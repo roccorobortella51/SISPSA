@@ -18,7 +18,7 @@ use Yii;
  * @property string $estatus
  * @property string|null $webpage
  * @property string|null $rs_instagram
- * @property string|null $QR Code
+ * @property string|null $QRCode
  * @property string|null $codigo_clinica
  * @property string|null $deleted_at
  * @property string|null $updated_at
@@ -48,7 +48,7 @@ class RmClinica extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['QR Code', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
+            [['QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
             [['rs_instagram'], 'default', 'value' => ''],
             [['created_at', 'deleted_at', 'updated_at'], 'safe'],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QR Code', 'codigo_clinica'], 'string'],
@@ -73,7 +73,7 @@ class RmClinica extends \yii\db\ActiveRecord
             'estatus' => 'Estatus',
             'webpage' => 'Webpage',
             'rs_instagram' => 'Rs Instagram',
-            'QR Code' => 'Qr Code',
+            'QRCode' => 'Qr Code',
             'codigo_clinica' => 'Codigo Clinica',
             'deleted_at' => 'Deleted At',
             'updated_at' => 'Updated At',

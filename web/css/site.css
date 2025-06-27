@@ -99,3 +99,20 @@ a.desc:after {
 .main-header i {
     color: white !important;
 }
+
+body.sidebar-collapse .brand-link,
+body.sidebar-collapse .user-panel,
+body.sidebar-collapse aside.main-sidebar .brand-link,
+body.sidebar-collapse aside.main-sidebar .sidebar .user-panel,
+aside.main-sidebar.sidebar-collapse .brand-link,
+aside.main-sidebar.sidebar-collapse .sidebar .user-panel,
+body.collapsed-sidebar aside.main-sidebar .brand-link,
+body.collapsed-sidebar aside.main-sidebar .sidebar .user-panel {
+    display: none !important;
+}
+
+/* Ocultar todo el sidebar cuando el body tenga las clases collapsed-sidebar o sidebar-collapse */
+body.collapsed-sidebar aside.main-sidebar,
+body.sidebar-collapse aside.main-sidebar {
+    display: none !important;
+}
