@@ -1,42 +1,34 @@
-<?php
-/* @var $content string */
+<!DOCTYPE html>
+<html lang="es">
 
-use yii\bootstrap4\Breadcrumbs;
-?>
-<div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="row mb-2">
-                <div class="col-sm-6">
-                    <h1 class="m-0">
-                        <?php
-                        if (!is_null($this->title)) {
-                            echo \yii\helpers\Html::encode($this->title);
-                        } else {
-                            echo \yii\helpers\Inflector::camelize($this->context->id);
-                        }
-                        ?>
-                    </h1>
-                </div><!-- /.col -->
-                <div class="col-sm-6">
-                    <?php
-                    echo Breadcrumbs::widget([
-                        'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
-                        'options' => [
-                            'class' => 'breadcrumb float-sm-right'
-                        ]
-                    ]);
-                    ?>
-                </div><!-- /.col -->
-            </div><!-- /.row -->
-        </div><!-- /.container-fluid -->
-    </div>
-    <!-- /.content-header -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SISPSA - Gestión</title>
+  <!-- Iconic Fonts -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="vendors/iconic-fonts/font-awesome/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="vendors/iconic-fonts/flat-icons/flaticon.css">
+  <link rel="stylesheet" href="vendors/iconic-fonts/cryptocoins/cryptocoins.css">
+  <link rel="stylesheet" href="vendors/iconic-fonts/cryptocoins/cryptocoins-colors.css">
+  <!-- Bootstrap core CSS -->
+  <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+  <!-- jQuery UI -->
+  <link href="assets/css/jquery-ui.min.css" rel="stylesheet">
+  <!-- Page Specific CSS (Slick Slider.css) -->
+  <link href="assets/css/slick.css" rel="stylesheet">
+  <!-- medboard styles -->
+  <link href="assets/css/style.css" rel="stylesheet">
 
-    <!-- Main content -->
-    <div class="content">
-       <body class="ms-body ms-aside-left-open ms-primary-theme ms-has-quickbar">
+  <!-- Page Specific CSS (Morris Charts.css) -->
+  <link href="assets/css/morris.css" rel="stylesheet">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.ico">
+</head>
+
+<body class="ms-body ms-aside-left-open ms-primary-theme ms-has-quickbar">
   <!-- Setting Panel -->
   <div class="ms-toggler ms-settings-toggle ms-d-block-lg">
     <i class="flaticon-gear"></i>
@@ -44,13 +36,13 @@ use yii\bootstrap4\Breadcrumbs;
   <div class="ms-settings-panel ms-d-block-lg">
     <div class="row">
       <div class="col-xl-4 col-md-4">
-        <h4 class="section-title">Customize</h4>
+        <h4 class="section-title">Ajustes</h4>
         <div>
           <label class="ms-switch">
             <input type="checkbox" id="dark-mode">
             <span class="ms-switch-slider round"></span>
           </label>
-          <span> Dark Mode </span>
+          <span> Modo Oscuro </span>
         </div>
 
       </div>
@@ -86,7 +78,7 @@ use yii\bootstrap4\Breadcrumbs;
   <aside id="ms-side-nav" class="side-nav fixed ms-aside-scrollable ms-aside-left">
     <!-- Logo -->
     <div class="logo-sn ms-d-block-lg">
-      <a class="pl-0 ml-0 text-center" href="index.html"> <img src="assets/img/medboard-logo-216x62.png" alt="logo"> </a>
+      <a class="pl-0 ml-0 text-center" href="index.html"> <img src="assets/img/sispsa-12-62.png" alt="logo"> </a>
       <a href="#" class="text-center ms-logo-img-link"> <img src="assets/img/dashboard/doctor-3.jpg" alt="logo"></a>
       <h5 class="text-center text-white mt-2">Dr.Samuel</h5>
       <h6 class="text-center text-white mb-3">Admin</h6>
@@ -99,7 +91,7 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">dashboard</i>Dashboard </span>
         </a>
         <ul id="dashboard" class="collapse" aria-labelledby="dashboard" data-parent="#side-nav-accordion">
-          <li> <a href="index.html">Medboard</a> </li>
+          <li> <a href="index.html">SISPSA</a> </li>
         </ul>
       </li>
       <!-- /Dashboard -->
@@ -109,115 +101,115 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-stethoscope"></i>Doctor</span>
         </a>
         <ul id="doctor" class="collapse" aria-labelledby="doctor" data-parent="#side-nav-accordion">
-          <li> <a href="pages/doctor/add-doctor.html">Add Doctor</a> </li>
-          <li> <a href="pages/doctor/doctor-list.html">Doctor List</a> </li>
+          <li> <a href="pages/doctor/add-doctor.html">+ Doctor</a> </li>
+          <li> <a href="pages/doctor/doctor-list.html">Lista Doctor</a> </li>
         </ul>
       </li>
       <!-- Doctor -->
       <!-- Patient -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#patient" aria-expanded="false" aria-controls="patient">
-          <span><i class="fas fa-user"></i>Patient</span>
+          <span><i class="fas fa-user"></i>Afiliados</span>
         </a>
         <ul id="patient" class="collapse" aria-labelledby="patient" data-parent="#side-nav-accordion">
-          <li> <a href="pages/patient/add-patient.html">Add Patient</a> </li>
-          <li> <a href="pages/patient/patient-list.html">Patient List</a> </li>
+          <li> <a href="pages/patient/add-patient.html">+ Afiliados</a> </li>
+          <li> <a href="pages/patient/patient-list.html">Lista Afiliados</a> </li>
         </ul>
       </li>
       <!-- /Patient -->
       <!-- Department -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#department" aria-expanded="false" aria-controls="department">
-          <span><i class="fas fa-sitemap"></i>Department</span>
+          <span><i class="fas fa-sitemap"></i>Departmento</span>
         </a>
         <ul id="department" class="collapse" aria-labelledby="department" data-parent="#side-nav-accordion">
-          <li> <a href="pages/department/add-department.html">Add Department</a> </li>
-          <li> <a href="pages/department/department-list.html">Department List</a> </li>
+          <li> <a href="pages/department/add-department.html">+ Departmento</a> </li>
+          <li> <a href="pages/department/department-list.html">Lista Departmento</a> </li>
         </ul>
       </li>
       <!-- /Department -->
       <!-- Schedule -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#schedule" aria-expanded="false" aria-controls="schedule">
-          <span><i class="fas fa-list-alt"></i>Doctor Schedule</span>
+          <span><i class="fas fa-list-alt"></i>Agenda Doctor</span>
         </a>
         <ul id="schedule" class="collapse" aria-labelledby="schedule" data-parent="#side-nav-accordion">
-          <li> <a href="pages/doctor-schedule/add-schedule.html">Add Schedule</a> </li>
-          <li> <a href="pages/doctor-schedule/schedule-list.html">Schedule List</a> </li>
+          <li> <a href="pages/doctor-schedule/add-schedule.html">+ Agenda</a> </li>
+          <li> <a href="pages/doctor-schedule/schedule-list.html">Lista Agenda</a> </li>
         </ul>
       </li>
       <!-- /Schedule -->
       <!-- Appointment -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#appointment" aria-expanded="false" aria-controls="appointment">
-          <span><i class="far fa-check-square"></i>Appointment</span>
+          <span><i class="far fa-check-square"></i>Citas</span>
         </a>
         <ul id="appointment" class="collapse" aria-labelledby="appointment" data-parent="#side-nav-accordion">
-          <li> <a href="pages/appointment/add-appointment.html">Add Appointment</a> </li>
-          <li> <a href="pages/appointment/appointment-list.html">Appointment List</a> </li>
+          <li> <a href="pages/appointment/add-appointment.html">+ Citas</a> </li>
+          <li> <a href="pages/appointment/appointment-list.html">Lista Citas</a> </li>
         </ul>
       </li>
       <!-- /Appointment -->
       <!-- Payment -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#payment" aria-expanded="false" aria-controls="payment">
-          <span><i class="fas fa-credit-card"></i>Payment</span>
+          <span><i class="fas fa-credit-card"></i>Pagos</span>
         </a>
         <ul id="payment" class="collapse" aria-labelledby="payment" data-parent="#side-nav-accordion">
-          <li> <a href="pages/payment/add-payment.html">Add Payment</a> </li>
-          <li> <a href="pages/payment/payment-list.html">Payment List</a> </li>
-          <li> <a href="pages/payment/payment-invoice.html">Payment Invoice</a> </li>
+          <li> <a href="pages/payment/add-payment.html">+ Pagos</a> </li>
+          <li> <a href="pages/payment/payment-list.html">Lista Pagos</a> </li>
+          <li> <a href="pages/payment/payment-invoice.html">Recibos Pagos</a> </li>
         </ul>
       </li>
       <!-- /Payment -->
       <!-- Report -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#report" aria-expanded="false" aria-controls="report">
-          <span><i class="fas fa-file-alt"></i>Report</span>
+          <span><i class="fas fa-file-alt"></i>Reportes</span>
         </a>
         <ul id="report" class="collapse" aria-labelledby="report" data-parent="#side-nav-accordion">
-          <li> <a href="pages/report/patient-report.html">Patient Wise Report</a> </li>
-          <li> <a href="pages/report/doctor-report.html">Doctor Wise Report</a> </li>
-          <li> <a href="pages/report/total-report.html">Total Report</a> </li>
+          <li> <a href="pages/report/patient-report.html">Report Afiliados</a> </li>
+          <li> <a href="pages/report/doctor-report.html">Report Doctores</a> </li>
+          <li> <a href="pages/report/total-report.html">Reporte Totales</a> </li>
         </ul>
       </li>
       <!-- /Report -->
       <!-- Human Resource -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#human-resource" aria-expanded="false" aria-controls="human-resource">
-          <span><i class="far fa-user-circle"></i>Human Resource</span>
+          <span><i class="far fa-user-circle"></i>Recursos Humanos</span>
         </a>
         <ul id="human-resource" class="collapse" aria-labelledby="human-resource" data-parent="#side-nav-accordion">
-          <li> <a href="pages/human-resource/add-employee.html">Add Employee</a> </li>
-          <li> <a href="pages/human-resource/employee-list.html">Employee List</a> </li>
-          <li> <a href="pages/human-resource/add-nurse.html">Add Nurse</a> </li>
-          <li> <a href="pages/human-resource/nurse-list.html">Nurse List</a> </li>
-          <li> <a href="pages/human-resource/add-pharmacist.html">Add Pharmacist</a> </li>
-          <li> <a href="pages/human-resource/pharmacist-list.html">Pharmacist List</a> </li>
-          <li> <a href="pages/human-resource/add-representative.html">Add Representative</a> </li>
-          <li> <a href="pages/human-resource/representative-list.html">Representative List</a> </li>
+          <li> <a href="pages/human-resource/add-employee.html">+ Empleados</a> </li>
+          <li> <a href="pages/human-resource/employee-list.html">Lista Empleados</a> </li>
+          <li> <a href="pages/human-resource/add-nurse.html">+ Enfermeras</a> </li>
+          <li> <a href="pages/human-resource/nurse-list.html">Lista Enfermeras</a> </li>
+          <li> <a href="pages/human-resource/add-pharmacist.html">+ Farmaceutas</a> </li>
+          <li> <a href="pages/human-resource/pharmacist-list.html">Lista Farmaceutas </a> </li>
+          <li> <a href="pages/human-resource/add-representative.html">+ Representantes</a> </li>
+          <li> <a href="pages/human-resource/representative-list.html">Lista Representantes</a> </li>
         </ul>
       </li>
       <!-- /Human Resource -->
       <!-- Bed -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#bed" aria-expanded="false" aria-controls="bed">
-          <span><i class="fas fa-bed"></i>Bed Manager</span>
+          <span><i class="fas fa-bed"></i>Gestión Camas</span>
         </a>
         <ul id="bed" class="collapse" aria-labelledby="bed" data-parent="#side-nav-accordion">
-          <li> <a href="pages/bed-manager/add-bed.html">Add Bed</a> </li>
-          <li> <a href="pages/bed-manager/bed-list.html">Bed List</a> </li>
+          <li> <a href="pages/bed-manager/add-bed.html">+ Cama</a> </li>
+          <li> <a href="pages/bed-manager/bed-list.html">Lista Camas</a> </li>
         </ul>
       </li>
       <!-- /Bed-->
       <!-- Notice -->
       <li class="menu-item">
         <a href="#" class="has-chevron" data-toggle="collapse" data-target="#notice" aria-expanded="false" aria-controls="notice">
-          <span><i class="far fa-file-alt"></i>Notice</span>
+          <span><i class="far fa-file-alt"></i>Avisos</span>
         </a>
         <ul id="notice" class="collapse" aria-labelledby="notice" data-parent="#side-nav-accordion">
-          <li> <a href="pages/notice/add-notice.html">Add Notice</a> </li>
-          <li> <a href="pages/notice/notice-list.html">Notice List</a> </li>
+          <li> <a href="pages/notice/add-notice.html">+ Avisos</a> </li>
+          <li> <a href="pages/notice/notice-list.html">Lista Avisos</a> </li>
         </ul>
       </li>
       <!-- /Notice -->
@@ -462,7 +454,7 @@ use yii\bootstrap4\Breadcrumbs;
             </label>
           </div>
           <div class="ms-form-group">
-            <span class="ms-option-name fs-14">Allow Notifications</span>
+            <span class="ms-option-name fs-14">Allow Notificaciones</span>
             <label class="ms-switch float-right">
               <input type="checkbox">
               <span class="ms-switch-slider round"></span>
@@ -533,59 +525,59 @@ use yii\bootstrap4\Breadcrumbs;
         <span class="ms-toggler-bar bg-white"></span>
       </div>
       <div class="logo-sn logo-sm ms-d-block-sm">
-        <a class="pl-0 ml-0 text-center navbar-brand mr-0" href="index.html"><img src="assets/img/medboard-logo-84x41.png" alt="logo"> </a>
+        <a class="pl-0 ml-0 text-center navbar-brand mr-0" href="index.html"><img src="assets/img/sispsa-03-41.png" alt="logo"> </a>
       </div>
       <ul class="ms-nav-list ms-inline mb-0" id="ms-nav-options">
 
         <li class="ms-nav-item  ms-d-none">
-          <a href="#mymodal" class="text-white" data-toggle="modal"><i class="flaticon-spreadsheet mr-2"></i> Make an appointment</a>
+          <a href="#mymodal" class="text-white" data-toggle="modal"><i class="flaticon-spreadsheet mr-2"></i> Nueva Cita</a>
         </li>
 
         <li class="ms-nav-item ms-d-none">
-          <a href="#prescription" class="text-white" data-toggle="modal"><i class="flaticon-pencil mr-2"></i> Write a prescription</a>
+          <a href="#prescription" class="text-white" data-toggle="modal"><i class="flaticon-pencil mr-2"></i> Nueva Prescripción</a>
         </li>
 
         <li class="ms-nav-item ms-d-none">
-          <a href="#report1" class="text-white" data-toggle="modal"><i class="flaticon-list mr-2"></i> Generate Report</a>
+          <a href="#report1" class="text-white" data-toggle="modal"><i class="flaticon-list mr-2"></i> Generar Reporte</a>
         </li>
 
         <li class="ms-nav-item dropdown">
           <a href="#" class="text-disabled ms-has-notification" id="notificationDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="flaticon-bell"></i></a>
           <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="notificationDropdown">
             <li class="dropdown-menu-header">
-              <h6 class="dropdown-header ms-inline m-0"><span class="text-disabled">Notifications</span></h6>
-              <span class="badge badge-pill badge-info">4 New</span>
+              <h6 class="dropdown-header ms-inline m-0"><span class="text-disabled">Notificaciones</span></h6>
+              <span class="badge badge-pill badge-info">4 Nuevos</span>
             </li>
             <li class="dropdown-divider"></li>
             <li class="ms-scrollable ms-dropdown-list">
               <a class="media p-2" href="#">
                 <div class="media-body">
-                  <span>12 ways to improve your crypto dashboard</span>
-                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> 30 seconds ago</p>
+                  <span>12 formas de mejorar tu panel de control de criptomonedas</span>
+                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> hace 30 segundos</p>
                 </div>
               </a>
               <a class="media p-2" href="#">
                 <div class="media-body">
-                  <span>You have newly registered users</span>
-                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> 45 minutes ago</p>
+                  <span>Tienes nuevos usuarios registrados</span>
+                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> hace 45 minutos</p>
                 </div>
               </a>
               <a class="media p-2" href="#">
                 <div class="media-body">
-                  <span>Your account was logged in from an unauthorized IP</span>
-                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> 2 hours ago</p>
+                  <span>Se inició sesión en su cuenta desde una IP no autorizada</span>
+                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> hace 2 horas</p>
                 </div>
               </a>
               <a class="media p-2" href="#">
                 <div class="media-body">
-                  <span>An application form has been submitted</span>
-                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> 1 day ago</p>
+                  <span>Se ha enviado un formulario de solicitud</span>
+                  <p class="fs-10 my-1 text-disabled"><i class="material-icons">access_time</i> hace 1 día</p>
                 </div>
               </a>
             </li>
             <li class="dropdown-divider"></li>
             <li class="dropdown-menu-footer text-center">
-              <a href="#">View all Notifications</a>
+              <a href="#">Ver todas Notificaciones</a>
             </li>
           </ul>
         </li>
@@ -593,20 +585,20 @@ use yii\bootstrap4\Breadcrumbs;
           <a href="#" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <img class="ms-user-img ms-img-round float-right" src="assets/img/dashboard/doctor-3.jpg" alt="people"> </a>
           <ul class="dropdown-menu dropdown-menu-right user-dropdown" aria-labelledby="userDropdown">
             <li class="dropdown-menu-header">
-              <h6 class="dropdown-header ms-inline m-0"><span class="text-disabled">Welcome, Dr Samuel Deo</span></h6>
+              <h6 class="dropdown-header ms-inline m-0"><span class="text-disabled">Saludos, Dr Samuel Deo</span></h6>
             </li>
             <li class="dropdown-divider"></li>
             <li class="ms-dropdown-list">
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/user-profile.html"> <span><i class="flaticon-user mr-2"></i> Profile</span> </a>
-              <a class="media fs-14 p-2" href="pages/apps/email.html"> <span><i class="flaticon-mail mr-2"></i> Inbox</span> <span class="badge badge-pill badge-info">3</span> </a>
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/user-profile.html"> <span><i class="flaticon-gear mr-2"></i> Account Settings</span> </a>
+              <a class="media fs-14 p-2" href="pages/prebuilt-pages/user-profile.html"> <span><i class="flaticon-user mr-2"></i> Perfil</span> </a>
+              <a class="media fs-14 p-2" href="pages/apps/email.html"> <span><i class="flaticon-mail mr-2"></i> Bandeja Entrada</span> <span class="badge badge-pill badge-info">3</span> </a>
+              <a class="media fs-14 p-2" href="pages/prebuilt-pages/user-profile.html"> <span><i class="flaticon-gear mr-2"></i> Configuración Cuenta</span> </a>
             </li>
             <li class="dropdown-divider"></li>
             <li class="dropdown-menu-footer">
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/lock-screen.html"> <span><i class="flaticon-security mr-2"></i> Lock</span> </a>
+              <a class="media fs-14 p-2" href="pages/prebuilt-pages/lock-screen.html"> <span><i class="flaticon-security mr-2"></i> Bloquear</span> </a>
             </li>
             <li class="dropdown-menu-footer">
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/default-login.html"> <span><i class="flaticon-shut-down mr-2"></i> Logout</span> </a>
+              <a class="media fs-14 p-2" href="pages/prebuilt-pages/default-login.html"> <span><i class="flaticon-shut-down mr-2"></i> Salir</span> </a>
             </li>
           </ul>
         </li>
@@ -620,14 +612,27 @@ use yii\bootstrap4\Breadcrumbs;
     <!-- Body Content Wrapper -->
     <div class="ms-content-wrapper">
       <div class="row">
-        <!-- Notifications Widgets -->
+        <!-- Notificaciones Widgets -->
 
         <div class="col-xl-3 col-md-6 col-sm-6">
           <a href="#">
             <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
               <div class="ms-card-body media">
                 <div class="media-body">
-                  <h6>Doctors</h6>
+                  <h6>Clínicas</h6>
+                  <p class="ms-card-change"> 4567</p>
+                </div>
+              </div>
+              <i class="fas fa-hospital ms-icon-mr"></i>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-md-6 col-sm-6">
+          <a href="#">
+            <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
+              <div class="ms-card-body media">
+                <div class="media-body">
+                  <h6>Doctores</h6>
                   <p class="ms-card-change"> 4567</p>
                 </div>
               </div>
@@ -640,20 +645,7 @@ use yii\bootstrap4\Breadcrumbs;
             <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
               <div class="ms-card-body media">
                 <div class="media-body">
-                  <h6>Nurses</h6>
-                  <p class="ms-card-change"> 4567</p>
-                </div>
-              </div>
-              <i class="fas fa-user-plus ms-icon-mr"></i>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-md-6 col-sm-6">
-          <a href="#">
-            <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
-              <div class="ms-card-body media">
-                <div class="media-body">
-                  <h6 class="bold">Patients</h6>
+                  <h6 class="bold">Afiliados</h6>
                   <p class="ms-card-change"> 4567</p>
                 </div>
               </div>
@@ -666,7 +658,7 @@ use yii\bootstrap4\Breadcrumbs;
             <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
               <div class="ms-card-body media">
                 <div class="media-body">
-                  <h6 class="bold">Pharmacists</h6>
+                  <h6 class="bold">Farmaceutas</h6>
                   <p class="ms-card-change"> 4567</p>
                 </div>
               </div>
@@ -680,7 +672,7 @@ use yii\bootstrap4\Breadcrumbs;
           <div class="ms-card ms-widget has-graph-full-width ms-infographics-widget">
             <div class="ms-card-body media">
               <div class="media-body">
-                <h6 class="bold">Appointments</h6>
+                <h6 class="bold">Citas</h6>
                 <h3><strong>3,973</strong></h3>
               </div>
             </div>
@@ -690,7 +682,7 @@ use yii\bootstrap4\Breadcrumbs;
           <div class="ms-card ms-widget has-graph-full-width ms-infographics-widget">
             <div class="ms-card-body media">
               <div class="media-body">
-                <h6>New Patients</h6>
+                <h6>Nuevos Afiliados</h6>
                 <h3><strong>593</strong></h3>
               </div>
             </div>
@@ -700,7 +692,7 @@ use yii\bootstrap4\Breadcrumbs;
           <div class="ms-card ms-widget has-graph-full-width ms-infographics-widget">
             <div class="ms-card-body media">
               <div class="media-body">
-                <h6 class="bold">Hospital Earning</h6>
+                <h6 class="bold">Ganancia de Clínicas</h6>
                 <h3><strong>3,973</strong></h3>
               </div>
             </div>
@@ -727,17 +719,17 @@ use yii\bootstrap4\Breadcrumbs;
             <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img" alt="people">
             <div class="ms-card-body">
               <h2>Anny Farisha</h2>
-              <span>Doctor</span>
+              <span>Doctora</span>
               <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In in arcu turpis. Nunc</p>
               <button type="button" class="btn btn-primary btn-sm" name="button"><i class="material-icons">person_add</i> Assign</button>
               <ul class="ms-profile-stats">
                 <li>
                   <h3 class="ms-count">5790</h3>
-                  <span>Operations</span>
+                  <span>Operaciones</span>
                 </li>
                 <li>
                   <h3 class="ms-count">4.8</h3>
-                  <span>Medical Rating</span>
+                  <span>Rating Médico</span>
                 </li>
               </ul>
             </div>
@@ -748,25 +740,25 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-6 col-lg-12">
           <div class="ms-panel ms-device-sessions ms-quick-mic">
             <div class="ms-panel-header">
-              <h6>Hospital Birth & Death Analytics</h6>
+              <h6>Análisis de nacimientos y muertes en hospitales</h6>
             </div>
             <div class="ms-panel-body">
               <div class="row">
                 <div class="col-xl-4 col-md-4 col-sm-4 col-6 ms-device">
                   <i class="material-icons">airline_seat_flat</i>
-                  <h4>Birth</h4>
+                  <h4>Nacidos</h4>
                   <p class="ms-text-primary">45.07%</p>
                   <span class="ms-text-primary">201,434</span>
                 </div>
                 <div class="col-xl-4 col-md-4 col-sm-4 col-6 ms-device">
                   <i class="material-icons">airline_seat_individual_suite</i>
-                  <h4>Death</h4>
+                  <h4>Decesos</h4>
                   <p class="ms-text-danger">29.05%</p>
                   <span class="ms-text-danger">134,693</span>
                 </div>
                 <div class="col-xl-4 col-md-4 col-sm-4 col-6 ms-device">
                   <i class="material-icons">accessible</i>
-                  <h4>Accidents</h4>
+                  <h4>Accidentes</h4>
                   <p class="ms-text-warning">18.43%</p>
                   <span class="ms-text-warning">81,525</span>
                 </div>
@@ -782,7 +774,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-6 col-lg-12">
           <div class="ms-panel">
             <div class="ms-panel-header d-flex justify-content-between">
-              <h6>Hospital Staff</h6>
+              <h6>Staff de Hospital</h6>
               <div class="ms-slider-arrow">
                 <a href="#" class="prev-item">
                   <i class="far fa-caret-square-left"></i>
@@ -798,7 +790,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Anny</h5>
-                    <span>Doctor</span>
+                    <span>Doctora</span>
                   </div>
                 </a>
               </div>
@@ -807,7 +799,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-2.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Jude</h5>
-                    <span>Surgeon</span>
+                    <span>Cirujana</span>
                   </div>
                 </a>
               </div>
@@ -825,7 +817,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-4.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Micheal</h5>
-                    <span>Nurse</span>
+                    <span>Enfermero</span>
                   </div>
                 </a>
               </div>
@@ -834,7 +826,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-2.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Rouge</h5>
-                    <span>Doctor</span>
+                    <span>Doctora</span>
                   </div>
                 </a>
               </div>
@@ -843,7 +835,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Lilly</h5>
-                    <span>Surgeon</span>
+                    <span>Cirujana</span>
                   </div>
                 </a>
               </div>
@@ -852,7 +844,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-3.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Sameul</h5>
-                    <span>Surgeon</span>
+                    <span>Cirujano</span>
                   </div>
                 </a>
               </div>
@@ -870,7 +862,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Venus</h5>
-                    <span>Doctor</span>
+                    <span>Doctora</span>
                   </div>
                 </a>
               </div>
@@ -879,7 +871,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <img src="assets/img/dashboard/doctor-3.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
                   <div class="ms-card-body">
                     <h5>Johan</h5>
-                    <span>Nurse</span>
+                    <span>Enfermero</span>
                   </div>
                 </a>
               </div>
@@ -890,7 +882,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-6 col-md-12">
           <div class="ms-panel">
             <div class="ms-panel-header">
-              <h6>Patient Total</h6>
+              <h6>Total Atenciones</h6>
             </div>
             <div class="ms-panel-body">
               <canvas id="line-chart"></canvas>
@@ -902,7 +894,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-6 col-md-12">
           <div class="ms-panel">
             <div class="ms-panel-header">
-              <h6>Patient In</h6>
+              <h6>Ingreso Afiliados</h6>
             </div>
             <div class="ms-panel-body">
               <canvas id="bar-chart-grouped"></canvas>
@@ -914,18 +906,18 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-8 col-md-12">
           <div class="ms-panel">
             <div class="ms-panel-header">
-              <h6>Upcoming Appointments</h6>
+              <h6>Próximas Citas</h6>
             </div>
             <div class="ms-panel-body">
               <div class="table-responsive">
                 <table class="table table-hover thead-primary">
                   <thead>
                     <tr>
-                      <th scope="col">Patient</th>
+                      <th scope="col">Afiliado</th>
                       <th scope="col">Doctor</th>
-                      <th scope="col">Date</th>
-                      <th scope="col">Timing</th>
-                      <th scope="col">Contact</th>
+                      <th scope="col">Dia</th>
+                      <th scope="col">Hora</th>
+                      <th scope="col">Contacto</th>
                       <th scope="col">Status</th>
                     </tr>
                   </thead>
@@ -1001,7 +993,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-4 col-md-12">
           <div class="ms-panel ms-panel-fh ms-widget">
             <div class="ms-panel-header ms-panel-custome">
-              <h6>Doctors List</h6>
+              <h6>Lista Doctores</h6>
             </div>
             <div class="ms-panel-body p-0">
               <ul class="ms-followers ms-list ms-scrollable">
@@ -1054,7 +1046,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-6 col-lg-12">
           <div class="ms-panel ms-panel-fh ms-facebook-engagements">
             <div class="ms-panel-header">
-              <h6>Doctor Engagements</h6>
+              <h6>Compromisos Médicos</h6>
             </div>
             <div class="ms-panel-body p-0">
               <div class="ms-facebook-page-selection">
@@ -1062,7 +1054,7 @@ use yii\bootstrap4\Breadcrumbs;
                 <p>Jan 18, 2022 to Feb 24, 2022 (Prev)</p>
 
                 <div class="dropdown">
-                  <a href="#" class="has-chevron" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Doctor Name here</a>
+                  <a href="#" class="has-chevron" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Nombre Doctor acá</a>
                   <ul class="dropdown-menu">
                     <li class="ms-dropdown-list">
                       <a class="media p-2" href="#">
@@ -1088,7 +1080,7 @@ use yii\bootstrap4\Breadcrumbs;
                 <li class="ms-list-item">
                   <div class="d-flex justify-content-between align-items-end">
                     <div class="ms-graph-meta">
-                      <h2>Weekday Engagement</h2>
+                      <h2>Compromiso Semana</h2>
                       <p class="ms-text-dark">45.07%</p>
                       <p class="ms-text-success">+28.44%</p>
                       <p>VS 66.68% (Prev)</p>
@@ -1101,7 +1093,7 @@ use yii\bootstrap4\Breadcrumbs;
                 <li class="ms-list-item">
                   <div class="d-flex justify-content-between align-items-end">
                     <div class="ms-graph-meta">
-                      <h2>Weekend Engagement</h2>
+                      <h2>Compromisos Fin de Semana</h2>
                       <p class="ms-text-dark">45.07%</p>
                       <p class="ms-text-success">+28.44%</p>
                       <p>VS 66.68% (Prev)</p>
@@ -1120,7 +1112,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-6 col-lg-12">
           <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-              <h6>Patient Timeline</h6>
+              <h6>Cronología de Pacientes</h6>
             </div>
             <div class="ms-panel-body">
               <ul class="ms-activity-log">
@@ -1128,7 +1120,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <div class="ms-btn-icon btn-pill icon btn-info">
                     <i class="fa fa-wheelchair"></i>
                   </div>
-                  <h6>Patient Admission</h6>
+                  <h6>Admisiones</h6>
                   <span> <i class="material-icons">event</i>1 January, 2022</span>
                   <p class="fs-14">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque diam non nisi semper, ula in sodales vehicula....</p>
                 </li>
@@ -1136,7 +1128,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <div class="ms-btn-icon btn-pill icon btn-primary">
                     <i class="fa fa-user-md"></i>
                   </div>
-                  <h6>Treatment Starts</h6>
+                  <h6>Tratamientos</h6>
                   <span> <i class="material-icons">event</i>5 January, 2022</span>
                   <p class="fs-14">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque diam non nisi semper, ula in sodales vehicula....</p>
                 </li>
@@ -1144,7 +1136,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <div class="ms-btn-icon btn-pill icon btn-success">
                     <i class="fa fa-check"></i>
                   </div>
-                  <h6>Patient Discharge</h6>
+                  <h6>Alta Pacientes</h6>
                   <span> <i class="material-icons">event</i>15 March, 2022</span>
                   <p class="fs-14">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque diam non nisi semper, ula in sodales vehicula....</p>
                 </li>
@@ -1157,17 +1149,17 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-8 col-md-12">
           <div class="ms-panel">
             <div class="ms-panel-header">
-              <h6>New Patients</h6>
+              <h6>Nuevos Afiliados</h6>
             </div>
             <div class="ms-panel-body">
               <div class="table-responsive">
                 <table class="table table-hover  thead-primary">
                   <thead>
                     <tr>
-                      <th scope="col">Patient</th>
+                      <th scope="col">Afiliado</th>
                       <th scope="col">E-mail Id</th>
-                      <th scope="col">Contact</th>
-                      <th scope="col">Disease</th>
+                      <th scope="col">Contact0</th>
+                      <th scope="col">Enfermedad</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1175,19 +1167,19 @@ use yii\bootstrap4\Breadcrumbs;
                       <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-3.jpg" alt="people"> Richard </td>
                       <td>Richard288@gmail.com</td>
                       <td>+1-202-555-0875</td>
-                      <td>Fever</td>
+                      <td>Fiebre</td>
                     </tr>
                     <tr>
                       <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-2.jpg" alt="people"> William </td>
                       <td>William434@gmail.com</td>
                       <td>+1-202-534-0112</td>
-                      <td>Eye</td>
+                      <td>Vista</td>
                     </tr>
                     <tr>
                       <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-4.jpg" alt="people"> John Doe </td>
                       <td>johndeo652@gmail.com</td>
                       <td>+1-202-182-0132</td>
-                      <td>Typhoid</td>
+                      <td>Tifoidea</td>
                     </tr>
                     <tr>
                       <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-5.jpg" alt="people"> Martin </td>
@@ -1199,7 +1191,7 @@ use yii\bootstrap4\Breadcrumbs;
                       <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-1.jpg" alt="people"> Robert </td>
                       <td>Robert082@gmail.com</td>
                       <td>+1-202-455-1431</td>
-                      <td>Diabetes</td>
+                      <td>Diábetes</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1212,7 +1204,7 @@ use yii\bootstrap4\Breadcrumbs;
         <div class="col-xl-4 col-md-12">
           <div class="ms-panel ms-panel-fh ms-widget">
             <div class="ms-panel-header ms-panel-custome">
-              <h6>Latest Reports</h6>
+              <h6>Últimos Reportes</h6>
             </div>
             <div class="ms-panel-body p-0">
               <ul class="ms-followers ms-list ms-scrollable">
@@ -1220,41 +1212,41 @@ use yii\bootstrap4\Breadcrumbs;
 
                   <div class="media-body mt-1">
                     <h4>Ultrasound-2.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
+                    <a href="#"><span class="fs-12">Ver Reporte</span></a>
                   </div>
-                  <button type="button" class="btn btn-success btn-sm" name="button">Download </button>
+                  <button type="button" class="btn btn-success btn-sm" name="button">Descargar </button>
                 </li>
                 <li class="ms-list-item media">
 
                   <div class="media-body mt-1">
                     <h4>Hypothermia.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
+                    <a href="#"><span class="fs-12">Ver Reporte</span></a>
                   </div>
-                  <button type="button" class="btn btn-danger btn-sm" name="button">On Hold </button>
+                  <button type="button" class="btn btn-danger btn-sm" name="button">En Espera </button>
                 </li>
                 <li class="ms-list-item media">
 
                   <div class="media-body mt-1">
                     <h4>Ultrasound.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
+                    <a href="#"><span class="fs-12">Ver Reporte</span></a>
                   </div>
-                  <button type="button" class="btn btn-success btn-sm" name="button">Download </button>
+                  <button type="button" class="btn btn-success btn-sm" name="button">Descargar </button>
                 </li>
                 <li class="ms-list-item media">
 
                   <div class="media-body mt-1">
                     <h4>Heart-ECG.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
+                    <a href="#"><span class="fs-12">Ver Reporte</span></a>
                   </div>
-                  <button type="button" class="btn btn-success btn-sm" name="button">Download</button>
+                  <button type="button" class="btn btn-success btn-sm" name="button">Descargar</button>
                 </li>
                 <li class="ms-list-item media">
 
                   <div class="media-body mt-1">
                     <h4>X-ray.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
+                    <a href="#"><span class="fs-12">Ver Reporte</span></a>
                   </div>
-                  <button type="button" class="btn btn-danger btn-sm" name="button">On Hold </button>
+                  <button type="button" class="btn btn-danger btn-sm" name="button">En Espera </button>
                 </li>
               </ul>
             </div>
@@ -1332,8 +1324,8 @@ use yii\bootstrap4\Breadcrumbs;
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-secondary shadow-none" data-dismiss="modal">Add Note</button>
+            <button type="button" class="btn btn-light" data-dismiss="modal">Cerrar</button>
+            <button type="button" class="btn btn-secondary shadow-none" data-dismiss="modal">+ Nota</button>
           </div>
         </form>
       </div>
@@ -1345,7 +1337,7 @@ use yii\bootstrap4\Breadcrumbs;
     <div class="modal-dialog ms-modal-dialog-width">
       <div class="modal-content ms-modal-content-width">
         <div class="modal-header  ms-modal-header-radius-0">
-          <h4 class="modal-title text-white">Make An Appointment</h4>
+          <h4 class="modal-title text-white">Nueva Cita</h4>
           <button type="button" class="close text-white" data-dismiss="modal" aria-hidden="true">x</button>
 
         </div>
@@ -1353,27 +1345,27 @@ use yii\bootstrap4\Breadcrumbs;
           <div class="col-xl-12 col-md-12">
             <div class="ms-panel ms-panel-bshadow-none">
               <div class="ms-panel-header">
-                <h6>Patient Information</h6>
+                <h6>Información Paciente</h6>
               </div>
               <div class="ms-panel-body">
                 <form class="needs-validation" novalidate>
                   <div class="form-row">
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom01">Patient Name</label>
+                      <label for="validationCustom01">Nombre</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom01" placeholder="Enter Name" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom02">Date Of Birth</label>
+                      <label for="validationCustom02">Fecha de Nacimiento</label>
                       <div class="input-group">
                         <input type="number" class="form-control" id="validationCustom02" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom03">Disease</label>
+                      <label for="validationCustom03">Enfermedad</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom03" placeholder="Disease" required>
 
@@ -1382,14 +1374,14 @@ use yii\bootstrap4\Breadcrumbs;
                   </div>
                   <div class="form-row">
                     <div class="col-md-4 mb-2">
-                      <label for="validationCustom04">Address</label>
+                      <label for="validationCustom04">Dirección</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom04" placeholder="Add Address" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom05">Phone no.</label>
+                      <label for="validationCustom05">Teléfono no.</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom05" placeholder="Enter Phone No." required>
 
@@ -1410,41 +1402,41 @@ use yii\bootstrap4\Breadcrumbs;
 
                   <div class="form-row">
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom07">Appointment With</label>
+                      <label for="validationCustom07">Cita con</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom07" placeholder="Enter Doctor Name" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom08">Appointment Date</label>
+                      <label for="validationCustom08">Fecha Cita</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom08" placeholder="Enter Appointment Date" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label>Sex</label>
+                      <label>Sexo</label>
                       <ul class="ms-list d-flex">
                         <li class="ms-list-item pl-0">
                           <label class="ms-checkbox-wrap">
                             <input type="radio" name="radioExample" value="">
                             <i class="ms-checkbox-check"></i>
                           </label>
-                          <span> Male </span>
+                          <span> Hombre </span>
                         </li>
                         <li class="ms-list-item">
                           <label class="ms-checkbox-wrap">
                             <input type="radio" name="radioExample" value="" checked="">
                             <i class="ms-checkbox-check"></i>
                           </label>
-                          <span> Female </span>
+                          <span> Mujer </span>
                         </li>
                       </ul>
                     </div>
                   </div>
                   <button class="btn btn-warning mt-4 d-inline w-20" type="submit">Reset</button>
-                  <button class="btn btn-primary mt-4 d-inline w-20" type="submit">Add Appointment</button>
+                  <button class="btn btn-primary mt-4 d-inline w-20" type="submit">+ Cita</button>
                 </form>
               </div>
 
@@ -1462,7 +1454,7 @@ use yii\bootstrap4\Breadcrumbs;
     <div class="modal-dialog ms-modal-dialog-width">
       <div class="modal-content ms-modal-content-width">
         <div class="modal-header  ms-modal-header-radius-0">
-          <h4 class="modal-title text-white">Make a prescription</h4>
+          <h4 class="modal-title text-white">+ Prescripción</h4>
           <button type="button" class="close  text-white" data-dismiss="modal" aria-hidden="true">x</button>
 
         </div>
@@ -1470,27 +1462,27 @@ use yii\bootstrap4\Breadcrumbs;
           <div class="col-xl-12 col-md-12">
             <div class="ms-panel ms-panel-bshadow-none">
               <div class="ms-panel-header">
-                <h6>Patient Information</h6>
+                <h6>Información Paciente</h6>
               </div>
               <div class="ms-panel-body">
                 <form class="needs-validation" novalidate>
                   <div class="form-row">
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom09">Patient Name</label>
+                      <label for="validationCustom09">Nombre</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom09" placeholder="Enter Name" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom10">Date Of Birth</label>
+                      <label for="validationCustom10">Fecha de Nacimiento</label>
                       <div class="input-group">
                         <input type="number" class="form-control" id="validationCustom10" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-2">
-                      <label for="validationCustom11">Address</label>
+                      <label for="validationCustom11">Dirección</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom11" placeholder="Add Address" required>
 
@@ -1500,7 +1492,7 @@ use yii\bootstrap4\Breadcrumbs;
                   </div>
                   <div class="form-row">
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom12">Phone no.</label>
+                      <label for="validationCustom12">Teléfono no.</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom12" placeholder="Enter Phone No." required>
 
@@ -1516,7 +1508,7 @@ use yii\bootstrap4\Breadcrumbs;
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom14">Period Of medication</label>
+                      <label for="validationCustom14">Período de medicación</label>
                       <div class="input-group">
                         <input type="number" class="form-control" id="validationCustom14" placeholder="" required>
 
@@ -1529,7 +1521,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <div class="form-row">
 
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom15">Appointment With</label>
+                      <label for="validationCustom15">Cita Con</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom15" placeholder="Enter Doctor Name" required>
 
@@ -1537,8 +1529,8 @@ use yii\bootstrap4\Breadcrumbs;
                     </div>
 
                   </div>
-                  <button class="btn btn-warning mt-4 d-inline w-20" type="submit">Save Prescription</button>
-                  <button class="btn btn-primary mt-4 d-inline w-20" type="submit">Save & Print</button>
+                  <button class="btn btn-warning mt-4 d-inline w-20" type="submit">Guardar Prescripció</button>
+                  <button class="btn btn-primary mt-4 d-inline w-20" type="submit">Guardar & Imprimir</button>
                 </form>
               </div>
 
@@ -1556,7 +1548,7 @@ use yii\bootstrap4\Breadcrumbs;
     <div class="modal-dialog ms-modal-dialog-width">
       <div class="modal-content ms-modal-content-width">
         <div class="modal-header  ms-modal-header-radius-0">
-          <h4 class="modal-title text-white">Generate report</h4>
+          <h4 class="modal-title text-white">Generar reporte</h4>
           <button type="button" class="close  text-white" data-dismiss="modal" aria-hidden="true">x</button>
 
         </div>
@@ -1564,27 +1556,27 @@ use yii\bootstrap4\Breadcrumbs;
           <div class="col-xl-12 col-md-12">
             <div class="ms-panel ms-panel-bshadow-none">
               <div class="ms-panel-header">
-                <h6>Patient Information</h6>
+                <h6>Información Paciente</h6>
               </div>
               <div class="ms-panel-body">
                 <form class="needs-validation" novalidate>
                   <div class="form-row">
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom16">Patient Name</label>
+                      <label for="validationCustom16">Nombre</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom16" placeholder="Enter Name" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom17">Date Of Birth</label>
+                      <label for="validationCustom17">Fecha de Nacimiento</label>
                       <div class="input-group">
                         <input type="number" class="form-control" id="validationCustom17" required>
 
                       </div>
                     </div>
                     <div class="col-md-4 mb-2">
-                      <label for="validationCustom22">Address</label>
+                      <label for="validationCustom22">Dirección</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom22" placeholder="Add Address" required>
 
@@ -1594,7 +1586,7 @@ use yii\bootstrap4\Breadcrumbs;
                   </div>
                   <div class="form-row">
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom18">Phone no.</label>
+                      <label for="validationCustom18">Teléfono no.</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom18" placeholder="Enter Phone No." required>
 
@@ -1610,7 +1602,7 @@ use yii\bootstrap4\Breadcrumbs;
                       </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom23">Report Period</label>
+                      <label for="validationCustom23">Período Reporte</label>
                       <div class="input-group">
                         <input type="number" class="form-control" id="validationCustom23" placeholder="" required>
 
@@ -1623,7 +1615,7 @@ use yii\bootstrap4\Breadcrumbs;
                   <div class="form-row">
 
                     <div class="col-md-4 mb-3">
-                      <label for="validationCustom20">Appointment With</label>
+                      <label for="validationCustom20">Cita con</label>
                       <div class="input-group">
                         <input type="text" class="form-control" id="validationCustom20" placeholder="Enter Doctor Name" required>
 
@@ -1631,8 +1623,8 @@ use yii\bootstrap4\Breadcrumbs;
                     </div>
 
                   </div>
-                  <button class="btn btn-warning mt-4 d-inline w-20" type="submit">Generate Report</button>
-                  <button class="btn btn-primary mt-4 d-inline w-20" type="submit">Generate & Print</button>
+                  <button class="btn btn-warning mt-4 d-inline w-20" type="submit">Generar Reporte</button>
+                  <button class="btn btn-primary mt-4 d-inline w-20" type="submit">Generar & Imprimir</button>
                 </form>
               </div>
 
@@ -1672,6 +1664,5 @@ use yii\bootstrap4\Breadcrumbs;
   <!-- Settings -->
   <script src="assets/js/settings.js"></script>
 </body>
-    </div>
-    <!-- /.content -->
-</div>
+
+</html>

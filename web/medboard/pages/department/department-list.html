@@ -1,42 +1,34 @@
-<?php
-/* @var $content string */
+<!DOCTYPE html>
+<html lang="en">
 
-use yii\bootstrap4\Breadcrumbs;
-?>
-<div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="row mb-2">
-                <div class="col-sm-6">
-                    <h1 class="m-0">
-                        <?php
-                        if (!is_null($this->title)) {
-                            echo \yii\helpers\Html::encode($this->title);
-                        } else {
-                            echo \yii\helpers\Inflector::camelize($this->context->id);
-                        }
-                        ?>
-                    </h1>
-                </div><!-- /.col -->
-                <div class="col-sm-6">
-                    <?php
-                    echo Breadcrumbs::widget([
-                        'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
-                        'options' => [
-                            'class' => 'breadcrumb float-sm-right'
-                        ]
-                    ]);
-                    ?>
-                </div><!-- /.col -->
-            </div><!-- /.row -->
-        </div><!-- /.container-fluid -->
-    </div>
-    <!-- /.content-header -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Medboard</title>
+  <!-- Iconic Fonts -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="../../vendors/iconic-fonts/font-awesome/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../../vendors/iconic-fonts/flat-icons/flaticon.css">
+  <link rel="stylesheet" href="../../vendors/iconic-fonts/cryptocoins/cryptocoins.css">
+  <link rel="stylesheet" href="../../vendors/iconic-fonts/cryptocoins/cryptocoins-colors.css">
+  <!-- Bootstrap core CSS -->
+  <link href="../../assets/css/bootstrap.min.css" rel="stylesheet">
+  <!-- jQuery UI -->
+  <link href="../../assets/css/jquery-ui.min.css" rel="stylesheet">
+  <!-- Page Specific Css (Datatables.css) -->
+  <link href="../../assets/css/datatables.min.css" rel="stylesheet">
+  <!-- Page Specific CSS (Slick Slider.css) -->
+  <link href="../../assets/css/slick.css" rel="stylesheet">
+  <!-- Medboard styles -->
+  <link href="../../assets/css/style.css" rel="stylesheet">
 
-    <!-- Main content -->
-    <div class="content">
-       <body class="ms-body ms-aside-left-open ms-primary-theme ms-has-quickbar">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="../../favicon.ico">
+</head>
+
+<body class="ms-body ms-aside-left-open ms-primary-theme ms-has-quickbar">
   <!-- Setting Panel -->
   <div class="ms-toggler ms-settings-toggle ms-d-block-lg">
     <i class="flaticon-gear"></i>
@@ -86,8 +78,8 @@ use yii\bootstrap4\Breadcrumbs;
   <aside id="ms-side-nav" class="side-nav fixed ms-aside-scrollable ms-aside-left">
     <!-- Logo -->
     <div class="logo-sn ms-d-block-lg">
-      <a class="pl-0 ml-0 text-center" href="index.html"> <img src="assets/img/medboard-logo-216x62.png" alt="logo"> </a>
-      <a href="#" class="text-center ms-logo-img-link"> <img src="assets/img/dashboard/doctor-3.jpg" alt="logo"></a>
+      <a class="pl-0 ml-0 text-center" href="../../index.html"> <img src="../../assets/img/medboard-logo-216x62.png" alt="logo"> </a>
+      <a href="#" class="text-center ms-logo-img-link"> <img src="../../assets/img/dashboard/doctor-3.jpg" alt="logo"></a>
       <h5 class="text-center text-white mt-2">Dr.Samuel</h5>
       <h6 class="text-center text-white mb-3">Admin</h6>
     </div>
@@ -99,7 +91,7 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">dashboard</i>Dashboard </span>
         </a>
         <ul id="dashboard" class="collapse" aria-labelledby="dashboard" data-parent="#side-nav-accordion">
-          <li> <a href="index.html">Medboard</a> </li>
+          <li> <a href="../../index.html">Medboard</a> </li>
         </ul>
       </li>
       <!-- /Dashboard -->
@@ -109,8 +101,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-stethoscope"></i>Doctor</span>
         </a>
         <ul id="doctor" class="collapse" aria-labelledby="doctor" data-parent="#side-nav-accordion">
-          <li> <a href="pages/doctor/add-doctor.html">Add Doctor</a> </li>
-          <li> <a href="pages/doctor/doctor-list.html">Doctor List</a> </li>
+          <li> <a href="../doctor/add-doctor.html">Add Doctor</a> </li>
+          <li> <a href="../doctor/doctor-list.html">Doctor List</a> </li>
         </ul>
       </li>
       <!-- Doctor -->
@@ -120,8 +112,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-user"></i>Patient</span>
         </a>
         <ul id="patient" class="collapse" aria-labelledby="patient" data-parent="#side-nav-accordion">
-          <li> <a href="pages/patient/add-patient.html">Add Patient</a> </li>
-          <li> <a href="pages/patient/patient-list.html">Patient List</a> </li>
+          <li> <a href="../patient/add-patient.html">Add Patient</a> </li>
+          <li> <a href="../patient/patient-list.html">Patient List</a> </li>
         </ul>
       </li>
       <!-- /Patient -->
@@ -131,8 +123,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-sitemap"></i>Department</span>
         </a>
         <ul id="department" class="collapse" aria-labelledby="department" data-parent="#side-nav-accordion">
-          <li> <a href="pages/department/add-department.html">Add Department</a> </li>
-          <li> <a href="pages/department/department-list.html">Department List</a> </li>
+          <li> <a href="add-department.html">Add Department</a> </li>
+          <li> <a href="department-list.html">Department List</a> </li>
         </ul>
       </li>
       <!-- /Department -->
@@ -142,8 +134,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-list-alt"></i>Doctor Schedule</span>
         </a>
         <ul id="schedule" class="collapse" aria-labelledby="schedule" data-parent="#side-nav-accordion">
-          <li> <a href="pages/doctor-schedule/add-schedule.html">Add Schedule</a> </li>
-          <li> <a href="pages/doctor-schedule/schedule-list.html">Schedule List</a> </li>
+          <li> <a href="../doctor-schedule/add-schedule.html">Add Schedule</a> </li>
+          <li> <a href="../doctor-schedule/schedule-list.html">Schedule List</a> </li>
         </ul>
       </li>
       <!-- /Schedule -->
@@ -153,8 +145,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="far fa-check-square"></i>Appointment</span>
         </a>
         <ul id="appointment" class="collapse" aria-labelledby="appointment" data-parent="#side-nav-accordion">
-          <li> <a href="pages/appointment/add-appointment.html">Add Appointment</a> </li>
-          <li> <a href="pages/appointment/appointment-list.html">Appointment List</a> </li>
+          <li> <a href="../appointment/add-appointment.html">Add Appointment</a> </li>
+          <li> <a href="../appointment/appointment-list.html">Appointment List</a> </li>
         </ul>
       </li>
       <!-- /Appointment -->
@@ -164,9 +156,9 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-credit-card"></i>Payment</span>
         </a>
         <ul id="payment" class="collapse" aria-labelledby="payment" data-parent="#side-nav-accordion">
-          <li> <a href="pages/payment/add-payment.html">Add Payment</a> </li>
-          <li> <a href="pages/payment/payment-list.html">Payment List</a> </li>
-          <li> <a href="pages/payment/payment-invoice.html">Payment Invoice</a> </li>
+          <li> <a href="../payment/add-payment.html">Add Payment</a> </li>
+          <li> <a href="../payment/payment-list.html">Payment List</a> </li>
+          <li> <a href="../payment/payment-invoice.html">Payment Invoice</a> </li>
         </ul>
       </li>
       <!-- /Payment -->
@@ -176,9 +168,9 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-file-alt"></i>Report</span>
         </a>
         <ul id="report" class="collapse" aria-labelledby="report" data-parent="#side-nav-accordion">
-          <li> <a href="pages/report/patient-report.html">Patient Wise Report</a> </li>
-          <li> <a href="pages/report/doctor-report.html">Doctor Wise Report</a> </li>
-          <li> <a href="pages/report/total-report.html">Total Report</a> </li>
+          <li> <a href="../report/patient-report.html">Patient Wise Report</a> </li>
+          <li> <a href="../report/doctor-report.html">Doctor Wise Report</a> </li>
+          <li> <a href="../report/total-report.html">Total Report</a> </li>
         </ul>
       </li>
       <!-- /Report -->
@@ -188,14 +180,14 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="far fa-user-circle"></i>Human Resource</span>
         </a>
         <ul id="human-resource" class="collapse" aria-labelledby="human-resource" data-parent="#side-nav-accordion">
-          <li> <a href="pages/human-resource/add-employee.html">Add Employee</a> </li>
-          <li> <a href="pages/human-resource/employee-list.html">Employee List</a> </li>
-          <li> <a href="pages/human-resource/add-nurse.html">Add Nurse</a> </li>
-          <li> <a href="pages/human-resource/nurse-list.html">Nurse List</a> </li>
-          <li> <a href="pages/human-resource/add-pharmacist.html">Add Pharmacist</a> </li>
-          <li> <a href="pages/human-resource/pharmacist-list.html">Pharmacist List</a> </li>
-          <li> <a href="pages/human-resource/add-representative.html">Add Representative</a> </li>
-          <li> <a href="pages/human-resource/representative-list.html">Representative List</a> </li>
+          <li> <a href="../human-resource/add-employee.html">Add Employee</a> </li>
+          <li> <a href="../human-resource/employee-list.html">Employee List</a> </li>
+          <li> <a href="../human-resource/add-nurse.html">Add Nurse</a> </li>
+          <li> <a href="../human-resource/nurse-list.html">Nurse List</a> </li>
+          <li> <a href="../human-resource/add-pharmacist.html">Add Pharmacist</a> </li>
+          <li> <a href="../human-resource/pharmacist-list.html">Pharmacist List</a> </li>
+          <li> <a href="../human-resource/add-representative.html">Add Representative</a> </li>
+          <li> <a href="../human-resource/representative-list.html">Representative List</a> </li>
         </ul>
       </li>
       <!-- /Human Resource -->
@@ -205,8 +197,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="fas fa-bed"></i>Bed Manager</span>
         </a>
         <ul id="bed" class="collapse" aria-labelledby="bed" data-parent="#side-nav-accordion">
-          <li> <a href="pages/bed-manager/add-bed.html">Add Bed</a> </li>
-          <li> <a href="pages/bed-manager/bed-list.html">Bed List</a> </li>
+          <li> <a href="../bed-manager/add-bed.html">Add Bed</a> </li>
+          <li> <a href="../bed-manager/bed-list.html">Bed List</a> </li>
         </ul>
       </li>
       <!-- /Bed-->
@@ -216,13 +208,13 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="far fa-file-alt"></i>Notice</span>
         </a>
         <ul id="notice" class="collapse" aria-labelledby="notice" data-parent="#side-nav-accordion">
-          <li> <a href="pages/notice/add-notice.html">Add Notice</a> </li>
-          <li> <a href="pages/notice/notice-list.html">Notice List</a> </li>
+          <li> <a href="../notice/add-notice.html">Add Notice</a> </li>
+          <li> <a href="../notice/notice-list.html">Notice List</a> </li>
         </ul>
       </li>
       <!-- /Notice -->
       <li class="menu-item">
-        <a href="pages/widgets.html">
+        <a href="../widgets.html">
           <span><i class="material-icons fs-16">widgets</i>Widgets</span>
         </a>
       </li>
@@ -232,17 +224,17 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">filter_list</i>Basic UI Elements</span>
         </a>
         <ul id="basic-elements" class="collapse" aria-labelledby="basic-elements" data-parent="#side-nav-accordion">
-          <li> <a href="pages/ui-basic/accordions.html">Accordions</a> </li>
-          <li> <a href="pages/ui-basic/alerts.html">Alerts</a> </li>
-          <li> <a href="pages/ui-basic/buttons.html">Buttons</a> </li>
-          <li> <a href="pages/ui-basic/breadcrumbs.html">Breadcrumbs</a> </li>
-          <li> <a href="pages/ui-basic/badges.html">Badges</a> </li>
-          <li> <a href="pages/ui-basic/cards.html">Cards</a> </li>
-          <li> <a href="pages/ui-basic/progress-bars.html">Progress Bars</a> </li>
-          <li> <a href="pages/ui-basic/preloaders.html">Pre-loaders</a> </li>
-          <li> <a href="pages/ui-basic/pagination.html">Pagination</a> </li>
-          <li> <a href="pages/ui-basic/tabs.html">Tabs</a> </li>
-          <li> <a href="pages/ui-basic/typography.html">Typography</a> </li>
+          <li> <a href="../ui-basic/accordions.html">Accordions</a> </li>
+          <li> <a href="../ui-basic/alerts.html">Alerts</a> </li>
+          <li> <a href="../ui-basic/buttons.html">Buttons</a> </li>
+          <li> <a href="../ui-basic/breadcrumbs.html">Breadcrumbs</a> </li>
+          <li> <a href="../ui-basic/badges.html">Badges</a> </li>
+          <li> <a href="../ui-basic/cards.html">Cards</a> </li>
+          <li> <a href="../ui-basic/progress-bars.html">Progress Bars</a> </li>
+          <li> <a href="../ui-basic/preloaders.html">Pre-loaders</a> </li>
+          <li> <a href="../ui-basic/pagination.html">Pagination</a> </li>
+          <li> <a href="../ui-basic/tabs.html">Tabs</a> </li>
+          <li> <a href="../ui-basic/typography.html">Typography</a> </li>
         </ul>
       </li>
       <!-- /Basic UI Elements -->
@@ -252,18 +244,18 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">code</i>Advanced UI Elements</span>
         </a>
         <ul id="advanced-elements" class="collapse" aria-labelledby="advanced-elements" data-parent="#side-nav-accordion">
-          <li> <a href="pages/ui-advanced/draggables.html">Draggables</a> </li>
-          <li> <a href="pages/ui-advanced/sliders.html">Sliders</a> </li>
-          <li> <a href="pages/ui-advanced/modals.html">Modals</a> </li>
-          <li> <a href="pages/ui-advanced/rating.html">Rating</a> </li>
-          <li> <a href="pages/ui-advanced/tour.html">Tour</a> </li>
-          <li> <a href="pages/ui-advanced/cropper.html">Cropper</a> </li>
-          <li> <a href="pages/ui-advanced/range-slider.html">Range Slider</a> </li>
+          <li> <a href="../ui-advanced/draggables.html">Draggables</a> </li>
+          <li> <a href="../ui-advanced/sliders.html">Sliders</a> </li>
+          <li> <a href="../ui-advanced/modals.html">Modals</a> </li>
+          <li> <a href="../ui-advanced/rating.html">Rating</a> </li>
+          <li> <a href="../ui-advanced/tour.html">Tour</a> </li>
+          <li> <a href="../ui-advanced/cropper.html">Cropper</a> </li>
+          <li> <a href="../ui-advanced/range-slider.html">Range Slider</a> </li>
         </ul>
       </li>
       <!-- /Advanced UI Elements -->
       <li class="menu-item">
-        <a href="pages/animation.html">
+        <a href="../animation.html">
           <span><i class="material-icons fs-16">format_paint</i>Animations</span>
         </a>
       </li>
@@ -273,10 +265,10 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">input</i>Form Elements</span>
         </a>
         <ul id="form-elements" class="collapse" aria-labelledby="form-elements" data-parent="#side-nav-accordion">
-          <li> <a href="pages/form/form-elements.html">Form Elements</a> </li>
-          <li> <a href="pages/form/form-layout.html">Form Layouts</a> </li>
-          <li> <a href="pages/form/form-validation.html">Form Validation</a> </li>
-          <li> <a href="pages/form/form-wizard.html">Form Wizard</a> </li>
+          <li> <a href="../form/form-elements.html">Form Elements</a> </li>
+          <li> <a href="../form/form-layout.html">Form Layouts</a> </li>
+          <li> <a href="../form/form-validation.html">Form Validation</a> </li>
+          <li> <a href="../form/form-wizard.html">Form Wizard</a> </li>
         </ul>
       </li>
       <!-- /Form Elements -->
@@ -286,8 +278,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">equalizer</i>Charts</span>
         </a>
         <ul id="charts" class="collapse" aria-labelledby="charts" data-parent="#side-nav-accordion">
-          <li> <a href="pages/charts/chartjs.html">Chart JS</a> </li>
-          <li> <a href="pages/charts/morris-charts.html">Morris Chart</a> </li>
+          <li> <a href="../charts/chartjs.html">Chart JS</a> </li>
+          <li> <a href="../charts/morris-charts.html">Morris Chart</a> </li>
         </ul>
       </li>
       <!-- /Charts -->
@@ -297,8 +289,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">tune</i>Tables</span>
         </a>
         <ul id="tables" class="collapse" aria-labelledby="tables" data-parent="#side-nav-accordion">
-          <li> <a href="pages/tables/basic-tables.html">Basic Tables</a> </li>
-          <li> <a href="pages/tables/data-tables.html">Data tables</a> </li>
+          <li> <a href="../tables/basic-tables.html">Basic Tables</a> </li>
+          <li> <a href="../tables/data-tables.html">Data tables</a> </li>
         </ul>
       </li>
       <!-- /Tables -->
@@ -308,8 +300,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">message</i>Popups</span>
         </a>
         <ul id="popups" class="collapse" aria-labelledby="popups" data-parent="#side-nav-accordion">
-          <li> <a href="pages/popups/sweet-alerts.html">Sweet Alerts</a> </li>
-          <li> <a href="pages/popups/toast.html">Toast</a> </li>
+          <li> <a href="../popups/sweet-alerts.html">Sweet Alerts</a> </li>
+          <li> <a href="../popups/toast.html">Toast</a> </li>
         </ul>
       </li>
       <!-- /Popups -->
@@ -319,9 +311,9 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">border_color</i>Icons</span>
         </a>
         <ul id="icons" class="collapse" aria-labelledby="icons" data-parent="#side-nav-accordion">
-          <li> <a href="pages/icons/fontawesome.html">Fontawesome</a> </li>
-          <li> <a href="pages/icons/flaticons.html">Flaticons</a> </li>
-          <li> <a href="pages/icons/materialize.html">Materialize</a> </li>
+          <li> <a href="../icons/fontawesome.html">Fontawesome</a> </li>
+          <li> <a href="../icons/flaticons.html">Flaticons</a> </li>
+          <li> <a href="../icons/materialize.html">Materialize</a> </li>
         </ul>
       </li>
       <!-- /Icons -->
@@ -331,8 +323,8 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">map</i>Maps</span>
         </a>
         <ul id="maps" class="collapse" aria-labelledby="maps" data-parent="#side-nav-accordion">
-          <li> <a href="pages/maps/google-maps.html">Google Maps</a> </li>
-          <li> <a href="pages/maps/vector-maps.html">Vector Maps</a> </li>
+          <li> <a href="../maps/google-maps.html">Google Maps</a> </li>
+          <li> <a href="../maps/vector-maps.html">Vector Maps</a> </li>
         </ul>
       </li>
       <!-- /Maps -->
@@ -345,19 +337,19 @@ use yii\bootstrap4\Breadcrumbs;
           <li class="menu-item">
             <a href="#" class="has-chevron" data-toggle="collapse" data-target="#authentication" aria-expanded="false" aria-controls="authentication">Authentication</a>
             <ul id="authentication" class="collapse" aria-labelledby="authentication" data-parent="#pages">
-              <li> <a href="pages/prebuilt-pages/default-login.html">Default Login</a> </li>
-              <li> <a href="pages/prebuilt-pages/modal-login.html">Modal Login</a> </li>
-              <li> <a href="pages/prebuilt-pages/default-register.html">Default Registration</a> </li>
-              <li> <a href="pages/prebuilt-pages/modal-register.html">Modal Registration</a> </li>
-              <li> <a href="pages/prebuilt-pages/lock-screen.html">Lock Screen</a> </li>
+              <li> <a href="../prebuilt-pages/default-login.html">Default Login</a> </li>
+              <li> <a href="../prebuilt-pages/modal-login.html">Modal Login</a> </li>
+              <li> <a href="../prebuilt-pages/default-register.html">Default Registration</a> </li>
+              <li> <a href="../prebuilt-pages/modal-register.html">Modal Registration</a> </li>
+              <li> <a href="../prebuilt-pages/lock-screen.html">Lock Screen</a> </li>
             </ul>
           </li>
-          <li> <a href="pages/prebuilt-pages/coming-soon.html">Coming Soon</a> </li>
-          <li> <a href="pages/prebuilt-pages/error.html">Error Page</a> </li>
-          <li class="menu-item"> <a href="pages/prebuilt-pages/faq.html"> FAQ </a> </li>
-          <li class="menu-item"> <a href="pages/prebuilt-pages/portfolio.html"> Portfolio </a> </li>
-          <li class="menu-item"> <a href="pages/prebuilt-pages/user-profile.html"> User Profile </a> </li>
-          <li class="menu-item"> <a href="pages/prebuilt-pages/invoice.html"> Invoice </a> </li>
+          <li> <a href="../prebuilt-pages/coming-soon.html">Coming Soon</a> </li>
+          <li> <a href="../prebuilt-pages/error.html">Error Page</a> </li>
+          <li class="menu-item"> <a href="../prebuilt-pages/faq.html"> FAQ </a> </li>
+          <li class="menu-item"> <a href="../prebuilt-pages/portfolio.html"> Portfolio </a> </li>
+          <li class="menu-item"> <a href="../prebuilt-pages/user-profile.html"> User Profile </a> </li>
+          <li class="menu-item"> <a href="../prebuilt-pages/invoice.html"> Invoice </a> </li>
         </ul>
       </li>
       <!-- /Pages -->
@@ -367,10 +359,10 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">dashboard</i>Bonus Pages </span>
         </a>
         <ul id="bonus" class="collapse" data-parent="#side-nav-accordion">
-          <li> <a href="pages/dashboard/web-analytics.html"> Web Analytics </a> </li>
-          <li> <a href="pages/dashboard/social-media.html">Social Media Management</a> </li>
-          <li> <a href="pages/dashboard/project-management.html">Department Management</a> </li>
-          <li> <a href="pages/dashboard/client-management.html">Patient Management</a> </li>
+          <li> <a href="../dashboard/web-analytics.html"> Web Analytics </a> </li>
+          <li> <a href="../dashboard/social-media.html">Social Media Management</a> </li>
+          <li> <a href="../dashboard/project-management.html">Department Management</a> </li>
+          <li> <a href="../dashboard/client-management.html">Patient Management</a> </li>
         </ul>
       </li>
       <!-- /Bonus Pages -->
@@ -380,9 +372,9 @@ use yii\bootstrap4\Breadcrumbs;
           <span><i class="material-icons fs-16">phone_iphone</i>Apps</span>
         </a>
         <ul id="apps" class="collapse" aria-labelledby="apps" data-parent="#side-nav-accordion">
-          <li> <a href="pages/apps/chat.html">Chat</a> </li>
-          <li> <a href="pages/apps/email.html">Email</a> </li>
-          <li> <a href="pages/apps/to-do-list.html">To-do List</a> </li>
+          <li> <a href="../apps/chat.html">Chat</a> </li>
+          <li> <a href="../apps/email.html">Email</a> </li>
+          <li> <a href="../apps/to-do-list.html">To-do List</a> </li>
         </ul>
       </li>
       <!-- /Apps -->
@@ -533,7 +525,7 @@ use yii\bootstrap4\Breadcrumbs;
         <span class="ms-toggler-bar bg-white"></span>
       </div>
       <div class="logo-sn logo-sm ms-d-block-sm">
-        <a class="pl-0 ml-0 text-center navbar-brand mr-0" href="index.html"><img src="assets/img/medboard-logo-84x41.png" alt="logo"> </a>
+        <a class="pl-0 ml-0 text-center navbar-brand mr-0" href="../../index.html"><img src="../../assets/img/medboard-logo-84x41.png" alt="logo"> </a>
       </div>
       <ul class="ms-nav-list ms-inline mb-0" id="ms-nav-options">
 
@@ -590,23 +582,23 @@ use yii\bootstrap4\Breadcrumbs;
           </ul>
         </li>
         <li class="ms-nav-item ms-nav-user dropdown">
-          <a href="#" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <img class="ms-user-img ms-img-round float-right" src="assets/img/dashboard/doctor-3.jpg" alt="people"> </a>
+          <a href="#" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <img class="ms-user-img ms-img-round float-right" src="../../assets/img/dashboard/doctor-3.jpg" alt="people"> </a>
           <ul class="dropdown-menu dropdown-menu-right user-dropdown" aria-labelledby="userDropdown">
             <li class="dropdown-menu-header">
               <h6 class="dropdown-header ms-inline m-0"><span class="text-disabled">Welcome, Dr Samuel Deo</span></h6>
             </li>
             <li class="dropdown-divider"></li>
             <li class="ms-dropdown-list">
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/user-profile.html"> <span><i class="flaticon-user mr-2"></i> Profile</span> </a>
-              <a class="media fs-14 p-2" href="pages/apps/email.html"> <span><i class="flaticon-mail mr-2"></i> Inbox</span> <span class="badge badge-pill badge-info">3</span> </a>
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/user-profile.html"> <span><i class="flaticon-gear mr-2"></i> Account Settings</span> </a>
+              <a class="media fs-14 p-2" href="../prebuilt-pages/user-profile.html"> <span><i class="flaticon-user mr-2"></i> Profile</span> </a>
+              <a class="media fs-14 p-2" href="../apps/email.html"> <span><i class="flaticon-mail mr-2"></i> Inbox</span> <span class="badge badge-pill badge-info">3</span> </a>
+              <a class="media fs-14 p-2" href="../prebuilt-pages/user-profile.html"> <span><i class="flaticon-gear mr-2"></i> Account Settings</span> </a>
             </li>
             <li class="dropdown-divider"></li>
             <li class="dropdown-menu-footer">
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/lock-screen.html"> <span><i class="flaticon-security mr-2"></i> Lock</span> </a>
+              <a class="media fs-14 p-2" href="../prebuilt-pages/lock-screen.html"> <span><i class="flaticon-security mr-2"></i> Lock</span> </a>
             </li>
             <li class="dropdown-menu-footer">
-              <a class="media fs-14 p-2" href="pages/prebuilt-pages/default-login.html"> <span><i class="flaticon-shut-down mr-2"></i> Logout</span> </a>
+              <a class="media fs-14 p-2" href="../prebuilt-pages/default-login.html"> <span><i class="flaticon-shut-down mr-2"></i> Logout</span> </a>
             </li>
           </ul>
         </li>
@@ -620,650 +612,51 @@ use yii\bootstrap4\Breadcrumbs;
     <!-- Body Content Wrapper -->
     <div class="ms-content-wrapper">
       <div class="row">
-        <!-- Notifications Widgets -->
-
-        <div class="col-xl-3 col-md-6 col-sm-6">
-          <a href="#">
-            <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
-              <div class="ms-card-body media">
-                <div class="media-body">
-                  <h6>Doctors</h6>
-                  <p class="ms-card-change"> 4567</p>
+        <div class="col-md-12">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb pl-0">
+              <li class="breadcrumb-item"><a href="#"><i class="material-icons">home</i> Home</a></li>
+              <li class="breadcrumb-item"><a href="#">Department</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Department List</li>
+            </ol>
+          </nav>
+        </div>
+          <div class="col-xl-6 col-lg-12 col-md-12">
+            <div class="ms-panel">
+              <div class="ms-panel-header">
+                <h6>Total Departments</h6>
+              </div>
+              <div class="ms-panel-body">
+                <canvas id="pie-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-6 col-lg-12 col-md-12">
+            <div class="ms-panel">
+              <div class="ms-panel-header">
+                <h6>Employes</h6>
+              </div>
+              <div class="ms-panel-body">
+                <canvas id="bar-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-12">
+            <div class="ms-panel">
+              <div class="ms-panel-header  ms-panel-custome">
+                <h6>Department List</h6>
+                <a href="add-department.html" class="ms-text-primary">Add Department</a>
+              </div>
+              <div class="ms-panel-body">
+                <div class="table-responsive">
+                  <table id="data-table5" class="table w-100 thead-primary"></table>
                 </div>
               </div>
-              <i class="fas fa-stethoscope ms-icon-mr"></i>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-md-6 col-sm-6">
-          <a href="#">
-            <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
-              <div class="ms-card-body media">
-                <div class="media-body">
-                  <h6>Nurses</h6>
-                  <p class="ms-card-change"> 4567</p>
-                </div>
-              </div>
-              <i class="fas fa-user-plus ms-icon-mr"></i>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-md-6 col-sm-6">
-          <a href="#">
-            <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
-              <div class="ms-card-body media">
-                <div class="media-body">
-                  <h6 class="bold">Patients</h6>
-                  <p class="ms-card-change"> 4567</p>
-                </div>
-              </div>
-              <i class="fa fa-wheelchair ms-icon-mr"></i>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-md-6 col-sm-6">
-          <a href="#">
-            <div class="ms-card card-gradient-custom ms-widget ms-infographics-widget ms-p-relative">
-              <div class="ms-card-body media">
-                <div class="media-body">
-                  <h6 class="bold">Pharmacists</h6>
-                  <p class="ms-card-change"> 4567</p>
-                </div>
-              </div>
-              <i class="fas fa-briefcase-medical ms-icon-mr"></i>
-            </div>
-          </a>
-        </div>
-
-
-        <div class="col-xl-4 col-lg-6 col-md-12">
-          <div class="ms-card ms-widget has-graph-full-width ms-infographics-widget">
-            <div class="ms-card-body media">
-              <div class="media-body">
-                <h6 class="bold">Appointments</h6>
-                <h3><strong>3,973</strong></h3>
-              </div>
-            </div>
-            <canvas id="line-chart-2"></canvas>
-          </div>
-
-          <div class="ms-card ms-widget has-graph-full-width ms-infographics-widget">
-            <div class="ms-card-body media">
-              <div class="media-body">
-                <h6>New Patients</h6>
-                <h3><strong>593</strong></h3>
-              </div>
-            </div>
-            <canvas id="line-chart-3"></canvas>
-          </div>
-
-          <div class="ms-card ms-widget has-graph-full-width ms-infographics-widget">
-            <div class="ms-card-body media">
-              <div class="media-body">
-                <h6 class="bold">Hospital Earning</h6>
-                <h3><strong>3,973</strong></h3>
-              </div>
-            </div>
-            <canvas id="line-chart-4"></canvas>
-          </div>
-
-        </div>
-
-        <div class="col-xl-4 col-lg-6 col-md-12">
-          <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-body calendar-wedgit">
-              <div id="calendar"></div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="col-xl-4 col-md-12">
-
-          <div class="ms-card ms-widget ms-profile-widget ms-card-fh br-0">
-            <div class="ms-card-img">
-              <img src="assets/img/portfolio/gallery-4-760x260.jpg" alt="card_img">
-            </div>
-            <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img" alt="people">
-            <div class="ms-card-body">
-              <h2>Anny Farisha</h2>
-              <span>Doctor</span>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In in arcu turpis. Nunc</p>
-              <button type="button" class="btn btn-primary btn-sm" name="button"><i class="material-icons">person_add</i> Assign</button>
-              <ul class="ms-profile-stats">
-                <li>
-                  <h3 class="ms-count">5790</h3>
-                  <span>Operations</span>
-                </li>
-                <li>
-                  <h3 class="ms-count">4.8</h3>
-                  <span>Medical Rating</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="col-xl-6 col-lg-12">
-          <div class="ms-panel ms-device-sessions ms-quick-mic">
-            <div class="ms-panel-header">
-              <h6>Hospital Birth & Death Analytics</h6>
-            </div>
-            <div class="ms-panel-body">
-              <div class="row">
-                <div class="col-xl-4 col-md-4 col-sm-4 col-6 ms-device">
-                  <i class="material-icons">airline_seat_flat</i>
-                  <h4>Birth</h4>
-                  <p class="ms-text-primary">45.07%</p>
-                  <span class="ms-text-primary">201,434</span>
-                </div>
-                <div class="col-xl-4 col-md-4 col-sm-4 col-6 ms-device">
-                  <i class="material-icons">airline_seat_individual_suite</i>
-                  <h4>Death</h4>
-                  <p class="ms-text-danger">29.05%</p>
-                  <span class="ms-text-danger">134,693</span>
-                </div>
-                <div class="col-xl-4 col-md-4 col-sm-4 col-6 ms-device">
-                  <i class="material-icons">accessible</i>
-                  <h4>Accidents</h4>
-                  <p class="ms-text-warning">18.43%</p>
-                  <span class="ms-text-warning">81,525</span>
-                </div>
-              </div>
-              <div class="progress">
-                <div class="progress-bar bg-primary" role="progressbar" style="width: 45.07%" aria-valuenow="45.07" aria-valuemin="0" aria-valuemax="100"></div>
-                <div class="progress-bar bg-danger" role="progressbar" style="width: 29.05%" aria-valuenow="29.05" aria-valuemin="0" aria-valuemax="100"></div>
-                <div class="progress-bar bg-warning" role="progressbar" style="width: 25.48%" aria-valuenow="25.48" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-xl-6 col-lg-12">
-          <div class="ms-panel">
-            <div class="ms-panel-header d-flex justify-content-between">
-              <h6>Hospital Staff</h6>
-              <div class="ms-slider-arrow">
-                <a href="#" class="prev-item">
-                  <i class="far fa-caret-square-left"></i>
-                </a>
-                <a href="#" class="next-item">
-                  <i class="far fa-caret-square-right"></i>
-                </a>
-              </div>
-            </div>
-            <div class="ms-panel-body p-0 ms-medical-overview-slider">
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Anny</h5>
-                    <span>Doctor</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-2.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Jude</h5>
-                    <span>Surgeon</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-3.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Jordan</h5>
-                    <span>Doctor</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-4.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Micheal</h5>
-                    <span>Nurse</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-2.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Rouge</h5>
-                    <span>Doctor</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Lilly</h5>
-                    <span>Surgeon</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-3.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Sameul</h5>
-                    <span>Surgeon</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-4.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Ricky</h5>
-                    <span>Doctor</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Venus</h5>
-                    <span>Doctor</span>
-                  </div>
-                </a>
-              </div>
-              <div class="ms-crypto-overview">
-                <a href="#" class="ms-profile">
-                  <img src="assets/img/dashboard/doctor-3.jpg" class="ms-img-large ms-img-round ms-user-img mx-auto d-block" alt="people">
-                  <div class="ms-card-body">
-                    <h5>Johan</h5>
-                    <span>Nurse</span>
-                  </div>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-xl-6 col-md-12">
-          <div class="ms-panel">
-            <div class="ms-panel-header">
-              <h6>Patient Total</h6>
-            </div>
-            <div class="ms-panel-body">
-              <canvas id="line-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-6 col-md-12">
-          <div class="ms-panel">
-            <div class="ms-panel-header">
-              <h6>Patient In</h6>
-            </div>
-            <div class="ms-panel-body">
-              <canvas id="bar-chart-grouped"></canvas>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-8 col-md-12">
-          <div class="ms-panel">
-            <div class="ms-panel-header">
-              <h6>Upcoming Appointments</h6>
-            </div>
-            <div class="ms-panel-body">
-              <div class="table-responsive">
-                <table class="table table-hover thead-primary">
-                  <thead>
-                    <tr>
-                      <th scope="col">Patient</th>
-                      <th scope="col">Doctor</th>
-                      <th scope="col">Date</th>
-                      <th scope="col">Timing</th>
-                      <th scope="col">Contact</th>
-                      <th scope="col">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-1.jpg" alt="people"> Bernardo Galaviz </td>
-                      <td>Dr. Cristina Groves</td>
-                      <td>01 Dec 2022</td>
-                      <td>5:00 PM</td>
-                      <td>+01-789-654-123</td>
-                      <td><label class="ms-switch">
-                          <input type="checkbox" checked="">
-                          <span class="ms-switch-slider ms-switch-success round"></span>
-                        </label>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-5.jpg" alt="people"> Jenni </td>
-                      <td>Dr. Richard Miles</td>
-                      <td>01 Dec 2022</td>
-                      <td>8:00 AM</td>
-                      <td>+10-654-654-991</td>
-                      <td><label class="ms-switch">
-                          <input type="checkbox" checked="">
-                          <span class="ms-switch-slider ms-switch-success round"></span>
-                        </label>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-6.jpg" alt="people"> John Doe </td>
-                      <td>Dr. Andrew </td>
-                      <td>01 Dec 2022</td>
-                      <td>10:00 AM</td>
-                      <td>+10-709-254-445</td>
-                      <td><label class="ms-switch">
-                          <input type="checkbox">
-                          <span class="ms-switch-slider ms-switch-success round"></span>
-                        </label>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-8.jpg" alt="people"> Alesdro Guitto </td>
-                      <td>Dr. Robert </td>
-                      <td>01 Dec 2022</td>
-                      <td>2:00 PM</td>
-                      <td>+10-102-225-333</td>
-                      <td><label class="ms-switch">
-                          <input type="checkbox" checked="">
-                          <span class="ms-switch-slider ms-switch-success round"></span>
-                        </label>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-1.jpg" alt="people"> Richard </td>
-                      <td>Dr. Adwerd</td>
-                      <td>07 Dec 2022</td>
-                      <td>5:00 PM</td>
-                      <td>+01-222-111-356</td>
-                      <td><label class="ms-switch">
-                          <input type="checkbox">
-                          <span class="ms-switch-slider ms-switch-success round"></span>
-                        </label>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-4 col-md-12">
-          <div class="ms-panel ms-panel-fh ms-widget">
-            <div class="ms-panel-header ms-panel-custome">
-              <h6>Doctors List</h6>
-            </div>
-            <div class="ms-panel-body p-0">
-              <ul class="ms-followers ms-list ms-scrollable">
-                <li class="ms-list-item media">
-                  <img src="assets/img/dashboard/doctor-1.jpg" class="ms-img-small ms-img-round" alt="people">
-                  <div class="media-body mt-1">
-                    <h4>Micheal</h4>
-                    <span class="fs-12">MBBS, MD</span>
-                  </div>
-                  <button type="button" class="ms-btn-icon btn-success" name="button"><i class="material-icons">check</i> </button>
-                </li>
-                <li class="ms-list-item media">
-                  <img src="assets/img/dashboard/doctor-2.jpg" class="ms-img-small ms-img-round" alt="people">
-                  <div class="media-body mt-1">
-                    <h4>Jennifer</h4>
-                    <span class="fs-12">MD</span>
-                  </div>
-                  <button type="button" class="ms-btn-icon btn-info" name="button"><i class="material-icons">person_add</i> </button>
-                </li>
-                <li class="ms-list-item media">
-                  <img src="assets/img/dashboard/doctor-3.jpg" class="ms-img-small ms-img-round" alt="people">
-                  <div class="media-body mt-1">
-                    <h4>Adwerd </h4>
-                    <span class="fs-12">BMBS</span>
-                  </div>
-                  <button type="button" class="ms-btn-icon btn-info" name="button"><i class="material-icons">person_add</i> </button>
-                </li>
-                <li class="ms-list-item media">
-                  <img src="assets/img/dashboard/doctor-4.jpg" class="ms-img-small ms-img-round" alt="people">
-                  <div class="media-body mt-1">
-                    <h4>John Doe</h4>
-                    <span class="fs-12">MS, MD</span>
-                  </div>
-                  <button type="button" class="ms-btn-icon btn-success" name="button"><i class="material-icons">check</i> </button>
-                </li>
-                <li class="ms-list-item media">
-                  <img src="assets/img/dashboard/doctor-5.jpg" class="ms-img-small ms-img-round" alt="people">
-                  <div class="media-body mt-1">
-                    <h4>Jordan</h4>
-                    <span class="fs-12">MBBS</span>
-                  </div>
-                  <button type="button" class="ms-btn-icon btn-info" name="button"><i class="material-icons">person_add</i> </button>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-6 col-lg-12">
-          <div class="ms-panel ms-panel-fh ms-facebook-engagements">
-            <div class="ms-panel-header">
-              <h6>Doctor Engagements</h6>
-            </div>
-            <div class="ms-panel-body p-0">
-              <div class="ms-facebook-page-selection">
-                <p class="ms-text-dark">Jan 25, 2022 to Feb 02, 2022</p>
-                <p>Jan 18, 2022 to Feb 24, 2022 (Prev)</p>
-
-                <div class="dropdown">
-                  <a href="#" class="has-chevron" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Doctor Name here</a>
-                  <ul class="dropdown-menu">
-                    <li class="ms-dropdown-list">
-                      <a class="media p-2" href="#">
-                        <div class="media-body">
-                          <span>Doctor 1</span>
-                        </div>
-                      </a>
-                      <a class="media p-2" href="#">
-                        <div class="media-body">
-                          <span>Doctor 2</span>
-                        </div>
-                      </a>
-                      <a class="media p-2" href="#">
-                        <div class="media-body">
-                          <span>Doctor 3</span>
-                        </div>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <ul class="ms-list clearfix">
-                <li class="ms-list-item">
-                  <div class="d-flex justify-content-between align-items-end">
-                    <div class="ms-graph-meta">
-                      <h2>Weekday Engagement</h2>
-                      <p class="ms-text-dark">45.07%</p>
-                      <p class="ms-text-success">+28.44%</p>
-                      <p>VS 66.68% (Prev)</p>
-                    </div>
-                    <div class="ms-graph-canvas">
-                      <canvas id="engaged-users"></canvas>
-                    </div>
-                  </div>
-                </li>
-                <li class="ms-list-item">
-                  <div class="d-flex justify-content-between align-items-end">
-                    <div class="ms-graph-meta">
-                      <h2>Weekend Engagement</h2>
-                      <p class="ms-text-dark">45.07%</p>
-                      <p class="ms-text-success">+28.44%</p>
-                      <p>VS 66.68% (Prev)</p>
-                    </div>
-                    <div class="ms-graph-canvas">
-                      <canvas id="page-impressions"></canvas>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-6 col-lg-12">
-          <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
-              <h6>Patient Timeline</h6>
-            </div>
-            <div class="ms-panel-body">
-              <ul class="ms-activity-log">
-                <li>
-                  <div class="ms-btn-icon btn-pill icon btn-info">
-                    <i class="fa fa-wheelchair"></i>
-                  </div>
-                  <h6>Patient Admission</h6>
-                  <span> <i class="material-icons">event</i>1 January, 2022</span>
-                  <p class="fs-14">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque diam non nisi semper, ula in sodales vehicula....</p>
-                </li>
-                <li>
-                  <div class="ms-btn-icon btn-pill icon btn-primary">
-                    <i class="fa fa-user-md"></i>
-                  </div>
-                  <h6>Treatment Starts</h6>
-                  <span> <i class="material-icons">event</i>5 January, 2022</span>
-                  <p class="fs-14">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque diam non nisi semper, ula in sodales vehicula....</p>
-                </li>
-                <li>
-                  <div class="ms-btn-icon btn-pill icon btn-success">
-                    <i class="fa fa-check"></i>
-                  </div>
-                  <h6>Patient Discharge</h6>
-                  <span> <i class="material-icons">event</i>15 March, 2022</span>
-                  <p class="fs-14">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque diam non nisi semper, ula in sodales vehicula....</p>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-8 col-md-12">
-          <div class="ms-panel">
-            <div class="ms-panel-header">
-              <h6>New Patients</h6>
-            </div>
-            <div class="ms-panel-body">
-              <div class="table-responsive">
-                <table class="table table-hover  thead-primary">
-                  <thead>
-                    <tr>
-                      <th scope="col">Patient</th>
-                      <th scope="col">E-mail Id</th>
-                      <th scope="col">Contact</th>
-                      <th scope="col">Disease</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-3.jpg" alt="people"> Richard </td>
-                      <td>Richard288@gmail.com</td>
-                      <td>+1-202-555-0875</td>
-                      <td>Fever</td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-2.jpg" alt="people"> William </td>
-                      <td>William434@gmail.com</td>
-                      <td>+1-202-534-0112</td>
-                      <td>Eye</td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-4.jpg" alt="people"> John Doe </td>
-                      <td>johndeo652@gmail.com</td>
-                      <td>+1-202-182-0132</td>
-                      <td>Typhoid</td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-5.jpg" alt="people"> Martin </td>
-                      <td>Martin876@gmail.com</td>
-                      <td>+1-202-998-2341</td>
-                      <td>Cancer</td>
-                    </tr>
-                    <tr>
-                      <td class="ms-table-f-w"> <img src="assets/img/dashboard/patient-1.jpg" alt="people"> Robert </td>
-                      <td>Robert082@gmail.com</td>
-                      <td>+1-202-455-1431</td>
-                      <td>Diabetes</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        <div class="col-xl-4 col-md-12">
-          <div class="ms-panel ms-panel-fh ms-widget">
-            <div class="ms-panel-header ms-panel-custome">
-              <h6>Latest Reports</h6>
-            </div>
-            <div class="ms-panel-body p-0">
-              <ul class="ms-followers ms-list ms-scrollable">
-                <li class="ms-list-item media">
-
-                  <div class="media-body mt-1">
-                    <h4>Ultrasound-2.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
-                  </div>
-                  <button type="button" class="btn btn-success btn-sm" name="button">Download </button>
-                </li>
-                <li class="ms-list-item media">
-
-                  <div class="media-body mt-1">
-                    <h4>Hypothermia.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
-                  </div>
-                  <button type="button" class="btn btn-danger btn-sm" name="button">On Hold </button>
-                </li>
-                <li class="ms-list-item media">
-
-                  <div class="media-body mt-1">
-                    <h4>Ultrasound.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
-                  </div>
-                  <button type="button" class="btn btn-success btn-sm" name="button">Download </button>
-                </li>
-                <li class="ms-list-item media">
-
-                  <div class="media-body mt-1">
-                    <h4>Heart-ECG.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
-                  </div>
-                  <button type="button" class="btn btn-success btn-sm" name="button">Download</button>
-                </li>
-                <li class="ms-list-item media">
-
-                  <div class="media-body mt-1">
-                    <h4>X-ray.pdf</h4>
-                    <a href="#"><span class="fs-12">View Report</span></a>
-                  </div>
-                  <button type="button" class="btn btn-danger btn-sm" name="button">On Hold </button>
-                </li>
-              </ul>
             </div>
           </div>
         </div>
       </div>
-    </div>
   </main>
-  <!-- MODALS -->
   <!-- Reminder Modal -->
   <div class="modal fade" id="reminder-modal" tabindex="-1" role="dialog" aria-labelledby="reminder-modal">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -1643,35 +1036,29 @@ use yii\bootstrap4\Breadcrumbs;
       </div>
     </div>
   </div>
-
   <!-- SCRIPTS -->
   <!-- Global Required Scripts Start -->
-  <script src="assets/js/jquery-3.3.1.min.js"></script>
-  <script src="assets/js/popper.min.js"></script>
-  <script src="assets/js/bootstrap.min.js"></script>
-  <script src="assets/js/perfect-scrollbar.js"> </script>
-  <script src="assets/js/jquery-ui.min.js"> </script>
-
+  <script src="../../assets/js/jquery-3.3.1.min.js"></script>
+  <script src="../../assets/js/popper.min.js"></script>
+  <script src="../../assets/js/bootstrap.min.js"></script>
+  <script src="../../assets/js/perfect-scrollbar.js"> </script>
+  <script src="../../assets/js/jquery-ui.min.js"> </script>
   <!-- Global Required Scripts End -->
-  <script src="assets/js/d3.v3.min.js"> </script>
-  <script src="assets/js/topojson.v1.min.js"> </script>
-  <script src="assets/js/datamaps.all.min.js"> </script>
-
-
   <!-- Page Specific Scripts Start -->
-  <script src="assets/js/slick.min.js"> </script>
-  <script src="assets/js/moment.js"> </script>
-  <script src="assets/js/jquery.webticker.min.js"> </script>
-  <script src="assets/js/Chart.bundle.min.js"> </script>
-  <script src="assets/js/index-chart.js"> </script>
-
+  <script src="../../assets/js/slick.min.js"> </script>
+  <script src="../../assets/js/moment.js"> </script>
+  <script src="../../assets/js/jquery.webticker.min.js"> </script>
+  <script src="../../assets/js/Chart.bundle.min.js"> </script>
+  <script src="../../assets/js/department.js"> </script>
   <!-- Page Specific Scripts Finish -->
-  <script src="assets/js/calendar.js"></script>
-  <!-- medboard core JavaScript -->
-  <script src="assets/js/framework.js"></script>
+  <!-- Page Specific Scripts Start -->
+  <script src="../../assets/js/datatables.min.js"> </script>
+  <script src="../../assets/js/data-tables.js"> </script>
+  <!-- Medboard core JavaScript -->
+
+  <script src="../../assets/js/framework.js"></script>
   <!-- Settings -->
-  <script src="assets/js/settings.js"></script>
+  <script src="../../assets/js/settings.js"></script>
 </body>
-    </div>
-    <!-- /.content -->
-</div>
+
+</html>

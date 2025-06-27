@@ -2,11 +2,13 @@
 
 /* @var $this \yii\web\View */
 /* @var $content string */
+use app\assets\MedboardAsset; // Importa tu nuevo Asset Bundle
 
 use yii\helpers\Html;
 
-\hail812\adminlte3\assets\FontAwesomeAsset::register($this);
-\hail812\adminlte3\assets\AdminLteAsset::register($this);
+MedboardAsset::register($this); // Registra el Asset Bundle de MedBoard
+// También asegúrate de que AppAsset se registre si lo necesitas para cosas generales de tu app
+// app\assets\AppAsset::register($this);
 $this->registerCssFile('https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback');
 
 $assetDir = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/adminlte/dist');

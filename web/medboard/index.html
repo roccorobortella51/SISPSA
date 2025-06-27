@@ -1,42 +1,34 @@
-<?php
-/* @var $content string */
+<!DOCTYPE html>
+<html lang="en">
 
-use yii\bootstrap4\Breadcrumbs;
-?>
-<div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="row mb-2">
-                <div class="col-sm-6">
-                    <h1 class="m-0">
-                        <?php
-                        if (!is_null($this->title)) {
-                            echo \yii\helpers\Html::encode($this->title);
-                        } else {
-                            echo \yii\helpers\Inflector::camelize($this->context->id);
-                        }
-                        ?>
-                    </h1>
-                </div><!-- /.col -->
-                <div class="col-sm-6">
-                    <?php
-                    echo Breadcrumbs::widget([
-                        'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
-                        'options' => [
-                            'class' => 'breadcrumb float-sm-right'
-                        ]
-                    ]);
-                    ?>
-                </div><!-- /.col -->
-            </div><!-- /.row -->
-        </div><!-- /.container-fluid -->
-    </div>
-    <!-- /.content-header -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Medboard</title>
+  <!-- Iconic Fonts -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="vendors/iconic-fonts/font-awesome/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="vendors/iconic-fonts/flat-icons/flaticon.css">
+  <link rel="stylesheet" href="vendors/iconic-fonts/cryptocoins/cryptocoins.css">
+  <link rel="stylesheet" href="vendors/iconic-fonts/cryptocoins/cryptocoins-colors.css">
+  <!-- Bootstrap core CSS -->
+  <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+  <!-- jQuery UI -->
+  <link href="assets/css/jquery-ui.min.css" rel="stylesheet">
+  <!-- Page Specific CSS (Slick Slider.css) -->
+  <link href="assets/css/slick.css" rel="stylesheet">
+  <!-- medboard styles -->
+  <link href="assets/css/style.css" rel="stylesheet">
 
-    <!-- Main content -->
-    <div class="content">
-       <body class="ms-body ms-aside-left-open ms-primary-theme ms-has-quickbar">
+  <!-- Page Specific CSS (Morris Charts.css) -->
+  <link href="assets/css/morris.css" rel="stylesheet">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.ico">
+</head>
+
+<body class="ms-body ms-aside-left-open ms-primary-theme ms-has-quickbar">
   <!-- Setting Panel -->
   <div class="ms-toggler ms-settings-toggle ms-d-block-lg">
     <i class="flaticon-gear"></i>
@@ -1672,6 +1664,5 @@ use yii\bootstrap4\Breadcrumbs;
   <!-- Settings -->
   <script src="assets/js/settings.js"></script>
 </body>
-    </div>
-    <!-- /.content -->
-</div>
+
+</html>
