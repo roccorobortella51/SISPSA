@@ -37,7 +37,7 @@ use yii\widgets\ActiveForm;
 
     <?php // echo $form->field($model, 'rs_instagram') ?>
 
-    <?php // echo $form->field($model, 'QR Code') ?>
+    <?php // echo $form->field($model, 'QRCode') ?>
 
     <?php // echo $form->field($model, 'codigo_clinica') ?>
 

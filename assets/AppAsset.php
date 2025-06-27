@@ -34,6 +34,7 @@ class AppAsset extends AssetBundle
         'cssMedboard/css/slick.css',
         'cssMedboard/css/sweetalert2.min.css',
         'cssMedboard/css/toastr.min.css',
+        //'css/iconos.css.map',
     ];
    public $js = [
         // Core / Librerías base

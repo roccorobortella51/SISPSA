@@ -51,7 +51,7 @@ class RmClinica extends \yii\db\ActiveRecord
             [['QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
             [['rs_instagram'], 'default', 'value' => ''],
             [['created_at', 'deleted_at', 'updated_at'], 'safe'],
-            [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QR Code', 'codigo_clinica'], 'string'],
+            [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
             [['private_key'], 'string', 'max' => 64],
         ];
     }
