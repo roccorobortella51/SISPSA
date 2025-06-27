@@ -5,7 +5,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
-
+//use kartik\grid\GridView; 
 /** @var yii\web\View $this */
 /** @var app\models\RmClinicaSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
@@ -21,38 +21,49 @@ $this->params['breadcrumbs'][] = $this->title;
         <?= Html::a('Create Rm Clinica', ['create'], ['class' => 'btn btn-success']) ?>
     </p>
 
-    <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
+    <div class="ms-panel">
+    <div class="ms-panel-header ms-panel-custome">
+        <h6>Clinicas</h6>
+        <?= Html::a('Create Baremo', ['create'], ['class' => 'btn btn-success']) ?>
+    </div>
+    <div class="ms-panel-body">
+        
+    <div class="rm-clinica-index">
 
-    <?= GridView::widget([
+    <?php
+    echo GridView::widget([
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
         'columns' => [
-            ['class' => 'yii\grid\SerialColumn'],
+            //['class' => 'kartik\grid\SerialColumn'], // Usa el SerialColumn de Kartik
 
             'id',
             'created_at',
             'rif:ntext',
             'nombre:ntext',
             'estado:ntext',
-            //'direccion:ntext',
-            //'telefono:ntext',
-            //'correo:ntext',
-            //'estatus:ntext',
-            //'webpage:ntext',
-            //'rs_instagram:ntext',
-            //'QR Code:ntext',
-            //'codigo_clinica:ntext',
-            //'deleted_at',
-            //'updated_at',
-            //'private_key',
-            [
-                'class' => ActionColumn::className(),
-                'urlCreator' => function ($action, RmClinica $model, $key, $index, $column) {
-                    return Url::toRoute([$action, 'id' => $model->id]);
-                 }
-            ],
         ],
-    ]); ?>
+        // --- PROPIEDADES PARA APLICAR LAS CLASES CSS ---
+        'tableOptions' => [
+            'class' => 'table table-striped thead-primary w-100'
+        ],
+       
+    ]);
+    ?>
+
+
+</div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+    <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
+
+    
 
 
 </div>

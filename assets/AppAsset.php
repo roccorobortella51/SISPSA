@@ -34,6 +34,8 @@ class AppAsset extends AssetBundle
         'cssMedboard/css/slick.css',
         'cssMedboard/css/sweetalert2.min.css',
         'cssMedboard/css/toastr.min.css',
+        'vendors/iconic-fonts/font-awesome/css/all.min.css',
+        
         //'css/iconos.css.map',
     ];
    public $js = [
@@ -95,6 +97,6 @@ class AppAsset extends AssetBundle
     ];
     public $depends = [
         'yii\web\YiiAsset',
-        'yii\bootstrap4\BootstrapAsset'
+        'yii\bootstrap4\BootstrapAsset',        
     ];
 }
