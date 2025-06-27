@@ -86,3 +86,16 @@ a.desc:after {
 .form-group {
     margin-bottom: 1rem;
 }
+
+/* Estilo personalizado para sidebar azul */
+.main-sidebar.sidebar-dark-primary {
+    background-color: #007bff !important; /* Azul bootstrap */
+    border-color: #0056b3 !important; /* Azul más oscuro para bordes */
+    color: white !important;
+}
+
+/* Iconos <i> en navbar y sidebar en color blanco */
+.main-sidebar i,
+.main-header i {
+    color: white !important;
+}
