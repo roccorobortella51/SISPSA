@@ -59,8 +59,8 @@ class AppAsset extends AssetBundle
         'jsMedboard/js/d3.v3.min.js',
         'jsMedboard/js/topojson.v1.min.js',
         // Tablas de datos
-        'jsMedboard/js/datatables.min.js',
-        'jsMedboard/js/data-tables.js', // Puede depender de datatables.min.js
+        //'jsMedboard/js/datatables.min.js',
+        //'jsMedboard/js/data-tables.js', // Puede depender de datatables.min.js
         // Scripts específicos de la plantilla/módulos
         'jsMedboard/js/animate.js',
         'jsMedboard/js/settings.js',

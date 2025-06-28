@@ -8976,3 +8976,234 @@ body:not(.ms-settings-open) .ms-settings-toggle:hover {
     margin: auto;
   }
 }
+
+/* Ejemplo de CSS para thead-primary */
+.table.thead-primary thead th {
+    background-color: #007bff !important; /* Color azul primario de Bootstrap */
+    color: #fff !important; /* Texto blanco para contraste */
+    border-color: #007bff !important; /* Mismo color para el borde inferior del thead */
+}
+
+/* Si quieres que no haya bordes entre celdas */
+.table:not(.table-bordered) th,
+.table:not(.table-bordered) td {
+    border-top: none !important; /* Elimina el borde superior */
+    border-bottom: none !important; /* Elimina el borde inferior */
+    /* Puedes ajustar left/right si es necesario */
+}
+
+/* Si el border de la tarjeta es el único que quieres ver */
+.card {
+    border: 1px solid rgba(0, 0, 0, .125) !important; /* Borde estándar de la tarjeta Bootstrap */
+    border-radius: .25rem !important; /* Bordes redondeados de la tarjeta */
+}
+
+/* Ajuste para el borde inferior de la última fila si se necesita */
+.table tbody tr:last-child {
+    border-bottom: 1px solid rgba(0, 0, 0, .125) !important; /* Borde para la última fila si la tarjeta lo necesita */
+}
+
+/* Contenedor principal */
+.grid-view {
+  margin-top: 20px !important;
+  background: #fff !important;
+  padding: 15px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* Estilos de la tabla */
+.table {
+  margin-bottom: 0 !important;
+  border-collapse: separate !important;
+  width: 100% !important;
+}
+
+.table th {
+  background-color: #007bff  !important;
+  color: #333 !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  padding: 12px 8px !important;
+  border: 1px solid #ddd !important;
+}
+
+/* Celdas */
+.table td {
+  padding: 12px 8px !important;
+  vertical-align: middle !important;
+  border: 1px solid #ddd !important;
+}
+
+/* Filas alternas */
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+  background-color: #f9f9f9 !important;
+}
+
+/* Hover en filas */
+.table-hover > tbody > tr:hover > td {
+  background-color: #f1f1f1 !important;
+}
+
+/* Paginación */
+.pagination {
+  margin: 15px 0 0 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.pagination > li > a {
+  color: #333 !important;
+  border: 1px solid #ddd !important;
+  margin: 0 2px !important;
+  padding: 5px 10px !important;
+  border-radius: 3px !important;
+}
+
+.pagination > .active > a {
+  background-color: #337ab7 !important;
+  border-color: #337ab7 !important;
+  color: #fff !important;
+}
+
+/* Botones de acción */
+.btn-xs {
+  margin: 0 2px !important;
+  padding: 1px 5px !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  border-radius: 3px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table-responsive {
+      width: 100% !important;
+      margin-bottom: 15px !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      -ms-overflow-style: -ms-autohiding-scrollbar !important;
+      -webkit-overflow-scrolling: touch !important;
+  }
+  
+  .table-responsive > .table {
+      margin-bottom: 0 !important;
+  }
+  
+  .table-responsive > .table > thead > tr > th,
+  .table-responsive > .table > tbody > tr > th,
+  .table-responsive > .table > tfoot > tr > th,
+  .table-responsive > .table > thead > tr > td,
+  .table-responsive > .table > tbody > tr > td,
+  .table-responsive > .table > tfoot > tr > td {
+      white-space: nowrap !important;
+  }
+}
+
+/* Estilos para botones de acción */
+.btn-info {
+  background-color: #5bc0de !important;
+  border-color: #46b8da !important;
+}
+
+.btn-primary {
+  background-color: #337ab7 !important;
+  border-color: #2e6da4 !important;
+}
+
+.btn-danger {
+  background-color: #d9534f !important;
+  border-color: #d43f3a !important;
+}
+
+/* Alineación de texto */
+.text-center {
+  text-align: center !important;
+}
+
+.text-right {
+  text-align: right !important;
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+/* Estilos para encabezados */
+.panel-heading {
+  background-color: #f5f5f5 !important;
+  border-bottom: 1px solid #ddd !important;
+  padding: 10px 15px !important;
+}
+
+.panel-title {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  font-size: 16px !important;
+  color: inherit !important;
+}
+
+
+/* En tu archivo CSS (ej. web/css/site.css) */
+
+/* Estilo para el texto de las cabeceras de columna (<th>) */
+.grid-view table thead th {
+  color: white!important; /* Asegura que cualquier texto directo en <th> sea blanco */
+  /* Puedes añadir !important si es necesario, pero intenta sin él primero */
+}
+
+/* Estilo para los ENLACES de ordenación dentro de las cabeceras (<th> a) */
+.grid-view table thead th a {
+  color: white!important; /* Esto hará que los enlaces de ordenación sean blancos */
+  text-decoration: none; /* Opcional: quita el subrayado si no lo quieres */
+  /* !important puede ser necesario si el tema tiene reglas muy específicas para enlaces */
+}
+
+/* Si tu tema usa una clase específica para el thead, como 'letrablanca' que mencionaste */
+th,
+th a {
+  color: white !important; /* El !important es muy probable que sea necesario aquí */
+}
+
+/* En tu archivo CSS (ej. web/css/site.css) */
+
+/* Estilo para el texto de la cabecera de la columna de ACCIONES */
+.grid-view table thead th.action-column {
+  color: white !important; /* El !important es casi seguro necesario aquí */
+}
+
+/* Si la cabecera de acciones es un enlace, también asegúrate de que el enlace sea blanco */
+.grid-view table thead th.action-column a {
+  color: white !important;
+  text-decoration: none; /* Opcional: quita el subrayado del enlace */
+}
+
+/* En tu archivo CSS (ej. web/css/site.css) */
+
+/* Estilo para la cabecera de la columna 13 (probable "ACCIONES") */
+#clinica-grid-container table thead tr:nth-child(1) th:nth-child(13) {
+  color: white !important;
+}
+
+/* Si el texto es un enlace (para ordenar), asegúrate también de que el enlace sea blanco */
+#clinica-grid-container table thead tr:nth-child(1) th:nth-child(13) a {
+  color: white !important;
+  text-decoration: none; /* Opcional: quita el subrayado del enlace */
+}
+
+/* En tu archivo CSS (ej. web/css/site.css) */
+
+/* Estilo para el texto de TODAS las cabeceras (<th>) dentro de un GridView */
+.grid-view table thead th {
+  color: white !important; /* El !important es muy probable que sea necesario aquí */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); /* Opcional: Un pequeño sombreado para mejorar la legibilidad sobre fondos claros */
+}
+
+/* Estilo para los ENLACES de ordenación dentro de TODAS las cabeceras (<th> a) */
+.grid-view table thead th a {
+  color: white !important;
+  text-decoration: none; /* Opcional: quita el subrayado de los enlaces de ordenación */
+}
