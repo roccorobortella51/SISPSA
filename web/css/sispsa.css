@@ -9207,3 +9207,123 @@ th a {
   color: white !important;
   text-decoration: none; /* Opcional: quita el subrayado de los enlaces de ordenación */
 }
+
+/*** Card-header ***/
+	.card-login .card-header{
+		text-align: center;
+	}
+
+	.btn-login {
+		margin-top: -10px;
+
+
+
+	}
+	/*** End card-header ***/
+
+  /*** Card ***/
+
+	.nota{
+		margin-top: 18%;
+		margin-bottom: 0%;
+		padding: 0px;
+		font-weight: 600;
+	}
+
+	.nota-icon{
+  	float: left;
+		margin-right: 7px;
+  	color: #f9e91f;
+  	font-size: 35px;
+  	line-height: 20px;
+	}
+
+	.nota h4{
+		color: white;
+  	margin-right: 15px;
+  	line-height: 5px;
+  	font-weight: bold;
+	}
+
+	.card-registro{
+		width: 80% !important;
+	}
+
+		.card-registre{
+		width: 80% !important;
+	}
+	
+	/*** Card-header ***/
+	.card .card-header{
+		height: 50px;
+		background-image: radial-gradient(circle at 0.81% 50%, #007bff 0%, #007bff 25%, #3d6ed4 75%, #005cc5 100%) !important;
+	}
+
+	.panel-heading{
+		color: #333;
+		border-color: #ddd;
+		height: 35px;
+		background-image: radial-gradient(circle at 0.81% 50%, #5f80e3 0, #3d6ed4 50%, #005cc5 100%) !important;
+	}
+
+
+	.card-header .title{
+		font-size: 19px;
+		font-weight: 600;
+		text-transform: uppercase;
+	}
+	/*** End card-header ***/
+	
+
+	/*** Card-content ***/
+	.card-content .control-label{
+		color: #212121 !important;
+	    font-size: 17px !important;
+		text-transform: uppercase;
+		font-weight: bold;
+	}
+
+	.card-content .help-block{
+		display: block;
+		font-size: 13px !important;
+		color: #A93226 !important;
+		text-transform: uppercase;
+	}
+
+
+	/*** End card-content ***/
+
+
+/* Estilo para las celdas de datos de las tablas con ID 'clinica-grid' */
+#clinica-grid tbody td {
+    font-size: 14px; /* Ajusta este valor (ej. 1.1em, 1.2em, 16px, 18px) */
+    font-weight: bold; /* Hace el texto más grueso */
+    vertical-align: middle; /* Centra verticalmente el contenido */
+}
+
+/* Estilos para los campos de Private Key del formulario de create clinicas */
+#rmclinica-private_key {
+    font-size: 14px !important; /* El !important fuerza la aplicación del estilo */
+    font-weight: bold !important; /* El !important fuerza la aplicación del estilo */
+}
+
+/* --- REGLAS PERSONALIZADAS PARA TAMAÑO DE FUENTE --- */
+
+/* Para etiquetas, inputs y selects dentro de form-group */
+.form-group label,
+.form-control,
+.select2-container .select2-selection__rendered,
+.select2-container .select2-results__option,
+.form-text.text-muted {
+    font-size: 1.5rem !important; /* Ajusta este valor */
+}
+
+/* Para los botones de las pestañas en la vista de actualización de clínica */
+.rm-clinica-update .card-header .btn {
+    font-size: 0.95rem !important; /* Ajusta este valor */
+}
+
+/* Si las etiquetas de Bootstrap no son afectadas por lo anterior, prueba con esto */
+.form-label { /* Para etiquetas de Bootstrap 5 */
+    font-size: 1.1rem !important;
+}
