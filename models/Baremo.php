@@ -80,4 +80,9 @@ class Baremo extends \yii\db\ActiveRecord
         return $this->hasMany(SisSiniestro::class, ['idbaremo' => 'id']);
     }
 
+    public function getArea()
+    {
+        return $this->hasOne(Area::className(), ['id' => 'area_id']);
+    }
+
 }
