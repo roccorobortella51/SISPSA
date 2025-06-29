@@ -33,15 +33,19 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                     <div class="ms-panel-header header-mini">
                         <h6>
                             <?php
-                            // Enlace para Baremo
-                            echo Html::a('Baremo', ['baremo/index'], ['class' => 'text-white']); // Ajusta la clase si el texto se ve mal
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Baremo',
+                                    ['baremo/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
                             ?>
                         </h6>
                     </div>
                     <div class="ms-panel-body">
                         <div class="text-center">
                             <i class="flaticon-information"></i>
-                            <p>Gestión de los baremos para servicios médicos y honorarios profesionales.</p>
+                            <p>Gestión de los baremos para servicios médicos.</p>
                         </div>
                     </div>
                 </div>
@@ -51,15 +55,19 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                     <div class="ms-panel-header header-mini">
                         <h6>
                             <?php
-                            // Enlace para Planes
-                            echo Html::a('Planes', ['planes/index'], ['class' => 'text-white']); // Ajusta la clase si el texto se ve mal
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Planes',
+                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
                             ?>
                         </h6>
                     </div>
                     <div class="ms-panel-body">
                         <div class="text-center">
                             <i class="flaticon-information"></i>
-                            <p>Administración y configuración de los diferentes planes de seguros y beneficios.</p>
+                            <p>Administración y configuración de los diferentes planes.</p>
                         </div>
                     </div>
                 </div>
@@ -69,15 +77,19 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                     <div class="ms-panel-header header-mini">
                         <h6>
                             <?php
-                            // Enlace para Afiliados
-                            echo Html::a('Afiliados', ['afiliados/index'], ['class' => 'text-white']); // Ajusta la clase si el texto se ve mal
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Afiliados',
+                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
                             ?>
                         </h6>
                     </div>
                     <div class="ms-panel-body">
                         <div class="text-center">
                             <i class="flaticon-information"></i>
-                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados al sistema.</p>
+                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados.</p>
                         </div>
                     </div>
                 </div>
