@@ -22,6 +22,7 @@ class AppAsset extends AssetBundle
     public $css = [
         'css/site.css',
         'css/sispsa.css',
+        'css/custom-sidebar.css', // Archivo CSS personalizado para el menú lateral
         'cssMedboard/css/style.css', // Este ya estaba, asegúrate de que la ruta sea correcta
         'cssMedboard/css/animate.min.css',
         'cssMedboard/css/bootstrap.min.css',
@@ -34,8 +35,7 @@ class AppAsset extends AssetBundle
         'cssMedboard/css/slick.css',
         'cssMedboard/css/sweetalert2.min.css',
         'cssMedboard/css/toastr.min.css',
-        'vendors/iconic-fonts/font-awesome/css/all.min.css',
-        
+        'vendors/iconic-fonts/font-awesome/css/all.min.css', // Ruta corregida
         //'css/iconos.css.map',
     ];
    public $js = [

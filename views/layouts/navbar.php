@@ -4,7 +4,7 @@ use yii\helpers\Html;
 
 ?>
 <!-- Navbar -->
-<nav class="main-header navbar navbar-expand navbar-white navbar-light" style="background-color: #007bff; color: white;">
+<nav class="main-header navbar navbar-expand navbar-white navbar-light" style="background-color: #007bff; width:auto">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
         <li class="nav-item">
@@ -17,18 +17,8 @@ use yii\helpers\Html;
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
-       
-
-        
-        
         <li class="nav-item">
             <?= Html::a('<i class="fas fa-sign-out-alt" style="color: white !important;"></i>', ['/site/logout'], ['data-method' => 'post', 'class' => 'nav-link']) ?>
-        </li>
-       
-        <li class="nav-item">
-            <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
-                <i class="fas fa-th-large" style="color: white !important;"></i>
-            </a>
         </li>
     </ul>
 </nav>
