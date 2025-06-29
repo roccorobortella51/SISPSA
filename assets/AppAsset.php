@@ -64,6 +64,7 @@ class AppAsset extends AssetBundle
         // Scripts específicos de la plantilla/módulos
         'jsMedboard/js/animate.js',
         'jsMedboard/js/settings.js',
+        'sispsa.js'
         //'jsMedboard/js/framework.js', // Puede ser un script global de la plantilla
         //'jsMedboard/js/calendar.js',
         //'jsMedboard/js/client-managemenet.js',
