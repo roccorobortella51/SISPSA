@@ -47,12 +47,7 @@ class RmClinicaSearch extends RmClinica
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'pagination' => [
-                'pageSize' => 5, // Establece el tamaño de página a 5
-            ],
         ]);
-        
-        $this->load($params, $formName);
 
         $this->load($params, $formName);
 

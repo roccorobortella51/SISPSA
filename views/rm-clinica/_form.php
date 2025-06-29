@@ -1,218 +1,182 @@
+
 <?php
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
+use kartik\select2\Select2; // Para los selectores de estado y estatus
+use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
 
-/* @var $this yii\web\View */
-/* @var $model app\models\RmClinica */
-/* @var $form yii\widgets\ActiveForm */
+/** @var yii\web\View $this */
+/** @var app\models\RmClinica $model */
+/** @var yii\widgets\ActiveForm $form */
+/** @var array $listaEstados */ // Espera la lista de estados para el Select2
+/** @var array $listaEstatus */ // Espera la lista de estatus para el Select2
+/** @var string $mode */ // Para saber si es 'create' o 'edit'
+/** @var bool $isNewRecord */ // Para saber si es un nuevo registro
 
-// Asegura que las variables existan, proporcionando valores por defecto si no están establecidas
+// Asegúrate de que estas variables siempre tengan un valor para evitar errores
+// si el controlador no las pasa por alguna razón (aunque el controlador sí las pasa).
 $listaEstados = $listaEstados ?? [];
 $listaEstatus = $listaEstatus ?? [];
-
-// Determina el modo (creación o edición) para el autofocus dinámico y otros elementos
-$mode = $mode ?? 'create';
-$isNewRecord = $model->isNewRecord ?? true;
+$mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
+$isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
 ?>
 
-<?php
-// ActiveForm sin la clase 'form-horizontal' para labels arriba
-$form = ActiveForm::begin([
-    'id' => 'form-clinica', // ID para el JavaScript
-]);
-?>
+<div class="rm-clinica-form">
 
-<?php if (!$isNewRecord): ?>
-    <?= $form->field($model, 'id')->hiddenInput()->label(false) ?>
-<?php endif; ?>
-
-<div class="row">
-    <div class="col-md-4">
-        <div class="form-group">
-            <?php
-            echo $form->field($model, 'rif')->begin();
-            ?>
-
-            <?= Html::activeLabel($model, 'rif') ?> <span class="text-danger">*</span>
-
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text">J-</span>
+    <?php $form = ActiveForm::begin([]); ?>
+    <?php if (!$model->isNewRecord) { ?>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                            // Enlace para Baremo
+                            echo Html::a('Baremo', ['baremo/index'], ['class' => 'text-white']); // Ajusta la clase si el texto se ve mal
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Gestión de los baremos para servicios médicos y honorarios profesionales.</p>
+                        </div>
+                    </div>
                 </div>
-                <?= Html::activeTextInput($model, 'rif', [
-                    'maxlength' => 12,
-                    'placeholder' => 'Ingrese solo los números (Ej: 1234567890)',
-                    'class' => 'form-control text-center',
-                    'pattern' => '[0-9]{10,12}',
-                    'title' => 'Ingrese entre 10 y 12 dígitos numéricos (sin guiones ni letras)',
-                    'required' => true,
-                    'autofocus' => ($mode == 'create'),
-                    'id' => 'rmclinica-rif-input',
-                ]) ?>
             </div>
-
-            <small class="form-text text-muted">Ingrese de 10 a 12 dígitos numéricos (la J- se muestra automáticamente).</small>
-
-            <?php
-            echo Html::error($model, 'rif', ['class' => 'invalid-feedback d-block']);
-            echo $form->field($model, 'rif')->end();
-            ?>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <?= $form->field($model, 'nombre')->textInput([
-            'maxlength' => true,
-            'placeholder' => 'Nombre comercial de la clínica',
-            'class' => 'form-control text-center',
-            'required' => true,
-        ])->label('Nombre <span class="text-danger">*</span>') ?>
-    </div>
-
-    <div class="col-md-4">
-        <?= $form->field($model, 'estado')->widget(Select2::classname(), [
-            'data' => $listaEstados,
-            'options' => ['placeholder' => 'Seleccione el estado donde se ubica'],
-            'pluginOptions' => [
-                'allowClear' => true
-            ],
-            'theme' => Select2::THEME_BOOTSTRAP,
-            'options' => [
-                'class' => 'text-center',
-                'required' => true,
-            ]
-        ])->label('Estado <span class="text-danger">*</span>') ?>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-4">
-        <?= $form->field($model, 'telefono')->textInput([
-            'maxlength' => true,
-            'placeholder' => 'Número de teléfono (Ej: 0212-XXX-XXXX)',
-            'class' => 'form-control text-center',
-            'required' => true,
-        ])->label('Teléfono <span class="text-danger">*</span>') ?>
-    </div>
-
-    <div class="col-md-4">
-        <?= $form->field($model, 'correo')->textInput([
-            'maxlength' => true,
-            'placeholder' => 'Correo electrónico de contacto (Ej: info@clinica.com)',
-            'class' => 'form-control text-center',
-            'type' => 'email',
-            'required' => true,
-        ])->label('Correo <span class="text-danger">*</span>') ?>
-    </div>
-
-    <div class="col-md-4">
-        <?= $form->field($model, 'estatus')->widget(Select2::classname(), [
-            'data' => $listaEstatus,
-            'options' => ['placeholder' => 'Seleccione el estatus de la clínica'],
-            'pluginOptions' => [
-                'allowClear' => true
-            ],
-            'theme' => Select2::THEME_BOOTSTRAP,
-            'options' => [
-                'class' => 'text-center',
-                'required' => true,
-            ]
-        ])->label('Estatus <span class="text-danger">*</span>') ?>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-4">
-        <?= $form->field($model, 'webpage')->textInput([
-            'maxlength' => true,
-            'placeholder' => 'Dirección del sitio web (URL completa)',
-            'class' => 'form-control text-center',
-            'type' => 'url',
-        ])->label('Página Web') ?>
-        <small class="form-text text-muted">Opcional</small>
-    </div>
-
-    <div class="col-md-4">
-        <div class="form-group">
-            <?php
-            echo $form->field($model, 'rs_instagram')->begin();
-            ?>
-            <?= Html::activeLabel($model, 'rs_instagram') ?>
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text">@</span>
+            <div class="col-md-4">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                            // Enlace para Planes
+                            echo Html::a('Planes', ['planes/index'], ['class' => 'text-white']); // Ajusta la clase si el texto se ve mal
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Administración y configuración de los diferentes planes de seguros y beneficios.</p>
+                        </div>
+                    </div>
                 </div>
-                <?= Html::activeTextInput($model, 'rs_instagram', [
+            </div>
+            <div class="col-md-4">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                            // Enlace para Afiliados
+                            echo Html::a('Afiliados', ['afiliados/index'], ['class' => 'text-white']); // Ajusta la clase si el texto se ve mal
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados al sistema.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php } ?>
+
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model, 'nombre')->textInput([
+                'maxlength' => true,
+                'autofocus' => true,
+                'placeholder' => 'Ingrese el nombre de la clínica',
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'rif')->widget(MaskedInput::class, [
+                'mask' => 'J-99999999-9',
+                'options' => [
+                    'placeholder' => 'J-XXXXXXXX-X',
+                    'class' => 'form-control',
                     'maxlength' => true,
-                    'placeholder' => 'usuario',
-                    'class' => 'form-control text-center',
-                ]) ?>
-            </div>
-            <small class="form-text text-muted">Opcional</small>
-            <?= Html::error($model, 'rs_instagram', ['class' => 'invalid-feedback d-block']) ?>
-            <?php echo $form->field($model, 'rs_instagram')->end(); ?>
+                ]
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
+                'mask' => '(9999) 999-9999',
+                'options' => [
+                    'placeholder' => '(XXXX) XXX-XXXX',
+                    'class' => 'form-control',
+                    'maxlength' => true,
+                ]
+            ]) ?>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <?= $form->field($model, 'codigo_clinica')->textInput([
+    <div class="row">
+        <div class="col-md-4">
+           <?= $form->field($model, 'correo')->textInput([
             'maxlength' => true,
-            'placeholder' => 'Código interno asignado a la clínica',
-            'class' => 'form-control text-center',
-            'required' => true,
-        ])->label('Código de la Clínica <span class="text-danger">*</span>') ?>
+            'placeholder' => 'Ingrese el correo electrónico',
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'estado')->widget(Select2::classname(), [
+                'data' => $listaEstados,
+                'options' => [
+                    'placeholder' => 'Seleccione un estado...',
+                    'class' => 'form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'allowClear' => true,
+                ],
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'estatus')->widget(Select2::classname(), [
+                'data' => $listaEstatus, // Asegúrate de que esta línea esté, faltaba en tu código
+                'options' => [
+                    'placeholder' => 'Seleccione un estatus...',
+                    'class' => 'form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'allowClear' => true,
+                ],
+            ]) ?>
+        </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-md-12">
-        <?= $form->field($model, 'direccion')->textArea([
-            'rows' => 3,
-            'placeholder' => 'Dirección completa de la clínica, incluyendo municipio y parroquia',
-            'class' => 'form-control text-center',
-            'required' => true,
-        ])->label('Dirección <span class="text-danger">*</span>') ?>
+    <div class="row">
+        <div class="col-md-12">
+            <?= $form->field($model, 'direccion')->textarea([
+                'rows' => 3, // Número de filas visibles para el textarea
+                'maxlength' => true,
+                'placeholder' => 'Ingrese la dirección completa',
+            ]) ?>
+        </div>
     </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model, 'webpage')->textInput(['maxlength' => true, 'placeholder' => 'Ej: www.ejemplo.com']) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'rs_instagram')->textInput(['maxlength' => true, 'placeholder' => 'Ej: @tu_clinica']) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'codigo_clinica')->textInput(['maxlength' => true, 'placeholder' => 'Código interno de clínica']) ?>
+        </div>
+    </div>
+    
+    <div class="form-group text-rigth mt-4">
+        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Clínica', ['class' => 'btn btn-success btn-lg']) ?>
+        <?= Html::a('Cancelar', ['index'], ['class' => 'btn btn-lg btn-warning']); ?>
+
+        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-warning']); } ?>
+    </div>
+
+    <?php ActiveForm::end(); ?>
+
 </div>
-
-<?php // Eliminado: el div de cierre huérfano que estaba aquí ?>
-<?php if (!$isNewRecord): // Mostrar solo en modo edición ?>
-    <?php // Si en el futuro necesitas un div aquí, asegúrate de abrirlo antes. ?>
-<?php endif; ?>
-
-<div class="form-group text-right mt-4 text-center">
-    <?= Html::a('<i class="fa fa-times"></i> Cancelar', ['index'], ['class' => 'btn btn-secondary ml-3']) ?>
-
-    <?= Html::submitButton(
-        '<i class="fas ' . (($mode == 'create') ? 'fa-plus-circle' : 'fa-save') . '"></i> ' .
-        (($mode == 'create') ? 'Crear Clínica' : 'Guardar Cambios'),
-        ['class' => 'btn btn-success ml-3', 'id' => 'submitFormBtn']
-    ) ?>
-</div>
-
-<?php ActiveForm::end(); ?>
-
-<?php
-// Script JavaScript para manejar la "J-" fija del RIF
-// Este bloque estaba duplicado, he dejado solo uno.
-$js = <<<JS
-$(document).ready(function() {
-    var rifCompletoDelModelo = $('#rmclinica-rif').val();
-    if (rifCompletoDelModelo && rifCompletoDelModelo.startsWith('J-')) {
-        $('#rmclinica-rif-input').val(rifCompletoDelModelo.substring(2)); // Mostrar solo números
-    }
-
-    $('#form-clinica').on('beforeSubmit', function(e) {
-        var valorNumericoIngresado = $('#rmclinica-rif-input').val();
-        if (valorNumericoIngresado && !valorNumericoIngresado.startsWith('J-')) {
-            $('#rmclinica-rif').val('J-' + valorNumericoIngresado); // Añadir J- al valor final
-        }
-        return true;
-    });
-});
-JS;
-
-?>
