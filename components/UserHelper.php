@@ -6,6 +6,7 @@ use yii\web\Request;
 use yii\helpers\Url;
 use yii\db\Expression;
 use yii\db\Query;
+use app\models\Area;
 
 class UserHelper
 {
@@ -67,6 +68,15 @@ class UserHelper
                 'linkContainerOptions' => ['class' => 'page-item'],
                 'linkOptions' => ['class' => 'page-link'],
             ];
+    }
+
+    public function getAreaList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            Area::find()->select(['id', 'nombre as name'])->asArray()->all(),
+            'id',
+            'name'
+        );
     }
 
 

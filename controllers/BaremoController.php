@@ -8,6 +8,7 @@ use app\models\RmClinica;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use Yii;
 
 /**
  * BaremoController implements the CRUD actions for Baremo model.
@@ -48,7 +49,7 @@ class BaremoController extends Controller
             if ($model->load($this->request->post())) {
 
                 $model->clinica_id = $clinica_id;
-                $model->estatus = "1";
+                $model->estatus = "Activo";
                 if($model->save()){
                 }else{
                      var_dump($model->errors); die();
@@ -112,7 +113,7 @@ class BaremoController extends Controller
         $model = $this->findModel($id);
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+            return $this->redirect(['index', 'clinica_id' => $model->clinica_id]);
         }
 
         return $this->render('update', [
@@ -150,4 +151,19 @@ class BaremoController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
+    public function actionUpdatestatus(){
+        if (Yii::$app->request->isAjax and Yii::$app->request->post()) {
+            $variables = Yii::$app->request->post();
+
+            $model = Baremo::find()->where(['id' => $variables['id']])->one();
+
+            if($model->estatus == "Activo"){
+                $model->estatus = "Inactivo";
+                $model->save(false);
+            }else{
+                $model->estatus = "Activo";
+                $model->save(false);
+            }
+        }
+    }
 }
