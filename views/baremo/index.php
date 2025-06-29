@@ -6,7 +6,8 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\grid\ActionColumn;
 use yii\widgets\ActiveForm;
-
+use app\components\UserHelper;
+use kartik\widgets\SwitchInput;
 /**
  * @var yii\web\View $this
  * @var app\models\RmClinicaSearch $searchModel
@@ -26,7 +27,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
 <div class=row style="margin:3px !important;">
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/index'], ['class' => 'btn btn-warning btn-lg']) ?> 
+            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-warning btn-lg']) ?> 
         </div>
     </div>
     <div class="col-md-12">
@@ -50,7 +51,17 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                          <?= $form->field($model, 'precio')->textInput() ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'area_id')->textInput() ?>
+                        <?php echo $form->field($model, 'area_id')->widget(\kartik\select2\Select2::classname(), [
+                                            'language' => 'es',
+                                            'theme' => \kartik\select2\Select2::THEME_KRAJEE_BS4,
+                                            //'data' => [1 => 'Express', 4 => 'Programado'],
+                                             'data' => UserHelper::getAreaList(),
+                                            'options' => ['placeholder' => 'Seleccione'], // Wrap the placeholder option within an options array
+                                            'pluginOptions' => [
+                                                'allowClear' => true // Set the allowClear option to true
+                                            ],
+                                        ])->label("Area");
+                        ?>
                     </div>
                      <div class="col-md-2">
                         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
@@ -120,41 +131,82 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                     ],
                                 ],
                                 [
-                                    'attribute' => 'area_id',
-                                    'options' => ['style' => 'width: 120px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
-                                    ],
+                                    'attribute' => 'costo',
+                                    'format' => ['currency', ''],
+                                    'contentOptions' => ['style' => 'text-align: right;'],
+                                    'filter' => false
                                 ],
-
-                                // Teléfono
                                 [
-                                    'attribute' => 'estatus',
-                                    'options' => ['style' => 'width: 120px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                    'attribute' => 'precio',
+                                    'format' => ['currency', ''],
+                                    'contentOptions' => ['style' => 'text-align: right;'],
+                                    'filter' => false
+
+                                ],
+                                [
+                                    'attribute' => 'area_id',
+                                    'value' => function ($model, $key, $index, $widget) {
+
+                                        if($model->area){
+                                            return $model->area->nombre;
+                                        }else{
+                                            return "";
+                                        }
+
+                                    },
+                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                    'filter' => UserHelper::getAreaList(),
+                                    'filterWidgetOptions' => [
+                                        'pluginOptions' => ['allowClear' => true],
                                     ],
+                                    'filterInputOptions' => ['placeholder' => Yii::t('app', 'Seleccione')],
+                                    'format' => 'raw',
+                                    'headerOptions' => ['class' => 'text-center header-link'], // Cambia el color del texto a negro
+                                    'label' => 'Area',
                                 ],
 
-
-
-                               
+                                // Estado
+                                [
+                                    'label' => 'Estado',
+                                    'attribute' => 'estatus',
+                                    'format' => 'raw',
+                                    'headerOptions' => ['class' => 'text-left header-link'],
+                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                    'value' => function ($model) {
+                                        // Asegurarse que el valor es booleano o compatible (1/0, 'true'/'false')
+                                        $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
+                                        
+                                        return SwitchInput::widget([
+                                            'name' => 'status_'.$model->id, // Mejor usar un nombre único por registro
+                                            'value' => $isActive, // Valor booleano que determina el estado inicial
+                                            'pluginEvents' => [
+                                                'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
+                                            ],
+                                            'pluginOptions' => [
+                                                'onText' => 'Activo',
+                                                'offText' => 'Inactivo',
+                                                'onColor' => 'success',
+                                                'offColor' => 'danger',
+                                                'state' => $isActive // Estado inicial del switch
+                                            ],
+                                            'options' => [
+                                                'id' => 'status-switch-'.$model->id // ID único para cada switch
+                                            ],
+                                            'labelOptions' => ['style' => 'font-size: 12px;'],
+                                        ]);
+                                    },
+                                ],
+                                'estatus',
                                 // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado
                                 [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{update}</div>',
                                     'options' => ['style' => 'width:55px; min-width:55px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                     'buttons' => [
-                                        'view' => function ($url, $model, $key) {
+                                        /*'view' => function ($url, $model, $key) {
                                             return Html::a(
                                                 '<i class="fa fa-eye"></i>',
                                                 Url::to(['view', 'id' => $model->id]),
@@ -164,7 +216,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                                     'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
-                                        },
+                                        },*/
                                         'update' => function ($url, $model, $key) {
                                             return Html::a(
                                                 '<i class="fas fa-pencil-alt ms-text-primary"></i>',

@@ -3,19 +3,22 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\Baremo $model */
+/** @var app\models\RmClinica $model */
 
-$this->title = 'Update Baremo: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Baremos', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->id, 'url' => ['view', 'id' => $model->nombre]];
-$this->params['breadcrumbs'][] = 'Update';
+$this->title = 'Actualizar Baremo: ' . $model->nombre_servicio;
+$this->params['breadcrumbs'][] = ['label' => 'Baremos', 'url' => ['index', 'clinica_id' => $model->clinica_id]];
+$this->params['breadcrumbs'][] = ['label' => $model->nombre_servicio, 'url' => ['view', 'id' => $model->id]];
+$this->params['breadcrumbs'][] = 'Actualizar';
 ?>
-<div class="baremo-update">
-
-    <h1><?= Html::encode($this->title) ?></h1>
-
-    <?= $this->render('_form', [
-        'model' => $model,
-    ]) ?>
-
+<div class="col-xl-12 col-md-12">
+        <div class="ms-panel ms-panel-fh">
+            <div class="ms-panel-header">
+                <h1><?= $this->title = 'Actualizar Baremo'; ?></h1>
+            </div>
+            <div class="ms-panel-body">
+                <?= $this->render('_form', [
+                    'model' => $model,
+                ]) ?>        
+            </div>
+        </div>
 </div>
