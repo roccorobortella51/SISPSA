@@ -8,6 +8,7 @@ $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log', 'admin'], // 'admin' y 'as access' deben estar en bootstrap
+    'language' => 'es',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
@@ -15,9 +16,15 @@ $config = [
     ],
     'modules' => $modules,
     'components' => [
-        'assetManager' => [ //SETTING FOR MATERIAL DASHBOARD THEME
-		    'bundles' => [
-			'genny3021\materialdashboard\web\MaterialDashboardAsset',
+         'assetManager' => [
+            'bundles' => [
+                'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
+                    'css' => [], // Vacía la lista de CSS originales de AdminLTE
+                    'depends' => [ // Si AdminLteAsset depende de otros bundles, puedes mantenerlos
+                        'yii\web\YiiAsset',
+                        'yii\bootstrap\BootstrapAsset',
+                    ],
+                ],
             ],
         ],
         'authManager' => [
