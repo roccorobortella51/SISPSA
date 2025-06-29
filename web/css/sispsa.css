@@ -9327,3 +9327,7 @@ th a {
 .form-label { /* Para etiquetas de Bootstrap 5 */
     font-size: 1.1rem !important;
 }
+
+/**.form-control {
+    padding: .400rem .75rem !important;
+}**/
