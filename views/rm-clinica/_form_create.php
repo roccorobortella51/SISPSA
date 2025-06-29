@@ -1,4 +1,3 @@
-
 <?php
 
 use yii\helpers\Html;
@@ -25,77 +24,11 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
 <div class="rm-clinica-form">
 
-    <?php $form = ActiveForm::begin([]); ?>
-    <?php if (!$model->isNewRecord) { ?>
-        <div class="row">
-            <div class="col-md-4">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Baremo',
-                                    ['baremo/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Gestión de los baremos para servicios médicos.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Planes',
-                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Administración y configuración de los diferentes planes.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Afiliados',
-                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php } ?>
+    <?php $form = ActiveForm::begin([
+        'id' => 'form-clinica-create', // Un ID único para este formulario de creación
+        'enableAjaxValidation' => true, // Habilita la validación AJAX si la configuras en el modelo
+        'enableClientValidation' => true, // Habilita la validación del lado del cliente
+    ]); ?>
 
     <div class="row">
         <div class="col-md-4">
@@ -182,13 +115,25 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
         </div>
     </div>
     
-    <div class="form-group text-rigth mt-4">
+    <div class="form-group text-center mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Clínica', ['class' => 'btn btn-success btn-lg']) ?>
-        <?= Html::a('Cancelar', ['index'], ['class' => 'btn btn-lg btn-warning']); ?>
-
-        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-warning']); } ?>
     </div>
 
     <?php ActiveForm::end(); ?>
 
 </div>
+
+<?php
+// Bloque de CSS específico para este formulario si necesitas ajustar el tamaño de fuente, etc.
+$cssFormCreate = <<<CSS
+#form-clinica-create .form-group label,
+#form-clinica-create .form-control,
+#form-clinica-create .select2-container .select2-selection__rendered,
+#form-clinica-create .select2-container .select2-results__option,
+#form-clinica-create .form-text.text-muted {
+    font-size: 1.1rem !important; /* Ejemplo: aumenta el tamaño de la fuente */
+}
+/* Puedes añadir más estilos específicos para los campos del formulario aquí */
+CSS;
+$this->registerCss($cssFormCreate);
+?>

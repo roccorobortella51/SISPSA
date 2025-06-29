@@ -72,7 +72,7 @@ class RmClinica extends \yii\db\ActiveRecord
             'correo' => 'Correo',
             'estatus' => 'Estatus',
             'webpage' => 'Webpage',
-            'rs_instagram' => 'Rs Instagram',
+            'rs_instagram' => 'Instagram',
             'QRCode' => 'Qr Code',
             'codigo_clinica' => 'Codigo Clinica',
             'deleted_at' => 'Deleted At',

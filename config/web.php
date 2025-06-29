@@ -11,6 +11,7 @@ $config = [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
+        '@kvgrid' => '@vendor/kartik-v/yii2-grid', // el GridView
     ],
     'modules' => $modules,
     'components' => [
@@ -59,6 +60,31 @@ $config = [
                 // Puedes añadir tus reglas de URL aquí si necesitas URLs más amigables para tus propias rutas.
             ],
         ],
+
+        // BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
+        'i18n' => [
+            'translations' => [
+                'kvgrid' => [ // Categoría para los mensajes de Kartik GridView
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@kvgrid/messages', // Ubicación de los archivos de traducción de Kartik
+                    'forceTranslation' => true, // Opcional, pero recomendado para asegurar que se traduzca
+                ],
+                // Si en el futuro tienes errores con 'kvdrange' o 'kvsfmsg',
+                // también los añadirías aquí siguiendo el mismo patrón:
+                // 'kvdrange' => [
+                //     'class' => 'yii\i18n\PhpMessageSource',
+                //     'basePath' => '@kvdrange/messages',
+                //     'forceTranslation' => true,
+                // ],
+            ],
+        ],
+        'mpdf' => [
+            'class' => 'kartik\mpdf\Pdf',
+            'format' => \kartik\mpdf\Pdf::FORMAT_A4,
+            'orientation' => \kartik\mpdf\Pdf::ORIENT_PORTRAIT,
+            'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
+        ],
+        // FIN BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
 
     ],
     // 'as access' debe ir aquí, fuera de 'components'

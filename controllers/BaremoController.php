@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\Baremo;
 use app\models\BaremoSearch;
+use app\models\RmClinica;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -36,14 +37,31 @@ class BaremoController extends Controller
      *
      * @return string
      */
-    public function actionIndex()
+    public function actionIndex($clinica_id = "")
     {
+        $clinica = RmClinica::find()->where(['id' => $clinica_id])->andWhere(['is','deleted_at', null])->one();
         $searchModel = new BaremoSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
+        $model = new Baremo();
+
+            if ($model->load($this->request->post())) {
+
+                $model->clinica_id = $clinica_id;
+                $model->estatus = "1";
+                if($model->save()){
+                }else{
+                     var_dump($model->errors); die();
+                };
+                return $this->redirect(['index', 'clinica_id' => $clinica->id]);
+            }
+       
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'clinica' => $clinica,
+            'model' => $model
         ]);
     }
 
@@ -131,4 +149,5 @@ class BaremoController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
+
 }
