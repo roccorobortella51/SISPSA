@@ -22,7 +22,7 @@ $mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
 $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
 $this->title = 'Detalles de la Clínica: ' . $model->nombre;
-$this->params['breadcrumbs'][] = ['label' => 'Detalles de la Clínica', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Clínicas', 'url' => ['index']];
 $this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
 $this->params['breadcrumbs'][] = 'Actualizar';
 

@@ -14,7 +14,7 @@ use yii\grid\ActionColumn;
 
 // --- BREADCRUMBS ---
 
-$this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Clínicas', 'url' => ['index']];
 // --- FIN  --- 
 
 
