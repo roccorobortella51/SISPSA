@@ -14,11 +14,6 @@ $config = [
     ],
     'modules' => $modules,
     'components' => [
-        'assetManager' => [ //SETTING FOR MATERIAL DASHBOARD THEME
-		    'bundles' => [
-			'genny3021\materialdashboard\web\MaterialDashboardAsset',
-            ],
-        ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
             // Puedes configurar un valor de caché si lo necesitas para entornos de producción:
