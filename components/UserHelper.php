@@ -7,6 +7,7 @@ use yii\helpers\Url;
 use yii\db\Expression;
 use yii\db\Query;
 use app\models\Area;
+use app\models\RmEstado;
 
 class UserHelper
 {
@@ -74,6 +75,15 @@ class UserHelper
     {
         return \yii\helpers\ArrayHelper::map(
             Area::find()->select(['id', 'nombre as name'])->asArray()->all(),
+            'id',
+            'name'
+        );
+    }
+
+    public function getEstadosList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            RmEstado::find()->select(['id', 'nombre as name'])->asArray()->all(),
             'id',
             'name'
         );

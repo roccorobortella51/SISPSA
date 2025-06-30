@@ -2,10 +2,10 @@
 use yii\bootstrap4\Nav;
 use mdm\admin\components\MenuHelper;
 ?>
-<aside class="main-sidebar sidebar-dark-primary elevation-4" style="border-bottom: none; background-color: #007bff !important; color: white !important;">
+<aside class="main-sidebar sidebar-dark-primary elevation-4" style="border-bottom: none; background-color: #009efb !important; color: white !important;">
     <!-- Brand Logo -->
     <a href="<?= Yii::$app->homeUrl ?>" class="brand-link d-flex justify-content-center" style="padding-top: 0; padding-bottom: 0; border-bottom: none;">
-        <img src="<?= Yii::getAlias('@web') ?>/img/sispsa-12-62.png" alt="Logo" class="brand-image" style="opacity: 1; margin: 15px auto; max-width: 150px; width: auto; height: auto; object-fit: contain;">
+        <img src="<?= Yii::getAlias('@web/img/sispsa-12-62.png')?>" alt="Logo"  style="opacity: 1; margin: 15px auto; max-width: 250px; width: auto; height: auto; object-fit: contain;">
     </a>
 
     <!-- Sidebar -->
@@ -13,10 +13,10 @@ use mdm\admin\components\MenuHelper;
         <!-- Sidebar user panel -->
         <div class="user-panel d-flex flex-column align-items-center">
             <div class="image mb-2">
-                <img src="<?= Yii::getAlias('@web') ?>/img/avatar5.png" class="img-circle elevation-2" alt="User Image">
+                <img src="<?= Yii::getAlias('@web/img/dashboard/employee-list/employee-(2).jpg')?>" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info text-center">
-                <a href="#" class="d-block"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a>
+                <b><a href="#" class="d-block" style="color: black !important;"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a></b>
             </div>
         </div>
 

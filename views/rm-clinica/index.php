@@ -5,7 +5,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\grid\ActionColumn;
-
+use kartik\widgets\SwitchInput;
 /**
  * @var yii\web\View $this
  * @var app\models\RmClinicaSearch $searchModel
@@ -23,6 +23,7 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
 ?>
 
 <div class=row style="margin:3px !important;">
+<input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
             <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA CLÍNICA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
@@ -95,6 +96,37 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
                                         'placeholder' => 'Búsqueda',
                                         'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
                                     ],
+                                ],
+                                [
+                                    'label' => 'Estado',
+                                    'attribute' => 'estatus',
+                                    'format' => 'raw',
+                                    'headerOptions' => ['class' => 'text-left header-link'],
+                                    'options' => ['style' => 'width: 100px;'],
+                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                    'value' => function ($model) {
+                                        // Asegurarse que el valor es booleano o compatible (1/0, 'true'/'false')
+                                        $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
+                                        
+                                        return SwitchInput::widget([
+                                            'name' => 'status_'.$model->id, // Mejor usar un nombre único por registro
+                                            'value' => $isActive, // Valor booleano que determina el estado inicial
+                                            'pluginEvents' => [
+                                                'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
+                                            ],
+                                            'pluginOptions' => [
+                                                'onText' => 'Activo',
+                                                'offText' => 'Inactivo',
+                                                'onColor' => 'success',
+                                                'offColor' => 'danger',
+                                                'state' => $isActive // Estado inicial del switch
+                                            ],
+                                            'options' => [
+                                                'id' => 'status-switch-'.$model->id // ID único para cada switch
+                                            ],
+                                            'labelOptions' => ['style' => 'font-size: 12px;'],
+                                        ]);
+                                    },
                                 ],
 
                                 // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado
