@@ -81,7 +81,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                                 // Enlace para Baremo
                                 echo Html::a(
                                     'Afiliados',
-                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['user-datos/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
                                     ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
                                 );
                             ?>
