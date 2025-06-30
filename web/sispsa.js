@@ -1,7 +1,9 @@
 function updatestatus(id, estatus) {
 
+  let csrfToken = $('#csrf-token').val();
   var parametros = {
     id: id,
+    "_csrf" : csrfToken,
   };
 
   $.ajax({

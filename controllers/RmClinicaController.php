@@ -4,10 +4,11 @@ namespace app\controllers;
 
 use app\models\RmClinica;
 use app\models\RmClinicaSearch;
+use app\models\RmEstado;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-
+use Yii;
 /**
  * RmClinicaController implements the CRUD actions for RmClinica model.
  */
@@ -70,7 +71,17 @@ class RmClinicaController extends Controller
         $model = new RmClinica();
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
+            if ($model->load($this->request->post())) {
+
+                $estado = RmEstado::find()->where(['id' => $model->estado])->one();
+
+                if($estado){
+                    $model->estado = $estado->nombre;
+                }
+
+                $model->estatus = "Activo";
+                $model->save();
+
                 return $this->redirect(['view', 'id' => $model->id]);
             }
         } else {
@@ -130,5 +141,21 @@ class RmClinicaController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+
+    public function actionUpdatestatus(){
+        if (Yii::$app->request->isAjax and Yii::$app->request->post()) {
+            $variables = Yii::$app->request->post();
+
+            $model = RmClinica::find()->where(['id' => $variables['id']])->one();
+
+            if($model->estatus == "Activo"){
+                $model->estatus = "Inactivo";
+                $model->save(false);
+            }else{
+                $model->estatus = "Activo";
+                $model->save(false);
+            }
+        }
     }
 }

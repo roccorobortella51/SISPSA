@@ -134,4 +134,9 @@ class RmClinica extends \yii\db\ActiveRecord
         return $this->hasMany(SisSiniestro::class, ['idclinica' => 'id']);
     }
 
+    public function getEstado()
+    {
+        return $this->hasOne(RmEstado::class, ['nombre' => 'estado']);
+    }
+
 }
