@@ -64,15 +64,15 @@ class Baremo extends \yii\db\ActiveRecord
         return [
             'id' => 'ID',
             'created_at' => 'Created At',
-            'nombre_servicio' => 'Nombre Servicio',
-            'descripcion' => 'Descripción',
-            'estatus' => 'Estatus',
+            'nombre_servicio' => 'NOMBRE DEL SERVICIO',
+            'descripcion' => 'DESCRIPCIÓN',
+            'estatus' => 'ESTATUS',
             'deleted_at' => 'Deleted At',
             'updated_at' => 'Updated At',
-            'precio' => 'Precio',
+            'precio' => 'PRECIO',
             'clinica_id' => 'Clinica ID',
-            'costo' => 'Costo',
-            'area_id' => 'Área',
+            'costo' => 'COSTO',
+            'area_id' => 'ÁREA',
         ];
     }
 
