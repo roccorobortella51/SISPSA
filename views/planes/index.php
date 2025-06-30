@@ -8,7 +8,6 @@ use yii\grid\ActionColumn;
 use yii\widgets\ActiveForm;
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
-use kartik\select2\Select2;
 /**
  * @var yii\web\View $this
  * @var app\models\RmClinicaSearch $searchModel
@@ -21,7 +20,7 @@ $this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['/rm-clinica/
 // --- FIN  --- 
 
 
-$this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la página y breadcrumbs
+$this->title = 'Gestión de Planes'; // Este sigue siendo el título para la página y breadcrumbs
 
 ?>
 
@@ -31,37 +30,36 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
             <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-warning btn-lg']) ?> 
         </div>
     </div>
+
+
     <div class="col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= $this->title = 'Agregar de Baremos a la Clínica '.$clinica->nombre; ?> </h1>
+                <h1><?= $this->title = 'Agregar de Plan a '.$clinica->nombre; ?> </h1>
             </div>
             <div class="ms-panel-body">
-                <?php $form = ActiveForm::begin(); ?>
                 <div class="row">
+                    <?php $form = ActiveForm::begin(); ?>
                     <div class="col-md-2">
-                        <?= $form->field($model, 'nombre_servicio')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba un nombre para el Baremo','class' => 'form-control form-control-lg',]) ?>
+                        <?= $form->field($model, 'nombre')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba un nombre para el plan']) ?>
                     </div>
-                    <div class="col-md-4">
-                         <?= $form->field($model, 'descripcion')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba una descripción para el Baremo','class' => 'form-control form-control-lg',]) ?>
+                    <div class="col-md-3">
+                         <?= $form->field($model, 'descripcion')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba una descripción para el plan']) ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'costo')->textInput(['type' => 'number','class' => 'form-control form-control-lg', 'placeholder' => '0.00' ]) ?>
+                         <?= $form->field($model, 'cobertura')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
                     </div>
-                    <div class="col-md-2">
-                        <?= $form->field($model, 'area_id')->widget(Select2::classname(), [
-                            'data' => UserHelper::getAreaList(),
-                            'options' => [
-                                'placeholder' => 'Seleccione un estado...',
-                                'class' => 'form-control form-control-lg',
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => false,
-                            ],
-                        ]) ?>
+                    <div class="col-md-1">
+                         <?= $form->field($model, 'comision')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0%']) ?>
+                    </div>
+                    <div class="col-md-1">
+                         <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>
+                    </div>
+                    <div class="col-md-1">
+                         <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>
                     </div>
                     <div class="col-md-12">
                         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
@@ -79,7 +77,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= $this->title = 'Gestión de Baremos '; ?> de <?= $clinica->nombre ?></h1>
+                <h1><?= $this->title = 'Gestión de Planes '; ?> de <?= $clinica->nombre ?></h1>
             </div>
             <div class="ms-panel-body">
                         <div class="table-responsive">
@@ -111,7 +109,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
 
                                 // Nombre
                                 [
-                                    'attribute' => 'nombre_servicio',
+                                    'attribute' => 'nombre',
                                     'format' => 'ntext',
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'options' => ['style' => 'width: 250px;'],
@@ -133,7 +131,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                     ],
                                 ],
                                 [
-                                    'attribute' => 'costo',
+                                    'attribute' => 'cobertura',
                                     'format' => ['currency', ''],
                                     'contentOptions' => ['style' => 'text-align: right;'],
                                     'filter' => false
@@ -146,34 +144,30 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
 
                                 ],
                                 [
-                                    'attribute' => 'area_id',
-                                    'value' => function ($model, $key, $index, $widget) {
+                                    'attribute' => 'comision',
+                                    'format' => ['currency', ''],
+                                    'contentOptions' => ['style' => 'text-align: right;'],
+                                    'filter' => false
 
-                                        if($model->area){
-                                            return $model->area->nombre;
-                                        }else{
-                                            return "";
-                                        }
-
-                                    },
-                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
-                                    'filter' => UserHelper::getAreaList(),
-                                    'filterWidgetOptions' => [
-                                        'pluginOptions' => ['allowClear' => true],
-                                    ],
-                                    'filterInputOptions' => ['placeholder' => Yii::t('app', 'Seleccione')],
-                                    'format' => 'raw',
-                                    'headerOptions' => ['class' => 'text-center header-link'], // Cambia el color del texto a negro
-                                    'label' => 'Area',
                                 ],
+                                [   
+                                    'attribute' => 'edad_minima', 
+                                    'contentOptions' => ['class' => 'text-center'],
+                                    'label' => Yii::t('app', 'Edades'),
+                                    'value' => function ($model, $key, $index, $widget) {
+                                        return $model->edad_minima."-".$model->edad_limite." años";
+                                    },
+                                    'headerOptions' => ['class' => 'text-left header-link'],
+                                ],
+                               
 
                                 // Estado
                                 [
                                     'label' => 'Estado',
                                     'attribute' => 'estatus',
                                     'format' => 'raw',
-                                    'headerOptions' => ['class' => 'text-left header-link'],
-                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                    'headerOptions' => ['class' => 'text-center header-link'],
+                                    'contentOptions' => ['class' => 'text-center'],
                                     'value' => function ($model) {
                                         // Asegurarse que el valor es booleano o compatible (1/0, 'true'/'false')
                                         $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
@@ -257,23 +251,3 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
         </div>
 
  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

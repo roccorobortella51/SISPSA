@@ -27,7 +27,11 @@ $this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', '
 $this->params['breadcrumbs'][] = 'Actualizar';
 
 ?>
-
+<div class="col-md-12 text-end">
+        <div class="float-right" style="margin-bottom:10px;">
+            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-warning btn-lg']) ?> 
+        </div>
+    </div>
 <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
@@ -40,9 +44,9 @@ $this->params['breadcrumbs'][] = 'Actualizar';
             <div class="row">
                 <div class="col-md-12">
                 <p>
-                    <?= Html::a('Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
+                    <?= Html::a('Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-lg btn-primary']) ?>
                     <?= Html::a('Borrar', ['delete', 'id' => $model->id], [
-                        'class' => 'btn btn-danger',
+                        'class' => 'btn btn-lg btn-danger',
                         'data' => [
                             'confirm' => 'Esta seguro que quiere eliminar esta clínica?',
                             'method' => 'post',
@@ -52,9 +56,10 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($model, 'nombre')->textInput([
-                        'maxlength' => true,
+                        'readonly' => true,
                         'autofocus' => true,
                         'placeholder' => 'Ingrese el nombre de la clínica',
+                        'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
                 <div class="col-md-4">
@@ -63,7 +68,8 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                         'options' => [
                             'placeholder' => 'J-XXXXXXXX-X',
                             'class' => 'form-control',
-                            'maxlength' => true,
+                            'readonly' => true,
+                            'class' => 'form-control form-control-lg',
                         ]
                     ]) ?>
                 </div>
@@ -73,7 +79,8 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                         'options' => [
                             'placeholder' => '(XXXX) XXX-XXXX',
                             'class' => 'form-control',
-                            'maxlength' => true,
+                            'readonly' => true,
+                            'class' => 'form-control form-control-lg',
                         ]
                     ]) ?>
                 </div>
@@ -82,8 +89,9 @@ $this->params['breadcrumbs'][] = 'Actualizar';
             <div class="row">
                 <div class="col-md-4">
                    <?= $form->field($model, 'correo')->textInput([
-                    'maxlength' => true,
+                    'readonly' => true,
                     'placeholder' => 'Ingrese el correo electrónico',
+                    'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
                 <div class="col-md-4">
@@ -91,7 +99,7 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                         'data' => $listaEstados,
                         'options' => [
                             'placeholder' => 'Seleccione un estado...',
-                            'class' => 'form-control-lg',
+                            'class' => 'form-control form-control-lg',
                         ],
                         'pluginOptions' => [
                             'allowClear' => true,
@@ -103,7 +111,7 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                         'data' => $listaEstatus, // Asegúrate de que esta línea esté, faltaba en tu código
                         'options' => [
                             'placeholder' => 'Seleccione un estatus...',
-                            'class' => 'form-control-lg',
+                            'class' => 'form-control form-control-lg',
                         ],
                         'pluginOptions' => [
                             'allowClear' => true,
@@ -116,21 +124,22 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                 <div class="col-md-12">
                     <?= $form->field($model, 'direccion')->textarea([
                         'rows' => 3, // Número de filas visibles para el textarea
-                        'maxlength' => true,
+                        'readonly' => true,
                         'placeholder' => 'Ingrese la dirección completa',
+                        'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($model, 'webpage')->textInput(['maxlength' => true, 'placeholder' => 'Ej: www.ejemplo.com']) ?>
+                    <?= $form->field($model, 'webpage')->textInput(['readonly' => true, 'placeholder' => 'Ej: www.ejemplo.com', 'class' => 'form-control form-control-lg',]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'rs_instagram')->textInput(['maxlength' => true, 'placeholder' => 'Ej: @tu_clinica']) ?>
+                    <?= $form->field($model, 'rs_instagram')->textInput(['readonly' => true, 'placeholder' => 'Ej: @tu_clinica', 'class' => 'form-control form-control-lg',]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'codigo_clinica')->textInput(['maxlength' => true, 'placeholder' => 'Código interno de clínica']) ?>
+                    <?= $form->field($model, 'codigo_clinica')->textInput(['readonly' => true, 'placeholder' => 'Código interno de clínica', 'class' => 'form-control form-control-lg',]) ?>
                 </div>
             </div>
             

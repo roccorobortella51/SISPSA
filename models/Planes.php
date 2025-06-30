@@ -53,6 +53,47 @@ class Planes extends \yii\db\ActiveRecord
             [['clinica_id', 'cobertura', 'edad_limite'], 'default', 'value' => null],
             [['clinica_id', 'cobertura', 'edad_limite'], 'integer'],
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id']],
+
+            [['nombre', 'descripcion', 'precio', 'estatus', 'cobertura',  'comision', 'edad_minima', 'edad_limite'], 'required',],
+
+             // Reglas para campos obligatorios y tipos de datos
+            [['nombre', 'precio', 'edad_minima'], 'required', 'message' => 'El campo {attribute} es obligatorio.'],
+
+            // Reglas para tipo de datos
+            [['precio', 'comision'], 'number', 'message' => 'El campo {attribute} debe ser un número.'],
+            [['edad_minima', 'edad_limite'], 'integer', 'message' => 'El campo {attribute} debe ser un número entero.'],
+
+            // Reglas para rangos de valores numéricos
+            // edad_minima
+            ['cobertura', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'La cobertura no puede ser menor a 0.'],
+
+            ['edad_minima', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'La edad mínima no puede ser menor a 0.'],
+            ['edad_minima', 'compare', 'compareAttribute' => 'edad_limite', 'operator' => '<', 'message' => 'La edad mínima debe ser menor que la edad límite.', 'when' => function($model) {
+                return !empty($model->edad_limite); // Aplica esta regla solo si edad_limite tiene un valor
+            }, 'whenClient' => "function (attribute, value) {
+                return $('#plan-edad_limite').val() != '';
+            }"],
+
+            // edad_limite
+            ['edad_limite', 'compare', 'compareAttribute' => 'edad_minima', 'operator' => '>', 'message' => 'La edad límite debe ser mayor que la edad mínima.', 'when' => function($model) {
+                return !empty($model->edad_minima); // Aplica esta regla solo si edad_minima tiene un valor
+            }, 'whenClient' => "function (attribute, value) {
+                return $('#plan-edad_minima').val() != '';
+            }"],
+            // Puedes agregar un límite superior si es necesario, ej:
+            ['edad_limite', 'compare', 'compareValue' => 120, 'operator' => '<=', 'type' => 'number', 'message' => 'La edad límite no puede exceder los 120 años.'],
+
+            // precio
+            ['precio', 'compare', 'compareValue' => 0, 'operator' => '>', 'type' => 'number', 'message' => 'El precio debe ser mayor a 0.'],
+
+            // comision (opcional, si tiene un rango específico)
+            ['comision', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'La comisión no puede ser negativa.'],
+            ['comision', 'compare', 'compareValue' => 100, 'operator' => '<=', 'type' => 'number', 'message' => 'La comisión no puede ser mayor a 100%.'],
+
+
+            // Reglas para longitud de cadenas
+            [['nombre', 'descripcion', 'cobertura'], 'string', 'max' => 255], // O la longitud máxima de tus columnas
+            // ... otras reglas ...
         ];
     }
 
@@ -63,21 +104,21 @@ class Planes extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'created_at' => 'Created At',
+            'created_at' => 'Creado en',
             'nombre' => 'Nombre',
-            'descripcion' => 'Descripcion',
+            'descripcion' => 'Descripción',
             'precio' => 'Precio',
             'estatus' => 'Estatus',
             'nota' => 'Nota',
             'tipo' => 'Tipo',
-            'clinica_id' => 'Clinica ID',
+            'clinica_id' => 'Clínica ID',
             'cobertura' => 'Cobertura',
-            'PDF' => 'Pdf',
-            'comision' => 'Comision',
-            'edad_minima' => 'Edad Minima',
-            'edad_limite' => 'Edad Limite',
-            'deleted_at' => 'Deleted At',
-            'updated_at' => 'Updated At',
+            'PDF' => 'PDF',
+            'comision' => 'Comisión',
+            'edad_minima' => 'Edad mínima',
+            'edad_limite' => 'Edad límite',
+            'deleted_at' => 'Eliminado en',
+            'updated_at' => 'Actualizado en',
         ];
     }
 

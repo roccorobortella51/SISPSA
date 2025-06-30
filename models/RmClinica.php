@@ -54,6 +54,7 @@ class RmClinica extends \yii\db\ActiveRecord
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
             [['private_key'], 'string', 'max' => 64],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
+            [['correo'], 'email'],
 
         ];
     }
@@ -69,14 +70,14 @@ class RmClinica extends \yii\db\ActiveRecord
             'rif' => 'Rif',
             'nombre' => 'Nombre',
             'estado' => 'Estado',
-            'direccion' => 'Direccion',
-            'telefono' => 'Telefono',
-            'correo' => 'Correo',
+            'direccion' => 'Dirección',
+            'telefono' => 'Teléfono',
+            'correo' => 'Correo Electronico',
             'estatus' => 'Estatus',
-            'webpage' => 'Webpage',
+            'webpage' => 'Sitio Web',
             'rs_instagram' => 'Instagram',
             'QRCode' => 'Qr Code',
-            'codigo_clinica' => 'Codigo Clinica',
+            'codigo_clinica' => 'Código Clínica',
             'deleted_at' => 'Deleted At',
             'updated_at' => 'Updated At',
             'private_key' => 'Private Key',
