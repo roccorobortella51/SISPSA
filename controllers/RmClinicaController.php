@@ -70,7 +70,11 @@ class RmClinicaController extends Controller
         $model = new RmClinica();
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
+            if ($model->load($this->request->post())) {
+
+                $model->estatus = "Activo";
+                $model->save();
+
                 return $this->redirect(['view', 'id' => $model->id]);
             }
         } else {
