@@ -41,29 +41,31 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                 <div class="row">
                     <?php $form = ActiveForm::begin(); ?>
                     <div class="col-md-2">
-                        <?= $form->field($model, 'nombre')->textInput() ?>
+                        <?= $form->field($model, 'nombre')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba un nombre para el plan']) ?>
+                    </div>
+                    <div class="col-md-3">
+                         <?= $form->field($model, 'descripcion')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba una descripción para el plan']) ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'descripcion')->textInput() ?>
+                         <?= $form->field($model, 'cobertura')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'cobertura')->textInput(['type' => 'number']) ?>
-                    </div>
-                    <div class="col-md-2">
-                         <?= $form->field($model, 'precio')->textInput(['type' => 'number']) ?>
+                         <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
                     </div>
                     <div class="col-md-1">
-                         <?= $form->field($model, 'comision')->textInput(['type' => 'number']) ?>
+                         <?= $form->field($model, 'comision')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0%']) ?>
                     </div>
                     <div class="col-md-1">
-                         <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number']) ?>
+                         <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>
                     </div>
                     <div class="col-md-1">
-                         <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number']) ?>
+                         <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-12">
                         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
-                            <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-md']) ?>
+                            <div class="form-group text-rigth mt-4" style="margin-right:10px;">
+                                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
+                            </div>
                         </div>
                     </div>
                      <?php ActiveForm::end(); ?>

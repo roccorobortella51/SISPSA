@@ -5,6 +5,7 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Planes;
+use Yii;
 
 /**
  * PlanesSearch represents the model behind the search form of `app\models\Planes`.
@@ -46,8 +47,18 @@ class PlanesSearch extends Planes
 
         // add conditions that should always apply here
 
+        if(Yii::$app->request->get('per_page') == ""){
+            $paginas = 20;
+        }else{
+            $paginas = 20;
+        }
+
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+               'defaultOrder' => ['created_at' => SORT_DESC]
+             ],
+            'pagination' => ['pageSize' => $paginas ],
         ]);
 
         $this->load($params, $formName);

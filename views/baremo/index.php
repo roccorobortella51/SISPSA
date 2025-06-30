@@ -8,6 +8,7 @@ use yii\grid\ActionColumn;
 use yii\widgets\ActiveForm;
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
+use kartik\select2\Select2;
 /**
  * @var yii\web\View $this
  * @var app\models\RmClinicaSearch $searchModel
@@ -36,36 +37,37 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                 <h1><?= $this->title = 'Agregar de Baremos a la Clínica '.$clinica->nombre; ?> </h1>
             </div>
             <div class="ms-panel-body">
+                <?php $form = ActiveForm::begin(); ?>
                 <div class="row">
-                    <?php $form = ActiveForm::begin(); ?>
                     <div class="col-md-2">
-                        <?= $form->field($model, 'nombre_servicio')->textInput() ?>
+                        <?= $form->field($model, 'nombre_servicio')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba un nombre para el Baremo','class' => 'form-control form-control-lg',]) ?>
+                    </div>
+                    <div class="col-md-4">
+                         <?= $form->field($model, 'descripcion')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba una descripción para el Baremo','class' => 'form-control form-control-lg',]) ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'descripcion')->textInput() ?>
+                         <?= $form->field($model, 'costo')->textInput(['type' => 'number','class' => 'form-control form-control-lg', 'placeholder' => '0.00' ]) ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'costo')->textInput(['type' => 'number']) ?>
+                         <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'precio')->textInput(['type' => 'number']) ?>
+                        <?= $form->field($model, 'area_id')->widget(Select2::classname(), [
+                            'data' => UserHelper::getAreaList(),
+                            'options' => [
+                                'placeholder' => 'Seleccione un estado...',
+                                'class' => 'form-control form-control-lg',
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => false,
+                            ],
+                        ]) ?>
                     </div>
-                    <div class="col-md-2">
-                        <?php echo $form->field($model, 'area_id')->widget(\kartik\select2\Select2::classname(), [
-                                            'language' => 'es',
-                                            'theme' => \kartik\select2\Select2::THEME_KRAJEE_BS4,
-                                            //'data' => [1 => 'Express', 4 => 'Programado'],
-                                             'data' => UserHelper::getAreaList(),
-                                            'options' => ['placeholder' => 'Seleccione'], // Wrap the placeholder option within an options array
-                                            'pluginOptions' => [
-                                                'allowClear' => true // Set the allowClear option to true
-                                            ],
-                                        ])->label("Área");
-                        ?>
-                    </div>
-                     <div class="col-md-2">
+                    <div class="col-md-12">
                         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
-                            <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-md']) ?>
+                            <div class="form-group text-rigth mt-4" style="margin-right:10px;">
+                                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
+                            </div>
                         </div>
                     </div>
                      <?php ActiveForm::end(); ?>

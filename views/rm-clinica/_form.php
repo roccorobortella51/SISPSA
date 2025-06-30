@@ -28,6 +28,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
     <?php $form = ActiveForm::begin([]); ?>
     <?php if (!$model->isNewRecord) { ?>
         <div class="row">
+        
             <div class="col-md-4">
                 <div class="ms-panel ms-widget ms-identifier-widget bg-info">
                     <div class="ms-panel-header header-mini">
@@ -99,10 +100,12 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
     <div class="row">
         <div class="col-md-4">
-            <?= $form->field($model, 'nombre')->textInput([
+            <?= $form->field($model, 'nombre')->label('NOMBRE DE LA CLÍNICA')->textInput([
                 'maxlength' => true,
+                'class' => 'form-control form-control-lg', // Usamos 'form-control' para tamaño estándar
+                'placeholder' => 'Nombre completo de la Clínica',
+                'label' => 'Nombre de la agencia',
                 'autofocus' => true,
-                'placeholder' => 'Ingrese el nombre de la clínica',
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -110,7 +113,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                 'mask' => 'J-99999999-9',
                 'options' => [
                     'placeholder' => 'J-XXXXXXXX-X',
-                    'class' => 'form-control',
+                    'class' => 'form-control form-control-lg',
                     'maxlength' => true,
                 ]
             ]) ?>
@@ -120,7 +123,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                 'mask' => '(9999) 999-9999',
                 'options' => [
                     'placeholder' => '(XXXX) XXX-XXXX',
-                    'class' => 'form-control',
+                    'class' => 'form-control form-control-lg',
                     'maxlength' => true,
                 ]
             ]) ?>
@@ -132,6 +135,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
            <?= $form->field($model, 'correo')->textInput([
             'maxlength' => true,
             'placeholder' => 'Ingrese el correo electrónico',
+            'class' => 'form-control form-control-lg',
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -139,7 +143,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                 'data' => $listaEstados,
                 'options' => [
                     'placeholder' => 'Seleccione un estado...',
-                    'class' => 'form-control-lg',
+                    'class' => 'form-control form-control-lg',
                 ],
                 'pluginOptions' => [
                     'allowClear' => true,
@@ -151,7 +155,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                 'data' => $listaEstatus, // Asegúrate de que esta línea esté, faltaba en tu código
                 'options' => [
                     'placeholder' => 'Seleccione un estatus...',
-                    'class' => 'form-control-lg',
+                    'class' => 'form-control form-control-lg',
                 ],
                 'pluginOptions' => [
                     'allowClear' => true,
@@ -162,23 +166,23 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
     <div class="row">
         <div class="col-md-12">
-            <?= $form->field($model, 'direccion')->textarea([
-                'rows' => 3, // Número de filas visibles para el textarea
+            <?= $form->field($model, 'direccion')->textInput([
                 'maxlength' => true,
                 'placeholder' => 'Ingrese la dirección completa',
+                'class' => 'form-control form-control-lg',
             ]) ?>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-4">
-            <?= $form->field($model, 'webpage')->textInput(['maxlength' => true, 'placeholder' => 'Ej: www.ejemplo.com']) ?>
+            <?= $form->field($model, 'webpage')->textInput(['maxlength' => true, 'placeholder' => 'Ej: www.ejemplo.com', 'class' => 'form-control form-control-lg',]) ?>
         </div>
         <div class="col-md-4">
-            <?= $form->field($model, 'rs_instagram')->textInput(['maxlength' => true, 'placeholder' => 'Ej: @tu_clinica']) ?>
+            <?= $form->field($model, 'rs_instagram')->textInput(['maxlength' => true, 'placeholder' => 'Ej: @tu_clinica', 'class' => 'form-control form-control-lg',]) ?>
         </div>
         <div class="col-md-4">
-            <?= $form->field($model, 'codigo_clinica')->textInput(['maxlength' => true, 'placeholder' => 'Código interno de clínica']) ?>
+            <?= $form->field($model, 'codigo_clinica')->textInput(['maxlength' => true, 'placeholder' => 'Código interno de clínica', 'class' => 'form-control form-control-lg',]) ?>
         </div>
     </div>
     
@@ -186,7 +190,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Clínica', ['class' => 'btn btn-success btn-lg']) ?>
         <?= Html::a('Cancelar', ['index'], ['class' => 'btn btn-lg btn-warning']); ?>
 
-        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-warning']); } ?>
+        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
     </div>
 
     <?php ActiveForm::end(); ?>

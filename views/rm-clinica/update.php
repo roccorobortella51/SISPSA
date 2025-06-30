@@ -6,10 +6,15 @@ use yii\helpers\Html;
 /** @var app\models\RmClinica $model */
 
 $this->title = 'Actualizar Clínica: ' . $model->nombre;
-$this->params['breadcrumbs'][] = ['label' => 'Actualizar Clínicas', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Clínicas', 'url' => ['index']];
 $this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
 $this->params['breadcrumbs'][] = 'Actualizar';
 ?>
+<div class="col-md-12 text-end">
+    <div class="float-right" style="margin-bottom:10px;">
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-warning btn-lg']) ?> 
+    </div>
+</div>
 <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
