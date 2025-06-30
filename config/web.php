@@ -8,6 +8,7 @@ $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log', 'admin'], // 'admin' y 'as access' deben estar en bootstrap
+    'language' => 'es',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
@@ -15,6 +16,17 @@ $config = [
     ],
     'modules' => $modules,
     'components' => [
+         'assetManager' => [
+            'bundles' => [
+                'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
+                    'css' => [], // Vacía la lista de CSS originales de AdminLTE
+                    'depends' => [ // Si AdminLteAsset depende de otros bundles, puedes mantenerlos
+                        'yii\web\YiiAsset',
+                        'yii\bootstrap\BootstrapAsset',
+                    ],
+                ],
+            ],
+        ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
             // Puedes configurar un valor de caché si lo necesitas para entornos de producción:

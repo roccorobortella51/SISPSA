@@ -4,12 +4,12 @@ namespace app\models;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Baremo;
-use Yii;
+use app\models\Agente;
+
 /**
- * BaremoSearch represents the model behind the search form of `app\models\Baremo`.
+ * AgenteSearch represents the model behind the search form of `app\models\Agente`.
  */
-class BaremoSearch extends Baremo
+class AgenteSearch extends Agente
 {
     /**
      * {@inheritdoc}
@@ -17,9 +17,9 @@ class BaremoSearch extends Baremo
     public function rules()
     {
         return [
-            [['id', 'clinica_id', 'area_id'], 'integer'],
-            [['created_at', 'nombre_servicio', 'descripcion', 'estatus', 'deleted_at', 'updated_at'], 'safe'],
-            [['precio', 'costo'], 'number'],
+            [['id', 'idusuariopropietario'], 'integer'],
+            [['nom', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente', 'por_max'], 'number'],
         ];
     }
 
@@ -42,24 +42,13 @@ class BaremoSearch extends Baremo
      */
     public function search($params, $formName = null)
     {
-        $query = Baremo::find();
+        $query = Agente::find();
 
         // add conditions that should always apply here
 
-        if(Yii::$app->request->get('per_page') == ""){
-            $paginas = 20;
-        }else{
-            $paginas = 20;
-        }
-
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'sort' => [
-               'defaultOrder' => ['created_at' => SORT_DESC]
-             ],
-            'pagination' => ['pageSize' => $paginas ],
         ]);
-
 
         $this->load($params, $formName);
 
@@ -72,18 +61,19 @@ class BaremoSearch extends Baremo
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
+            'idusuariopropietario' => $this->idusuariopropietario,
+            'por_venta' => $this->por_venta,
+            'por_asesor' => $this->por_asesor,
+            'por_cobranza' => $this->por_cobranza,
+            'por_post_venta' => $this->por_post_venta,
+            'por_agente' => $this->por_agente,
+            'por_max' => $this->por_max,
             'created_at' => $this->created_at,
-            'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
-            'precio' => $this->precio,
-            'clinica_id' => $this->clinica_id,
-            'costo' => $this->costo,
-            'area_id' => $this->area_id,
+            'deleted_at' => $this->deleted_at,
         ]);
 
-        $query->andFilterWhere(['ilike', 'nombre_servicio', $this->nombre_servicio])
-            ->andFilterWhere(['ilike', 'descripcion', $this->descripcion])
-            ->andFilterWhere(['ilike', 'estatus', $this->estatus]);
+        $query->andFilterWhere(['ilike', 'nom', $this->nom]);
 
         return $dataProvider;
     }

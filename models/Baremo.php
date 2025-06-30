@@ -47,6 +47,12 @@ class Baremo extends \yii\db\ActiveRecord
             [['precio', 'costo'], 'number'],
             [['clinica_id', 'area_id'], 'default', 'value' => null],
             [['clinica_id', 'area_id'], 'integer'],
+            [['nombre_servicio', 'descripcion', 'area_id', 'costo', 'precio'], 'required'],
+
+            ['costo', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'El costo no puede ser menor a 0.'],
+            ['precio', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'El precio no puede ser menor a 0.'],
+
+
         ];
     }
 
@@ -58,15 +64,15 @@ class Baremo extends \yii\db\ActiveRecord
         return [
             'id' => 'ID',
             'created_at' => 'Created At',
-            'nombre_servicio' => 'Nombre Servicio',
-            'descripcion' => 'Descripcion',
-            'estatus' => 'Estatus',
+            'nombre_servicio' => 'NOMBRE DEL SERVICIO',
+            'descripcion' => 'DESCRIPCIÓN',
+            'estatus' => 'ESTATUS',
             'deleted_at' => 'Deleted At',
             'updated_at' => 'Updated At',
-            'precio' => 'Precio',
+            'precio' => 'PRECIO',
             'clinica_id' => 'Clinica ID',
-            'costo' => 'Costo',
-            'area_id' => 'Area ID',
+            'costo' => 'COSTO',
+            'area_id' => 'ÁREA',
         ];
     }
 
