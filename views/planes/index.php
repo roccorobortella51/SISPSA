@@ -190,7 +190,6 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                                         ]);
                                     },
                                 ],
-                                'estatus',
                                 // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado
                                 [
                                     'class' => 'yii\grid\ActionColumn',

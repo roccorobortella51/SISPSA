@@ -196,7 +196,6 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                         ]);
                                     },
                                 ],
-                                'estatus',
                                 // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado
                                 [
                                     'class' => 'yii\grid\ActionColumn',
