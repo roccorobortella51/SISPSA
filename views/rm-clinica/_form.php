@@ -15,7 +15,13 @@ $listaEstatus = $listaEstatus ?? [];
 $mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
 $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
+if ($model->isNewRecord) {
+    $readOnly = false;
+}else{
+    $readOnly = true;
+}
 ?>
+
 
 <div class="rm-clinica-form">
 
@@ -100,6 +106,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                 'placeholder' => 'Nombre completo de la Clínica',
                 'label' => 'Nombre de la agencia',
                 'autofocus' => true,
+                'readonly' => $readOnly
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -109,6 +116,7 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                     'placeholder' => 'J-XXXXXXXX-X',
                     'class' => 'form-control form-control-lg',
                     'maxlength' => true,
+                    'readonly' => $readOnly
                 ]
             ]) ?>
         </div>
@@ -133,7 +141,10 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
             ]) ?>
         </div>
         <div class="col-md-4">
-            <?= $form->field($model, 'estado')->widget(Select2::classname(), [
+            <?php 
+
+            if($readOnly == false){
+                echo $form->field($model, 'estado')->widget(Select2::classname(), [
                 'data' => UserHelper::getEstadosList(),
                 'options' => [
                     'placeholder' => 'Seleccione',
@@ -141,8 +152,16 @@ $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
                             ],
                             'pluginOptions' => [
                                 'allowClear' => false,
-                            ],
-            ]) ?>
+                            ],]); 
+            }else{
+
+                echo $form->field($model, 'estado')->textInput([
+                'readonly' => $readOnly,
+                'value' => $model->estado,
+                'class' => 'form-control form-control-lg',
+                ]); 
+
+            } ?>
         </div>
     </div>
 

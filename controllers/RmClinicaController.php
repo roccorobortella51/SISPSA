@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\RmClinica;
 use app\models\RmClinicaSearch;
+use app\models\RmEstado;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -71,6 +72,12 @@ class RmClinicaController extends Controller
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
+
+                $estado = RmEstado::find()->where(['id' => $model->estado])->one();
+
+                if($estado){
+                    $model->estado = $estado->nombre;
+                }
 
                 $model->estatus = "Activo";
                 $model->save();

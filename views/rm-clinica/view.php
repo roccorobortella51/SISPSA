@@ -38,6 +38,74 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                 <h1><?= $this->title = 'Detalle de la Clínica'; ?></h1>
             </div>
             <div class="ms-panel-body">
+            <div class="row">
+            <div class="col-md-4">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Baremo',
+                                    ['baremo/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Gestión de los baremos para servicios médicos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Planes',
+                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Administración y configuración de los diferentes planes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Afiliados',
+                                    ['user-datos/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
             <?php $form = ActiveForm::begin([]); ?>
 
@@ -45,7 +113,7 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                 <div class="col-md-12">
                 <p>
                     <?= Html::a('Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-lg btn-primary']) ?>
-                    <?= Html::a('Borrar', ['delete', 'id' => $model->id], [
+                    <?php Html::a('Borrar', ['delete', 'id' => $model->id], [
                         'class' => 'btn btn-lg btn-danger',
                         'data' => [
                             'confirm' => 'Esta seguro que quiere eliminar esta clínica?',
@@ -95,15 +163,11 @@ $this->params['breadcrumbs'][] = 'Actualizar';
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'estado')->widget(Select2::classname(), [
-                        'data' => $listaEstados,
-                        'options' => [
-                            'placeholder' => 'Seleccione un estado...',
-                            'class' => 'form-control form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'allowClear' => true,
-                        ],
+                    <?= $form->field($model, 'estado')->textInput([
+                    'readonly' => true,
+                    'placeholder' => 'Ingrese el correo electrónico',
+                    'class' => 'form-control form-control-lg',
+                    'value' => $model->estado
                     ]) ?>
                 </div>
                 <div class="col-md-4">
