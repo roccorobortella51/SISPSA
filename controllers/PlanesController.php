@@ -8,6 +8,7 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use app\models\RmClinica;
+use Yii;
 
 
 /**
@@ -155,7 +156,7 @@ class PlanesController extends Controller
         if (Yii::$app->request->isAjax and Yii::$app->request->post()) {
             $variables = Yii::$app->request->post();
 
-            $model = Baremo::find()->where(['id' => $variables['id']])->one();
+            $model = Planes::find()->where(['id' => $variables['id']])->one();
 
             if($model->estatus == "Activo"){
                 $model->estatus = "Inactivo";
