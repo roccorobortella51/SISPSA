@@ -22,6 +22,7 @@ class AppAsset extends AssetBundle
     public $css = [
         'css/site.css',
         'css/sispsa.css',
+        'css/main-login.css',
         'css/custom-sidebar.css', // Archivo CSS personalizado para el menú lateral
         'cssMedboard/css/style.css', // Este ya estaba, asegúrate de que la ruta sea correcta
         'cssMedboard/css/animate.min.css',

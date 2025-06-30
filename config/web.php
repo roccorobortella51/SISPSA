@@ -91,10 +91,12 @@ $config = [
     'as access' => [
         'class' => 'mdm\admin\components\AccessControl',
         'allowActions' => [
-            'gii/*',
-            'site/*',              // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
+            //'gii/*',
+            'site/login',
+            'site/logout',
+            'site/error',              // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
             'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
-            'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
+            //'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
         ]
     ],
     'params' => $params,
