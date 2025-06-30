@@ -7,7 +7,7 @@ use app\models\RmClinicaSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-
+use Yii;
 /**
  * RmClinicaController implements the CRUD actions for RmClinica model.
  */
@@ -130,5 +130,21 @@ class RmClinicaController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+
+    public function actionUpdatestatus(){
+        if (Yii::$app->request->isAjax and Yii::$app->request->post()) {
+            $variables = Yii::$app->request->post();
+
+            $model = RmClinica::find()->where(['id' => $variables['id']])->one();
+
+            if($model->estatus == "Activo"){
+                $model->estatus = "Inactivo";
+                $model->save(false);
+            }else{
+                $model->estatus = "Activo";
+                $model->save(false);
+            }
+        }
     }
 }
