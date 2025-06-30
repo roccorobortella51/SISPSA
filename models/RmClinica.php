@@ -54,6 +54,7 @@ class RmClinica extends \yii\db\ActiveRecord
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
             [['private_key'], 'string', 'max' => 64],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
+            [['correo'], 'email'],
 
         ];
     }

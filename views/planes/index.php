@@ -20,7 +20,7 @@ $this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['/rm-clinica/
 // --- FIN  --- 
 
 
-$this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la página y breadcrumbs
+$this->title = 'Gestión de Planes'; // Este sigue siendo el título para la página y breadcrumbs
 
 ?>
 
@@ -30,40 +30,38 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
             <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-warning btn-lg']) ?> 
         </div>
     </div>
+
+
     <div class="col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= $this->title = 'Agregar de Baremos a la Clínica '.$clinica->nombre; ?> </h1>
+                <h1><?= $this->title = 'Agregar de Plan a '.$clinica->nombre; ?> </h1>
             </div>
             <div class="ms-panel-body">
                 <div class="row">
                     <?php $form = ActiveForm::begin(); ?>
                     <div class="col-md-2">
-                        <?= $form->field($model, 'nombre_servicio')->textInput() ?>
+                        <?= $form->field($model, 'nombre')->textInput() ?>
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'descripcion')->textInput() ?>
                     </div>
                     <div class="col-md-2">
-                         <?= $form->field($model, 'costo')->textInput(['type' => 'number']) ?>
+                         <?= $form->field($model, 'cobertura')->textInput(['type' => 'number']) ?>
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'precio')->textInput(['type' => 'number']) ?>
                     </div>
-                    <div class="col-md-2">
-                        <?php echo $form->field($model, 'area_id')->widget(\kartik\select2\Select2::classname(), [
-                                            'language' => 'es',
-                                            'theme' => \kartik\select2\Select2::THEME_KRAJEE_BS4,
-                                            //'data' => [1 => 'Express', 4 => 'Programado'],
-                                             'data' => UserHelper::getAreaList(),
-                                            'options' => ['placeholder' => 'Seleccione'], // Wrap the placeholder option within an options array
-                                            'pluginOptions' => [
-                                                'allowClear' => true // Set the allowClear option to true
-                                            ],
-                                        ])->label("Área");
-                        ?>
+                    <div class="col-md-1">
+                         <?= $form->field($model, 'comision')->textInput(['type' => 'number']) ?>
                     </div>
-                     <div class="col-md-2">
+                    <div class="col-md-1">
+                         <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number']) ?>
+                    </div>
+                    <div class="col-md-1">
+                         <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number']) ?>
+                    </div>
+                    <div class="col-md-2">
                         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
                             <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-md']) ?>
                         </div>
@@ -77,7 +75,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= $this->title = 'Gestión de Baremos '; ?> de <?= $clinica->nombre ?></h1>
+                <h1><?= $this->title = 'Gestión de Planes '; ?> de <?= $clinica->nombre ?></h1>
             </div>
             <div class="ms-panel-body">
                         <div class="table-responsive">
@@ -109,7 +107,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
 
                                 // Nombre
                                 [
-                                    'attribute' => 'nombre_servicio',
+                                    'attribute' => 'nombre',
                                     'format' => 'ntext',
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'options' => ['style' => 'width: 250px;'],
@@ -131,7 +129,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                     ],
                                 ],
                                 [
-                                    'attribute' => 'costo',
+                                    'attribute' => 'cobertura',
                                     'format' => ['currency', ''],
                                     'contentOptions' => ['style' => 'text-align: right;'],
                                     'filter' => false
@@ -144,34 +142,30 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
 
                                 ],
                                 [
-                                    'attribute' => 'area_id',
-                                    'value' => function ($model, $key, $index, $widget) {
+                                    'attribute' => 'comision',
+                                    'format' => ['currency', ''],
+                                    'contentOptions' => ['style' => 'text-align: right;'],
+                                    'filter' => false
 
-                                        if($model->area){
-                                            return $model->area->nombre;
-                                        }else{
-                                            return "";
-                                        }
-
-                                    },
-                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
-                                    'filter' => UserHelper::getAreaList(),
-                                    'filterWidgetOptions' => [
-                                        'pluginOptions' => ['allowClear' => true],
-                                    ],
-                                    'filterInputOptions' => ['placeholder' => Yii::t('app', 'Seleccione')],
-                                    'format' => 'raw',
-                                    'headerOptions' => ['class' => 'text-center header-link'], // Cambia el color del texto a negro
-                                    'label' => 'Area',
                                 ],
+                                [   
+                                    'attribute' => 'edad_minima', 
+                                    'contentOptions' => ['class' => 'text-center'],
+                                    'label' => Yii::t('app', 'Edades'),
+                                    'value' => function ($model, $key, $index, $widget) {
+                                        return $model->edad_minima."-".$model->edad_limite." años";
+                                    },
+                                    'headerOptions' => ['class' => 'text-left header-link'],
+                                ],
+                               
 
                                 // Estado
                                 [
                                     'label' => 'Estado',
                                     'attribute' => 'estatus',
                                     'format' => 'raw',
-                                    'headerOptions' => ['class' => 'text-left header-link'],
-                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                    'headerOptions' => ['class' => 'text-center header-link'],
+                                    'contentOptions' => ['class' => 'text-center'],
                                     'value' => function ($model) {
                                         // Asegurarse que el valor es booleano o compatible (1/0, 'true'/'false')
                                         $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
@@ -256,23 +250,3 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
         </div>
 
  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
