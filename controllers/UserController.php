@@ -9,6 +9,8 @@ use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\db\Expression;
+
 
 /**
  * UserController implements the CRUD actions for User and UserDatos models.
@@ -78,6 +80,7 @@ class UserController extends Controller
         if ($user->load(Yii::$app->request->post()) && $userDatos->load(Yii::$app->request->post())) {
             $user->setPassword($user->password);
             $user->generateAuthKey();
+            $userDatos->user_id = new Expression('gen_random_uuid()');
             if ($user->save()) {
                 $userDatos->user_login_id = $user->id;
                 if ($userDatos->save()) {

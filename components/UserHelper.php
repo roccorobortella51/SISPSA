@@ -93,7 +93,7 @@ class UserHelper
         );
     }
 
-    public function getTotalClinicas()
+    public static function getTotalClinicas()
     {
         $totalClinicas = RmClinica::find()->count();
 
@@ -101,7 +101,7 @@ class UserHelper
         return $totalClinicas;
     }
 
-    public function getTotalAsesores()
+    public static function getTotalAsesores()
     {
         $totalClinicas = Asesores::find()->count();
 
@@ -109,7 +109,7 @@ class UserHelper
         return $totalClinicas;
     }
 
-    public function getTotalAgentes()
+    public static function getTotalAgentes()
     {
         $totalClinicas = Agente::find()->count();
 
@@ -117,7 +117,7 @@ class UserHelper
         return $totalClinicas;
     }
 
-    public function getTotalUsuarios()
+    public static function getTotalUsuarios()
     {
         $totalClinicas = User::find()->count();
 

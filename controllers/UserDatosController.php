@@ -67,6 +67,7 @@ class UserDatosController extends Controller
         $model = new UserDatos();
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            var_dump($model->errors);
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
