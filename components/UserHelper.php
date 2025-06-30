@@ -7,6 +7,11 @@ use yii\helpers\Url;
 use yii\db\Expression;
 use yii\db\Query;
 use app\models\Area;
+use app\models\RmEstado;
+use app\models\RmClinica;
+use app\models\Agente;
+use app\models\Asesores;
+use app\models\User;
 
 class UserHelper
 {
@@ -77,6 +82,47 @@ class UserHelper
             'id',
             'name'
         );
+    }
+
+    public function getEstadosList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            RmEstado::find()->select(['id', 'nombre as name'])->asArray()->all(),
+            'id',
+            'name'
+        );
+    }
+
+    public function getTotalClinicas()
+    {
+        $totalClinicas = RmClinica::find()->count();
+
+        // Puedes pasar este total a una vista
+        return $totalClinicas;
+    }
+
+    public function getTotalAsesores()
+    {
+        $totalClinicas = Asesores::find()->count();
+
+        // Puedes pasar este total a una vista
+        return $totalClinicas;
+    }
+
+    public function getTotalAgentes()
+    {
+        $totalClinicas = Agente::find()->count();
+
+        // Puedes pasar este total a una vista
+        return $totalClinicas;
+    }
+
+    public function getTotalUsuarios()
+    {
+        $totalClinicas = User::find()->count();
+
+        // Puedes pasar este total a una vista
+        return $totalClinicas;
     }
 
 

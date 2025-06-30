@@ -1,0 +1,38 @@
+/*
+ * Estilos para el layout de login (main-login.php)
+ */
+
+body {
+    background-color: #f4f6f9; /* Un color de fondo suave, similar a AdminLTE */
+}
+
+.ms-auth-container {
+    display: flex;
+    /* Ocupa el alto de la ventana menos la altura de la barra de navegación (aprox 58px) */
+    min-height: calc(100vh - 58px); 
+    width: 100%;
+}
+
+.ms-auth-col {
+    flex: 1;
+    display: flex;
+    align-items: center;     /* Centrado vertical */
+    justify-content: center; /* Centrado horizontal */
+}
+
+.ms-auth-bg {
+    /* Puedes poner una imagen de fondo aquí si quieres */
+    /* background-image: url('../img/login-bg.jpg'); */
+    background-color: #e9ecef;
+    background-size: cover;
+    background-position: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Oculta la columna de la imagen en pantallas pequeñas para dar más espacio al formulario */
+@media (max-width: 992px) {
+    .ms-auth-col:first-child {
+        display: none;
+    }
+}
