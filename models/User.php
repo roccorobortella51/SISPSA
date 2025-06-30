@@ -30,6 +30,8 @@ use yii\web\IdentityInterface;
  */
 class User extends ActiveRecord implements IdentityInterface
 {
+    public $password;
+
     const STATUS_INACTIVE = 0;
     const STATUS_ACTIVE = 10;
 
@@ -41,6 +43,24 @@ class User extends ActiveRecord implements IdentityInterface
         return Configs::instance()->userTable;
     }
 
+    public function rules()
+    {
+        return [
+            ['password', 'string', 'min' => 6],
+            ['status', 'in', 'range' => [UserStatus::ACTIVE, UserStatus::INACTIVE]],
+        ];
+    }
+
+    /**
+     * Gets query for [[UserDatos]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUserDatos()
+    {
+        return $this->hasOne(UserDatos::class, ['user_login_id' => 'id']);
+    }
+
     /**
      * @inheritdoc
      */
@@ -48,16 +68,6 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return [
             TimestampBehavior::className(),
-        ];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function rules()
-    {
-        return [
-            ['status', 'in', 'range' => [UserStatus::ACTIVE, UserStatus::INACTIVE]],
         ];
     }
 

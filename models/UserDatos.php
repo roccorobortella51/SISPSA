@@ -42,6 +42,7 @@ use Yii;
  * @property string|null $tipo_cedula
  * @property string|null $tipo_sangre
  * @property string|null $estatus_solvente
+ * @property int|null $user_login_id este campo relaciona los datos del usuario con los datos del login y el rbac
  *
  * @property Beneficiarios[] $beneficiarios
  * @property Beneficiarios[] $beneficiarios0
@@ -51,6 +52,7 @@ use Yii;
  * @property Notifications[] $notifications
  * @property Recibos[] $recibos
  * @property TransactionHistory[] $transactionHistories
+ * @property User $userLogin
  */
 class UserDatos extends \yii\db\ActiveRecord
 {
@@ -70,13 +72,14 @@ class UserDatos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'paso', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'clinica_id', 'plan_id', 'apellidos', 'email', 'contrato_id', 'asesor_id', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'cedula', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'default', 'value' => null],
+            [['nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'paso', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'clinica_id', 'plan_id', 'apellidos', 'email', 'contrato_id', 'asesor_id', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'cedula', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'user_login_id'], 'default', 'value' => null],
             [['user_id'], 'default', 'value' => 'gen_random_uuid()'],
             [['created_at', 'fechanac', 'deleted_at', 'updated_at'], 'safe'],
             [['user_id', 'nombres', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'string'],
             [['paso'], 'number'],
-            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'default', 'value' => null],
-            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'integer'],
+            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id'], 'default', 'value' => null],
+            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id'], 'integer'],
+            [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id']],
         ];
     }
 
@@ -121,6 +124,7 @@ class UserDatos extends \yii\db\ActiveRecord
             'tipo_cedula' => 'Tipo Cedula',
             'tipo_sangre' => 'Tipo Sangre',
             'estatus_solvente' => 'Estatus Solvente',
+            'user_login_id' => 'User Login ID',
         ];
     }
 
@@ -202,6 +206,16 @@ class UserDatos extends \yii\db\ActiveRecord
     public function getTransactionHistories()
     {
         return $this->hasMany(TransactionHistory::class, ['user_id' => 'id']);
+    }
+
+    /**
+     * Gets query for [[UserLogin]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUserLogin()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_login_id']);
     }
 
 }
