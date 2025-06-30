@@ -5668,7 +5668,7 @@ table.data-table7 a:hover {
 .ms-auth-bg {
   position: relative;
   height: 100%;
-  background-image: url('../img/default-login-1000x700.jpg');
+  background-image: url('../../img/default-login-1000x700.jpg');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center center;
