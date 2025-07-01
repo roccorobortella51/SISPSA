@@ -23,6 +23,8 @@ use Yii;
  * @property string|null $deleted_at
  * @property int|null $puede_registrar
  * @property float|null $por_registrar
+ * @property User $user 
+ * @property UserDatos $userDatos 
  */
 class AgenteFuerza extends \yii\db\ActiveRecord
 {
@@ -77,5 +79,25 @@ class AgenteFuerza extends \yii\db\ActiveRecord
             'por_registrar' => 'Por Registrar',
         ];
     }
+
+    public function getUser()
+    {
+        return $this->hasOne(User::className(), ['id' => 'idusuario']);
+    }
+
+        /**
+     * Gets query for [[UserDatos]] through [[User]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUserDatos()
+    {
+        // Conectamos AgenteFuerza con UserDatos A TRAVÉS del modelo User.
+        // La relación en User (getUserDatos) es ['user_login_id' => 'id'].
+        // La relación en AgenteFuerza (getUser) es ['id' => 'idusuario'].
+        return $this->hasOne(UserDatos::class, ['user_login_id' => 'id'])
+                    ->via('user'); // ¡Aquí indicamos que pase por la relación 'user'!
+    }
+
 
 }

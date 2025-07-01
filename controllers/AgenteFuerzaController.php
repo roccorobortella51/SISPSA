@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\models\AgenteFuerza;
 use app\models\AgenteFuerzaSearch;
 use app\models\Agente; 
+use app\models\User; 
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -66,7 +67,7 @@ class AgenteFuerzaController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate()
+    public function actionCreate($id_agente)
     {
         $model = new AgenteFuerza();
 

@@ -24,7 +24,7 @@ use yii\web\JqueryAsset;
                     <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
                         <h6 style="margin: 0;"> 
                             <?= Html::a(
-                                'ACTUALIZACIÓN DE AGENCIA',
+                                'ACTUALIZAR AGENCIA',
                                 ['update', 'id' => $model->id],
                                 ['class' => 'text-white panel-link', 'style' => 'font-size: 1.em;']
                             ) ?>

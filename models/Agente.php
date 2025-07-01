@@ -70,4 +70,5 @@ class Agente extends \yii\db\ActiveRecord
         ];
     }
 
+
 }

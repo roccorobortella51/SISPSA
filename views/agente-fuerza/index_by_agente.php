@@ -103,7 +103,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'attribute' => 'usuario.nombre_completo', // Asumiendo una relación 'usuario' en AgenteFuerza
                                 'label' => 'Nombre',
                                 'value' => function($model) {
-                                    return $model->usuario->nombre_completo ?? 'N/A';
+                                    return $model->user->userDatos->nombres ?? 'N/A';
                                 },
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [

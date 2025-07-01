@@ -22,6 +22,24 @@ use Yii;
  * @property string|null $qr
  * @property float|null $paso
  * @property string|null $video
+/**
+ * This is the model class for table "user_datos".
+ *
+ * @property int $id
+ * @property string $created_at
+ * @property string|null $user_id
+ * @property string|null $nombres
+ * @property string|null $fechanac
+ * @property string|null $sexo
+ * @property string|null $selfie
+ * @property string|null $telefono
+ * @property string|null $estado
+ * @property string|null $role
+ * @property string|null $estatus
+ * @property string|null $imagen_identificacion
+ * @property string|null $qr
+ * @property float|null $paso
+ * @property string|null $video
  * @property string|null $ciudad
  * @property string|null $municipio
  * @property string|null $parroquia
@@ -125,6 +143,7 @@ class UserDatos extends \yii\db\ActiveRecord
             'tipo_sangre' => 'Tipo Sangre',
             'estatus_solvente' => 'Estatus Solvente',
             'user_login_id' => 'User Login ID',
+            'user_login_id' => 'User Login ID',
         ];
     }
 
@@ -205,7 +224,7 @@ class UserDatos extends \yii\db\ActiveRecord
      */
     public function getTransactionHistories()
     {
-        return $this->hasMany(TransactionHistory::class, ['user_id' => 'id']);
+     return $this->hasMany(TransactionHistory::class, ['user_id' => 'id']);
     }
 
     /**
