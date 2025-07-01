@@ -2,7 +2,6 @@
 
 namespace app\controllers;
 
-use Yii;
 use app\models\UserDatos;
 use app\models\UserDatosSearch;
 use yii\web\Controller;
@@ -15,28 +14,32 @@ use yii\filters\VerbFilter;
 class UserDatosController extends Controller
 {
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function behaviors()
     {
-        return [
-            'verbs' => [
-                'class' => VerbFilter::className(),
-                'actions' => [
-                    'delete' => ['POST'],
+        return array_merge(
+            parent::behaviors(),
+            [
+                'verbs' => [
+                    'class' => VerbFilter::className(),
+                    'actions' => [
+                        'delete' => ['POST'],
+                    ],
                 ],
-            ],
-        ];
+            ]
+        );
     }
 
     /**
      * Lists all UserDatos models.
-     * @return mixed
+     *
+     * @return string
      */
     public function actionIndex()
     {
         $searchModel = new UserDatosSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider = $searchModel->search($this->request->queryParams);
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -47,7 +50,7 @@ class UserDatosController extends Controller
     /**
      * Displays a single UserDatos model.
      * @param int $id ID
-     * @return mixed
+     * @return string
      * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionView($id)
@@ -60,14 +63,18 @@ class UserDatosController extends Controller
     /**
      * Creates a new UserDatos model.
      * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return mixed
+     * @return string|\yii\web\Response
      */
     public function actionCreate()
     {
         $model = new UserDatos();
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($this->request->isPost) {
+            if ($model->load($this->request->post()) && $model->save()) {
+                return $this->redirect(['view', 'id' => $model->id]);
+            }
+        } else {
+            $model->loadDefaultValues();
         }
 
         return $this->render('create', [
@@ -79,14 +86,14 @@ class UserDatosController extends Controller
      * Updates an existing UserDatos model.
      * If update is successful, the browser will be redirected to the 'view' page.
      * @param int $id ID
-     * @return mixed
+     * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -99,7 +106,7 @@ class UserDatosController extends Controller
      * Deletes an existing UserDatos model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param int $id ID
-     * @return mixed
+     * @return \yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionDelete($id)
@@ -118,7 +125,7 @@ class UserDatosController extends Controller
      */
     protected function findModel($id)
     {
-        if (($model = UserDatos::findOne($id)) !== null) {
+        if (($model = UserDatos::findOne(['id' => $id])) !== null) {
             return $model;
         }
 

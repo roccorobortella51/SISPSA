@@ -4,14 +4,14 @@ use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
-/** @var app\models\Planes $model */
+/** @var app\models\User $model */
 
 $this->title = $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Planes', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Users', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 \yii\web\YiiAsset::register($this);
 ?>
-<div class="planes-view">
+<div class="user-view">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
@@ -29,22 +29,15 @@ $this->params['breadcrumbs'][] = $this->title;
     <?= DetailView::widget([
         'model' => $model,
         'attributes' => [
-            'id',
+            'username',
+            'auth_key',
+            'password_hash',
+            'password_reset_token',
+            'email:email',
+            'status',
             'created_at',
-            'nombre:ntext',
-            'descripcion:ntext',
-            'precio',
-            'estatus:ntext',
-            'nota:ntext',
-            'tipo:ntext',
-            'clinica_id',
-            'cobertura',
-            'PDF:ntext',
-            'comision',
-            'edad_minima',
-            'edad_limite',
-            'deleted_at',
             'updated_at',
+            'id',
         ],
     ]) ?>
 

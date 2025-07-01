@@ -4,12 +4,12 @@ namespace app\models;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Area;
+use app\models\User;
 
 /**
- * AreaSearch represents the model behind the search form of `app\models\Area`.
+ * UserSearch represents the model behind the search form of `app\models\User`.
  */
-class AreaSearch extends Area
+class UserSearch extends User
 {
     /**
      * {@inheritdoc}
@@ -17,8 +17,8 @@ class AreaSearch extends Area
     public function rules()
     {
         return [
-            [['id'], 'integer'],
-            [['nombre', 'descripcion', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
+            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email'], 'safe'],
+            [['status', 'created_at', 'updated_at', 'id'], 'integer'],
         ];
     }
 
@@ -41,7 +41,7 @@ class AreaSearch extends Area
      */
     public function search($params, $formName = null)
     {
-        $query = Area::find();
+        $query = User::find();
 
         // add conditions that should always apply here
 
@@ -59,14 +59,17 @@ class AreaSearch extends Area
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'id' => $this->id,
+            'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'deleted_at' => $this->deleted_at,
+            'id' => $this->id,
         ]);
 
-        $query->andFilterWhere(['ilike', 'nombre', $this->nombre])
-            ->andFilterWhere(['ilike', 'descripcion', $this->descripcion]);
+        $query->andFilterWhere(['ilike', 'username', $this->username])
+            ->andFilterWhere(['ilike', 'auth_key', $this->auth_key])
+            ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
+            ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
+            ->andFilterWhere(['ilike', 'email', $this->email]);
 
         return $dataProvider;
     }

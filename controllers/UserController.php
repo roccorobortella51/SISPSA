@@ -2,19 +2,19 @@
 
 namespace app\controllers;
 
-use app\models\Planes;
-use app\models\PlanesSearch;
+use Yii;
+use app\models\User;
+use app\models\UserSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use app\models\RmClinica;
-use Yii;
+use app\models\AuthAssignment;
 
 
 /**
- * PlanesController implements the CRUD actions for Planes model.
+ * UserController implements the CRUD actions for User model.
  */
-class PlanesController extends Controller
+class UserController extends Controller
 {
     /**
      * @inheritDoc
@@ -35,41 +35,24 @@ class PlanesController extends Controller
     }
 
     /**
-     * Lists all Planes models.
+     * Lists all User models.
      *
      * @return string
      */
-    public function actionIndex($clinica_id = "")
+    public function actionIndex()
     {
-        $clinica = RmClinica::find()->where(['id' => $clinica_id])->andWhere(['is','deleted_at', null])->one();
-        $searchModel = new PlanesSearch();
+        $searchModel = new UserSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
-        $model = new Planes();
-
-            if ($model->load($this->request->post())) {
-
-                $model->clinica_id = $clinica_id;
-                $model->estatus = "Activo";
-                if($model->save()){
-                }else{
-                     var_dump($model->errors); die();
-                };
-                return $this->redirect(['index', 'clinica_id' => $clinica->id]);
-            }
-       
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
-            'clinica' => $clinica,
-            'model' => $model
         ]);
     }
 
     /**
-     * Displays a single Planes model.
-     * @param int $id ID
+     * Displays a single User model.
+     * @param int $id
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
      */
@@ -81,17 +64,26 @@ class PlanesController extends Controller
     }
 
     /**
-     * Creates a new Planes model.
+     * Creates a new User model.
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
     public function actionCreate()
     {
-        $model = new Planes();
+        $model = new User();
+        $modelAuthAssignment = new AuthAssignment();
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
+            $model->load($this->request->post());
+            $model->password_hash = User::setPassword($model->password);
+            $model->auth_key = User::generateAuthKey();
+            $modelAuthAssignment->item_name = $model->roles;
+            if ($model->save()) {
+                $modelAuthAssignment->save();
                 return $this->redirect(['view', 'id' => $model->id]);
+            } else {
+                \Yii::error('User create failed: ' . json_encode($model->errors));
+                \Yii::error('POST data: ' . json_encode($this->request->post()));
             }
         } else {
             $model->loadDefaultValues();
@@ -103,18 +95,41 @@ class PlanesController extends Controller
     }
 
     /**
-     * Updates an existing Planes model.
+     * Updates an existing User model.
      * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
+     * @param int $id
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $pass = $model->password_hash;
+        $auth = Yii::$app->authManager;
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        
+        if ($this->request->isPost) {
+            $model->load($this->request->post());
+            
+
+            if ($model->password == '') {
+                $model->password_hash = $pass;
+            }
+            else {
+                $model->password_hash = User::setPassword($model->password);
+            }
+            if ($model->save()) {
+                $auth->revokeAll($model->id);
+                $rol = $auth->getRole($model->roles);
+                if ($rol){
+                    $auth->assign($rol, $model->id);
+                    Yii::$app->cache->flush();
+                }
+                return $this->redirect(['view', 'id' => $model->id]);
+            } else {
+                \Yii::error('User update failed: ' . json_encode($model->errors));
+                \Yii::error('POST data: ' . json_encode($this->request->post()));
+            }
         }
 
         return $this->render('update', [
@@ -123,9 +138,9 @@ class PlanesController extends Controller
     }
 
     /**
-     * Deletes an existing Planes model.
+     * Deletes an existing User model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
+     * @param int $id
      * @return \yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
@@ -137,34 +152,18 @@ class PlanesController extends Controller
     }
 
     /**
-     * Finds the Planes model based on its primary key value.
+     * Finds the User model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Planes the loaded model
+     * @param int $id
+     * @return User the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
     protected function findModel($id)
     {
-        if (($model = Planes::findOne(['id' => $id])) !== null) {
+        if (($model = User::findOne(['id' => $id])) !== null) {
             return $model;
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
-    }
-
-    public function actionUpdatestatus(){
-        if (Yii::$app->request->isAjax and Yii::$app->request->post()) {
-            $variables = Yii::$app->request->post();
-
-            $model = Planes::find()->where(['id' => $variables['id']])->one();
-
-            if($model->estatus == "Activo"){
-                $model->estatus = "Inactivo";
-                $model->save(false);
-            }else{
-                $model->estatus = "Activo";
-                $model->save(false);
-            }
-        }
     }
 }

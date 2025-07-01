@@ -2,26 +2,19 @@
 
 use yii\helpers\Html;
 
-/* @var $this yii\web\View */
-/* @var $model app\models\UserDatos */
+/** @var yii\web\View $this */
+/** @var app\models\UserDatos $model */
 
 $this->title = 'Create User Datos';
 $this->params['breadcrumbs'][] = ['label' => 'User Datos', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
+<div class="user-datos-create">
 
-<div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <?=$this->render('_form', [
-                        'model' => $model
-                    ]) ?>
-                </div>
-            </div>
-        </div>
-        <!--.card-body-->
-    </div>
-    <!--.card-->
+    <h1><?= Html::encode($this->title) ?></h1>
+
+    <?= $this->render('_form', [
+        'model' => $model,
+    ]) ?>
+
 </div>
