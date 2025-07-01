@@ -5,7 +5,6 @@ namespace app\models;
 //namespace mdm\admin\models;
 
 use mdm\admin\components\Configs;
-use mdm\admin\components\UserStatus;
 use Yii;
 use yii\base\NotSupportedException;
 use yii\behaviors\TimestampBehavior;
@@ -31,6 +30,7 @@ use yii\web\IdentityInterface;
 class User extends ActiveRecord implements IdentityInterface
 {
     public $password;
+    public $roles;
 
     const STATUS_INACTIVE = 0;
     const STATUS_ACTIVE = 10;
@@ -51,9 +51,34 @@ class User extends ActiveRecord implements IdentityInterface
             ['email', 'required'],
             ['email', 'string', 'max' => 255],
             ['email', 'email'],
-            ['password', 'string', 'min' => 6],
-            ['status', 'in', 'range' => [UserStatus::ACTIVE, UserStatus::INACTIVE]],
+            ['password', 'string', 'min' => 5],
+            ['roles', 'required'],
+            ['roles', 'string'],
+            ['status', 'in', 'range' => [1, self::STATUS_INACTIVE]],
         ];
+    }
+
+    public function beforeValidate()
+    {
+        if (isset($this->status)) {
+            $this->status = (int) $this->status;
+        }
+        return parent::beforeValidate();
+    }
+     public function beforeSave($insert)
+    {
+        if (parent::beforeSave($insert)) {
+            // Si el valor recibido del formulario es 1 (del switch "encendido"),
+            // lo cambiamos a 10 (STATUS_ACTIVE) para guardar en la base de datos.
+            if ($this->status == 1) {
+                $this->status = self::STATUS_ACTIVE; // O 10 directamente
+            }
+            // Si el valor es 0 (del switch "apagado"), ya es 0 (STATUS_INACTIVE),
+            // no necesitamos cambiarlo, ya que coincide con el valor de la DB.
+
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -81,7 +106,7 @@ class User extends ActiveRecord implements IdentityInterface
      */
     public static function findIdentity($id)
     {
-        return static::findOne(['id' => $id, 'status' => UserStatus::ACTIVE]);
+        return static::findOne(['id' => $id, 'status' => self::STATUS_ACTIVE]);
     }
 
     /**
@@ -100,7 +125,7 @@ class User extends ActiveRecord implements IdentityInterface
      */
     public static function findByUsername($username)
     {
-        return static::findOne(['username' => $username, 'status' => UserStatus::ACTIVE]);
+        return static::findOne(['username' => $username, 'status' => self::STATUS_ACTIVE]);
     }
 
     /**
@@ -117,7 +142,7 @@ class User extends ActiveRecord implements IdentityInterface
 
         return static::findOne([
                 'password_reset_token' => $token,
-                'status' => UserStatus::ACTIVE,
+                'status' => self::STATUS_ACTIVE,
         ]);
     }
 
@@ -177,18 +202,19 @@ class User extends ActiveRecord implements IdentityInterface
      * Generates password hash from password and sets it to the model
      *
      * @param string $password
+     * @return string
      */
-    public function setPassword($password)
+    public static function setPassword($password)
     {
-        $this->password_hash = Yii::$app->security->generatePasswordHash($password);
+        return Yii::$app->security->generatePasswordHash($password);
     }
 
     /**
      * Generates "remember me" authentication key
      */
-    public function generateAuthKey()
+    public static function generateAuthKey()
     {
-        $this->auth_key = Yii::$app->security->generateRandomString();
+        return Yii::$app->security->generateRandomString();
     }
 
     /**

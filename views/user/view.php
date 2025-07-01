@@ -3,61 +3,42 @@
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
-/* @var $this yii\web\View */
-/* @var $model app\models\User */
-/* @var $userDatos app\models\UserDatos */
+/** @var yii\web\View $this */
+/** @var app\models\User $model */
 
-$this->title = $model->username;
+$this->title = $model->id;
 $this->params['breadcrumbs'][] = ['label' => 'Users', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
+\yii\web\YiiAsset::register($this);
 ?>
-<div class="user-view container">
+<div class="user-view">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        <?= Html::a('<i class="fas fa-edit"></i> Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary btn-lg']) ?>
-        <?= Html::a('<i class="fas fa-trash"></i> Eliminar', ['delete', 'id' => $model->id], [
-            'class' => 'btn btn-danger btn-lg',
+        <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
+        <?= Html::a('Delete', ['delete', 'id' => $model->id], [
+            'class' => 'btn btn-danger',
             'data' => [
-                'confirm' => '¿Está seguro que desea eliminar este usuario?',
+                'confirm' => 'Are you sure you want to delete this item?',
                 'method' => 'post',
             ],
         ]) ?>
     </p>
 
-    <h3>Información del Usuario</h3>
     <?= DetailView::widget([
         'model' => $model,
         'attributes' => [
-            'id',
             'username',
-            'email',
+            'auth_key',
+            'password_hash',
+            'password_reset_token',
+            'email:email',
             'status',
-            'created_at:datetime',
-            'updated_at:datetime',
+            'created_at',
+            'updated_at',
+            'id',
         ],
     ]) ?>
-
-    <h3>Datos del Usuario</h3>
-    <?php if ($userDatos): ?>
-        <?= DetailView::widget([
-            'model' => $userDatos,
-            'attributes' => [
-                'nombres',
-                'apellidos',
-                'telefono',
-                'email',
-                'sexo',
-                'fechanac',
-                'direccion',
-                'ciudad',
-                'municipio',
-                'parroquia',
-            ],
-        ]) ?>
-    <?php else: ?>
-        <p>No hay datos adicionales disponibles para este usuario.</p>
-    <?php endif; ?>
 
 </div>

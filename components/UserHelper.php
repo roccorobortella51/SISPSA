@@ -12,6 +12,7 @@ use app\models\RmClinica;
 use app\models\Agente;
 use app\models\Asesores;
 use app\models\User;
+use app\models\AuthItem;
 
 class UserHelper
 {
@@ -84,7 +85,7 @@ class UserHelper
         );
     }
 
-    public function getEstadosList()
+    public static function getEstadosList()
     {
         return \yii\helpers\ArrayHelper::map(
             RmEstado::find()->select(['id', 'nombre as name'])->asArray()->all(),
@@ -124,6 +125,17 @@ class UserHelper
         // Puedes pasar este total a una vista
         return $totalClinicas;
     }
+
+    public static function getRolesList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            AuthItem::find()->select(['name', 'name'])->where(['type' => '1'])->asArray()->all(),
+            'name',
+            'name'
+        );
+    }
+
+    
 
 
 }

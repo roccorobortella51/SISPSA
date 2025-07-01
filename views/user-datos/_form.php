@@ -1,11 +1,11 @@
 <?php
 
 use yii\helpers\Html;
-use yii\bootstrap4\ActiveForm;
+use yii\widgets\ActiveForm;
 
-/* @var $this yii\web\View */
-/* @var $model app\models\UserDatos */
-/* @var $form yii\bootstrap4\ActiveForm */
+/** @var yii\web\View $this */
+/** @var app\models\UserDatos $model */
+/** @var yii\widgets\ActiveForm $form */
 ?>
 
 <div class="user-datos-form">
@@ -79,6 +79,8 @@ use yii\bootstrap4\ActiveForm;
     <?= $form->field($model, 'tipo_sangre')->textarea(['rows' => 6]) ?>
 
     <?= $form->field($model, 'estatus_solvente')->textarea(['rows' => 6]) ?>
+
+    <?= $form->field($model, 'user_login_id')->textInput() ?>
 
     <div class="form-group">
         <?= Html::submitButton('Save', ['class' => 'btn btn-success']) ?>

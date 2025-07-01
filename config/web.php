@@ -109,6 +109,7 @@ $config = [
             'site/error',              // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
             'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
             //'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
+            
         ]
     ],
     'params' => $params,

@@ -17,7 +17,7 @@ class UserDatosSearch extends UserDatos
     public function rules()
     {
         return [
-            [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'integer'],
+            [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id'], 'integer'],
             [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'safe'],
             [['paso'], 'number'],
         ];
@@ -36,10 +36,11 @@ class UserDatosSearch extends UserDatos
      * Creates data provider instance with search query applied
      *
      * @param array $params
+     * @param string|null $formName Form name to be used into `->load()` method.
      *
      * @return ActiveDataProvider
      */
-    public function search($params)
+    public function search($params, $formName = null)
     {
         $query = UserDatos::find();
 
@@ -49,7 +50,7 @@ class UserDatosSearch extends UserDatos
             'query' => $query,
         ]);
 
-        $this->load($params);
+        $this->load($params, $formName);
 
         if (!$this->validate()) {
             // uncomment the following line if you do not want to return any records when validation fails
@@ -70,6 +71,7 @@ class UserDatosSearch extends UserDatos
             'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
             'cedula' => $this->cedula,
+            'user_login_id' => $this->user_login_id,
         ]);
 
         $query->andFilterWhere(['ilike', 'user_id', $this->user_id])
