@@ -24,7 +24,7 @@ use yii\web\JqueryAsset;
                     <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
                         <h6 style="margin: 0;"> 
                             <?= Html::a(
-                                'ACTUALIZAR AGENCIA',
+                                'ACTUALIZACIÓN DE AGENCIA',
                                 ['update', 'id' => $model->id],
                                 ['class' => 'text-white panel-link', 'style' => 'font-size: 1.em;']
                             ) ?>
@@ -126,17 +126,11 @@ use yii\web\JqueryAsset;
 
     <div class="form-group text-end mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> GUARDAR', ['class' => 'btn btn-outline-primary btn-md']) ?>
-
-        <?= Html::a('CANCELAR', ['index'], ['class' => 'btn btn-md btn-outline-warning ms-2']); ?>
-
-        <?php if ($model->isNewRecord) { ?>
-            <?= Html::a('LIMPIAR', ['create'], ['class' => 'btn btn-md btn-outline-dark ms-2']); ?>
-        <?php } ?>
+        <?= Html::a('<i class="fas fa-arrow-left"></i> VOLVER', ['index'], ['class' => 'btn btn-outline-secondary btn-md ms-2']) ?>
     </div>
 
     <?php ActiveForm::end(); ?>
 
 </div>
-
 
 

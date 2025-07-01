@@ -67,13 +67,19 @@ class AgenteFuerzaController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate($id_agente)
+    public function actionCreate($agente_id)
     {
         $model = new AgenteFuerza();
+        $agente = Agente::findOne($agente_id);
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+            if ($model->load($this->request->post())) {
+
+                $model->id_agente = $agente_id;
+                if($model->save()){
+                    
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }
             }
         } else {
             $model->loadDefaultValues();
@@ -81,6 +87,7 @@ class AgenteFuerzaController extends Controller
 
         return $this->render('create', [
             'model' => $model,
+            'agente' => $agente,
         ]);
     }
 
