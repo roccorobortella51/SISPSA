@@ -77,9 +77,15 @@ class UserController extends Controller
             $model->load($this->request->post());
             $model->password_hash = User::setPassword($model->password);
             $model->auth_key = User::generateAuthKey();
-            $modelAuthAssignment->item_name = $model->roles;
+            $auth = Yii::$app->authManager;
+
             if ($model->save()) {
-                $modelAuthAssignment->save();
+                $auth->revokeAll($model->id);
+                $rol = $auth->getRole($model->roles);
+                if ($rol){
+                    $auth->assign($rol, $model->id);
+                    Yii::$app->cache->flush();
+                }
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
                 \Yii::error('User create failed: ' . json_encode($model->errors));
