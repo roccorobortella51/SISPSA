@@ -6,6 +6,10 @@ use kartik\select2\Select2; // Para los selectores de estado y estatus
 use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
+use kartik\widgets\DatePicker;
+use kartik\depdrop\DepDrop;
+use yii\helpers\Url;
+
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
@@ -62,7 +66,14 @@ $this->registerJs($js);
                     <?= $form->field($model, 'email')->textInput() ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'telefono')->textInput() ?>
+                    <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
+                        'mask' => '(9999) 999-9999',
+                        'options' => [
+                            'placeholder' => '(XXXX) XXX-XXXX',
+                            'class' => 'form-control',
+                            'maxlength' => true,
+                        ]
+                    ]) ?>
                 </div>
             </div>
             <div class="row">
@@ -75,37 +86,125 @@ $this->registerJs($js);
             </div>
             <div class="row ">
                 <div class="col-md-3">
-    <label style="font-weight: bold; font-size: 14px;">Cedula</label>
-    <div class="form-inline d-flex"> <?php // Añadir d-flex para usar flexbox ?>
-        <?= $form->field($model, 'tipo_cedula', ['options' => ['class' => 'form-group mr-2', 'style' => 'width: 25%;']])->textInput()->label(false) ?>
-        <?= $form->field($model, 'cedula', ['options' => ['class' => 'form-group', 'style' => 'width: 75%;']])->textInput()->label(false) ?>
-    </div>
-</div>
-                <div class="col-md-3">
-                    <?= $form->field($model, 'fechanac')->textInput() ?>
+                    <?= $form->field($model, 'cedula')->widget(\yii\widgets\MaskedInput::class, [
+                        'mask' => 'a-99999999',
+                        'clientOptions' => [
+                            'definitions' => [
+                                'a' => [
+                                    'validator' => '[VE]',
+                                    'cardinality' => 1,
+                                ],
+                            ],
+                        ],
+                        'options' => [
+                            'placeholder' => 'V-99999999 o E-99999999',
+                            'class' => 'form-control',
+                            'maxlength' => true,
+                        ],
+                    ]) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'sexo')->textInput() ?>
+                    <?= $form->field($model, 'fechanac')->widget(\kartik\date\DatePicker::class, [
+                        'options' => ['placeholder' => 'Seleccione la fecha de nacimiento...'],
+                        'pluginOptions' => [
+                            'autoclose' => true,
+                            'format' => 'yyyy-mm-dd',
+                            'todayHighlight' => true,
+                        ],
+                    ]) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'tipo_sangre')->textInput() ?>
+                    <?= $form->field($model, 'sexo')->widget(\kartik\select2\Select2::class, [
+                        'data' => [
+                            'masculino' => 'Masculino',
+                            'femenino' => 'Femenino',
+                        ],
+                        'options' => ['placeholder' => 'Seleccione el sexo...'],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                        ],
+                    ]) ?>
+                </div>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'tipo_sangre')->widget(\kartik\select2\Select2::class, [
+                        'data' => [
+                            'A+' => 'A+',
+                            'A-' => 'A-',
+                            'B+' => 'B+',
+                            'B-' => 'B-',
+                            'AB+' => 'AB+',
+                            'AB-' => 'AB-',
+                            'O+' => 'O+',
+                            'O-' => 'O-',
+                        ],
+                        'options' => ['placeholder' => 'Seleccione el tipo de sangre...'],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                        ],
+                    ]) ?>
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-6">
-                    <?= $form->field($model, 'estado')->textInput() ?>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'estado')->widget(Select2::classname(), [
+                            'data' => UserHelper::getEstadosList(),
+                            'options' => [
+                                'placeholder' => 'Seleccione',
+                                'class' => 'form-control',
+                                'id' => 'estado_id'
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => false,
+                            ],
+                        ]); 
+                    ?>
                 </div>
-                <div class="col-md-6">
-                    <?= $form->field($model, 'municipio')->textInput() ?>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'municipio')->widget(DepDrop::classname(), [
+                            'type' => DepDrop::TYPE_SELECT2,
+                            'options'=>[
+                                'id'=>'municipio_id',
+                                'placeholder' => 'Seleccione',
+                                'class' => 'form-control',
+                            ],
+                            'pluginOptions'=>[
+                                'depends'=>['estado_id'],
+                                'url'=>Url::to(['/site/municipio'])
+                            ]
+                        ]); 
+                    ?>
+                </div>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'parroquia')->widget(DepDrop::classname(), [
+                            'type' => DepDrop::TYPE_SELECT2,
+                            'options'=>[
+                                'id'=>'parroquia_id',
+                                'placeholder' => 'Seleccione',
+                                'class' => 'form-control',
+                            ],
+                            'pluginOptions'=>[
+                                'depends'=>['municipio_id'],
+                                'url'=>Url::to(['/site/parroquia'])
+                            ]
+                        ]); 
+                    ?>
+                </div>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'ciudad')->widget(DepDrop::classname(), [
+                            'type' => DepDrop::TYPE_SELECT2,
+                            'options'=>[
+                                'id'=>'ciudad_id',
+                                'placeholder' => 'Seleccione',
+                                'class' => 'form-control',
+                            ],
+                            'pluginOptions'=>[
+                                'depends'=>['estado_id'],
+                                'url'=>Url::to(['/site/ciudad'])
+                            ]
+                        ]);  ?>
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-6">
-                    <?= $form->field($model, 'parroquia')->textInput() ?>
-                </div>
-                <div class="col-md-6">
-                    <?= $form->field($model, 'ciudad')->textInput() ?>
-                </div>
             </div>
             <div class="row">
                 <div class="col-md-12">

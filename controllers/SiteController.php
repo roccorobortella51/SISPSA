@@ -9,6 +9,10 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\RmMunicipio;
+use app\models\RmParroquia;
+use app\models\RmCiudad;
+
 
 class SiteController extends Controller
 {
@@ -129,4 +133,47 @@ class SiteController extends Controller
     {
         return $this->render('about');
     }
+
+    public function actionMunicipio(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+        if ($parents != null) {
+            $est_id = $parents[0];
+            $out = RmMunicipio::find()->select(['codigo_muni as id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all(); 
+            return ['output'=>$out, 'selected'=>''];
+        }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+
+    public function actionParroquia(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+        if ($parents != null) {
+            $mun_id = $parents[0];
+            $out = RmParroquia::find()->select(['id', 'nombre as name'])->where(['muni_codigo'=>$mun_id])->asArray()->all(); 
+            return ['output'=>$out, 'selected'=>''];
+        }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+
+    public function actionCiudad(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+        if ($parents != null) {
+            $est_id = $parents[0];
+            $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all(); 
+            return ['output'=>$out, 'selected'=>''];
+        }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+
 }

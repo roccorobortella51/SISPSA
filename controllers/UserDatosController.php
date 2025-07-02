@@ -78,8 +78,19 @@ class UserDatosController extends Controller
 
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+            if ($model->load($this->request->post())) {
+                $cel = explode("-",$model->cedula);
+                $model->tipo_cedula = $cel[0];
+                $model->cedula = $cel[1];
+                var_dump($model->cedula);
+                exit;
+                if($model->save()){
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }
+                else{
+                    var_dump($model->errors);
+                    exit;
+                }
             }
         } else {
             $model->loadDefaultValues();
@@ -101,8 +112,13 @@ class UserDatosController extends Controller
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($this->request->isPost && $model->load($this->request->post())) {
+                $cel = explode("-",$model->cedula);
+                $model->tipo_cedula = $cel[0];
+                $model->cedula = $cel[1];
+                if($model->save()){
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }
         }
 
         return $this->render('update', [
