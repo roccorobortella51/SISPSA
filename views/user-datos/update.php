@@ -18,6 +18,7 @@ $this->params['breadcrumbs'][] = 'Update';
         <div class="ms-panel-body">
             <?= $this->render('_form', [
                 'model' => $model,
+                'modelContrato' => $modelContrato,
             ]) ?>        
         </div>
     </div>
