@@ -57,7 +57,7 @@ use Yii;
 class UserDatos extends \yii\db\ActiveRecord
 {
 
-
+    public $codigoAsesor;
     /**
      * {@inheritdoc}
      */
@@ -73,16 +73,20 @@ class UserDatos extends \yii\db\ActiveRecord
     {
         return [
             [['nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'paso', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'clinica_id', 'plan_id', 'apellidos', 'email', 'contrato_id', 'asesor_id', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'cedula', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'default', 'value' => null],
-            [['user_id'], 'default', 'value' => 'gen_random_uuid()'],
+            [['user_id'], 'default', 'value' => null],
             [['created_at', 'fechanac', 'deleted_at', 'updated_at'], 'safe'],
             [['user_id', 'nombres', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'string'],
             [['paso'], 'number'],
             [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'default', 'value' => null],
-            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'integer'],
+            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id'], 'integer'],
+            ['email', 'email'],
 
             [['nombres', 'apellidos', 'cedula', 'tipo_cedula', 'fechanac', 'sexo', 
               'telefono', 'email', 'estado', 'ciudad', 'municipio', 'parroquia', 
               'direccion'], 'required', 'message' => 'Este campo es obligatorio'],
+
+            ['cedula', 'string', 'max' => 10],
+            //['cedula', 'match', 'pattern' => '/^[VE]-\d{8}$/', 'message' => 'El formato debe ser V-99999999 o E-99999999.'],
         ];
     }
 

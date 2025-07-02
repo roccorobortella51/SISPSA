@@ -122,7 +122,7 @@ class UserController extends Controller
         $pass = $model->password_hash;
         $auth = Yii::$app->authManager;
 
-        $model2 = UserDatos::find()->where(['user_id' => $model->id])->one();
+        $model2 = UserDatos::find()->where(['user_login_id' => $model->id])->one();
 
         if($model2 == "" || $model2 == null){
             $model2 = new UserDatos();

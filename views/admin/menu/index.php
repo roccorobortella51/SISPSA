@@ -1,83 +1,77 @@
 <?php
 
 use yii\helpers\Html;
-use yii\grid\GridView;
-use mdm\admin\models\Menu;
+use kartik\grid\GridView;
+use yii\widgets\Pjax;
 
 /* @var $this yii\web\View */
 /* @var $dataProvider yii\data\ActiveDataProvider */
+/* @var $searchModel mdm\admin\models\searchs\Menu */
 
-$this->title = 'Menús';
+$this->title = Yii::t('rbac-admin', 'Menus');
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="menu-index">
 
-    <h1><?= Html::encode($this->title) ?></h1>
 
-    <p>
-        <?= Html::a('Crear Menú', ['create'], ['class' => 'btn btn-success']) ?>
-    </p>
-
-    <?= GridView::widget([
-        'dataProvider' => $dataProvider,
-        'columns' => [
-            ['class' => 'yii\grid\SerialColumn'],
-
-            'id',
-            'name',
-            [
-                'attribute' => 'parent',
-                'value' => function($model) {
-                    $parent = Menu::findOne($model->parent);
-                    return $parent ? $parent->name : '-';
-                }
-            ],
-            'route',
-            'order',
-            [
-                'attribute' => 'data',
-                'format' => 'raw',
-                'value' => function($model) {
-                    try {
-                        if (empty($model->data)) {
-                            return '-';
-                        }
-                        
-                        // Si es un recurso, obtener el contenido
-                        if (is_resource($model->data)) {
-                            $menuData = @stream_get_contents($model->data);
-                            if ($menuData === false) {
-                                return '<span class="text-warning">Error al leer datos</span>';
-                            }
-                        } else {
-                            $menuData = $model->data;
-                        }
-                        
-                        // Intentar decodificar JSON
-                        $decoded = @json_decode($menuData, true);
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                            $icon = $decoded['icon'] ?? 'fas fa-circle';
-                            $visible = isset($decoded['visible']) ? ($decoded['visible'] ? 'Sí' : 'No') : 'Sí';
-                            return "
-                                <div style='display: flex; align-items: center; gap: 10px;'>
-                                    <i class='{$icon}' style='font-size: 1.2em;'></i>
-                                    <div>
-                                        <div>{$icon}</div>
-                                        <small class='text-muted'>Visible: {$visible}</small>
-                                    </div>
-                                </div>";
-                        }
-                        
-                        // Si no es JSON válido, mostrar el contenido raw
-                        return '<span class="text-warning">Formato inválido: ' . htmlspecialchars($menuData) . '</span>';
-                    } catch (\Exception $e) {
-                        return '<span class="text-danger">Error: ' . htmlspecialchars($e->getMessage()) . '</span>';
-                    }
-                }
-            ],
-
-            ['class' => 'yii\grid\ActionColumn'],
-        ],
-    ]); ?>
-
+<div class=row style="margin:3px !important;">
+    <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
+    <div class="col-md-12 text-end">
+        <div class="float-right" style="margin-bottom:10px;">
+             
+        </div>
+    </div>
+    <div class="col-xl-12 col-md-12">
+        <div class="ms-panel ms-panel-fh">
+            <div class="ms-panel-header row">
+                <span class="col-md-10"><h1><?= $this->title = 'Gestión de Menus'; ?></h1></span>
+                <span class="col-md-2" style="padding-left: 1rem;"><?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO ELEMENTO DE MENU', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?></span>
+            </div>
+            <div class="ms-panel-body">
+                <div class="table-responsive">
+                    <?php Pjax::begin(); ?>
+                        <?=
+                        GridView::widget([
+                            'dataProvider' => $dataProvider,
+                            'filterModel' => $searchModel,
+                            'columns' => [
+                                ['class' => 'yii\grid\SerialColumn'],
+                                [
+                                    'attribute' => 'name',
+                                    'format' => 'html',
+                                ],
+                                [
+                                    'attribute' => 'menuParent.name',
+                                    'format' => 'html',
+                                    'value' => function($model) {
+                                        return '<b>' . htmlspecialchars($model->menuParent->name ?? '') . '</b>';
+                                    },
+                                    'filter' => Html::activeTextInput($searchModel, 'parent_name', [
+                                        'class' => 'form-control', 'id' => null
+                                    ]),
+                                    'label' => Yii::t('rbac-admin', 'Parent'),
+                                ],
+                                [
+                                    'attribute' => 'route',
+                                    'format' => 'html',
+                                    'value' => function($model) {
+                                        return '<b>' . htmlspecialchars($model->route) . '</b>';
+                                    },
+                                ],
+                                [
+                                    'attribute' => 'order',
+                                    'format' => 'html',
+                                    'value' => function($model) {
+                                        return '<b>' . htmlspecialchars($model->order) . '</b>';
+                                    },
+                                ],
+                                ['class' => 'yii\grid\ActionColumn'],
+                            ],
+                        ]);
+                        ?>
+                    <?php Pjax::end(); ?>       
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="clearfix"></div>
 </div>

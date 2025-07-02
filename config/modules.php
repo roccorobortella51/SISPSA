@@ -3,6 +3,7 @@ return
 [
     'admin' => [
             'class' => 'mdm\admin\Module',
+            'viewPath' => '@app/views/admin',  // Agregado para sobreescribir las vistas del módulo admin
             // Configuración clave para el módulo 'admin' de mdmsoft
             'controllerMap' => [
                 'assignment' => [

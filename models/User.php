@@ -53,7 +53,7 @@ class User extends ActiveRecord implements IdentityInterface
             ['email', 'string', 'max' => 255],
             ['email', 'email'],
             ['password', 'string', 'min' => 5],
-            ['roles', 'required'],
+            ['roles', 'safe'],
             ['roles', 'string'],
             ['status', 'in', 'range' => [1, self::STATUS_INACTIVE]],
         ];

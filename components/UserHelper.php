@@ -8,6 +8,7 @@ use yii\db\Expression;
 use yii\db\Query;
 use app\models\Area;
 use app\models\RmEstado;
+use app\models\RmMunicipio;
 use app\models\RmClinica;
 use app\models\Agente;
 use app\models\Asesores;
@@ -94,12 +95,39 @@ class UserHelper
         );
     }
 
+    public static function getMunicipiosList($id = null)
+    {
+        if($id == null){
+            return \yii\helpers\ArrayHelper::map(
+                RmMunicipio::find()->select(['id', 'nombre as name'])->asArray()->all(),
+                'id',
+                'name'
+            );
+        }
+        else{
+             return \yii\helpers\ArrayHelper::map(
+                RmMunicipio::find()->select(['id', 'nombre as name'])->where(['id'=>$id])->asArray()->all(),
+                'id',
+                'name'
+            );
+        }
+    }
+
     public static function getTotalClinicas()
     {
         $totalClinicas = RmClinica::find()->count();
 
         // Puedes pasar este total a una vista
         return $totalClinicas;
+    }
+
+    public static function getClinicasList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+                RmClinica::find()->select(['id', 'nombre as name'])->asArray()->all(),
+                'id',
+                'name'
+            );        
     }
 
     public static function getTotalAsesores()
@@ -133,6 +161,15 @@ class UserHelper
             'name',
             'name'
         );
+    }
+
+    public static function generarCodigoValidacion($longitud = 6) {
+        $caracteres = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $codigo = '';
+        for ($i = 0; $i < $longitud; $i++) {
+            $codigo .= $caracteres[random_int(0, strlen($caracteres) - 1)];
+        }
+        return $codigo;
     }
 
     public static function getRolesAllRoles()
@@ -172,6 +209,18 @@ class UserHelper
             'id',
             'name'
         );
+    }
+
+    public static function generateUniqueUsername($baseUsername)
+    {
+        $username = $baseUsername;
+        $counter = 1;
+
+        while (User::find()->where(['username' => $username])->exists()) {
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+        return $username;
     }
 
 

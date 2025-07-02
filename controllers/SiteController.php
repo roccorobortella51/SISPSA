@@ -9,6 +9,12 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\RmMunicipio;
+use app\models\RmParroquia;
+use app\models\RmCiudad;
+use app\models\Planes;
+use yii\helpers\Json;
+
 
 class SiteController extends Controller
 {
@@ -129,4 +135,84 @@ class SiteController extends Controller
     {
         return $this->render('about');
     }
+
+    public function actionMunicipio(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+        if ($parents != null) {
+            $est_id = $parents[0];
+            if($est_id == ''){return ['output'=>'', 'selected'=>''];}
+            $out = RmMunicipio::find()->select(['codigo_muni as id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all(); 
+            return ['output'=>$out, 'selected'=>''];
+        }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+
+    public function actionParroquia(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+        if ($parents != null) {
+            $mun_id = $parents[0];
+            if($mun_id == ''){return ['output'=>'', 'selected'=>''];}
+            $out = RmParroquia::find()->select(['id', 'nombre as name'])->where(['muni_codigo'=>$mun_id])->asArray()->all(); 
+            return ['output'=>$out, 'selected'=>''];
+        }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+
+    public function actionCiudad(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+        if ($parents != null) {
+            $est_id = $parents[0];
+            if($est_id == ''){return ['output'=>'', 'selected'=>''];}
+            $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all(); 
+            return ['output'=>$out, 'selected'=>''];
+        }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+    public function actionPlanes(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+        $parents = $_POST['depdrop_parents'];
+            if ($parents != null) {
+                $cli_id = $parents[0];
+                if($cli_id == ''){return ['output'=>'', 'selected'=>''];}
+                $planes = Planes::find()->where(['clinica_id'=>$cli_id])->all(); 
+                foreach ($planes as $plan) {
+                    // ¡IMPORTANTE! Añade el monto a la salida
+                    $out[] = [
+                        'id' => $plan->id, 
+                        'name' => $plan->nombre, 
+                        'monto' => $plan->precio // Asegúrate de que tu modelo Plan tenga un atributo 'monto'
+                    ]; 
+                }
+                return ['output' => $out, 'selected' => ''];
+            }
+        }
+        return ['output'=>'', 'selected'=>''];
+    }
+
+    public function actionPlanmonto($id){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON; // Establece el formato de respuesta a JSON
+        if(!is_numeric($id)){return ['output'=>'', 'selected'=>''];}
+        $plan = Planes::findOne($id);
+
+        if ($plan) {
+            return ['monto' => (float)$plan->precio]; // Devuelve el monto del plan
+        } else {
+            return ['monto' => 0]; // Si no se encuentra, devuelve 0 o un valor por defecto
+        }
+    }
+
 }

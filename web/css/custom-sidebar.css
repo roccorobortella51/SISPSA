@@ -254,7 +254,12 @@ i.fas.fa-bars {
     animation-duration: 0.3s;
     animation-fill-mode: both;
 }
-
+ul#ui-id-1, ul#ui-id-2 {
+    margin: 20rem 16rem !important;
+    overflow-y: auto;
+    max-height: 35vh;
+    overflow-x: hidden;
+}
 
 
 
