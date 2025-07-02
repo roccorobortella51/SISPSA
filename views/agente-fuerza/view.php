@@ -8,8 +8,8 @@ use app\models\User;
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
 
-$this->title = 'Detalles de Agente de Fuerza: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Agentes de Fuerza', 'url' => ['index']];
+$this->title = 'DETALLES DE ASESOR VENDEDOR: ' . $model->id;
+$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA'];
 $this->params['breadcrumbs'][] = $model->id;
 
 \yii\web\YiiAsset::register($this);

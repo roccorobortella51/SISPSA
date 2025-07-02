@@ -6,8 +6,8 @@ use yii\widgets\DetailView;
 /** @var yii\web\View $this */
 /** @var app\models\Agente $model */
 
-$this->title = 'Detalles de Agencia ' . $model->nom; // Changed title for better context
-$this->params['breadcrumbs'][] = ['label' => 'Agentes', 'url' => ['index']];
+$this->title = $model->nom; // Changed title for better context
+$this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $model->nom; // Changed breadcrumb to agent's name
 \yii\web\YiiAsset::register($this);
 
@@ -21,16 +21,18 @@ function formatDateTime($value) {
     return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
 }
 
+
 ?>
 
+
 <div class="agente-view">
-
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0"><?= Html::encode($this->title) ?></h3>
+    <div class="col-xl-12 col-md-12">
+        <div class="ms-panel ms-panel-fh text-center">
+                <h3 class="mb-0"><?= Html::encode($this->title) ?></h3>
+            <div class="ms-panel-header">
+            </div>
         </div>
-        <div class="card-body">
-
+    </div>    
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="ms-panel ms-widget ms-identifier-widget bg-info">
@@ -160,9 +162,5 @@ function formatDateTime($value) {
                         <h6 class="text-muted">Fecha de Eliminación</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->deleted_at) ?></p>
                     </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
+           
 </div>

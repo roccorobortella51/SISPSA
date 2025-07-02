@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use app\models\User;
 
 /**
  * This is the model class for table "agente".
@@ -19,6 +20,8 @@ use Yii;
  * @property string|null $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
+ * 
+ * @property AgenteFuerza[] $agenteFuerzas
  */
 class Agente extends \yii\db\ActiveRecord
 {
@@ -91,6 +94,28 @@ class Agente extends \yii\db\ActiveRecord
             'updated_at' => 'Updated At',
             'deleted_at' => 'Deleted At',
         ];
+    }
+
+    public function getAgenteFuerzas()
+    {
+        return $this->hasMany(AgenteFuerza::class, ['agente_id' => 'id']);
+    }
+
+    /**
+     * Método para obtener el conteo de AgenteFuerza relacionados.
+     * Esto es útil para mostrar directamente en el GridView.
+     *
+     * @return int
+     */
+    public function getAgenteFuerzaCount()
+    {
+        return $this->getAgenteFuerzas()->count();
+    }
+
+    public function getPropietario()
+    {
+        // Relaciona idusuariopropietario de Agente con id de User
+        return $this->hasOne(User::class, ['id' => 'idusuariopropietario']);
     }
 
 
