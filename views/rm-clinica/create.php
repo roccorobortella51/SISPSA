@@ -6,8 +6,8 @@ use yii\helpers\Html;
 /** @var app\models\RmClinica $model */
 
 
-$this->title = 'Crear Clínica';
-$this->params['breadcrumbs'][] = ['label' => 'Crear Clínica', 'url' => ['index']];
+$this->title = 'CREAR CLINICA';
+$this->params['breadcrumbs'][] = ['label' => 'CREAR CLINICAS', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="col-xl-12 col-md-12">
