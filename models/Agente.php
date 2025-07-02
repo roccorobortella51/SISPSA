@@ -44,6 +44,7 @@ class Agente extends \yii\db\ActiveRecord
             [['idusuariopropietario'], 'required', 'message' => 'El nombre del propetario no puede estar vacío.'],
             // 'idusuariopropietario' debe ser un número entero.
             [['idusuariopropietario'], 'integer'],
+            
     
             // 2. Campos numéricos (porcentajes)
             // Ningún porcentaje puede ser mayor a 15% y no puede ser negativo.

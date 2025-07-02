@@ -7,9 +7,8 @@ use yii\helpers\Html;
 /* @var app\models\Agente $agente */ // Make sure $agente is passed from the controller
 
 // Set the page title for updating an AgenteFuerza
-$this->title = 'ACTUALIZAR ASESOR DE VENTAS: ' . $model->idusuario; // Or $model->nombre_agente for context
+$this->title = 'CREAR AGENCIAS';
 $this->params['breadcrumbs'][] = ['label' => 'Agente de Fuerza', 'url' => ['index']]; // Link to the main index for AgenteFuerza
-$this->params['breadcrumbs'][] = ['label' => $model->idusuario, 'url' => ['view', 'id' => $model->id]]; // Link to the view page of this specific AgenteFuerza
 $this->params['breadcrumbs'][] = 'Actualizar';
 ?>
 
@@ -23,7 +22,7 @@ $this->params['breadcrumbs'][] = 'Actualizar';
             <div class="ms-panel-body">
                 <?= $this->render('_form', [
                     'model' => $model,
-                    'agente' => $agente, // Crucial to pass the $agente object
+                    
                 ]) ?>
             </div>
         </div>
