@@ -9,6 +9,7 @@ use app\models\AgenteFuerza; // Tu modelo AgenteFuerza
 use app\models\Agente; // Tu modelo Agente
 
 
+
 /** @var yii\web\View $this */
 /** @var app\models\search\AgenteFuerzaSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
@@ -20,6 +21,7 @@ $this->params['breadcrumbs'][] = ['label' => 'Agentes', 'url' => ['agente/index'
 $this->params['breadcrumbs'][] = ['label' => 'Agente: ' . $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
 $this->params['breadcrumbs'][] = $this->title;
 
+
 ?>
 
 <div class="row" style="margin:3px !important;">
@@ -30,61 +32,61 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
     </div>
     
-
+    
     <?php if (!$agente->isNewRecord) { ?>
         <div class="col-xl-12 col-md-12 mb-3"> <div class="row">
-                <div class="col-md-6">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" 
-                         data-href="<?= Url::to(['agente/update', 'id' => $agente->id]) ?>">
-                        <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                            <h6 style="margin: 0;"> 
-                                <?= Html::a(
-                                    'ACTUALIZACIÓN DE AGENCIA',
-                                    ['agente/update', 'id' => $agente->id],
-                                    ['class' => 'text-white panel-link', 'style' => 'font-size: 1.40em;']
-                                ) ?>
+            <div class="col-md-6">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" 
+                data-href="<?= Url::to(['agente/update', 'id' => $agente->id]) ?>">
+                <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
+                    <h6 style="margin: 0;"> 
+                        <?= Html::a(
+                            'ACTUALIZACIÓN DE AGENCIA',
+                            ['agente/update', 'id' => $agente->id],
+                            ['class' => 'text-white panel-link', 'style' => 'font-size: 1.40em;']
+                            ) ?>
                             </h6>
                         </div>
                     </div>
                 </div>
-
+                
                 <div class="col-md-6">
                     <div class="ms-panel ms-widget ms-identifier-widget bg-info" 
-                         style="cursor: default;"> 
-                        <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                            <h6 style="margin: 0;">
-                                <span class="text-white" style="font-size: 1.40em;">
-                                    FUERZA DE VENTA
-                                </span>
-                            </h6>
-                        </div>
+                    style="cursor: default;"> 
+                    <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
+                        <h6 style="margin: 0;">
+                            <span class="text-white" style="font-size: 1.40em;">
+                                FUERZA DE VENTA
+                            </span>
+                        </h6>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     <?php } ?>
-
-  
+    
+    
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
                 <h1><?= Html::encode($this->title) ?></h1> </div>
-            <div class="ms-panel-body">
-                <div class="table-responsive">
-                    <?= GridView::widget([
-                        'dataProvider' => $dataProvider,
-                        'filterModel' => $searchModel,
-                        'layout' => "{items}{pager}", // Puedes mantener o ajustar según necesites {summary}{items}{pager}
-
-                        'tableOptions' => [
+                <div class="ms-panel-body">
+                    <div class="table-responsive">
+                        <?= GridView::widget([
+                            'dataProvider' => $dataProvider,
+                            'filterModel' => $searchModel,
+                            'layout' => "{items}{pager}", // Puedes mantener o ajustar según necesites {summary}{items}{pager}
+                            
+                            'tableOptions' => [
                             'class' => 'table table-striped table-bordered table-hover table-sm'
                         ],
                         'options' => [
                             'class' => 'grid-view-container table-responsive',
                         ],
-
+                        
                         'columns' => [
-                           // ['class' => 'kartik\grid\SerialColumn'], // Usamos SerialColumn de Kartik para consistencia
+                            // ['class' => 'kartik\grid\SerialColumn'], // Usamos SerialColumn de Kartik para consistencia
                             
                             // Asegúrate de que estos atributos existan en tu modelo AgenteFuerza
                             // y sean relevantes para mostrar en la tabla
@@ -99,14 +101,14 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'options' => ['style' => 'width: 100px;'], // <--- para ancho de la celda
                             ],
                             // Puedes añadir una columna para mostrar el nombre del usuario si tienes una relación
-                           
+                            
                             [
                                 'attribute' => 'usuario.nombre_completo', // Asumiendo una relación 'usuario' en AgenteFuerza
                                 'label' => 'Nombre',
                                 'value' => function($model) {
-
+                                    
                                     if($model->user){
-
+                                        
                                         return $model->user->username;
                                         //return $model->user->userDatos->nombres;
                                     }
@@ -119,43 +121,64 @@ $this->params['breadcrumbs'][] = $this->title;
                                 ],
                                 'options' => ['style' => 'width: 30%;'], // <--- para ancho de la celda
                             ],
-                           
+                            
+                            
                             [
-                                'attribute' => 'por_venta',
-                                'label' => '% Venta',
+                                'label' => 'Correo Electrónico',
+                                'value' => function($model) {
+                                    if ($model->user && $model->user->userDatos) {
+                                        return $model->user->userDatos->email;
+                                    }
+                                    return 'No disponible';
+                                },
+                                // Asegúrate de que este 'attribute' sea correcto para el SearchModel
+                                'attribute' => 'user.userDatos.email',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
-                                    'placeholder' => '%',
+                                    'placeholder' => 'Buscar correo',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
                             ],
-                            [
-                                'attribute' => 'por_asesor',
-                                'label' => '% Asesor',
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => '%',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                            ],
-                            // Puedes añadir más columnas de porcentajes o booleanas aquí
-                            'puede_vender:boolean',
-                            'puede_cobrar:boolean',
-                            'puede_post_venta:boolean',
 
-                            // Columna de Acciones (Ver, Editar, Eliminar)
+                            [
+                                'label' => 'Teléfono', // Título de la columna
+                                'value' => function($model) {
+                                    // Asumiendo que la columna en user_datos es 'telefono' o 'telf'
+                                    // Ajusta 'telefono' al nombre real de tu columna
+                                    return $model->user?->userDatos?->telefono ?? 'No disponible';
+                                },
+                                // Asegúrate de que este 'attribute' sea correcto para el SearchModel
+                                'attribute' => 'user.userDatos.telefono', // Cambia 'telefono' si el nombre de tu columna es diferente
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar teléfono',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
+                           // Columna de Acciones (Ver, Editar, Eliminar)
                             [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{update}{delete}</div>', // No incluimos 'view' por ahora
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
                                 'options' => ['style' => 'width:80px; min-width:80px;'],
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
                                 'buttons' => [
+                                    'view' => function ($url, $model, $key) { 
+                                        return Html::a(
+                                            '<i class="fa fa-eye"></i>', 
+                                            Url::to(['agente-fuerza/view', 'id' => $model->id]), // URL a la acción 'view' de tu controlador AgenteFuerza
+                                            [
+                                                'title' => 'Ver Detalles',
+                                                'class' => 'btn btn-link btn-sm text-info', // Estilo de botón para ver (azul)
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                            ]
+                                        );
+                                    },
                                     'update' => function ($url, $model, $key) use ($id_agente, $agente) {
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                            Url::to(['agente-fuerza/update', 'id' => $model->id]), // Pasamos id_agente
+                                            Url::to(['agente-fuerza/update', 'id' => $model->id]),
                                             [
                                                 'title' => 'Editar',
                                                 'class' => 'btn btn-link btn-sm text-success',
@@ -163,19 +186,19 @@ $this->params['breadcrumbs'][] = $this->title;
                                             ]
                                         );
                                     },
-                                    'delete' => function ($url, $model, $key) {
-                                        return Html::a(
-                                            '<i class="fas fa-trash-alt"></i>',
-                                            Url::to(['agente-fuerza/delete', 'id' => $model->id]),
-                                            [
-                                                'title' => 'Eliminar',
-                                                'class' => 'btn btn-link btn-sm text-danger',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
-                                                'data-confirm' => '¿Estás seguro de que quieres eliminar este miembro de la fuerza de venta?',
-                                                'data-method' => 'post'
-                                            ]
-                                        );
-                                    },
+                                    // 'delete' => function ($url, $model, $key) {
+                                    //     return Html::a(
+                                    //         '<i class="fas fa-trash-alt"></i>',
+                                    //         Url::to(['agente-fuerza/delete', 'id' => $model->id]),
+                                    //         [
+                                    //             'title' => 'Eliminar',
+                                    //             'class' => 'btn btn-link btn-sm text-danger',
+                                    //             'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
+                                    //             'data-confirm' => '¿Estás seguro de que quieres eliminar este miembro de la fuerza de venta?',
+                                    //             'data-method' => 'post'
+                                    //         ]
+                                    //     );
+                                    // },
                                 ],
                             ],
                         ], // Fin de columns

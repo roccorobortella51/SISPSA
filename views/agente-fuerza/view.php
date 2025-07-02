@@ -33,6 +33,8 @@ function formatBooleanIcon($value) {
 
 ?>
 
+
+
 <div class="agente-fuerza-view">
 
     <div class="card shadow-sm">
@@ -107,30 +109,6 @@ function formatBooleanIcon($value) {
                 </div>
             </div>
 
-            ---
-
-            <h5 class="mt-4 mb-3">Información Principal del Agente</h5>
-            <div class="row mb-4 g-3"> <div class="col-md-4">
-                    <div class="card card-body bg-light">
-                        <h6 class="text-muted">ID Agente Fuerza</h6>
-                        <p class="h4 text-primary"><?= Html::encode($model->id) ?></p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card card-body bg-light">
-                        <h6 class="text-muted">Agencia Asociada</h6>
-                        <p class="h4 text-primary"><?= Html::encode($agenciaNombre) ?></p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card card-body bg-light">
-                        <h6 class="text-muted">Usuario Asociado</h6>
-                        <p class="h4 text-primary"><?= Html::encode($nombreUsuario) ?></p>
-                    </div>
-                </div>
-            </div>
-
-            ---
 
             <h5 class="mt-4 mb-3">Porcentajes de Comisión</h5>
             <div class="row mb-4 g-3">

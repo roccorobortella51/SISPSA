@@ -73,7 +73,8 @@ class AgenteFuerzaController extends Controller
         $agente = Agente::findOne($agente_id);
 
             if ($model->load($this->request->post())) {
-
+                    $model->agente_id = $agente_id;
+                    
                     if (!$model->save()) {
                       echo "MODEL NOT SAVED";
                       print_r($model->getAttributes());

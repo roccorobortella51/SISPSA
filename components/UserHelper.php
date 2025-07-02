@@ -166,7 +166,7 @@ class UserHelper
                 // Corregimos la sintaxis de la cláusula ON con comillas dobles
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
                 ->select(['user.id AS id', 'username AS name'])
-                ->where(['auth_assignment.item_name' => "asesor"])
+                ->where(['auth_assignment.item_name' => "Asesor"])
                 ->asArray()
                 ->all(),
             'id',

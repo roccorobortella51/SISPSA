@@ -41,7 +41,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h3 class="mb-0"><?= Html::encode($model->isNewRecord ? 'Registrar Nuevo Agente de Fuerza' : 'Actualizar Agente de Fuerza') ?></h3>
+            <h3 class="mb-0"><?= Html::encode($model->isNewRecord ? 'REGISTRAR NUEVO ASESOR DE VENTAS' : 'Actualizar Agente de Fuerza') ?></h3>
         </div>
         <div class="card-body">
             <?php $form = ActiveForm::begin([]); ?>
@@ -109,14 +109,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
             <?php } ?>
 
             <div class="row">
-                <div class="col-md-4">
-                    <?= $form->field($model, 'agente_id')->textInput([
-                        'readonly' => true,
-                        'class' => 'form-control form-control-lg',
-                        'placeholder' => 'ID Agente Fuerza',
-                        'value' => $agente->id
-                    ]) ?>
-                </div>
+             
                 <div class="col-md-4">
                     <?= $form->field($model, 'nombre_agente')->textInput([
                         'readonly' => true,
@@ -138,13 +131,13 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                             'pluginOptions' => [
                                 'allowClear' => false,
                             ],
-                    ]) ?>
+                    ])->label('NOMBRE DEL ASESOR')
+                    
+                    ?> 
 
 
                 </div>
-            </div>
 
-            <div class="row">
                 <div class="col-md-4">
                     <?= $form->field($model, 'por_venta')->label('PORCENTAJE POR VENTA')->textInput([
                         'class' => 'form-control form-control-lg',
@@ -153,6 +146,11 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                         'step' => '0.01',
                     ]) ?>
                 </div>
+
+            </div>
+
+            <div class="row">
+                
                 <div class="col-md-4">
                     <?= $form->field($model, 'por_asesor')->label('PORCENTAJE DE ASESORÍA')->textInput([
                         'class' => 'form-control form-control-lg',
@@ -169,10 +167,9 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                         'step' => '0.01',
                     ]) ?>
                 </div>
-            </div>
 
-            <div class="row mb-3">
-                <div class="col-md-4">
+
+                 <div class="col-md-4">
                     <?= $form->field($model, 'por_post_venta')->label('PORCENTAJE POST VENTA')->textInput([
                         'class' => 'form-control form-control-lg',
                         'placeholder' => '% Post-Venta',
@@ -180,6 +177,10 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                         'step' => '0.01',
                     ]) ?>
                 </div>
+            </div>
+
+            <div class="row mb-3">
+               
                 <div class="col-md-4">
                     <?= $form->field($model, 'por_registrar')->label('PORCENTAJE POR REGISTRO')->textInput([
                         'class' => 'form-control form-control-lg',
@@ -192,14 +193,13 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                     </div>
             </div>
 
-            ---
 
-            <h5 class="mt-4 mb-3">Permisos de Acceso</h5>
+            
             <div class="row">
                 <div class="col-md-6">
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0">Permisos de Venta y Asesoría</h6>
+                            <h6 class="mb-0" style="color: white; font-size: 20px;">Permisos de Venta y Asesoría</h6>
                         </div>
                         <div class="card-body">
                             <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
@@ -235,7 +235,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                 <div class="col-md-6">
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0">Permisos de Gestión y Cobranza</h6>
+                            <h6 class="mb-0" style="color: white; font-size: 20px;">Permisos de Gestión y Cobranza</h6>
                         </div>
                         <div class="card-body">
                             <?= $form->field($model, 'puede_cobrar')->widget(SwitchInput::class, [
@@ -285,7 +285,6 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                 </div>
             </div>
 
-            ---
 
             <div class="form-group text-end mt-4">
                 <?= Html::submitButton('<i class="fas fa-save"></i> GUARDAR', ['class' => 'btn btn-success btn-lg']) ?>

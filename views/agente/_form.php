@@ -72,7 +72,7 @@ if ($model->isNewRecord) {
         </div>
 
         <div class="col-md-6">
-            <?= $form->field($model, 'idusuariopropietario')->widget(Select2::classname(), [
+            <?= $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->widget(Select2::classname(), [
                             'data' => UserHelper::getAgentesList(),
                             'options' => [
                                 'placeholder' => 'Seleccione',
