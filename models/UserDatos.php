@@ -79,6 +79,10 @@ class UserDatos extends \yii\db\ActiveRecord
             [['paso'], 'number'],
             [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'default', 'value' => null],
             [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'integer'],
+
+            [['nombres', 'apellidos', 'cedula', 'tipo_cedula', 'fechanac', 'sexo', 
+              'telefono', 'email', 'estado', 'ciudad', 'municipio', 'parroquia', 
+              'direccion'], 'required', 'message' => 'Este campo es obligatorio'],
         ];
     }
 

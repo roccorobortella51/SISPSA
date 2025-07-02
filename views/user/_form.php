@@ -11,7 +11,7 @@ use kartik\widgets\SwitchInput
 ?>
 
 <div class="user-form">
-    <?php $form = ActiveForm::begin([]); ?>
+    <?php $form = ActiveForm::begin(['options' => ['class' => 'needs-validation']]); ?>
 
     <div class="row">
         <div class="col-md-4">
@@ -57,24 +57,128 @@ use kartik\widgets\SwitchInput
         </div>
     </div>
     <?= $form->field($model, 'status')->widget(SwitchInput::classname(), [
-    'options' => [
-        'label' => false,
-    ],
-    'pluginOptions' => [
-        'onText' => 'Activo',
-        'offText' => 'Inactivo',
-        'onColor' => 'success',
-        'offColor' => 'danger',
-        'size' => 'large',
-    ],
-]);
-?>
-    
+            'options' => [
+                'label' => false,
+            ],
+            'pluginOptions' => [
+                'onText' => 'Activo',
+                'offText' => 'Inactivo',
+                'onColor' => 'success',
+                'offColor' => 'danger',
+                'size' => 'large',
+            ],
+    ]); ?>
 
+    <br><br>
+    <h1>Datos Personales del usuario</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <?= $form->field($model2, 'nombres')->textarea([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ingrese sus nombres completos',
+                'rows' => 1
+            ]) ?>
+        </div>
+        <div class="col-md-6">
+            <?= $form->field($model2, 'apellidos')->textarea([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ingrese sus apellidos completos',
+                'rows' => 1
+            ]) ?>
+        </div>
+    </div>
 
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model2, 'cedula')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: 12345678'
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'tipo_cedula')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: V, E, J, P'
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'fechanac')->textInput([
+                'class' => 'form-control form-control-lg',
+                'type' => 'date',
+                'placeholder' => 'Seleccione su fecha de nacimiento'
+            ]) ?>
+        </div>
+    </div>
 
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model2, 'sexo')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: Masculino, Femenino'
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'telefono')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: 04121234567'
+            ]) ?>
+        </div>
+    </div>
 
-    
+    <div class="row">
+        <div class="col-md-6">
+            <?= $form->field($model2, 'email')->textInput([
+                'class' => 'form-control form-control-lg',
+                'type' => 'email',
+                'placeholder' => 'Ejemplo: usuario@dominio.com'
+            ])->label("Correo electrónico") ?>
+        </div>
+        <div class="col-md-6">
+            <?= $form->field($model2, 'estado')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: Distrito Capital'
+            ]) ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model2, 'ciudad')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: Caracas'
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'municipio')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: Libertador'
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'parroquia')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ejemplo: El Recreo'
+            ]) ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <?= $form->field($model2, 'direccion')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ingrese su dirección completa',
+            ]) ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <?= $form->field($model2, 'codigoValidacion')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Código de validación (si aplica)'
+            ]) ?>
+        </div>
+    </div>
 
     <div class="form-group text-rigth mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Usuario', ['class' => 'btn btn-success btn-lg']) ?>
