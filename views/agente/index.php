@@ -48,6 +48,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         ],
 
                         'columns' => [
+                            'id',
                             // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
                                 'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**

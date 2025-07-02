@@ -45,7 +45,7 @@ use kartik\widgets\SwitchInput
     <div class="row">
         <div class="col-md-4">
             <?= $form->field($model, 'roles')->label('ROLES')->widget(Select2::classname(), [
-                    'data' => UserHelper::getRolesList(),
+                    'data' => UserHelper::getRolesAllRoles(),
                     'options' => [
                         'placeholder' => 'Seleccione',
                             'class' => 'form-control form-control-lg',

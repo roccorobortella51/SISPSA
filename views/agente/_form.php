@@ -1,22 +1,32 @@
+
 <?php
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
+use kartik\select2\Select2; // Para los selectores de estado y estatus
+use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
+use app\components\UserHelper;
 use yii\helpers\Url;
-use yii\web\JqueryAsset;
 
-/** @var yii\web\View $this */
-/** @var app\models\Agente $model */
-/** @var yii\widgets\ActiveForm $form */
-// ... otras variables ...
 
+
+// Asegúrate de que estas variables siempre tengan un valor para evitar errores
+// si el controlador no las pasa por alguna razón (aunque el controlador sí las pasa).
+$mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
+$isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
+
+if ($model->isNewRecord) {
+    $readOnly = false;
+}else{
+    $readOnly = true;
+}
 ?>
 
-<div class="agente-form">
+<div class="rm-clinica-form">
+    <div class="ms-panel-body">
+    <?php $form = ActiveForm::begin(); ?>
 
-    <?php $form = ActiveForm::begin([]); ?>
-
-    <?php if (!$model->isNewRecord) { ?>
+     <?php if (!$model->isNewRecord) { ?>
         <div class="row mb-3"> 
             
             <div class="col-md-6">
@@ -26,7 +36,7 @@ use yii\web\JqueryAsset;
                             <?= Html::a(
                                 'ACTUALIZACIÓN DE AGENCIA',
                                 ['update', 'id' => $model->id],
-                                ['class' => 'text-white panel-link', 'style' => 'font-size: 1.em;']
+                                ['class' => 'text-white']
                             ) ?>
                         </h6>
                     </div>
@@ -40,7 +50,7 @@ use yii\web\JqueryAsset;
                             <?= Html::a(
                                 'FUERZA DE VENTA',
                                 ['agente-fuerza/index-by-agente', 'agente_id' => $model->id], 
-                                ['class' => 'text-white panel-link', 'style' => 'font-size: 1.em;']
+                                ['class' => 'text-white']
                             ) ?>
                         </h6>
                     </div>
@@ -50,20 +60,27 @@ use yii\web\JqueryAsset;
         </div>
     <?php } ?>
 
-    <div class="row mb-3">
+
+    <div class="row">
         <div class="col-md-6">
             <?= $form->field($model, 'nom')->label('NOMBRE DE LA AGENCIA')->textInput([
                 'maxlength' => true,
-                'class' => 'form-control',
+                'class' => 'form-control form-control-lg',
                 'placeholder' => 'Nombre completo del agente',
                 'autofocus' => true,
             ]) ?>
         </div>
 
         <div class="col-md-6">
-            <?= $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->textInput([
-                'class' => 'form-control',
-                'placeholder' => 'ID del usuario propietario',
+            <?= $form->field($model, 'idusuariopropietario')->widget(Select2::classname(), [
+                            'data' => UserHelper::getAgentesList(),
+                            'options' => [
+                                'placeholder' => 'Seleccione',
+                                'class' => 'form-control form-control-lg'
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => false,
+                            ],
             ]) ?>
         </div>
        
@@ -76,6 +93,7 @@ use yii\web\JqueryAsset;
                 'placeholder' => '% Venta',
                 'type' => 'number',
                 'step' => '0.01',
+                'class' => 'form-control form-control-lg'
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -84,6 +102,7 @@ use yii\web\JqueryAsset;
                 'placeholder' => '% Asesoría',
                 'type' => 'number',
                 'step' => '0.01',
+                'class' => 'form-control form-control-lg'
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -92,6 +111,7 @@ use yii\web\JqueryAsset;
                 'placeholder' => '% Cobranza',
                 'type' => 'number',
                 'step' => '0.01',
+                'class' => 'form-control form-control-lg'
             ]) ?>
         </div>
     </div>
@@ -103,6 +123,7 @@ use yii\web\JqueryAsset;
                 'placeholder' => '% Post-Venta',
                 'type' => 'number',
                 'step' => '0.01',
+                'class' => 'form-control form-control-lg'
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -111,6 +132,7 @@ use yii\web\JqueryAsset;
                 'placeholder' => '% Agente',
                 'type' => 'number',
                 'step' => '0.01',
+                'class' => 'form-control form-control-lg'
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -119,18 +141,18 @@ use yii\web\JqueryAsset;
                 'placeholder' => '% Máximo',
                 'type' => 'number',
                 'step' => '0.01',
+                'class' => 'form-control form-control-lg'
             ]) ?>
         </div>
+
+        <div class="col-md-12">
+        <div class="form-group text-rigth mt-4" style="margin-right:10px;">
+            <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
+            <?= Html::a('Cancelar', ['index'], ['class' => 'btn btn-lg btn-warning']); ?>
+        </div>
+        </div>
     </div>
-
-
-    <div class="form-group text-end mt-4">
-        <?= Html::submitButton('<i class="fas fa-save"></i> GUARDAR', ['class' => 'btn btn-outline-primary btn-md']) ?>
-        <?= Html::a('<i class="fas fa-arrow-left"></i> VOLVER', ['index'], ['class' => 'btn btn-outline-secondary btn-md ms-2']) ?>
-    </div>
-
     <?php ActiveForm::end(); ?>
-
+    </div>
 </div>
-
 

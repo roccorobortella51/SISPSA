@@ -72,19 +72,21 @@ class AgenteFuerzaController extends Controller
         $model = new AgenteFuerza();
         $agente = Agente::findOne($agente_id);
 
-        if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
 
-                $model->id_agente = $agente_id;
-                if($model->save()){
-                    
-                    return $this->redirect(['view', 'id' => $model->id]);
-                }
-            }
-        } else {
-            $model->loadDefaultValues();
-        }
+                    if (!$model->save()) {
+                      echo "MODEL NOT SAVED";
+                      print_r($model->getAttributes());
+                      print_r($model->getErrors());
+                      exit;
+                    }else{
 
+                        return $this->redirect(['index-by-agente', 'agente_id' => $agente->id]);
+
+                    }
+        }
+            
+        
         return $this->render('create', [
             'model' => $model,
             'agente' => $agente,
@@ -101,6 +103,8 @@ class AgenteFuerzaController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $agente = Agente::findOne($model->agente_id);
+
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
@@ -108,6 +112,8 @@ class AgenteFuerzaController extends Controller
 
         return $this->render('update', [
             'model' => $model,
+            'agente' => $agente,
+            'agente_id' => $model->agente_id
         ]);
     }
 
@@ -141,9 +147,11 @@ class AgenteFuerzaController extends Controller
 
         $searchModel = new AgenteFuerzaSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'agente_id', $agente_id]);
+
         
         // ¡CORRECCIÓN CLAVE AQUÍ! Usamos $agente_id para el filtro
-        $dataProvider->query->andWhere(['agente_id' => $agente_id]); 
+        //$dataProvider->query->andWhere(['agente_id' => $agente_id]); 
 
         $this->view->title = 'Fuerza de Venta para Agente: ' . $agente->nom;
         
