@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use Yii;
 use app\models\User;
+use app\models\UserDatos;
 use app\models\UserSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -71,6 +72,7 @@ class UserController extends Controller
     public function actionCreate()
     {
         $model = new User();
+        $model2 = new UserDatos();
         $modelAuthAssignment = new AuthAssignment();
 
         if ($this->request->isPost) {
@@ -79,6 +81,8 @@ class UserController extends Controller
             $model->auth_key = User::generateAuthKey();
             $auth = Yii::$app->authManager;
 
+            $model2->load($this->request->post());
+
             if ($model->save()) {
                 $auth->revokeAll($model->id);
                 $rol = $auth->getRole($model->roles);
@@ -86,6 +90,8 @@ class UserController extends Controller
                     $auth->assign($rol, $model->id);
                     Yii::$app->cache->flush();
                 }
+
+                $model2->save(false);
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
                 \Yii::error('User create failed: ' . json_encode($model->errors));
@@ -97,6 +103,7 @@ class UserController extends Controller
 
         return $this->render('create', [
             'model' => $model,
+            'model2' => $model2
         ]);
     }
 
@@ -113,9 +120,18 @@ class UserController extends Controller
         $pass = $model->password_hash;
         $auth = Yii::$app->authManager;
 
+        $model2 = UserDatos::find()->where(['user_id' => $model->id])->one();
+
+        if($model2 == "" || $model2 == null){
+            $model2 = new UserDatos();
+            $model2->user_id = $model->id;
+            $model2->save(false);
+        }
+
         
         if ($this->request->isPost) {
             $model->load($this->request->post());
+            $model2->load($this->request->post());
             
 
             if ($model->password == '') {
@@ -125,13 +141,17 @@ class UserController extends Controller
                 $model->password_hash = User::setPassword($model->password);
             }
             if ($model->save()) {
+
+                $model2->save(false);
+
+
                 $auth->revokeAll($model->id);
                 $rol = $auth->getRole($model->roles);
                 if ($rol){
                     $auth->assign($rol, $model->id);
                     Yii::$app->cache->flush();
                 }
-                return $this->redirect(['view', 'id' => $model->id]);
+                return $this->redirect(['index']);
             } else {
                 \Yii::error('User update failed: ' . json_encode($model->errors));
                 \Yii::error('POST data: ' . json_encode($this->request->post()));
@@ -140,6 +160,7 @@ class UserController extends Controller
 
         return $this->render('update', [
             'model' => $model,
+            'model2' => $model2,
         ]);
     }
 

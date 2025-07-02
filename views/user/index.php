@@ -24,7 +24,7 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO USUARIO CLÍNICA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
+            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO USUARIO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
         </div>
     </div>
     <div class="col-xl-12 col-md-12">
