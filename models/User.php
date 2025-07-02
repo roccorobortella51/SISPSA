@@ -87,6 +87,7 @@ class User extends ActiveRecord implements IdentityInterface
      *
      * @return \yii\db\ActiveQuery
      */
+    
     public function getUserDatos()
     {
         return $this->hasOne(UserDatos::class, ['user_login_id' => 'id']);
@@ -239,5 +240,9 @@ class User extends ActiveRecord implements IdentityInterface
         return Configs::userDb();
     }
 
+    public function getAuthAssignment()
+    {
+        return $this->hasOne(AuthAssignment::class, ['user_id' => 'id']);
+    }
 
 }

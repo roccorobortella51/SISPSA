@@ -3,25 +3,22 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\Agente $model */
+/** @var app\models\RmClinica $model */
 
-$this->title = 'CREAR NUEVA AGENCIA'; // Aseguramos que el título esté establecido aquí
-$this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
+
+$this->title = 'Crear Agencia';
+$this->params['breadcrumbs'][] = ['label' => 'Crear Agencia', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
-
 ?>
-
 <div class="col-xl-12 col-md-12">
     <div class="ms-panel ms-panel-fh">
         <div class="ms-panel-header">
-            <h4><?= Html::encode($this->title); ?></h4>
+            <h1><?= $this->title = 'Crear Agencia'; ?></h1>
         </div>
         <div class="ms-panel-body">
-            <div class="agente-create">
-                <?= $this->render('_form', [
-                    'model' => $model,
-                ]) ?>
-            </div>
+            <?= $this->render('_form', [
+                'model' => $model,
+            ]) ?>        
         </div>
     </div>
 </div>

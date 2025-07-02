@@ -144,6 +144,48 @@ class UserHelper
         return $codigo;
     }
 
+    public static function getRolesAllRoles()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            AuthItem::find()->select(['name', 'name'])->asArray()->all(),
+            'name',
+            'name'
+        );
+    }
+
+    public static function getAgentesList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            User::find()
+                // Corregimos la sintaxis de la cláusula ON con comillas dobles
+                ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                ->select(['user.id AS id', 'username AS name'])
+                ->where(['auth_assignment.item_name' => "Agente"])
+                ->asArray()
+                ->all(),
+            'id',
+            'name'
+        );
+    }
+
+    public static function getAgenteFuerzaList()
+    {
+        return \yii\helpers\ArrayHelper::map(
+            User::find()
+                // Corregimos la sintaxis de la cláusula ON con comillas dobles
+                ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                ->select(['user.id AS id', 'username AS name'])
+                ->where(['auth_assignment.item_name' => "asesor"])
+                ->asArray()
+                ->all(),
+            'id',
+            'name'
+        );
+    }
+
+
+
+
     
 
 

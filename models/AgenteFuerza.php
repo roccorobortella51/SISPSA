@@ -30,7 +30,7 @@ use Yii;
 class AgenteFuerza extends \yii\db\ActiveRecord
 {
 
-
+public $agente_nombre;
     /**
      * {@inheritdoc}
      */
@@ -46,7 +46,7 @@ class AgenteFuerza extends \yii\db\ActiveRecord
     {
         return [
             // 1. Campos obligatorios: Asegura que estos campos estén presentes.
-            [['id', 'idusuario', 'agente_id'], 'required'],
+            [['idusuario', 'agente_id'], 'required'],
     
             // 2. Tipo de dato entero para IDs y booleanos:
             // Asegura que estos campos sean números enteros. Los campos booleanos
@@ -70,6 +70,8 @@ class AgenteFuerza extends \yii\db\ActiveRecord
             // o si no son validados con reglas específicas y pueden ser enviados directamente.
             // Si usas TimestampBehavior, no necesitas validación 'safe' aquí.
             [['created_at', 'updated_at', 'deleted_at'], 'safe'],
+
+            [['agente_nombre'], 'string'],
     
             // 6. Validación de unicidad para 'id':
             [['id'], 'unique'],
@@ -82,7 +84,6 @@ class AgenteFuerza extends \yii\db\ActiveRecord
     public function attributeLabels()
     {
         return [
-            'id' => 'ID',
             'idusuario' => 'Idusuario',
             'agente_id' => 'Agente ID',
             'por_venta' => 'Por Venta',
@@ -106,20 +107,7 @@ class AgenteFuerza extends \yii\db\ActiveRecord
         return $this->hasOne(User::className(), ['id' => 'idusuario']);
     }
 
-        /**
-     * Gets query for [[UserDatos]] through [[User]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getUserDatos()
-    {
-        // Conectamos AgenteFuerza con UserDatos A TRAVÉS del modelo User.
-        // La relación en User (getUserDatos) es ['user_login_id' => 'id'].
-        // La relación en AgenteFuerza (getUser) es ['id' => 'idusuario'].
-        return $this->hasOne(UserDatos::class, ['user_login_id' => 'id'])
-                    ->via('user'); // Aquí indicamos que pase por la relación 'user'!
-    }
-
+   
     public function getAgente()
     {
         // Esto define la relación desde AgenteFuerza hacia Agente

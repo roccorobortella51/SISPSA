@@ -8,6 +8,8 @@ use app\models\User;
 use kartik\select2\Select2;
 use yii\widgets\MaskedInput;
 use app\models\Agente; // Asegúrate de importar el modelo Agente
+use app\components\UserHelper;
+use kartik\widgets\SwitchInput;
 
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
@@ -108,33 +110,37 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($model, 'id')->textInput([
-                        'readonly' => true,
-                        'class' => 'form-control form-control-lg',
-                        'placeholder' => 'ID Agente Fuerza',
-                    ]) ?>
-                </div>
-                <div class="col-md-4">
                     <?= $form->field($model, 'agente_id')->textInput([
                         'readonly' => true,
                         'class' => 'form-control form-control-lg',
-                        'value' => $agenciaNombre,
+                        'placeholder' => 'ID Agente Fuerza',
+                        'value' => $agente->id
+                    ]) ?>
+                </div>
+                <div class="col-md-4">
+                    <?= $form->field($model, 'nombre_agente')->textInput([
+                        'readonly' => true,
+                        'class' => 'form-control form-control-lg',
+                        'value' => $agente->nom,
                         'placeholder' => 'Nombre de la Agencia Asociada',
                     ])->label('AGENCIA ASOCIADA')
                     ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'idusuario')->label('USUARIO ASOCIADO')->widget(Select2::classname(), [
-                        'data' => $userList,
-                        'options' => [
-                            'placeholder' => 'Selecciona un usuario',
-                            'class' => 'form-control form-control-lg',
-                            'disabled' => $readOnly
-                        ],
-                        'pluginOptions' => [
-                            'allowClear' => false,
-                        ],
+                    
+
+                    <?= $form->field($model, 'idusuario')->widget(Select2::classname(), [
+                            'data' => UserHelper::getAgenteFuerzaList(),
+                            'options' => [
+                                'placeholder' => 'Seleccione',
+                                'class' => 'form-control form-control-lg',
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => false,
+                            ],
                     ]) ?>
+
+
                 </div>
             </div>
 
@@ -196,30 +202,33 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                             <h6 class="mb-0">Permisos de Venta y Asesoría</h6>
                         </div>
                         <div class="card-body">
-                            <?= $form->field($model, 'puede_vender', [
-                                // Aquí es donde controlamos el template para el switch
-                                'template' => '<div class="form-check form-switch">{input}{label}{error}{hint}</div>',
-                                // No necesitamos 'options' para la envoltura div.form-group del field,
-                                // porque el template ahora lo maneja directamente
-                            ])->checkbox([
-                                'class' => 'form-check-input',
-                                'role' => 'switch',
-                                // Es fundamental que el ID sea correcto para que el label funcione
-                                'id' => Html::getInputId($model, 'puede_vender')
-                            ])->label('Puede Vender', [
-                                // La clase para el label del switch
-                                'class' => 'form-check-label'
-                            ]); ?>
+                            <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
+                                'type' => SwitchInput::CHECKBOX,
+                                'pluginOptions' => [
+                                    'onText' => 'Si',
+                                    'offText' => 'No',
+                                    'onColor' => 'success',
+                                    'offColor' => 'danger',
+                                ],
+                                'options' => [
+                                    'id' => Html::getInputId($model, 'puede_vender'), // Mantener el ID explícito si es necesario
+                                ],
+                            ])->label('Puede Vender'); ?>
 
-                            <?= $form->field($model, 'puede_asesorar', [
-                                'template' => '<div class="form-check form-switch">{input}{label}{error}{hint}</div>',
-                            ])->checkbox([
-                                'class' => 'form-check-input',
-                                'role' => 'switch',
-                                'id' => Html::getInputId($model, 'puede_asesorar')
-                            ])->label('Puede Asesorar', [
-                                'class' => 'form-check-label'
-                            ]); ?>
+                            ---
+
+                            <?= $form->field($model, 'puede_asesorar')->widget(SwitchInput::class, [
+                                'type' => SwitchInput::CHECKBOX,
+                                'pluginOptions' => [
+                                    'onText' => 'Si',
+                                    'offText' => 'No',
+                                    'onColor' => 'success',
+                                    'offColor' => 'danger',
+                                ],
+                                'options' => [
+                                    'id' => Html::getInputId($model, 'puede_asesorar'),
+                                ],
+                            ])->label('Puede Asesorar'); ?>
                         </div>
                     </div>
                 </div>
@@ -229,35 +238,48 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                             <h6 class="mb-0">Permisos de Gestión y Cobranza</h6>
                         </div>
                         <div class="card-body">
-                            <?= $form->field($model, 'puede_cobrar', [
-                                'template' => '<div class="form-check form-switch">{input}{label}{error}{hint}</div>',
-                            ])->checkbox([
-                                'class' => 'form-check-input',
-                                'role' => 'switch',
-                                'id' => Html::getInputId($model, 'puede_cobrar')
-                            ])->label('Puede Cobrar', [
-                                'class' => 'form-check-label'
-                            ]); ?>
+                            <?= $form->field($model, 'puede_cobrar')->widget(SwitchInput::class, [
+                                'type' => SwitchInput::CHECKBOX, // Opcional, ya que es el tipo por defecto para booleans
+                                'pluginOptions' => [
+                                    'onText' => 'Si',
+                                    'offText' => 'No',
+                                    'onColor' => 'success', // Color para 'Si' (verde)
+                                    'offColor' => 'danger',  // Color para 'No' (rojo)
+                                ],
+                                'options' => [
+                                    'id' => Html::getInputId($model, 'puede_cobrar'), // Mantener el ID explícito si es necesario
+                                ],
+                            ])->label('Puede Cobrar'); ?>
 
-                            <?= $form->field($model, 'puede_post_venta', [
-                                'template' => '<div class="form-check form-switch">{input}{label}{error}{hint}</div>',
-                            ])->checkbox([
-                                'class' => 'form-check-input',
-                                'role' => 'switch',
-                                'id' => Html::getInputId($model, 'puede_post_venta')
-                            ])->label('Puede Post Venta', [
-                                'class' => 'form-check-label'
-                            ]); ?>
+                            ---
 
-                            <?= $form->field($model, 'puede_registrar', [
-                                'template' => '<div class="form-check form-switch">{input}{label}{error}{hint}</div>',
-                            ])->checkbox([
-                                'class' => 'form-check-input',
-                                'role' => 'switch',
-                                'id' => Html::getInputId($model, 'puede_registrar')
-                            ])->label('Puede Registrar', [
-                                'class' => 'form-check-label'
-                            ]); ?>
+                            <?= $form->field($model, 'puede_post_venta')->widget(SwitchInput::class, [
+                                'type' => SwitchInput::CHECKBOX,
+                                'pluginOptions' => [
+                                    'onText' => 'Si',
+                                    'offText' => 'No',
+                                    'onColor' => 'success',
+                                    'offColor' => 'danger',
+                                ],
+                                'options' => [
+                                    'id' => Html::getInputId($model, 'puede_post_venta'),
+                                ],
+                            ])->label('Puede Post Venta'); ?>
+
+                            ---
+
+                            <?= $form->field($model, 'puede_registrar')->widget(SwitchInput::class, [
+                                'type' => SwitchInput::CHECKBOX,
+                                'pluginOptions' => [
+                                    'onText' => 'Si',
+                                    'offText' => 'No',
+                                    'onColor' => 'success',
+                                    'offColor' => 'danger',
+                                ],
+                                'options' => [
+                                    'id' => Html::getInputId($model, 'puede_registrar'),
+                                ],
+                            ])->label('Puede Registrar'); ?>
                         </div>
                     </div>
                 </div>

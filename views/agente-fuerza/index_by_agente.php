@@ -8,6 +8,7 @@ use yii\web\JqueryAsset; // Asegúrate de tener este 'use' si tu JS de paneles l
 use app\models\AgenteFuerza; // Tu modelo AgenteFuerza
 use app\models\Agente; // Tu modelo Agente
 
+
 /** @var yii\web\View $this */
 /** @var app\models\search\AgenteFuerzaSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
@@ -103,7 +104,13 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'attribute' => 'usuario.nombre_completo', // Asumiendo una relación 'usuario' en AgenteFuerza
                                 'label' => 'Nombre',
                                 'value' => function($model) {
-                                    return $model->user->userDatos->nombres ?? 'N/A';
+
+                                    if($model->user){
+
+                                        return $model->user->username;
+                                        //return $model->user->userDatos->nombres;
+                                    }
+                                    
                                 },
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
@@ -145,10 +152,10 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
                                 'buttons' => [
-                                    'update' => function ($url, $model, $key) use ($id_agente) {
+                                    'update' => function ($url, $model, $key) use ($id_agente, $agente) {
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                            Url::to(['agente-fuerza/update', 'id' => $model->id, 'id_agente' => $id_agente]), // Pasamos id_agente
+                                            Url::to(['agente-fuerza/update', 'id' => $model->id]), // Pasamos id_agente
                                             [
                                                 'title' => 'Editar',
                                                 'class' => 'btn btn-link btn-sm text-success',
