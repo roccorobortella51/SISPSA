@@ -48,6 +48,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         ],
 
                         'columns' => [
+                            'id',
                             // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
                                 'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**
@@ -115,12 +116,12 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{update}{delete}</div>',
                                 'options' => ['style' => 'width:80px; min-width:80px;'],
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
                                 'buttons' => [
-                                    'view' => function ($url, $model, $key) {
+                                    /*/'view' => function ($url, $model, $key) {
                                         return Html::a(
                                             '<i class="fa fa-eye"></i>',
                                             Url::to(['view', 'id' => $model->id]),
@@ -130,7 +131,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                                 'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                             ]
                                         );
-                                    },
+                                    },*/
                                     'update' => function ($url, $model, $key) {
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt ms-text-primary"></i>',
@@ -139,6 +140,19 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                                 'title' => 'Editar',
                                                 'class' => 'btn btn-link btn-sm text-success',
                                                 'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                            ]
+                                        );
+                                    },
+                                    'delete' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fas fa-trash-alt"></i>',
+                                            Url::to(['delete', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Eliminar',
+                                                'class' => 'btn btn-link btn-sm text-danger',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
+                                                'data-confirm' => '¿Estás seguro de que quieres eliminar este elemento?',
+                                                'data-method' => 'post'
                                             ]
                                         );
                                     },
