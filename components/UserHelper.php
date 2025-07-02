@@ -77,7 +77,7 @@ class UserHelper
             ];
     }
 
-    public function getAreaList()
+    public static function getAreaList()
     {
         return \yii\helpers\ArrayHelper::map(
             Area::find()->select(['id', 'nombre as name'])->asArray()->all(),

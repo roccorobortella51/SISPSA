@@ -21,10 +21,10 @@ $listaEstatus = $listaEstatus ?? [];
 $mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
 $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
-$this->title = 'Detalles de la Clínica: ' . $model->nombre;
-$this->params['breadcrumbs'][] = ['label' => 'Clínicas', 'url' => ['index']];
+$this->title = 'DETALLES DE LA CLINICA: ' . $model->nombre;
+$this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
 $this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Actualizar';
+$this->params['breadcrumbs'][] = 'ACTUALIZAR';
 
 ?>
 <div class="col-md-12 text-end">

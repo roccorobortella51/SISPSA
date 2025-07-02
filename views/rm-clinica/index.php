@@ -14,7 +14,7 @@ use kartik\widgets\SwitchInput;
 
 // --- BREADCRUMBS ---
 
-$this->params['breadcrumbs'][] = ['label' => 'Clínicas', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
 // --- FIN  --- 
 
 

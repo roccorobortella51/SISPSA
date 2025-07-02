@@ -5,10 +5,10 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\RmClinica $model */
 
-$this->title = 'Actualizar Clínica: ' . $model->nombre;
-$this->params['breadcrumbs'][] = ['label' => 'Clínicas', 'url' => ['index']];
+$this->title = 'ACTUALIZAR CLÍNICA: ' . $model->nombre;
+$this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
 $this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Actualizar';
+$this->params['breadcrumbs'][] = 'ACTUALIZAR';
 ?>
 <div class="col-md-12 text-end">
     <div class="float-right" style="margin-bottom:10px;">
