@@ -43,40 +43,37 @@ public $agente_nombre;
      * {@inheritdoc}
      */
     public function rules()
-    {
-        return [
-            // 1. Campos obligatorios: Asegura que estos campos estén presentes.
-            [['idusuario', 'agente_id'], 'required'],
-    
-            // 2. Tipo de dato entero para IDs y booleanos:
-            // Asegura que estos campos sean números enteros. Los campos booleanos
-            // (puede_vender, etc.) en PHP suelen manejarse como 0 o 1, que son enteros.
-            [['id', 'idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
-    
-            // 3. Tipo de dato numérico para porcentajes:
-            // 'number' permite enteros y flotantes (decimales).
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
-    
-            // 4. Reglas de valor por defecto:
-            // Asigna 'null' a los campos de fecha si no se envían.
-            // Asigna '1' por defecto a 'puede_registrar' si no se especifica.
-            // Es importante que los 'default' vayan DESPUÉS de los 'required' si un campo puede ser null.
-            // Y los 'default' para booleanos/enteros deben ir después de su regla 'integer'.
-            [['updated_at', 'deleted_at'], 'default', 'value' => null],
-            [['puede_registrar'], 'default', 'value' => 1], // Si el valor por defecto para nuevo registro es 1 (true)
-    
-            // 5. Campos de fecha y hora:
-            // 'safe' es suficiente para created_at y updated_at si son manejados por TimestampBehavior
-            // o si no son validados con reglas específicas y pueden ser enviados directamente.
-            // Si usas TimestampBehavior, no necesitas validación 'safe' aquí.
-            [['created_at', 'updated_at', 'deleted_at'], 'safe'],
+{
+    return [
+        // ... otras reglas ...
 
-            [['agente_nombre'], 'string'],
+        // 1. Campos obligatorios:
+        // Personalizamos el mensaje para 'idusuario'
+        [['idusuario'], 'required', 'message' => 'Este campo del asesor de ventas  no puede estar vacío.'],
+        
+
+        // ... el resto de tus reglas ...
+
+        [['id', 'idusuario', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
     
-            // 6. Validación de unicidad para 'id':
-            [['id'], 'unique'],
-        ];
-    }
+        [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number', 
+            'min' => 0, 
+            'max' => 15,
+            'tooSmall' => 'El porcentaje no puede ser negativo.',
+            'tooBig' => 'El porcentaje no puede ser mayor a 15.'
+        ],
+    
+        [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'default', 'value' => null],
+        [['updated_at', 'deleted_at'], 'default', 'value' => null],
+        [['puede_registrar'], 'default', 'value' => 1], 
+    
+        [['created_at', 'updated_at', 'deleted_at'], 'safe'],
+
+        
+    
+        [['id'], 'unique'],
+    ];
+}
 
     /**
      * {@inheritdoc}

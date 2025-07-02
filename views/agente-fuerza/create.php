@@ -11,9 +11,17 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="agente-fuerza-create">
 
-    <?= $this->render('_form', [
-        'model' => $model,
-        'agente' => $agente,
-    ]) ?>
+    <div class="col-xl-12 col-md-12">
+        
+            <div class="ms-panel-header">
+                <h1> CREAR ASESOR VENDEDOR </h1>
+            </div>
+        </div>
+
+    </div>
+        <?= $this->render('_form', [
+            'model' => $model,
+            'agente' => $agente,
+        ]) ?>
 
 </div>

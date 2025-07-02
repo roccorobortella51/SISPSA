@@ -38,27 +38,36 @@ class Agente extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            // Campos que pueden ser NULL por defecto si no se envían (y la DB lo permite)
-            [['nom', 'por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'default', 'value' => null],
-    
-            // Valor por defecto para por_max
-            [['por_max'], 'default', 'value' => 15],
-    
-            // idusuariopropietario es obligatorio y entero
-            // ELIMINAMOS el 'default' => null para idusuariopropietario si es 'required'
-            [['idusuariopropietario'], 'required'],
+            // 1. Campos obligatorios
+            
+            [['nom'], 'required', 'message' => 'El nombre no puede estar vacío.'],
+            [['idusuariopropietario'], 'required', 'message' => 'El nombre del propetario no puede estar vacío.'],
+            // 'idusuariopropietario' debe ser un número entero.
             [['idusuariopropietario'], 'integer'],
     
-            // Campos numéricos (incluyendo 'por_max' si no quieres que sea solo un default)
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente', 'por_max'], 'number'],
+            // 2. Campos numéricos (porcentajes)
+            // Ningún porcentaje puede ser mayor a 15% y no puede ser negativo.
+            // Aquí también puedes personalizar los mensajes de 'min' y 'max' si quieres.
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'number', 
+                'min' => 0, 
+                'max' => 15,
+                'tooSmall' => 'El porcentaje no puede ser negativo.', // Mensaje personalizado para min
+                'tooBig' => 'El porcentaje no puede ser mayor a 15.' // Mensaje personalizado para max
+            ],
+            
+            // 'por_max' es un número y su valor por defecto es 15 si no se especifica.
+            [['por_max'], 'number'],
     
-            // Campos de fecha: se marcan como 'safe' para permitir asignación si no se usa Behavior,
-            // PERO lo ideal es usar TimestampBehavior para created_at y updated_at.
-            // deleted_at puede ser 'safe' o gestionarse manualmente si es para soft-delete.
+            // 3. Valores por defecto
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'default', 'value' => null],
+            [['por_max'], 'default', 'value' => 15],
+    
+            // 4. Validación de cadena de texto
+            // Aquí también podrías personalizar el mensaje si la cadena es muy larga
+            [['nom'], 'string', 'max' => 255, 'tooLong' => 'El nombre es demasiado largo (máximo 255 caracteres).'],
+            
+            // 5. Campos de fecha
             [['created_at', 'updated_at', 'deleted_at'], 'safe'],
-    
-            // Validación de string para 'nom'
-            [['nom'], 'string', 'max' => 255],
         ];
     }
 

@@ -91,6 +91,8 @@ class UserController extends Controller
                     Yii::$app->cache->flush();
                 }
 
+                $model2->user_login_id = $model->id; //id-user
+
                 $model2->save(false);
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {

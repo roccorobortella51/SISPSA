@@ -16,7 +16,7 @@ use app\models\Agente; // Tu modelo Agente
 /** @var int $id_agente */
 /** @var app\models\Agente $agente */ // ¡Este es el objeto Agente que necesitas!
 
-$this->title = 'FUERZA DE VENTA PARA AGENTE: ' . $agente->nom; // Título adaptado
+$this->title = 'FUERZA DE VENTA'; //PARA AGENTE: ' . $agente->nom;
 $this->params['breadcrumbs'][] = ['label' => 'Agentes', 'url' => ['agente/index']];
 $this->params['breadcrumbs'][] = ['label' => 'Agente: ' . $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
 $this->params['breadcrumbs'][] = $this->title;
@@ -28,7 +28,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
             <?= Html::a('<i class="fas fa-plus"></i> CREAR MIEMBRO DE FUERZA DE VENTA', ['agente-fuerza/create', 'agente_id' => $id_agente], ['class' => 'btn btn-outline-primary btn-lg']) ?>
-            <?= Html::a('Volver al Agente', ['agente/update', 'id' => $agente->id], ['class' => 'btn btn-outline-secondary btn-lg']) ?>
+            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['agente/update', 'id' => $agente->id], ['class' => 'btn btn-info btn-lg']) ?>
         </div>
     </div>
     
