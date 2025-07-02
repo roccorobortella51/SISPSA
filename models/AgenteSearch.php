@@ -45,6 +45,7 @@ class AgenteSearch extends Agente
         $query = Agente::find();
 
         // add conditions that should always apply here
+        $query->with(['propietario', 'agenteFuerzas']); 
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

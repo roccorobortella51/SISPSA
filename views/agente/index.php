@@ -48,7 +48,6 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         ],
 
                         'columns' => [
-                            'id',
                             // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
                                 'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**
@@ -65,51 +64,57 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             // Propietario (asumimos 'idusuariopropietario'. Si necesitas el nombre real,
                             // tu modelo 'Agente' necesitará una relación o un campo 'value' aquí)
                             [
-                                'attribute' => 'idusuariopropietario', // **VERIFICA que este es el campo correcto**
-                                'label' => 'Propietario', // Etiqueta visible en la cabecera
+                                'attribute' => 'propietario.username', // CORRECTO, si 'username' es donde está el nombre en el modelo User
+                                'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar propietario ID',
+                                    'placeholder' => 'Buscar propietario',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                                /* Si 'idusuariopropietario' es una FK y quieres mostrar el nombre del usuario:
-                                'value' => function ($model) {
-                                    // Asegúrate de que 'getUsuarioPropietario()' sea el nombre de tu relación en el modelo Agente
-                                    return $model->usuarioPropietario->nombre_completo ?? 'N/A'; // Suponiendo una relación y un campo 'nombre_completo' en el modelo de usuario
-                                },
-                                // Y si quieres filtrar por el nombre del propietario (requiere ajustes en AgenteSearch):
-                                // 'filter' => \yii\helpers\ArrayHelper::map(\app\models\User::find()->all(), 'id', 'nombre_completo'),
-                                */
+                                // Opcional: para manejar el caso de que no haya propietario y no mostrar error, puedes usar 'value':
+                                'value' => function($model) {
+                                    return $model->propietario ? $model->propietario->username : 'No asignado';
+                                }
                             ],
-
-                            // Porcentaje (asumimos 'por_venta' como un ejemplo de porcentaje)
-                            [
-                                'attribute' => 'por_venta', // **VERIFICA que este es el campo correcto para porcentaje**
-                                'label' => 'Porcentaje', // Etiqueta visible en la cabecera
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar %',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                            ],
+                            // // Porcentaje (asumimos 'por_venta' como un ejemplo de porcentaje)
+                            // [
+                            //     'attribute' => 'por_venta', // **VERIFICA que este es el campo correcto para porcentaje**
+                            //     'label' => 'Porcentaje', // Etiqueta visible en la cabecera
+                            //     'headerOptions' => ['style' => 'color: white!important;'],
+                            //     'filterInputOptions' => [
+                            //         'placeholder' => 'Buscar %',
+                            //         'class' => 'form-control form-control-lg text-center',
+                            //     ],
+                            // ],
 
                             // Fuerza de Venta (este atributo NO estaba en tu lista original de columnas de agente,
                             // **DEBES REEMPLAZAR 'fuerza_venta_atributo' CON EL NOMBRE REAL DE TU COLUMNA**)
                             [
-                                'attribute' => 'fuerza_venta_atributo', // <--- ¡¡¡IMPORTANTE!!! CAMBIA ESTO POR EL CAMPO REAL DE TU BD
+                                'attribute' => 'agenteFuerzaCount', // Usa el nombre del método "getter" que definimos en el modelo Agente
                                 'label' => 'Fuerza de Venta', // Etiqueta visible en la cabecera
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar fuerza',
+                                    'placeholder' => 'Buscar fuerza', // Esto no aplicará directamente a un conteo, pero puedes dejarlo.
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                                // Si es un campo calculado o una relación, puedes usar 'value':
-                                /*
+                                'format' => 'raw', // Necesario para renderizar HTML (el enlace)
                                 'value' => function($model) {
-                                    // Lógica para obtener el valor de "fuerza de venta"
-                                    return 'Valor Calculado';
-                                }
-                                */
+                                    // Asegúrate de que el método getAgenteFuerzaCount() exista en tu modelo Agente.
+                                    // Esto devolverá el número de AgenteFuerza relacionados.
+                                    $count = $model->agenteFuerzaCount; // O $model->getAgenteFuerzaCount() si prefieres la forma explícita
+                            
+                                    // Opcional: Si quieres que el número sea un enlace a la lista de esos asesores.
+                                    // Asegúrate de que la URL y la acción en tu controlador AgenteFuerzaController existan.
+                                    return Html::a(
+                                        $count, // El texto del enlace será el número de asesores
+                                        ['agente-fuerza/index-by-agente', 'agente_id' => $model->id], // URL a la vista de los asesores de esta agencia
+                                        ['title' => 'Ver asesores de esta agencia', 'data-pjax' => '0'] // data-pjax="0" para que no recargue el Pjax del GridView si lo usas
+                                    );
+                            
+                                    // Si solo quieres mostrar el número sin enlace, usa:
+                                    // return $count;
+                                },
+                                'contentOptions' => ['class' => 'text-center'], // Para centrar el contenido de la celda
                             ],
 
                            // Columna de Acciones (Ver, Editar, Eliminar)

@@ -17,8 +17,8 @@ use app\models\Agente; // Tu modelo Agente
 /** @var app\models\Agente $agente */ // ¡Este es el objeto Agente que necesitas!
 
 $this->title = 'FUERZA DE VENTA'; //PARA AGENTE: ' . $agente->nom;
-$this->params['breadcrumbs'][] = ['label' => 'Agentes', 'url' => ['agente/index']];
-$this->params['breadcrumbs'][] = ['label' => 'Agente: ' . $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
+$this->params['breadcrumbs'][] = ['label' => 'VENDEDORES', 'url' => ['agente/index']];
+$this->params['breadcrumbs'][] = ['label' => 'ASESOR VENDEDOR: ' . $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
 $this->params['breadcrumbs'][] = $this->title;
 
 

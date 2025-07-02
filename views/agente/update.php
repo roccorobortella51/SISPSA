@@ -6,10 +6,9 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\Agente $model */ // ¡Cambio aquí!
 
-$this->title = 'Actualizar Agente: ' . $model->nom;
-$this->params['breadcrumbs'][] = ['label' => 'Agentes', 'url' => ['index']]; 
-$this->params['breadcrumbs'][] = ['label' => $model->nom, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Actualizar';
+$this->title = 'ACTUALIZAR AGENTE: ' . $model->nom;
+$this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
+$this->params['breadcrumbs'][] = 'ACTUALIZAR';
 ?>
 
 <div class="col-md-12 text-end">
