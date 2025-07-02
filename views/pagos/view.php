@@ -4,14 +4,14 @@ use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
-/** @var app\models\User $model */
+/** @var app\models\Pagos $model */
 
 $this->title = $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Users', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Pagos', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 \yii\web\YiiAsset::register($this);
 ?>
-<div class="user-view">
+<div class="pagos-view">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
@@ -29,15 +29,24 @@ $this->params['breadcrumbs'][] = $this->title;
     <?= DetailView::widget([
         'model' => $model,
         'attributes' => [
-            'username',
-            'auth_key',
-            'password_hash',
-            'password_reset_token',
-            'email:email',
-            'status',
-            'created_at',
-            'updated_at',
             'id',
+            'created_at',
+            'recibo_id',
+            'fecha_pago',
+            'monto_pagado',
+            'metodo_pago:ntext',
+            'estatus:ntext',
+            'numero_referencia_pago:ntext',
+            'updated_at',
+            'imagen_prueba:ntext',
+            'user_id',
+            'nombre_conciliador:ntext',
+            'fecha_conciliacion',
+            'fecha_registro',
+            'deleted_at',
+            'conciliador_id',
+            'conciliado',
+            'monto_usd',
         ],
     ]) ?>
 

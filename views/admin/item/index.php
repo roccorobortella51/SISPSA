@@ -22,15 +22,11 @@ unset($rules[RouteRule::RULE_NAME]);
 
 <div class=row style="margin:3px !important;">
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
-    <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a(Yii::t('rbac-admin', 'Create ' . $labels['Item']), ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-        </div>
-    </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
-                <h1><?= $this->title = 'Gestión de '; ?><?= Yii::t('rbac-admin', $labels['Items']) ?></h1>
+            <div class="ms-panel-header row">
+                <span class="col-md-10"><h1><?= $this->title = 'Gestión de '; ?><?= Yii::t('rbac-admin', $labels['Items']) ?></h1></span>
+                <span class="col-md-2" style="padding-left: 11rem;"><?= Html::a('<i class="fas fa-plus"></i> ' . Yii::t('rbac-admin', 'Create ' . $labels['Item']), ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?></span>
             </div>
             <div class="ms-panel-body">
                 <div class="table-responsive">

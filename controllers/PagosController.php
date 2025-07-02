@@ -2,18 +2,16 @@
 
 namespace app\controllers;
 
-use app\models\UserDatos;
-use app\models\UserDatosSearch;
+use app\models\Pagos;
+use app\models\PagosSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use app\components\UserHelper;
-
 
 /**
- * UserDatosController implements the CRUD actions for UserDatos model.
+ * PagosController implements the CRUD actions for Pagos model.
  */
-class UserDatosController extends Controller
+class PagosController extends Controller
 {
     /**
      * @inheritDoc
@@ -34,13 +32,13 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Lists all UserDatos models.
+     * Lists all Pagos models.
      *
      * @return string
      */
     public function actionIndex()
     {
-        $searchModel = new UserDatosSearch();
+        $searchModel = new PagosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
         return $this->render('index', [
@@ -50,7 +48,7 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Displays a single UserDatos model.
+     * Displays a single Pagos model.
      * @param int $id ID
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
@@ -63,19 +61,13 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Creates a new UserDatos model.
+     * Creates a new Pagos model.
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
     public function actionCreate()
     {
-        $model = new UserDatos();
-        $model->created_at = date('Y-m-d H:i:s');
-        $model->updated_at = date('Y-m-d H:i:s');
-        $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion(); //generar codigo de validacion de 6 digitos
-
-
-
+        $model = new Pagos();
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {
@@ -91,7 +83,7 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Updates an existing UserDatos model.
+     * Updates an existing Pagos model.
      * If update is successful, the browser will be redirected to the 'view' page.
      * @param int $id ID
      * @return string|\yii\web\Response
@@ -111,7 +103,7 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Deletes an existing UserDatos model.
+     * Deletes an existing Pagos model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param int $id ID
      * @return \yii\web\Response
@@ -125,15 +117,15 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Finds the UserDatos model based on its primary key value.
+     * Finds the Pagos model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
      * @param int $id ID
-     * @return UserDatos the loaded model
+     * @return Pagos the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
     protected function findModel($id)
     {
-        if (($model = UserDatos::findOne(['id' => $id])) !== null) {
+        if (($model = Pagos::findOne(['id' => $id])) !== null) {
             return $model;
         }
 

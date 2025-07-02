@@ -57,7 +57,7 @@ use Yii;
 class UserDatos extends \yii\db\ActiveRecord
 {
 
-
+    public $codigoAsesor;
     /**
      * {@inheritdoc}
      */
@@ -79,6 +79,7 @@ class UserDatos extends \yii\db\ActiveRecord
             [['paso'], 'number'],
             [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'default', 'value' => null],
             [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'integer'],
+            ['email', 'email'],
         ];
     }
 

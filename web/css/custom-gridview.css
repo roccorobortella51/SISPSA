@@ -1,0 +1,5 @@
+/* Ajusta el tamaño de letra y pone en negrita el contenido de todos los gridviews */
+div.kv-grid-container,.summary {
+    font-weight: bold;
+    font-size: 14px;
+}

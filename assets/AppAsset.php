@@ -20,6 +20,7 @@ class AppAsset extends AssetBundle
     public $basePath = '@webroot';
     public $baseUrl = '@web';
     public $css = [
+        'css/custom-gridview.css',
         'css/site.css',
         'css/sispsa.css',
         'css/main-login.css',

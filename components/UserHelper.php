@@ -135,6 +135,15 @@ class UserHelper
         );
     }
 
+    public static function generarCodigoValidacion($longitud = 6) {
+        $caracteres = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $codigo = '';
+        for ($i = 0; $i < $longitud; $i++) {
+            $codigo .= $caracteres[random_int(0, strlen($caracteres) - 1)];
+        }
+        return $codigo;
+    }
+
     
 
 

@@ -4,12 +4,12 @@ namespace app\models;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\AgenteFuerza;
+use app\models\Pagos;
 
 /**
- * AgenteFuerzaSearch represents the model behind the search form of `app\models\AgenteFuerza`.
+ * PagosSearch represents the model behind the search form of `app\models\Pagos`.
  */
-class AgenteFuerzaSearch extends AgenteFuerza
+class PagosSearch extends Pagos
 {
     /**
      * {@inheritdoc}
@@ -17,9 +17,9 @@ class AgenteFuerzaSearch extends AgenteFuerza
     public function rules()
     {
         return [
-            [['id', 'idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
-            [['created_at', 'updated_at', 'deleted_at'], 'safe'],
+            [['id', 'recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
+            [['created_at', 'fecha_pago', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at'], 'safe'],
+            [['monto_pagado', 'monto_usd'], 'number'],
         ];
     }
 
@@ -42,7 +42,7 @@ class AgenteFuerzaSearch extends AgenteFuerza
      */
     public function search($params, $formName = null)
     {
-        $query = AgenteFuerza::find();
+        $query = Pagos::find();
 
         // add conditions that should always apply here
 
@@ -61,22 +61,25 @@ class AgenteFuerzaSearch extends AgenteFuerza
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
-            'idusuario' => $this->idusuario,
-            'agente_id' => $this->agente_id,
-            'por_venta' => $this->por_venta,
-            'por_asesor' => $this->por_asesor,
-            'por_cobranza' => $this->por_cobranza,
-            'por_post_venta' => $this->por_post_venta,
-            'puede_vender' => $this->puede_vender,
-            'puede_asesorar' => $this->puede_asesorar,
-            'puede_cobrar' => $this->puede_cobrar,
-            'puede_post_venta' => $this->puede_post_venta,
             'created_at' => $this->created_at,
+            'recibo_id' => $this->recibo_id,
+            'fecha_pago' => $this->fecha_pago,
+            'monto_pagado' => $this->monto_pagado,
             'updated_at' => $this->updated_at,
+            'user_id' => $this->user_id,
+            'fecha_conciliacion' => $this->fecha_conciliacion,
+            'fecha_registro' => $this->fecha_registro,
             'deleted_at' => $this->deleted_at,
-            'puede_registrar' => $this->puede_registrar,
-            'por_registrar' => $this->por_registrar,
+            'conciliador_id' => $this->conciliador_id,
+            'conciliado' => $this->conciliado,
+            'monto_usd' => $this->monto_usd,
         ]);
+
+        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
+            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'imagen_prueba', $this->imagen_prueba])
+            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador]);
 
         return $dataProvider;
     }

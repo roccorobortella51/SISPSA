@@ -19,10 +19,11 @@ $config = [
          'assetManager' => [
             'bundles' => [
                 'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
-                    'css' => [], // Vacía la lista de CSS originales de AdminLTE
-                    'depends' => [ // Si AdminLteAsset depende de otros bundles, puedes mantenerlos
+                    //'css' => [], // Comentado para no vaciar la lista de CSS originales de AdminLTE
+                    'depends' => [ // Mantener dependencias
                         'yii\web\YiiAsset',
-                        'yii\bootstrap\BootstrapAsset',
+                        'yii\bootstrap4\BootstrapAsset', // Cambiado a Bootstrap 4
+                        //'rmrevin\yii\fontawesome\AssetBundle', // Comentado FontAwesome para evitar error
                     ],
                 ],
             ],
@@ -106,7 +107,8 @@ $config = [
             //'gii/*',
             'site/login',
             'site/logout',
-            'site/error',              // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
+            'site/error', 
+            'site/tabs-data',// Permite acceso público a todas las acciones de SiteController (login, error, etc.)
             'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
             //'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
             

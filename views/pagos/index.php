@@ -1,24 +1,24 @@
 <?php
 
-use app\models\AgenteFuerza;
+use app\models\Pagos;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 
 /** @var yii\web\View $this */
-/** @var app\models\AgenteFuerzaSearch $searchModel */
+/** @var app\models\PagosSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-$this->title = 'Agente Fuerzas';
+$this->title = 'Pagos';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="agente-fuerza-index">
+<div class="pagos-index">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        <?= Html::a('Create Agente Fuerza', ['create'], ['class' => 'btn btn-success']) ?>
+        <?= Html::a('Create Pagos', ['create'], ['class' => 'btn btn-success']) ?>
     </p>
 
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
@@ -30,24 +30,26 @@ $this->params['breadcrumbs'][] = $this->title;
             ['class' => 'yii\grid\SerialColumn'],
 
             'id',
-            'idusuario',
-            'agente_id',
-            'por_venta',
-            'por_asesor',
-            //'por_cobranza',
-            //'por_post_venta',
-            //'puede_vender',
-            //'puede_asesorar',
-            //'puede_cobrar',
-            //'puede_post_venta',
-            //'created_at',
+            'created_at',
+            'recibo_id',
+            'fecha_pago',
+            'monto_pagado',
+            //'metodo_pago:ntext',
+            //'estatus:ntext',
+            //'numero_referencia_pago:ntext',
             //'updated_at',
+            //'imagen_prueba:ntext',
+            //'user_id',
+            //'nombre_conciliador:ntext',
+            //'fecha_conciliacion',
+            //'fecha_registro',
             //'deleted_at',
-            //'puede_registrar',
-            //'por_registrar',
+            //'conciliador_id',
+            //'conciliado',
+            //'monto_usd',
             [
                 'class' => ActionColumn::className(),
-                'urlCreator' => function ($action, AgenteFuerza $model, $key, $index, $column) {
+                'urlCreator' => function ($action, Pagos $model, $key, $index, $column) {
                     return Url::toRoute([$action, 'id' => $model->id]);
                  }
             ],

@@ -6,6 +6,12 @@ use app\assets\MedboardAsset; // Importa tu nuevo Asset Bundle
 use app\assets\AppAsset;
 
 use yii\helpers\Html;
+use yii\bootstrap4\BootstrapAsset;
+use yii\bootstrap4\BootstrapPluginAsset;
+
+BootstrapAsset::register($this);
+BootstrapPluginAsset::register($this);
+
 //\hail812\adminlte3\assets\AdminLteAsset::register($this);
 //MedboardAsset::register($this); // Registra el Asset Bundle de MedBoard
 AppAsset::register($this);

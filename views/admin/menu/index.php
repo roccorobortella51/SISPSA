@@ -17,13 +17,14 @@ $this->params['breadcrumbs'][] = $this->title;
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO ELEMENTO DE MENU', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
+             
         </div>
     </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
-                <h1><?= $this->title = 'Gestión de Menus'; ?></h1>
+            <div class="ms-panel-header row">
+                <span class="col-md-10"><h1><?= $this->title = 'Gestión de Menus'; ?></h1></span>
+                <span class="col-md-2" style="padding-left: 1rem;"><?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO ELEMENTO DE MENU', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?></span>
             </div>
             <div class="ms-panel-body">
                 <div class="table-responsive">
@@ -34,16 +35,35 @@ $this->params['breadcrumbs'][] = $this->title;
                             'filterModel' => $searchModel,
                             'columns' => [
                                 ['class' => 'yii\grid\SerialColumn'],
-                                'name',
+                                [
+                                    'attribute' => 'name',
+                                    'format' => 'html',
+                                ],
                                 [
                                     'attribute' => 'menuParent.name',
+                                    'format' => 'html',
+                                    'value' => function($model) {
+                                        return '<b>' . htmlspecialchars($model->menuParent->name ?? '') . '</b>';
+                                    },
                                     'filter' => Html::activeTextInput($searchModel, 'parent_name', [
                                         'class' => 'form-control', 'id' => null
                                     ]),
                                     'label' => Yii::t('rbac-admin', 'Parent'),
                                 ],
-                                'route',
-                                'order',
+                                [
+                                    'attribute' => 'route',
+                                    'format' => 'html',
+                                    'value' => function($model) {
+                                        return '<b>' . htmlspecialchars($model->route) . '</b>';
+                                    },
+                                ],
+                                [
+                                    'attribute' => 'order',
+                                    'format' => 'html',
+                                    'value' => function($model) {
+                                        return '<b>' . htmlspecialchars($model->order) . '</b>';
+                                    },
+                                ],
                                 ['class' => 'yii\grid\ActionColumn'],
                             ],
                         ]);
