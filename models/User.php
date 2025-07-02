@@ -26,6 +26,7 @@ use yii\web\IdentityInterface;
  * @property string $password write-only password
  *
  * @property UserProfile $profile
+ * @property UserDatos $userDatos
  */
 class User extends ActiveRecord implements IdentityInterface
 {
@@ -237,4 +238,6 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return Configs::userDb();
     }
+
+
 }
