@@ -132,10 +132,10 @@ class UserDatosController extends Controller
                     if($modelUser->save()){
                         
                         
-                        /*$modelContrato->user_id = $model->id;
+                        $modelContrato->user_id = $model->id;
                         $modelContrato->estatus = 'Creado';
                         $modelContrato->clinica_id = $model->clinica_id;
-                        $modelContrato->save();  */                    
+                        $modelContrato->save();                     
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);
