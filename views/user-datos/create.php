@@ -5,8 +5,8 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
 
-$this->title = 'Create User Datos';
-$this->params['breadcrumbs'][] = ['label' => 'User Datos', 'url' => ['index']];
+$this->title = 'Crear Afiliado';
+$this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="col-xl-12 col-md-12">

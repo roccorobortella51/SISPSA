@@ -130,15 +130,27 @@ $this->registerJs($jsValidation);
         <div role="tabpanel" class="tab-pane active" id="tab13">
             <div class="row">
                 <div class="col-md-6">
-                    <?= $form->field($model, 'codigoAsesor')->textInput() ?>
+                    <?= $form->field($model, 'codigoAsesor')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'asesor_id')->textInput() ?>
+                    <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
+                            'data' => UserHelper::getAgenteFuerzaList(),
+                            'options' => [
+                                'placeholder' => 'Seleccione el asesor', // Placeholder adaptado
+                                'class' => 'form-control form-control-lg',
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => false,
+                            ],
+                    ])->label('NOMBRE DEL ASESOR') // Etiqueta adaptada
+                    ?> 
                 </div>
+
+
             </div>
             <div class="row">
                 <div class="col-md-6">
-                    <?= $form->field($model, 'email')->textInput() ?>
+                    <?= $form->field($model, 'email')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
                 <div class="col-md-6">
                     <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
@@ -153,10 +165,10 @@ $this->registerJs($jsValidation);
             </div>
             <div class="row">
                 <div class="col-md-6">
-                    <?= $form->field($model, 'nombres')->textInput() ?>
+                    <?= $form->field($model, 'nombres')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'apellidos')->textInput() ?>
+                    <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
             </div>
             <div class="row ">
@@ -289,7 +301,7 @@ $this->registerJs($jsValidation);
             </div>
             <div class="row">
                 <div class="col-md-12">
-                    <?= $form->field($model, 'direccion')->textarea() ?>
+                    <?= $form->field($model, 'direccion')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
             </div>
         </div>
@@ -364,9 +376,6 @@ $this->registerJs($jsValidation);
                         ]) ?>
                 </div>
                 <div class="col-md-4"> <?= $form->field($modelContrato, 'monto')->textInput() ?></div>
-                
-                
-
             </div>
         </div>
     </div>
