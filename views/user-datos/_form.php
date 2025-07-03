@@ -146,7 +146,7 @@ $this->registerJs($jsValidation);
     </div>
 
     <div class="col-md-auto mb-3">
-        <?= Html::a('Tabla Tu Afiliacion', Url::to(['contratos/index']), [ // <--- AQUI APUNTA A LA ACCIÓN
+        <?= Html::a('Afiliación', Url::to(['contratos/index']), [ // <--- AQUI APUNTA A LA ACCIÓN
             'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
             'data-pjax' => '0'
         ]) ?>
@@ -332,22 +332,9 @@ $this->registerJs($jsValidation);
                         ]);  ?>
                 </div>
             </div>
-            <div class="row">
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <?= $form->field($model, 'direccion')->textInput(['class' => 'form-control form-control-lg',]) ?>
-                </div>
-                <div class="col-md-12">
-                    <div class="form-group text-rigth mt-4" style="margin-right:10px;">
-                        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
-                        <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-lg btn-warning']); ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div role="tabpanel" class="tab-pane" id="tab17">
+            <br>
+            <h1>Datos del Contrato</h1>
+                <br>
             <div class = 'row'>
                 <div class="col-md-6">
                     <?= $form->field($model, 'clinica_id')->widget(Select2::classname(), [
@@ -389,6 +376,8 @@ $this->registerJs($jsValidation);
                         'todayHighlight' => true,
                     ],
                     ]) ?></div>
+
+
                 <div class="col-md-4">
                     <?= $form->field($modelContrato, 'fecha_ven')->widget(\kartik\date\DatePicker::class, [
                         'options' => [
@@ -402,10 +391,22 @@ $this->registerJs($jsValidation);
                         ],
                         ]) ?>
                 </div>
-                <div class="col-md-4"> <?= $form->field($modelContrato, 'monto')->textInput() ?></div>
+                <div class="col-md-4"> <?= $form->field($modelContrato, 'monto')->textInput(['class' => 'form-control  form-control-lg', 'type' => 'number']) ?></div>
+            </div>
+
+           
+            <div class="row">
+                <div class="col-md-12">
+                    <?= $form->field($model, 'direccion')->textInput(['class' => 'form-control form-control-lg',]) ?>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group text-rigth mt-4" style="margin-right:10px;">
+                        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
+                        <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-lg btn-warning']); ?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <?php ActiveForm::end(); ?>
-</div>
