@@ -39,7 +39,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
             </div>
             <div class="ms-panel-body">
             <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="ms-panel ms-widget ms-identifier-widget bg-info">
                     <div class="ms-panel-header header-mini">
                         <h6>
@@ -61,7 +61,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="ms-panel ms-widget ms-identifier-widget bg-info">
                     <div class="ms-panel-header header-mini">
                         <h6>
@@ -83,7 +83,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="ms-panel ms-widget ms-identifier-widget bg-info">
                     <div class="ms-panel-header header-mini">
                         <h6>
@@ -91,6 +91,28 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                                 // Enlace para Baremo
                                 echo Html::a(
                                     'Afiliados',
+                                    ['user-datos/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
+                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
+                                );
+                            ?>
+                        </h6>
+                    </div>
+                    <div class="ms-panel-body">
+                        <div class="text-center">
+                            <i class="flaticon-information"></i>
+                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
+                    <div class="ms-panel-header header-mini">
+                        <h6>
+                            <?php
+                                // Enlace para Baremo
+                                echo Html::a(
+                                    'Check List',
                                     ['user-datos/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
                                     ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
                                 );

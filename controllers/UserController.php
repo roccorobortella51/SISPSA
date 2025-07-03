@@ -51,6 +51,18 @@ class UserController extends Controller
         ]);
     }
 
+    public function actionIndexClinicas($clinica_id = "")
+    {
+        $searchModel = new UserSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
+
+
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+        ]);
+    }
     /**
      * Displays a single User model.
      * @param int $id
@@ -126,7 +138,6 @@ class UserController extends Controller
 
         if($model2 == "" || $model2 == null){
             $model2 = new UserDatos();
-            $model2->user_id = $model->id;
             $model2->save(false);
         }
 
@@ -142,8 +153,10 @@ class UserController extends Controller
             else {
                 $model->password_hash = User::setPassword($model->password);
             }
-            if ($model->save()) {
+            if ($model->save(false)) {
 
+                $model2->user_login_id = $model->id;
+                $model2->user_id = $model->id;
                 $model2->save(false);
 
 

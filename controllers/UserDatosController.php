@@ -57,6 +57,17 @@ class UserDatosController extends Controller
         ]);
     }
 
+    public function actionIndexClinicas()
+    {
+        $searchModel = new UserDatosSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+
     /**
      * Displays a single UserDatos model.
      * @param int $id ID

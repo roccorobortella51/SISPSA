@@ -54,7 +54,7 @@ class Planes extends \yii\db\ActiveRecord
             [['clinica_id', 'cobertura', 'edad_limite'], 'integer'],
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id']],
 
-            [['nombre', 'descripcion', 'precio', 'estatus', 'cobertura',  'comision', 'edad_minima', 'edad_limite'], 'required',],
+            [['nombre', 'descripcion', 'precio', 'estatus', 'cobertura', 'edad_minima', 'edad_limite'], 'required',],
 
              // Reglas para campos obligatorios y tipos de datos
             [['nombre', 'precio', 'edad_minima'], 'required', 'message' => 'El campo {attribute} es obligatorio.'],
