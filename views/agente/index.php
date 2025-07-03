@@ -24,7 +24,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 <div class="row" style="margin:3px !important;">
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-success btn-lg']) ?>
         </div>
     </div>
     <div class="col-xl-12 col-md-12">
@@ -139,7 +139,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
         },
         'update' => function ($url, $model, $key) {
             return Html::a(
-                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                '<i class="fas fa-pencil-alt ms-text-success"></i>',
                 Url::to(['update', 'id' => $model->id]),
                 [
                     'title' => 'Editar',

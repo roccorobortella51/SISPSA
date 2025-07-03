@@ -6,6 +6,7 @@ use yii\widgets\ActiveForm;
 use kartik\select2\Select2; // Para los selectores de estado y estatus
 use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
 use app\components\UserHelper;
+use yii\helpers\Url;
 
 
 
@@ -26,99 +27,43 @@ if ($model->isNewRecord) {
 <div class="rm-clinica-form">
 
     <?php $form = ActiveForm::begin([]); ?>
+
+
     <?php if (!$model->isNewRecord) { ?>
-        <div class="row">
-        
-            <div class="col-md-3">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Baremo',
-                                    ['baremo/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Gestión de los baremos para servicios médicos.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Planes',
-                                    ['planes/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Administración y configuración de los diferentes planes.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Afiliados',
-                                    ['user-datos/index-clinicas', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Registro y gestión de todos los miembros y beneficiarios afiliados.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                    <div class="ms-panel-header header-mini">
-                        <h6>
-                            <?php
-                                // Enlace para Baremo
-                                echo Html::a(
-                                    'Check List',
-                                    ['user-datos/index', 'clinica_id' => $model->id], // ¡CORRECCIÓN AQUÍ!
-                                    ['class' => 'text-white'] // Ajusta la clase si el texto se ve mal
-                                );
-                            ?>
-                        </h6>
-                    </div>
-                    <div class="ms-panel-body">
-                        <div class="text-center">
-                            <i class="flaticon-information"></i>
-                            <p>Check para convenios de clinicas.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="row row-cols-1 row-cols-md-4 g-3 mb-3">
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-file-invoice-dollar"></i> Baremo', // Icono y texto en la misma línea
+                ['baremo/index', 'clinica_id' => $model->id],
+                ['class' => 'btn btn-primary btn-lg w-100'] // Quitamos 'py-4'
+            ) ?>
         </div>
-    <?php } ?>
+
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-clipboard-list"></i> Planes', // Icono y texto en la misma línea
+                ['planes/index', 'clinica_id' => $model->id],
+                ['class' => 'btn btn-primary btn-lg w-100'] // Quitamos 'py-4'
+            ) ?>
+        </div>
+
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-users"></i> Afiliados', // Icono y texto en la misma línea
+                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                ['class' => 'btn btn-primary btn-lg w-100'] // Quitamos 'py-4'
+            ) ?>
+        </div>
+
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-tasks"></i> Check List', // Icono y texto en la misma línea
+                ['user-datos/index', 'clinica_id' => $model->id],
+                ['class' => 'btn btn-primary btn-lg w-100'] // Quitamos 'py-4'
+            ) ?>
+        </div>
+    </div>
+<?php } ?>
 
     <div class="row">
         <div class="col-md-4">

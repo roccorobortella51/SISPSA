@@ -17,54 +17,61 @@ use app\models\Agente; // Tu modelo Agente
 /** @var app\models\Agente $agente */ // ¡Este es el objeto Agente que necesitas!
 
 $this->title = 'FUERZA DE VENTA'; //PARA AGENTE: ' . $agente->nom;
-$this->params['breadcrumbs'][] = ['label' => 'VENDEDORES', 'url' => ['agente/index']];
-$this->params['breadcrumbs'][] = ['label' => 'ASESOR VENDEDOR: ' . $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
+$this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['agente/index']];
+$this->params['breadcrumbs'][] = ['label' => $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
 $this->params['breadcrumbs'][] = $this->title;
 
 
 ?>
 
-<div class="row" style="margin:3px !important;">
+<!-- <div class="row" style="margin:3px !important;">
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR MIEMBRO DE FUERZA DE VENTA', ['agente-fuerza/create', 'agente_id' => $id_agente], ['class' => 'btn btn-outline-primary btn-lg']) ?>
-            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['agente/update', 'id' => $agente->id], ['class' => 'btn btn-info btn-lg']) ?>
+            ('<i class="fas fa-plus"></i> CREAR MIEMBRO DE FUERZA DE VENTA', ['agente-fuerza/create', 'agente_id' => $id_agente], ['class' => 'btn btn-outline-primary btn-lg'])
+            ('<i class="fas fa-undo"></i> Volver', ['agente/update', 'id' => $agente->id], ['class' => 'btn btn-info btn-lg'])
         </div>
-    </div>
-    
-    
-    <?php if (!$agente->isNewRecord) { ?>
-        <div class="col-xl-12 col-md-12 mb-3"> <div class="row">
-            <div class="col-md-6">
-                <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" 
-                data-href="<?= Url::to(['agente/update', 'id' => $agente->id]) ?>">
-                <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                    <h6 style="margin: 0;"> 
-                        <?= Html::a(
-                            'ACTUALIZACIÓN DE AGENCIA',
-                            ['agente/update', 'id' => $agente->id],
-                            ['class' => 'text-white panel-link', 'style' => 'font-size: 1.40em;']
-                            ) ?>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info" 
-                    style="cursor: default;"> 
-                    <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                        <h6 style="margin: 0;">
-                            <span class="text-white" style="font-size: 1.40em;">
-                                FUERZA DE VENTA
-                            </span>
-                        </h6>
-                    </div>
-                </div>
+    </div> -->
+
+    <?php
+
+
+if (!$agente->isNewRecord) { ?>
+    <div class="col-xl-12 col-md-12 mb-3">
+        <div class="row row-cols-1 row-cols-md-4 g-3">
+            <div class="col">
+                <?= Html::a(
+                    '<i class="fas fa-building"></i> AGENCIAS',
+                    ['agente/index'],
+                    ['class' => 'btn btn-secondary btn-lg w-100']
+                ) ?>
+            </div>
+
+            <div class="col">
+                <?= Html::a(
+                    '<i class="fas fa-undo"></i> VOLVER PARA AGENCIA PRINCIPAL',
+                    ['agente/update', 'id' => $agente->id],
+                    ['class' => 'btn btn-info btn-lg w-100']
+                ) ?>
+            </div>
+
+            <div class="col">
+                <?= Html::a(
+                    '<i class="fas fa-plus"></i> CREAR UN MIEMBRO DE FUERZA DE VENTA',
+                    ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
+                    ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
+                ) ?>
+            </div>
+
+            <div class="col">
+                <?= Html::a(
+                    '<i class="fas fa-plus"></i> CREAR MIEMBROS DE FUERZA DE VENTAS',
+                    ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
+                    ['class' => 'btn btn-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
+                ) ?>
             </div>
         </div>
     </div>
-    <?php } ?>
+<?php } ?>
     
     
     <div class="col-xl-12 col-md-12">

@@ -17,6 +17,7 @@ use app\models\User;
  * @property float|null $por_post_venta
  * @property float|null $por_agente
  * @property float|null $por_max
+ * @property string|null $sudeaseg 
  * @property string|null $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
@@ -52,23 +53,37 @@ class Agente extends \yii\db\ActiveRecord
             // 2. Campos numéricos (porcentajes)
             // Ningún porcentaje puede ser mayor a 15% y no puede ser negativo.
             // Aquí también puedes personalizar los mensajes de 'min' y 'max' si quieres.
+        
+            // --- INICIO: REGLAS MODIFICADAS PARA LOS PORCENTAJES ---
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'required', 'message' => 'El porcentaje no puede estar vacío.'], // Hacemos estos campos obligatorios
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'number', 
                 'min' => 0, 
-                'max' => 15,
-                'tooSmall' => 'El porcentaje no puede ser negativo.', // Mensaje personalizado para min
-                'tooBig' => 'El porcentaje no puede ser mayor a 15.' // Mensaje personalizado para max
+                'max' => 100, // CAMBIADO: Ahora el máximo es 100
+                'tooSmall' => 'El porcentaje no puede ser negativo.',
+                'tooBig' => 'El porcentaje no puede ser mayor a 100.' // Mensaje actualizado
             ],
             
-            // 'por_max' es un número y su valor por defecto es 15 si no se especifica.
-            [['por_max'], 'number'],
-    
-            // 3. Valores por defecto
+            // 'por_max' es también un número, con su valor por defecto y validación de rango 0-100
+            [['por_max'], 'required', 'message' => 'El porcentaje máximo no puede estar vacío.'], // Si también debe ser obligatorio
+            [['por_max'], 'number',
+                'min' => 0,
+                'max' => 100, // CAMBIADO: Ahora el máximo es 100
+                'tooSmall' => 'El porcentaje máximo no puede ser negativo.',
+                'tooBig' => 'El porcentaje máximo no puede ser mayor a 100.' // Mensaje actualizado
+            ],
+
+            // --- FIN: REGLAS MODIFICADAS ---
+
+            // 3. Valores por defecto (se mantienen, pero la validación 'required' tiene precedencia)
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'default', 'value' => null],
-            [['por_max'], 'default', 'value' => 15],
+            [['por_max'], 'default', 'value' => 100], // CAMBIADO: Valor por defecto a 100 si es el nuevo máximo
     
             // 4. Validación de cadena de texto
             // Aquí también podrías personalizar el mensaje si la cadena es muy larga
             [['nom'], 'string', 'max' => 255, 'tooLong' => 'El nombre es demasiado largo (máximo 255 caracteres).'],
+
+            [['sudeaseg'], 'string', 'max' => 50, 'message' => 'El Código SUDEASEG es demasiado largo.'], // Ajusta el 'max' al tamaño de tu VARCHAR
+            [['sudeaseg'], 'safe'], // O 'required' si debe ser obligatorio
             
             // 5. Campos de fecha
             [['created_at', 'updated_at', 'deleted_at'], 'safe'],
@@ -82,20 +97,20 @@ class Agente extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'idusuariopropietario' => 'Idusuariopropietario',
-            'nom' => 'Nom',
-            'por_venta' => 'Por Venta',
-            'por_asesor' => 'Por Asesor',
-            'por_cobranza' => 'Por Cobranza',
-            'por_post_venta' => 'Por Post Venta',
-            'por_agente' => 'Por Agente',
-            'por_max' => 'Por Max',
-            'created_at' => 'Created At',
-            'updated_at' => 'Updated At',
-            'deleted_at' => 'Deleted At',
+            'idusuariopropietario' => 'Idusuariopropietario', // O "Propietario" para ser más amigable
+            'nom' => 'Nombre', // Cambiado a 'Nombre' para ser más amigable
+            'por_venta' => 'Porcentaje Venta', // Cambiado a 'Porcentaje Venta'
+            'por_asesor' => 'Porcentaje Asesoría',
+            'por_cobranza' => 'Porcentaje Cobranza',
+            'por_post_venta' => 'Porcentaje Post Venta',
+            'por_agente' => 'Porcentaje Agente',
+            'por_max' => 'Porcentaje Máximo',
+            'sudeaseg' => 'Código SUDEASEG', // <--- ¡Añade esta línea!
+            'created_at' => 'Fecha Creación', // Cambiado para ser más amigable
+            'updated_at' => 'Última Actualización',
+            'deleted_at' => 'Fecha Eliminación',
         ];
     }
-
     public function getAgenteFuerzas()
     {
         return $this->hasMany(AgenteFuerza::class, ['agente_id' => 'id']);

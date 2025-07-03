@@ -27,7 +27,7 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
 <div class=row style="margin:3px !important;">
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-warning btn-lg']) ?> 
+            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-info btn-lg']) ?> 
         </div>
     </div>
 

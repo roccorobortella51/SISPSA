@@ -7,8 +7,8 @@ use yii\helpers\Html;
 /* @var app\models\Agente $agente */ // Make sure $agente is passed from the controller
 
 // Set the page title for updating an AgenteFuerza
-$this->title = 'CREAR AGENCIAS';
-$this->params['breadcrumbs'][] = ['label' => 'AGENTE DE FUERZA', 'url' => ['index']]; // Link to the main index for AgenteFuerza
+$this->title = 'CREAR AGENCIA';
+$this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']]; // Link to the main index for AgenteFuerza
 $this->params['breadcrumbs'][] = 'CREAR AGENCIA';
 ?>
 
