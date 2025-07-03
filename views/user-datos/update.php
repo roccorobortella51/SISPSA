@@ -5,10 +5,9 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
 
-$this->title = 'Update User Datos: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'User Datos', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->id, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Update';
+$this->title = 'Actualizar datos del afiliado: Nombre completo: '.$model->nombres." ".$model->apellidos.', Cédula: ' . $model->cedula;
+$this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index']];
+$this->params['breadcrumbs'][] = 'Actualizar';
 ?>
 <div class="col-xl-12 col-md-12">
     <div class="ms-panel ms-panel-fh">

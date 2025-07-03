@@ -2,20 +2,31 @@
 
 use yii\helpers\Html;
 
+
 /** @var yii\web\View $this */
-/** @var app\models\DeclaracionDeSalud $model */
+/** @var app\models\Agente $model */ // ¡Cambio aquí!
 
-$this->title = 'Update Declaracion De Salud: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Declaracion De Saluds', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->id, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Update';
+$this->title = 'DECLARACIÓN DE SALUD: ' . $model->id;
+$this->params['breadcrumbs'][] = ['label' => 'DECLARACIÓN DE SALUD', 'url' => ['index', 'user_id' => $model->user_id]];
+$this->params['breadcrumbs'][] = 'ACTUALIZAR';
 ?>
-<div class="declaracion-de-salud-update">
 
-    <h1><?= Html::encode($this->title) ?></h1>
-
-    <?= $this->render('_form', [
-        'model' => $model,
-    ]) ?>
-
+<div class="col-md-12 text-end">
+    <div class="float-right" style="margin-bottom:10px;">
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-info btn-lg']) ?> 
+    </div>
 </div>
+
+<div class="col-xl-12 col-md-12">
+    <div class="ms-panel ms-panel-fh">
+        <div class="ms-panel-header">
+            <h3><?= $this->title = 'ACTUALIZAR DECLARACIÓN DE SALUD'; ?></h3> </div>
+        <div class="ms-panel-body">
+            <?= $this->render('_form', [ // Renderiza el _form de agente
+                'model' => $model,
+                'afiliado' => $afiliado
+            ]) ?>        
+        </div>
+    </div>
+</div>
+

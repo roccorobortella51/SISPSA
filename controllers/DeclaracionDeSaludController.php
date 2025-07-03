@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\DeclaracionDeSalud;
 use app\models\DeclaracionDeSaludSearch;
+use app\models\UserDatos;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -36,14 +37,31 @@ class DeclaracionDeSaludController extends Controller
      *
      * @return string
      */
-    public function actionIndex()
+   public function actionIndex($user_id = "")
     {
+        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+
+        $model = new DeclaracionDeSalud();
+
         $searchModel = new DeclaracionDeSaludSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'user_id', $user_id]);
+
+            if ($model->load($this->request->post())) {
+
+                $model->user_id = $user_id;
+                if($model->save()){
+                }else{
+                     var_dump($model->errors); die();
+                };
+                return $this->redirect(['index', 'user_id' => $afiliado->id]);
+            }
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'afiliado' => $afiliado,
+            'model' => $model
         ]);
     }
 
@@ -65,13 +83,14 @@ class DeclaracionDeSaludController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate()
+    public function actionCreate($user_id)
     {
         $model = new DeclaracionDeSalud();
+        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+                return $this->redirect(['index', 'user_id' => $afiliado->id]);
             }
         } else {
             $model->loadDefaultValues();
@@ -79,6 +98,7 @@ class DeclaracionDeSaludController extends Controller
 
         return $this->render('create', [
             'model' => $model,
+            'afiliado' => $afiliado
         ]);
     }
 
@@ -92,6 +112,7 @@ class DeclaracionDeSaludController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+         $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
@@ -99,6 +120,7 @@ class DeclaracionDeSaludController extends Controller
 
         return $this->render('update', [
             'model' => $model,
+            'afiliado' => $afiliado
         ]);
     }
 

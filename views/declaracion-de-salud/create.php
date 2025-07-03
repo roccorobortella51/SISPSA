@@ -3,18 +3,24 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\DeclaracionDeSalud $model */
+/** @var app\models\RmClinica $model */
 
-$this->title = 'Create Declaracion De Salud';
-$this->params['breadcrumbs'][] = ['label' => 'Declaracion De Saluds', 'url' => ['index']];
+
+$this->title = 'CREAR DECLARACIÓN DE SALUD';
+$this->params['breadcrumbs'][] = ['label' => 'DECLARACIÓN DE SALUD', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="declaracion-de-salud-create">
-
-    <h1><?= Html::encode($this->title) ?></h1>
-
-    <?= $this->render('_form', [
-        'model' => $model,
-    ]) ?>
-
+<div class="col-xl-12 col-md-12">
+    <div class="ms-panel ms-panel-fh">
+        <div class="ms-panel-header">
+            <h1><?= $this->title = 'DECLARACIÓN DE SALUD'; ?></h1>
+        </div>
+        <div class="ms-panel-body">
+            <?= $this->render('_form', [
+                'model' => $model,
+                'afiliado' => $afiliado
+            ]) ?>        
+        </div>
+    </div>
 </div>
+

@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\ContactosEmergencia;
 use app\models\ContactosEmergenciaSearch;
+use app\models\UserDatos;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -36,14 +37,31 @@ class ContactosEmergenciaController extends Controller
      *
      * @return string
      */
-    public function actionIndex()
+    public function actionIndex($user_id = "")
     {
+        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+
+        $model = new ContactosEmergencia();
+
         $searchModel = new ContactosEmergenciaSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'user_id', $user_id]);
+
+            if ($model->load($this->request->post())) {
+
+                $model->user_id = $user_id;
+                if($model->save()){
+                }else{
+                     var_dump($model->errors); die();
+                };
+                return $this->redirect(['index', 'user_id' => $afiliado->id]);
+            }
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'afiliado' => $afiliado,
+            'model' => $model
         ]);
     }
 
@@ -94,7 +112,7 @@ class ContactosEmergenciaController extends Controller
         $model = $this->findModel($id);
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+            return $this->redirect(['index', 'user_id' => $model->user_id]);
         }
 
         return $this->render('update', [

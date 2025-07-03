@@ -1,26 +1,24 @@
 <?php
 
-/* @var $this yii\web\View */
-/* @var $model app\models\Contratos */
+use yii\helpers\Html;
 
-$this->title = 'Update Contratos: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Contratos', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->id, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Update';
+/** @var yii\web\View $this */
+/** @var app\models\RmClinica $model */
+
+$this->title = 'Actualizar Contacto: ' . $model->nombre;
+$this->params['breadcrumbs'][] = ['label' => 'Contacto', 'url' => ['index', 'user_id' => $model->user_id]];
+$this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
+$this->params['breadcrumbs'][] = 'Actualizar';
 ?>
-
-<div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <?=$this->render('_form', [
-                        'model' => $model
-                    ]) ?>
-                </div>
+<div class="col-xl-12 col-md-12">
+        <div class="ms-panel ms-panel-fh">
+            <div class="ms-panel-header">
+                <h1><?= $this->title = 'Actualizar Contacto'; ?></h1>
+            </div>
+            <div class="ms-panel-body">
+                <?= $this->render('_form', [
+                    'model' => $model,
+                ]) ?>        
             </div>
         </div>
-        <!--.card-body-->
-    </div>
-    <!--.card-->
 </div>

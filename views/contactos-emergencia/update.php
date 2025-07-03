@@ -3,19 +3,21 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\ContactosEmergencia $model */
+/** @var app\models\RmClinica $model */
 
-$this->title = 'Update Contactos Emergencia: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Contactos Emergencias', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->id, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Update';
+$this->title = 'Actualizar Contacto: ' . $model->nombre;
+$this->params['breadcrumbs'][] = ['label' => 'Contacto', 'url' => ['index', 'user_id' => $model->user_id]];
+$this->params['breadcrumbs'][] = 'Actualizar';
 ?>
-<div class="contactos-emergencia-update">
-
-    <h1><?= Html::encode($this->title) ?></h1>
-
-    <?= $this->render('_form', [
-        'model' => $model,
-    ]) ?>
-
+<div class="col-xl-12 col-md-12">
+        <div class="ms-panel ms-panel-fh">
+            <div class="ms-panel-header">
+                <h1><?= $this->title = 'Actualizar Contacto'; ?></h1>
+            </div>
+            <div class="ms-panel-body">
+                <?= $this->render('_form', [
+                    'model' => $model,
+                ]) ?>        
+            </div>
+        </div>
 </div>

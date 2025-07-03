@@ -9,6 +9,7 @@ use kartik\widgets\SwitchInput;
 use kartik\widgets\DatePicker;
 use kartik\depdrop\DepDrop;
 use yii\helpers\Url;
+$currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 
 
 /** @var yii\web\View $this */
@@ -119,13 +120,42 @@ $('#user-datos-form').on('afterValidate', function(event, attribute, messages) {
 JS;
 $this->registerJs($jsValidation);
 ?>
-    <ul class="nav nav-tabs d-flex nav-justified mb-4" role="tablist">
-        <li role="presentation"><a href="#tab13" aria-controls="tab13" class="nav-link active" role="tab" data-toggle="tab">Datos Personales</a></li>
-        <li role="presentation"><a href="#tab14" aria-controls="tab14" class="nav-link" role="tab" data-toggle="tab">Fotos</a></li>
-        <li role="presentation"><a href="#tab15" aria-controls="tab15" class="nav-link" role="tab" data-toggle="tab">Contactos</a></li>
-        <li role="presentation"><a href="#tab16" aria-controls="tab16" class="nav-link" role="tab" data-toggle="tab">Declaracion de Salud</a></li>
-        <li role="presentation"><a href="#tab17" aria-controls="tab17" class="nav-link" role="tab" data-toggle="tab">Tu Afiliacion</a></li>
-    </ul>
+
+
+<?php if (!$model->isNewRecord) { ?>
+<div class="row justify-content-center mb-4">
+
+    <div class="col-md-auto mb-3">
+        <?= Html::a('Datos Personales', Url::to(['index']), [ // <--- AQUI APUNTA A LA ACCIÓN
+            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'index' ? 'active' : ''),
+        ]) ?>
+    </div>
+
+    <div class="col-md-auto mb-3">
+        <?= Html::a('Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [ // <--- AQUI APUNTA A LA ACCIÓN CONTACTOS/INDEX
+            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
+            'data-pjax' => '0'
+        ]) ?>
+    </div>
+
+    <div class="col-md-auto mb-3">
+        <?= Html::a('Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [ // <--- AQUI APUNTA A LA ACCIÓN
+            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
+            'data-pjax' => '0'
+        ]) ?>
+    </div>
+
+    <div class="col-md-auto mb-3">
+        <?= Html::a('Tabla Tu Afiliacion', Url::to(['contratos/index']), [ // <--- AQUI APUNTA A LA ACCIÓN
+            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
+            'data-pjax' => '0'
+        ]) ?>
+    </div>
+
+</div>
+<?php } ?>
+
+    </div>
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="tab13">
             <div class="row">
@@ -173,22 +203,27 @@ $this->registerJs($jsValidation);
             </div>
             <div class="row ">
                 <div class="col-md-3">
-                    <?= $form->field($model, 'cedula')->widget(\yii\widgets\MaskedInput::class, [
-                        'mask' => 'a-99999999',
-                        'clientOptions' => [
-                            'definitions' => [
-                                'a' => [
-                                    'validator' => '[VE]',
-                                    'cardinality' => 1,
+                    <?php if ($model->isNewRecord) { ?>
+                        <?= $form->field($model, 'cedula')->widget(\yii\widgets\MaskedInput::class, [
+                            'mask' => 'a-99999999',
+                            'clientOptions' => [
+                                'definitions' => [
+                                    'a' => [
+                                        'validator' => '[VE]',
+                                        'cardinality' => 1,
+                                    ],
                                 ],
                             ],
-                        ],
-                        'options' => [
-                            'placeholder' => 'V-99999999 o E-99999999',
-                            'class' => 'form-control  form-control-lg',
-                            'maxlength' => true,
-                        ],
-                    ]) ?>
+                            'options' => [
+                                'placeholder' => 'V-99999999 o E-99999999',
+                                'class' => 'form-control  form-control-lg',
+                                'maxlength' => true,
+                            ],
+                        ]) ?>
+                    <?php }else{?>
+                        <?= $form->field($model, 'cedula')->textInput(['class' => 'form-control form-control-lg',]) ?>
+                    <?php } ?>
+
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($model, 'fechanac')->widget(\kartik\date\DatePicker::class, [
@@ -303,23 +338,15 @@ $this->registerJs($jsValidation);
                 <div class="col-md-12">
                     <?= $form->field($model, 'direccion')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
+                <div class="col-md-12">
+                    <div class="form-group text-rigth mt-4" style="margin-right:10px;">
+                        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
+                        <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-lg btn-warning']); ?>
+                    </div>
+                </div>
             </div>
         </div>
-        <div role="tabpanel" class="tab-pane" id="tab14">
-            <p> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam urna nunc, congue nec laoreet sed, maximus non massa. Fusce vestibulum vel risus vitae tincidunt. </p>
-            <p> Cras egestas nisi vel tempor dignissim. Ut condimentum iaculis ex nec ornare. Vivamus sit amet elementum ante. Fusce eget erat volutpat </p>
-            <p> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam urna nunc, congue nec laoreet sed, maximus non massa. Fusce vestibulum vel risus vitae tincidunt. </p>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="tab15">
-            <p> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam urna nunc, congue nec laoreet sed, maximus non massa. Fusce vestibulum vel risus vitae tincidunt. </p>
-            <p> Cras egestas nisi vel tempor dignissim. Ut condimentum iaculis ex nec ornare. Vivamus sit amet elementum ante. Fusce eget erat volutpat </p>
-            <p> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam urna nunc, congue nec laoreet sed, maximus non massa. Fusce vestibulum vel risus vitae tincidunt. </p>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="tab16">
-            <p> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam urna nunc, congue nec laoreet sed, maximus non massa. Fusce vestibulum vel risus vitae tincidunt. </p>
-            <p> Cras egestas nisi vel tempor dignissim. Ut condimentum iaculis ex nec ornare. Vivamus sit amet elementum ante. Fusce eget erat volutpat </p>
-            <p> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam urna nunc, congue nec laoreet sed, maximus non massa. Fusce vestibulum vel risus vitae tincidunt. </p>
-        </div>
+        
         <div role="tabpanel" class="tab-pane" id="tab17">
             <div class = 'row'>
                 <div class="col-md-6">
@@ -379,8 +406,6 @@ $this->registerJs($jsValidation);
             </div>
         </div>
     </div>
-    <div class="form-group">
-        <?= Html::submitButton('Save', ['class' => 'btn btn-success']) ?>
-    </div>
+    
     <?php ActiveForm::end(); ?>
 </div>
