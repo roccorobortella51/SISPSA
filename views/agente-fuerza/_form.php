@@ -48,7 +48,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 
         <?php if (!$model->isNewRecord) { ?>
             <div class="row mb-3"> 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" data-href="<?= Url::to(['update', 'id' => $model->id]) ?>">
                         <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
                             <h6 style="margin: 0;"> 
@@ -62,7 +62,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                     </div>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" data-href="<?= Url::to(['user/view', 'id' => $model->idusuario]) ?>">
                         <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
                             <h6 style="margin: 0;">
@@ -75,6 +75,22 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                         </div>
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" data-href="<?= Url::to(['user/view', 'id' => $model->idusuario]) ?>">
+                        <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
+                            <h6 style="margin: 0;">
+                                <?= Html::a(
+                                    'VER AFILIZADOS DEL VENDOR', // Texto adaptado para AgenteFuerza
+                                    ['user-datos/index'], 
+                                    ['class' => 'text-white']
+                                ) ?>
+                            </h6>
+                        </div>
+                    </div>
+                </div>
+
+
             </div>
         <?php } ?>
 

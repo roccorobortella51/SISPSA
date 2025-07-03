@@ -40,18 +40,6 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                 <?php $form = ActiveForm::begin(); ?>
                 <div class="row">
                     <div class="col-md-2">
-                        <?= $form->field($model, 'nombre_servicio')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba un nombre para el Baremo','class' => 'form-control form-control-lg',]) ?>
-                    </div>
-                    <div class="col-md-4">
-                         <?= $form->field($model, 'descripcion')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba una descripción para el Baremo','class' => 'form-control form-control-lg',]) ?>
-                    </div>
-                    <div class="col-md-2">
-                         <?= $form->field($model, 'costo')->textInput(['type' => 'number','class' => 'form-control form-control-lg', 'placeholder' => '0.00' ]) ?>
-                    </div>
-                    <div class="col-md-2">
-                         <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
-                    </div>
-                    <div class="col-md-2">
                         <?= $form->field($model, 'area_id')->widget(Select2::classname(), [
                             'data' => UserHelper::getAreaList(),
                             'options' => [
@@ -62,6 +50,18 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                 'allowClear' => false,
                             ],
                         ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'nombre_servicio')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba un nombre para el Baremo','class' => 'form-control form-control-lg',]) ?>
+                    </div>
+                    <div class="col-md-4">
+                         <?= $form->field($model, 'descripcion')->textInput([ 'class' => 'form-control', 'placeholder' => 'Escriba una descripción para el Baremo','class' => 'form-control form-control-lg',]) ?>
+                    </div>
+                    <div class="col-md-2">
+                         <?= $form->field($model, 'costo')->textInput(['type' => 'number','class' => 'form-control form-control-lg', 'placeholder' => '0.00' ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                         <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
                     </div>
                     <div class="col-md-12">
                         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
@@ -99,6 +99,27 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                             'columns' => [
                                 // ID
                                 [
+                                    'attribute' => 'area_id',
+                                    'value' => function ($model, $key, $index, $widget) {
+
+                                        if($model->area){
+                                            return $model->area->nombre;
+                                        }else{
+                                            return "";
+                                        }
+
+                                    },
+                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                    'filter' => UserHelper::getAreaList(),
+                                    'filterWidgetOptions' => [
+                                        'pluginOptions' => ['allowClear' => true],
+                                    ],
+                                    'filterInputOptions' => ['placeholder' => Yii::t('app', 'Seleccione')],
+                                    'format' => 'raw',
+                                    'headerOptions' => ['class' => 'text-center header-link'], // Cambia el color del texto a negro
+                                    'label' => 'Area',
+                                ],
+                                /*[
                                     'attribute' => 'id',
                                     'options' => ['style' => 'width: 50px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
@@ -107,7 +128,7 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                         'placeholder' => 'Búsqueda',
                                         'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
                                     ],
-                                ],
+                                ],*/
 
                                 // Nombre
                                 [
@@ -145,28 +166,6 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                                     'filter' => false
 
                                 ],
-                                [
-                                    'attribute' => 'area_id',
-                                    'value' => function ($model, $key, $index, $widget) {
-
-                                        if($model->area){
-                                            return $model->area->nombre;
-                                        }else{
-                                            return "";
-                                        }
-
-                                    },
-                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
-                                    'filter' => UserHelper::getAreaList(),
-                                    'filterWidgetOptions' => [
-                                        'pluginOptions' => ['allowClear' => true],
-                                    ],
-                                    'filterInputOptions' => ['placeholder' => Yii::t('app', 'Seleccione')],
-                                    'format' => 'raw',
-                                    'headerOptions' => ['class' => 'text-center header-link'], // Cambia el color del texto a negro
-                                    'label' => 'Area',
-                                ],
-
                                 // Estado
                                 [
                                     'label' => 'Estado',

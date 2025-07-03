@@ -43,7 +43,7 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                     <div class="col-md-2">
                         <?= $form->field($model, 'nombre')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba un nombre para el plan']) ?>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                          <?= $form->field($model, 'descripcion')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba una descripción para el plan']) ?>
                     </div>
                     <div class="col-md-2">
@@ -51,9 +51,6 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
-                    </div>
-                    <div class="col-md-1">
-                         <?= $form->field($model, 'comision')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0%']) ?>
                     </div>
                     <div class="col-md-1">
                          <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>

@@ -19,7 +19,8 @@ $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
 
 $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la página y breadcrumbs
 ?>
-
+<h1>AGREGAR BOTON DE CARGA MASIVA</h1>
+<h1>AGREGAR BOTON DE GENERAR PDF DEL CONTRATO con los datos del afiliado</h1>
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">

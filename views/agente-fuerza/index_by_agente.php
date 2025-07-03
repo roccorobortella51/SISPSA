@@ -123,7 +123,7 @@ $this->params['breadcrumbs'][] = $this->title;
                             ],
                             
                             
-                            [
+                            /*[
                                 'label' => 'Correo Electrónico',
                                 'value' => function($model) {
                                     if ($model->user && $model->user->userDatos) {
@@ -154,7 +154,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'placeholder' => 'Buscar teléfono',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                            ],
+                            ],*/
                            // Columna de Acciones (Ver, Editar, Eliminar)
                             [
                                 'class' => ActionColumn::class,
