@@ -31,7 +31,7 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header row">
                 <span class="col-md-10"><h1><?= $this->title = 'Gestión de Usuarios'; ?></h1></span>
-                <span class="col-md-2" style="padding-left: 9rem;"><?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO USUARIO', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> </span>
+              
             </div>
             <div class="ms-panel-body">
                 <div class="table-responsive">
