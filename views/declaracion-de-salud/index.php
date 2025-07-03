@@ -17,7 +17,7 @@ use kartik\select2\Select2;
 
 // --- BREADCRUMBS ---
 
-$this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index']];
+$this->params['breadcrumbs'][] = ['label' => 'AFILIADO', 'url' => ['/user-datos/update', 'id' => $afiliado->id]];
 // --- FIN  --- 
 
 
@@ -33,7 +33,7 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
     </div>
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR DECLARACIÓM DE SALUD', ['create', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
+            <?= Html::a('<i class="fas fa-plus"></i> CREAR DECLARACIÓN DE SALUD', ['create', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
         </div>
     </div>
 
@@ -42,7 +42,10 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= $this->title = 'Gestión de Declaración de salud '?></h1>
+                <div class="ms-panel-header">
+                <h1>Gestión de Declaración de Salud del Afiliado: <?= $this->title = 'Nombre completo: '.$afiliado->nombres." ".$afiliado->apellidos.', Cédula: ' . $afiliado->cedula; ?></h1>
+            </div>
+
             </div>
             <div class="ms-panel-body">
                         <div class="table-responsive">
@@ -54,11 +57,11 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                 'columns' => [
                                     ['class' => 'yii\grid\SerialColumn'],
 
-                                    'id',
-                                    'created_at',
-                                    'p1_sino:ntext',
-                                    'p1_especifica:ntext',
-                                    'p2_sino:ntext',
+                                    //'id',
+                                    //'created_at',
+                                    //'p1_sino:ntext',
+                                    //'p1_especifica:ntext',
+                                    //'p2_sino:ntext',
                                     //'p2_especifica:ntext',
                                     //'p3_sino:ntext',
                                     //'p3_especifica:ntext',
@@ -91,14 +94,14 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                     //'deleted_at',
                                     //'updated_at',
                                     //'ver_usuario_id',
-                                    //'ver_observacion:ntext',
+                                    'ver_observacion:ntext',
                                     //'ver_si_no:ntext',
                                     //'ver_fecha',
                                     //'url_video_declaracion:ntext',
                                     //'estatus:ntext',
                                     //'user_id',
-                                    //'estatura:ntext',
-                                    //'peso:ntext',
+                                    'estatura:ntext',
+                                    'peso:ntext',
                                     [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
