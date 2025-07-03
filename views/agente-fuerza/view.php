@@ -8,9 +8,9 @@ use app\models\User;
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
 
-$this->title = 'DETALLES DE ASESOR VENDEDOR: ' . $model->id;
+$this->title = 'DETALLES DE ASESOR VENDEDOR: ';
 $this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA'];
-$this->params['breadcrumbs'][] = $model->id;
+$this->params['breadcrumbs'][] = 'DETALLES';
 
 \yii\web\YiiAsset::register($this);
 
@@ -43,71 +43,37 @@ function formatBooleanIcon($value) {
         </div>
         <div class="card-body">
 
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                        <div class="ms-panel-header header-mini">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'ACTUALIZAR AGENTE',
-                                    ['update', 'id' => $model->id],
-                                    ['class' => 'text-white']
-                                ) ?>
-                            </h6>
-                        </div>
-                        <div class="ms-panel-body">
-                            <div class="text-center">
-                                <i class="flaticon-information"></i>
-                                <p class="mb-0">Modifica los datos de este agente de fuerza.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                        <div class="ms-panel-header header-mini">
-                            <h6 style="margin: 0;">
-                            <?= Html::a(
-    'VOLVER A LA LISTA',
-    ['agente-fuerza/index-by-agente', 'agente_id' => $model->agente_id], // ¡AQUÍ ESTÁ EL CAMBIO!
-    ['class' => 'text-white']
-) ?>
-                            </h6>
-                        </div>
-                        <div class="ms-panel-body">
-                            <div class="text-center">
-                                <i class="flaticon-information"></i>
-                                <p class="mb-0">Regresa a la lista completa de agentes.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                        <div class="ms-panel-header header-mini">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'ELIMINAR AGENTE',
-                                    ['delete', 'id' => $model->id],
-                                    [
-                                        'class' => 'text-white',
-                                        'data' => [
-                                            'confirm' => '¿Estás seguro de que quieres eliminar este agente de fuerza? Esta acción no se puede deshacer.',
-                                            'method' => 'post',
-                                        ],
-                                    ]
-                                ) ?>
-                            </h6>
-                        </div>
-                        <div class="ms-panel-body">
-                            <div class="text-center">
-                                <i class="flaticon-information"></i>
-                                <p class="mb-0">Elimina este agente de forma permanente.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-3">
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-edit"></i> ACTUALIZAR AGENTE', // Icono sugerido
+            ['update', 'id' => $model->id], // Ruta original
+            ['class' => 'btn btn-info btn-sm w-100'] // CAMBIO: Ahora es 'btn-sm'
+        ) ?>
+    </div>
+
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-arrow-left"></i> VOLVER A LA LISTA', // Icono sugerido
+            ['agente-fuerza/index-by-agente', 'agente_id' => $model->agente_id], // Ruta original
+            ['class' => 'btn btn-secondary btn-sm w-100'] // CAMBIO: Ahora es 'btn-sm'
+        ) ?>
+    </div>
+
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-trash-alt"></i> ELIMINAR AGENTE', // Icono sugerido
+            ['delete', 'id' => $model->id], // Ruta original
+            [
+                'class' => 'btn btn-danger btn-sm w-100', // CAMBIO: Ahora es 'btn-sm'
+                'data' => [
+                    'confirm' => '¿Estás seguro de que quieres eliminar este agente de fuerza? Esta acción no se puede deshacer.',
+                    'method' => 'post',
+                ],
+            ]
+        ) ?>
+    </div>
+</div>
 
 
             <h5 class="mt-4 mb-3">Porcentajes de Comisión</h5>
@@ -144,7 +110,7 @@ function formatBooleanIcon($value) {
                 </div>
             </div>
 
-            ---
+            
 
             <h5 class="mt-4 mb-3">Permisos de Acceso</h5>
             <div class="row mb-4">
@@ -202,28 +168,28 @@ function formatBooleanIcon($value) {
                 </div>
             </div>
 
-            ---
+    
 
             <h5 class="mt-4 mb-3">Fechas de Gestión</h5>
             <div class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Fecha de Creación</h6>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->created_at) ?></p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Última Actualización</h6>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->updated_at) ?></p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <!-- <div class="col-md-4">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Fecha de Eliminación</h6>
                         <p class="h5 text-dark"><?= $model->deleted_at ? Yii::$app->formatter->asDatetime($model->deleted_at) : 'N/A' ?></p>
                     </div>
-                </div>
+                </div> -->
             </div>
 
         </div>

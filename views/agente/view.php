@@ -113,22 +113,22 @@ function formatDateTime($value) {
 
             <h5 class="mt-4 mb-3">Fechas de Gestión</h5>
             <div class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Fecha de Creación</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->created_at) ?></p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Última Actualización</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->updated_at) ?></p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <!-- <div class="col-md-4">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Fecha de Eliminación</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->deleted_at) ?></p>
                     </div>
            
-</div>
+</div> -->

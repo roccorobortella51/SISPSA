@@ -97,20 +97,10 @@ if (!$agente->isNewRecord) { ?>
                             
                             // Asegúrate de que estos atributos existan en tu modelo AgenteFuerza
                             // y sean relevantes para mostrar en la tabla
-                            [
-                                'attribute' => 'idusuario', // ID del usuario de la fuerza de venta
-                                'label' => 'ID',
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                                'options' => ['style' => 'width: 100px;'], // <--- para ancho de la celda
-                            ],
-                            // Puedes añadir una columna para mostrar el nombre del usuario si tienes una relación
+                           
                             
                             [
-                                'attribute' => 'usuario.nombre_completo', // Asumiendo una relación 'usuario' en AgenteFuerza
+                                'attribute' => 'usuario.nombre_completo',
                                 'label' => 'Nombre',
                                 'value' => function($model) {
                                     
@@ -130,7 +120,7 @@ if (!$agente->isNewRecord) { ?>
                             ],
                             
                             
-                            /*[
+                            [
                                 'label' => 'Correo Electrónico',
                                 'value' => function($model) {
                                     if ($model->user && $model->user->userDatos) {
@@ -161,7 +151,7 @@ if (!$agente->isNewRecord) { ?>
                                     'placeholder' => 'Buscar teléfono',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                            ],*/
+                            ],
                            // Columna de Acciones (Ver, Editar, Eliminar)
                             [
                                 'class' => ActionColumn::class,

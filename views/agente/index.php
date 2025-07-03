@@ -20,7 +20,6 @@ $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 
 ?>
-<h1>AGREGAR EL CODIGO DE LA SUDEASEG</h1>
 <div class="row" style="margin:3px !important;">
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
