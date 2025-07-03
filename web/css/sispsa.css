@@ -9364,3 +9364,24 @@ th a {
 .agente-form .select2-container--bootstrap .select2-selection--single .select2-selection__rendered {
     line-height: 1.5 !important;
 }
+
+/* Custom Button Style (azul #009efb) */
+.btn-custom-blue { /* Cambiamos el nombre de la clase para reflejar el color */
+    background-color: #009efb !important; /* Azul base */
+    color: #FFFFFF !important; /* Texto blanco */
+    border-color: #009efb !important; /* Borde del mismo color */
+}
+
+.btn-custom-blue:hover,
+.btn-custom-blue:focus,
+.btn-custom-blue:active {
+    background-color: #007bff !important; /* Un azul un poco más oscuro para el hover/focus/active (similar al btn-primary por defecto de Bootstrap) */
+    border-color: #007bff !important;
+    color: #FFFFFF !important;
+}
+
+.btn-custom-blue.active {
+    background-color: #0056b3 !important; /* Un azul más oscuro para el estado activo */
+    border-color: #0056b3 !important;
+    color: #FFFFFF !important;
+}

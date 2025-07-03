@@ -2,107 +2,94 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
+use kartik\date\DatePicker;
 
-/** @var yii\web\View $this */
-/** @var app\models\DeclaracionDeSalud $model */
-/** @var yii\widgets\ActiveForm $form */
+/* @var $this yii\web\View */
+/* @var $model app\models\YourModelName */
+/* @var $form yii\widgets\ActiveForm */
+
+// Define las opciones para "Sí/No" con los strings 'Si' y 'No'
+$sinoOptions = [
+    'Si' => 'Sí', // La clave 'Si' se guardará en DB, el valor 'Sí' se mostrará al usuario
+    'No' => 'No', // La clave 'No' se guardará en DB, el valor 'No' se mostrará al usuario
+];
+
 ?>
 
-<div class="declaracion-de-salud-form">
+<div class="your-form-container">
 
     <?php $form = ActiveForm::begin(); ?>
 
-    <?= $form->field($model, 'created_at')->textInput() ?>
+  
+    <h3>Sección de Preguntas Sí/No</h3>
+    <hr>
 
-    <?= $form->field($model, 'p1_sino')->textarea(['rows' => 6]) ?>
+    <?php for ($i = 1; $i <= 16; $i++): ?>
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Pregunta <?= $i ?></h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <?= $form->field($model, "p{$i}_sino")->radioList($sinoOptions, [
+                            'itemOptions' => ['class' => 'me-3'],
+                            'separator' => '<br>',
+                            // O si quieres que estén en línea: 'class' => 'form-check-inline'
+                        ])->label("¿Tuvo alguna afección para la pregunta {$i}?"); ?>
+                    </div>
+                    <div class="col-md-8">
+                        <?= $form->field($model, "p{$i}_especifica")->textarea(['rows' => 3, 'placeholder' => 'Especifique la afección para la pregunta ' . $i]) ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endfor; ?>
 
-    <?= $form->field($model, 'p1_especifica')->textarea(['rows' => 6]) ?>
+    <hr>
+    <h3>Otros Datos</h3>
 
-    <?= $form->field($model, 'p2_sino')->textarea(['rows' => 6]) ?>
 
-    <?= $form->field($model, 'p2_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p3_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p3_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p4_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p4_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p5_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p5_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p6_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p6_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p7_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p7_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p8_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p8_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p9_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p9_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p10_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p10_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p11_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p11_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p12_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p12_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p13_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p13_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p14_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p14_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p15_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p15_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p16_sino')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'p16_especifica')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'deleted_at')->textInput() ?>
-
-    <?= $form->field($model, 'updated_at')->textInput() ?>
-
-    <?= $form->field($model, 'ver_usuario_id')->textInput() ?>
-
-    <?= $form->field($model, 'ver_observacion')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'ver_si_no')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'ver_fecha')->textInput() ?>
-
-    <?= $form->field($model, 'url_video_declaracion')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'estatus')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'user_id')->textInput() ?>
-
-    <?= $form->field($model, 'estatura')->textarea(['rows' => 6]) ?>
-
-    <?= $form->field($model, 'peso')->textarea(['rows' => 6]) ?>
-
-    <div class="form-group">
-        <?= Html::submitButton('Save', ['class' => 'btn btn-success']) ?>
+    <div class="row">
+        <div class="col-md-6">
+            <?= $form->field($model, 'ver_observacion')->textarea(['rows' => 3]) ?>
+        </div>
+        <div class="col-md-6">
+            <?= $form->field($model, 'ver_si_no')->radioList($sinoOptions, [
+                'itemOptions' => ['class' => 'me-3'],
+                'separator' => '<br>'
+            ])->label('¿Verificado Sí/No?'); ?>
+        </div>
     </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <?= $form->field($model, 'url_video_declaracion')->textarea(['rows' => 3]) ?>
+        </div>
+        <div class="col-md-6">
+            <?= $form->field($model, 'estatus')->textInput() ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model, 'user_id')->textInput(['value' => $afiliado->id, 'readonly' => true]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'estatura')->textInput() ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'peso')->textInput(['type' => 'number']) ?>
+        </div>
+    </div>
+
+     <div class="form-group text-rigth mt-4">
+        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Clínica', ['class' => 'btn btn-success btn-lg']) ?>
+        <?= Html::a('Cancelar', ['index', 'user_id' => $afiliado->id], ['class' => 'tn btn btn-lg btn-warning']); ?>
+
+        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
+    </div>
+
 
     <?php ActiveForm::end(); ?>
 

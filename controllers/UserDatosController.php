@@ -99,7 +99,7 @@ class UserDatosController extends Controller
 
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post())  && $modelContrato->load($this->request->post())) {
+            if ($model->load($this->request->post()) ) {
                 $cel = explode("-",$model->cedula);
                 $model->tipo_cedula = $cel[0];
                 $model->cedula = $cel[1];
@@ -132,10 +132,10 @@ class UserDatosController extends Controller
                     if($modelUser->save()){
                         
                         
-                        $modelContrato->user_id = $model->id;
+                        /*$modelContrato->user_id = $model->id;
                         $modelContrato->estatus = 'Creado';
                         $modelContrato->clinica_id = $model->clinica_id;
-                        $modelContrato->save();                      
+                        $modelContrato->save();  */                    
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);
@@ -153,7 +153,7 @@ class UserDatosController extends Controller
                         } else {
                             Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
                         }
-                        return $this->redirect(['view', 'id' => $model->id]);
+                        return $this->redirect(['update', 'id' => $model->id]);
                     }
                     else{
                         var_dump($modelUser->errors);
@@ -200,7 +200,7 @@ class UserDatosController extends Controller
                     $modelContrato->estatus = 'Creado';
                     $modelContrato->clinica_id = $model->clinica_id;
                     if($modelContrato->save()){
-                        return $this->redirect(['view', 'id' => $model->id]);
+                        return $this->redirect(['update', 'id' => $model->id]);
                     }
                 }
         }

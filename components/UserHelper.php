@@ -175,7 +175,7 @@ class UserHelper
     public static function getRolesAllRoles()
     {
         return \yii\helpers\ArrayHelper::map(
-            AuthItem::find()->select(['name', 'name'])->asArray()->all(),
+            AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->asArray()->all(),
             'name',
             'name'
         );
