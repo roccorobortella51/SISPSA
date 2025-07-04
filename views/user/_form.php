@@ -89,57 +89,91 @@ use kartik\widgets\SwitchInput
     </div>
 
     <div class="row">
-        <div class="col-md-4">
-            <?= $form->field($model2, 'cedula')->textInput([
-                'class' => 'form-control form-control-lg',
-                'placeholder' => 'Ejemplo: 12345678'
-            ]) ?>
-        </div>
-        <div class="col-md-4">
-            <?= $form->field($model2, 'tipo_cedula')->textInput([
-                'class' => 'form-control form-control-lg',
-                'placeholder' => 'Ejemplo: V, E, J, P'
-            ]) ?>
-        </div>
-        <div class="col-md-4">
-            <?= $form->field($model2, 'fechanac')->textInput([
-                'class' => 'form-control form-control-lg',
-                'type' => 'date',
-                'placeholder' => 'Seleccione su fecha de nacimiento'
-            ]) ?>
-        </div>
+    
+    <div class="col-md-1">
+        <?= $form->field($model2, 'tipo_cedula')->widget(Select2::class, [ // Changed field to tipo_cedula
+            'data' => [ // Updated data options
+                'V' => 'V',
+                'E' => 'E',
+                'J' => 'J',
+                'P' => 'P',
+                'N' => 'N',
+                'M' => 'M',
+            ],
+            'options' => [
+                'placeholder' => 'Tipo', // Updated placeholder for brevity
+                'class' => 'form-control form-control-lg', 
+            ],
+            'pluginOptions' => [
+                'allowClear' => true, 
+            ],
+        ])->label('Tipo') // Updated label for brevity
+        ?>
     </div>
 
+   
+    <div class="col-md-5">
+        <?= $form->field($model2, 'cedula')->textInput([
+            'class' => 'form-control form-control-lg',
+            'placeholder' => 'Ejemplo: 12345678'
+        ])->label('Cédula de Identidad') // Added label for clarity
+        ?>
+    </div>
+    
+   
+    <div class="col-md-3">
+        <?= $form->field($model2, 'fechanac')->textInput([
+            'class' => 'form-control form-control-lg',
+            'type' => 'date',
+            'placeholder' => 'Fecha de Nacimiento' // Updated placeholder for brevity
+        ])->label('Fecha de Nacimiento') ?>
+    </div>
+
+   
+    <div class="col-md-3">
+        <?= $form->field($model2, 'sexo')->widget(Select2::class, [
+            'data' => [
+                'Masculino' => 'Masculino',
+                'Femenino' => 'Femenino',
+            ],
+            'options' => [
+                'placeholder' => 'Sexo...', // Updated placeholder for brevity
+                'class' => 'form-control form-control-lg', 
+            ],
+            'pluginOptions' => [
+                'allowClear' => true, 
+            ],
+        ])->label('Sexo')
+        ?>
+    </div>
+
+</div>
     <div class="row">
-        <div class="col-md-4">
-            <?= $form->field($model2, 'sexo')->textInput([
-                'class' => 'form-control form-control-lg',
-                'placeholder' => 'Ejemplo: Masculino, Femenino'
-            ]) ?>
-        </div>
+    
         <div class="col-md-4">
             <?= $form->field($model2, 'telefono')->textInput([
                 'class' => 'form-control form-control-lg',
                 'placeholder' => 'Ejemplo: 04121234567'
             ]) ?>
         </div>
-    </div>
 
-    <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <?= $form->field($model2, 'email')->textInput([
                 'class' => 'form-control form-control-lg',
                 'type' => 'email',
                 'placeholder' => 'Ejemplo: usuario@dominio.com'
             ])->label("Correo electrónico") ?>
         </div>
-        <div class="col-md-6">
+
+        <div class="col-md-4">
             <?= $form->field($model2, 'estado')->textInput([
                 'class' => 'form-control form-control-lg',
                 'placeholder' => 'Ejemplo: Distrito Capital'
             ]) ?>
         </div>
+
     </div>
+
 
     <div class="row">
         <div class="col-md-4">

@@ -22,17 +22,24 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
 
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
-    <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO USUARIO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-        </div>
-    </div>
+    
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header row">
-                <span class="col-md-10"><h1><?= $this->title = 'Gestión de Usuarios'; ?></h1></span>
-              
-            </div>
+        <div class="ms-panel-header row">
+   
+    <span class="col-md-10">
+        <h1><?= $this->title = 'Gestión de Usuarios'; ?></h1>
+    </span>
+    
+   
+    <div class="col-md-2 text-end"> 
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CREAR NUEVO USUARIO DEL SÍSTEMA',
+            ['create'], // Destino del enlace
+            ['class' => 'btn btn-outline-primary btn-lg w-100'] // w-100 para que ocupe todo el ancho de su columna
+        ) ?>
+    </div>
+</div>
             <div class="ms-panel-body">
                 <div class="table-responsive">
                             <?= GridView::widget([

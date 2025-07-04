@@ -3,9 +3,10 @@
 namespace app\models;
 
 use Yii;
+use yii\db\ActiveRecord;
 
 /**
- * This is the model class for table "agente_fuerza".
+ * This is the model class for table "AgenteFuerza".
  *
  * @property int $id
  * @property int $idusuario
@@ -23,14 +24,14 @@ use Yii;
  * @property string|null $deleted_at
  * @property int|null $puede_registrar
  * @property float|null $por_registrar
- * @property User $user 
- * @property UserDatos $userDatos
+ *
+ * @property User $user
+ * @property UserDatos $userDatos // Asumiendo que esta es una relación que tienes o planeas tener.
  * @property Agente $agente
  */
-class AgenteFuerza extends \yii\db\ActiveRecord
+class AgenteFuerza extends ActiveRecord
 {
-
-public $agente_nombre;
+    public $nombre_agente;
     /**
      * {@inheritdoc}
      */
@@ -45,42 +46,29 @@ public $agente_nombre;
     public function rules()
     {
         return [
-            // 1. Campos obligatorios
-            
-            [['nom'], 'required', 'message' => 'El nombre no puede estar vacío.'],
-            [['idusuariopropietario'], 'required', 'message' => 'El propietario no puede estar vacío.'],
-            [['idusuariopropietario'], 'integer'],
-            
-            // --- REGLAS DE PORCENTAJES: AJUSTE DE MENSAJE PARA FORMATO INVÁLIDO ---
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'required', 'message' => 'El porcentaje no puede estar vacío.'],
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'number', 
-                'min' => 0, 
-                'max' => 100, 
-                'tooSmall' => 'El porcentaje no puede ser negativo.',
-                'tooBig' => 'El porcentaje no puede ser mayor a 100.',
-                'message' => 'El porcentaje debe ser un número válido.' // ¡Añadida esta línea!
-            ],
-            
-            [['por_max'], 'required', 'message' => 'El porcentaje máximo no puede estar vacío.'],
-            [['por_max'], 'number',
-                'min' => 0,
-                'max' => 100,
-                'tooSmall' => 'El porcentaje máximo no puede ser negativo.',
-                'tooBig' => 'El porcentaje máximo no puede ser mayor a 100.',
-                'message' => 'El porcentaje máximo debe ser un número válido.' // ¡Añadida esta línea!
-            ],
-    
-            // 3. Valores por defecto
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'default', 'value' => null],
-            [['por_max'], 'default', 'value' => 100],
-    
-            // 4. Validación de cadena de texto
-            [['nom'], 'string', 'max' => 255, 'tooLong' => 'El nombre es demasiado largo (máximo 255 caracteres).'],
-            [['sudeaseg'], 'string', 'max' => 50, 'message' => 'El Código SUDEASEG es demasiado largo.'],
-            [['sudeaseg'], 'safe'],
-            
-            // 5. Campos de fecha
-            [['created_at', 'updated_at', 'deleted_at'], 'safe'],
+            // Reglas para campos obligatorios
+            [['idusuario', 'agente_id'], 'required'],
+
+            // Reglas para enteros
+            [['idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
+
+            // Reglas para números flotantes (porcentajes)
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'default', 'value' => 0.00], // Valor por defecto si no se especifica
+
+            // Reglas para fechas (created_at, updated_at, deleted_at)
+            [['created_at', 'updated_at', 'deleted_at', 'nombre_agente'], 'safe'], // 'safe' porque se suelen manejar automáticamente por comportamientos o triggers
+
+            // Reglas de rangos para porcentajes (opcional, pero recomendado)
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number', 'min' => 0, 'max' => 100],
+
+            // Reglas para asegurar que 'puede_...' sean 0 o 1 (booleano)
+            [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'in', 'range' => [0, 1]],
+            [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'default', 'value' => 0],
+
+            // Reglas para relaciones (foreign keys)
+            [['idusuario'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['idusuario' => 'id']],
+            [['agente_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['agente_id' => 'id']],
         ];
     }
 
@@ -90,36 +78,59 @@ public $agente_nombre;
     public function attributeLabels()
     {
         return [
-            'idusuario' => 'Idusuario',
-            'agente_id' => 'Agente ID',
-            'por_venta' => 'Por Venta',
-            'por_asesor' => 'Por Asesor',
-            'por_cobranza' => 'Por Cobranza',
-            'por_post_venta' => 'Por Post Venta',
+            'id' => 'ID',
+            'idusuario' => 'Usuario',
+            'agente_id' => 'Agente Asociado',
+            'por_venta' => 'Porcentaje de Venta',
+            'por_asesor' => 'Porcentaje de Asesoramiento',
+            'por_cobranza' => 'Porcentaje de Cobranza',
+            'por_post_venta' => 'Porcentaje de Post Venta',
             'puede_vender' => 'Puede Vender',
             'puede_asesorar' => 'Puede Asesorar',
             'puede_cobrar' => 'Puede Cobrar',
-            'puede_post_venta' => 'Puede Post Venta',
-            'created_at' => 'Created At',
-            'updated_at' => 'Updated At',
-            'deleted_at' => 'Deleted At',
+            'puede_post_venta' => 'Puede Realizar Post Venta',
+            'created_at' => 'Fecha de Creación',
+            'updated_at' => 'Fecha de Actualización',
+            'deleted_at' => 'Fecha de Eliminación',
             'puede_registrar' => 'Puede Registrar',
-            'por_registrar' => 'Por Registrar',
+            'por_registrar' => 'Porcentaje de Registro',
         ];
     }
 
+    /**
+     * Gets query for [[User]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
     public function getUser()
     {
-        return $this->hasOne(User::className(), ['id' => 'idusuario']);
+        return $this->hasOne(User::class, ['id' => 'idusuario']);
     }
 
-   
+    /**
+     * Gets query for [[Agente]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
     public function getAgente()
     {
-        // Esto define la relación desde AgenteFuerza hacia Agente
-        // donde el 'id' de la tabla 'agente' coincide con 'agente_id' en 'agente_fuerza'.
         return $this->hasOne(Agente::class, ['id' => 'agente_id']);
     }
 
-
+    /**
+     * Gets query for [[UserDatos]].
+     *
+     * Asumo que tienes una tabla UserDatos relacionada con User o directamente con AgenteFuerza.
+     * Si no es el caso, puedes eliminar o ajustar esta relación.
+     * Si UserDatos es una extensión de User, la relación podría ser diferente.
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUserDatos()
+    {
+        // Esta relación es un ejemplo. Depende de cómo tengas estructuradas tus tablas.
+        // Podría ser hasOne a User y luego a UserDatos, o directamente si idusuario es FK a UserDatos.
+        // Ejemplo: Si UserDatos tiene 'id_usuario' como FK.
+        return $this->hasOne(UserDatos::class, ['id_usuario' => 'idusuario']);
+    }
 }
