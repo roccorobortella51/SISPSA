@@ -237,36 +237,12 @@ if (!$model->isNewRecord) { ?>
                 </div>
 
                 <div class="col-md-3">
-                    <?= $form->field($model, 'fechanac')->widget(DatePicker::class, [
-                        'options' => [
-                            'placeholder' => 'Seleccione la fecha de nacimiento',
-                            'class' => 'form-control form-control-lg',
-                            
-                        ],
-                        'pluginOptions' => [
-                            'autoclose' => true,
-                            // *** CAMBIO CLAVE AQUÍ para el formato de visualización y entrada ***
-                            'format' => 'dd/mm/yyyy', // <-- ¡MODIFICADO!
-                            'todayHighlight' => true,
-                            // --- Plantillas para íconos de Font Awesome 4.x ---
-                            'templates' => [
-                                'leftArrow' => '<i class="fa fa-angle-left"></i>',
-                                'rightArrow' => '<i class="fa fa-angle-right"></i>',
-                                'prevMonth' => '<i class="fa fa-angle-left"></i>', // Flecha izquierda para mes anterior
-                                'nextMonth' => '<i class="fa fa-angle-right"></i>', // Flecha derecha para mes siguiente
-                                'clearBtn' => '<i class="fa fa-times"></i>',       // Ícono de "x" para limpiar
-                                'todayBtn' => '<i class="fa fa-calendar-o"></i>', // Ícono de calendario vacío para "hoy"
-                            ],
-                        ],
-                        // --- Ícono del botón principal del DatePicker (Font Awesome 4.x) ---
-                        'pickerButton' => [
-                            'label' => '<i class="fa fa-calendar"></i>', // Ícono de calendario sólido
-                            'title' => 'Seleccionar fecha',
-                            'options' => ['class' => 'btn btn-outline-secondary'],
-                        ],
-                        // --- Versión de Bootstrap (Importante para la compatibilidad visual) ---
-                        'bsVersion' => '4.x',
-                    ])->label('Fecha de Nacimiento') ?>
+            
+                    <?= $form->field($model, 'fechanac')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'type' => 'date',
+                                    'placeholder' => 'Seleccione su fecha de nacimiento'
+                                ])->label('Fecha de Nacimiento') ?>
                 </div>
 
                 <div class="col-md-3">
@@ -379,7 +355,7 @@ if (!$model->isNewRecord) { ?>
                             'pluginOptions' => [
                                 'allowClear' => false,
                             ],
-                        ]); ?>
+                        ])->label('Clinica'); ?>
                 </div>
                 <div class="col-md-6">
                     <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
@@ -394,36 +370,24 @@ if (!$model->isNewRecord) { ?>
                             'url'=>Url::to(['/site/planes']),
                             'initialize' => true,
                             ]
-                        ]);
+                        ])->label('Plan');
                         ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($modelContrato, 'fecha_ini')->widget(DatePicker::class, [ // Usado DatePicker::class
-                    'options' => [
-                        'placeholder' => 'Seleccione la fecha de inicio', // <-- ¡SUGERENCIA!
-                        'class' => 'form-control  form-control-lg',
-                    ],
-                    'pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd',
-                        'todayHighlight' => true,
-                    ],
-                    ])->label('Fecha de Inicio') ?>
+                    <?= $form->field($modelContrato, 'fecha_ini')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'type' => 'date',
+                                    'placeholder' => 'Seleccione su fecha de nacimiento'
+                                ])->label('Fecha de Inicio') ?>
                 </div>
 
 
                 <div class="col-md-4">
-                    <?= $form->field($modelContrato, 'fecha_ven')->widget(DatePicker::class, [ // Usado DatePicker::class
-                        'options' => [
-                            'placeholder' => 'Seleccione la fecha de vencimiento', // <-- ¡SUGERENCIA!
-                            'class' => 'form-control  form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'autoclose' => true,
-                            'format' => 'yyyy-mm-dd',
-                            'todayHighlight' => true,
-                        ],
-                        ])->label('Fecha de Vencimiento') ?>
+                        <?= $form->field($modelContrato, 'fecha_ven')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'type' => 'date',
+                                    'placeholder' => 'Seleccione su fecha de nacimiento'
+                                ])->label('Fecha de Vencimiento') ?>
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($modelContrato, 'monto')->textInput(['class' => 'form-control  form-control-lg', 'type' => 'number']) ?>

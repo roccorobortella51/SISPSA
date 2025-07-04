@@ -98,11 +98,13 @@ class UserDatosController extends Controller
 
 
 
-        if ($this->request->isPost) {
+        //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
                 $cel = explode("-",$model->cedula);
-                $model->tipo_cedula = $cel[0];
-                $model->cedula = $cel[1];
+
+                //var_dump($model->asesor_id); die();
+                //$model->tipo_cedula = $cel[0];
+                //$model->cedula = $cel[1];
                 if($model->save()){
                     $nombres = $model->nombres;
                     $apellidos = $model->apellidos;
@@ -159,15 +161,16 @@ class UserDatosController extends Controller
                         var_dump($modelUser->errors);
                         exit;
                     }
-                }
-                else{
+                }else{
                     var_dump($model->errors);
                     exit;
                 }
-            }
-        } else {
+                }
+                
+           // }
+        /*} else {
             $model->loadDefaultValues();
-        }
+        }*/
 
         return $this->render('create', [
             'model' => $model,

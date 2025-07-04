@@ -50,7 +50,7 @@ use yii\db\ActiveRecord;
  * @property UploadedFile $selfieFile
  * @property UploadedFile $imagenIdentificacionFile
  * @property UploadedFile $videoFile
- * @property Clinica $clinica
+ * 
  * @property Plan $plan
  * @property Agente $asesor
  * @property Contrato $contrato
@@ -88,7 +88,7 @@ class UserDatos extends ActiveRecord
             // CAMBIO: Ahora 'cedulaFormatted' es el campo requerido, no 'cedula' directamente,
             // porque el usuario lo ingresa con el formato completo.
             [['nombres', 'apellidos', 'cedulaFormatted', 'fechanac', 'sexo',
-              'telefono', 'email', 'estado','direccion', 'clinica_id','asesor_id'], 'required', 'message' => 'Este campo es obligatorio.'],
+              'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
 
             // 2. Valores por defecto (se mantienen igual)
             [['paso'], 'default', 'value' => 0.0],
@@ -129,14 +129,14 @@ class UserDatos extends ActiveRecord
             }],
             
             [['paso'], 'number'],
-            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'user_login_id'], 'integer'],
+            [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id'], 'integer'],
 
             // 4. Validaciones específicas de contenido (se mantienen igual)
             [['email'], 'email'],
             [['email'], 'unique', 'targetClass' => UserDatos::class, 'message' => 'Este correo electrónico ya está registrado.'],
 
-            [['fechanac'], 'date', 'format' => 'yyyy-MM-dd', 'message' => 'El formato de la fecha de nacimiento debe ser YYYY-MM-DD.'],
-            [['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date', 'message' => 'La fecha de nacimiento no puede ser en el futuro.'],
+            //[['fechanac'], 'date', 'format' => 'yyyy-MM-dd', 'message' => 'El formato de la fecha de nacimiento debe ser YYYY-MM-DD.'],
+            //[['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date', 'message' => 'La fecha de nacimiento no puede ser en el futuro.'],
 
             // 5. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
             [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
@@ -161,11 +161,11 @@ class UserDatos extends ActiveRecord
             // 8. Campos seguros (timestamps)
             // CAMBIO: 'cedula' se marca como 'safe'. Esto le dice a Yii que está bien si el valor de 'cedula'
             // se modifica programáticamente (en 'beforeSave()') y no directamente desde un input del formulario.
-            [['created_at', 'updated_at', 'deleted_at', 'cedula'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
+            [['created_at', 'updated_at', 'deleted_at', 'cedula', 'fechanac','clinica_id','asesor_id'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
             [['codigoAsesor'], 'safe'],
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
-            [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => Clinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
+            [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Plan::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
             [['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contrato::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
@@ -302,7 +302,7 @@ class UserDatos extends ActiveRecord
 
     // --- RELACIONES (MÉTODOS GET) ---
     // Estos métodos de relación no necesitan cambios y se mantienen tal cual.
-    public function getClinica() { return $this->hasOne(Clinica::class, ['id' => 'clinica_id']); }
+    public function getClinica() { return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']); }
     public function getPlan() { return $this->hasOne(Plan::class, ['id' => 'plan_id']); }
     public function getAsesor() { return $this->hasOne(Agente::class, ['id' => 'asesor_id']); }
     public function getContrato() { return $this->hasOne(Contrato::class, ['id' => 'contrato_id']); }
