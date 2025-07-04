@@ -25,7 +25,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
         <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
+            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-success btn-lg']) ?> 
         </div>
     </div>
     <div class="col-xl-12 col-md-12">

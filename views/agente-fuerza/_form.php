@@ -47,52 +47,25 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
         <?php $form = ActiveForm::begin(['id' => 'agente-fuerza-form']); // ¡ID esencial para JavaScript! ?>
 
         <?php if (!$model->isNewRecord) { ?>
-            <div class="row mb-3"> 
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" data-href="<?= Url::to(['update', 'id' => $model->id]) ?>">
-                        <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                            <h6 style="margin: 0;"> 
-                                <?= Html::a(
-                                    'ACTUALIZACIÓN ASESOR', // Texto adaptado para AgenteFuerza
-                                    ['update', 'id' => $model->id],
-                                    ['class' => 'text-white']
-                                ) ?>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
+    <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
+    <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-undo"></i> Volver',
+                // CAMBIO AQUÍ: La ruta ahora apunta a 'index-by-agente' y pasa el 'agente_id'
+                ['index-by-agente', 'agente_id' => $agente->id],
+                ['class' => 'btn btn-primary btn-lg w-100']
+            ) ?>
+        </div>
 
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" data-href="<?= Url::to(['user/view', 'id' => $model->idusuario]) ?>">
-                        <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'VER USUARIO ASOCIADO', // Texto adaptado para AgenteFuerza
-                                    ['user/view', 'id' => $model->idusuario], 
-                                    ['class' => 'text-white']
-                                ) ?>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info panel-clickable" data-href="<?= Url::to(['user/view', 'id' => $model->idusuario]) ?>">
-                        <div class="ms-panel-header header-mini" style="padding-top: 35px; padding-bottom: 35px; text-align: center">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'VER AFILIZADOS DEL VENDOR', // Texto adaptado para AgenteFuerza
-                                    ['user-datos/index'], 
-                                    ['class' => 'text-white']
-                                ) ?>
-                            </h6>
-                        </div>
-                    </div>
-                </div>
-
-
-            </div>
-        <?php } ?>
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR', // Icono para afiliados
+                ['user-datos/index'], // RUTA ORIGINAL - SIN CAMBIOS
+                ['class' => 'btn btn-success btn-lg w-100'] // Estilo de botón
+            ) ?>
+        </div>
+    </div>
+    <br> <?php } ?>
 
         <div class="row">
             <div class="col-md-6">

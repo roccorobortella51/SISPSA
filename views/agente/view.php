@@ -32,74 +32,42 @@ function formatDateTime($value) {
             <div class="ms-panel-header">
             </div>
         </div>
-    </div>    
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                        <div class="ms-panel-header header-mini">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'ACTUALIZAR AGENCIA',
-                                    ['update', 'id' => $model->id],
-                                    ['class' => 'text-white']
-                                ) ?>
-                            </h6>
-                        </div>
-                        <div class="ms-panel-body">
-                            <div class="text-center">
-                                <i class="flaticon-information"></i>
-                                <p class="mb-0">Modifica los datos de este agente.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-info">
-                        <div class="ms-panel-header header-mini">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'VOLVER A LA LISTA',
-                                    ['index'],
-                                    ['class' => 'text-white']
-                                ) ?>
-                            </h6>
-                        </div>
-                        <div class="ms-panel-body">
-                            <div class="text-center">
-                                <i class="flaticon-information"></i>
-                                <p class="mb-0">Regresa a la lista completa de agentes.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="ms-panel ms-widget ms-identifier-widget bg-danger">
-                        <div class="ms-panel-header header-mini">
-                            <h6 style="margin: 0;">
-                                <?= Html::a(
-                                    'ELIMINAR AGENCIA',
-                                    ['delete', 'id' => $model->id],
-                                    [
-                                        'class' => 'text-white',
-                                        'data' => [
-                                            'confirm' => '¿Estás seguro de que quieres eliminar este agente? Esta acción no se puede deshacer.',
-                                            'method' => 'post',
-                                        ],
-                                    ]
-                                ) ?>
-                            </h6>
-                        </div>
-                        <div class="ms-panel-body">
-                            <div class="text-center">
-                                <i class="flaticon-information"></i>
-                                <p class="mb-0">Elimina este agente de forma permanente.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    </div> 
+-------    
+       
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-edit"></i> ACTUALIZAR AGENCIA', // Icono para editar
+            ['update', 'id' => $model->id],
+            ['class' => 'btn btn-primary w-100'] // Eliminada la clase btn-lg
+        ) ?>
+    </div>
 
-         
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-list"></i> VOLVER A LA LISTA', // Icono para lista
+            ['index'],
+            ['class' => 'btn btn-primary w-100'] // Eliminada la clase btn-lg
+        ) ?>
+    </div>
+
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-trash-alt"></i> ELIMINAR AGENCIA', // Icono para eliminar
+            ['delete', 'id' => $model->id],
+            [
+                'class' => 'btn btn-danger w-100', // Eliminada la clase btn-lg
+                'data' => [
+                    'confirm' => '¿Estás seguro de que quieres eliminar este agente? Esta acción no se puede deshacer.',
+                    'method' => 'post',
+                ],
+            ]
+        ) ?>
+    </div>
+</div>
+
+-----         
 
             <h5 class="mt-4 mb-3">Porcentajes de Comisión</h5>
             <div class="row mb-4 g-3">
@@ -145,22 +113,22 @@ function formatDateTime($value) {
 
             <h5 class="mt-4 mb-3">Fechas de Gestión</h5>
             <div class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Fecha de Creación</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->created_at) ?></p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Última Actualización</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->updated_at) ?></p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <!-- <div class="col-md-4">
                     <div class="card card-body bg-light text-center">
                         <h6 class="text-muted">Fecha de Eliminación</h6>
                         <p class="h5 text-dark"><?= formatDateTime($model->deleted_at) ?></p>
                     </div>
            
-</div>
+</div> -->

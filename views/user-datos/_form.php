@@ -9,6 +9,7 @@ use kartik\widgets\SwitchInput;
 use kartik\widgets\DatePicker;
 use kartik\depdrop\DepDrop;
 use yii\helpers\Url;
+
 $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 
 
@@ -18,10 +19,19 @@ $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 ?>
 
 <style>
+/* Tu estilo existente para las pestañas */
 .nav-tabs .nav-link.active {
     background-color: #007bff !important; /* Bootstrap primary blue */
     color: white !important;
     border-color: #007bff #007bff #fff !important;
+}
+
+/* **NUEVO ESTILO OPCIONAL para asegurar que los botones .btn.active no se vean aplastados**
+   Si el estilo 'active' de btn está causando que el padding se reduzca, esto lo restaurará
+*/
+.btn.active {
+    padding: .5rem 1rem !important; /* Ajusta según el padding estándar de btn-lg */
+    /* Asegúrate de que el color de fondo y borde también sean consistentes con el diseño de botón activo */
 }
 </style>
 
@@ -121,41 +131,35 @@ JS;
 $this->registerJs($jsValidation);
 ?>
 
-
-<?php if (!$model->isNewRecord) { ?>
-<div class="row justify-content-center mb-4">
-
-    <div class="col-md-auto mb-3">
-        <?= Html::a('Datos Personales', Url::to(['index']), [ // <--- AQUI APUNTA A LA ACCIÓN
-            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'index' ? 'active' : ''),
+<?php
+// *** LOS ESTILOS DE LOS BOTONES APLICADOS AQUÍ ***
+if (!$model->isNewRecord) { ?>
+<div class="row row-cols-1 row-cols-md-4 justify-content-center g-3 mb-4">
+    <div class="col"> <?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
         ]) ?>
     </div>
 
-    <div class="col-md-auto mb-3">
-        <?= Html::a('Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [ // <--- AQUI APUNTA A LA ACCIÓN CONTACTOS/INDEX
-            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
+    <div class="col"> <?= Html::a('<i class="fas fa-phone-alt"></i> Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
             'data-pjax' => '0'
         ]) ?>
     </div>
 
-    <div class="col-md-auto mb-3">
-        <?= Html::a('Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [ // <--- AQUI APUNTA A LA ACCIÓN
-            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
+    <div class="col"> <?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
             'data-pjax' => '0'
         ]) ?>
     </div>
 
-    <div class="col-md-auto mb-3">
-        <?= Html::a('Afiliación', Url::to(['contratos/index']), [ // <--- AQUI APUNTA A LA ACCIÓN
-            'class' => 'btn btn-custom-blue btn-lg ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
+    <div class="col"> <?= Html::a('<i class="fas fa-id-card"></i> Afiliación', Url::to(['contratos/index']), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
             'data-pjax' => '0'
         ]) ?>
     </div>
-
 </div>
 <?php } ?>
 
-    </div>
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="tab13">
             <div class="row">
@@ -173,10 +177,8 @@ $this->registerJs($jsValidation);
                                 'allowClear' => false,
                             ],
                     ])->label('NOMBRE DEL ASESOR') // Etiqueta adaptada
-                    ?> 
+                    ?>
                 </div>
-
-
             </div>
             <div class="row">
                 <div class="col-md-6">
@@ -223,21 +225,41 @@ $this->registerJs($jsValidation);
                     <?php }else{?>
                         <?= $form->field($model, 'cedula')->textInput(['class' => 'form-control form-control-lg',]) ?>
                     <?php } ?>
+                </div>
 
-                </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'fechanac')->widget(\kartik\date\DatePicker::class, [
-                        'options' => [
-                            'placeholder' => 'Seleccione la fecha de nacimiento',
-                            'class' => 'form-control  form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'autoclose' => true,
-                            'format' => 'yyyy-mm-dd',
-                            'todayHighlight' => true,
-                        ],
-                    ]) ?>
+                        <?= $form->field($model, 'fechanac')->widget(\kartik\date\DatePicker::class, [
+                            'options' => [
+                                'placeholder' => 'Seleccione la fecha de nacimiento',
+                                'class' => 'form-control form-control-lg',
+                                
+                            ],
+                            'pluginOptions' => [
+                                'autoclose' => true,
+                                'format' => 'yyyy-mm-dd',
+                                'todayHighlight' => true,
+                                // --- Plantillas para íconos de Font Awesome 4.x ---
+                                'templates' => [
+                                    'leftArrow' => '<i class="fa fa-angle-left"></i>',
+                                    'rightArrow' => '<i class="fa fa-angle-right"></i>',
+                                    'prevMonth' => '<i class="fa fa-angle-left"></i>', // Flecha izquierda para mes anterior
+                                    'nextMonth' => '<i class="fa fa-angle-right"></i>', // Flecha derecha para mes siguiente
+                                    'clearBtn' => '<i class="fa fa-times"></i>',       // Ícono de "x" para limpiar
+                                    'todayBtn' => '<i class="fa fa-calendar-o"></i>', // Ícono de calendario vacío para "hoy"
+                                ],
+                            ],
+                            // --- Ícono del botón principal del DatePicker (Font Awesome 4.x) ---
+                            'pickerButton' => [
+                                'label' => '<i class="fa fa-calendar"></i>', // Ícono de calendario sólido
+                                'title' => 'Seleccionar fecha',
+                                'options' => ['class' => 'btn btn-outline-secondary'],
+                            ],
+                            // --- Versión de Bootstrap (Importante para la compatibilidad visual) ---
+                            'bsVersion' => '4.x', // Es muy probable que uses Bootstrap 3.x si usas Font Awesome 4.x
+                            // Ya NO necesitamos 'iconSource' => \kartik\icons\Icon::FA, porque lo estamos definiendo manualmente.
+                        ])->label('Fecha de Nacimiento') ?>
                 </div>
+
                 <div class="col-md-3">
                     <?= $form->field($model, 'sexo')->widget(\kartik\select2\Select2::class, [
                         'data' => [
@@ -281,7 +303,7 @@ $this->registerJs($jsValidation);
                             'pluginOptions' => [
                                 'allowClear' => false,
                             ],
-                        ]); 
+                        ]);
                     ?>
                 </div>
                 <div class="col-md-3">
@@ -297,7 +319,7 @@ $this->registerJs($jsValidation);
                                 'url'=>Url::to(['/site/municipio']),
                                 'initialize' => true,
                             ]
-                        ]); 
+                        ]);
                     ?>
                 </div>
                 <div class="col-md-3">
@@ -313,7 +335,7 @@ $this->registerJs($jsValidation);
                                 'url'=>Url::to(['/site/parroquia']),
                                 'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
                             ]
-                        ]); 
+                        ]);
                     ?>
                 </div>
                 <div class="col-md-3">
@@ -362,7 +384,7 @@ $this->registerJs($jsValidation);
                             'url'=>Url::to(['/site/planes']),
                             'initialize' => true,
                             ]
-                        ]);  
+                        ]);
                         ?>
                 </div>
                 <div class="col-md-4"><?= $form->field($modelContrato, 'fecha_ini')->widget(\kartik\date\DatePicker::class, [
@@ -375,7 +397,7 @@ $this->registerJs($jsValidation);
                         'format' => 'yyyy-mm-dd',
                         'todayHighlight' => true,
                     ],
-                    ]) ?></div>
+                    ])->label('Fecha de Inicio') ?></div>
 
 
                 <div class="col-md-4">
@@ -389,24 +411,23 @@ $this->registerJs($jsValidation);
                             'format' => 'yyyy-mm-dd',
                             'todayHighlight' => true,
                         ],
-                        ]) ?>
+                        ])->label('Fecha de Vencimiento') ?>
                 </div>
                 <div class="col-md-4"> <?= $form->field($modelContrato, 'monto')->textInput(['class' => 'form-control  form-control-lg', 'type' => 'number']) ?></div>
             </div>
 
-           
+
             <div class="row">
                 <div class="col-md-12">
                     <?= $form->field($model, 'direccion')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
                 <div class="col-md-12">
-                    <div class="form-group text-rigth mt-4" style="margin-right:10px;">
-                        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
-                        <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-lg btn-warning']); ?>
+                    <div class="form-group text-end mt-4"> <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?> <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-warning btn-lg']); ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <?php ActiveForm::end(); ?>
+</div>

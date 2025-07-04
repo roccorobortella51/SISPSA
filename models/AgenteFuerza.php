@@ -43,37 +43,46 @@ public $agente_nombre;
      * {@inheritdoc}
      */
     public function rules()
-{
-    return [
-        // ... otras reglas ...
-
-        // 1. Campos obligatorios:
-        // Personalizamos el mensaje para 'idusuario'
-        [['idusuario'], 'required', 'message' => 'Este campo del asesor de ventas  no puede estar vacío.'],
-        
-
-        // ... el resto de tus reglas ...
-
-        [['id', 'idusuario', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
+    {
+        return [
+            // 1. Campos obligatorios
+            
+            [['nom'], 'required', 'message' => 'El nombre no puede estar vacío.'],
+            [['idusuariopropietario'], 'required', 'message' => 'El propietario no puede estar vacío.'],
+            [['idusuariopropietario'], 'integer'],
+            
+            // --- REGLAS DE PORCENTAJES: AJUSTE DE MENSAJE PARA FORMATO INVÁLIDO ---
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'required', 'message' => 'El porcentaje no puede estar vacío.'],
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'number', 
+                'min' => 0, 
+                'max' => 100, 
+                'tooSmall' => 'El porcentaje no puede ser negativo.',
+                'tooBig' => 'El porcentaje no puede ser mayor a 100.',
+                'message' => 'El porcentaje debe ser un número válido.' // ¡Añadida esta línea!
+            ],
+            
+            [['por_max'], 'required', 'message' => 'El porcentaje máximo no puede estar vacío.'],
+            [['por_max'], 'number',
+                'min' => 0,
+                'max' => 100,
+                'tooSmall' => 'El porcentaje máximo no puede ser negativo.',
+                'tooBig' => 'El porcentaje máximo no puede ser mayor a 100.',
+                'message' => 'El porcentaje máximo debe ser un número válido.' // ¡Añadida esta línea!
+            ],
     
-        [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number', 
-            'min' => 0, 
-            'max' => 15,
-            'tooSmall' => 'El porcentaje no puede ser negativo.',
-            'tooBig' => 'El porcentaje no puede ser mayor a 15.'
-        ],
+            // 3. Valores por defecto
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente'], 'default', 'value' => null],
+            [['por_max'], 'default', 'value' => 100],
     
-        [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'default', 'value' => null],
-        [['updated_at', 'deleted_at'], 'default', 'value' => null],
-        [['puede_registrar'], 'default', 'value' => 1], 
-    
-        [['created_at', 'updated_at', 'deleted_at'], 'safe'],
-
-        
-    
-        [['id'], 'unique'],
-    ];
-}
+            // 4. Validación de cadena de texto
+            [['nom'], 'string', 'max' => 255, 'tooLong' => 'El nombre es demasiado largo (máximo 255 caracteres).'],
+            [['sudeaseg'], 'string', 'max' => 50, 'message' => 'El Código SUDEASEG es demasiado largo.'],
+            [['sudeaseg'], 'safe'],
+            
+            // 5. Campos de fecha
+            [['created_at', 'updated_at', 'deleted_at'], 'safe'],
+        ];
+    }
 
     /**
      * {@inheritdoc}
