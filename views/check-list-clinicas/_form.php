@@ -30,14 +30,17 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 1: Visita de Clínica de SOEPSA</h4>
-            <small>Responsable: Presidencia. Gestión de Operaciones (Personas contacto)</small>
+         <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">
+            <h4 class="mb-0">Paso 1: Visita de Clínica de SISPSA. Responsable: Presidencia. Gestión de Operaciones (Personas contacto) 
+                    </h4>
         </div>
         <div class="card-body">
             <div class="form-group row">
                 <div class="col-md-12">
                     <?= $form->field($model, 'planes')->checkbox() ?>
+                </div>
+                <div class="col-md-12">
+                    <?= $form->field($model, 'otro_paso1')->checkbox() ?>
                 </div>
                 <div class="col-md-12">
                     <?= $form->field($model, 'programa_de_servicio')->checkbox() ?>
@@ -54,17 +57,13 @@ use yii\widgets\ActiveForm;
                 <div class="col-md-12">
                     <?= $form->field($model, 'visita_clinica_registro_escrito')->checkbox() ?>
                 </div>
-                <div class="col-md-12">
-                    <?= $form->field($model, 'otro_paso1')->checkbox() ?>
-                </div>
             </div>
         </div>
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 2: Evaluación de la Clínica</h4>
-            <small>Responsable: Gestión de Operaciones/Informática/Comercialización</small>
+        <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">
+            <h4 class="mb-0">Paso 2: Evaluación de la Clínica. Responsable: Gestión de Operaciones/Informática/Comercialización</h4>
         </div>
         <div class="card-body">
             <div class="form-group row">
@@ -106,9 +105,8 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 3: Presentación del CONVENIO SOEPSA-CLÍNICA</h4>
-            <small>Responsable: Gestión de Operaciones, Consultoría Jurídica, cualquier otra Dirección que sirva de apoyo</small>
+        <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">                    
+            <h4 class="mb-0">Paso 3: Presentación del CONVENIO SISPSA-CLÍNICA. Responsable: Gestión de Operaciones, Consultoría Jurídica, cualquier otra Dirección que sirva de apoyo</h4>
         </div>
         <div class="card-body">
             <div class="form-group row">
@@ -144,10 +142,9 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 4: Plan de contratos</h4>
-            <small>Responsable: Gestión de Operaciones, Consultoría Jurídica, cualquier otra Dirección que sirva de apoyo</small>
-        </div>
+         <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">                    
+            <h4 class="mb-0">Paso 4: Firma de contrato Responsable: Gestión de Operaciones, Consultoría Jurídica, cualquier otra Director que sirva de apoyo</h4>
+                </div>
         <div class="card-body">
             <div class="form-group row">
                 <div class="col-md-12">
@@ -164,9 +161,9 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 5: Puesta en Marcha del Contrato</h4>
-        </div>
+        <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">                    
+            <h4 class="mb-0">Paso 5: Puesta en marcha del convenio</h4>
+                </div>
         <div class="card-body">
             <div class="form-group row">
                 <div class="col-md-12">
@@ -181,19 +178,20 @@ use yii\widgets\ActiveForm;
                 <div class="col-md-12">
                     <?= $form->field($model, 'verif_sistema_pdv_local_clinica')->checkbox() ?>
                 </div>
-                <div class="col-md-12">
-                    <?= $form->field($model, 'otro_paso5')->checkbox() ?>
-                </div>
+                
             </div>
         </div>
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
+        <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">                    
             <h4 class="mb-0">Paso 6: Ejecución detallada del sistema</h4>
-        </div>
+                </div>
         <div class="card-body">
             <div class="form-group row">
+                <div class="col-md-12">
+                    <?= $form->field($model, 'otro_paso5')->checkbox() ?>
+                </div>
                 <div class="col-md-12">
                     <?= $form->field($model, 'descripcion_servicios_soepsa')->checkbox() ?>
                 </div>
@@ -217,9 +215,9 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
+        <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">                    
             <h4 class="mb-0">Paso 7: Análisis y estudio de los plazos con el equipo de trabajo</h4>
-        </div>
+                </div>
         <div class="card-body">
             <div class="form-group row">
                 <div class="col-md-12">
@@ -236,10 +234,9 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 8: Especificar, analizar y realizar el Plan</h4>
-            <small>Equipo de Implementación:</small>
-        </div>
+       <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">                    
+        <h4 class="mb-0">Paso 8: Especificar, analizar y evaluar el Plan</h4>
+                </div>
         <div class="card-body">
             <div class="form-group row">
                 <div class="col-md-12">
@@ -277,9 +274,9 @@ use yii\widgets\ActiveForm;
     </div>
 
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h4 class="mb-0">Paso 9: Verificación del sistema</h4>
-        </div>
+       <div class="card-header bg-gradient-info text-white text-center" style="height:50px;">
+                    <h4 class="mb-0">Paso 9: Ventas de los Planes</h4>
+                </div>
         <div class="card-body">
             <div class="form-group row">
                 <div class="col-md-12">
@@ -305,3 +302,11 @@ use yii\widgets\ActiveForm;
     <?php ActiveForm::end(); ?>
 
 </div>
+<style>
+    card-header {
+        height: 100px !important; /* O el valor que prefieras */
+        display: flex; /* Asegura que el contenido (h4) se centre verticalmente */
+        align-items: center; /* Centra verticalmente */
+        justify-content: center; /* Centra horizontalmente el texto */
+    }
+</style>
