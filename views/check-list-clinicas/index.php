@@ -68,6 +68,8 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                     'filterModel' => $searchModel,
                     'tableOptions' => ['class' => 'table table-striped table-bordered table-hover'],
                     'columns' => [
+                    'clinica.nombre',
+                    'clinica.rif',
                     [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
