@@ -74,9 +74,9 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                 </div>
                 <div class="col">
                     <?= Html::a(
-                        '<i class="fas fa-tasks"></i> Check List',
-                        ['user-datos/index', 'clinica_id' => $model->id],
-                        ['class' => 'btn btn-primary btn-lg w-100']
+                        '<i class="fas fa-tasks"></i> Check List', // Icono y texto en la misma línea
+                        ['check-list-clinicas/index', 'clinica_id' => $model->id],
+                        ['class' => 'btn btn-primary btn-lg w-100'] // Quitamos 'py-4'
                     ) ?>
                 </div>
             </div>
