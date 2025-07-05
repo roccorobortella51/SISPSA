@@ -1,11 +1,11 @@
 <?php
 
 use yii\helpers\Html;
-use kartik\form\ActiveForm;
+use kartik\form\ActiveForm; // Asegúrate de que esto es 'kartik\form\ActiveForm'
 use kartik\select2\Select2; // Para los selectores de estado y estatus
-use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
+use yii\widgets\MaskedInput; // <--- ¡IMPORTANTE! Sigue siendo 'yii\widgets\MaskedInput' para el campo de cédula
 use app\components\UserHelper;
-use kartik\widgets\SwitchInput;
+use kartik\widgets\SwitchInput; // No usado en este fragmento, pero puede mantenerse.
 use kartik\widgets\DatePicker;
 use kartik\depdrop\DepDrop;
 use yii\helpers\Url;
@@ -15,6 +15,7 @@ $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
+/** @var app\models\Contrato $modelContrato // Asumo que tienes un modelo de Contrato separado para los datos de contrato */
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
@@ -65,6 +66,7 @@ $('#plan_id').on('change', function() {
             success: function(response) {
                 if (response && typeof response.monto !== 'undefined') {
                     console.log("Monto del plan recibido:", response.monto);
+                    // CAMBIO AQUÍ: Asegúrate que el ID del campo de monto en el formulario sea correcto
                     $('#contratos-monto').val(response.monto);
                 } else {
                     console.log("Respuesta AJAX no válida o monto no encontrado.");
@@ -186,11 +188,15 @@ if (!$model->isNewRecord) { ?>
                 </div>
                 <div class="col-md-6">
                     <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
-                        'mask' => '(9999) 999-9999',
+                        'mask' =>  '99999999999',
                         'options' => [
                             'placeholder' => '(XXXX) XXX-XXXX',
                             'class' => 'form-control  form-control-lg',
                             'maxlength' => true,
+                        ],
+                        'clientOptions' => [
+                        'clearIncomplete' => true, // Opcional: limpia el campo si el usuario no lo completa
+                        'unmaskAsSubmit' => true,  // <-- Envía solo los dígitos al servidor
                         ]
                     ]) ?>
                 </div>
@@ -206,65 +212,45 @@ if (!$model->isNewRecord) { ?>
             <div class="row ">
                 <div class="col-md-3">
                     <?php if ($model->isNewRecord) { ?>
-                        <?= $form->field($model, 'cedula')->widget(\yii\widgets\MaskedInput::class, [
+                        <?= $form->field($model, 'cedulaFormatted')->widget(MaskedInput::class, [ // <-- ¡MODIFICADO!
                             'mask' => 'a-99999999',
                             'clientOptions' => [
                                 'definitions' => [
-                                    'a' => [
-                                        'validator' => '[VE]',
-                                        'cardinality' => 1,
-                                    ],
+                                    // Ampliado el validador a [VEJG] para incluir J y G según tu modelo.
+                                    'a' => ['validator' => '[VEJG]', 'cardinality' => 1,], // <-- ¡MODIFICADO!
                                 ],
                             ],
                             'options' => [
-                                'placeholder' => 'V-99999999 o E-99999999',
+                                'placeholder' => 'V-99999999, E-99999999, J-99999999 o G-99999999', // <-- ¡SUGERENCIA! Texto de ayuda.
                                 'class' => 'form-control  form-control-lg',
                                 'maxlength' => true,
                             ],
-                        ]) ?>
+                        ])->label('Cédula de Identidad') // <-- ¡IMPORTANTE! Añade una etiqueta explícita para la nueva propiedad.
+                        ?>
                     <?php }else{?>
-                        <?= $form->field($model, 'cedula')->textInput(['class' => 'form-control form-control-lg',]) ?>
+                        <?= $form->field($model, 'cedulaFormatted')->textInput([ // <-- ¡MODIFICADO!
+                            'class' => 'form-control form-control-lg',
+                            'readonly' => true, // La cédula no se edita directamente una vez creada.
+                        ])->label('Cédula de Identidad') // <-- ¡IMPORTANTE! Añade una etiqueta explícita.
+                        ?>
                     <?php } ?>
                 </div>
 
                 <div class="col-md-3">
-                        <?= $form->field($model, 'fechanac')->widget(\kartik\date\DatePicker::class, [
-                            'options' => [
-                                'placeholder' => 'Seleccione la fecha de nacimiento',
-                                'class' => 'form-control form-control-lg',
-                                
-                            ],
-                            'pluginOptions' => [
-                                'autoclose' => true,
-                                'format' => 'yyyy-mm-dd',
-                                'todayHighlight' => true,
-                                // --- Plantillas para íconos de Font Awesome 4.x ---
-                                'templates' => [
-                                    'leftArrow' => '<i class="fa fa-angle-left"></i>',
-                                    'rightArrow' => '<i class="fa fa-angle-right"></i>',
-                                    'prevMonth' => '<i class="fa fa-angle-left"></i>', // Flecha izquierda para mes anterior
-                                    'nextMonth' => '<i class="fa fa-angle-right"></i>', // Flecha derecha para mes siguiente
-                                    'clearBtn' => '<i class="fa fa-times"></i>',       // Ícono de "x" para limpiar
-                                    'todayBtn' => '<i class="fa fa-calendar-o"></i>', // Ícono de calendario vacío para "hoy"
-                                ],
-                            ],
-                            // --- Ícono del botón principal del DatePicker (Font Awesome 4.x) ---
-                            'pickerButton' => [
-                                'label' => '<i class="fa fa-calendar"></i>', // Ícono de calendario sólido
-                                'title' => 'Seleccionar fecha',
-                                'options' => ['class' => 'btn btn-outline-secondary'],
-                            ],
-                            // --- Versión de Bootstrap (Importante para la compatibilidad visual) ---
-                            'bsVersion' => '4.x', // Es muy probable que uses Bootstrap 3.x si usas Font Awesome 4.x
-                            // Ya NO necesitamos 'iconSource' => \kartik\icons\Icon::FA, porque lo estamos definiendo manualmente.
-                        ])->label('Fecha de Nacimiento') ?>
+            
+                    <?= $form->field($model, 'fechanac')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'type' => 'date',
+                                    'placeholder' => 'Seleccione su fecha de nacimiento'
+                                ])->label('Fecha de Nacimiento') ?>
                 </div>
 
                 <div class="col-md-3">
-                    <?= $form->field($model, 'sexo')->widget(\kartik\select2\Select2::class, [
+                    <?= $form->field($model, 'sexo')->widget(Select2::class, [ // Usado Select2::class en lugar de \kartik\select2\Select2::class
                         'data' => [
-                            'masculino' => 'Masculino',
-                            'femenino' => 'Femenino',
+                            'Masculino' => 'Masculino', // <-- ¡SUGERENCIA! Usa mayúsculas iniciales para consistencia
+                            'Femenino' => 'Femenino',   // <-- ¡SUGERENCIA!
+                            'Otro' => 'Otro',           // <-- ¡SUGERENCIA! Si tu modelo permite 'Otro'
                         ],
                         'options' => ['placeholder' => 'Seleccione el sexo...'],
                         'pluginOptions' => [
@@ -273,7 +259,7 @@ if (!$model->isNewRecord) { ?>
                     ]) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'tipo_sangre')->widget(\kartik\select2\Select2::class, [
+                    <?= $form->field($model, 'tipo_sangre')->widget(Select2::class, [ // Usado Select2::class en lugar de \kartik\select2\Select2::class
                         'data' => [
                             'A+' => 'A+',
                             'A-' => 'A-',
@@ -333,7 +319,7 @@ if (!$model->isNewRecord) { ?>
                             'pluginOptions'=>[
                                 'depends'=>['municipio_id'],
                                 'url'=>Url::to(['/site/parroquia']),
-                                'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
+                                // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '', // Comentado si no pasas esta variable
                             ]
                         ]);
                     ?>
@@ -369,10 +355,10 @@ if (!$model->isNewRecord) { ?>
                             'pluginOptions' => [
                                 'allowClear' => false,
                             ],
-                        ]); ?>
+                        ])->label('Clinica'); ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [
+                    <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
                         'type' => DepDrop::TYPE_SELECT2,
                         'options'=>[
                             'id'=>'plan_id',
@@ -384,36 +370,28 @@ if (!$model->isNewRecord) { ?>
                             'url'=>Url::to(['/site/planes']),
                             'initialize' => true,
                             ]
-                        ]);
+                        ])->label('Plan');
                         ?>
                 </div>
-                <div class="col-md-4"><?= $form->field($modelContrato, 'fecha_ini')->widget(\kartik\date\DatePicker::class, [
-                    'options' => [
-                        'placeholder' => 'Seleccione la fecha de nacimiento',
-                        'class' => 'form-control  form-control-lg',
-                    ],
-                    'pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd',
-                        'todayHighlight' => true,
-                    ],
-                    ])->label('Fecha de Inicio') ?></div>
+                <div class="col-md-4">
+                    <?= $form->field($modelContrato, 'fecha_ini')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'type' => 'date',
+                                    'placeholder' => 'Seleccione su fecha de nacimiento'
+                                ])->label('Fecha de Inicio') ?>
+                </div>
 
 
                 <div class="col-md-4">
-                    <?= $form->field($modelContrato, 'fecha_ven')->widget(\kartik\date\DatePicker::class, [
-                        'options' => [
-                            'placeholder' => 'Seleccione la fecha de nacimiento',
-                            'class' => 'form-control  form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'autoclose' => true,
-                            'format' => 'yyyy-mm-dd',
-                            'todayHighlight' => true,
-                        ],
-                        ])->label('Fecha de Vencimiento') ?>
+                        <?= $form->field($modelContrato, 'fecha_ven')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'type' => 'date',
+                                    'placeholder' => 'Seleccione su fecha de nacimiento'
+                                ])->label('Fecha de Vencimiento') ?>
                 </div>
-                <div class="col-md-4"> <?= $form->field($modelContrato, 'monto')->textInput(['class' => 'form-control  form-control-lg', 'type' => 'number']) ?></div>
+                <div class="col-md-4">
+                    <?= $form->field($modelContrato, 'monto')->textInput(['class' => 'form-control  form-control-lg', 'type' => 'number']) ?>
+                </div>
             </div>
 
 

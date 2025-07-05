@@ -6,8 +6,8 @@ use yii\helpers\Html;
 /** @var app\models\User $model */
 
 
-$this->title = 'Crear Usuario';
-$this->params['breadcrumbs'][] = ['label' => 'Usuarios', 'url' => ['index']];
+$this->title = 'CREAR USUARIO';
+$this->params['breadcrumbs'][] = ['label' => 'USUARIOS', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="col-xl-12 col-md-12">

@@ -68,8 +68,17 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
     <br> <?php } ?>
 
         <div class="row">
-            <div class="col-md-6">
+        <div class="col-md-6" style="display:none;">
                 <?= $form->field($model, 'agente_id')->textInput([
+                    'readonly' => true, // Este campo siempre es de solo lectura
+                    'class' => 'form-control form-control-lg',
+                    'value' => $agente->id, // Usar null coalescing para seguridad
+                    'placeholder' => 'Nombre de la Agencia Asociada',
+                ])
+                ?>
+            </div>
+            <div class="col-md-6">
+                <?= $form->field($model, 'nombre_agente')->textInput([
                     'readonly' => true, // Este campo siempre es de solo lectura
                     'class' => 'form-control form-control-lg',
                     'value' => $agente->nom ?? 'N/A', // Usar null coalescing para seguridad

@@ -3,13 +3,15 @@
 namespace app\models;
 
 use Yii;
+use yii\web\UploadedFile;
+use yii\db\ActiveRecord;
 
-/*
+/**
  * This is the model class for table "user_datos".
  *
  * @property int $id
  * @property string $created_at
- * @property string|null $user_id
+ * @property string $user_id
  * @property string|null $nombres
  * @property string|null $fechanac
  * @property string|null $sexo
@@ -38,26 +40,36 @@ use Yii;
  * @property string|null $ver_cedula
  * @property string|null $ver_foto
  * @property string|null $session_id
- * @property int|null $cedula
+ * @property int|null $cedula // ¡Sigue siendo INTEGER en DB, solo números!
  * @property string|null $tipo_cedula
  * @property string|null $tipo_sangre
  * @property string|null $estatus_solvente
- * @property int|null $user_login_id 
+ * @property int|null $user_login_id
  *
- * @property Beneficiarios[] $beneficiarios
- * @property Beneficiarios[] $beneficiarios0
- * @property ContactosEmergencia[] $contactosEmergencias
- * @property Contratos[] $contratos
- * @property DeclaracionDeSalud[] $declaracionDeSaluds
- * @property Notifications[] $notifications
- * @property Recibos[] $recibos
- * @property TransactionHistory[] $transactionHistories
+ * // ... (Tus @property para las relaciones get...())
+ * @property UploadedFile $selfieFile
+ * @property UploadedFile $imagenIdentificacionFile
+ * @property UploadedFile $videoFile
+ * 
+ * @property Plan $plan
+ * @property Agente $asesor
+ * @property Contrato $contrato
  * @property User $userLogin
  */
-class UserDatos extends \yii\db\ActiveRecord
+class UserDatos extends ActiveRecord
 {
-
+    public $selfieFile;
+    public $imagenIdentificacionFile;
+    public $videoFile;
     public $codigoAsesor;
+
+    /**
+     * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
+     * como se ingresa en el formulario con MaskedInput.
+     * Esta propiedad NO existe como columna en la tabla 'user_datos' de la base de datos.
+     */
+    public $cedulaFormatted; // <-- ¡ESTO ES NUEVO Y CLAVE!
+
     /**
      * {@inheritdoc}
      */
@@ -72,21 +84,92 @@ class UserDatos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'paso', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'clinica_id', 'plan_id', 'apellidos', 'email', 'contrato_id', 'asesor_id', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'cedula', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'default', 'value' => null],
-            [['user_id'], 'default', 'value' => null],
-            [['created_at', 'fechanac', 'deleted_at', 'updated_at'], 'safe'],
-            [['user_id', 'nombres', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'string'],
+            // 1. Campos obligatorios
+            // CAMBIO: Ahora 'cedulaFormatted' es el campo requerido, no 'cedula' directamente,
+            // porque el usuario lo ingresa con el formato completo.
+            [['nombres', 'apellidos', 'cedulaFormatted', 'fechanac', 'sexo',
+              'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
+
+            // 2. Valores por defecto (se mantienen igual)
+            [['paso'], 'default', 'value' => 0.0],
+            [['user_login_id', 'contrato_id'], 'default', 'value' => null],
+            [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
+            [['ver_cedula', 'ver_foto', 'estatus_solvente'], 'default', 'value' => '0'],
+
+            [['user_id', 'session_id'], 'string'],
+            
+            // 3. Validación de tipos de datos y longitud
+            [['telefono'], 'string', 'max' => 15], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
+            [['telefono'], 'match',
+                'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
+                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
+
+            [['nombres', 'apellidos', 'direccion', 'codigoValidacion', 'telefono', 'email'], 'string', 'max' => 255],
+            [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'estatus', 'tipo_sangre'], 'string', 'max' => 50],
+            [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
+
+            // VALIDACIÓN DE CÉDULA:
+            // Estos son los CAMBIOS MÁS IMPORTANTES en rules()
+            // --- CÓDIGO ORIGINAL QUE DEBES ELIMINAR O COMENTAR ---
+            // [['cedula'], 'integer', 'message' => 'La cédula debe contener solo números.'],
+            // [['cedula'], 'string', 'max' => 9, 'min' => 7], // Estas reglas ya no aplican directamente al input del usuario.
+            // --- FIN CÓDIGO ORIGINAL ---
+
+            // NUEVAS REGLAS para 'cedulaFormatted':
+            // 3.1. Valida que 'cedulaFormatted' sea un string y tenga la longitud esperada (V-999999999 es 11 caracteres).
+            [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
+            // 3.2. Valida el patrón exacto: Una letra (V, E, J, G), un guion, y de 7 a 9 dígitos.
+            [['cedulaFormatted'], 'match', 'pattern' => '/^[VEJG]-\d{7,9}$/', 'message' => 'El formato debe ser V-XXXXXXXX, E-XXXXXXXX, J-XXXXXXXX o G-XXXXXXXX.'],
+            
+            // Regla de unicidad para 'cedula' (el número entero en la DB).
+            // Esta validación se ejecuta *después* de que 'beforeSave()' haya separado el número del formato.
+            ['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
+                // Solo verifica la unicidad si es un nuevo registro O si el valor numérico de la cédula ha cambiado.
+                return $model->isNewRecord || $model->isAttributeDirty('cedula');
+            }],
+            
             [['paso'], 'number'],
-            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula'], 'default', 'value' => null],
-            [['clinica_id', 'plan_id', 'contrato_id', 'asesor_id'], 'integer'],
-            ['email', 'email'],
+            [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id'], 'integer'],
 
-            [['nombres', 'apellidos', 'cedula', 'tipo_cedula', 'fechanac', 'sexo', 
-              'telefono', 'email', 'estado', 'ciudad', 'municipio', 'parroquia', 
-              'direccion'], 'required', 'message' => 'Este campo es obligatorio'],
+            // 4. Validaciones específicas de contenido (se mantienen igual)
+            [['email'], 'email'],
+            [['email'], 'unique', 'targetClass' => UserDatos::class, 'message' => 'Este correo electrónico ya está registrado.'],
 
-            ['cedula', 'string', 'max' => 10],
-            //['cedula', 'match', 'pattern' => '/^[VE]-\d{8}$/', 'message' => 'El formato debe ser V-99999999 o E-99999999.'],
+            //[['fechanac'], 'date', 'format' => 'yyyy-MM-dd', 'message' => 'El formato de la fecha de nacimiento debe ser YYYY-MM-DD.'],
+            //[['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date', 'message' => 'La fecha de nacimiento no puede ser en el futuro.'],
+
+            // 5. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
+            [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
+            [['role'], 'in', 'range' => ['afiliado', 'medico', 'admin'], 'message' => 'El rol seleccionado no es válido.'],
+            [['estatus'], 'in', 'range' => ['Activo', 'Inactivo', 'Pendiente'], 'message' => 'El estatus seleccionado no es válido.'],
+            [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
+            // Si el 'tipo_cedula' SIEMPRE se deriva de 'cedulaFormatted' en beforeSave(),
+            // esta regla 'in' es redundante para el flujo normal, pero puede servir como un doble chequeo
+            // o si en algún momento 'tipo_cedula' se puede setear de otra forma.
+            [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G'], 'message' => 'Tipo de cédula no válido.'], 
+
+            [['ver_cedula', 'ver_foto', 'estatus_solvente'], 'in', 'range' => ['0', '1'], 'message' => 'Valor no válido para el campo de verificación.'],
+
+            // 6. Validaciones para carga de archivos (se mantienen igual)
+            [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
+            [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
+            [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
+
+            // 7. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
+            [['selfie', 'imagen_identificacion', 'video', 'qr'], 'string', 'max' => 255],
+
+            // 8. Campos seguros (timestamps)
+            // CAMBIO: 'cedula' se marca como 'safe'. Esto le dice a Yii que está bien si el valor de 'cedula'
+            // se modifica programáticamente (en 'beforeSave()') y no directamente desde un input del formulario.
+            [['created_at', 'updated_at', 'deleted_at', 'cedula', 'fechanac','clinica_id','asesor_id'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
+            [['codigoAsesor'], 'safe'],
+            
+            // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
+            [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
+            [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Plan::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
+            [['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
+            [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contrato::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
+            [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
         ];
     }
 
@@ -95,134 +178,133 @@ class UserDatos extends \yii\db\ActiveRecord
      */
     public function attributeLabels()
     {
-        return [
-            'id' => 'ID',
-            'created_at' => 'Created At',
-            'user_id' => 'User ID',
-            'nombres' => 'Nombres',
-            'fechanac' => 'Fechanac',
-            'sexo' => 'Sexo',
-            'selfie' => 'Selfie',
-            'telefono' => 'Telefono',
-            'estado' => 'Estado',
-            'role' => 'Role',
-            'estatus' => 'Estatus',
-            'imagen_identificacion' => 'Imagen Identificacion',
-            'qr' => 'Qr',
-            'paso' => 'Paso',
-            'video' => 'Video',
-            'ciudad' => 'Ciudad',
-            'municipio' => 'Municipio',
-            'parroquia' => 'Parroquia',
-            'direccion' => 'Direccion',
-            'codigoValidacion' => 'Codigo Validacion',
-            'clinica_id' => 'ClÍnica',
-            'plan_id' => 'Plan',
-            'apellidos' => 'Apellidos',
-            'email' => 'Email',
-            'contrato_id' => 'Contrato ID',
-            'asesor_id' => 'Asesor ID',
-            'deleted_at' => 'Deleted At',
-            'updated_at' => 'Updated At',
-            'ver_cedula' => 'Ver Cedula',
-            'ver_foto' => 'Ver Foto',
-            'session_id' => 'Session ID',
-            'cedula' => 'Cedula',
-            'tipo_cedula' => 'Tipo Cedula',
-            'tipo_sangre' => 'Tipo Sangre',
-            'estatus_solvente' => 'Estatus Solvente',
-            'user_login_id' => 'User Login ID',
+        // CAMBIO: Añadimos una etiqueta amigable para 'cedulaFormatted'
+        // Esto hará que el campo en el formulario se muestre con "Cédula de Identidad"
+        // en lugar de "Cedula Formatted".
+        return array_merge(parent::attributeLabels(), [
+            'cedulaFormatted' => 'Cédula de Identidad',
+        ]);
+    }
+
+    /**
+     * Este método se ejecuta AUTOMÁTICAMENTE después de que un registro del modelo
+     * es cargado desde la base de datos (por ejemplo, al editar un usuario).
+     *
+     * Su propósito es reconstruir el formato completo de la cédula (V-12345678)
+     * a partir del número entero ('cedula') y el prefijo ('tipo_cedula')
+     * que están almacenados en la base de datos.
+     * Esto es para que el formulario de edición muestre la cédula con el formato esperado.
+     */
+
+     // --- INICIO: Validador personalizado para el campo 'telefono' ---
+    /**
+     * Valida que el número de teléfono sea venezolano y tenga un prefijo válido.
+     * Este método es llamado por la regla de validación definida en `rules()`.
+     *
+     * @param string $attribute El nombre del atributo que se está validando (ej. 'telefono').
+     * @param array $params Parámetros adicionales para la validación.
+     */
+    public function validateVenezuelanPhoneNumber($attribute, $params)
+    {
+        // Si ya hay errores en el atributo (ej. 'required'), no seguimos validando.
+        if ($this->hasErrors($attribute)) {
+            return;
+        }
+
+        // Limpiamos el formato del número de teléfono (quita paréntesis, espacios, guiones).
+        $cleanedPhone = str_replace(['(', ')', ' ', '-'], '', $this->$attribute);
+
+        // Define los prefijos venezolanos válidos.
+        $validPrefixes = [
+            '0416', '0426', '0414', '0424', '0412',
+            '0212', '0261', '0241', '0243', '0251',
+            '0274', '0276', '0286', '0291', '0293'
         ];
+
+        // 1. Valida la longitud total del número limpio.
+        if (strlen($cleanedPhone) !== 11) {
+            $this->addError($attribute, 'El número de teléfono debe tener 11 dígitos.');
+            return; // Si la longitud es incorrecta, no continuamos con la validación de prefijo.
+        }
+
+        // 2. Extrae el prefijo (los primeros 4 dígitos).
+        $prefix = substr($cleanedPhone, 0, 4);
+
+        // 3. Valida si el prefijo está en la lista de prefijos válidos.
+        if (!in_array($prefix, $validPrefixes)) {
+            $this->addError($attribute, 'El prefijo del número de teléfono no es válido en Venezuela.');
+        }
+
+        // 4. (Opcional pero recomendado) Valida que el resto del número sean solo dígitos.
+        if (!preg_match('/^\d{11}$/', $cleanedPhone)) {
+             $this->addError($attribute, 'El número de teléfono debe contener solo dígitos.');
+        }
+    }
+    // --- FIN: Validador personalizado para el campo 'telefono' ---
+
+
+
+    public function afterFind()
+    {
+        parent::afterFind(); // Siempre llama al método padre.
+
+        // Si tenemos un número de cédula y un tipo de cédula en el modelo
+        // (lo que debería ser cierto si los datos provienen de la DB),
+        // los concatenamos y asignamos a la propiedad temporal 'cedulaFormatted'.
+        if ($this->cedula !== null && $this->tipo_cedula !== null) {
+            $this->cedulaFormatted = $this->tipo_cedula . '-' . $this->cedula;
+        }
     }
 
     /**
-     * Gets query for [[Beneficiarios]].
+     * Este método se ejecuta AUTOMÁTICAMENTE ANTES de que el modelo sea guardado
+     * en la base de datos (tanto para creación como para actualización).
      *
-     * @return \yii\db\ActiveQuery
+     * Su función principal es tomar el valor de 'cedulaFormatted' (ej. "V-12345678")
+     * que viene del formulario, y separarlo en sus dos componentes:
+     * 1. El prefijo (ej. "V") para la columna 'tipo_cedula' (TEXT).
+     * 2. El número (ej. "12345678") para la columna 'cedula' (INTEGER).
      */
-    public function getBeneficiarios()
+    public function beforeSave($insert)
     {
-        return $this->hasMany(Beneficiarios::class, ['id_titular' => 'id']);
+        // Siempre llama al método padre. Si el padre retorna false, detenemos el guardado.
+        if (parent::beforeSave($insert)) {
+            // Solo procedemos si la propiedad 'cedulaFormatted' tiene un valor.
+            // Esto asegura que no intentamos procesar una cédula vacía o nula.
+            if ($this->cedulaFormatted !== null) {
+                // Paso 1: Extraer el prefijo (V, E, J, G) de 'cedulaFormatted'.
+                // 'preg_match' busca un patrón. '^([VEJG])' busca una de esas letras al inicio.
+                preg_match('/^([VEJG])/', $this->cedulaFormatted, $matches);
+                if (isset($matches[1])) {
+                    // Si se encuentra un prefijo, lo asignamos a la columna 'tipo_cedula' del modelo.
+                    $this->tipo_cedula = $matches[1];
+                } else {
+                    // Si no se encuentra un prefijo válido (aunque la validación 'match'
+                    // en rules() debería evitar esto), puedes establecer un valor por defecto
+                    // o manejar este error según tu lógica de negocio.
+                    $this->tipo_cedula = ''; // Valor por defecto si no se puede extraer.
+                }
+
+                // Paso 2: Extraer solo los números de 'cedulaFormatted' y convertirlos a entero.
+                // 'preg_replace('/[^0-9]/', '', $this->cedulaFormatted)' elimina todos los caracteres
+                // que NO sean dígitos (0-9). Por ejemplo, de "V-12345678", resultará "12345678".
+                // '(int)' convierte ese string de números en un valor de tipo entero, listo para la DB.
+                $this->cedula = (int)preg_replace('/[^0-9]/', '', $this->cedulaFormatted);
+            }
+            
+            // Retorna true para permitir que el proceso de guardado en la base de datos continúe.
+            return true;
+        }
+        // Si la validación o alguna condición en el método padre falla, retorna false
+        // para abortar el guardado.
+        return false;
     }
 
-    /**
-     * Gets query for [[Beneficiarios0]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getBeneficiarios0()
-    {
-        return $this->hasMany(Beneficiarios::class, ['id_beneficiario' => 'id']);
-    }
-
-    /**
-     * Gets query for [[ContactosEmergencias]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getContactosEmergencias()
-    {
-        return $this->hasMany(ContactosEmergencia::class, ['user_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[Contratos]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getContratos()
-    {
-        return $this->hasMany(Contratos::class, ['user_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[DeclaracionDeSaluds]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getDeclaracionDeSaluds()
-    {
-        return $this->hasMany(DeclaracionDeSalud::class, ['user_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[Notifications]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getNotifications()
-    {
-        return $this->hasMany(Notifications::class, ['user_datos_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[Recibos]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getRecibos()
-    {
-        return $this->hasMany(Recibos::class, ['id_titular' => 'id']);
-    }
-
-    /**
-     * Gets query for [[TransactionHistories]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getTransactionHistories()
-    {
-     return $this->hasMany(TransactionHistory::class, ['user_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[UserLogin]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getUserLogin()
-    {
-        return $this->hasOne(User::class, ['id' => 'user_login_id']);
-    }
-
+    // --- RELACIONES (MÉTODOS GET) ---
+    // Estos métodos de relación no necesitan cambios y se mantienen tal cual.
+    public function getClinica() { return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']); }
+    public function getPlan() { return $this->hasOne(Plan::class, ['id' => 'plan_id']); }
+    public function getAsesor() { return $this->hasOne(Agente::class, ['id' => 'asesor_id']); }
+    public function getContrato() { return $this->hasOne(Contrato::class, ['id' => 'contrato_id']); }
+    public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
 }

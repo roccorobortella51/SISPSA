@@ -64,8 +64,8 @@ if (!$agente->isNewRecord) { ?>
 
             <div class="col">
                 <?= Html::a(
-                    '<i class="fas fa-plus"></i> CREAR MIEMBROS DE FUERZA DE VENTAS',
-                    ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
+                    '<i class="fas fa-plus"></i> CARGA MASIVA',
+                    '#',//['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
                     ['class' => 'btn btn-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
                 ) ?>
             </div>

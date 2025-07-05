@@ -13,6 +13,8 @@ use app\models\RmClinica;
 use app\models\Agente;
 use app\models\Asesores;
 use app\models\User;
+use app\models\Planes; 
+use app\models\Contratos; 
 use app\models\AuthItem;
 
 class UserHelper
