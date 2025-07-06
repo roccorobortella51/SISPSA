@@ -59,8 +59,8 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 
         <div class="col">
             <?= Html::a(
-                '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR', // Icono para afiliados
-                ['user-datos/index'], // RUTA ORIGINAL - SIN CAMBIOS
+                '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR(EN CONSTRUCCION)', // Icono para afiliados
+                '#',//['user-datos/index'],
                 ['class' => 'btn btn-success btn-lg w-100'] // Estilo de botón
             ) ?>
         </div>
