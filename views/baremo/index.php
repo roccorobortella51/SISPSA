@@ -88,6 +88,10 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
                             'dataProvider' => $dataProvider,
                             'filterModel' => $searchModel,
                             'layout' => "{items}{pager}",
+                            'resizableColumns' => false,
+                            'bordered' => false,
+                            'responsiveWrap' => false,
+                            'persistResize' => false,
 
                             'tableOptions' => [
                                 'class' => 'table table-striped table-bordered table-hover table-sm'

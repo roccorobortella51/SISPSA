@@ -38,6 +38,10 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         'dataProvider' => $dataProvider,
                         'filterModel' => $searchModel,
                         'layout' => "{items}{pager}",
+                        'resizableColumns' => false,
+                        'bordered' => false,
+                        'responsiveWrap' => false,
+                        'persistResize' => false,
 
                         'tableOptions' => [
                             'class' => 'table table-striped table-bordered table-hover table-sm'
