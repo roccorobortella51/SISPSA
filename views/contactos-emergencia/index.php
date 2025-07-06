@@ -81,6 +81,10 @@ $this->title = 'Gestión de Contactos del Afiliado'; // Este sigue siendo el tí
                                 'dataProvider' => $dataProvider,
                                 'filterModel' => $searchModel,
                                 'layout' => "{items}{pager}",
+                                'resizableColumns' => false,
+                                'bordered' => false,
+                                'responsiveWrap' => false,
+                                'persistResize' => false,
                                 'columns' => [
                                     ['class' => 'yii\grid\SerialColumn'],
 
