@@ -100,7 +100,7 @@ class UserDatosController extends Controller
 
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
-                $cel = explode("-",$model->cedula);
+                //$cel = explode("-",$model->cedula);
 
                 //var_dump($model->asesor_id); die();
                 //$model->tipo_cedula = $cel[0];
@@ -195,9 +195,7 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-                $cel = explode("-",$model->cedula);
-                $model->tipo_cedula = $cel[0];
-                $model->cedula = $cel[1];
+                
                 if($model->save()){
                     $modelContrato->user_id = $id;
                     $modelContrato->estatus = 'Creado';
