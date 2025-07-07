@@ -14,6 +14,8 @@ use app\models\RmParroquia;
 use app\models\RmCiudad;
 use app\models\Planes;
 use yii\helpers\Json;
+use app\models\TasaCambio;
+
 
 
 class SiteController extends Controller
@@ -87,6 +89,7 @@ class SiteController extends Controller
 
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
+            $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
             return $this->goBack();
         }
 
@@ -108,33 +111,8 @@ class SiteController extends Controller
         return $this->goHome();
     }
 
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
 
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
-    }
 
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
-    }
 
     public function actionMunicipio(){
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -213,6 +191,36 @@ class SiteController extends Controller
         } else {
             return ['monto' => 0]; // Si no se encuentra, devuelve 0 o un valor por defecto
         }
+    }
+
+    public function actionTasacambio($fecha=null){
+        if($fecha == null){
+            $fecha = date('Y-m-d');
+        }
+        $tasacambio = Tasacambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
+        if($tasacambio == null){
+            $tasacambio = new Tasacambio();
+            $tasacambio->fecha = $fecha;
+            $tasacambio->tasa_cambio = $this->explorartasabcv();
+            $tasacambio->save();
+        }
+        $tasacambio = TasaCambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
+        return $tasacambio->tasa_cambio;
+
+
+    }
+
+    private function explorartasabcv() {
+        $url = "https://www.bcv.org.ve/";
+        $html = file_get_contents($url, false, stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]));
+        $dom = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+        $tasa_bcv = $xpath->query("//*[@id='dolar']/div/div/div/strong");
+        $valor = str_replace(',', '.', $tasa_bcv->item(0)->nodeValue);
+        $valor = floatval($valor);
+        return $valor;
     }
 
 }

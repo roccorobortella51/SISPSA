@@ -154,7 +154,7 @@ if (!$model->isNewRecord) { ?>
         ]) ?>
     </div>
 
-    <div class="col"> <?= Html::a('<i class="fas fa-id-card"></i> Afiliación', Url::to(['contratos/index']), [
+    <div class="col"> <?= Html::a('<i class="fas fa-id-card"></i> Afiliación', Url::to(['contratos/index','user_id' => $model->id]), [
             'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
             'data-pjax' => '0'
         ]) ?>
@@ -217,11 +217,11 @@ if (!$model->isNewRecord) { ?>
                             'clientOptions' => [
                                 'definitions' => [
                                     // Ampliado el validador a [VEJG] para incluir J y G según tu modelo.
-                                    'a' => ['validator' => '[VEJG]', 'cardinality' => 1,], // <-- ¡MODIFICADO!
+                                    'a' => ['validator' => '[VE]', 'cardinality' => 1,], // <-- ¡MODIFICADO!
                                 ],
                             ],
                             'options' => [
-                                'placeholder' => 'V-99999999, E-99999999, J-99999999 o G-99999999', // <-- ¡SUGERENCIA! Texto de ayuda.
+                                'placeholder' => 'V-99999999, E-99999999', // <-- ¡SUGERENCIA! Texto de ayuda.
                                 'class' => 'form-control  form-control-lg',
                                 'maxlength' => true,
                             ],
@@ -358,7 +358,7 @@ if (!$model->isNewRecord) { ?>
                         ])->label('Clinica'); ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
+                    <?= $form->field($model, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
                         'type' => DepDrop::TYPE_SELECT2,
                         'options'=>[
                             'id'=>'plan_id',

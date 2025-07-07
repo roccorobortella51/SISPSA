@@ -31,7 +31,7 @@ use Yii;
 class Pagos extends \yii\db\ActiveRecord
 {
 
-
+    public $tasa;
     /**
      * {@inheritdoc}
      */

@@ -122,7 +122,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                             },
                                             
                                         ],
-                                    ],
+                            ],
                         ],
                     ]); ?>
                 </div>

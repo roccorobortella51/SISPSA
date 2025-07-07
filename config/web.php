@@ -28,6 +28,11 @@ $config = [
                 ],
             ],
         ],
+        'formatter' => [
+            'defaultTimeZone' => 'America/Caracas', // ¡Esta es la línea clave!
+            // Opcional: Puedes también configurar el locale si lo necesitas
+            'locale' => 'es-VE',
+        ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
             // Puedes configurar un valor de caché si lo necesitas para entornos de producción:

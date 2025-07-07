@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use Yii;
 use app\models\Contratos;
+use app\models\UserDatos;
 use app\models\ContratosSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -33,10 +34,12 @@ class ContratosController extends Controller
      * Lists all Contratos models.
      * @return mixed
      */
-    public function actionIndex()
+    public function actionIndex($user_id = "")
     {
+        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
         $searchModel = new ContratosSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'user_id', $user_id]);
 
         return $this->render('index', [
             'searchModel' => $searchModel,

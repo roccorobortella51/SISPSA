@@ -2,7 +2,10 @@
 
 namespace app\controllers;
 
+use Yii;
 use app\models\Pagos;
+use app\models\TasaCambio;
+use app\models\UserDatos;
 use app\models\PagosSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -36,10 +39,14 @@ class PagosController extends Controller
      *
      * @return string
      */
-    public function actionIndex()
+    public function actionIndex($user_id = "")
     {
         $searchModel = new PagosSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        if ($user_id !== "") {
+            $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+            $dataProvider->query->andFilterWhere(['=', 'user_id', $afiliado->id]);
+        }
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -68,6 +75,9 @@ class PagosController extends Controller
     public function actionCreate()
     {
         $model = new Pagos();
+        $tasa = TasaCambio::find()->orderBy(['created_at' => SORT_DESC])->one();
+        $model->tasa = round($tasa->tasa_cambio,5);
+
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {

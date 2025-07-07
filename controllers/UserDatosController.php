@@ -94,6 +94,9 @@ class UserDatosController extends Controller
         $model->created_at = date('Y-m-d H:i:s');
         $model->updated_at = date('Y-m-d H:i:s');
         $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion(); //generar codigo de validacion de 6 digitos
+        $model->role = 'afiliado';
+        $model->estatus = 'Creado';
+
 
 
 
@@ -195,7 +198,7 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-                $cel = explode("-",$model->cedula);
+                $cel = explode("-",$model->cedulaFormatted);
                 $model->tipo_cedula = $cel[0];
                 $model->cedula = $cel[1];
                 if($model->save()){

@@ -123,9 +123,9 @@ class UserDatos extends ActiveRecord
             
             // Regla de unicidad para 'cedula' (el número entero en la DB).
             // Esta validación se ejecuta *después* de que 'beforeSave()' haya separado el número del formato.
-            ['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
+['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
                 // Solo verifica la unicidad si es un nuevo registro O si el valor numérico de la cédula ha cambiado.
-                return $model->isNewRecord || $model->isAttributeDirty('cedula');
+                return $model->isNewRecord || $model->isAttributeChanged('cedula');
             }],
             
             [['paso'], 'number'],
@@ -166,8 +166,13 @@ class UserDatos extends ActiveRecord
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
-            [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Plan::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
-            [['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
+            [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
+            [['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => AgenteFuerza::class, 'targetAttribute' => ['asesor_id' => 'idusuario'], 'message' => 'El asesor seleccionado no existe.',
+                'when' => function ($model) {
+                    return $model->asesor_id !== null;
+                }   
+            ],
+            //[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contrato::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
         ];
