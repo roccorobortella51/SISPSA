@@ -87,7 +87,7 @@ class UserDatos extends ActiveRecord
             // 1. Campos obligatorios
             // CAMBIO: Ahora 'cedulaFormatted' es el campo requerido, no 'cedula' directamente,
             // porque el usuario lo ingresa con el formato completo.
-            [['nombres', 'apellidos', 'cedulaFormatted', 'fechanac', 'sexo',
+            [['nombres', 'apellidos', 'fechanac', 'sexo',
               'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
 
             // 2. Valores por defecto (se mantienen igual)
@@ -119,14 +119,14 @@ class UserDatos extends ActiveRecord
             // 3.1. Valida que 'cedulaFormatted' sea un string y tenga la longitud esperada (V-999999999 es 11 caracteres).
             [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
             // 3.2. Valida el patrón exacto: Una letra (V, E, J, G), un guion, y de 7 a 9 dígitos.
-            [['cedulaFormatted'], 'match', 'pattern' => '/^[VEJG]-\d{7,9}$/', 'message' => 'El formato debe ser V-XXXXXXXX, E-XXXXXXXX, J-XXXXXXXX o G-XXXXXXXX.'],
+            //[['cedulaFormatted'], 'match', 'pattern' => '/^[VEJG]-\d{7,9}$/', 'message' => 'El formato debe ser V-XXXXXXXX, E-XXXXXXXX, J-XXXXXXXX o G-XXXXXXXX.'],
             
             // Regla de unicidad para 'cedula' (el número entero en la DB).
             // Esta validación se ejecuta *después* de que 'beforeSave()' haya separado el número del formato.
-['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
+            /*['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
                 // Solo verifica la unicidad si es un nuevo registro O si el valor numérico de la cédula ha cambiado.
-                return $model->isNewRecord || $model->isAttributeChanged('cedula');
-            }],
+                return $model->isNewRecord || $model->isAttributeDirty('cedula');
+            }],*/
             
             [['paso'], 'number'],
             [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id'], 'integer'],
@@ -181,7 +181,7 @@ class UserDatos extends ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public function attributeLabels()
+    /*public function attributeLabels()
     {
         // CAMBIO: Añadimos una etiqueta amigable para 'cedulaFormatted'
         // Esto hará que el campo en el formulario se muestre con "Cédula de Identidad"
@@ -189,7 +189,7 @@ class UserDatos extends ActiveRecord
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
         ]);
-    }
+    }*/
 
     /**
      * Este método se ejecuta AUTOMÁTICAMENTE después de que un registro del modelo
@@ -249,7 +249,7 @@ class UserDatos extends ActiveRecord
 
 
 
-    public function afterFind()
+    /**public function afterFind()
     {
         parent::afterFind(); // Siempre llama al método padre.
 
@@ -259,7 +259,7 @@ class UserDatos extends ActiveRecord
         if ($this->cedula !== null && $this->tipo_cedula !== null) {
             $this->cedulaFormatted = $this->tipo_cedula . '-' . $this->cedula;
         }
-    }
+    }*/
 
     /**
      * Este método se ejecuta AUTOMÁTICAMENTE ANTES de que el modelo sea guardado
@@ -270,7 +270,7 @@ class UserDatos extends ActiveRecord
      * 1. El prefijo (ej. "V") para la columna 'tipo_cedula' (TEXT).
      * 2. El número (ej. "12345678") para la columna 'cedula' (INTEGER).
      */
-    public function beforeSave($insert)
+    /*public function beforeSave($insert)
     {
         // Siempre llama al método padre. Si el padre retorna false, detenemos el guardado.
         if (parent::beforeSave($insert)) {
@@ -303,7 +303,7 @@ class UserDatos extends ActiveRecord
         // Si la validación o alguna condición en el método padre falla, retorna false
         // para abortar el guardado.
         return false;
-    }
+    }*/
 
     // --- RELACIONES (MÉTODOS GET) ---
     // Estos métodos de relación no necesitan cambios y se mantienen tal cual.

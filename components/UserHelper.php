@@ -16,6 +16,7 @@ use app\models\User;
 use app\models\Planes; 
 use app\models\Contratos; 
 use app\models\AuthItem;
+use yii\helpers\ArrayHelper;
 
 class UserHelper
 {
@@ -185,24 +186,32 @@ class UserHelper
 
     public static function getAgentesList()
     {
-        return \yii\helpers\ArrayHelper::map(
-            User::find()
-                // Corregimos la sintaxis de la cláusula ON con comillas dobles
-                ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-                ->select(['user.id AS id', 'username AS name'])
-                ->where(['auth_assignment.item_name' => "Agente"])
-                ->asArray()
-                ->all(),
-            'id',
-            'name'
-        );
+        // 1. Obtener los agentes reales de la base de datos
+        $agentes = User::find()
+            ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+            ->leftJoin('user_datos', '"user"."id" = "user_datos"."user_login_id"')
+            ->select(['user.id AS id', 'user_datos.nombres AS name'])
+            ->where(['auth_assignment.item_name' => "Agente"])
+            ->asArray()
+            ->all();
+
+        // 2. Mapear los resultados a un array ID => Nombre
+        $list = ArrayHelper::map($agentes, 'id', 'name');
+
+        // 3. Añadir la opción "No Asignado" al principio del array
+        $defaultOption = ['0' => 'No Asignado']; // Usamos 0 como clave para "No Asignado"
+
+        // Fusionar la opción predeterminada con la lista de agentes reales
+        $finalList = $defaultOption + $list; // El operador '+' fusiona arrays manteniendo las claves.
+
+        return $finalList;
     }
 
     public static function getAgenteFuerzaList()
     {
         return \yii\helpers\ArrayHelper::map(
             User::find()
-                // Corregimos la sintaxis de la cláusula ON con comillas dobles
+                
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
                 ->select(['user.id AS id', 'username AS name'])
                 ->where(['auth_assignment.item_name' => "Asesor"])
@@ -225,10 +234,22 @@ class UserHelper
         return $username;
     }
 
+    public static function getMyRol(){
 
+        $userId = Yii::$app->user->id;
+        $auth = Yii::$app->authManager;
+        $roles = $auth->getRolesByUser($userId); 
 
+        $roleName = null; 
+        if (!empty($roles)) {
+            $firstRole = reset($roles); 
+            $roleName = $firstRole->name;
+        }
 
-    
-
-
+        if ($roleName) {
+            return $roleName;
+        } else {
+            return "Sin rol";
+        }
+    }
 }

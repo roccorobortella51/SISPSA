@@ -67,6 +67,10 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                     'dataProvider' => $dataProvider,
                     'filterModel' => $searchModel,
                     'tableOptions' => ['class' => 'table table-striped table-bordered table-hover'],
+                    'resizableColumns' => false,
+                    'bordered' => false,
+                    'responsiveWrap' => false,
+                    'persistResize' => false,
                     'columns' => [
                     'clinica.nombre',
                     'clinica.rif',

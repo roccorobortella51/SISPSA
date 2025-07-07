@@ -6,11 +6,17 @@ use kartik\select2\Select2; // Para los selectores de estado y estatus
 use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
 use app\components\UserHelper;
 use yii\helpers\Url;
+use app\models\Agente; // Asegúrate de que tu modelo Agente esté correctamente importado
+
+
+
 
 // Asegúrate de que estas variables siempre tengan un valor para evitar errores
 // si el controlador no las pasa por alguna razón (aunque el controlador sí las pasa).
 $mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
 $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
+
+
 
 if ($model->isNewRecord) {
     $readOnly = false;
@@ -62,17 +68,41 @@ if ($model->isNewRecord) {
                 ]) ?>
             </div>
             <div class="col-md-4">
-                <?= $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->widget(Select2::classname(), [
-                                'data' => UserHelper::getAgentesList(),
-                                'options' => [
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control form-control-lg'
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => false,
-                                ],
-                ]) ?>
-            </div>
+    <?php
+    // Paso 1: Obtener la lista de agentes de tu UserHelper
+    $agentesList = UserHelper::getAgentesList();
+
+    // Paso 2: Determinar si la lista *realmente* contiene agentes reales.
+    // Esto asume que tu UserHelper siempre incluye la opción '0' => 'No Asignado' o '' => 'No Asignado'.
+    // Si el conteo total del array es 1 y esa única entrada es tu opción "no asignada",
+    // significa que no hay agentes reales para seleccionar.
+    $hasRealAgents = (count($agentesList) > 1) || (count($agentesList) === 1 && !isset($agentesList['0']) && !isset($agentesList['']));
+
+    // Paso 3: Configurar dinámicamente las opciones del Select2
+    $select2Options = [
+        'data' => $agentesList,
+        'options' => [
+            'placeholder' => 'Seleccione',
+            'class' => 'form-control form-control-lg'
+        ],
+        'pluginOptions' => [
+            'allowClear' => false,
+        ],
+    ];
+
+    // Si no hay agentes reales, ajustamos el placeholder y deshabilitamos el Select2
+    if (!$hasRealAgents) {
+        $select2Options['options']['placeholder'] = 'No Disponible';
+        $select2Options['options']['disabled'] = true; // Deshabilita el Select2
+        // Opcionalmente, si quieres que la opción "No Asignado" no aparezca en la lista
+        // cuando no hay agentes reales, puedes filtrar 'data' aquí:
+        // $select2Options['data'] = ['' => 'No Disponible']; // O ['0' => 'No Disponible']
+    }
+
+    // Paso 4: Renderizar el Select2 con las opciones configuradas
+    echo $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->widget(Select2::classname(), $select2Options);
+    ?>
+</div>
         </div>
 
         <div class="row mb-3">

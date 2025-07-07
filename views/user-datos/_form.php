@@ -210,29 +210,47 @@ if (!$model->isNewRecord) { ?>
                 </div>
             </div>
             <div class="row ">
-                <div class="col-md-3">
-                    <?php if ($model->isNewRecord) { ?>
-                        <?= $form->field($model, 'cedulaFormatted')->widget(MaskedInput::class, [ // <-- ¡MODIFICADO!
-                            'mask' => 'a-99999999',
-                            'clientOptions' => [
-                                'definitions' => [
-                                    // Ampliado el validador a [VEJG] para incluir J y G según tu modelo.
-                                    'a' => ['validator' => '[VE]', 'cardinality' => 1,], // <-- ¡MODIFICADO!
+                 <div class="col-md-1">
+                            <?= $form->field($model, 'tipo_cedula')->widget(Select2::class, [ // Changed field to tipo_cedula
+                                'data' => [ // Updated data options
+                                    'V' => 'V',
+                                    'E' => 'E',
+                                    'J' => 'J',
+                                    'P' => 'P',
+                                    'N' => 'N',
+                                    'M' => 'M',
                                 ],
-                            ],
-                            'options' => [
-                                'placeholder' => 'V-99999999, E-99999999', // <-- ¡SUGERENCIA! Texto de ayuda.
-                                'class' => 'form-control  form-control-lg',
-                                'maxlength' => true,
-                            ],
-                        ])->label('Cédula de Identidad') // <-- ¡IMPORTANTE! Añade una etiqueta explícita para la nueva propiedad.
-                        ?>
+                                'options' => [
+                                    'placeholder' => 'Tipo', // Updated placeholder for brevity
+                                    'class' => 'form-control form-control-lg', 
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => true, 
+                                ],
+                            ])->label('Tipo') // Updated label for brevity
+                            ?>
+                        </div>
+
+                    <?php if ($model->isNewRecord) { ?>
+                         
+                       
+                       
+                        <div class="col-md-2">
+                            <?= $form->field($model, 'cedula')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ejemplo: 12345678'
+                            ])->label('Cédula de Identidad') // Added label for clarity
+                            ?>
+                        </div>
                     <?php }else{?>
-                        <?= $form->field($model, 'cedulaFormatted')->textInput([ // <-- ¡MODIFICADO!
-                            'class' => 'form-control form-control-lg',
-                            'readonly' => true, // La cédula no se edita directamente una vez creada.
-                        ])->label('Cédula de Identidad') // <-- ¡IMPORTANTE! Añade una etiqueta explícita.
+                        <div class="col-md-3">
+
+                            <?= $form->field($model, 'cedula')->textInput([ // <-- ¡MODIFICADO!
+                                'class' => 'form-control form-control-lg',
+                                'readonly' => true, // La cédula no se edita directamente una vez creada.
+                            ])->label('Cédula de Identidad') // <-- ¡IMPORTANTE! Añade una etiqueta explícita.
                         ?>
+                         </div>
                     <?php } ?>
                 </div>
 
@@ -358,7 +376,7 @@ if (!$model->isNewRecord) { ?>
                         ])->label('Clinica'); ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
+                    <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
                         'type' => DepDrop::TYPE_SELECT2,
                         'options'=>[
                             'id'=>'plan_id',

@@ -33,11 +33,11 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
     
    
     <div class="col-md-2 text-end"> 
-        <?= Html::a(
-            '<i class="fas fa-plus"></i> CREAR NUEVO USUARIO DEL SÍSTEMA',
-            ['create'], // Destino del enlace
-            ['class' => 'btn btn-outline-primary btn-lg w-100'] // w-100 para que ocupe todo el ancho de su columna
-        ) ?>
+       <?= Html::a(
+        '<i class="fas fa-plus"></i> CREAR NUEVO USUARIO',
+        ['create'],
+        ['class' => 'btn btn-outline-primary btn-lg w-100']
+    ) ?>
     </div>
 </div>
             <div class="ms-panel-body">
@@ -47,7 +47,10 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                 'dataProvider' => $dataProvider,
                                 'filterModel' => $searchModel,
                                 'layout' => "{items}{pager}",
-
+                                'resizableColumns' => false,
+                                'bordered' => false,
+                                'responsiveWrap' => false,
+                                'persistResize' => false,
                                 'tableOptions' => [
                                     'class' => 'table table-striped table-bordered table-hover table-sm'
                                 ],

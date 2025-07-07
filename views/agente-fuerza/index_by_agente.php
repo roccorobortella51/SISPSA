@@ -64,7 +64,7 @@ if (!$agente->isNewRecord) { ?>
 
             <div class="col">
                 <?= Html::a(
-                    '<i class="fas fa-plus"></i> CARGA MASIVA',
+                    '<i class="fas fa-plus"></i> CARGA MASIVA(EN CONSTRUCCION)',
                     '#',//['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
                     ['class' => 'btn btn-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
                 ) ?>
@@ -84,6 +84,10 @@ if (!$agente->isNewRecord) { ?>
                             'dataProvider' => $dataProvider,
                             'filterModel' => $searchModel,
                             'layout' => "{items}{pager}", // Puedes mantener o ajustar según necesites {summary}{items}{pager}
+                            'resizableColumns' => false,
+                            'bordered' => false,
+                            'responsiveWrap' => false,
+                            'persistResize' => false,
                             
                             'tableOptions' => [
                             'class' => 'table table-striped table-bordered table-hover table-sm'
@@ -106,8 +110,8 @@ if (!$agente->isNewRecord) { ?>
                                     
                                     if($model->user){
                                         
-                                        return $model->user->username;
-                                        //return $model->user->userDatos->nombres;
+                                        //return $model->user->username;
+                                        return $model->user->userDatos->nombres;
                                     }
                                     
                                 },

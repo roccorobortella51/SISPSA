@@ -32,6 +32,7 @@ use yii\db\ActiveRecord;
 class AgenteFuerza extends ActiveRecord
 {
     public $nombre_agente;
+    public $asesor_id;
     /**
      * {@inheritdoc}
      */
@@ -50,7 +51,7 @@ class AgenteFuerza extends ActiveRecord
             [['idusuario', 'agente_id'], 'required'],
 
             // Reglas para enteros
-            [['idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
+            [['idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar', 'asesor_id'], 'integer'],
 
             // Reglas para números flotantes (porcentajes)
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
@@ -133,4 +134,10 @@ class AgenteFuerza extends ActiveRecord
         // Ejemplo: Si UserDatos tiene 'id_usuario' como FK.
         return $this->hasOne(UserDatos::class, ['id_usuario' => 'idusuario']);
     }
+
+    public function getcodigoAsesor()
+    {
+        return $this->hasOne(Agente::class, ['id' => 'agente_id']);
+    }
+
 }
