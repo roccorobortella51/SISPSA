@@ -5,12 +5,15 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\UserDatos;
+use Yii;
+use app\components\UserHelper;
 
 /**
  * UserDatosSearch represents the model behind the search form of `app\models\UserDatos`.
  */
 class UserDatosSearch extends UserDatos
 {
+
     /**
      * {@inheritdoc}
      */
@@ -42,7 +45,13 @@ class UserDatosSearch extends UserDatos
      */
     public function search($params, $formName = null)
     {
+
+        $rol = UserHelper::getMyRol();
         $query = UserDatos::find();
+
+        if($rol == "Asesor"){
+            $query->where(['asesor_id' => Yii::$app->user->id]);
+        }
 
         // add conditions that should always apply here
 
