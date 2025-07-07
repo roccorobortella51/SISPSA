@@ -19,20 +19,35 @@ $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
 
 $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la página y breadcrumbs
 ?>
-<h1>AGREGAR BOTON DE CARGA MASIVA</h1>
 <h1>AGREGAR BOTON DE GENERAR PDF DEL CONTRATO con los datos del afiliado</h1>
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-success btn-lg']) ?> 
-        </div>
+       
     </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header row">
-                <span class="col-md-10"><h1><?= $this->title = 'Gestión de Afiliados'; ?></h1></span>
-            </div>
+
+        <div class="ms-panel-header row">
+    <div class="col-md-8 d-flex align-items-center">
+        <h1><?= Html::encode($this->title) ?></h1>
+    </div>
+
+    <div class="col-md-4 d-flex justify-content-end align-items-center">
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO',
+            ['create'],
+            ['class' => 'btn btn-outline-primary btn-lg', 'style' => 'margin-right: 15px;'] // <-- ¡Aquí está el cambio!
+        ) ?>
+
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CARGA MASIVA',
+            '#',
+            ['class' => 'btn btn-primary btn-lg']
+        ) ?>
+    </div>
+</div>
+
             <div class="ms-panel-body">
                 <div class="table-responsive">
                             <?= GridView::widget([

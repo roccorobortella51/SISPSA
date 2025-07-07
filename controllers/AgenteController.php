@@ -2,11 +2,13 @@
 
 namespace app\controllers;
 
+use Yii;
 use app\models\Agente;
 use app\models\AgenteSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\helpers\Html;
 
 /**
  * AgenteController implements the CRUD actions for Agente model.
@@ -70,15 +72,46 @@ class AgenteController extends Controller
         $model = new Agente();
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+            if ($model->load($this->request->post())) {
+        
+                if ($model->save()) {
+                    
+                    Yii::$app->session->setFlash('success', 'La agencia ha sido creada exitosamente.');
+                    return $this->redirect(['view', 'id' => $model->id]); // Redirige a la vista de la agencia creada
+                } else {
+
+                    // Obtener los errores del modelo.
+                    $errors = $model->getErrors();
+
+                    // mensaje de error flash.
+                
+                    $errorMessage = 'No se pudo crear la agencia. Por favor, revise los siguientes errores:<br>';
+                    foreach ($errors as $attribute => $attributeErrors) {
+                      
+                        foreach ($attributeErrors as $error) {
+                            $errorMessage .= Html::encode($error) . '<br>';
+                        }
+                    }
+                    
+                    Yii::$app->session->setFlash('error', $errorMessage);
+
+                  
+                    return $this->render('create', [
+                        'model' => $model,
+                        'isNewRecord' => true,
+                    ]);
+                }
             }
+            
         } else {
-            $model->loadDefaultValues();
+          
+            $model->loadDefaultValues(); 
         }
 
+    
         return $this->render('create', [
             'model' => $model,
+            'isNewRecord' => true,
         ]);
     }
 
@@ -99,6 +132,7 @@ class AgenteController extends Controller
 
         return $this->render('update', [
             'model' => $model,
+            'isNewRecord' => false,
         ]);
     }
 

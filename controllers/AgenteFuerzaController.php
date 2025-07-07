@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use Yii; 
 use app\models\AgenteFuerza;
 use app\models\AgenteFuerzaSearch;
 use app\models\Agente; 
@@ -72,24 +73,46 @@ class AgenteFuerzaController extends Controller
         $model = new AgenteFuerza();
         $agente = Agente::findOne($agente_id);
 
-            if ($model->load($this->request->post())) {
-                    if (!$model->save()) {
-                      echo "MODEL NOT SAVED";
-                      print_r($model->getAttributes());
-                      print_r($model->getErrors());
-                      exit;
-                    }else{
-
-                        return $this->redirect(['index-by-agente', 'agente_id' => $agente->id]);
-
-                    }
+        if ($agente === null) {
+            throw new NotFoundHttpException('El agente especificado no existe.');
         }
-            
-        
-        return $this->render('create', [
-            'model' => $model,
-            'agente' => $agente,
-        ]);
+
+        $model->agente_id = $agente->id;
+
+        if ($model->load($this->request->post())) {
+            if ($model->save()) {
+                // Éxito: Guardado y validación correctos
+                Yii::$app->session->setFlash('success', 'La asignación de agente/fuerza ha sido creada exitosamente.');
+                return $this->redirect(['index-by-agente', 'agente_id' => $agente->id]);
+            } else {
+                // FALLO: El modelo no se guardó (puede ser por validación, como la de unicidad)
+
+                // 1. Obtener los errores del modelo
+                $errors = $model->getErrors();
+
+                // 2. Construir un mensaje de error flash
+                // Puedes mostrar un mensaje genérico, o los errores específicos
+                $errorMessage = '';
+                foreach ($errors as $attribute => $attributeErrors) {
+                    $errorMessage .= implode('<br>', $attributeErrors) . '<br>';
+                }
+
+                Yii::$app->session->setFlash('error', $errorMessage);
+
+                // 3. Renderizar la vista de nuevo para que el usuario vea el formulario y el mensaje flash
+                // No uses exit; aquí.
+                return $this->render('create', [
+                    'model' => $model,
+                    'agente' => $agente,
+                ]);
+            }
+        } else {
+            // Primera carga del formulario (GET request)
+            return $this->render('create', [
+                'model' => $model,
+                'agente' => $agente,
+            ]);
+        }
     }
 
     /**
