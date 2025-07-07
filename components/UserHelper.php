@@ -234,10 +234,22 @@ class UserHelper
         return $username;
     }
 
+    public static function getMyRol(){
 
+        $userId = Yii::$app->user->id;
+        $auth = Yii::$app->authManager;
+        $roles = $auth->getRolesByUser($userId); 
 
+        $roleName = null; 
+        if (!empty($roles)) {
+            $firstRole = reset($roles); 
+            $roleName = $firstRole->name;
+        }
 
-    
-
-
+        if ($roleName) {
+            return $roleName;
+        } else {
+            return "Sin rol";
+        }
+    }
 }

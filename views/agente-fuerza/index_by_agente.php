@@ -84,6 +84,10 @@ if (!$agente->isNewRecord) { ?>
                             'dataProvider' => $dataProvider,
                             'filterModel' => $searchModel,
                             'layout' => "{items}{pager}", // Puedes mantener o ajustar según necesites {summary}{items}{pager}
+                            'resizableColumns' => false,
+                            'bordered' => false,
+                            'responsiveWrap' => false,
+                            'persistResize' => false,
                             
                             'tableOptions' => [
                             'class' => 'table table-striped table-bordered table-hover table-sm'
