@@ -227,14 +227,11 @@ if (!$model->isNewRecord) { ?>
                                 'pluginOptions' => [
                                     'allowClear' => true, 
                                 ],
-                            ])->label('Tipo') // Updated label for brevity
+                                ])->label('Tipo') // Updated label for brevity
                             ?>
-                        </div>
+                </div>
 
                     <?php if ($model->isNewRecord) { ?>
-                         
-                       
-                       
                         <div class="col-md-2">
                             <?= $form->field($model, 'cedula')->textInput([
                                 'class' => 'form-control form-control-lg',
@@ -243,7 +240,7 @@ if (!$model->isNewRecord) { ?>
                             ?>
                         </div>
                     <?php }else{?>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
 
                             <?= $form->field($model, 'cedula')->textInput([ // <-- ¡MODIFICADO!
                                 'class' => 'form-control form-control-lg',
@@ -252,7 +249,6 @@ if (!$model->isNewRecord) { ?>
                         ?>
                          </div>
                     <?php } ?>
-                </div>
 
                 <div class="col-md-3">
             
