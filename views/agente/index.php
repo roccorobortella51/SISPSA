@@ -21,16 +21,20 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 
 ?>
 <div class="row" style="margin:3px !important;">
-    <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-success btn-lg']) ?>
-        </div>
-    </div>
+   
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
-                <h1><?= Html::encode($this->title) ?></h1>
+
+
+        <div class="ms-panel-header d-flex justify-content-between align-items-center mb-3">
+            <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
+
+            <div>
+                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
             </div>
+        </div>
+
+
             <div class="ms-panel-body">
                 <div class="table-responsive">
                     <?= GridView::widget([
