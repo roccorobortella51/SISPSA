@@ -71,8 +71,11 @@ class CheckListClinicasSearch extends CheckListClinicas
         // add conditions that should always apply here
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+               'defaultOrder' => ['created_at' => SORT_DESC]
+             ],
+            'pagination' => ['pageSize' => 20 ],
         ]);
-
         $this->load($params);
 
         if (!$this->validate()) {
