@@ -6,26 +6,6 @@ use kartik\grid\GridView;
 use yii\helpers\Url;
 
 
-/*echo DetailView::widget([
-    'model' => $model,
-    'attributes' => [
-        'nombres',
-        'apellidos',
-        'cedulaFormatted',
-        'email',
-        'telefono',
-        [
-            'label' => 'Asesor',
-            //'value' => $model->pagos ? $model->pagos->monto_pagado : 'Sin asignar',
-        ],
-        [
-            'label' => 'Plan',
-            //'value' => $model->pagos ? $model->pagos->fecha_pago : 'Sin asignar',
-        ],
-    ],
-]);*/
-        //var_dump($model->pagos);exit();
-
 if (!empty($model->pagos)) {
     echo "<h4>Pagos Realizados</h4>";
 

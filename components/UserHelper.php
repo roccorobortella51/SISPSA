@@ -177,6 +177,13 @@ class UserHelper
 
     public static function getRolesAllRoles()
     {
+        if(self::getMyRol() == "Administrador"){
+            return \yii\helpers\ArrayHelper::map(
+                AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->asArray()->all(),
+                'name',
+                'name'
+            );
+        }
         return \yii\helpers\ArrayHelper::map(
             AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->asArray()->all(),
             'name',

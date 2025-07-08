@@ -6,10 +6,6 @@ use kartik\detail\DetailView;
 /* @var $this yii\web\View */
 /* @var $model app\models\Contratos */
 
-$this->title = $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Contratos', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
-\yii\web\YiiAsset::register($this);
 
 $css = <<<CSS
 @media (min-width: 992px) {
@@ -200,7 +196,8 @@ $attributes = [
         <div class="card-body">
             <div class="row">
                 <div class="col-md-12">
-                    <!-- Eliminado botones de Update y Delete para no mostrar opciones de editar y eliminar -->
+                    <!-- agregar boton para eliminar este contrato -->
+                     
                     <?= DetailView::widget([
                         'model' => $model,
                         'condensed'=>true,

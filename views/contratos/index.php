@@ -18,23 +18,6 @@ use kartik\grid\ExpandRowColumnAsset;
 $this->title = 'Contratos';
 $this->params['breadcrumbs'][] = $this->title;
 
-/*$csrfToken = Yii::$app->request->csrfToken;
-$js = <<<JS
-$(document).ready(function () {
-    kvExpandRowSettings = {
-        params: function (tr, btn) {
-            var row = $(tr);
-            var key = row.data('key');
-            return {
-                id: key,
-                YII_CSRF_TOKEN: $('meta[name="csrf-token"]').attr('content')
-            };
-        }
-    };
-});
-JS;
-
-$this->registerJs($js);*/
 ?>
 
 <div class="container-fluid">
@@ -65,12 +48,29 @@ $this->registerJs($js);*/
                                 'expandOneOnly' => true,
                                 'headerOptions' => ['style' => 'width:50px'],
                             ],
-
-                            'id',
-                            'created_at',
-                            'plan_id',
-                            'ente_id',
-                            'clinica_id',
+                            [
+                                'label' => 'Nro de contrato',
+                                'attribute' => 'id',
+                                'headerOptions' => ['style' => 'width:50px'],
+                            ],
+                            [
+                                'label' => 'clinica',
+                                'value' => function($model){
+                                    return $model->clinica->nombre;
+                                }
+                            ],
+                            [
+                                'label' => 'plan',
+                                'value' => function($model){
+                                    return $model->plan->nombre;
+                                }
+                            ],
+                            [
+                                'label' => 'cobertura (BS)',
+                                'value' => function($model){
+                                    return $model->plan->cobertura;
+                                }
+                            ],
                             //'fecha_ini',
                             //'fecha_ven',
                             //'monto',
@@ -91,7 +91,7 @@ $this->registerJs($js);*/
                             [
                                         'class' => 'yii\grid\ActionColumn',
                                         'header' => 'ACCIONES',
-                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{delete}{payment}</div>',
+                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{payment}</div>',
                                         'options' => ['style' => 'width:55px; min-width:55px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -107,30 +107,7 @@ $this->registerJs($js);*/
                                                     ]
                                                 );
                                             },
-                                            'update' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                    Url::to(['update', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Editar Usuario',
-                                                        'class' => 'btn btn-link btn-sm text-success',
-                                                        'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                                                    ]
-                                                );
-                                            },
-                                            'delete' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="far fa-trash-alt ms-text-danger"></i>',
-                                                    Url::to(['delete', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Eliminar Usuario',
-                                                        'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                                        'data-method' => 'post',
-                                                        'class' => 'btn btn-link btn-sm text-danger',
-                                                        'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                                                    ]
-                                                );
-                                            },
+
                                             'payment' => function ($url, $model, $key) {
                                                 return Html::a(
                                                     '<i class="fa fa-file-invoice-dollar ms-text-primary"></i>',
