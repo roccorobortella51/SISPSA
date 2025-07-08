@@ -15,6 +15,13 @@ use yii\filters\VerbFilter;
  */
 class ContratosController extends Controller
 {
+    public function beforeAction($action)
+    {
+        if ($action->id === 'detalle-pagos-ajax') {
+            $this->enableCsrfValidation = false;
+        }
+        return parent::beforeAction($action);
+    }
     /**
      * {@inheritdoc}
      */
@@ -29,6 +36,7 @@ class ContratosController extends Controller
             ],
         ];
     }
+
 
     /**
      * Lists all Contratos models.
@@ -110,6 +118,24 @@ class ContratosController extends Controller
         $this->findModel($id)->delete();
 
         return $this->redirect(['index']);
+    }
+
+    // controllers/UserController.php
+
+
+
+    public function actionDetallePagosAjax()
+    {
+        $id = $_POST['expandRowKey'];
+        $model = Contratos::findOne($id);
+
+        if (!$model) {
+            throw new \yii\web\NotFoundHttpException("Contrato no encontrado.");
+        }
+
+        return $this->renderPartial('_detalle-pagos-ajax', [
+            'model' => $model,
+        ]);
     }
 
     /**

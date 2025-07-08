@@ -27,7 +27,8 @@
         "kartik-v/yii2-date-range": "@dev",
         "kartik-v/yii2-mpdf": "^1.0",
         "kartik-v/yii2-widget-depdrop": "@dev",
-        "kartik-v/yii2-tabs-x": "^1.2.0"
+        "kartik-v/yii2-tabs-x": "^1.2.0",
+        "kartik-v/yii2-detail-view": "dev-master"
 
     },
     "require-dev": {

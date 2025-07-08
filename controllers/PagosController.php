@@ -9,6 +9,7 @@ use app\models\UserDatos;
 use app\models\PagosSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
+use yii\web\UploadedFile;
 use yii\filters\VerbFilter;
 
 /**
@@ -51,6 +52,8 @@ class PagosController extends Controller
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'afiliado' => $afiliado,
+            'user_id' => $user_id,
         ]);
     }
 
@@ -72,16 +75,30 @@ class PagosController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate()
+    public function actionCreate($user_id = "")
     {
         $model = new Pagos();
         $tasa = TasaCambio::find()->orderBy(['created_at' => SORT_DESC])->one();
         $model->tasa = round($tasa->tasa_cambio,5);
+        $model->user_id = $user_id;
+        $model->estatus = 'pendiente';
 
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+            if ($model->load($this->request->post())) {
+                $model->imagen_prueba_file = UploadedFile::getInstance($model, 'imagen_prueba_file');
+                if ($model->validate()) {
+                    if ($model->imagen_prueba_file) {
+                        $fileName = 'uploads/' . uniqid() . '.' . $model->imagen_prueba_file->extension;
+                        $fullPath = Yii::getAlias('@webroot') . '/' . $fileName;
+                        if ($model->imagen_prueba_file->saveAs($fullPath)) {
+                            $model->imagen_prueba = $fileName;
+                        }
+                    }
+                    if ($model->save(false)) {
+                        return $this->redirect(['contratos/index', 'user_id' => $user_id]);
+                    }
+                }
             }
         } else {
             $model->loadDefaultValues();
@@ -102,13 +119,33 @@ class PagosController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $tasa = TasaCambio::find()->orderBy(['created_at' => SORT_DESC])->one();
+        $model->tasa = round($tasa->tasa_cambio,5);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        // Determine if the payment is editable based on status
+        $isEditable = ($model->estatus === 'pendiente');
+
+        if ($this->request->isPost && $isEditable) {
+            if ($model->load($this->request->post())) {
+                $model->imagen_prueba_file = UploadedFile::getInstance($model, 'imagen_prueba_file');
+                if ($model->validate()) {
+                    if ($model->imagen_prueba_file) {
+                        $fileName = 'uploads/' . uniqid() . '.' . $model->imagen_prueba_file->extension;
+                        $fullPath = Yii::getAlias('@webroot') . '/' . $fileName;
+                        if ($model->imagen_prueba_file->saveAs($fullPath)) {
+                            $model->imagen_prueba = $fileName;
+                        }
+                    }
+                    if ($model->save(false)) {
+                        return $this->redirect(['contratos/index', 'user_id' => $model->user_id]);
+                    }
+                }
+            }
         }
 
         return $this->render('update', [
             'model' => $model,
+            'isEditable' => $isEditable,
         ]);
     }
 

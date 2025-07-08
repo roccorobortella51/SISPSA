@@ -4,13 +4,39 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
+use yii\widgets\DetailView;
+use kartik\grid\ExpandRowColumn;
+use kartik\grid\GridViewAsset;
+use kartik\grid\ExpandRowColumnAsset;
+
+
+
 /* @var $this yii\web\View */
 /* @var $searchModel app\models\ContratosSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
 $this->title = 'Contratos';
 $this->params['breadcrumbs'][] = $this->title;
+
+/*$csrfToken = Yii::$app->request->csrfToken;
+$js = <<<JS
+$(document).ready(function () {
+    kvExpandRowSettings = {
+        params: function (tr, btn) {
+            var row = $(tr);
+            var key = row.data('key');
+            return {
+                id: key,
+                YII_CSRF_TOKEN: $('meta[name="csrf-token"]').attr('content')
+            };
+        }
+    };
+});
+JS;
+
+$this->registerJs($js);*/
 ?>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
@@ -29,7 +55,16 @@ $this->params['breadcrumbs'][] = $this->title;
                         'dataProvider' => $dataProvider,
                         'filterModel' => $searchModel,
                         'columns' => [
-                            ['class' => 'yii\grid\SerialColumn'],
+                            [
+                                'class' => ExpandRowColumn::class,
+                                'value' => function ($model, $key, $index, $column) {
+                                    return GridView::ROW_EXPANDED;
+                                },
+                                // Carga AJAX:
+                                'detailUrl' => \yii\helpers\Url::to(['detalle-pagos-ajax']),
+                                'expandOneOnly' => true,
+                                'headerOptions' => ['style' => 'width:50px'],
+                            ],
 
                             'id',
                             'created_at',
@@ -99,7 +134,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                             'payment' => function ($url, $model, $key) {
                                                 return Html::a(
                                                     '<i class="fa fa-file-invoice-dollar ms-text-primary"></i>',
-                                                    Url::to(['../pagos/index', 'user_id' => $model->user_id]),
+                                                    Url::to(['../pagos/create', 'user_id' => $model->user_id]),
                                                     [
                                                         'title' => 'Realizar pago',
                                                         'class' => 'btn btn-link btn-sm text-danger',

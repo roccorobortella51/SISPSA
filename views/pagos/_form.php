@@ -29,7 +29,14 @@ $this->registerJs($js);
 ?>
 <div class="pagos-form">
 
-    <?php $form = ActiveForm::begin(); ?>
+<?php $form = ActiveForm::begin([
+        'options' => ['enctype' => 'multipart/form-data']
+    ]); ?>
+
+    <?php
+    // Determine if the form should be disabled based on $isEditable
+    $disabled = isset($isEditable) && !$isEditable;
+    ?>
 
     <div class ="row">
         <div class="col-md-2 text-end">
@@ -38,6 +45,7 @@ $this->registerJs($js);
                             'options' => [
                                 'placeholder' => 'Seleccione el asesor', // Placeholder adaptado
                                 'class' => 'form-control form-control-lg',
+                                'disabled' => $disabled,
                             ],
                             'pluginOptions' => [
                                 'allowClear' => false,
@@ -50,7 +58,8 @@ $this->registerJs($js);
             <?= $form->field($model, 'fecha_pago')->textInput([
                 'class' => 'form-control form-control-lg',
                 'type' => 'date',
-                'placeholder' => 'Seleccione su fecha de nacimiento'
+                'placeholder' => 'Seleccione su fecha de nacimiento',
+                'disabled' => $disabled,
                 ])->label('Fecha de Pago') 
                 ?>
         </div>
@@ -58,7 +67,8 @@ $this->registerJs($js);
             <?= $form->field($model, 'monto_pagado')->textInput([
                 'class' => 'form-control form-control-lg',
                 'type' => 'number',
-                'placeholder' => 'Ingrese el monto pagado'
+                'placeholder' => 'Ingrese el monto pagado',
+                'disabled' => $disabled,
                 ])->label('Monto Pagado') 
             ?>
         </div>
@@ -67,7 +77,8 @@ $this->registerJs($js);
                 'class' => 'form-control form-control-lg',
                 'type' => 'number',
                 'readonly' => 'readonly',
-                'placeholder' => 'Ingrese la tasa'
+                'placeholder' => 'Ingrese la tasa',
+                'disabled' => $disabled,
                 ])->label('Tasa de Cambio') 
             ?>
         </div>
@@ -75,7 +86,8 @@ $this->registerJs($js);
             <?= $form->field($model, 'monto_usd')->textInput([
                 'class' => 'form-control form-control-lg',
                 'readonly' => 'readonly',
-                'placeholder' => 'Ingrese el monto en USD'
+                'placeholder' => 'Ingrese el monto en USD',
+                'disabled' => $disabled,
                 ])->label('Monto en USD') 
             ?>
         </div>
@@ -83,28 +95,55 @@ $this->registerJs($js);
             <?= $form->field($model, 'numero_referencia_pago')->textInput([
                 'class' => 'form-control form-control-lg',
                 'type' => 'text',
-                'placeholder' => 'Ingrese el numero de referencia'
+                'placeholder' => 'Ingrese el numero de referencia',
+                'disabled' => $disabled,
                 ])->label('Numero de Referencia') 
             ?>
         </div>
     </div>
-
-
-
-
-
-
-    <?= $form->field($model, 'imagen_prueba')->widget(FileInput::classname(),[
-        'name' => 'attachments', 
-        ])->label('Imagen de Prueba');
-    ?>    
-
-
-
-
+    <div class="row">
+        <div class="col-md-8">
+            <?php
+            $initialPreview = [];
+            $initialPreviewConfig = [];
+            if (!$model->isNewRecord && $model->imagen_prueba) {
+                $initialPreview[] = \yii\helpers\Url::to('@web/' . $model->imagen_prueba);
+                $initialPreviewConfig[] = ['caption' => basename($model->imagen_prueba), 'key' => 1];
+            }
+            ?>
+            <?= $form->field($model, 'imagen_prueba_file')->widget(FileInput::classname(),[
+                'name' => 'attachments',
+                'pluginOptions' => [
+                    'browseClass' => 'btn btn-success',
+                    'uploadClass' => 'btn btn-info',
+                    'removeClass' => 'btn btn-danger',
+                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                    'previewFileType' => 'image',
+                    'showUpload' => true,
+                    'maxFileSize' => 2800,
+                    'previewSettings' => [
+                        'image' => ['width' => '150px', 'height' => 'auto'],
+                    ],
+                    'initialPreview' => $initialPreview,
+                    'initialPreviewAsData' => true,
+                    'initialPreviewConfig' => $initialPreviewConfig,
+                    'overwriteInitial' => true,
+                    //'layoutTemplates' => [
+                    //    'preview' => '<div class="file-preview {class}" style="width: 200px;"></div>',
+                    //],
+                ],
+                'options' => [
+                    'disabled' => $disabled,
+                ],
+                ])->label('Imagen de Prueba');
+            ?>    
+        </div>
+    </div>
+    <?php if (!$disabled): ?>
     <div class="form-group">
         <?= Html::submitButton('Save', ['class' => 'btn btn-success']) ?>
     </div>
+    <?php endif; ?>
 
     <?php ActiveForm::end(); ?>
 

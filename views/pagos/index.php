@@ -4,7 +4,10 @@ use app\models\Pagos;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
-use yii\grid\GridView;
+use kartik\grid\GridView;
+use yii\widgets\DetailView;
+use kartik\grid\ExpandRowColumn;
+
 
 /** @var yii\web\View $this */
 /** @var app\models\PagosSearch $searchModel */
@@ -18,7 +21,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        <?= Html::a('Create Pagos', ['create'], ['class' => 'btn btn-success']) ?>
+        <?= Html::a('Create Pagos', ['create','user_id' => $user_id], ['class' => 'btn btn-primary']) ?>
     </p>
 
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>

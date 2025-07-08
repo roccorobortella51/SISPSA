@@ -132,4 +132,9 @@ class Contratos extends \yii\db\ActiveRecord
         return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
     }
 
+    public function getPagos()
+    {
+        return $this->hasMany(Pagos::class, ['user_id' => 'user_id']);
+    }
+
 }

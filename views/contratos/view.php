@@ -1,7 +1,7 @@
 <?php
 
 use yii\helpers\Html;
-use yii\widgets\DetailView;
+use kartik\detail\DetailView;
 
 /* @var $this yii\web\View */
 /* @var $model app\models\Contratos */
@@ -10,47 +10,209 @@ $this->title = $model->id;
 $this->params['breadcrumbs'][] = ['label' => 'Contratos', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 \yii\web\YiiAsset::register($this);
+
+$css = <<<CSS
+@media (min-width: 992px) {
+    .kv-detail-content {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .kv-detail-content {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+@media (max-width: 767px) {
+    .kv-detail-content {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+CSS;
+
+$this->registerCss($css);
+
+$attributes = [
+    [
+        'group'=>true,
+        'label'=>'Información General',
+        'rowOptions'=>['class'=>'table-info']
+    ],
+    [
+        'columns' => [
+            [
+                'attribute'=>'id',
+                'label'=>'ID Contrato',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'plan_id',
+                'label'=>'Plan',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'ente_id',
+                'label'=>'Ente',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+        ],
+    ],
+    [
+        'columns' => [
+            [
+                'attribute'=>'clinica_id',
+                'label'=>'Clínica',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'fecha_ini',
+                'label'=>'Fecha Inicio',
+                'format'=>['date', 'php:d-m-Y'],
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'fecha_ven',
+                'label'=>'Fecha Vencimiento',
+                'format'=>['date', 'php:d-m-Y'],
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+        ],
+    ],
+    [
+        'group'=>true,
+        'label'=>'Detalles de Pago',
+        'rowOptions'=>['class'=>'table-info']
+    ],
+    [
+        'columns' => [
+            [
+                'attribute'=>'monto',
+                'label'=>'Monto',
+                'format'=>['decimal', 2],
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'frecuencia_pago',
+                'label'=>'Frecuencia de Pago',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'moneda',
+                'label'=>'Moneda',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+        ],
+    ],
+    [
+        'group'=>true,
+        'label'=>'Estado y Otros',
+        'rowOptions'=>['class'=>'table-info']
+    ],
+    [
+        'columns' => [
+            [
+                'attribute'=>'estatus',
+                'label'=>'Estatus',
+                'format'=>'ntext',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'nrocontrato',
+                'label'=>'Número de Contrato',
+                'format'=>'ntext',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'sucursal',
+                'label'=>'Sucursal',
+                'format'=>'ntext',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+        ],
+    ],
+    [
+        'columns' => [
+            [
+                'attribute'=>'anulado_por',
+                'label'=>'Anulado Por',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'anulado_fecha',
+                'label'=>'Fecha Anulación',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'anulado_motivo',
+                'label'=>'Motivo Anulación',
+                'format'=>'ntext',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+        ],
+    ],
+    [
+        'columns' => [
+            [
+                'attribute'=>'user_id',
+                'label'=>'Usuario',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+            [
+                'attribute'=>'PDF',
+                'label'=>'PDF',
+                'format'=>'ntext',
+                'displayOnly'=>true,
+                'valueColOptions'=>['class'=>'col-md-4']
+            ],
+        ],
+    ],
+];
+
 ?>
+
+
 
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <div class="row">
                 <div class="col-md-12">
-                    <p>
-                        <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
-                        <?= Html::a('Delete', ['delete', 'id' => $model->id], [
-                            'class' => 'btn btn-danger',
-                            'data' => [
-                                'confirm' => 'Are you sure you want to delete this item?',
-                                'method' => 'post',
-                            ],
-                        ]) ?>
-                    </p>
+                    <!-- Eliminado botones de Update y Delete para no mostrar opciones de editar y eliminar -->
                     <?= DetailView::widget([
                         'model' => $model,
-                        'attributes' => [
-                            'id',
-                            'created_at',
-                            'plan_id',
-                            'ente_id',
-                            'clinica_id',
-                            'fecha_ini',
-                            'fecha_ven',
-                            'monto',
-                            'estatus:ntext',
-                            'nrocontrato:ntext',
-                            'frecuencia_pago:ntext',
-                            'sucursal:ntext',
-                            'moneda:ntext',
-                            'updated_at',
-                            'deleted_at',
-                            'anulado_por',
-                            'anulado_fecha',
-                            'anulado_motivo:ntext',
-                            'user_id',
-                            'PDF:ntext',
+                        'condensed'=>true,
+                        'hover'=>true,
+                        'mode'=>DetailView::MODE_VIEW,
+                        'buttons1' => '',
+                        'buttons2' => '',
+                        'panel'=>[
+                            'heading'=>'Contrato # ' . $model->id,
+                            'type'=>DetailView::TYPE_INFO,
                         ],
+                        'attributes' => $attributes,
                     ]) ?>
                 </div>
                 <!--.col-md-12-->

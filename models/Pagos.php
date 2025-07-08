@@ -30,7 +30,7 @@ use Yii;
  */
 class Pagos extends \yii\db\ActiveRecord
 {
-
+    public $imagen_prueba_file; // atributo para el archivo subido
     public $tasa;
     /**
      * {@inheritdoc}
@@ -53,6 +53,7 @@ class Pagos extends \yii\db\ActiveRecord
             [['recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
             [['monto_pagado', 'monto_usd'], 'number'],
             [['metodo_pago', 'estatus', 'numero_referencia_pago', 'imagen_prueba', 'nombre_conciliador'], 'string'],
+            [['imagen_prueba_file'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif'],
             [['recibo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Recibos::class, 'targetAttribute' => ['recibo_id' => 'id']],
         ];
     }
@@ -94,4 +95,11 @@ class Pagos extends \yii\db\ActiveRecord
         return $this->hasOne(Recibos::class, ['id' => 'recibo_id']);
     }
 
+    public function getImagenPruebaUrl()
+    {
+        if ($this->imagen_prueba) {
+            return \Yii::getAlias('@web') . '/' . $this->imagen_prueba;
+        }
+        return null;
+    }
 }
