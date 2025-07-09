@@ -113,9 +113,13 @@ class Agente extends \yii\db\ActiveRecord
             'deleted_at' => 'Fecha Eliminación',
         ];
     }
+
+    
     public function getAgenteFuerzas()
     {
-        return $this->hasMany(AgenteFuerza::class, ['agente_id' => 'id']);
+        return $this->hasMany(User::class, ['id' => 'idusuario']) // <-- ¡CAMBIADO AQUÍ! 'idusuario' es la columna en agente_fuerza que apunta al ID del usuario
+                    ->viaTable('agente_fuerza', ['agente_id' => 'id']) // 'agente_fuerza' es la tabla intermedia, 'agente_id' apunta al ID del agente
+                    ->onCondition(['user.status' => User::STATUS_ACTIVE]); // Filtra para que solo se cuenten usuarios con status = 10 (ACTIVO)
     }
 
     /**
