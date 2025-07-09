@@ -9,7 +9,11 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use Yii;
+
+use app\models\CheckListClinicas; // Importar el modelo CheckListClinicas
+
 /**
+ * 
  * RmClinicaController implements the CRUD actions for RmClinica model.
  */
 class RmClinicaController extends Controller
@@ -42,9 +46,13 @@ class RmClinicaController extends Controller
         $searchModel = new RmClinicaSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
+         // *** AQUI OBTENEMOS LOS DATOS DEL GRAFICO ***
+        $chartData = CheckListClinicas::getLastChecklistsByClinic();
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'chartData' => $chartData, 
         ]);
     }
 

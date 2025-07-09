@@ -20,6 +20,9 @@ $this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
 
 $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la página y breadcrumbs
 
+$clinicNames = json_encode(array_column($chartData, 'clinicName'));
+$percentages = json_encode(array_column($chartData, 'percentage'));
+$currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y')
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -37,6 +40,18 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
             </div>
             <div class="ms-panel-body">
                         <div class="table-responsive">
+
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h3>% Avance <?= $currentDate ?></h3>
+                                </div>
+                                <div class="card-body">
+                                    <div style="height: 450px; width: 100%;"> <canvas id="progressChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+
                             <?= GridView::widget([
                             'id' => 'clinica-grid',
                             'dataProvider' => $dataProvider,
@@ -202,6 +217,102 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
             </div>
             <div class="clearfix"></div>
 </div>
- 
+<?php
+// Script para Chart.js
+$this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js');
+// Si necesitas un plugin para el centrado del texto en barras horizontales, como chartjs-plugin-datalabels
+// $this->registerJsFile('https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js'); // CDN del plugin
+
+$js = <<<JS
+// Datos pasados desde PHP
+const clinicNames = {$clinicNames};
+const percentages = {$percentages};
+
+const ctx = document.getElementById('progressChart').getContext('2d');
+
+const progressChart = new Chart(ctx, {
+    type: 'bar', // Tipo de gráfico de barras
+    data: {
+        labels: clinicNames,
+        datasets: [{
+            label: '% Avance',
+            data: percentages,
+            backgroundColor: 'rgba(54, 162, 235, 0.7)', // Un azul bonito para las barras
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y', // Hace las barras horizontales
+        responsive: true,
+        maintainAspectRatio: false, // Permite que el gráfico se adapte al tamaño del contenedor
+        scales: {
+            x: {
+                beginAtZero: true,
+                max: 100, // El porcentaje va de 0 a 100
+                title: {
+                    display: true,
+                    text: 'Porcentaje (%)'
+                }
+            },
+            y: {
+                // Configura las etiquetas del eje Y para que no se corten si son largas
+                ticks: {
+                    autoSkip: false, // Evita que se salte etiquetas
+                    maxRotation: 0, // No rotar las etiquetas
+                    minRotation: 0,
+                    font: {
+                        size: 10 // Puedes ajustar el tamaño de fuente de la etiqueta de la clínica
+                    }
+                },
+                title: {
+                    display: false // No es necesario un título para el eje Y si las etiquetas ya son los nombres
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false // Oculta la leyenda si solo hay un dataset
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        if (context.parsed.x !== null) {
+                            label += context.parsed.x + '%';
+                        }
+                        return label;
+                    }
+                }
+            }
+            // Si quieres mostrar los valores directamente en las barras, descomenta lo siguiente y el CDN del plugin arriba
+            /*
+            datalabels: {
+                anchor: 'end', // Muestra el label al final de la barra
+                align: 'end',
+                formatter: (value, context) => {
+                    return value + '%';
+                },
+                color: '#fff', // Color del texto del porcentaje
+                font: {
+                    weight: 'bold'
+                }
+            }
+            */
+        }
+    }
+});
+
+// Ajustar el tamaño del canvas cuando la ventana cambie
+$(window).on('resize', function() {
+    progressChart.resize();
+});
+
+JS;
+$this->registerJs($js);
+?> 
 
 
