@@ -5,6 +5,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -70,6 +71,7 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                     ],
                                     [
                                         'attribute' => 'username',
+                                        'label' => 'Nombre de Usuario',
                                         'format' => 'ntext',
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'options' => ['style' => 'width: 500px;'],
@@ -90,6 +92,28 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                             'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
                                         ],
                                     ],
+
+                                    // --- NUEVA COLUMNA PARA EL ROL ---
+                                    [
+                                        'label' => 'Rol del Usuario', // El título de la columna
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'format' => 'raw', 
+                                        'value' => function ($model) {
+                                            return UserHelper::getRolNameByUserId($model->id);
+                                        },
+                                        // Opcional: Centrar el texto en la celda
+                                        'contentOptions' => ['class' => 'text-center'],
+                                        // Opcional: Si quieres un filtro de texto para el rol, tendrías que modificar UserSearch
+                                        // 'filterInputOptions' => [
+                                        //     'placeholder' => 'Filtrar por rol',
+                                        //     'class' => 'form-control text-center',
+                                        // ],
+                                    ],
+                                    // --- FIN NUEVA COLUMNA ---
+                                        // Columna de Acciones - Se mantiene sin cambios
+
+
+
                                     //'status',
                                     //'created_at',
                                     //'updated_at',

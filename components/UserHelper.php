@@ -17,6 +17,7 @@ use app\models\Planes;
 use app\models\Contratos; 
 use app\models\AuthItem;
 use yii\helpers\ArrayHelper;
+use yii\rbac\DbManager;
 
 class UserHelper
 {
@@ -255,6 +256,32 @@ class UserHelper
 
         if ($roleName) {
             return $roleName;
+        } else {
+            return "Sin rol";
+        }
+    }
+
+    //funcion para mostrar roles en el index de user mientras tanto*
+
+    public static function getRolNameByUserId($userId)
+    {
+        if (empty($userId)) {
+            return "N/A"; 
+        }
+
+        $auth = Yii::$app->authManager;
+        
+        if (!$auth instanceof DbManager) {
+            
+            return "Error de Configuración Auth";
+        }
+
+        $roles = $auth->getRolesByUser($userId);
+
+        if (!empty($roles)) {
+            
+            $firstRole = reset($roles);
+            return $firstRole->name;
         } else {
             return "Sin rol";
         }
