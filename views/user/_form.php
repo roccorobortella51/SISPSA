@@ -33,18 +33,18 @@ use kartik\widgets\SwitchInput
             ]) ?>
         </div>
         <div class="col-md-4">
-            <?= $form->field($model, 'password')->label('CONTRASEÑA')->passwordInput([
+            <?= $form->field($model, 'password')->label('CONTRASEÑA')->passwordInput([ // ¡CAMBIO AQUÍ: 'password' en lugar de 'password_hash'!
                 'maxlength' => true,
-                'class' => 'form-control form-control-lg', // Usamos 'form-control' para tamaño estándar
+                'class' => 'form-control form-control-lg', 
                 'placeholder' => 'Contraseña',
-                'label' => 'Contraseña',
+                'label' => 'Contraseña', // Este label es redundante si ya lo pones en label()
                 'autofocus' => true,
             ]) ?>
         </div>
     </div>
     <div class="row">
         <div class="col-md-4">
-            <?= $form->field($model, 'roles')->label('ROLES')->widget(Select2::classname(), [
+            <?= $form->field($model2, 'role')->label('ROLES')->widget(Select2::classname(), [
                     'data' => UserHelper::getRolesAllRoles(),
                     'options' => [
                         'placeholder' => 'Seleccione',
@@ -56,18 +56,22 @@ use kartik\widgets\SwitchInput
             ?>
         </div>
     </div>
-    <?= $form->field($model, 'status')->widget(SwitchInput::classname(), [
-            'options' => [
-                'label' => false,
-            ],
-            'pluginOptions' => [
-                'onText' => 'Activo',
-                'offText' => 'Inactivo',
-                'onColor' => 'success',
-                'offColor' => 'danger',
-                'size' => 'large',
-            ],
-    ]); ?>
+    
+
+    <?= $form->field($model, 'status')->label('ESTATUS')->widget(SwitchInput::classname(), [
+    'options' => [
+        'label' => false,
+    ],
+    'pluginOptions' => [
+        'onText' => 'Activo',
+        'offText' => 'Inactivo',
+        'onColor' => 'success',
+        'offColor' => 'danger',
+        'size' => 'large',
+        'onValue' => 1,  // Envía 1 desde el formulario (se convertirá a 10 en beforeSave)
+        'offValue' => 0, // Envía 0 desde el formulario (se convertirá a 9 o 0 en beforeSave)
+    ],
+]); ?>
 
     <br><br>
     <h1>Datos Personales del usuario</h1>
@@ -215,8 +219,9 @@ use kartik\widgets\SwitchInput
     </div>
 
     <div class="form-group text-rigth mt-4">
-        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Usuario', ['class' => 'btn btn-success btn-lg']) ?>
-        <?= Html::a('Cancelar', ['index'], ['class' => 'btn btn-lg btn-warning']); ?>
+        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Usuario', ['class' => 'btn btn-success btn-lg']); ?>
+       
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-primary btn-lg']); ?>
 
         <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
     </div>

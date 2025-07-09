@@ -11,14 +11,16 @@ use app\models\Agente;
  */
 class AgenteSearch extends Agente
 {
+    public $rif;
+
     /**
      * {@inheritdoc}
      */
-    public function rules()
+public function rules()
     {
         return [
             [['id', 'idusuariopropietario'], 'integer'],
-            [['nom', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
+            [['nom', 'rif', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente', 'por_max'], 'number'],
         ];
     }
@@ -74,7 +76,8 @@ class AgenteSearch extends Agente
             'deleted_at' => $this->deleted_at,
         ]);
 
-        $query->andFilterWhere(['ilike', 'nom', $this->nom]);
+$query->andFilterWhere(['ilike', 'nom', $this->nom]);
+        $query->andFilterWhere(['ilike', 'rif', $this->rif]);
 
         return $dataProvider;
     }

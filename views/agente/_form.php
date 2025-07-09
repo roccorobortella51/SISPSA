@@ -67,7 +67,7 @@ if ($model->isNewRecord) {
                     'placeholder' => 'Ingrese el código SUDEASEG',
                 ]) ?>
             </div>
-            <div class="col-md-4">
+<div class="col-md-4">
     <?php
     // Paso 1: Obtener la lista de agentes de tu UserHelper
     $agentesList = UserHelper::getAgentesList();

@@ -55,6 +55,7 @@ class RmClinica extends \yii\db\ActiveRecord
             [['private_key'], 'string', 'max' => 64],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
             [['correo'], 'email'],
+            [['rif'], 'unique', 'message' => 'El RIF ya está en uso. Por favor, ingrese un valor único.'],
 
         ];
     }

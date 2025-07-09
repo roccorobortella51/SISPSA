@@ -33,8 +33,10 @@ class User extends ActiveRecord implements IdentityInterface
     public $password;
     public $roles;
 
-    const STATUS_INACTIVE = 0;
-    const STATUS_ACTIVE = 10;
+    const STATUS_DELETED = 0;
+    const STATUS_INACTIVE = 9;
+    const STATUS_ACTIVE = 10; 
+
 
     /**
      * @inheritdoc
@@ -47,39 +49,73 @@ class User extends ActiveRecord implements IdentityInterface
     public function rules()
     {
         return [
-            ['username', 'required'],
+            // 'username' y 'email' son siempre obligatorios
+            [['username', 'email'], 'required'], 
+            
+            // 'password' solo es obligatorio al crear un nuevo usuario
+            ['password', 'required', 'on' => 'create'],
+
+            // El resto de tus reglas...
             ['username', 'string', 'max' => 255],
-            ['email', 'required'],
             ['email', 'string', 'max' => 255],
             ['email', 'email'],
-            ['password', 'string', 'min' => 5],
-            ['roles', 'safe'],
-            ['roles', 'string'],
-            ['status', 'in', 'range' => [1, self::STATUS_INACTIVE]],
+            ['password', 'string', 'min' => 5], // Longitud mínima para la contraseña
+            
+            // Reglas para roles y status
+            ['roles', 'safe'], // 'safe' para que se pueda cargar desde el formulario
+         
+
+            ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED, 0, 1],
+            'message' => 'El estatus "{value}" no es válido. Los valores permitidos son: Activo (10), Inactivo (9), Eliminado (0).'],
+            // Si quieres que el mensaje sea más claro sobre lo que se espera *internamente*
+
+            ['status', 'default', 'value' => self::STATUS_ACTIVE, 'on' => 'create'],
         ];
     }
 
-    public function beforeValidate()
-    {
-        if (isset($this->status)) {
-            $this->status = (int) $this->status;
-        }
-        return parent::beforeValidate();
+
+    public function afterFind()
+{
+    parent::afterFind();
+    // Convertimos el valor de la DB (10 o 9) a 1 o 0 para el SwitchInput
+    if ($this->status === self::STATUS_ACTIVE) { // Si el status de DB es 10
+        $this->status = 1; // Lo mostramos como 1 en el formulario
+    } elseif ($this->status === self::STATUS_INACTIVE || $this->status === self::STATUS_DELETED) { // Si el status de DB es 9 o 0
+        $this->status = 0; // Lo mostramos como 0 en el formulario
     }
-     public function beforeSave($insert)
+    // IMPORTANTE: Esta conversión solo afecta la presentación en el formulario.
+    // beforeSave() se encarga de convertirlo de vuelta para guardar en la DB.
+}
+
+    
+    public function beforeSave($insert)
     {
         if (parent::beforeSave($insert)) {
-            // Si el valor recibido del formulario es 1 (del switch "encendido"),
-            // lo cambiamos a 10 (STATUS_ACTIVE) para guardar en la base de datos.
-            if ($this->status == 1) {
-                $this->status = self::STATUS_ACTIVE; // O 10 directamente
-            }
-            // Si el valor es 0 (del switch "apagado"), ya es 0 (STATUS_INACTIVE),
-            // no necesitamos cambiarlo, ya que coincide con el valor de la DB.
 
-            return true;
+           
+            if ($this->isNewRecord || !empty($this->password)) {
+                if (!empty($this->password)) { 
+                    $this->password_hash = Yii::$app->security->generatePasswordHash($this->password);
+                } else {
+            
+                }
+            }
+          
+
+            // Generar auth_key siempre que sea un nuevo registro.
+            if ($this->isNewRecord) {
+                $this->auth_key = Yii::$app->security->generateRandomString();
+            }
+
+            if ($this->status == 1) {
+                $this->status = self::STATUS_ACTIVE; // Convierte 1 a 10
+            } elseif ($this->status == 0) {
+                $this->status = self::STATUS_INACTIVE; // Convierte 0 a 9 (o a STATUS_DELETED si ese es tu deseo para el "off")
+            }
+
+            return true; // Continúa con el proceso de guardado
         }
-        return false;
+        return false; // Detiene el guardado si el método padre falla
     }
 
     /**
@@ -244,5 +280,7 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return $this->hasOne(AuthAssignment::class, ['user_id' => 'id']);
     }
+
+    
 
 }

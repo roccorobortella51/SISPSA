@@ -25,14 +25,15 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA CLÍNICA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-        </div>
+       
     </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
+<div class="ms-panel-header d-flex justify-content-between align-items-center">
                 <h1><?= $this->title = 'Gestión de Clínicas'; ?></h1>
+                <div>
+                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA CLÍNICA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+                </div>
             </div>
             <div class="ms-panel-body">
                         <div class="table-responsive">
@@ -76,6 +77,17 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
                                     'filterInputOptions' => [
                                         'placeholder' => 'Búsqueda',
                                         'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                    ],
+                                ],
+
+                                // RIF
+                                [
+                                    'attribute' => 'rif',
+                                    'headerOptions' => ['style' => 'color: white!important;'],
+                                    'options' => ['style' => 'width: 120px;'], 
+                                    'filterInputOptions' => [
+                                        'placeholder' => 'Búsqueda',
+                                        'class' => 'form-control text-center',
                                     ],
                                 ],
 
