@@ -168,7 +168,17 @@ if ($model->isNewRecord) {
         <div class="row mt-4">
             <div class="col-12 d-flex justify-content-start gap-4"> <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
                 <?= Html::a('Cancelar', ['index'], ['class' => 'btn btn-lg btn-warning']) ?>
-                <?= Html::button('<i class="fas fa-sync-alt"></i> Refrescar', ['class' => 'btn btn-info btn-lg', 'id' => 'btn-refrescar-form']) ?>
+                <?php
+                // Condición para mostrar el botón "Refrescar"
+            
+                if (isset($isNewRecord) && $isNewRecord) { 
+                    echo Html::button('<i class="fas fa-sync-alt"></i> Refrescar', [
+                        'class' => 'btn btn-info btn-lg',
+                        'id' => 'btn-refrescar-form'
+                    ]);
+                }
+            
+                ?>
             </div>
         </div>
 

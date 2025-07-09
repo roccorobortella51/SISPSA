@@ -43,13 +43,15 @@ class Agente extends \yii\db\ActiveRecord
     {
         return [
             // 1. Campos obligatorios
-            
             [['nom'], 'required', 'message' => 'El nombre no puede estar vacío.'],
             [['idusuariopropietario'], 'required', 'message' => 'El nombre del propetario no puede estar vacío.'],
+            
             // 'idusuariopropietario' debe ser un número entero.
             [['idusuariopropietario'], 'integer'],
-            
-    
+
+            // codigo de unicidad.
+            ['idusuariopropietario', 'unique', 'message' => 'Este usuario ya es propietario de otra agencia.'],
+                
             // 2. Campos numéricos (porcentajes)
             // Ningún porcentaje puede ser mayor a 15% y no puede ser negativo.
             // Aquí también puedes personalizar los mensajes de 'min' y 'max' si quieres.

@@ -19,6 +19,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
         <div class="ms-panel-body">
             <?= $this->render('_form', [ // Renderiza el _form de agente
                 'model' => $model,
+                'isNewRecord' => $isNewRecord,
             ]) ?>        
         </div>
     </div>
