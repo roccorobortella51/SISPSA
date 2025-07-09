@@ -308,7 +308,7 @@ class UserDatos extends ActiveRecord
     // --- RELACIONES (MÉTODOS GET) ---
     // Estos métodos de relación no necesitan cambios y se mantienen tal cual.
     public function getClinica() { return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']); }
-    public function getPlan() { return $this->hasOne(Plan::class, ['id' => 'plan_id']); }
+    public function getPlan() { return $this->hasOne(Planes::class, ['id' => 'plan_id']); }
     public function getAsesor() { return $this->hasOne(Agente::class, ['id' => 'asesor_id']); }
     public function getContrato() { return $this->hasOne(Contrato::class, ['id' => 'contrato_id']); }
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }

@@ -57,6 +57,11 @@ class UserDatosSearch extends UserDatos
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+                'defaultOrder' => [
+                    'id' => SORT_DESC,
+                ],
+            ],
         ]);
 
         $this->load($params, $formName);
@@ -77,11 +82,11 @@ class UserDatosSearch extends UserDatos
             'plan_id' => $this->plan_id,
             'contrato_id' => $this->contrato_id,
             'asesor_id' => $this->asesor_id,
-            'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
             'cedula' => $this->cedula,
             'user_login_id' => $this->user_login_id,
         ]);
+
 
         $query->andFilterWhere(['ilike', 'user_id', $this->user_id])
             ->andFilterWhere(['ilike', 'nombres', $this->nombres])
@@ -106,7 +111,8 @@ class UserDatosSearch extends UserDatos
             ->andFilterWhere(['ilike', 'session_id', $this->session_id])
             ->andFilterWhere(['ilike', 'tipo_cedula', $this->tipo_cedula])
             ->andFilterWhere(['ilike', 'tipo_sangre', $this->tipo_sangre])
-            ->andFilterWhere(['ilike', 'estatus_solvente', $this->estatus_solvente]);
+            ->andFilterWhere(['ilike', 'estatus_solvente', $this->estatus_solvente])
+            ->andWhere(['is', 'deleted_at', null]);
 
         return $dataProvider;
     }

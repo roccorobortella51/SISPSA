@@ -16,7 +16,6 @@ use kartik\grid\ExpandRowColumnAsset;
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
 $this->title = 'Contratos';
-$this->params['breadcrumbs'][] = $this->title;
 
 ?>
 
@@ -27,7 +26,15 @@ $this->params['breadcrumbs'][] = $this->title;
                 <div class="card-body">
                     <div class="row mb-2">
                         <div class="col-md-12">
-                            <?= Html::a('Create Contratos', ['create'], ['class' => 'btn btn-success']) ?>
+                            <div class="float-right" style="margin-bottom:10px;">
+                                <?php
+                                    if($searchModel->estatus == 'Anulado'){
+                                        Html::a('<i class="fas fa-plus"></i> Crear Contratos', ['create'], ['class' => 'btn btn-outline-primary']);
+                                    }
+                                ?>
+                                <?= Html::a('<i class="fas fa-undo-alt"></i> Volver', Url::to(['user-datos/update','id' => $afiliado->id]), ['class' => 'btn btn-outline-primary']); ?>
+
+                            </div>
                         </div>
                     </div>
 
@@ -111,7 +118,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                             'payment' => function ($url, $model, $key) {
                                                 return Html::a(
                                                     '<i class="fa fa-file-invoice-dollar ms-text-primary"></i>',
-                                                    Url::to(['../pagos/create', 'user_id' => $model->user_id]),
+                                                    Url::to(['pagos/create', 'user_id' => $model->user_id]),
                                                     [
                                                         'title' => 'Realizar pago',
                                                         'class' => 'btn btn-link btn-sm text-danger',

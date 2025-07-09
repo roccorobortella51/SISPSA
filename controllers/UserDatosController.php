@@ -13,6 +13,7 @@ use app\components\UserHelper;
 use app\models\RmMunicipio;
 use app\models\RmParroquia;
 use app\models\RmCiudad;
+use app\models\RmEstado;
 use app\models\Contratos;
 use app\models\RmClinica;
 use app\models\Planes;
@@ -50,6 +51,8 @@ class UserDatosController extends Controller
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['ilike', 'role', 'Afiliado']);
+        
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -61,6 +64,7 @@ class UserDatosController extends Controller
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
+
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -76,8 +80,31 @@ class UserDatosController extends Controller
      */
     public function actionView($id)
     {
+        $model = $this->findModel($id);
+        $estado = $model->estado;
+        $municipio = $model->municipio;
+        $parroquia = $model->parroquia;
+        $ciudad = $model->ciudad;
+        if(is_numeric($estado)){
+            $estado = RmEstado::find()->where(['id' => $estado])->one()->nombre;
+        }
+        if(is_numeric($municipio)){
+            $municipio = RmMunicipio::find()->where(['id' => $municipio])->one()->nombre;
+        }
+        if(is_numeric($parroquia)){
+            $parroquia = RmParroquia::find()->where(['id' => $parroquia])->one()->nombre;
+        }
+        if(is_numeric($ciudad)){
+            $ciudad = RmCiudad::find()->where(['id' => $ciudad])->one()->nombre;
+        }
+        
+
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $model,
+            'estado' => $estado,
+            'municipio' => $municipio,
+            'parroquia' => $parroquia,
+            'ciudad' => $ciudad,    
         ]);
     }
 
@@ -103,11 +130,6 @@ class UserDatosController extends Controller
 
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
-                $cel = explode("-",$model->cedula);
-
-                //var_dump($model->asesor_id); die();
-                //$model->tipo_cedula = $cel[0];
-                //$model->cedula = $cel[1];
                 if($model->save()){
                     $nombres = $model->nombres;
                     $apellidos = $model->apellidos;
@@ -198,9 +220,6 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-                $cel = explode("-",$model->cedulaFormatted);
-                $model->tipo_cedula = $cel[0];
-                $model->cedula = $cel[1];
                 if($model->save()){
                     $modelContrato->user_id = $id;
                     $modelContrato->estatus = 'Creado';

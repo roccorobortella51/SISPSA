@@ -19,19 +19,19 @@ $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
 
 $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la página y breadcrumbs
 ?>
-<h1>AGREGAR BOTON DE CARGA MASIVA</h1>
-<h1>AGREGAR BOTON DE GENERAR PDF DEL CONTRATO con los datos del afiliado</h1>
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-success btn-lg']) ?> 
-        </div>
+        
     </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header row">
-                <span class="col-md-10"><h1><?= $this->title = 'Gestión de Afiliados'; ?></h1></span>
+                <span class="col-md-8"><h1><?= $this->title = 'Gestión de Afiliados'; ?></h1></span>
+                <div class="float-right" style="margin-bottom:10px;">
+                    <?= Html::a('<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', ['#'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
+                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
+                </div>
             </div>
             <div class="ms-panel-body">
                 <div class="table-responsive">
@@ -84,7 +84,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                             [
                                         'class' => 'yii\grid\ActionColumn',
                                         'header' => 'ACCIONES',
-                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{delete}</div>',
+                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
                                         'options' => ['style' => 'width:55px; min-width:55px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
