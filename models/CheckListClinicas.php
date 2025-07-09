@@ -218,4 +218,76 @@ class CheckListClinicas extends ActiveRecord
         // Relaciona idusuariopropietario de Agente con id de User
         return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']);
     }
+
+     // Aquí agregamos el método para obtener el último checklist por clínica
+    public static function getLastChecklistsByClinic()
+    {
+        // Define las columnas booleanas para el cálculo del porcentaje
+        $booleanColumns = [
+            'planes', 'programa_de_servicio', 'equipamiento', 'servicios_de_tecnologia',
+            'soepsa_rm_009013_reglamento_soepsa_mes', 'visita_clinica_registro_escrito', 'otro_paso1',
+            'ubicacion_de_la_clinica_facil_acceso_usuario', 'instalaciones_adecuacion_aire_atencion_medica',
+            'instalaciones_optimas_equipos_nuevos', 'generador_energia_emergencia',
+            'capacidad_atencion_afiliados_emergencia_hosp', 'especialistas_diferentes_especialidades',
+            'disponibilidad_ambulancia', 'personal_medico_registrado_licencia',
+            'personal_enfermeria_licencia', 'complemento_horarios_atencion', 'servicio_farmacia',
+            'acuerdo_servicios_medicos_emergencia_urgencia', 'formatos_servicios',
+            'certificacion_cumplimientos_normativas_sanitarias',
+            'certificacion_cumplimiento_normativas_riesgos', 'certificado_control_calidad',
+            'documentos_superintendencia_seguros', 'certificado_registro_salud_minsalud_ci_nii',
+            'documentos_legales_firma_poderes_autorizar', 'firma_permisos', 'contratos',
+            'marco_legal_operar', 'documentacion_responsables_firmantes_contrato',
+            'personal_soepsa', 'asignar_personal_adecuado_soepsa',
+            'capacitacion_personal_pdv_servicio_local', 'verif_sistema_pdv_local_clinica', 'otro_paso5',
+            'descripcion_servicios_soepsa', 'explicacion_beneficios_afiliados_soepsa',
+            'espacio_presentacion_ilum_sonido_internet', 'material_apoyo_presentacion_triptico_laminas',
+            'plan_contingencia_fallas_procedencia', 'comunicacion_fluida_gerencias_apoyo',
+            'tiempo_ejecucion_actividades_acumuladas', 'plazos_ejecucion_actividades_super',
+            'verificar_servicios_cuentan_clinica', 'equipo_implementacion_coordinador_soepsa',
+            'equipo_implementacion_gerencia', 'equipo_implementacion_directivos_operaciones',
+            'equipo_implementacion_directivo_marketing_ventas',
+            'equipo_implementacion_directivo_finanzas', 'equipo_implementacion_contabilidad',
+            'equipo_implementacion_coordinador_ventas', 'equipo_implementacion_soporte',
+            'equipo_implementacion_cursos_capacitacion', 'equipo_implementacion_material_apoyo_sistema',
+            'sistema_soepsa', 'instalacion_personal_medico', 'verificacion_area_emergencia',
+        ];
+
+        // Subconsulta para encontrar el ID del último registro para cada clinica_id
+        $subQuery = self::find()
+            ->select(['MAX(id)']) // Asumiendo que 'id' es autoincremental y el más grande es el último
+            ->groupBy('clinica_id');
+
+        // Consulta principal para obtener los últimos registros
+        $lastChecklists = self::find()
+            ->where(['id' => $subQuery])
+            ->with('clinica') // Cargar la relación para obtener el nombre de la clínica
+            ->all();
+
+        $chartData = [];
+        foreach ($lastChecklists as $checklist) {
+            $trueCount = 0;
+            foreach ($booleanColumns as $column) {
+                if ($checklist->$column === true || $checklist->$column == 1) {
+                    $trueCount++;
+                }
+            }
+            $totalBooleans = count($booleanColumns);
+            $percentage = ($totalBooleans > 0) ? round(($trueCount / $totalBooleans) * 100, 2) : 0;
+
+            $chartData[] = [
+                'clinicName' => $checklist->clinica->nombre ?? 'N/A', // Nombre de la clínica
+                'percentage' => $percentage,
+            ];
+        }
+
+        // Ordenar los datos si es necesario (ej. por porcentaje o nombre)
+        usort($chartData, function($a, $b) {
+            return $a['percentage'] <=> $b['percentage']; // Ordenar por porcentaje ascendente
+            // return strcmp($a['clinicName'], $b['clinicName']); // Ordenar por nombre
+        });
+
+        return $chartData;
+    }
+
+
 }

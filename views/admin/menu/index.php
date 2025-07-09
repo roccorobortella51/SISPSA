@@ -54,7 +54,9 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'attribute' => 'route',
                                     'format' => 'html',
                                     'value' => function($model) {
-                                        return '<b>' . htmlspecialchars($model->route) . '</b>';
+                                        if($model->route){
+                                            return '<b>' . htmlspecialchars($model->route) . '</b>';
+                                        }
                                     },
                                 ],
                                 [
