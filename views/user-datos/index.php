@@ -26,13 +26,30 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
     </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header row">
-                <span class="col-md-8"><h1><?= $this->title = 'Gestión de Afiliados'; ?></h1></span>
-                <div class="float-right" style="margin-bottom:10px;">
-                    <?= Html::a('<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', ['#'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-                </div>
-            </div>
+
+
+
+
+        <div class="ms-panel-header d-flex justify-content-between align-items-center">
+    <h1><?= $this->title = 'Gestión de Afiliados'; ?></h1>
+
+    <div> 
+        <?= Html::a(
+            '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', 
+            ['#'], 
+            // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
+            ['class' => 'btn btn-outline-primary btn-lg me-3']
+        ) ?> 
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
+            ['create'], 
+            // Este es el último botón, no necesita margen a la derecha
+            ['class' => 'btn btn-outline-primary btn-lg'] 
+        ) ?> 
+    </div>
+</div>
+
+
             <div class="ms-panel-body">
                 <div class="table-responsive">
                             <?= GridView::widget([
@@ -48,9 +65,94 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                             //'id',
                             //'created_at',
                             //'user_id',
-                            'nombres:ntext',
-                            'sexo:ntext',
-                            'fechanac',
+                            [
+                                'label' => 'Nombre Completo', 
+                                'attribute' => 'nombres', 
+                                'value' => function ($model) {
+                                    
+                                    return $model->nombres . ' ' . $model->apellidos;
+                                },
+                                'format' => 'ntext',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                // Opcional: Si quieres que el filtro de búsqueda busque tanto en nombres como en apellidos
+                                // necesitarías ajustar tu UserDatosSearch, pero por ahora, el filtro predeterminado
+                                // seguirá buscando solo en 'nombres'.
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar por nombre',
+                                    'class' => 'form-control text-center',
+                                ],
+                            ],
+                            [
+                                'label' => 'Cédula de Identidad',
+                                'attribute' => 'cedula',  
+                                'value' => function ($model) {
+                                   
+                                    return ($model->tipo_cedula ?? '') . ' ' . ($model->cedula ?? '');
+                                },
+                                'format' => 'ntext', 
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 200px;'], 
+                                'contentOptions' => ['class' => 'text-center'], 
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar por cédula', 
+                                    'class' => 'form-control text-center',
+                                ],
+                            ],
+                            'telefono',
+                            [
+                                'attribute' => 'email',
+                                'label' => 'Correo Electrónico', 
+                                'format' => 'email', 
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 300px;'], 
+                                'filterInputOptions' => [ 
+                                    'placeholder' => 'Buscar por correo',
+                                    'class' => 'form-control text-center',
+                                ],
+                            ],
+                            [
+                                'label' => 'Fecha de Nacimiento',
+                                'attribute' => 'fechanac', 
+                                'format' => 'date', // Mantiene el formato de fecha de Yii (ej. 10 de julio de 2025)
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 150px;'], 
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar por fecha',
+                                    'class' => 'form-control text-center', 
+                                ],
+                            ],
+                            [
+                                'label' => 'clinica', 
+                                'attribute' => 'clinica_id', 
+                                'value' => function ($model) {
+                                    $clinica = '';
+                                    $plan = '';
+
+                                    if($model->clinica){
+                                        $clinica = 'Clinica: '.  $model->clinica->nombre;
+                                    }
+
+                                    if($model->plan){
+                                        $plan = 'Plan: ' .$model->plan->nombre;
+                                    }
+                                        return $clinica . '<br> ' . $plan;
+                                    
+                                    
+                                    
+                                },
+                                'format' => 'html',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                // Opcional: Si quieres que el filtro de búsqueda busque tanto en nombres como en apellidos
+                                // necesitarías ajustar tu UserDatosSearch, pero por ahora, el filtro predeterminado
+                                // seguirá buscando solo en 'nombres'.
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar por nombre',
+                                    'class' => 'form-control text-center',
+                                ],
+                            ],
+
+                            
+                           
                             //'selfie:ntext',
                             //'telefono:ntext',
                             //'estado:ntext',
@@ -68,7 +170,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                             //'clinica_id',
                             //'plan_id',
                             //'apellidos:ntext',
-                            //'email:email',
+                            
                             //'contrato_id',
                             //'asesor_id',
                             //'deleted_at',

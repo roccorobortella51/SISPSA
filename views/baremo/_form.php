@@ -40,7 +40,7 @@ use kartik\select2\Select2;
         <div class="col-md-12">
         <div class="form-group text-rigth mt-4" style="margin-right:10px;">
             <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
-            <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-lg btn-warning']); ?>
+           
         </div>
         </div>
     </div>

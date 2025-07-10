@@ -156,7 +156,15 @@ if ($model->isNewRecord) {
     
     <div class="form-group text-rigth mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Clínica', ['class' => 'btn btn-success btn-lg']) ?>
-        <?= Html::a('Cancelar', ['index'], ['class' => 'tn btn btn-lg btn-warning']); ?>
+        <?= Html::a(
+        '<i class="fas fa-undo"></i> Volver', 
+        '#',
+        [
+            'class' => 'btn btn-primary btn-lg', 
+            'onclick' => 'window.history.back(); return false;', 
+            'title' => 'Volver a la página anterior', 
+        ]
+        ) ?> 
 
         <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
     </div>

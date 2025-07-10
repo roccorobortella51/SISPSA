@@ -27,15 +27,28 @@ $this->title = 'Gestión de Baremos'; // Este sigue siendo el título para la p�
 
 <div class=row style="margin:3px !important;">
     <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-info btn-lg']) ?> 
-        </div>
+        
     </div>
     <div class="col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
+
+            <div class="ms-panel-header d-flex justify-content-between align-items-center">
                 <h1><?= $this->title = 'Agregar de Baremos a la Clínica '.$clinica->nombre; ?> </h1>
+                        
+                        <div>
+                            <?= Html::a(
+                                '<i class="fas fa-undo"></i> Volver', 
+                                '#',
+                                [
+                                    'class' => 'btn btn-primary btn-lg', 
+                                    'onclick' => 'window.history.back(); return false;', 
+                                    'title' => 'Volver a la página anterior', 
+                                ]
+                            ) ?> 
+                        </div>
             </div>
+
+
             <div class="ms-panel-body">
                 <?php $form = ActiveForm::begin(); ?>
                 <div class="row">

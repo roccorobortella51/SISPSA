@@ -60,11 +60,11 @@ class UserDatosController extends Controller
         ]);
     }
 
-    public function actionIndexClinicas()
+    public function actionIndexClinicas($clinica_id = "")
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-
+        $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -85,17 +85,22 @@ class UserDatosController extends Controller
         $municipio = $model->municipio;
         $parroquia = $model->parroquia;
         $ciudad = $model->ciudad;
-        if(is_numeric($estado)){
-            $estado = RmEstado::find()->where(['id' => $estado])->one()->nombre;
+
+        if (!empty($estado) && is_numeric($estado)) {
+            $estadoModel = RmEstado::findOne($estado);
+            $estado = $estadoModel ? $estadoModel->nombre : $estado;
         }
-        if(is_numeric($municipio)){
-            $municipio = RmMunicipio::find()->where(['id' => $municipio])->one()->nombre;
+        if (!empty($municipio) && is_numeric($municipio)) {
+            $municipioModel = RmMunicipio::findOne($municipio);
+            $municipio = $municipioModel ? $municipioModel->nombre : $municipio;
         }
-        if(is_numeric($parroquia)){
-            $parroquia = RmParroquia::find()->where(['id' => $parroquia])->one()->nombre;
+        if (!empty($parroquia) && is_numeric($parroquia)) {
+            $parroquiaModel = RmParroquia::findOne($parroquia);
+            $parroquia = $parroquiaModel ? $parroquiaModel->nombre : $parroquia;
         }
-        if(is_numeric($ciudad)){
-            $ciudad = RmCiudad::find()->where(['id' => $ciudad])->one()->nombre;
+        if (!empty($ciudad) && is_numeric($ciudad)) {
+            $ciudadModel = RmCiudad::findOne($ciudad);
+            $ciudad = $ciudadModel ? $ciudadModel->nombre : $ciudad;
         }
         
 
@@ -308,4 +313,17 @@ class UserDatosController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
+
+    public function actionIndexByAfiliado($asesor_id = "")
+    {
+        $searchModel = new UserDatosSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'asesor_id', $asesor_id]);
+    
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+    
 }

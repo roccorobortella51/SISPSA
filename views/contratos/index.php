@@ -63,19 +63,26 @@ $this->title = 'Contratos';
                             [
                                 'label' => 'clinica',
                                 'value' => function($model){
-                                    return $model->clinica->nombre;
+                                    if($model->clinica){
+                                        return $model->clinica->nombre;
+                                    }
                                 }
                             ],
                             [
                                 'label' => 'plan',
                                 'value' => function($model){
-                                    return $model->plan->nombre;
+                                    if($model->plan){
+                                        return $model->plan->nombre;
+                                    }
+                                   
                                 }
                             ],
                             [
                                 'label' => 'cobertura (BS)',
                                 'value' => function($model){
-                                    return $model->plan->cobertura;
+                                    if($model->plan){
+                                        return $model->plan->cobertura;
+                                    }
                                 }
                             ],
                             //'fecha_ini',

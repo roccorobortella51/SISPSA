@@ -115,16 +115,41 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA VERIFICACIÓN', ['create', 'clinica_id' => $clinica->id], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-             <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/rm-clinica/update', 'id' => $clinica->id], ['class' => 'btn btn-info btn-lg']) ?>
-        </div>
+        
     </div>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
-                <h1><?= $this->title = 'Verificación de Clínicas'." ".$clinica->nombre; ?></h1>
-            </div>
+           
+
+        <div class="ms-panel-header d-flex justify-content-between align-items-center">
+             
+            <h1><?= $this->title = 'Verificación de Clínicas'." ".$clinica->nombre; ?></h1>
+                
+                <div class="d-flex align-items-center gap-2">
+
+                    <?= Html::a(
+                        '<i class="fas fa-plus"></i> CREAR NUEVA VERIFICACIÓN', 
+                        ['create', 'clinica_id' => $clinica->id], 
+                        ['class' => 'btn btn-outline-primary btn-lg']
+                    ) ?> 
+                   <?= Html::a(
+                        '<i class="fas fa-undo"></i> Volver', 
+                        '#',
+                        [
+                            // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
+                            'class' => 'btn btn-primary btn-lg me-3', 
+                            'onclick' => 'window.history.back(); return false;', 
+                            'title' => 'Volver a la página anterior', 
+                        ]
+                    ) ?> 
+                </div>
+        </div>    
+
+
+
+
+
+
 
             <?php Pjax::begin(); ?>
                 <?= GridView::widget([

@@ -69,17 +69,32 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                             'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
                                         ],
                                     ],
+                                    // [
+                                    //     'attribute' => 'username',
+                                    //     'label' => 'Nombre de Usuario',
+                                    //     'format' => 'ntext',
+                                    //     'headerOptions' => ['style' => 'color: white!important;'],
+                                    //     'options' => ['style' => 'width: 500px;'],
+                                    //     // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                    //     'filterInputOptions' => [
+                                    //         'placeholder' => 'Búsqueda',
+                                    //         'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                    //     ],
+                                    // ],
                                     [
-                                        'attribute' => 'username',
-                                        'label' => 'Nombre de Usuario',
+                                        'attribute' => 'nombrecompleto', // <-- USA EL NUEVO ATRIBUTO VIRTUAL AQUÍ
+                                        'label' => 'Nombre Completo', // Etiqueta para el encabezado de la columna
                                         'format' => 'ntext',
                                         'headerOptions' => ['style' => 'color: white!important;'],
-                                        'options' => ['style' => 'width: 500px;'],
-                                        // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                        'options' => ['style' => 'width: 500px;'], // Mantén el ancho si lo necesitas
                                         'filterInputOptions' => [
-                                            'placeholder' => 'Búsqueda',
-                                            'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                            'placeholder' => 'Buscar por Nombre/Apellido', // Placeholder del filtro
+                                            'class' => 'form-control text-center', // Centra el texto del filtro
                                         ],
+                                        'value' => function ($model) { // <-- DEFINE CÓMO SE MUESTRA EL VALOR EN CADA FILA
+                                            // Accede al nombre y apellido a través de la relación userDatos
+                                            return $model->userDatos ? Html::encode($model->userDatos->nombres . ' ' . $model->userDatos->apellidos) : 'N/A';
+                                        },
                                     ],
                                     [
                                         'attribute' => 'email',
