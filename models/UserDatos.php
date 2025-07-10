@@ -138,9 +138,16 @@ class UserDatos extends ActiveRecord
             //[['fechanac'], 'date', 'format' => 'yyyy-MM-dd', 'message' => 'El formato de la fecha de nacimiento debe ser YYYY-MM-DD.'],
             //[['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date', 'message' => 'La fecha de nacimiento no puede ser en el futuro.'],
 
-            // 5. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
+            // Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
             [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
-            [['role'], 'in', 'range' => ['afiliado', 'medico', 'admin'], 'message' => 'El rol seleccionado no es válido.'],
+            
+            //validaciones para roles 
+            [['role'], 'in',
+            'range' => \yii\helpers\ArrayHelper::getColumn(
+                \Yii::$app->authManager->getRoles(), 'name'
+            ),
+            'message' => 'El rol seleccionado no es válido.'
+            ],
             [['estatus'], 'in', 'range' => ['Activo', 'Inactivo', 'Pendiente'], 'message' => 'El estatus seleccionado no es válido.'],
             [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
             // Si el 'tipo_cedula' SIEMPRE se deriva de 'cedulaFormatted' en beforeSave(),

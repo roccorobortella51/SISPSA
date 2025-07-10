@@ -66,6 +66,9 @@ $config = [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
+                    'logFile' => '@runtime/logs/app.log', // Ruta donde se guardará el "reporte"
+                    'maxFileSize' => 1024 * 2, // Tamaño máximo del archivo en KB
+                    'maxLogFiles' => 5, // Número de archivos de log a mantener
                 ],
             ],
         ],

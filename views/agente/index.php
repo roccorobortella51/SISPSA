@@ -38,7 +38,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
             <div class="ms-panel-body">
                 <div class="table-responsive">
                     <?= GridView::widget([
-                        'id' => 'clinica-grid', // <--- ¡¡¡MODIFICACIÓN CLAVE AQUÍ!!! ANTES ERA 'agente-grid'
+                        'id' => 'clinica-grid', 
                         'dataProvider' => $dataProvider,
                         'filterModel' => $searchModel,
                         'layout' => "{items}{pager}",
@@ -68,6 +68,16 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 ],
                             ],
 
+                            // [
+                            //     'attribute' => 'rif', 
+                            //     'label' => 'RIF',     // 
+                            //     'headerOptions' => ['style' => 'color: white!important;'], 
+                            //     'filterInputOptions' => [
+                            //         'placeholder' => 'Buscar RIF',
+                            //         'class' => 'form-control form-control-lg text-center',
+                            //     ],
+                            // ],
+
                             // Propietario (asumimos 'idusuariopropietario'. Si necesitas el nombre real,
                             // tu modelo 'Agente' necesitará una relación o un campo 'value' aquí)
                             [
@@ -94,24 +104,21 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             //     ],
                             // ],
 
-                            // Fuerza de Venta (este atributo NO estaba en tu lista original de columnas de agente,
-                            // **DEBES REEMPLAZAR 'fuerza_venta_atributo' CON EL NOMBRE REAL DE TU COLUMNA**)
+                            
                             [
-                                'attribute' => 'agenteFuerzaCount', // Usa el nombre del método "getter" que definimos en el modelo Agente
-                                'label' => 'Fuerza de Venta', // Etiqueta visible en la cabecera
+                                'attribute' => 'agenteFuerzaCount', 
+                                'label' => 'Fuerza de Venta', 
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar fuerza', // Esto no aplicará directamente a un conteo, pero puedes dejarlo.
+                                    'placeholder' => 'Buscar fuerza', 
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                                'format' => 'raw', // Necesario para renderizar HTML (el enlace)
+                                'format' => 'raw', 
                                 'value' => function($model) {
-                                    // Asegúrate de que el método getAgenteFuerzaCount() exista en tu modelo Agente.
-                                    // Esto devolverá el número de AgenteFuerza relacionados.
+                                    
+                                    
                                     $count = $model->agenteFuerzaCount; // O $model->getAgenteFuerzaCount() si prefieres la forma explícita
                             
-                                    // Opcional: Si quieres que el número sea un enlace a la lista de esos asesores.
-                                    // Asegúrate de que la URL y la acción en tu controlador AgenteFuerzaController existan.
                                     return Html::a(
                                         $count, // El texto del enlace será el número de asesores
                                         ['agente-fuerza/index-by-agente', 'agente_id' => $model->id], // URL a la vista de los asesores de esta agencia
@@ -121,55 +128,55 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                     // Si solo quieres mostrar el número sin enlace, usa:
                                     // return $count;
                                 },
-                                'contentOptions' => ['class' => 'text-center'], // Para centrar el contenido de la celda
+                                'contentOptions' => ['class' => 'text-center'],
                             ],
 
                            // Columna de Acciones (Ver, Editar, Eliminar)
-[
-    'class' => ActionColumn::class,
-    'header' => 'ACCIONES',
-    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // ¡CAMBIO AQUÍ! Añadimos {view} y removemos {delete}
-    'options' => ['style' => 'width:80px; min-width:80px;'],
-    'headerOptions' => ['style' => 'color: white!important;'],
-    'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
-    'buttons' => [
-        'view' => function ($url, $model, $key) { // ¡BOTÓN 'VIEW' AÑADIDO!
-            return Html::a(
-                '<i class="fa fa-eye ms-text-primary"></i>', // Icono de ojo
-                Url::to(['view', 'id' => $model->id]), // URL a la acción 'view'
-                [
-                    'title' => 'Ver Detalle',
-                    'class' => 'btn btn-link btn-sm text-info', // Estilo de botón de información
-                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                ]
-            );
-        },
-        'update' => function ($url, $model, $key) {
-            return Html::a(
-                '<i class="fas fa-pencil-alt ms-text-success"></i>',
-                Url::to(['update', 'id' => $model->id]),
-                [
-                    'title' => 'Editar',
-                    'class' => 'btn btn-link btn-sm text-success',
-                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                ]
-            );
-        },
-        /*'delete' => function ($url, $model, $key) { // ¡BOTÓN 'DELETE' COMENTADO/ELIMINADO!
-            return Html::a(
-                '<i class="fas fa-trash-alt"></i>',
-                Url::to(['delete', 'id' => $model->id]),
-                [
-                    'title' => 'Eliminar',
-                    'class' => 'btn btn-link btn-sm text-danger',
-                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
-                    'data-confirm' => '¿Estás seguro de que quieres eliminar este elemento?',
-                    'data-method' => 'post'
-                ]
-            );
-        },*/
-    ],
-],
+                            [
+                                'class' => ActionColumn::class,
+                                'header' => 'ACCIONES',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // ¡CAMBIO AQUÍ! Añadimos {view} y removemos {delete}
+                                'options' => ['style' => 'width:80px; min-width:80px;'],
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
+                                'buttons' => [
+                                    'view' => function ($url, $model, $key) { // ¡BOTÓN 'VIEW' AÑADIDO!
+                                        return Html::a(
+                                            '<i class="fa fa-eye ms-text-primary"></i>', // Icono de ojo
+                                            Url::to(['view', 'id' => $model->id]), // URL a la acción 'view'
+                                            [
+                                                'title' => 'Ver Detalle',
+                                                'class' => 'btn btn-link btn-sm text-info', // Estilo de botón de información
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                            ]
+                                        );
+                                    },
+                                    'update' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fas fa-pencil-alt ms-text-success"></i>',
+                                            Url::to(['update', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Editar',
+                                                'class' => 'btn btn-link btn-sm text-success',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                            ]
+                                        );
+                                    },
+                                    /*'delete' => function ($url, $model, $key) { // ¡BOTÓN 'DELETE' COMENTADO/ELIMINADO!
+                                        return Html::a(
+                                            '<i class="fas fa-trash-alt"></i>',
+                                            Url::to(['delete', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Eliminar',
+                                                'class' => 'btn btn-link btn-sm text-danger',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
+                                                'data-confirm' => '¿Estás seguro de que quieres eliminar este elemento?',
+                                                'data-method' => 'post'
+                                            ]
+                                        );
+                                    },*/
+                                ],
+                            ],
                         ], // Fin de columns
                     ]); ?>
                 </div>

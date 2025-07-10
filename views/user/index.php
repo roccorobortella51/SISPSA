@@ -98,7 +98,7 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                     [
                                         'class' => 'yii\grid\ActionColumn',
                                         'header' => 'ACCIONES',
-                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{delete}</div>',
+                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
                                         'options' => ['style' => 'width:55px; min-width:55px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -125,19 +125,7 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                                     ]
                                                 );
                                             },
-                                            'delete' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="far fa-trash-alt ms-text-danger"></i>',
-                                                    Url::to(['delete', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Eliminar Usuario',
-                                                        'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                                        'data-method' => 'post',
-                                                        'class' => 'btn btn-link btn-sm text-danger',
-                                                        'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                                                    ]
-                                                );
-                                            },
+                                         
                                             
                                         ],
                                     ],
