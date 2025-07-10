@@ -94,9 +94,9 @@ class UserDatos extends ActiveRecord
             [['paso'], 'default', 'value' => 0.0],
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
-            [['ver_cedula', 'ver_foto', 'estatus_solvente'], 'default', 'value' => '0'],
+            [['ver_cedula', 'ver_foto'], 'default', 'value' => '0'],
 
-            [['user_id', 'session_id'], 'string'],
+            [['user_id', 'session_id', 'estatus_solvente'], 'string'],
             
             // 3. Validación de tipos de datos y longitud
             [['telefono'], 'string', 'max' => 15], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
@@ -104,8 +104,8 @@ class UserDatos extends ActiveRecord
                 'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
                 'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
 
-            [['nombres', 'apellidos', 'direccion', 'codigoValidacion', 'telefono', 'email'], 'string', 'max' => 255],
-            [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'estatus', 'tipo_sangre'], 'string', 'max' => 50],
+            [['nombres', 'apellidos', 'direccion', 'codigoValidacion', 'telefono', 'email', 'estatus'], 'string', 'max' => 255],
+            [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'tipo_sangre'], 'string', 'max' => 255],
             [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
 
             // VALIDACIÓN DE CÉDULA:
@@ -148,15 +148,14 @@ class UserDatos extends ActiveRecord
             ),
             'message' => 'El rol seleccionado no es válido.'
             ],
-            [['estatus'], 'in', 'range' => ['Activo', 'Inactivo', 'Pendiente'], 'message' => 'El estatus seleccionado no es válido.'],
+
             [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
             // Si el 'tipo_cedula' SIEMPRE se deriva de 'cedulaFormatted' en beforeSave(),
             // esta regla 'in' es redundante para el flujo normal, pero puede servir como un doble chequeo
             // o si en algún momento 'tipo_cedula' se puede setear de otra forma.
             [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G'], 'message' => 'Tipo de cédula no válido.'], 
 
-            [['ver_cedula', 'ver_foto', 'estatus_solvente'], 'in', 'range' => ['0', '1'], 'message' => 'Valor no válido para el campo de verificación.'],
-
+        
             // 6. Validaciones para carga de archivos (se mantienen igual)
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
             [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
@@ -168,17 +167,17 @@ class UserDatos extends ActiveRecord
             // 8. Campos seguros (timestamps)
             // CAMBIO: 'cedula' se marca como 'safe'. Esto le dice a Yii que está bien si el valor de 'cedula'
             // se modifica programáticamente (en 'beforeSave()') y no directamente desde un input del formulario.
-            [['created_at', 'updated_at', 'deleted_at', 'cedula', 'fechanac','clinica_id','asesor_id'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
+            [['created_at', 'updated_at', 'deleted_at', 'cedula', 'fechanac','clinica_id'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
             [['codigoAsesor'], 'safe'],
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
-            [['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => AgenteFuerza::class, 'targetAttribute' => ['asesor_id' => 'idusuario'], 'message' => 'El asesor seleccionado no existe.',
+            /*[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => AgenteFuerza::class, 'targetAttribute' => ['asesor_id' => 'idusuario'], 'message' => 'El asesor seleccionado no existe.',
                 'when' => function ($model) {
                     return $model->asesor_id !== null;
                 }   
-            ],
+            ],*/
             //[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],

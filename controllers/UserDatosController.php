@@ -124,34 +124,19 @@ class UserDatosController extends Controller
         $model->role = 'afiliado';
         $model->estatus = 'Creado';
 
-
-
+        if($model->estatus_solvente == "" || $model->estatus_solvente == null){
+            $model->estatus_solvente = "No";
+        }
 
 
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
                 if($model->save()){
-                    $nombres = $model->nombres;
-                    $apellidos = $model->apellidos;
-                    // 1. Tomar las 3 primeras letras del nombre y convertir a minúsculas
-                    $primerasTresNombre = substr($nombres, 0, 3);
-                    $primerasTresNombre = mb_strtolower($primerasTresNombre, 'UTF-8'); // Usa mb_strtolower para caracteres UTF-8
-
-                    // 2. Limpiar el apellido: quitar espacios y caracteres especiales, luego convertir a minúsculas
-                    // Usamos preg_replace para mantener solo letras y números
-                    $apellidoLimpio = preg_replace('/[^a-zA-Z0-9]/', '', $apellidos);
-                    $apellidoLimpio = mb_strtolower($apellidoLimpio, 'UTF-8'); // Usa mb_strtolower
-
-                    // 3. Combinar para formar el username base
-                    $usernameBase = $primerasTresNombre . $apellidoLimpio;
-
-                    // 4. Asegurar que el username sea único (es crucial en un sistema de usuarios)
-                    $usernameFinal = UserHelper::generateUniqueUsername($usernameBase);
-
+            
                     // Asignar el username generado al modelo de usuario
-                    $modelUser->username = $usernameFinal;
+                    $modelUser->username = $model->email;;
                     //var_dump($modelUser->username);exit;
-                    $pass = '123456789';//Yii::$app->security->generateRandomString(8);
+                    $pass = 'sispsa'.$model->cedula;//Yii::$app->security->generateRandomString(8);
                     $modelUser->password_hash = User::setPassword($pass);
                     $modelUser->auth_key = User::generateAuthKey();
                     $modelUser->email = $model->email;
@@ -160,7 +145,7 @@ class UserDatosController extends Controller
                         
                         
                         $modelContrato->user_id = $model->id;
-                        $modelContrato->estatus = 'Creado';
+                        $modelContrato->estatus = 'Registrado';
                         $modelContrato->clinica_id = $model->clinica_id;
                         $modelContrato->save();                     
                         $auth = Yii::$app->authManager;
@@ -220,11 +205,57 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+
+                if($model->user_login_id == "" || $model->user_login_id == null){
+
+                    $modelUser = new User();
+                    $modelUser->username = $model->email;
+                    $pass = 'sispsa'.$model->cedula;
+                    $modelUser->password_hash = User::setPassword($pass);
+                    $modelUser->auth_key = User::generateAuthKey();
+                    $modelUser->email = $model->email;
+                    $modelUser->status = 1;
+                    $modelUser->save();
+                    $model->user_login_id = $modelUser->id;
+                }
+
+
+                if($model->estatus_solvente == "" || $model->estatus_solvente == null){
+                    $model->estatus_solvente = "No";
+                }
+
+                $model->role = 'afiliado';
+                $model->estatus = 'Registrado';
+
+                $model->updated_at = date('Y-m-d H:i:s');
+
+
                 if($model->save()){
                     $modelContrato->user_id = $id;
                     $modelContrato->estatus = 'Creado';
                     $modelContrato->clinica_id = $model->clinica_id;
+
+
                     if($modelContrato->save()){
+
+                        $auth = Yii::$app->authManager;
+                        $roleName = 'afiliado';
+                        $role = $auth->getRole($roleName);
+                        if ($role) {
+                            try {
+                                $auth->revokeAll($modelUser->id);
+                                $auth->assign($role, $modelUser->id);
+                                Yii::$app->cache->flush();
+                                $model->user_login_id = $modelUser->id;
+                                $model->save();
+                                
+                            } catch (\Exception $e) {
+                                Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                            }
+                        } else {
+                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                        }
+
                         return $this->redirect(['update', 'id' => $model->id]);
                     }else{
 

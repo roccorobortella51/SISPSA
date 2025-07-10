@@ -30,7 +30,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
             <div>
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+                <?php Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
             </div>
         </div>
 
