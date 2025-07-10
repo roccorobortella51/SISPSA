@@ -45,10 +45,13 @@ class CheckListClinicasController extends Controller
         $dataProvider = $searchModel->search($this->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
 
+        $chartData = CheckListClinicas::getLastChecklistsByClinic();
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
-            'clinica' => $clinica
+            'clinica' => $clinica,
+            'chartData' => $chartData
 
         ]);
     }
@@ -190,5 +193,13 @@ class CheckListClinicasController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+
+    public function actionChart()
+    {
+        $chartData = CheckListClinicas::getLastChecklistsByClinic();
+        return $this->render('chart', [
+            'chartData' => $chartData,
+        ]);
     }
 }
