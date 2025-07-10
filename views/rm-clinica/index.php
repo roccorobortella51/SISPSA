@@ -22,7 +22,8 @@ $this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la 
 
 $clinicNames = json_encode(array_column($chartData, 'clinicName'));
 $percentages = json_encode(array_column($chartData, 'percentage'));
-$currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y')
+$clinicIds = json_encode(array_column($chartData, 'clinicId')); // <-- ¡NUEVO! Pasar los IDs de las clínicas
+$currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -32,23 +33,13 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y')
             <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA CLÍNICA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
         </div>
     </div>
-    <div class="col-xl-12 col-md-12">
+    <div class="col-md-8">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
                 <h1><?= $this->title = 'Gestión de Clínicas'; ?></h1>
             </div>
             <div class="ms-panel-body">
                         <div class="table-responsive">
-
-                            <div class="card mb-4">
-                                <div class="card-header">
-                                    <h3>% Avance <?= $currentDate ?></h3>
-                                </div>
-                                <div class="card-body">
-                                    <div style="height: 450px; width: 100%;"> <canvas id="progressChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
 
 
                             <?= GridView::widget([
@@ -202,65 +193,74 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y')
                      </div>
                   </div>
                </div>
+               <div class="col-md-4">
+                    <div class="ms-panel ms-panel-fh">
+                        <div class="ms-panel-header">
+                            <h1>% Avance de los Check list por Clínica <?= $currentDate ?></h1>
+                        </div>
+                        <div class="card-body">
+                            <div style="height: 450px; width: 100%;"> <canvas id="progressChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="clearfix"></div>
 </div>
 <?php
 // Script para Chart.js
 $this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js');
-// Si necesitas un plugin para el centrado del texto en barras horizontales, como chartjs-plugin-datalabels
-// $this->registerJsFile('https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js'); // CDN del plugin
 
 $js = <<<JS
 // Datos pasados desde PHP
 const clinicNames = {$clinicNames};
 const percentages = {$percentages};
+const clinicIds = {$clinicIds}; // <-- ¡NUEVO! IDs de las clínicas
 
 const ctx = document.getElementById('progressChart').getContext('2d');
 
 const progressChart = new Chart(ctx, {
-    type: 'bar', // Tipo de gráfico de barras
+    type: 'bar',
     data: {
         labels: clinicNames,
         datasets: [{
             label: '% Avance',
             data: percentages,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)', // Un azul bonito para las barras
+            backgroundColor: 'rgba(54, 162, 235, 0.7)',
             borderColor: 'rgba(54, 162, 235, 1)',
             borderWidth: 1
         }]
     },
     options: {
-        indexAxis: 'y', // Hace las barras horizontales
+        indexAxis: 'y',
         responsive: true,
-        maintainAspectRatio: false, // Permite que el gráfico se adapte al tamaño del contenedor
+        maintainAspectRatio: false,
         scales: {
             x: {
                 beginAtZero: true,
-                max: 100, // El porcentaje va de 0 a 100
+                max: 100,
                 title: {
                     display: true,
                     text: 'Porcentaje (%)'
                 }
             },
             y: {
-                // Configura las etiquetas del eje Y para que no se corten si son largas
                 ticks: {
-                    autoSkip: false, // Evita que se salte etiquetas
-                    maxRotation: 0, // No rotar las etiquetas
+                    autoSkip: false,
+                    maxRotation: 0,
                     minRotation: 0,
                     font: {
-                        size: 10 // Puedes ajustar el tamaño de fuente de la etiqueta de la clínica
+                        size: 10
                     }
                 },
                 title: {
-                    display: false // No es necesario un título para el eje Y si las etiquetas ya son los nombres
+                    display: false
                 }
             }
         },
         plugins: {
             legend: {
-                display: false // Oculta la leyenda si solo hay un dataset
+                display: false
             },
             tooltip: {
                 callbacks: {
@@ -276,20 +276,28 @@ const progressChart = new Chart(ctx, {
                     }
                 }
             }
-            // Si quieres mostrar los valores directamente en las barras, descomenta lo siguiente y el CDN del plugin arriba
-            /*
-            datalabels: {
-                anchor: 'end', // Muestra el label al final de la barra
-                align: 'end',
-                formatter: (value, context) => {
-                    return value + '%';
-                },
-                color: '#fff', // Color del texto del porcentaje
-                font: {
-                    weight: 'bold'
+        },
+        // *** AQUI AGREGAMOS LA LOGICA DE CLICK ***
+        onClick: (e, elements) => {
+            if (elements.length > 0) {
+                const firstElement = elements[0];
+                const index = firstElement.index; // Obtener el índice de la barra clicada
+
+                const clickedClinicId = clinicIds[index]; // Obtener el ID de la clínica usando el índice
+                if (clickedClinicId) {
+                    // Construir la URL de redirección
+                    const url = '/web/check-list-clinicas/index?clinica_id=' + clickedClinicId;
+                    window.location.href = url; // Redirigir a la nueva URL
                 }
             }
-            */
+        },
+        // Opcional: Cambiar el cursor a 'pointer' cuando se pasa sobre una barra
+        hover: {
+            mode: 'nearest',
+            intersect: true,
+            onHover: function(e, elements) {
+                e.native.target.style.cursor = elements[0] ? 'pointer' : 'default';
+            }
         }
     }
 });
@@ -301,6 +309,5 @@ $(window).on('resize', function() {
 
 JS;
 $this->registerJs($js);
-?> 
-
+?>
 
