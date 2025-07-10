@@ -202,8 +202,8 @@ class CheckListClinicas extends ActiveRecord
      // Aquí agregamos el método para obtener el último checklist por clínica
     public static function getLastChecklistsByClinic()
     {
-        // Define las columnas booleanas para el cálculo del porcentaje
         $booleanColumns = [
+            // ... (todas tus columnas booleanas) ...
             'planes', 'programa_de_servicio', 'equipamiento', 'servicios_de_tecnologia',
             'soepsa_rm_009013_reglamento_soepsa_mes', 'visita_clinica_registro_escrito', 'otro_paso1',
             'ubicacion_de_la_clinica_facil_acceso_usuario', 'instalaciones_adecuacion_aire_atencion_medica',
@@ -232,15 +232,13 @@ class CheckListClinicas extends ActiveRecord
             'sistema_soepsa', 'instalacion_personal_medico', 'verificacion_area_emergencia',
         ];
 
-        // Subconsulta para encontrar el ID del último registro para cada clinica_id
         $subQuery = self::find()
-            ->select(['MAX(id)']) // Asumiendo que 'id' es autoincremental y el más grande es el último
+            ->select(['MAX(id)'])
             ->groupBy('clinica_id');
 
-        // Consulta principal para obtener los últimos registros
         $lastChecklists = self::find()
             ->where(['id' => $subQuery])
-            ->with('clinica') // Cargar la relación para obtener el nombre de la clínica
+            ->with('clinica')
             ->all();
 
         $chartData = [];
@@ -255,15 +253,14 @@ class CheckListClinicas extends ActiveRecord
             $percentage = ($totalBooleans > 0) ? round(($trueCount / $totalBooleans) * 100, 2) : 0;
 
             $chartData[] = [
-                'clinicName' => $checklist->clinica->nombre ?? 'N/A', // Nombre de la clínica
+                'clinicId' => $checklist->clinica_id, // <-- ¡NUEVO! Incluir el ID de la clínica
+                'clinicName' => $checklist->clinica->nombre ?? 'N/A',
                 'percentage' => $percentage,
             ];
         }
 
-        // Ordenar los datos si es necesario (ej. por porcentaje o nombre)
         usort($chartData, function($a, $b) {
-            return $a['percentage'] <=> $b['percentage']; // Ordenar por porcentaje ascendente
-            // return strcmp($a['clinicName'], $b['clinicName']); // Ordenar por nombre
+            return $a['percentage'] <=> $b['percentage'];
         });
 
         return $chartData;

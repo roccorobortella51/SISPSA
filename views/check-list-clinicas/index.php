@@ -181,7 +181,7 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                         'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'headerOptions' => ['style' => 'text-align: center;'],
                     ],
-                    [
+                    /*[
                         'label' => '% No Seleccionados',
                         'format' => 'raw',
                         'value' => function ($model) use ($booleanColumns) {
@@ -213,7 +213,7 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                         },
                         'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'headerOptions' => ['style' => 'text-align: center;'],
-                    ],
+                    ],*/
                     [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
