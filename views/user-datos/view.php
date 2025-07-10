@@ -21,7 +21,15 @@ $this->params['breadcrumbs'][] = $this->title;
                 <h4 class="text-primary"><?= Html::encode("Perfil del Afiliado #{$model->id}") ?></h4>
                 <div class="float-right" style="margin-bottom:10px;">
                     <?= Html::a('<i class="fas fa-file-pdf"></i> Contrato', ['index'], ['class' => 'btn btn-outline-primary btn-sm']) ?>
-                    <?= Html::a('<i class="fas fa-undo-alt"></i> Volver', ['index'], ['class' => 'btn btn-outline-primary btn-sm']) ?>
+                    <?= Html::a(
+                    '<i class="fas fa-undo"></i> Volver', 
+                    '#', 
+                    [
+                        'class' => 'btn btn-primary btn-sm', 
+                        'onclick' => 'window.history.back(); return false;', 
+                        'title' => 'Volver a la página anterior', 
+                    ]
+                ) ?> 
                 </div>
             </div>
         </div>

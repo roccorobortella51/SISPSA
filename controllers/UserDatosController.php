@@ -60,11 +60,11 @@ class UserDatosController extends Controller
         ]);
     }
 
-    public function actionIndexClinicas()
+    public function actionIndexClinicas($clinica_id = "")
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-
+        $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -308,4 +308,17 @@ class UserDatosController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
+
+    public function actionIndexByAfiliado($asesor_id = "")
+    {
+        $searchModel = new UserDatosSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $dataProvider->query->andFilterWhere(['=', 'asesor_id', $asesor_id]);
+    
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+    
 }

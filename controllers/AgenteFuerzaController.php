@@ -160,7 +160,8 @@ class AgenteFuerzaController extends Controller
      * @return string
      * @throws NotFoundHttpException si el ID del Agente es inválido.
      */
-    public function actionIndexByAgente($agente_id) // <-- Usamos $agente_id aquí
+    
+     public function actionIndexByAgente($agente_id) // <-- Usamos $agente_id aquí
     {
         $agente = Agente::findOne($agente_id); // <-- Usamos $agente_id
         if ($agente === null) {

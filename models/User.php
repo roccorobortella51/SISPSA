@@ -276,9 +276,19 @@ class User extends ActiveRecord implements IdentityInterface
         return Configs::userDb();
     }
 
+
     public function getAuthAssignment()
     {
         return $this->hasOne(AuthAssignment::class, ['user_id' => 'id']);
+    }
+
+    public static function getStatusLabels()
+    {
+        return [
+            self::STATUS_ACTIVE => 'Activo',
+            self::STATUS_INACTIVE => 'Inactivo',
+            self::STATUS_DELETED => 'Eliminado',
+        ];
     }
 
     

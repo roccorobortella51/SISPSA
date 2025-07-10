@@ -17,16 +17,17 @@ class AgenteFuerzaSearch extends AgenteFuerza
     public $user_nombres;
     public $user_email;
     public $user_telefono;
+    public $propietarioNombreCompleto;
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['id', 'idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
+            [['id', 'idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar','propietarioNombreCompleto'], 'integer'],
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
             [['created_at', 'updated_at', 'deleted_at'], 'safe'],
-             [['user_nombres', 'user_email', 'user_telefono'], 'safe'],
+             [['user_nombres', 'user_email', 'user_telefono', 'propietarioNombreCompleto'], 'safe'],
         ];
     }
 
@@ -50,6 +51,10 @@ class AgenteFuerzaSearch extends AgenteFuerza
     public function search($params, $formName = null)
     {
         $query = AgenteFuerza::find();
+        
+        $query->joinWith(['agente']); 
+        $query->leftJoin('user p', 'p.id = agente.idusuariopropietario');
+        $query->leftJoin('user_datos pd', 'pd.user_login_id = p.id');
 
         // add conditions that should always apply here
         $query->innerJoinWith([
@@ -83,6 +88,13 @@ class AgenteFuerzaSearch extends AgenteFuerza
                     'deleted_at',
                     'puede_registrar',
                     'por_registrar',
+
+                    // Atributos relacionados (los que creamos para ordenar por user)
+                    'propietarioNombreCompleto' => [
+                        'asc' => ['p.nombres' => SORT_ASC, 'p.apellidos' => SORT_ASC],
+                        'desc' => ['p.nombres' => SORT_DESC, 'p.apellidos' => SORT_DESC],
+                        'label' => 'Propietario',
+                    ],
 
                     // Atributos relacionados (los que creamos para ordenar por userDatos)
                     'user_nombres' => [
@@ -118,6 +130,7 @@ class AgenteFuerzaSearch extends AgenteFuerza
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
+            //'agente.idusuariopropietario' => $this->idusuariopropietario,
             'idusuario' => $this->idusuario,
             'agente_id' => $this->agente_id,
             'por_venta' => $this->por_venta,
@@ -138,6 +151,21 @@ class AgenteFuerzaSearch extends AgenteFuerza
         $query->andFilterWhere(['ilike', 'user_datos.nombres', $this->user_nombres]);
         $query->andFilterWhere(['ilike', 'user_datos.email', $this->user_email]);
         $query->andFilterWhere(['ilike', 'user_datos.telefono', $this->user_telefono]);
+
+        if (!empty($this->propietarioNombreCompleto)) {
+            $query->andFilterWhere(['or',
+                ['ilike', 'pd.nombres', $this->propietarioNombreCompleto],
+                ['ilike', 'pd.apellidos', $this->propietarioNombreCompleto]
+            ]);
+        }
+
+        // Filtro para el nombre del AGENTE de la FUERZA DE VENTA (si usas agenteFuerzaNombreCompleto)
+        if (!empty($this->agenteFuerzaNombreCompleto)) {
+            $query->andFilterWhere(['or',
+                ['ilike', 'user_datos.nombres', $this->agenteFuerzaNombreCompleto],
+                ['ilike', 'user_datos.apellidos', $this->agenteFuerzaNombreCompleto]
+            ]);
+        }
 
         return $dataProvider;
     }

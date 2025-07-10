@@ -11,13 +11,16 @@ use app\models\User;
  */
 class UserSearch extends User
 {
+
+
+    public $nombrecompleto;
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email'], 'safe'],
+            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email', 'nombrecompleto'], 'safe'],
             [['status', 'created_at', 'updated_at', 'id'], 'integer'],
         ];
     }
@@ -42,6 +45,7 @@ class UserSearch extends User
     public function search($params, $formName = null)
     {
         $query = User::find();
+        $query->innerJoinWith(['userDatos']);
 
         // add conditions that should always apply here
 
@@ -70,6 +74,14 @@ class UserSearch extends User
             ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
             ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
             ->andFilterWhere(['ilike', 'email', $this->email]);
+
+                // Filtro para el nombre completo
+        if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO
+            $query->andFilterWhere(['or',
+                ['ilike', 'user_datos.nombres', $this->nombrecompleto],
+                ['ilike', 'user_datos.apellidos', $this->nombrecompleto]
+            ]);
+        }
 
         return $dataProvider;
     }
