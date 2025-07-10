@@ -15,7 +15,7 @@ $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
-/** @var app\models\Contrato $modelContrato // Asumo que tienes un modelo de Contrato separado para los datos de contrato */
+/** @var app\models\Contratos $modelContrato // Asumo que tienes un modelo de Contrato separado para los datos de contrato */
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
