@@ -226,7 +226,19 @@ class UserDatosController extends Controller
                     $modelContrato->clinica_id = $model->clinica_id;
                     if($modelContrato->save()){
                         return $this->redirect(['update', 'id' => $model->id]);
+                    }else{
+
+                        echo "MODEL CONTRATO NOT SAVED";
+                      print_r($modelContrato->getAttributes());
+                      print_r($modelContrato->getErrors());
+                      exit;
+
                     }
+                }else{
+                    echo "MODEL NOT SAVED";
+                      print_r($model->getAttributes());
+                      print_r($model->getErrors());
+                      exit;
                 }
         }
 
