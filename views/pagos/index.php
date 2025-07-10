@@ -13,7 +13,7 @@ use kartik\grid\ExpandRowColumn;
 /** @var app\models\PagosSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-$this->title = 'Pagos';
+$this->title = 'PAGOS';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="pagos-index">
@@ -21,7 +21,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        <?= Html::a('Create Pagos', ['create','user_id' => $user_id], ['class' => 'btn btn-primary']) ?>
+        <?= Html::a('Nuevo Pagos', ['create','user_id' => $user_id], ['class' => 'btn btn-primary']) ?>
     </p>
 
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>

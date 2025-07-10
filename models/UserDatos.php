@@ -53,7 +53,7 @@ use yii\db\ActiveRecord;
  * 
  * @property Plan $plan
  * @property Agente $asesor
- * @property Contrato $contrato
+ * @property Contratos $contratos
  * @property User $userLogin
  */
 class UserDatos extends ActiveRecord
@@ -180,7 +180,7 @@ class UserDatos extends ActiveRecord
                 }   
             ],
             //[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
-            [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contrato::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
+            [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
         ];
     }
@@ -317,6 +317,6 @@ class UserDatos extends ActiveRecord
     public function getClinica() { return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']); }
     public function getPlan() { return $this->hasOne(Planes::class, ['id' => 'plan_id']); }
     public function getAsesor() { return $this->hasOne(Agente::class, ['id' => 'asesor_id']); }
-    public function getContrato() { return $this->hasOne(Contrato::class, ['id' => 'contrato_id']); }
+    public function getContrato() { return $this->hasOne(Contratos::class, ['id' => 'contrato_id']); }
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
 }
