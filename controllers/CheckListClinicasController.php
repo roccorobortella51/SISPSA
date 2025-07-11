@@ -84,24 +84,7 @@ class CheckListClinicasController extends Controller
 
             // Cargar los datos del formulario
             if ($model->load($this->request->post())) {
-                /*// Iterar sobre todos los atributos booleanos y asegurar que se guarden como 0 o 1
-                // Si un checkbox no está marcado, su valor no se envía en $_POST, lo que resultaría en null.
-                // Lo convertimos a 0 (false) explícitamente para la base de datos si no está marcado.
-                $booleanAttributes = array_keys(array_filter($model->attributeLabels(), function($key) {
-                    return property_exists($this->findModel(0), $key) && gettype($this->findModel(0)->$key) === 'boolean';
-                }, ARRAY_FILTER_USE_KEY));
-
-                foreach ($model->attributes as $attribute => $value) {
-                    if (in_array($attribute, $booleanAttributes)) {
-                         // Si el atributo es booleano y no está en el POST (checkbox no marcado), se setea a 0
-                        if (!isset($this->request->post('CheckListClinicas')[$attribute])) {
-                            $model->$attribute = 0;
-                        } else {
-                            // Si está en el POST, se asegura que sea 1 (marcado)
-                            $model->$attribute = 1;
-                        }
-                    }
-                }*/
+                
 
                 if ($model->save()) {
                     Yii::$app->session->setFlash('success', 'Registro creado exitosamente.');
@@ -135,22 +118,19 @@ class CheckListClinicasController extends Controller
 
         //if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
-                // Misma lógica para manejar los booleanos al actualizar
-                /*$booleanAttributes = array_keys(array_filter($model->attributeLabels(), function($key) {
-                    return property_exists($model, $key) && gettype($model->$key) === 'boolean';
-                }, ARRAY_FILTER_USE_KEY));
+                
+                $historico = new CheckListClinicas();
 
-                foreach ($model->attributes as $attribute => $value) {
-                    if (in_array($attribute, $booleanAttributes)) {
-                        if (!isset($this->request->post('CheckListClinicas')[$attribute])) {
-                            $model->$attribute = 0;
-                        } else {
-                            $model->$attribute = 1;
-                        }
-                    }
-                }*/
+                $historico->setAttributes($model->attributes, [
+                    'id',         
+                    'created_at',  
+                    'updated_at'
+                ]);
 
-                if ($model->save()) {
+                $historico->created_at = date('Y-m-d H:i:s');
+                $historico->updated_at = date('Y-m-d H:i:s');
+
+                if ($historico->save()) {
                     Yii::$app->session->setFlash('success', 'Registro actualizado exitosamente.');
                     return $this->redirect(['index', 'clinica_id' => $model->clinica_id]);
                 } else {
@@ -174,9 +154,11 @@ class CheckListClinicasController extends Controller
      */
     public function actionDelete($id)
     {
+        $model = $this->findModel($id);
+        $clinica_id = $model->clinica_id;
         $this->findModel($id)->delete();
         Yii::$app->session->setFlash('success', 'Registro eliminado exitosamente.');
-        return $this->redirect(['index']);
+        return $this->redirect(['index', 'clinica_id' => $clinica_id]);
     }
 
     /**
