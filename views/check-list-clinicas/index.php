@@ -7,7 +7,8 @@ use kartik\grid\GridView;
 use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
 use yii\widgets\Pjax;
-use yii\bootstrap4\Progress; // Si usas Bootstrap 5
+use yii\bootstrap4\Progress; 
+use app\models\CheckListClinicas;
 
 
 /* @var $this yii\web\View */
@@ -96,6 +97,10 @@ $booleanColumnFormat = function ($data, $row) {
     return ''; // Para valores nulos o no definidos
 };
 
+$maxId = CheckListClinicas::find()->max('id');
+$latestCreatedAt = CheckListClinicas::find()->max('created_at');
+
+
 /**
  * @var yii\web\View $this
  * @var app\models\RmClinicaSearch $searchModel
@@ -127,11 +132,17 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                 
                 <div class="d-flex align-items-center gap-2">
 
-                    <?= Html::a(
-                        '<i class="fas fa-plus"></i> CREAR NUEVA VERIFICACIÓN', 
-                        ['create', 'clinica_id' => $clinica->id], 
-                        ['class' => 'btn btn-outline-primary btn-lg']
-                    ) ?> 
+                    <?php
+                    $check = CheckListClinicas::find()->where(['clinica_id' => $clinica->id])->one();
+
+                    if($check == "" || $check == null){
+                       echo  Html::a(
+                            '<i class="fas fa-plus"></i> CREAR NUEVA VERIFICACIÓN', 
+                            ['create', 'clinica_id' => $clinica->id], 
+                            ['class' => 'btn btn-outline-primary btn-lg']
+                        ); 
+                    }
+                    ?> 
                    <?= Html::a(
                         '<i class="fas fa-undo"></i> Volver', 
                         '#',
@@ -242,12 +253,29 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                     [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{update}{view}</div>',
                                     'options' => ['style' => 'width:55px; min-width:55px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                     'buttons' => [
-                                        'view' => function ($url, $model, $key) {
+
+                                    'update' => function ($url, $model, $key) use ($maxId, $latestCreatedAt) { // ¡Aquí está el cambio clave!
+                                        // Solo muestra el botón si el ID del modelo actual es el ID máximo
+                                        if ($model->id == $maxId || $latestCreatedAt == $model->created_at) {
+                                            return Html::a(
+                                                '<i class="fas fa-sync-alt ms-text-primary"></i>', // Ícono de sincronización
+                                                Url::to(['update', 'id' => $model->id]),
+                                                [
+                                                    'title' => 'Renovar Check List de la Clínica', // Tooltip
+                                                    'class' => 'btn btn-link btn-sm text-info',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                ]
+                                            );
+                                        }
+                                        return ''; // Si no es el ID mayor, no muestra nada
+                                    },
+
+                                    'view' => function ($url, $model, $key) {
                                             return Html::a(
                                                 '<i class="fa fa-eye"></i>',
                                                 Url::to(['view', 'id' => $model->id]),
@@ -258,19 +286,6 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                                                 ]
                                             );
                                         },
-                                        'update' => function ($url, $model, $key) {
-                                            return Html::a(
-                                                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                Url::to(['update', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Editar',
-                                                    'class' => 'btn btn-link btn-sm text-success',
-                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                                                ]
-                                            );
-                                        },
-                                   
-                                        
                                     ],
                                 ],
 
