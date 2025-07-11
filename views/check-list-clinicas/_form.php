@@ -294,7 +294,7 @@ use yii\widgets\ActiveForm;
 
      <div class="form-group text-rigth mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Verificación', ['class' => 'btn btn-success btn-lg']) ?>
-        <?= Html::a('Cancelar', ['index'], ['class' => 'tn btn btn-lg btn-warning']); ?>
+        <?= Html::a('Cancelar', ['index', 'clinica_id' => $clinica->id], ['class' => 'tn btn btn-lg btn-warning']); ?>
 
         <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
     </div>
