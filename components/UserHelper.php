@@ -9,6 +9,7 @@ use yii\db\Query;
 use app\models\Area;
 use app\models\RmEstado;
 use app\models\RmMunicipio;
+use app\models\RmParroquia;
 use app\models\RmClinica;
 use app\models\Agente;
 use app\models\Asesores;
@@ -99,22 +100,36 @@ class UserHelper
         );
     }
 
-    public static function getMunicipiosList($id = null)
+    public static function getMunicipiosList($estado_id = null)
     {
-        if($id == null){
-            return \yii\helpers\ArrayHelper::map(
-                RmMunicipio::find()->select(['id', 'nombre as name'])->asArray()->all(),
-                'id',
-                'name'
-            );
+        $query = RmMunicipio::find()->select(['id', 'nombre as name'])->asArray();
+
+        if ($estado_id !== null) {
+            // Filtra por el código del estado (que es el ID del estado en RmEstado)
+            $query->where(['estado_codigo' => $estado_id]);
         }
-        else{
-             return \yii\helpers\ArrayHelper::map(
-                RmMunicipio::find()->select(['id', 'nombre as name'])->where(['id'=>$id])->asArray()->all(),
-                'id',
-                'name'
-            );
+
+        return ArrayHelper::map(
+            $query->all(),
+            'id',
+            'name'
+        );
+    }
+
+    public static function getParroquiasList($municipio_id = null)
+    {
+        $query = RmParroquia::find()->select(['id', 'nombre as name'])->asArray();
+
+        if ($municipio_id !== null) {
+            // Filtra por el código del municipio (que es el ID del municipio en RmMunicipio)
+            $query->where(['muni_codigo' => $municipio_id]);
         }
+
+        return ArrayHelper::map(
+            $query->all(),
+            'id',
+            'name'
+        );
     }
 
     public static function getTotalClinicas()

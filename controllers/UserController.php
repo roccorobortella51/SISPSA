@@ -10,7 +10,7 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use app\models\AuthAssignment;
-
+use app\components\UserHelper;
 
 /**
  * UserController implements the CRUD actions for User model.
@@ -297,4 +297,6 @@ class UserController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
+
+
 }
