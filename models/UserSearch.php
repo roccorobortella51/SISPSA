@@ -5,12 +5,17 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\User;
+use app\models\UserDatos; 
+use app\components\UserHelper; 
+
 
 /**
  * UserSearch represents the model behind the search form of `app\models\User`.
  */
 class UserSearch extends User
 {
+
+    public $roleName;
 
 
     public $nombrecompleto;
@@ -20,7 +25,7 @@ class UserSearch extends User
     public function rules()
     {
         return [
-            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email', 'nombrecompleto'], 'safe'],
+            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email', 'nombrecompleto','roleName'], 'safe'],
             [['status', 'created_at', 'updated_at', 'id'], 'integer'],
         ];
     }
@@ -51,6 +56,21 @@ class UserSearch extends User
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => 5,
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'created_at' => SORT_DESC,
+                ],
+                // Permite ordenar por roleName, apuntando a la columna real en la tabla unida
+                'attributes' => array_merge(parent::attributes(), [
+                    'roleName' => [
+                        'asc' => ['userDatos.role' => SORT_ASC], // Columna 'role' en la tabla 'user_datos'
+                        'desc' => ['userDatos.role' => SORT_DESC],
+                    ],
+                ]),
+            ],
         ]);
 
         $this->load($params, $formName);
@@ -73,7 +93,8 @@ class UserSearch extends User
             ->andFilterWhere(['ilike', 'auth_key', $this->auth_key])
             ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
             ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
-            ->andFilterWhere(['ilike', 'email', $this->email]);
+            ->andFilterWhere(['ilike', 'email', $this->email])
+            ->andFilterWhere(['like', 'userDatos.role', $this->roleName]);
 
                 // Filtro para el nombre completo
         if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO

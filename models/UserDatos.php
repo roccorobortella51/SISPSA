@@ -108,12 +108,7 @@ class UserDatos extends ActiveRecord
             [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'tipo_sangre'], 'string', 'max' => 255],
             [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
 
-            // VALIDACIÓN DE CÉDULA:
-            // Estos son los CAMBIOS MÁS IMPORTANTES en rules()
-            // --- CÓDIGO ORIGINAL QUE DEBES ELIMINAR O COMENTAR ---
-            // [['cedula'], 'integer', 'message' => 'La cédula debe contener solo números.'],
-            // [['cedula'], 'string', 'max' => 9, 'min' => 7], // Estas reglas ya no aplican directamente al input del usuario.
-            // --- FIN CÓDIGO ORIGINAL ---
+        
 
             // NUEVAS REGLAS para 'cedulaFormatted':
             // 3.1. Valida que 'cedulaFormatted' sea un string y tenga la longitud esperada (V-999999999 es 11 caracteres).
@@ -150,9 +145,6 @@ class UserDatos extends ActiveRecord
             ],
 
             [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
-            // Si el 'tipo_cedula' SIEMPRE se deriva de 'cedulaFormatted' en beforeSave(),
-            // esta regla 'in' es redundante para el flujo normal, pero puede servir como un doble chequeo
-            // o si en algún momento 'tipo_cedula' se puede setear de otra forma.
             [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G'], 'message' => 'Tipo de cédula no válido.'], 
 
         
@@ -181,7 +173,15 @@ class UserDatos extends ActiveRecord
             //[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
+
+            // *** LA REGLA CLAVE: No puede ser mayor a la fecha actual ***
+            [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'], // Valida el formato de fecha
+            [['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date',
+                'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'],
+            // *** REGLA DE VALIDACIÓN PERSONALIZADA PARA LA EDAD ***
+            [['fechanac'], 'validateAge'],
         ];
+
     }
 
     /**
@@ -252,6 +252,38 @@ class UserDatos extends ActiveRecord
         }
     }
     // --- FIN: Validador personalizado para el campo 'telefono' ---
+
+    /**
+     * Valida que la fecha de nacimiento no corresponda a una persona menor de 18 años.
+     * Este es un método de validación personalizado.
+     *
+     * @param string $attribute el nombre del atributo a validar (ej. 'fechanac')
+     * @param array $params parámetros adicionales (no usados aquí)
+     */
+
+     public function validateAge($attribute, $params)
+    {
+        // Solo valida si el campo tiene un valor. Las reglas 'required' y 'date'
+        // ya deberían asegurar que el valor no esté vacío y tenga un formato de fecha.
+        if (!empty($this->$attribute)) {
+            try {
+                // Crea objetos DateTime para la fecha de nacimiento y la fecha actual
+                $birthDate = new \DateTime($this->$attribute);
+                $today = new \DateTime(); // La fecha y hora actual (ej. 2025-07-12)
+
+                // Calcula la diferencia en años
+                $age = $birthDate->diff($today)->y;
+
+                // Si la edad calculada es menor de 18, añade un error
+                if ($age < 18) {
+                    $this->addError($attribute, 'Debe tener al menos 18 años para registrarse.');
+                }
+            } catch (\Exception $e) {
+                // Captura cualquier error si el valor de la fecha es inesperadamente inválido
+                $this->addError($attribute, 'Formato de fecha de nacimiento inválido.');
+            }
+        }
+    }
 
 
 

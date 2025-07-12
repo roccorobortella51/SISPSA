@@ -1,6 +1,11 @@
 <?php
 
 namespace app\models;
+use app\components\UserHelper;
+use app\models\RmEstado; 
+use app\models\RmMunicipio;
+use app\models\RmParroquia; 
+use app\models\RmCiudad;
 
 use Yii;
 
@@ -23,6 +28,8 @@ use Yii;
  * @property string|null $deleted_at
  * @property string|null $updated_at
  * @property string|null $private_key
+ * @property string|null $municipio
+ * @property string|null $parroquia
  *
  * @property ClinicaContactos[] $clinicaContactos
  * @property Contratos[] $contratos
@@ -50,12 +57,14 @@ class RmClinica extends \yii\db\ActiveRecord
         return [
             [['QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
             [['rs_instagram'], 'default', 'value' => ''],
-            [['created_at', 'deleted_at', 'updated_at'], 'safe'],
+            [['created_at', 'deleted_at', 'updated_at', 'municipio', 'parroquia'], 'safe'],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
             [['private_key'], 'string', 'max' => 64],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
             [['correo'], 'email'],
             [['rif'], 'unique', 'message' => 'El RIF ya está en uso. Por favor, ingrese un valor único.'],
+            [['municipio', 'parroquia'], 'string', 'max' => 255],
+            
 
         ];
     }
@@ -81,7 +90,9 @@ class RmClinica extends \yii\db\ActiveRecord
             'codigo_clinica' => 'CÓDIGO DE LA CLINICA',
             'deleted_at' => 'Deleted At',
             'updated_at' => 'Updated At',
-            'private_key' => 'Private Key',
+            'private_key' => 'Private Key', 
+            'municipio' => 'MUNICIPIO',
+            'parroquia' => 'PARROQUIA',
         ];
     }
 

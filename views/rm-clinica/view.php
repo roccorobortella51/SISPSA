@@ -99,7 +99,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <?= $form->field($model, 'rif')->widget(MaskedInput::class, [
                         'mask' => 'J-99999999-9',
                         'options' => [
@@ -109,7 +109,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         ]
                     ]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
                         'mask' => '(9999) 999-9999',
                         'options' => [
@@ -119,25 +119,18 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         ]
                     ]) ?>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4">
+                    <div class="col-md-3">
                    <?= $form->field($model, 'correo')->textInput([
                     'readonly' => true,
                     'placeholder' => 'Ingrese el correo electrónico',
                     'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
-                <div class="col-md-4">
-                    <?= $form->field($model, 'estado')->textInput([
-                    'readonly' => true,
-                    'placeholder' => 'Ingrese el correo electrónico',
-                    'class' => 'form-control form-control-lg',
-                    'value' => $model->estado
-                    ]) ?>
-                </div>
-                <div class="col-md-4">
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
                     <?= $form->field($model, 'estatus')->widget(Select2::classname(), [
                         'data' => $listaEstatus,
                         'options' => [
@@ -149,6 +142,33 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         ],
                     ]) ?>
                 </div>
+            
+                <div class="col-md-3">
+                    <?= $form->field($model, 'estado')->textInput([
+                    'readonly' => true,
+                    'placeholder' => 'Ingrese el correo electrónico',
+                    'class' => 'form-control form-control-lg',
+                    'value' => $model->estado
+                    ]) ?>
+                </div>
+
+                <div class="col-md-3">
+                    <?= $form->field($model, 'municipio')->textInput([
+                    'readonly' => true,
+                    'placeholder' => 'Ingrese el correo electrónico',
+                    'class' => 'form-control form-control-lg',
+                    'value' => $model->municipio
+                    ]) ?>
+                </div>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'parroquia')->textInput([
+                    'readonly' => true,
+                    'placeholder' => 'Ingrese el correo electrónico',
+                    'class' => 'form-control form-control-lg',
+                    'value' => $model->parroquia
+                    ]) ?>
+                </div>
+
             </div>
 
             <div class="row">
