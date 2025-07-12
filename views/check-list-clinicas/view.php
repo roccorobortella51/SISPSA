@@ -49,7 +49,16 @@ $renderTextField = function ($attribute, $model) {
     <h1 class="text-center mb-4"><?= Html::encode($this->title) ?></h1>
 
     <div class="d-flex justify-content-center mb-4">
-        <?= Html::a('<i class="fas fa-sync-alt"></i> Renovar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary btn-lg mr-3']) ?>
+        <?= Html::a(
+            '<i class="fas fa-undo"></i> Volver', 
+            '#',
+            [
+                'class' => 'btn btn-primary btn-lg mr-3', 
+                'onclick' => 'window.history.back(); return false;', 
+                'title' => 'Volver a la página anterior', 
+            ]
+        ) ?> 
+        <?= Html::a('<i class="fas fa-sync-alt"></i> Renovar', ['update', 'id' => $model->id], ['class' => 'btn btn-info btn-lg mr-3']) ?>
         <?= Html::a('<i class="fas fa-trash-alt"></i> Eliminar', ['delete', 'id' => $model->id], [
             'class' => 'btn btn-danger btn-lg',
             'data' => [

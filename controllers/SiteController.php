@@ -223,4 +223,6 @@ class SiteController extends Controller
         return $valor;
     }
 
+    
+
 }
