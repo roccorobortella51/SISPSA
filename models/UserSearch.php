@@ -57,7 +57,7 @@ class UserSearch extends User
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [
-                'pageSize' => 5,
+                'pageSize' => 10,
             ],
             'sort' => [
                 'defaultOrder' => [
@@ -66,8 +66,8 @@ class UserSearch extends User
                 // Permite ordenar por roleName, apuntando a la columna real en la tabla unida
                 'attributes' => array_merge(parent::attributes(), [
                     'roleName' => [
-                        'asc' => ['userDatos.role' => SORT_ASC], // Columna 'role' en la tabla 'user_datos'
-                        'desc' => ['userDatos.role' => SORT_DESC],
+                         'asc' => ['user_datos.role' => SORT_ASC],
+                        'desc' => ['user_datos.role' => SORT_DESC],
                     ],
                 ]),
             ],
@@ -94,7 +94,7 @@ class UserSearch extends User
             ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
             ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
             ->andFilterWhere(['ilike', 'email', $this->email])
-            ->andFilterWhere(['like', 'userDatos.role', $this->roleName]);
+            ->andFilterWhere(['like', 'user_datos.role', $this->roleName]);
 
                 // Filtro para el nombre completo
         if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO

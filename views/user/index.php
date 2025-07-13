@@ -7,6 +7,7 @@ use yii\grid\ActionColumn;
 use kartik\grid\GridView;
 use app\components\UserHelper;
 use kartik\select2\Select2;
+use app\models\AuthItem; 
 
 
 /** @var yii\web\View $this */
@@ -111,24 +112,22 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                     ],
 
                                     // --- COLUMNA PARA EL ROL ---
-                                   [
+                                    [  
                                         'label' => 'Rol del Usuario',
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'format' => 'raw',
                                         'value' => function ($model) {
-                                            // Acceso directo al rol desde la relación. Manejo de null con '??'
-                                            return $model->userDatos->role ?? 'No asignado'; 
+                                            return $model->userDatos->role ?? 'No asignado';
                                         },
                                         'contentOptions' => ['class' => 'text-center'],
                                         'filter' => Select2::widget([
                                             'model' => $searchModel,
-                                            'attribute' => 'roleName', // El atributo roleName en tu UserSearch
-                                            // Esta función debe devolver un array con todos los roles posibles
-                                            // Ej: ['admin' => 'Administrador', 'cliente' => 'Cliente', 'asesor' => 'Asesor']
-                                            'data' => UserHelper::getRolesAllRoles(), // <--- Asegúrate de que esta función existe y devuelve los roles
+                                            'attribute' => 'roleName',
+                                           
+                                            'data' => UserHelper::getRolesAllRoles(), 
                                             'options' => ['placeholder' => 'Filtrar por rol...'],
                                             'pluginOptions' => [
-                                                'allowClear' => true, // Permite al usuario borrar la selección del filtro
+                                                'allowClear' => true,
                                             ],
                                         ]),
                                     ],
