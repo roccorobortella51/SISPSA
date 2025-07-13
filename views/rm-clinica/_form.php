@@ -111,13 +111,13 @@ if ($model->isNewRecord) {
     <div class="row">
         
  
-        <div class="col-md-4">
+        <div class="col-md-3">
             <?= $form->field($model, 'estado')->widget(Select2::classname(), [
                 'data' => UserHelper::getEstadosList(),
                 'options' => [
                     'placeholder' => 'Seleccione un estado...',
-                    'class' => 'form-control form-control-lg',
-                    'id' => 'nuevo_formulario_estado_id' // ¡Cambia este ID si ya hay otro 'estado_id' en la misma página!
+                    'class' => 'form-control  form-control-lg',
+                    'id' => 'estado_id'
                 ],
                 'pluginOptions' => [
                     'allowClear' => false,
@@ -125,44 +125,53 @@ if ($model->isNewRecord) {
             ]);
             ?>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <?= $form->field($model, 'municipio')->widget(DepDrop::classname(), [
                 'type' => DepDrop::TYPE_SELECT2,
                 'options' => [
-                    'id' => 'nuevo_formulario_municipio_id', // ¡Cambia este ID si ya hay otro 'municipio_id' en la misma página!
+                    'id' => 'municipio_id',
                     'placeholder' => 'Seleccione un municipio...',
-                    'class' => 'form-control form-control-lg',
+                    'class' => 'form-control  form-control-lg',
                 ],
                 'pluginOptions' => [
-                    'depends' => ['nuevo_formulario_estado_id'], // Asegúrate que dependa del ID del Select2 de arriba
-                    'url' => Url::to(['/site/municipio']),
+                    'depends' => ['estado_id'],
+                    'url' => Url::to(['/site/municipio']), 
                     'initialize' => true,
-                    // Si estás editando un registro y quieres que el valor guardado aparezca,
-                    // y tu controlador /site/municipio no devuelve el 'selected' adecuado al inicializar,
-                    // es posible que necesites ajustar la URL o el comportamiento de la inicialización.
-                    // Sin embargo, si ya te funciona con user_datos, probablemente no necesites nada más.
                 ]
             ]);
             ?>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <?= $form->field($model, 'parroquia')->widget(DepDrop::classname(), [
                 'type' => DepDrop::TYPE_SELECT2,
                 'options' => [
-                    'id' => 'nuevo_formulario_parroquia_id', // ¡Cambia este ID si ya hay otro 'parroquia_id' en la misma página!
+                    'id' => 'parroquia_id',
                     'placeholder' => 'Seleccione una parroquia...',
-                    'class' => 'form-control form-control-lg',
+                    'class' => 'form-control  form-control-lg',
                 ],
                 'pluginOptions' => [
-                    'depends' => ['nuevo_formulario_municipio_id'], // Asegúrate que dependa del ID del DepDrop de municipio
-                    'url' => Url::to(['/site/parroquia']),
-                    'initialize' => true,
-                    // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '', // Puedes descomentar si necesitas un texto inicial
+                    'depends' => ['municipio_id'],
+                    'url' => Url::to(['/site/parroquia']), 
+                    // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
                 ]
             ]);
             ?>
         </div>
-    </div>
+        <div class="col-md-3">
+            <?= $form->field($model, 'ciudad')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'ciudad_id',
+                    'placeholder' => 'Seleccione una ciudad...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['estado_id'], 
+                    'url' => Url::to(['/site/ciudad']), 
+                    'initialize' => true,
+                ]
+            ]);  ?>
+        </div>
     </div>
 
     <div class="row">

@@ -30,6 +30,7 @@ use Yii;
  * @property string|null $private_key
  * @property string|null $municipio
  * @property string|null $parroquia
+ * @property string|null $ciudad
  *
  * @property ClinicaContactos[] $clinicaContactos
  * @property Contratos[] $contratos
@@ -57,8 +58,8 @@ class RmClinica extends \yii\db\ActiveRecord
         return [
             [['QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
             [['rs_instagram'], 'default', 'value' => ''],
-            [['created_at', 'deleted_at', 'updated_at', 'municipio', 'parroquia'], 'safe'],
-            [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
+            [['created_at', 'deleted_at', 'updated_at', 'municipio', 'parroquia', 'ciudad'], 'safe'],
+            [['rif', 'nombre', 'estado', 'ciudad', 'municipio', 'parroquia','direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
             [['private_key'], 'string', 'max' => 64],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
             [['correo'], 'email'],
@@ -93,6 +94,7 @@ class RmClinica extends \yii\db\ActiveRecord
             'private_key' => 'Private Key', 
             'municipio' => 'MUNICIPIO',
             'parroquia' => 'PARROQUIA',
+            'ciudad' => 'CIUDAD',
         ];
     }
 
