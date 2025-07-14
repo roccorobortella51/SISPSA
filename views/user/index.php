@@ -6,6 +6,9 @@ use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
 use app\components\UserHelper;
+use kartik\select2\Select2;
+use app\models\AuthItem; 
+
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -108,31 +111,29 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                         ],
                                     ],
 
-                                    // --- NUEVA COLUMNA PARA EL ROL ---
-                                    [
-                                        'label' => 'Rol del Usuario', // El título de la columna
+                                    // --- COLUMNA PARA EL ROL ---
+                                    [  
+                                        'label' => 'Rol del Usuario',
                                         'headerOptions' => ['style' => 'color: white!important;'],
-                                        'format' => 'raw', 
+                                        'format' => 'raw',
                                         'value' => function ($model) {
-                                            return UserHelper::getRolNameByUserId($model->id);
+                                            return $model->userDatos->role ?? 'No asignado';
                                         },
-                                        // Opcional: Centrar el texto en la celda
                                         'contentOptions' => ['class' => 'text-center'],
-                                        // Opcional: Si quieres un filtro de texto para el rol, tendrías que modificar UserSearch
-                                        // 'filterInputOptions' => [
-                                        //     'placeholder' => 'Filtrar por rol',
-                                        //     'class' => 'form-control text-center',
-                                        // ],
+                                        'filter' => Select2::widget([
+                                            'model' => $searchModel,
+                                            'attribute' => 'roleName',
+                                           
+                                            'data' => UserHelper::getRolesAllRoles(), 
+                                            'options' => ['placeholder' => 'Filtrar por rol...'],
+                                            'pluginOptions' => [
+                                                'allowClear' => true,
+                                            ],
+                                        ]),
                                     ],
-                                    // --- FIN NUEVA COLUMNA ---
-                                        // Columna de Acciones - Se mantiene sin cambios
-
-
-
-                                    //'status',
-                                    //'created_at',
-                                    //'updated_at',
-                                    //'id',
+                                    // --- FIN COLUMNA ----
+                                    
+                        
                                         // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado
                                     [
                                         'class' => 'yii\grid\ActionColumn',

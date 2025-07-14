@@ -7,6 +7,7 @@ use kartik\select2\Select2; // Para los selectores de estado y estatus
 use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
 use app\components\UserHelper;
 use yii\helpers\Url;
+use kartik\depdrop\DepDrop;
 
 
 
@@ -76,7 +77,7 @@ if ($model->isNewRecord) {
                 'readonly' => $readOnly
             ]) ?>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-2">
             <?= $form->field($model, 'rif')->widget(MaskedInput::class, [
                 'mask' => 'J-99999999-9',
                 'options' => [
@@ -87,7 +88,7 @@ if ($model->isNewRecord) {
                 ]
             ]) ?>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-2">
             <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
                 'mask' => '(9999) 999-9999',
                 'options' => [
@@ -97,9 +98,7 @@ if ($model->isNewRecord) {
                 ]
             ]) ?>
         </div>
-    </div>
 
-    <div class="row">
         <div class="col-md-4">
            <?= $form->field($model, 'correo')->textInput([
             'maxlength' => true,
@@ -107,28 +106,71 @@ if ($model->isNewRecord) {
             'class' => 'form-control form-control-lg',
             ]) ?>
         </div>
-        <div class="col-md-4">
-            <?php 
+    </div>
 
-            if($readOnly == false){
-                echo $form->field($model, 'estado')->widget(Select2::classname(), [
+    <div class="row">
+        
+ 
+        <div class="col-md-3">
+            <?= $form->field($model, 'estado')->widget(Select2::classname(), [
                 'data' => UserHelper::getEstadosList(),
                 'options' => [
-                    'placeholder' => 'Seleccione',
-                                'class' => 'form-control form-control-lg',
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => false,
-                            ],]); 
-            }else{
-
-                echo $form->field($model, 'estado')->textInput([
-                'readonly' => $readOnly,
-                'value' => $model->estado,
-                'class' => 'form-control form-control-lg',
-                ]); 
-
-            } ?>
+                    'placeholder' => 'Seleccione un estado...',
+                    'class' => 'form-control  form-control-lg',
+                    'id' => 'estado_id'
+                ],
+                'pluginOptions' => [
+                    'allowClear' => false,
+                ],
+            ]);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model, 'municipio')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'municipio_id',
+                    'placeholder' => 'Seleccione un municipio...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['estado_id'],
+                    'url' => Url::to(['/site/municipio']), 
+                    'initialize' => true,
+                ]
+            ]);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model, 'parroquia')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'parroquia_id',
+                    'placeholder' => 'Seleccione una parroquia...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['municipio_id'],
+                    'url' => Url::to(['/site/parroquia']), 
+                    // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
+                ]
+            ]);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model, 'ciudad')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'ciudad_id',
+                    'placeholder' => 'Seleccione una ciudad...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['estado_id'], 
+                    'url' => Url::to(['/site/ciudad']), 
+                    'initialize' => true,
+                ]
+            ]);  ?>
         </div>
     </div>
 
@@ -153,6 +195,8 @@ if ($model->isNewRecord) {
             <?= $form->field($model, 'codigo_clinica')->textInput(['maxlength' => true, 'placeholder' => 'Código interno de clínica', 'class' => 'form-control form-control-lg',]) ?>
         </div>
     </div>
+
+    
     
     <div class="form-group text-rigth mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Clínica', ['class' => 'btn btn-success btn-lg']) ?>

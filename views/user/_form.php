@@ -10,6 +10,12 @@ use yii\helpers\Url;
 use yii\web\JsExpression;
 use kartik\depdrop\DepDrop; 
 
+// --- Calcula los IDs de los campos antes del bloque JS ---
+$firstEmailFieldId = Html::getInputId($model, 'email');
+$secondEmailFieldId = Html::getInputId($model2, 'email');
+// --- Fin de cálculo de IDs ---
+
+
 
 ?>
 
@@ -148,8 +154,9 @@ use kartik\depdrop\DepDrop;
             <?= $form->field($model2, 'email')->textInput([
                 'class' => 'form-control form-control-lg',
                 'type' => 'email',
-                'placeholder' => 'Ej: personal@dominio.com'
-            ])->label("CORREO ELECTRÓNICO (Personal)") ?>
+                'placeholder' => 'Ej: personal@dominio.com',
+                'readonly' => true 
+            ])->label("CORREO ELECTRÓNICO") ?>
         </div>
         <div class="col-md-4">
             <?= $form->field($model2, 'codigoValidacion')->textInput([
@@ -246,3 +253,37 @@ use kartik\depdrop\DepDrop;
     <?php ActiveForm::end(); ?>
 
 </div>
+
+<?php
+
+
+
+
+// ... (el resto de tu código del formulario) ...
+
+$js = <<<JS
+// Obtener los elementos jQuery usando los IDs calculados
+var \$firstEmailField = $('#{$firstEmailFieldId}');
+var \$secondEmailField = $('#{$secondEmailFieldId}');
+
+// Función para copiar el valor
+function copyEmailToPersonal() {
+    // Verificamos que los elementos existan antes de intentar usarlos
+    if (\$firstEmailField.length && \$secondEmailField.length) {
+        \$secondEmailField.val(\$firstEmailField.val());
+    }
+}
+
+// Escuchar el evento 'input' (cada vez que se escribe algo) en el primer campo
+\$firstEmailField.on('input', function() {
+    copyEmailToPersonal();
+});
+
+// Opcional: Si el primer campo ya tiene un valor al cargar la página (ej. en edición),
+// cópialo al segundo campo una vez.
+if (\$firstEmailField.val() !== '') {
+    copyEmailToPersonal();
+}
+JS;
+$this->registerJs($js);
+?>
