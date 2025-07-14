@@ -53,7 +53,7 @@ $preguntas = [
                     'method' => 'post',
                 ],
             ]) ?>
-            <?= Html::a('<i class="fas fa-list"></i> Volver', ['index'], ['class' => 'btn btn-outline-secondary']) ?>
+            <?= Html::a('<i class="fas fa-list"></i> Volver', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-secondary']) ?>
         </div>
     </div>
 
