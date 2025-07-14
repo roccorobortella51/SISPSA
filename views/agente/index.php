@@ -30,7 +30,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
             <div>
-                <?php Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
             </div>
         </div>
 
@@ -55,10 +55,10 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         ],
 
                         'columns' => [
-                           
+                            // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
-                                'attribute' => 'nom', 
-                                'label' => 'Nombre', 
+                                'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**
+                                'label' => 'Nombre', // Etiqueta visible en la cabecera
                                 'format' => 'ntext',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'options' => ['style' => 'width: 250px;'],
@@ -78,27 +78,24 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             //     ],
                             // ],
 
-                           
+                            // Propietario (asumimos 'idusuariopropietario'. Si necesitas el nombre real,
+                            // tu modelo 'Agente' necesitará una relación o un campo 'value' aquí)
                             [
-                                
-                                'attribute' => 'propietarioNombreCompleto', 
+                                'attribute' => 'propietario.username', // CORRECTO, si 'username' es donde está el nombre en el modelo User
                                 'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar propietario',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                // Opcional: para manejar el caso de que no haya propietario y no mostrar error, puedes usar 'value':
                                 'value' => function($model) {
-                                    
-                                    if ($model->propietario && $model->propietario->userDatos) {
-                                        return $model->propietario->userDatos->nombres . ' ' . $model->propietario->userDatos->apellidos;
-                                    }
-                                    return 'No asignado';
+                                    return $model->propietario ? $model->propietario->username : 'No asignado';
                                 }
                             ],
                             // // Porcentaje (asumimos 'por_venta' como un ejemplo de porcentaje)
                             // [
-                            //     'attribute' => 'por_venta', // 
+                            //     'attribute' => 'por_venta', // **VERIFICA que este es el campo correcto para porcentaje**
                             //     'label' => 'Porcentaje', // Etiqueta visible en la cabecera
                             //     'headerOptions' => ['style' => 'color: white!important;'],
                             //     'filterInputOptions' => [
@@ -120,12 +117,12 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 'value' => function($model) {
                                     
                                     
-                                    $count = $model->agenteFuerzaCount; 
+                                    $count = $model->agenteFuerzaCount; // O $model->getAgenteFuerzaCount() si prefieres la forma explícita
                             
                                     return Html::a(
-                                        $count, 
-                                        ['agente-fuerza/index-by-agente', 'agente_id' => $model->id], 
-                                        ['title' => 'Ver asesores de esta agencia', 'data-pjax' => '0'] 
+                                        $count, // El texto del enlace será el número de asesores
+                                        ['agente-fuerza/index-by-agente', 'agente_id' => $model->id], // URL a la vista de los asesores de esta agencia
+                                        ['title' => 'Ver asesores de esta agencia', 'data-pjax' => '0'] // data-pjax="0" para que no recargue el Pjax del GridView si lo usas
                                     );
                             
                                     // Si solo quieres mostrar el número sin enlace, usa:
@@ -138,18 +135,18 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // ¡CAMBIO AQUÍ! Añadimos {view} y removemos {delete}
                                 'options' => ['style' => 'width:80px; min-width:80px;'],
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
                                 'buttons' => [
-                                    'view' => function ($url, $model, $key) {
+                                    'view' => function ($url, $model, $key) { // ¡BOTÓN 'VIEW' AÑADIDO!
                                         return Html::a(
-                                            '<i class="fa fa-eye ms-text-primary"></i>',
-                                            Url::to(['view', 'id' => $model->id]), 
+                                            '<i class="fa fa-eye ms-text-primary"></i>', // Icono de ojo
+                                            Url::to(['view', 'id' => $model->id]), // URL a la acción 'view'
                                             [
                                                 'title' => 'Ver Detalle',
-                                                'class' => 'btn btn-link btn-sm text-info', 
+                                                'class' => 'btn btn-link btn-sm text-info', // Estilo de botón de información
                                                 'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                             ]
                                         );

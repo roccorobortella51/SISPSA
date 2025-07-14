@@ -33,7 +33,6 @@ function formatDateTime($value) {
             </div>
         </div>
     </div> 
--------    
        
 <div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
     <div class="col">
@@ -66,8 +65,6 @@ function formatDateTime($value) {
         ) ?>
     </div>
 </div>
-
------         
 
             <h5 class="mt-4 mb-3">Porcentajes de Comisión</h5>
             <div class="row mb-4 g-3">
