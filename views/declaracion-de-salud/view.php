@@ -42,20 +42,20 @@ $preguntas = [
 ?>
 <div class="declaracion-de-salud-view-custom container mt-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3><?= Html::encode($this->title) ?></h3><br>
-        <div class="btn-group">
-            <?= Html::a('<i class="fas fa-edit"></i> Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
-            <?= Html::a('<i class="fas fa-trash-alt"></i> Eliminar', ['delete', 'id' => $model->id], [
-                'class' => 'btn btn-danger',
-                'data' => [
-                    'confirm' => '¿Está seguro de que desea eliminar esta Declaración de Salud?',
-                    'method' => 'post',
-                ],
-            ]) ?>
-            <?= Html::a('<i class="fas fa-list"></i> Volver', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-secondary']) ?>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><?= Html::encode($this->title) ?></h3><br>
+    <div class="d-flex align-items-center">
+        <?= Html::a('<i class="fas fa-edit"></i> Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary btn-sm my-spaced-button']) // Agregamos 'my-spaced-button' ?>
+        <?= Html::a('<i class="fas fa-trash-alt"></i> Eliminar', ['delete', 'id' => $model->id], [
+            'class' => 'btn btn-danger btn-sm my-spaced-button', // Agregamos 'my-spaced-button'
+            'data' => [
+                'confirm' => '¿Está seguro de que desea eliminar esta Declaración de Salud?',
+                'method' => 'post',
+            ],
+        ]) ?>
+        <?= Html::a('<i class="fas fa-list"></i> Volver', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-secondary btn-sm']) // El último no necesita margen derecho ?>
     </div>
+</div>
 
     <hr>
 

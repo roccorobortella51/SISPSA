@@ -104,25 +104,36 @@ if (!$agente->isNewRecord) { ?>
                            
                             
                             [
-                                'attribute' => 'usuario.nombre_completo',
+                                'attribute' => 'agenteFuerzaUserNombres', // <--- ¡Debe coincidir con el nombre del atributo virtual!
                                 'label' => 'Nombre',
                                 'value' => function($model) {
-                                    
-                                    if($model->user){
-                                        
-                                        //return $model->user->username;
-                                        return $model->user->userDatos->nombres;
+                                    if ($model->user && $model->user->userDatos) {
+                                        return $model->user->userDatos->nombres . ' ' . $model->user->userDatos->apellidos;
                                     }
-                                    
+                                    return 'N/A';
                                 },
-                                'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar nombre',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                                'options' => ['style' => 'width: 30%;'], // <--- para ancho de la celda
                             ],
-                            
+
+                            [
+                                'label' => 'Cedula de identidad',
+                                'value' => function($model) {
+                                    if ($model->user && $model->user->userDatos) {
+                                        return $model->user->userDatos->cedula;
+                                    }
+                                    return 'No disponible';
+                                },
+                                // Asegúrate de que este 'attribute' sea correcto para el SearchModel
+                                'attribute' => 'agenteFuerzaUserCedula',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar cedula de identidad',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
                             
                             [
                                 'label' => 'Correo Electrónico',
@@ -133,7 +144,7 @@ if (!$agente->isNewRecord) { ?>
                                     return 'No disponible';
                                 },
                                 // Asegúrate de que este 'attribute' sea correcto para el SearchModel
-                                'attribute' => 'user.userDatos.email',
+                                'attribute' => 'agenteFuerzaUserEmail',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar correo',
@@ -149,7 +160,7 @@ if (!$agente->isNewRecord) { ?>
                                     return $model->user->userDatos->telefono ?? 'No disponible';
                                 },
                                 // Asegúrate de que este 'attribute' sea correcto para el SearchModel
-                                'attribute' => 'user.userDatos.telefono', // Cambia 'telefono' si el nombre de tu columna es diferente
+                                'attribute' => 'agenteFuerzaUserTelefono', // Cambia 'telefono' si el nombre de tu columna es diferente
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar teléfono',

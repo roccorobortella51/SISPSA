@@ -94,17 +94,27 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                     return $model->propietario ? $model->propietario->username : 'No asignado';
                                 }
                             ],
-                            // // Porcentaje (asumimos 'por_venta' como un ejemplo de porcentaje)
-                            // [
-                            //     'attribute' => 'por_venta', // **VERIFICA que este es el campo correcto para porcentaje**
-                            //     'label' => 'Porcentaje', // Etiqueta visible en la cabecera
-                            //     'headerOptions' => ['style' => 'color: white!important;'],
-                            //     'filterInputOptions' => [
-                            //         'placeholder' => 'Buscar %',
-                            //         'class' => 'form-control form-control-lg text-center',
-                            //     ],
-                            // ],
-
+                            
+                            [
+                                'attribute' => 'propietarioEmail', // Atributo virtual del AgenteSearch
+                                'label' => 'Correo del Propietario', // Etiqueta para el encabezado
+                                'value' => function ($model) {
+                                    // $model aquí es una instancia de Agente.
+                                    // Accedemos a su relación 'propietario' y luego a su 'email'.
+                                    return $model->propietario ? $model->propietario->email : 'N/A';
+                                },
+                            ],
+                            // Columna para la cédula del propietario
+                            [
+                                'attribute' => 'propietarioCedula', // Atributo virtual del AgenteSearch
+                                'label' => 'Cédula del Propietario', // Etiqueta para el encabezado
+                                'value' => function ($model) {
+                                    // $model aquí es una instancia de Agente.
+                                    // Accedemos a su relación 'propietario', y luego a los 'userDatos' del propietario.
+                                    return ($model->propietario && $model->propietario->userDatos) ? $model->propietario->userDatos->cedula : 'N/A';
+                                },
+                            ],
+               
                             
                             [
                                 'attribute' => 'agenteFuerzaCount', 
