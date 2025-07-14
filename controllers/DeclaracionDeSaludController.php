@@ -73,8 +73,12 @@ class DeclaracionDeSaludController extends Controller
      */
     public function actionView($id)
     {
+         $model = $this->findModel($id);
+         $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
+
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $model,
+            'afiliado' => $afiliado
         ]);
     }
 
