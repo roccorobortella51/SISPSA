@@ -119,8 +119,25 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
                                         'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
                                     ],
                                 ],
+                                 [
+                                    'attribute' => 'estado',
+                                    'options' => ['style' => 'width: 250px;'],
+                                    'headerOptions' => ['style' => 'color: white!important;'],
+                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                    'filterInputOptions' => [
+                                        'placeholder' => 'Búsqueda',
+                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                    ],
+
+                                    /*filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                     'filter' => \yii\helpers\ArrayHelper::map(\app\models\RmEstado::find()->orderBy('nombre')->asArray()->all(), 'estado.nombre', 'customer.estado.nombre'),
+                                    'filterWidgetOptions' => [
+                                        'pluginOptions' => ['allowClear' => true],
+                                    ],
+                                    'filterInputOptions' => ['placeholder' => 'Estado'],*/
+                                ],
                                 [
-                                    'label' => 'Estado',
+                                    'label' => 'Estatus',
                                     'attribute' => 'estatus',
                                     'format' => 'raw',
                                     'headerOptions' => ['class' => 'text-left header-link'],
@@ -149,6 +166,12 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
                                             'labelOptions' => ['style' => 'font-size: 12px;'],
                                         ]);
                                     },
+                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                    'filter' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],
+                                    'filterWidgetOptions' => [
+                                        'pluginOptions' => ['allowClear' => true],
+                                    ],
+                                    'filterInputOptions' => ['placeholder' => 'Estatus'],
                                 ],
 
                                 // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado

@@ -65,6 +65,31 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                             //'id',
                             //'created_at',
                             //'user_id',
+                             [
+                                'attribute' => 'created_at',
+                                'hAlign' => 'center',
+                                'vAlign' => 'middle',
+                                'value' => function ($model, $key, $index, $widget) {
+                                    return $model->created_at;
+                                },
+                                'width' => '12%',
+                                'filterType' => \kartik\grid\GridView::FILTER_DATE_RANGE,
+                                'format' => 'date',
+                                'filterInputOptions' => ['placeholder' => 'Seleccione un rango de fechas', 'class' => 'form-control'],
+                                'filterWidgetOptions' => [
+                                    'presetDropdown' => true,
+                                    'pluginOptions' => [
+                                        'locale' => ['format' => 'YYYY/MM/DD'],
+                                        'separator' => ' A ',
+                                        'placeholder' => 'Fecha de creación',
+                                        'placeholder' => "Filter",
+                                    ],
+                                    'pluginEvents' => [
+                                        "apply.daterangepicker" => "function() { $('.grid-view').yiiGridView('applyFilter') }",
+                                    ]
+                                ],
+                            ],
+
                             [
                                 'label' => 'Nombre Completo', 
                                 'attribute' => 'nombres', 
@@ -110,7 +135,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                     'class' => 'form-control text-center',
                                 ],
                             ],
-                            [
+                            /*[
                                 'label' => 'Fecha de Nacimiento',
                                 'attribute' => 'fechanac', 
                                 'format' => 'date', // Mantiene el formato de fecha de Yii (ej. 10 de julio de 2025)
@@ -120,8 +145,36 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                     'placeholder' => 'Buscar por fecha',
                                     'class' => 'form-control text-center', 
                                 ],
-                            ],
+                            ],*/
+
                             [
+                                'attribute' => 'fechanac',
+                                'label' => 'Fecha de Nacimiento',
+                                'hAlign' => 'center',
+                                'vAlign' => 'middle',
+                                'value' => function ($model, $key, $index, $widget) {
+                                    return $model->created_at;
+                                },
+                                'width' => '12%',
+                                'filterType' => \kartik\grid\GridView::FILTER_DATE_RANGE,
+                                'format' => 'date',
+                                'filterInputOptions' => ['placeholder' => 'Seleccione un rango de fechas', 'class' => 'form-control'],
+                                'filterWidgetOptions' => [
+                                    'presetDropdown' => true,
+                                    'pluginOptions' => [
+                                        'locale' => ['format' => 'YYYY/MM/DD'],
+                                        'separator' => ' A ',
+                                        'placeholder' => 'Fecha de Nacimiento',
+                                        'placeholder' => "Filter",
+                                    ],
+                                    'pluginEvents' => [
+                                        "apply.daterangepicker" => "function() { $('.grid-view').yiiGridView('applyFilter') }",
+                                    ]
+                                ],
+                            ],
+
+
+                            /*[
                                 'label' => 'clinica', 
                                 'attribute' => 'clinica_id', 
                                 'value' => function ($model) {
@@ -149,6 +202,35 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                     'placeholder' => 'Buscar por nombre',
                                     'class' => 'form-control text-center',
                                 ],
+                            ],*/
+
+                            [
+                                'attribute' => 'clinica_id',
+                                'vAlign' => 'middle',
+                                'label' => 'Clínicas',
+                                'value' => function ($model) {
+                                    $clinica = '';
+                                    $plan = '';
+
+                                    if($model->clinica){
+                                        $clinica = 'Clinica: '.  $model->clinica->nombre;
+                                    }
+
+                                    if($model->plan){
+                                        $plan = 'Plan: ' .$model->plan->nombre;
+                                    }
+                                        return $clinica . '<br> ' . $plan;
+                                    
+                                    
+                                    
+                                },
+                                'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                 'filter' => \yii\helpers\ArrayHelper::map(\app\models\RmClinica::find()->orderBy('nombre')->asArray()->all(), 'id', 'nombre'),
+                                'filterWidgetOptions' => [
+                                    'pluginOptions' => ['allowClear' => true],
+                                ],
+                                'filterInputOptions' => ['placeholder' => 'Clinicas'],
+                                'format' => 'raw',
                             ],
 
                             
