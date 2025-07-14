@@ -179,7 +179,7 @@ class UserDatos extends ActiveRecord
             [['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date',
                 'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'],
             // *** REGLA DE VALIDACIÓN PERSONALIZADA PARA LA EDAD ***
-            [['fechanac'], 'validateAge'],
+            //[['fechanac'], 'validateAge'],
         ];
 
     }
