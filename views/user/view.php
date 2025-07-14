@@ -62,15 +62,10 @@ function formatBooleanIcon($value) {
         <div class="card-body">
 
             <div class="row row-cols-1 row-cols-md-3 g-3 mb-3">
-                <div class="col">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">ID de Usuario</h6>
-                        <p class="h4 text-dark"><?= Html::encode($model->id) ?></p>
-                    </div>
-                </div>
+                
                 <div class="col-md-4">
                     <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Nombre de Usuario</h6>
+                        <h6 class="text-muted">Nombre de Usuario (Login)</h6>
                         <p class="h4 text-dark"><?= Html::encode($model->username) ?></p>
                     </div>
                 </div>
@@ -87,6 +82,77 @@ function formatBooleanIcon($value) {
         </div>
     </div>
             </div>
+
+
+            <h5 class="mt-4 mb-3">Datos Personales del Afiliado</h5>
+            <div class="row g-3 mb-3">
+                <?php if ($model->userDatos): // Verificamos si existe la relación userDatos ?>
+                    <div class="col-md-12">
+                        <div class="card card-body bg-light text-center">
+                            <h6 class="text-muted">Nombre Completo</h6>
+                            <p class="h3 text-dark">
+                                <?php
+                                // Concatena nombres y apellidos de UserDatos
+                                if (!empty($model->userDatos->nombres) || !empty($model->userDatos->apellidos)) {
+                                    echo Html::encode($model->userDatos->nombres . ' ' . $model->userDatos->apellidos);
+                                } else {
+                                    echo 'No especificado';
+                                }
+                                ?>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card card-body bg-light text-center">
+                            <h6 class="text-muted">Fecha de Nacimiento</h6>
+                            <p class="h5 text-dark">
+                                <?= !empty($model->userDatos->fechanac) ? Yii::$app->formatter->asDate($model->userDatos->fechanac) : 'No especificada' ?>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card card-body bg-light text-center">
+                            <h6 class="text-muted">Teléfono</h6>
+                            <p class="h5 text-dark">
+                                <?= !empty($model->userDatos->telefono) ? Html::encode($model->userDatos->telefono) : 'No especificado' ?>
+                            </p>
+                        </div>
+                    </div>
+
+                    
+
+                    <div class="col-md-12">
+                        <div class="card card-body bg-light text-center">
+                            <h6 class="text-muted">Dirección Completa</h6>
+                            <p class="h5 text-dark">
+                                <?php
+                                $direccionParts = [];
+                                if (!empty($model->userDatos->direccion)) $direccionParts[] = $model->userDatos->direccion;
+                                if (!empty($model->userDatos->parroquia)) $direccionParts[] = $model->userDatos->parroquia;
+                                if (!empty($model->userDatos->municipio)) $direccionParts[] = $model->userDatos->municipio;
+                                if (!empty($model->userDatos->ciudad)) $direccionParts[] = $model->userDatos->ciudad; // Agregado ciudad
+                                if (!empty($model->userDatos->estado)) $direccionParts[] = $model->userDatos->estado;
+
+                                if (!empty($direccionParts)) {
+                                    echo Html::encode(implode(', ', $direccionParts));
+                                } else {
+                                    echo 'No especificada';
+                                }
+                                ?>
+                            </p>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="col-md-12">
+                        <div class="card card-body bg-light text-center">
+                            <p class="h5 text-danger">Datos de afiliado no encontrados para este usuario.</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
 
             <h5 class="mt-4 mb-3">Fechas de Registro</h5>
             <div class="row g-3">

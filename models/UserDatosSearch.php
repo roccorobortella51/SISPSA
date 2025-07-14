@@ -75,8 +75,8 @@ class UserDatosSearch extends UserDatos
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
-            'created_at' => $this->created_at,
-            'fechanac' => $this->fechanac,
+            //'created_at' => $this->created_at,
+            //'fechanac' => $this->fechanac,
             'paso' => $this->paso,
             'clinica_id' => $this->clinica_id,
             'plan_id' => $this->plan_id,
@@ -86,6 +86,16 @@ class UserDatosSearch extends UserDatos
             'cedula' => $this->cedula,
             'user_login_id' => $this->user_login_id,
         ]);
+
+        if (isset($this->created_at) && !empty($this->created_at)) {
+            $dates = explode("-", $this->created_at);
+            $query->andFilterWhere(['between', 'user_datos.created_at', $dates[0] . ' 00:00:00', $dates[1] . ' 23:59:59']);
+        }
+
+        if (isset($this->fechanac) && !empty($this->fechanac)) {
+            $dates = explode("-", $this->fechanac);
+            $query->andFilterWhere(['between', 'user_datos.fechanac', $dates[0] . ' 00:00:00', $dates[1] . ' 23:59:59']);
+        }
 
 
         $query->andFilterWhere(['ilike', 'user_id', $this->user_id])

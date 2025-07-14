@@ -6,6 +6,7 @@ use kartik\select2\Select2; // Para los selectores de estado y estatus
 use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
 use yii\helpers\Url; // Necesario para Url::to
 use app\components\UserHelper; // Asumo que esto se usa en getAgenteFuerzaList() y getClinicasList()
+use kartik\depdrop\DepDrop;
 
 /** @var yii\web\View $this */
 /** @var app\models\RmClinica $model */
@@ -21,6 +22,9 @@ $listaEstados = $listaEstados ?? [];
 $listaEstatus = $listaEstatus ?? [];
 $mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
 $isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
+
+// --- PRE-CARGA DE LISTAS PARA LA TRADUCCIÓN ---
+
 
 $this->title = 'DETALLES DE LA CLINICA: ' . $model->nombre;
 $this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
@@ -99,7 +103,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <?= $form->field($model, 'rif')->widget(MaskedInput::class, [
                         'mask' => 'J-99999999-9',
                         'options' => [
@@ -109,7 +113,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         ]
                     ]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
                         'mask' => '(9999) 999-9999',
                         'options' => [
@@ -119,34 +123,50 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                         ]
                     ]) ?>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4">
+                    <div class="col-md-4">
                    <?= $form->field($model, 'correo')->textInput([
                     'readonly' => true,
                     'placeholder' => 'Ingrese el correo electrónico',
                     'class' => 'form-control form-control-lg',
                     ]) ?>
                 </div>
-                <div class="col-md-4">
+            </div>
+
+            <div class="row">
+
+               
+                 <div class="col-md-3">
                     <?= $form->field($model, 'estado')->textInput([
-                    'readonly' => true,
-                    'placeholder' => 'Ingrese el correo electrónico',
-                    'class' => 'form-control form-control-lg',
-                    'value' => $model->estado
+                        'readonly' => true,
+                        'class' => 'form-control form-control-lg',
+                        'value' => $estadosList[$model->estado] ?? 'N/A'
                     ]) ?>
                 </div>
-                <div class="col-md-4">
-                    <?= $form->field($model, 'estatus')->widget(Select2::classname(), [
-                        'data' => $listaEstatus,
-                        'options' => [
-                            'placeholder' => 'Seleccione un estatus...',
-                            'class' => 'form-control form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'allowClear' => true,
-                        ],
+
+               <div class="col-md-3">
+    <?= $form->field($model, 'municipio')->textInput([
+        'readonly' => true,
+        'class' => 'form-control form-control-lg',
+        // ¡ASEGÚRATE DE QUE LA LÍNEA DE 'value' ESTÉ EXACTAMENTE ASÍ!
+        'value' => (isset($municipiosList[(string)$model->municipio]) ? $municipiosList[(string)$model->municipio] : 'N/A')
+    ]) ?>
+</div>
+                <div class="col-md-3">
+                    <?= $form->field($model, 'parroquia')->textInput([
+                        'readonly' => true,
+                        'class' => 'form-control form-control-lg',
+                        // --- AQUÍ ES DONDE TRADUCIMOS EL ID A NOMBRE ---
+                        // Asegúrate de que la variable sea la correcta, ej. $parroquiaList
+                        'value' => $parroquiaList[$model->parroquia] ?? 'N/A' // ¡CAMBIADO a $parroquiaList!
+                    ]) ?>
+                </div>
+
+                <div class="col-md-3">
+                    <?= $form->field($model, 'ciudad')->textInput([
+                        'readonly' => true,
+                        'class' => 'form-control form-control-lg',
+                        // --- AQUÍ ES DONDE TRADUCIMOS EL ID A NOMBRE ---
+                        'value' => $ciudadesList[$model->ciudad] ?? 'N/A'
                     ]) ?>
                 </div>
             </div>
@@ -163,13 +183,27 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
             </div>
 
             <div class="row">
-                <div class="col-md-4">
+
+             <div class="col-md-3">
+                    <?= $form->field($model, 'estatus')->widget(Select2::classname(), [
+                        'data' => $listaEstatus,
+                        'options' => [
+                            'placeholder' => 'Seleccione un estatus...',
+                            'class' => 'form-control form-control-lg',
+                        ],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                        ],
+                    ]) ?>
+                </div>
+            
+                <div class="col-md-3">
                     <?= $form->field($model, 'webpage')->textInput(['readonly' => true, 'placeholder' => 'Ej: www.ejemplo.com', 'class' => 'form-control form-control-lg',]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <?= $form->field($model, 'rs_instagram')->textInput(['readonly' => true, 'placeholder' => 'Ej: @tu_clinica', 'class' => 'form-control form-control-lg',]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <?= $form->field($model, 'codigo_clinica')->textInput(['readonly' => true, 'placeholder' => 'Código interno de clínica', 'class' => 'form-control form-control-lg',]) ?>
                 </div>
             </div>
