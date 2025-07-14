@@ -80,7 +80,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
                 <div class="col">
                     <?= Html::a(
                         '<i class="fas fa-users"></i> Afiliados',
-                        ['user-datos/index', 'clinica_id' => $model->id],
+                        ['user-datos/index-clinicas', 'clinica_id' => $model->id],
                         ['class' => 'btn btn-primary btn-lg w-100']
                     ) ?>
                 </div>
