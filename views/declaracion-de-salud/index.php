@@ -105,22 +105,22 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                     [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{update}</div>',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
                                     'options' => ['style' => 'width:55px; min-width:55px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                     'buttons' => [
-                                        /*'view' => function ($url, $model, $key) {
+                                        'view' => function ($url, $model, $key) {
                                             return Html::a(
                                                 '<i class="fa fa-eye"></i>',
                                                 Url::to(['view', 'id' => $model->id]),
                                                 [
-                                                    'title' => 'Detalle de la Clínica',
+                                                    'title' => 'Detalle de la Declaración de Salud',
                                                     'class' => 'btn btn-link btn-sm text-success',
                                                     'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
-                                        },*/
+                                        },
                                         'update' => function ($url, $model, $key) {
                                             return Html::a(
                                                 '<i class="fas fa-pencil-alt ms-text-primary"></i>',
