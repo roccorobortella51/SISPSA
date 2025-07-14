@@ -33,6 +33,7 @@ class AgenteFuerza extends ActiveRecord
 {
     public $nombre_agente;
     public $asesor_id;
+    public $registro_corredor_actividad_aseguradora;
     /**
      * {@inheritdoc}
      */
@@ -64,7 +65,7 @@ class AgenteFuerza extends ActiveRecord
             [['created_at', 'updated_at', 'deleted_at', 'nombre_agente'], 'safe'], // 'safe' porque se suelen manejar automáticamente por comportamientos o triggers
 
             // Reglas de rangos para porcentajes (opcional, pero recomendado)
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number', 'min' => 0, 'max' => 100],
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar', 'registro_corredor_actividad_aseguradora'], 'number', 'min' => 0, 'max' => 100],
 
             // Reglas para asegurar que 'puede_...' sean 0 o 1 (booleano)
             [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'in', 'range' => [0, 1]],

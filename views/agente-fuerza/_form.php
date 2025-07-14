@@ -46,7 +46,10 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
     <div class="ms-panel-body">
         <?php $form = ActiveForm::begin(['id' => 'agente-fuerza-form']); // ¡ID esencial para JavaScript! ?>
 
-        <?php if (!$model->isNewRecord) { ?>
+         
+
+     <?php if (!$model->isNewRecord) { ?>
+
     <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
     <div class="col">
             <?= Html::a(
@@ -84,6 +87,14 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
                     'value' => $agente->nom ?? 'N/A', // Usar null coalescing para seguridad
                     'placeholder' => 'Nombre de la Agencia Asociada',
                 ])->label('AGENCIA ASOCIADA')
+                ?>
+            </div>
+            <div class="col-md-6">
+                <?= $form->field($model, 'registro_corredor_actividad_aseguradora')->textInput([
+                    'class' => 'form-control form-control-lg',
+                    //'value' => $agente->nom ?? 'N/A', // Usar null coalescing para seguridad
+                    'placeholder' => 'Registro corredor aseguradoras ',
+                ])->label('REGISTRO CORREDOR ACTIVIDAD ASEGURADORA')
                 ?>
             </div>
             <div class="col-md-6">
