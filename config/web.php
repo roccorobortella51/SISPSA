@@ -2,42 +2,36 @@
 
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
+$modules = require __DIR__ . '/modules.php';
 
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log', 'admin'], // 'admin' y 'as access' deben estar en bootstrap
+    'language' => 'es',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
+        '@kvgrid' => '@vendor/kartik-v/yii2-grid', // el GridView
     ],
-    'modules' => [
-        'admin' => [
-            'class' => 'mdm\admin\Module',
-            // Configuración clave para el módulo 'admin' de mdmsoft
-            'controllerMap' => [
-                'assignment' => [
-                    'class' => 'mdm\admin\controllers\AssignmentController',
-                    // ¡MUY IMPORTANTE! Asegúrate de que esta sea la ruta correcta a tu modelo User
-                    'userClassName' => 'app\models\User',
-                    'idField' => 'id',
-                    'usernameField' => 'username',
-                ],
-                'menu' => [
-                    'class' => 'app\controllers\AdminMenuController',
-                ],
-            ],
-            // Opcional: Define el layout para el módulo de administración.
-            // Esto es útil si quieres que la interfaz de admin tenga un diseño específico.
-            // 'layout' => 'left-menu', // Por ejemplo, 'left-menu' o 'top-menu'
-            // 'mainLayout' => '@app/views/layouts/main.php', // Si quieres un layout diferente
-        ]
-    ],
+    'modules' => $modules,
     'components' => [
-        'assetManager' => [ //SETTING FOR MATERIAL DASHBOARD THEME
-		    'bundles' => [
-			'genny3021\materialdashboard\web\MaterialDashboardAsset',
+         'assetManager' => [
+            'bundles' => [
+                'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
+                    //'css' => [], // Comentado para no vaciar la lista de CSS originales de AdminLTE
+                    'depends' => [ // Mantener dependencias
+                        'yii\web\YiiAsset',
+                        'yii\bootstrap4\BootstrapAsset', // Cambiado a Bootstrap 4
+                        //'rmrevin\yii\fontawesome\AssetBundle', // Comentado FontAwesome para evitar error
+                    ],
+                ],
             ],
+        ],
+        'formatter' => [
+            'defaultTimeZone' => 'America/Caracas', // ¡Esta es la línea clave!
+            // Opcional: Puedes también configurar el locale si lo necesitas
+            'locale' => 'es-VE',
         ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
@@ -72,6 +66,9 @@ $config = [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
+                    'logFile' => '@runtime/logs/app.log', // Ruta donde se guardará el "reporte"
+                    'maxFileSize' => 1024 * 2, // Tamaño máximo del archivo en KB
+                    'maxLogFiles' => 5, // Número de archivos de log a mantener
                 ],
             ],
         ],
@@ -85,15 +82,44 @@ $config = [
             ],
         ],
 
+        // BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
+        'i18n' => [
+            'translations' => [
+                'kvgrid' => [ // Categoría para los mensajes de Kartik GridView
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@kvgrid/messages', // Ubicación de los archivos de traducción de Kartik
+                    'forceTranslation' => true, // Opcional, pero recomendado para asegurar que se traduzca
+                ],
+                // Si en el futuro tienes errores con 'kvdrange' o 'kvsfmsg',
+                // también los añadirías aquí siguiendo el mismo patrón:
+                // 'kvdrange' => [
+                //     'class' => 'yii\i18n\PhpMessageSource',
+                //     'basePath' => '@kvdrange/messages',
+                //     'forceTranslation' => true,
+                // ],
+            ],
+        ],
+        'mpdf' => [
+            'class' => 'kartik\mpdf\Pdf',
+            'format' => \kartik\mpdf\Pdf::FORMAT_A4,
+            'orientation' => \kartik\mpdf\Pdf::ORIENT_PORTRAIT,
+            'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
+        ],
+        // FIN BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
+
     ],
     // 'as access' debe ir aquí, fuera de 'components'
     'as access' => [
         'class' => 'mdm\admin\components\AccessControl',
         'allowActions' => [
-            'gii/*',
-            'site/*',              // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
+            //'gii/*',
+            'site/login',
+            'site/logout',
+            'site/error', 
+            'site/tabs-data',// Permite acceso público a todas las acciones de SiteController (login, error, etc.)
             'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
             //'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
+            
         ]
     ],
     'params' => $params,

@@ -1,88 +1,45 @@
-main > .container {
-    padding: 70px 15px 20px;
+.main-header {
+  border-bottom: 1px solid #dee2e6;
+  z-index: 1040;
 }
 
-.footer {
-    background-color: #f5f5f5;
-    font-size: .9em;
-    height: 60px;
+/* Additional CSS to prevent navbar and sidebar overlap */
+.main-header {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1040;
 }
 
-.footer > .container {
-    padding-right: 15px;
-    padding-left: 15px;
+.main-sidebar {
+  position: fixed;
+  top: 56px; /* height of navbar */
+  left: 0;
+  width: 250px;
+  height: calc(100% - 56px);
+  z-index: 1039;
+  overflow-y: auto;
 }
 
-.not-set {
-    color: #c55;
-    font-style: italic;
+/* Adjust content wrapper to not be under navbar or sidebar */
+.content-wrapper {
+  margin-top: 56px; /* height of navbar */
+  margin-left: 250px; /* width of sidebar */
+  transition: margin-left 0.3s ease;
 }
 
-/* add sorting icons to gridview sort links */
-a.asc:after, a.desc:after {
-    content: '';
-    left: 3px;
-    display: inline-block;
-    width: 0;
-    height: 0;
-    border: solid 5px transparent;
-    margin: 4px 4px 2px 4px;
-    background: transparent;
+/* When sidebar is collapsed */
+.sidebar-collapse .main-sidebar {
+  margin-left: -250px;
 }
 
-a.asc:after {
-    border-bottom: solid 7px #212529;
-    border-top-width: 0;
+.sidebar-collapse .content-wrapper {
+  margin-left: 0;
 }
 
-a.desc:after {
-    border-top: solid 7px #212529;
-    border-bottom-width: 0;
-}
-
-.grid-view th {
-    white-space: nowrap;
-}
-
-.hint-block {
-    display: block;
-    margin-top: 5px;
-    color: #999;
-}
-
-.error-summary {
-    color: #a94442;
-    background: #fdf7f7;
-    border-left: 3px solid #eed3d7;
-    padding: 10px 20px;
-    margin: 0 0 15px 0;
-}
-
-/* align the logout "link" (button in form) of the navbar */
-.nav li > form > button.logout {
-    padding-top: 7px;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-@media(max-width:767px) {
-    .nav li > form > button.logout {
-        display:block;
-        text-align: left;
-        width: 100%;
-        padding: 10px 0;
-    }
-}
-
-.nav > li > form > button.logout:focus,
-.nav > li > form > button.logout:hover {
-    text-decoration: none;
-    color: rgba(255, 255, 255, 0.75);
-}
-
-.nav > li > form > button.logout:focus {
-    outline: none;
-}
-
-.form-group {
-    margin-bottom: 1rem;
+/* Ensure navbar is above sidebar */
+.navbar {
+  z-index: 1040;
 }

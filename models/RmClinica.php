@@ -1,0 +1,156 @@
+<?php
+
+namespace app\models;
+use app\components\UserHelper;
+use app\models\RmEstado; 
+use app\models\RmMunicipio;
+use app\models\RmParroquia; 
+use app\models\RmCiudad;
+
+use Yii;
+
+/**
+ * This is the model class for table "rm_clinica".
+ *
+ * @property int $id
+ * @property string $created_at
+ * @property string|null $rif
+ * @property string|null $nombre
+ * @property string|null $estado
+ * @property string|null $direccion
+ * @property string|null $telefono
+ * @property string|null $correo
+ * @property string $estatus
+ * @property string|null $webpage
+ * @property string|null $rs_instagram
+ * @property string|null $QRCode
+ * @property string|null $codigo_clinica
+ * @property string|null $deleted_at
+ * @property string|null $updated_at
+ * @property string|null $private_key
+ * @property string|null $municipio
+ * @property string|null $parroquia
+ * @property string|null $ciudad
+ *
+ * @property ClinicaContactos[] $clinicaContactos
+ * @property Contratos[] $contratos
+ * @property Planes[] $planes
+ * @property Qr[] $qrs
+ * @property SisSiniestro[] $sisSiniestros
+ */
+class RmClinica extends \yii\db\ActiveRecord
+{
+
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function tableName()
+    {
+        return 'rm_clinica';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function rules()
+    {
+        return [
+            [['QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
+            [['rs_instagram'], 'default', 'value' => ''],
+            [['created_at', 'deleted_at', 'updated_at', 'municipio', 'parroquia', 'ciudad'], 'safe'],
+            [['rif', 'nombre', 'estado', 'ciudad', 'municipio', 'parroquia','direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
+            [['private_key'], 'string', 'max' => 64],
+            [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
+            [['correo'], 'email'],
+            [['rif'], 'unique', 'message' => 'El RIF ya está en uso. Por favor, ingrese un valor único.'],
+            [['municipio', 'parroquia'], 'string', 'max' => 255],
+            
+
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function attributeLabels()
+    {
+        return [
+            'id' => 'ID',
+            'created_at' => 'Created At',
+            'rif' => 'Rif',
+            'nombre' => 'NOMBRE',
+            'estado' => 'ESTADO',
+            'direccion' => 'DIRECCIÓN',
+            'telefono' => 'TELÉFONO',
+            'correo' => 'CORREO ELECTRONICO',
+            'estatus' => 'ESTATUS',
+            'webpage' => 'SITIO WEB',
+            'rs_instagram' => 'INSTAGRAM',
+            'QRCode' => 'QR CODE',
+            'codigo_clinica' => 'CÓDIGO DE LA CLINICA',
+            'deleted_at' => 'Deleted At',
+            'updated_at' => 'Updated At',
+            'private_key' => 'Private Key', 
+            'municipio' => 'MUNICIPIO',
+            'parroquia' => 'PARROQUIA',
+            'ciudad' => 'CIUDAD',
+        ];
+    }
+
+    /**
+     * Gets query for [[ClinicaContactos]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getClinicaContactos()
+    {
+        return $this->hasMany(ClinicaContactos::class, ['clinica_id' => 'id']);
+    }
+
+    /**
+     * Gets query for [[Contratos]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getContratos()
+    {
+        return $this->hasMany(Contratos::class, ['clinica_id' => 'id']);
+    }
+
+    /**
+     * Gets query for [[Planes]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPlanes()
+    {
+        return $this->hasMany(Planes::class, ['clinica_id' => 'id']);
+    }
+
+    /**
+     * Gets query for [[Qrs]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getQrs()
+    {
+        return $this->hasMany(Qr::class, ['id_clinica' => 'id']);
+    }
+
+    /**
+     * Gets query for [[SisSiniestros]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getSisSiniestros()
+    {
+        return $this->hasMany(SisSiniestro::class, ['idclinica' => 'id']);
+    }
+
+    public function getEstado()
+    {
+        return $this->hasOne(RmEstado::class, ['nombre' => 'estado']);
+    }
+
+}

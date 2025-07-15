@@ -1,0 +1,289 @@
+<?php
+
+use yii\helpers\Html;
+use kartik\form\ActiveForm;
+use kartik\select2\Select2;
+use yii\widgets\MaskedInput;
+use app\components\UserHelper; 
+use kartik\widgets\SwitchInput;
+use yii\helpers\Url;
+use yii\web\JsExpression;
+use kartik\depdrop\DepDrop; 
+
+// --- Calcula los IDs de los campos antes del bloque JS ---
+$firstEmailFieldId = Html::getInputId($model, 'email');
+$secondEmailFieldId = Html::getInputId($model2, 'email');
+// --- Fin de cálculo de IDs ---
+
+
+
+?>
+
+<div class="user-form">
+    <?php $form = ActiveForm::begin(['options' => ['class' => 'needs-validation']]); ?>
+
+    <h3 class="mb-4">Datos de Usuario y Acceso</h3>
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model, 'username')->label('NOMBRE DE USUARIO')->textInput([
+                'maxlength' => true,
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ej: j.perez',
+                'autofocus' => true,
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+           <?= $form->field($model, 'email')->label('CORREO ELECTRÓNICO (Usuario)')->textInput([
+                'maxlength' => true,
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ej: correo@ejemplo.com',
+                'autofocus' => true,
+            ]) ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model, 'password')->label('CONTRASEÑA')->passwordInput([
+                'maxlength' => true,
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ingrese una contraseña segura',
+                'autofocus' => true,
+            ]) ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model2, 'role')->label('ROL DEL USUARIO')->widget(Select2::classname(), [
+                    'data' => UserHelper::getRolesAllRoles(), 
+                    'options' => [
+                        'placeholder' => 'Seleccione un rol...',
+                        'class' => 'form-control form-control-lg',
+                    ],
+                    'pluginOptions' => [
+                        'allowClear' => false,
+                    ],
+            ]);
+            ?>
+        </div>
+        <div class="col-md-4 d-flex align-items-center mt-3">
+             <?= $form->field($model, 'status')->label('ESTATUS', ['class' => 'me-3'])->widget(SwitchInput::classname(), [
+                'options' => [
+                    'label' => false,
+                ],
+                'pluginOptions' => [
+                    'onText' => 'Activo',
+                    'offText' => 'Inactivo',
+                    'onColor' => 'success',
+                    'offColor' => 'danger',
+                    'size' => 'large',
+                    'onValue' => 1,
+                    'offValue' => 0,
+                ],
+            ]); ?>
+        </div>
+    </div>
+
+    <br>
+    <hr>
+    <h3 class="mb-4">Datos Personales del Usuario</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <?= $form->field($model2, 'nombres')->textInput([ 
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ingrese sus nombres completos',
+            ])->label('NOMBRES') ?>
+        </div>
+        <div class="col-md-6">
+            <?= $form->field($model2, 'apellidos')->textInput([ 
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ingrese sus apellidos completos',
+            ])->label('APELLIDOS') ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-2">
+            <?= $form->field($model2, 'tipo_cedula')->widget(Select2::class, [
+                'data' => ['V' => 'V', 'E' => 'E', 'J' => 'J', 'P' => 'P', 'N' => 'N', 'M' => 'M'],
+                'options' => [
+                    'placeholder' => 'Tipo',
+                    'class' => 'form-control form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'allowClear' => true,
+                ],
+            ])->label('TIPO ID')
+            ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'cedula')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ej: 12345678'
+            ])->label('CÉDULA / RIF')
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model2, 'fechanac')->textInput([
+                'class' => 'form-control form-control-lg',
+                'type' => 'date',
+                'placeholder' => 'DD/MM/AAAA'
+            ])->label('FECHA NACIMIENTO') ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model2, 'sexo')->widget(Select2::class, [
+                'data' => ['Masculino' => 'Masculino', 'Femenino' => 'Femenino'],
+                'options' => [
+                    'placeholder' => 'Seleccione sexo...',
+                    'class' => 'form-control form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'allowClear' => true,
+                ],
+            ])->label('SEXO')
+            ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <?= $form->field($model2, 'telefono')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ej: 04121234567'
+            ])->label('TELÉFONO') ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'email')->textInput([
+                'class' => 'form-control form-control-lg',
+                'type' => 'email',
+                'placeholder' => 'Ej: personal@dominio.com',
+                'readonly' => true 
+            ])->label("CORREO ELECTRÓNICO") ?>
+        </div>
+        <div class="col-md-4">
+            <?= $form->field($model2, 'codigoValidacion')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Código de validación (si aplica)'
+            ])->label('CÓDIGO DE VALIDACIÓN') ?>
+        </div>
+    </div>
+
+    <br>
+    <hr>
+    <h3 class="mb-4">Información de Ubicación</h3>
+    <div class="row">
+        <div class="col-md-3">
+            <?= $form->field($model2, 'estado')->widget(Select2::classname(), [
+                'data' => UserHelper::getEstadosList(),
+                'options' => [
+                    'placeholder' => 'Seleccione un estado...',
+                    'class' => 'form-control  form-control-lg',
+                    'id' => 'estado_id'
+                ],
+                'pluginOptions' => [
+                    'allowClear' => false,
+                ],
+            ]);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model2, 'municipio')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'municipio_id',
+                    'placeholder' => 'Seleccione un municipio...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['estado_id'],
+                    'url' => Url::to(['/site/municipio']), 
+                    'initialize' => true,
+                ]
+            ]);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model2, 'parroquia')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'parroquia_id',
+                    'placeholder' => 'Seleccione una parroquia...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['municipio_id'],
+                    'url' => Url::to(['/site/parroquia']), 
+                    // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
+                ]
+            ]);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?= $form->field($model2, 'ciudad')->widget(DepDrop::classname(), [
+                'type' => DepDrop::TYPE_SELECT2,
+                'options' => [
+                    'id' => 'ciudad_id',
+                    'placeholder' => 'Seleccione una ciudad...',
+                    'class' => 'form-control  form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'depends' => ['estado_id'], 
+                    'url' => Url::to(['/site/ciudad']), 
+                    'initialize' => true,
+                ]
+            ]);  ?>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <?= $form->field($model2, 'direccion')->textInput([
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ej: Calle Principal, Edificio A, Apt. 12',
+            ])->label('DIRECCIÓN COMPLETA') ?>
+        </div>
+    </div>
+
+    <div class="form-group text-end mt-4">
+        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Usuario', ['class' => 'btn btn-success btn-lg']); ?>
+
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-primary btn-lg']); ?>
+
+        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
+    </div>
+
+    <?php ActiveForm::end(); ?>
+
+</div>
+
+<?php
+
+
+
+
+// ... (el resto de tu código del formulario) ...
+
+$js = <<<JS
+// Obtener los elementos jQuery usando los IDs calculados
+var \$firstEmailField = $('#{$firstEmailFieldId}');
+var \$secondEmailField = $('#{$secondEmailFieldId}');
+
+// Función para copiar el valor
+function copyEmailToPersonal() {
+    // Verificamos que los elementos existan antes de intentar usarlos
+    if (\$firstEmailField.length && \$secondEmailField.length) {
+        \$secondEmailField.val(\$firstEmailField.val());
+    }
+}
+
+// Escuchar el evento 'input' (cada vez que se escribe algo) en el primer campo
+\$firstEmailField.on('input', function() {
+    copyEmailToPersonal();
+});
+
+// Opcional: Si el primer campo ya tiene un valor al cargar la página (ej. en edición),
+// cópialo al segundo campo una vez.
+if (\$firstEmailField.val() !== '') {
+    copyEmailToPersonal();
+}
+JS;
+$this->registerJs($js);
+?>

@@ -3,18 +3,21 @@
 use yii\helpers\Html;
 
 /* @var $this yii\web\View */
-/* @var $model app\models\MenuExtended */
+/* @var $model mdm\admin\models\Menu */
 
-$this->title = 'Crear Menú';
-$this->params['breadcrumbs'][] = ['label' => 'Menús', 'url' => ['index']];
+$this->title = Yii::t('rbac-admin', 'Create Menu');
+$this->params['breadcrumbs'][] = ['label' => Yii::t('rbac-admin', 'Menus'), 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="menu-create">
-
-    <h1><?= Html::encode($this->title) ?></h1>
-
-    <?= $this->render('_form', [
-        'model' => $model,
-    ]) ?>
-
+<div class="col-xl-12 col-md-12">
+    <div class="ms-panel ms-panel-fh">
+        <div class="ms-panel-header">
+            <h1><?= Html::encode($this->title); ?></h1>
+        </div>
+        <div class="ms-panel-body">
+            <?= $this->render('_form', [
+                'model' => $model,
+            ]) ?>        
+        </div>
+    </div>
 </div>
