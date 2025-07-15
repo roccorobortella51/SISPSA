@@ -18,10 +18,23 @@ $js = <<<JS
         $('#pagos-monto_pagado').on('change keyup', function(){
             var monto_pagado = $(this).val();
             var tasa = $('#pagos-tasa').val();
-            var monto_total = monto_pagado * tasa;
-            $('#pagos-monto_usd').val(monto_total);
+            if ($('#pagos-metodo_pago').val() != 'Zelle'){
+                var monto_total = monto_pagado * tasa;
+                $('#pagos-monto_usd').val(monto_total);
+            }else{
+                $('#pagos-monto_usd').val(monto_pagado);
+            }
             console.log(monto_total);
         })
+        $('#pagos-metodo_pago').on('change', function(){
+            $('#pagos-monto_usd').val(0);
+            $('#pagos-monto_pagado').val(0);
+            if ($(this).val() == 'Zelle'){
+                $('.field-pagos-tasa').hide();
+            }else{
+                $('.field-pagos-tasa').show();
+            }            
+        });
     })
 JS;
 $this->registerJs($js);

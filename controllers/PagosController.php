@@ -11,12 +11,16 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\UploadedFile;
 use yii\filters\VerbFilter;
+use yii\web\Response;
+use Aws\S3\S3Client;
+use Aws\Exception\AwsException;
 
 /**
  * PagosController implements the CRUD actions for Pagos model.
  */
 class PagosController extends Controller
 {
+
     /**
      * @inheritDoc
      */
@@ -33,6 +37,13 @@ class PagosController extends Controller
                 ],
             ]
         );
+    }
+    private $s3Config;
+
+    public function init()
+    {
+        parent::init();
+        $this->s3Config = Yii::$app->params['supabaseS3'];
     }
 
     /**
@@ -92,18 +103,22 @@ class PagosController extends Controller
                         $fileName = 'uploads/' . uniqid() . '.' . $model->imagen_prueba_file->extension;
                         $fullPath = Yii::getAlias('@webroot') . '/' . $fileName;
                         if ($model->imagen_prueba_file->saveAs($fullPath)) {
+                            $S3 = $this->uploadfileS3($fileName,$model->imagen_prueba_file->extension);
+                            var_dump($S3);
+                            exit();
                             $model->imagen_prueba = $fileName;
                         }
-                    }
+                       
                     if ($model->save(false)) {
                         return $this->redirect(['contratos/index', 'user_id' => $user_id]);
                     }
                 }
             }
-        } else {
-            $model->loadDefaultValues();
-        }
+            } else {
+                $model->loadDefaultValues();
+            }
 
+        }
         return $this->render('create', [
             'model' => $model,
         ]);
@@ -177,5 +192,47 @@ class PagosController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+        
+    public function uploadfileS3(string $localTempFilePath, string $mimeType, string $fileNameInSupabase){
+        try {
+            $s3Client = new S3Client([
+                        'version' => 'latest',
+                        'region' => $this->s3Config['region'],
+                        'endpoint' => $this->s3Config['endpoint'], // **MUY IMPORTANTE: Este es el endpoint S3 de Supabase**
+                        'credentials' => [
+                            'key' => $this->s3Config['key'],
+                            'secret' => $this->s3Config['secret'],
+                        ],
+                        'force_path_style' => true, // Importante para la compatibilidad con Supabase/MinIO
+                    ]);
+
+                    // Subir el archivo a S3
+            $bucketName = $this->s3Config['bucket']; // Esto debería ser 'usuarios' según tu params.php
+
+            // Construir la CLAVE S3 correctamente: subcarpeta/nombre_de_archivo
+            // Usaremos 'pago/' como prefijo de carpeta, y luego el nombre de archivo final.
+            $s3Key = 'pago/' . $fileNameInSupabase; 
+
+            $result = $s3Client->putObject([
+                'Bucket'     => $bucketName,
+                'Key'        => $s3Key, // Clave S3 final (ej. 'pago/nombre_archivo.png')
+                'SourceFile' => $localTempFilePath, // Ruta real al archivo en tu servidor
+                'ContentType' => $mimeType, // Tipo MIME correcto (ej. 'image/jpeg')
+                // 'ACL'        => 'public-read', // Solo si tu bucket lo permite y lo deseas.
+                                                // Supabase recomienda RLS en la base de datos para controlar el acceso,
+                                                // y los archivos son públicos por defecto si no tienen RLS.
+            ]);
+
+            // Si la subida fue exitosa, construye la URL pública del archivo
+            // La URL pública es diferente del endpoint S3.
+            // Es la URL de tu proyecto base + /storage/v1/object/public/ + bucket + / + key
+            $projectBaseUrl = str_replace('/storage/v1/s3', '', $this->s3Config['endpoint']);
+            $publicUrl = "{$projectBaseUrl}/storage/v1/object/public/{$bucketName}/{$s3Key}";
+
+            return $publicUrl; // Devuelve la URL pública del archivo
+        } catch (\Throwable $e) {
+            Yii::error("General S3 Upload Exception: " . $e->getMessage(), __METHOD__);
+        }
     }
 }

@@ -53,7 +53,7 @@ class Pagos extends \yii\db\ActiveRecord
             [['recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
             [['monto_pagado', 'monto_usd'], 'number'],
             [['metodo_pago', 'estatus', 'numero_referencia_pago', 'imagen_prueba', 'nombre_conciliador'], 'string'],
-            [['imagen_prueba_file'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif'],
+            [['imagen_prueba_file'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg','maxSize' => 1024 * 1024 * 5, 'tooBig' => 'El archivo no debe exceder los 5MB.'],
             [['recibo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Recibos::class, 'targetAttribute' => ['recibo_id' => 'id']],
         ];
     }

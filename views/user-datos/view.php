@@ -202,7 +202,7 @@ $this->params['breadcrumbs'][] = $this->title;
                             [
                                 'attribute' => 'asesor.nombre',
                                 'label' => 'Asesor',
-                                'value' => $model->asesor ? $model->asesor->nombre : 'Sin asignar',
+                                'value' => $model->asesor ? $model->asesor->nom : 'Sin asignar',
                             ],
                             'tipo_sangre',
                         ],
