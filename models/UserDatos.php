@@ -45,11 +45,13 @@ use yii\db\ActiveRecord;
  * @property string|null $tipo_sangre
  * @property string|null $estatus_solvente
  * @property int|null $user_login_id
+ * @property int|null $user_datos_type_id
  *
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
  * @property UploadedFile $imagenIdentificacionFile
  * @property UploadedFile $videoFile
+ * @property UserDatosType $userDatosType
  * 
  * @property Plan $plan
  * @property Agente $asesor
@@ -68,7 +70,8 @@ class UserDatos extends ActiveRecord
      * como se ingresa en el formulario con MaskedInput.
      * Esta propiedad NO existe como columna en la tabla 'user_datos' de la base de datos.
      */
-    public $cedulaFormatted; // <-- ¡ESTO ES NUEVO Y CLAVE!
+    public $cedulaFormatted;
+    public $afiliado_corporativo_id;
 
     /**
      * {@inheritdoc}
@@ -85,8 +88,7 @@ class UserDatos extends ActiveRecord
     {
         return [
             // 1. Campos obligatorios
-            // CAMBIO: Ahora 'cedulaFormatted' es el campo requerido, no 'cedula' directamente,
-            // porque el usuario lo ingresa con el formato completo.
+            
             [['nombres', 'apellidos', 'fechanac', 'sexo',
               'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
 
@@ -109,22 +111,16 @@ class UserDatos extends ActiveRecord
             [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
 
         
-
-            // NUEVAS REGLAS para 'cedulaFormatted':
-            // 3.1. Valida que 'cedulaFormatted' sea un string y tenga la longitud esperada (V-999999999 es 11 caracteres).
             [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
-            // 3.2. Valida el patrón exacto: Una letra (V, E, J, G), un guion, y de 7 a 9 dígitos.
-            //[['cedulaFormatted'], 'match', 'pattern' => '/^[VEJG]-\d{7,9}$/', 'message' => 'El formato debe ser V-XXXXXXXX, E-XXXXXXXX, J-XXXXXXXX o G-XXXXXXXX.'],
+           
             
-            // Regla de unicidad para 'cedula' (el número entero en la DB).
-            // Esta validación se ejecuta *después* de que 'beforeSave()' haya separado el número del formato.
             /*['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
                 // Solo verifica la unicidad si es un nuevo registro O si el valor numérico de la cédula ha cambiado.
                 return $model->isNewRecord || $model->isAttributeDirty('cedula');
             }],*/
             
             [['paso'], 'number'],
-            [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id'], 'integer'],
+            [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
 
             // 4. Validaciones específicas de contenido (se mantienen igual)
             [['email'], 'email'],
@@ -350,4 +346,5 @@ class UserDatos extends ActiveRecord
     public function getAsesor() { return $this->hasOne(Agente::class, ['id' => 'asesor_id']); }
     public function getContrato() { return $this->hasOne(Contratos::class, ['id' => 'contrato_id']); }
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
+    public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
 }

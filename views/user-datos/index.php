@@ -5,7 +5,8 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
-
+use kartik\select2\Select2;
+use app\components\UserHelper;
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
@@ -88,6 +89,27 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                         "apply.daterangepicker" => "function() { $('.grid-view').yiiGridView('applyFilter') }",
                                     ]
                                 ],
+                            ],
+
+                            // --- TIPO DE AFILIADO ---
+                            [
+                                'attribute' => 'user_datos_type_id', // El atributo del modelo de búsqueda
+                                'label' => 'Tipo Afiliado', // La etiqueta que se muestra en la cabecera
+                                'value' => function ($model) {
+                                    // Muestra el nombre del tipo, no el ID
+                                    return $model->userDatosType ? $model->userDatosType->nombre : null;
+                                },
+                                'filter' => Select2::widget([ // Usar Select2 para el filtro
+                                    'model' => $searchModel,
+                                    'attribute' => 'user_datos_type_id',
+                                    'data' => app\models\UserDatosType::getList(), 
+                                    'options' => ['placeholder' => 'Seleccionar tipo'],
+                                    'pluginOptions' => [
+                                        'allowClear' => true
+                                    ],
+                                ]),
+                                // Opcional: Ancho de columna
+                                'contentOptions' => ['style' => 'width: 150px;'],
                             ],
 
                             [
