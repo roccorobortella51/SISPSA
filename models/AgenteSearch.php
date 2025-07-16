@@ -12,6 +12,8 @@ use app\models\Agente;
 class AgenteSearch extends Agente
 {
     public $rif;
+    public $propietarioEmail;  
+    public $propietarioCedula;
 
     /**
      * {@inheritdoc}
@@ -20,7 +22,7 @@ public function rules()
     {
         return [
             [['id', 'idusuariopropietario'], 'integer'],
-            [['nom', 'rif', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
+            [['nom', 'rif', 'created_at', 'updated_at', 'deleted_at', 'propietarioEmail', 'propietarioCedula'], 'safe'],
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente', 'por_max'], 'number'],
         ];
     }
@@ -51,6 +53,20 @@ public function rules()
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+                'attributes' => array_merge(parent::attributeLabels(), [
+                    'propietarioEmail' => [
+                        'asc' => ['user.email' => SORT_ASC],        
+                        'desc' => ['user.email' => SORT_DESC],
+                        'label' => 'Correo del Propietario',
+                    ],
+                    'propietarioCedula' => [
+                        'asc' => ['userDatos.cedula' => SORT_ASC], 
+                        'desc' => ['userDatos.cedula' => SORT_DESC],
+                        'label' => 'Cédula del Propietario',
+                    ],
+                ]),
+            ],
         ]);
 
         $this->load($params, $formName);
@@ -76,8 +92,10 @@ public function rules()
             'deleted_at' => $this->deleted_at,
         ]);
 
-$query->andFilterWhere(['ilike', 'nom', $this->nom]);
+        $query->andFilterWhere(['ilike', 'nom', $this->nom]);
         $query->andFilterWhere(['ilike', 'rif', $this->rif]);
+        $query->andFilterWhere(['ilike', 'user.email', $this->propietarioEmail])
+        ->andFilterWhere(['ilike', 'userDatos.cedula', $this->propietarioCedula]);
 
         return $dataProvider;
     }
