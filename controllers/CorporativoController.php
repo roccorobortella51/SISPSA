@@ -2,11 +2,13 @@
 
 namespace app\controllers;
 
+use Yii;
 use app\models\Corporativo;
 use app\models\CorporativoSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\helpers\Url;
 
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
@@ -66,21 +68,45 @@ class CorporativoController extends Controller
      * @return string|\yii\web\Response
      */
     public function actionCreate()
-    {
-        $model = new Corporativo();
+{
+    $model = new Corporativo();
+    $model->created_at = date('Y-m-d H:i:s'); // Asegúrate de que esto se settee
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+    if ($this->request->isPost) {
+        if ($model->load($this->request->post())) {
+            // *** INICIO DE LAS LÍNEAS DE DEPURACIÓN CRÍTICAS ***
+            if (!$model->validate()) {
+                echo "<pre>";
+                echo "ERRORES DE VALIDACIÓN DEL MODELO:\n";
+                print_r($model->getErrors());
+                echo "</pre>";
+                die("Ejecución detenida para mostrar errores de validación.");
             }
-        } else {
-            $model->loadDefaultValues();
-        }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+            if (!$model->save()) {
+                echo "<pre>";
+                echo "ERROR AL INTENTAR GUARDAR EL MODELO (save() devolvió false):\n";
+                print_r($model->getErrors()); // Esto mostrará errores si el save() falló por razones de DB o otros hooks
+                echo "\nDatos del modelo al intentar guardar:\n";
+                print_r($model->attributes);
+                echo "</pre>";
+                die("Ejecución detenida porque save() falló.");
+            }
+            // *** FIN DE LAS LÍNEAS DE DEPURACIÓN CRÍTICAS ***
+
+
+            Yii::$app->session->setFlash('success', 'Corporativo creado exitosamente.');
+            return $this->redirect(['view', 'id' => $model->id]);
+
+        }
+    } else {
+        $model->loadDefaultValues();
     }
+
+    return $this->render('create', [
+        'model' => $model,
+    ]);
+}
 
     /**
      * Updates an existing Corporativo model.

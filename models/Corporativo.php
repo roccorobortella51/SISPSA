@@ -3,6 +3,15 @@
 namespace app\models;
 
 use Yii;
+use yii\helpers\ArrayHelper;
+use app\models\RmClinica;
+use app\models\User;
+use app\models\CorporativoClinica;
+use app\models\CorporativoUser;
+use app\models\RmEstado;
+use app\models\RmMunicipio;
+use app\models\RmParroquia;
+use app\models\RmCiudad;
 
 /**
  * This is the model class for table "corporativos".
@@ -15,6 +24,7 @@ use Yii;
  * @property string|null $estado
  * @property string|null $municipio
  * @property string|null $parroquia
+ * @property string|null $ciudad
  * @property string|null $direccion
  * @property string|null $codigo_asesor
  * @property string|null $lugar_registro
@@ -31,14 +41,18 @@ use Yii;
  * @property string|null $updated_at
  * @property string|null $deleted_at
  *
- * @property RmClinica[] $clinicas
  * @property CorporativoClinica[] $corporativoClinicas
+ * @property RmClinica[] $clinicas
  * @property CorporativoUser[] $corporativoUsers
  * @property User[] $users
+ *
+ * @property array $clinicas_ids
+ * @property array $users_ids
  */
 class Corporativo extends \yii\db\ActiveRecord
 {
-
+    public $clinicas_ids;
+    public $users_ids;
 
     /**
      * {@inheritdoc}
@@ -54,18 +68,27 @@ class Corporativo extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['email', 'telefono', 'rif', 'estado', 'municipio', 'parroquia', 'direccion', 'codigo_asesor', 'lugar_registro', 'fecha_registro_mercantil', 'tomo_registro', 'folio_registro', 'domicilio_fiscal', 'contacto_nombre', 'contacto_cedula', 'contacto_telefono', 'contacto_cargo', 'updated_at', 'deleted_at'], 'default', 'value' => null],
-            [['estatus'], 'default', 'value' => 'Activo'],
-            [['nombre'], 'required'],
+            // Campos requeridos, incluyendo estado, municipio, parroquia como en RmClinica
+            [['nombre', 'estatus', 'created_at', 'estado', 'municipio', 'parroquia'], 'required'],
             [['direccion', 'domicilio_fiscal'], 'string'],
-            [['fecha_registro_mercantil', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
+            // 'ciudad' debe estar en 'safe' para carga masiva
+            [['fecha_registro_mercantil', 'created_at', 'updated_at', 'deleted_at', 'ciudad'], 'safe'],
+
             [['nombre', 'email', 'lugar_registro', 'contacto_nombre'], 'string', 'max' => 255],
             [['telefono', 'rif', 'contacto_cedula', 'contacto_telefono'], 'string', 'max' => 20],
-            [['estado', 'municipio', 'parroquia', 'contacto_cargo'], 'string', 'max' => 100],
+
+            // ****** ESTA ES LA CLAVE: Las columnas de ubicación se declaran como STRING, TAL CUAL RMCLINICA ******
+            // Esto significa que en la base de datos se guardarán los IDs numéricos como cadenas de texto (ej. "123").
+            // Asegúrate de que tus columnas en la DB sean VARCHAR o TEXT para estos campos.
+            [['estado', 'municipio', 'parroquia', 'contacto_cargo', 'ciudad'], 'string', 'max' => 100],
+
             [['codigo_asesor', 'tomo_registro', 'folio_registro', 'estatus'], 'string', 'max' => 50],
-            [['email'], 'unique'],
             [['nombre'], 'unique'],
+            [['email'], 'unique'],
             [['rif'], 'unique'],
+            [['estatus'], 'default', 'value' => 'Activo'],
+            // Las IDs para las relaciones Many-to-Many son INTEGER
+            [['clinicas_ids', 'users_ids'], 'each', 'rule' => ['integer']],
         ];
     }
 
@@ -76,44 +99,35 @@ class Corporativo extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'nombre' => 'Nombre',
+            'nombre' => 'Nombre Corporativo',
             'email' => 'Email',
-            'telefono' => 'Telefono',
+            'telefono' => 'Teléfono',
             'rif' => 'Rif',
             'estado' => 'Estado',
             'municipio' => 'Municipio',
             'parroquia' => 'Parroquia',
-            'direccion' => 'Direccion',
-            'codigo_asesor' => 'Codigo Asesor',
-            'lugar_registro' => 'Lugar Registro',
-            'fecha_registro_mercantil' => 'Fecha Registro Mercantil',
-            'tomo_registro' => 'Tomo Registro',
-            'folio_registro' => 'Folio Registro',
+            'ciudad' => 'Ciudad',
+            'direccion' => 'Dirección',
+            'codigo_asesor' => 'Código Asesor',
+            'lugar_registro' => 'Lugar de Registro',
+            'fecha_registro_mercantil' => 'Fecha de Registro Mercantil',
+            'tomo_registro' => 'Tomo de Registro',
+            'folio_registro' => 'Folio de Registro',
             'domicilio_fiscal' => 'Domicilio Fiscal',
-            'contacto_nombre' => 'Contacto Nombre',
-            'contacto_cedula' => 'Contacto Cedula',
-            'contacto_telefono' => 'Contacto Telefono',
-            'contacto_cargo' => 'Contacto Cargo',
+            'contacto_nombre' => 'Nombre Contacto',
+            'contacto_cedula' => 'Cédula Contacto',
+            'contacto_telefono' => 'Teléfono Contacto',
+            'contacto_cargo' => 'Cargo Contacto',
             'estatus' => 'Estatus',
-            'created_at' => 'Created At',
-            'updated_at' => 'Updated At',
-            'deleted_at' => 'Deleted At',
+            'created_at' => 'Creado El',
+            'updated_at' => 'Actualizado El',
+            'deleted_at' => 'Eliminado El',
+            'clinicas_ids' => 'Clínicas Asociadas',
+            'users_ids' => 'Empleados Asociados',
         ];
     }
 
     /**
-     * Gets query for [[Clinicas]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getClinicas()
-    {
-        return $this->hasMany(RmClinica::class, ['id' => 'clinica_id'])->viaTable('corporativo_clinica', ['corporativo_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[CorporativoClinicas]].
-     *
      * @return \yii\db\ActiveQuery
      */
     public function getCorporativoClinicas()
@@ -122,8 +136,16 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     /**
-     * Gets query for [[CorporativoUsers]].
-     *
+     * Obtiene las clínicas asociadas a este corporativo a través de la tabla intermedia.
+     * @return \yii\db\ActiveQuery
+     */
+    public function getClinicas()
+    {
+        return $this->hasMany(RmClinica::class, ['id' => 'clinica_id'])
+            ->viaTable('corporativo_clinica', ['corporativo_id' => 'id']);
+    }
+
+    /**
      * @return \yii\db\ActiveQuery
      */
     public function getCorporativoUsers()
@@ -132,13 +154,85 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     /**
-     * Gets query for [[Users]].
-     *
+     * Obtiene los usuarios (empleados) asociados a este corporativo a través de la tabla intermedia.
      * @return \yii\db\ActiveQuery
      */
     public function getUsers()
     {
-        return $this->hasMany(User::class, ['id' => 'user_id'])->viaTable('corporativo_user', ['corporativo_id' => 'id']);
+        return $this->hasMany(User::class, ['id' => 'user_id'])
+            ->viaTable('corporativo_user', ['corporativo_id' => 'id']);
     }
 
+    // Métodos para cargar y guardar las relaciones Many-to-Many
+    public function afterFind()
+    {
+        parent::afterFind();
+        $this->clinicas_ids = ArrayHelper::getColumn($this->clinicas, 'id');
+        $this->users_ids = ArrayHelper::getColumn($this->users, 'id');
+    }
+
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        $this->saveClinicasRelations();
+        $this->saveUsersRelations();
+    }
+
+    private function saveClinicasRelations()
+    {
+        CorporativoClinica::deleteAll(['corporativo_id' => $this->id]);
+        if (is_array($this->clinicas_ids) && !empty($this->clinicas_ids)) {
+            $batch = [];
+            foreach ($this->clinicas_ids as $clinicaId) {
+                $batch[] = [$this->id, $clinicaId, new \yii\db\Expression('NOW()')];
+            }
+            Yii::$app->db->createCommand()
+                ->batchInsert(
+                    CorporativoClinica::tableName(),
+                    ['corporativo_id', 'clinica_id', 'created_at'],
+                    $batch
+                )->execute();
+        }
+    }
+
+    private function saveUsersRelations()
+    {
+        CorporativoUser::deleteAll(['corporativo_id' => $this->id]);
+        if (is_array($this->users_ids) && !empty($this->users_ids)) {
+            $batch = [];
+            foreach ($this->users_ids as $userId) {
+                $batch[] = [$this->id, $userId, new \yii\db\Expression('NOW()'), null];
+            }
+            Yii::$app->db->createCommand()
+                ->batchInsert(
+                    CorporativoUser::tableName(),
+                    ['corporativo_id', 'user_id', 'fecha_vinculacion', 'rol_en_corporativo'],
+                    $batch
+                )->execute();
+        }
+    }
+
+    // Relaciones para obtener el objeto de la ubicación (RmEstado, RmMunicipio, etc.)
+    // Estas buscarán por el NOMBRE de la columna en el modelo de ubicación,
+    // ya que el modelo Corporativo guarda el ID numérico como una cadena de texto.
+    public function getRmEstado()
+    {
+        return $this->hasOne(RmEstado::class, ['id' => 'estado']); // Busca por ID, no por nombre
+    }
+
+    public function getRmMunicipio()
+    {
+        return $this->hasOne(RmMunicipio::class, ['codigo_muni' => 'municipio']); // Busca por codigo_muni, no por nombre
+    }
+
+    public function getRmParroquia()
+    {
+        return $this->hasOne(RmParroquia::class, ['id' => 'parroquia']); // Busca por ID, no por nombre
+    }
+
+    public function getRmCiudad()
+    {
+        return $this->hasOne(RmCiudad::class, ['id' => 'ciudad']); // Busca por ID, no por nombre
+    }
 }
