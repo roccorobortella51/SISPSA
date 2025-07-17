@@ -5,6 +5,7 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\DeclaracionDeSalud;
+use Yii;
 
 /**
  * DeclaracionDeSaludSearch represents the model behind the search form of `app\models\DeclaracionDeSalud`.
@@ -45,8 +46,18 @@ class DeclaracionDeSaludSearch extends DeclaracionDeSalud
 
         // add conditions that should always apply here
 
+        if(Yii::$app->request->get('per_page') == ""){
+            $paginas = 20;
+        }else{
+            $paginas = 20;
+        }
+
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+               'defaultOrder' => ['created_at' => SORT_DESC]
+             ],
+            'pagination' => ['pageSize' => $paginas ],
         ]);
 
         $this->load($params, $formName);
