@@ -19,6 +19,8 @@ use app\models\Contratos;
 use app\models\AuthItem;
 use yii\helpers\ArrayHelper;
 use yii\rbac\DbManager;
+use yii\httpclient\Client; // Necesario para hacer peticiones HTTP a la API de Supabase
+
 
 class UserHelper
 {
@@ -299,6 +301,130 @@ class UserHelper
             return $firstRole->name;
         } else {
             return "Sin rol";
+        }
+    }
+
+    /**
+     * Sube un archivo a Supabase Storage directamente a través de su API REST.
+     * Utiliza yii\httpclient\Client para realizar la solicitud HTTP.
+     *
+     * @param string $localFilePath Ruta completa del archivo temporal en el servidor.
+     * @param string $mimeType Tipo MIME del archivo (ej. 'image/png', 'application/pdf').
+     * @param string $fileKeyInBucket La clave o ruta del archivo deseada dentro del bucket de Supabase (ej. 'mi_imagen.jpg' o 'docs/reporte.pdf').
+     * @return string|null La URL pública del archivo si la subida fue exitosa, o null si hubo un error.
+     */
+    public static function uploadFileToSupabaseApi(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
+    {
+                
+        $supabaseConfig = Yii::$app->params['supabase'];
+        $supabaseUrl = $supabaseConfig['url'];
+        $supabaseAnonKey = $supabaseConfig['anon_key'];
+        $bucketName = $supabaseConfig['bucket_name'];
+
+        // Construimos la URL del endpoint de la API de Storage para la operación de subida (PUT/POST)
+        $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}/{$fileKeyInBucket}";
+        // Construimos la URL pública esperada para acceder al archivo una vez subido
+        $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/{$fileKeyInBucket}";
+        
+        Yii::info("Supabase Upload URL: " . $uploadUrl, __METHOD__);
+        Yii::info("Supabase Public URL (esperada): " . $publicUrl, __METHOD__);
+        Yii::info("File Key in Bucket: " . $fileKeyInBucket, __METHOD__);
+        Yii::info("Local File Path: " . $localFilePath, __METHOD__);
+        Yii::info("MIME Type: " . $mimeType, __METHOD__);
+
+        try {
+            $client = new Client();
+            $response = $client->createRequest()
+                ->setMethod('POST') // Usamos POST para subir nuevos archivos. Puedes usar 'PUT' para sobrescribir.
+                ->setUrl($uploadUrl)
+                ->addHeaders([
+                    'Authorization' => "Bearer {$supabaseAnonKey}",
+                    'Content-Type' => $mimeType,
+                    'x-upsert' => 'true', // Opcional: para sobrescribir si el archivo ya existe con la misma clave
+                ])
+                ->setContent(file_get_contents($localFilePath)) // Leemos el contenido del archivo temporal
+                ->send();
+
+            if ($response->isOk) {
+                Yii::info("Archivo subido exitosamente a Supabase Storage via API. Respuesta: " . $response->getContent(), __METHOD__);
+                return $publicUrl;
+            } else {
+                $errorContent = $response->getContent();
+                Yii::error("Error al subir archivo a Supabase Storage via API. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
+                Yii::$app->session->setFlash('error', "Error al subir archivo a Supabase Storage: " . ($errorContent ?: "Desconocido"));
+                return null;
+            }
+
+        } catch (\yii\httpclient\Exception $e) {
+            Yii::error("Excepción del cliente HTTP al subir a Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Error de conexión al subir archivo: " . $e->getMessage());
+            return null;
+        } catch (\Throwable $e) {
+            Yii::error("Excepción general al subir a Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Elimina un archivo de Supabase Storage usando su API REST.
+     *
+     * @param string $fileUrl La URL pública completa del archivo en Supabase.
+     * @return bool True si la eliminación fue exitosa, false en caso contrario.
+     */
+    public static function deleteFileFromSupabaseApi(string $fileUrl, string $folder = null): bool
+    {
+        $supabaseConfig = Yii::$app->params['supabase'];
+        $supabaseUrl = $supabaseConfig['url'];
+        $supabaseAnonKey = $supabaseConfig['anon_key'];
+        $bucketName = $supabaseConfig['bucket_name'];
+
+        // Extraer la clave del archivo de la URL pública
+        // La URL es del tipo: [URL_PROYECTO]/storage/v1/object/public/[BUCKET]/[FOLDER]/[CLAVE_ARCHIVO]
+        // Necesitamos la parte [FOLDER]/[CLAVE_ARCHIVO]
+        $prefix = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/";
+        if (strpos($fileUrl, $prefix) === 0) {
+            $fileKeyToDelete = substr($fileUrl, strlen($prefix));
+        } else {
+            Yii::warning("No se pudo extraer la clave del archivo de la URL para eliminar: {$fileUrl}", __METHOD__);
+            return false; // La URL no tiene el formato esperado
+        }
+
+        // El endpoint correcto para eliminar es: [URL_PROYECTO]/storage/v1/object/[BUCKET]
+        $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}";
+
+        Yii::info("Supabase Delete URL: " . $deleteUrl, __METHOD__);
+        Yii::info("File Key to Delete: " . $fileKeyToDelete, __METHOD__);
+
+        try {
+            $client = new Client();
+            $response = $client->createRequest()
+                ->setMethod('DELETE')
+                ->setUrl($deleteUrl)
+                ->addHeaders([
+                    'Authorization' => "Bearer {$supabaseAnonKey}",
+                    'Content-Type' => 'application/json',
+                ])
+                ->setContent(json_encode(['prefixes' => [$fileKeyToDelete]])) // Usar 'prefixes' en lugar de 'name'
+                ->send();
+
+            if ($response->isOk) {
+                Yii::info("Archivo eliminado exitosamente de Supabase Storage. Respuesta: " . $response->getContent(), __METHOD__);
+                return true;
+            } else {
+                $errorContent = $response->getContent();
+                Yii::error("Error al eliminar archivo de Supabase Storage. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
+                Yii::$app->session->setFlash('error', "Error al eliminar archivo de Supabase Storage: " . ($errorContent ?: "Desconocido"));
+                return false;
+            }
+        } catch (\yii\httpclient\Exception $e) {
+            Yii::error("Excepción del cliente HTTP al eliminar de Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Error de conexión al eliminar archivo: " . $e->getMessage());
+            return false;
+        } catch (\Throwable $e) {
+            Yii::error("Excepción general al eliminar de Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al eliminar archivo: " . $e->getMessage());
+            return false;
         }
     }
 }

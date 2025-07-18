@@ -123,7 +123,10 @@ $this->registerJs($js);
 ?>
 
 <div class="user-datos-form">
-<?php $form = ActiveForm::begin(['id' => 'user-datos-form']); ?>
+<?php $form = ActiveForm::begin([
+    'id' => 'user-datos-form',
+    'options' => ['enctype' => 'multipart/form-data']
+    ]); ?>
 
 <?php
 $jsValidation = <<<JS
@@ -379,7 +382,7 @@ if (!$model->isNewRecord) { ?>
             </div>
             <div class="row">
                 <div class="col-md-6">
-                    <?= $form->field($model, 'selfie')->widget(FileInput::classname(),[
+                    <?= $form->field($model, 'selfieFile')->widget(FileInput::classname(),[
                         'name' => 'attachments',
                         'pluginOptions' => [
                             'browseClass' => 'btn btn-primary',

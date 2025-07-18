@@ -25,7 +25,7 @@ if (!empty($model->pagos)) {
                 'attribute' => 'imagen_prueba',
                 'format' => 'raw',
                 'value' => function($model) {
-                    $url = $model->imagenPruebaUrl;
+                    $url = $model->imagen_prueba;
                     if ($url) {
                         return Html::a(Html::img($url, ['width' => '350']), $url, ['target' => '_blank']);
                     }

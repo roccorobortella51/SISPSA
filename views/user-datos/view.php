@@ -37,9 +37,10 @@ $this->params['breadcrumbs'][] = $this->title;
              <!-- Foto de perfil -->
             <div class="profile-header text-center">
                 <?php if ($model->selfie): ?>
-                    <?= Html::img(Yii::$app->request->baseUrl . '/' . $model->selfie, [
+                    <?= Html::img($model->selfie, [
                         'alt' => 'Foto de Perfil',
-                        'class' => 'profile-img'
+                        'class' => 'profile-img',
+                        'style' => 'width: 200px; height: 200px; border-radius: 50%;',
                     ]) ?>
                     <p><strong>Foto de Perfil</strong></p>
                 <?php else: ?>

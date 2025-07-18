@@ -18,6 +18,8 @@ use app\models\Contratos;
 use app\models\RmClinica;
 use app\models\Planes;
 use yii\base\Security;
+use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
+
 
 /**
  * UserDatosController implements the CRUD actions for UserDatos model.
@@ -128,6 +130,7 @@ class UserDatosController extends Controller
         $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion(); //generar codigo de validacion de 6 digitos
         $model->role = 'afiliado';
         $model->estatus = 'Creado';
+        
 
         if($model->estatus_solvente == "" || $model->estatus_solvente == null){
             $model->estatus_solvente = "No";
@@ -146,6 +149,104 @@ class UserDatosController extends Controller
                     $modelUser->auth_key = User::generateAuthKey();
                     $modelUser->email = $model->email;
                     $modelUser->status = 1;
+                    $model->selfieFile = UploadedFile::getInstance($model, 'selfieFile');
+                    if ($model->selfieFile) {
+                        $folder = 'FotoPerfil';
+                        // Generamos un nombre de archivo único para evitar colisiones
+                        $fileName = uniqid('selfie_') . '.' . $model->selfieFile->extension;
+                        // Definimos la ruta temporal en el directorio @runtime (fuera del acceso web directo por seguridad)
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->selfieFile->saveAs($tempFilePath)) {
+                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
+
+                            // La "clave" del archivo en Supabase Storage (su nombre y ruta dentro del bucket).
+                            // En este caso, solo es el nombre del archivo para que se guarde en la raíz del bucket 'usuarios'.
+                            // Si quisieras una subcarpeta, sería por ejemplo 'pagos_imagenes/' . $fileName;
+                            $fileKeyInBucket = $fileName;
+
+                            // Llamamos a la función dedicada a subir el archivo a Supabase Storage via API
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->selfieFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            // Eliminamos el archivo temporal del servidor DESPUÉS de que la operación de subida
+                            // a Supabase haya concluido (ya sea con éxito o error). Esto evita "Stream is detached".
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
+                            }
+
+                            if ($publicUrl) {
+                                // Si la subida a Supabase fue exitosa, guardamos la URL pública en el modelo del pago
+                                $model->selfie = $publicUrl;
+                                if ($model->save(false)) { // Guardamos el modelo de pago en la base de datos
+                                    Yii::$app->session->setFlash('success', 'Pago y archivo subido con éxito.');
+                                    return $this->redirect(['view', 'id' => $model->id]);
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar el pago en la base de datos.');
+                                }
+                            } else {
+                                // Si la subida a Supabase falló, el mensaje de error ya se estableció en la función de subida.
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->selfieFile->error, __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+                    $model->imagenIdentificacionFile = UploadedFile::getInstance($model, 'imagenIdentificacionFile');
+                    if ($model->imagenIdentificacionFile) {
+                        $folder = 'documentos';
+                        // Generamos un nombre de archivo único para evitar colisiones
+                        $fileName = uniqid('imagen_identificacion_') . '.' . $model->imagenIdentificacionFile->extension;
+                        // Definimos la ruta temporal en el directorio @runtime (fuera del acceso web directo por seguridad)
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->imagenIdentificacionFile->saveAs($tempFilePath)) {
+                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
+
+                            // La "clave" del archivo en Supabase Storage (su nombre y ruta dentro del bucket).
+                            // En este caso, solo es el nombre del archivo para que se guarde en la raíz del bucket 'usuarios'.
+                            // Si quisieras una subcarpeta, sería por ejemplo 'pagos_imagenes/' . $fileName;
+                            $fileKeyInBucket = $fileName;
+
+                            // Llamamos a la función dedicada a subir el archivo a Supabase Storage via API
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagenIdentificacionFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            // Eliminamos el archivo temporal del servidor DESPUÉS de que la operación de subida
+                            // a Supabase haya concluido (ya sea con éxito o error). Esto evita "Stream is detached".
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
+                            }
+
+                            if ($publicUrl) {
+                                // Si la subida a Supabase fue exitosa, guardamos la URL pública en el modelo del pago
+                                $model->imagen_identificacion = $publicUrl;
+                                if ($model->save(false)) { // Guardamos el modelo de pago en la base de datos
+                                    Yii::$app->session->setFlash('success', 'Pago y archivo subido con éxito.');
+                                    return $this->redirect(['view', 'id' => $model->id]);
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar el pago en la base de datos.');
+                                }
+                            } else {
+                                // Si la subida a Supabase falló, el mensaje de error ya se estableció en la función de subida.
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->selfieFile->error, __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
                     if($modelUser->save()){
                         
                         

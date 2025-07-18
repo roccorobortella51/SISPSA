@@ -40,6 +40,13 @@ JS;
 $this->registerJs($js);
 
 ?>
+<style>
+    .file-input .file-caption{
+        width: 50% !important;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+</style>
 <div class="pagos-form">
 
 <?php $form = ActiveForm::begin([
@@ -115,24 +122,27 @@ $this->registerJs($js);
         </div>
     </div>
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <?php
             $initialPreview = [];
             $initialPreviewConfig = [];
             if (!$model->isNewRecord && $model->imagen_prueba) {
-                $initialPreview[] = \yii\helpers\Url::to('@web/' . $model->imagen_prueba);
+                $initialPreview[] = \yii\helpers\Url::to($model->imagen_prueba);
                 $initialPreviewConfig[] = ['caption' => basename($model->imagen_prueba), 'key' => 1];
             }
             ?>
             <?= $form->field($model, 'imagen_prueba_file')->widget(FileInput::classname(),[
                 'name' => 'attachments',
                 'pluginOptions' => [
-                    'browseClass' => 'btn btn-success',
-                    'uploadClass' => 'btn btn-info',
-                    'removeClass' => 'btn btn-danger',
+                    'browseClass' => 'btn btn-primary',
+                    'removeClass' => 'btn btn-secondary',
                     'removeIcon' => '<i class="fas fa-trash"></i> ',
                     'previewFileType' => 'image',
-                    'showUpload' => true,
+                    'showUpload' => false,
+                    'showCancel' => false,
+                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                    'previewFileType' => 'image',
+                    'showUpload' => false,
                     'maxFileSize' => 2800,
                     'previewSettings' => [
                         'image' => ['width' => '150px', 'height' => 'auto'],
