@@ -29,7 +29,7 @@
         "kartik-v/yii2-widget-depdrop": "@dev",
         "kartik-v/yii2-tabs-x": "^1.2.0",
         "kartik-v/yii2-detail-view": "dev-master",
-        "aws/aws-sdk-php": "^3.349"
+        "yiisoft/yii2-httpclient": "^2.0"
 
     },
     "require-dev": {
