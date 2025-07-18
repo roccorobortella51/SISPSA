@@ -68,23 +68,38 @@ class Corporativo extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            // Campos requeridos, incluyendo estado, municipio, parroquia como en RmClinica
-            [['nombre', 'estatus', 'created_at', 'estado', 'municipio', 'parroquia'], 'required'],
+            // Campos requeridos
+            [['nombre', 'estatus', 'rif', 'telefono', 'email', 'lugar_registro', 'fecha_registro_mercantil', 'tomo_registro', 'folio_registro', 'direccion', 
+            'domicilio_fiscal', 'contacto_nombre', 'contacto_cedula', 'contacto_telefono', 'estado', 'municipio', 'parroquia', 'ciudad'], 'required'],
+
+
             [['direccion', 'domicilio_fiscal'], 'string'],
-            // 'ciudad' debe estar en 'safe' para carga masiva
+            
+
             [['fecha_registro_mercantil', 'created_at', 'updated_at', 'deleted_at', 'ciudad'], 'safe'],
 
             [['nombre', 'email', 'lugar_registro', 'contacto_nombre'], 'string', 'max' => 255],
-            [['telefono', 'rif', 'contacto_cedula', 'contacto_telefono'], 'string', 'max' => 20],
+            [['rif'], 'string', 'max' => 12],
 
-            // ****** ESTA ES LA CLAVE: Las columnas de ubicación se declaran como STRING, TAL CUAL RMCLINICA ******
-            // Esto significa que en la base de datos se guardarán los IDs numéricos como cadenas de texto (ej. "123").
-            // Asegúrate de que tus columnas en la DB sean VARCHAR o TEXT para estos campos.
+            // validacion del codigo del telefono 
+            [['telefono', 'contacto_telefono'], 'string', 'max' => 12], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
+            [['telefono', 'contacto_telefono'], 'match',
+                'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
+                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
+        
+            // Validaciones de cedula
+            [['contacto_cedula'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
+
+            
             [['estado', 'municipio', 'parroquia', 'contacto_cargo', 'ciudad'], 'string', 'max' => 100],
 
             [['codigo_asesor', 'tomo_registro', 'folio_registro', 'estatus'], 'string', 'max' => 50],
             [['nombre'], 'unique'],
-            [['email'], 'unique'],
+
+            // Validaciones de correo
+            [['email'], 'email'],
+            [['email'], 'unique','message' => 'Este correo electrónico ya está registrado.'],
+
             [['rif'], 'unique'],
             [['estatus'], 'default', 'value' => 'Activo'],
             // Las IDs para las relaciones Many-to-Many son INTEGER
