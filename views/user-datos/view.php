@@ -20,7 +20,15 @@ $this->params['breadcrumbs'][] = $this->title;
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="text-primary"><?= Html::encode("Perfil del Afiliado #{$model->id}") ?></h4>
                 <div class="float-right" style="margin-bottom:10px;">
-                    <?= Html::a('<i class="fas fa-file-pdf"></i> Contrato', ['index'], ['class' => 'btn btn-outline-primary btn-sm']) ?>
+                    <?= Html::a(
+                            '<i class="fas fa-file-pdf"></i> Contrato', 
+                            ['user-datos/generar-contratov', 'id' => $model->id], 
+                            [
+                                'class' => 'btn btn-outline-danger btn-sm',
+                                'target' => '_blank',
+                                'data-pjax' => '0'
+                            ]
+                        ) ?>
                     <?= Html::a(
                     '<i class="fas fa-undo"></i> Volver', 
                     '#', 

@@ -1,0 +1,280 @@
+/* Reset y configuración básica */
+body {
+    font-family: Arial, sans-serif;
+    font-size: 9pt;
+    margin: 0;
+    padding: 10mm 15mm; /* Maintain reasonable padding */
+    line-height: 1.2;
+    color: #000;
+}
+
+/* Contenedor principal */
+.pdf-container {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
+    position: relative; /* Essential for absolute positioning of the logo within the page */
+}
+
+/* Encabezado */
+.header {
+    display: flex;
+    justify-content: flex-end; /* Pushes the header-right content to the right */
+    margin-bottom: 5mm;
+    align-items: flex-end;
+    padding-top: 15mm; /* Adds space at the top to clear the absolutely positioned logo */
+}
+
+.header-right {
+    text-align: right;
+    font-size: 8pt;
+}
+
+.title {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 3mm 0;
+    text-transform: uppercase;
+}
+
+.rif {
+    text-align: center;
+    font-size: 8pt;
+    margin-bottom: 5mm;
+}
+
+/* Tipo de afiliación */
+.affiliation-type {
+    text-align: center;
+    margin-bottom: 3mm;
+    font-weight: bold;
+}
+
+/* Checkboxes */
+.checkbox-group {
+    display: inline-block;
+    margin-right: 5mm;
+    white-space: nowrap;
+}
+
+.checkbox {
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 10pt;
+    margin-right: 2mm;
+}
+
+/* Secciones */
+.section-title {
+    font-size: 10pt;
+    font-weight: bold;
+    margin: 4mm 0 1.5mm 0;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1mm;
+    text-transform: uppercase;
+}
+
+/* Tablas de datos */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 3mm;
+}
+
+.data-table td {
+    padding: 0.5mm 1mm;
+    vertical-align: top;
+    height: auto; /* Allow height to adjust naturally based on content */
+    line-height: 1.2;
+}
+
+.underline {
+    border-bottom: 1px solid #000;
+    min-width: 20mm;
+    display: inline-block;
+    padding-bottom: 0.5mm;
+    height: auto; /* Allow height to adjust naturally */
+}
+
+/* Tabla de planes */
+.plan-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 3mm;
+}
+
+.plan-table td {
+    padding: 1.5mm;
+    border: 1px solid #000;
+    vertical-align: middle;
+    height: auto; /* Allow height to adjust naturally */
+}
+
+/* Tabla de familia */
+.family-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 3mm;
+}
+
+.family-table th, .family-table td {
+    border: 1px solid #000;
+    padding: 1mm;
+    height: auto; /* Allow height to adjust naturally */
+    text-align: center;
+}
+
+.family-table th {
+    font-weight: bold;
+    background-color: #f0f0f0;
+}
+
+/* Notas */
+.note {
+    text-align: center;
+    font-size: 8pt;
+    margin: 2mm 0;
+}
+
+/* Firmas */
+.signatures-title {
+    font-weight: bold;
+    text-align: center;
+    margin: 5mm 0 3mm 0;
+}
+
+.signature-date-place {
+    margin: 5mm 0;
+}
+
+/* Contenedor principal de firmas */
+.signatures-container {
+    **display: flex; /* Use flexbox to arrange children in a row */
+    **justify-content: space-around; /* Distributes items evenly with space around them */
+    **align-items: flex-start; /* Aligns items to the top of the flex container */
+    margin: 5mm 0;
+    **gap: 10mm; /* Adds space between the flex items */
+}
+
+/* Cajas de firma */
+.signature-box {
+    **flex: 1; /* Allows the boxes to grow and shrink, taking equal available space */
+    **min-width: 45%; /* Ensures a minimum width, preventing them from becoming too small */
+    **max-width: 50%; /* Prevents them from becoming too wide */
+    text-align: center;
+}
+
+.signature-label {
+    font-weight: bold;
+    margin-bottom: 2mm;
+    text-align: center;
+}
+
+.signature-line {
+    border-bottom: 1px solid #000;
+    height: 15mm;
+    margin: 3mm auto; /* Centers the line horizontally within its box */
+    width: 80%; /* Adjust line width as needed */
+}
+
+.fingerprint {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: 3mm;
+}
+
+/* Intermediario */
+.intermediary {
+    margin-top: 10mm;
+    font-size: 9pt;
+}
+
+.intermediary p {
+    margin: 1.5mm 0;
+}
+
+/* Aprobación */
+.approval {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: 5mm;
+}
+
+/* Salto de página */
+.page-break {
+    page-break-after: always;
+}
+
+/* Logo superior izquierda - positioned absolutely */
+.logo-superior-izquierda {
+    position: absolute;
+    top: 15px; /* Adjust based on your header content */
+    left: 15px; /* Adjust based on your page margins */
+    max-width: 150px;
+    height: auto;
+    z-index: 1000;
+}
+
+/* Firmas */
+.signatures-title {
+    font-weight: bold;
+    text-align: center;
+    margin: 5mm 0 8mm 0; /* Increased bottom margin slightly for spacing */
+}
+
+/* Contenedor principal de firmas */
+.signatures-container {
+    display: flex; /* Makes it a flex container */
+    justify-content: space-around; /* Distributes items evenly with space around them */
+    align-items: flex-start; /* Aligns items to the top of the flex container */
+    margin: 10mm 0 15mm 0; /* Adjust vertical margins for better spacing to other sections */
+    width: 100%; /* Ensure it takes full available width */
+}
+
+/* Cajas de firma */
+.signature-box {
+    flex: 1; /* Allows boxes to grow and shrink, taking equal space */
+    min-width: 45%; /* Ensures each box has a minimum width */
+    max-width: 48%; /* Caps the max width to ensure they don't touch and allow for gap */
+    text-align: center;
+    padding: 0 5mm; /* Add some horizontal padding inside each box */
+    box-sizing: border-box; /* Include padding in the width calculation */
+}
+
+.signature-label {
+    font-weight: bold;
+    margin-bottom: 2mm; /* Reduced margin */
+    text-align: center;
+}
+
+.signature-line {
+    border-bottom: 1px solid #000;
+    height: 15mm; /* Provides space for the actual signature */
+    margin: 3mm auto; /* Centers the line horizontally and adds vertical spacing */
+    width: 80%; /* Adjust line width as needed for visual balance */
+}
+
+.fingerprint {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: 3mm; /* Spacing below the signature line */
+}
+
+/* Intermediario */
+.intermediary {
+    margin-top: 15mm; /* Increased margin to separate from signatures */
+    font-size: 9pt;
+    text-align: left; /* Align intermediary text to the left if not already */
+}
+
+.intermediary p {
+    margin: 2mm 0; /* Spacing for each line of intermediary info */
+}
+
+/* Aprobación */
+.approval {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: 10mm; /* Increased margin for better separation at the bottom */
+}
