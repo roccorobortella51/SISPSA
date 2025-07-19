@@ -11,7 +11,7 @@ body {
 /* Contenedor principal */
 .pdf-container {
     width: 210mm;
-    min-height: 297mm;
+    /* Removed min-height to allow content to flow naturally */
     margin: 0 auto;
     box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
     position: relative; /* Essential for absolute positioning of the logo within the page */
@@ -21,9 +21,9 @@ body {
 .header {
     display: flex;
     justify-content: flex-end; /* Pushes the header-right content to the right */
-    margin-bottom: 5mm;
+    margin-bottom: 1mm;
     align-items: flex-end;
-    padding-top: 15mm; /* Adds space at the top to clear the absolutely positioned logo */
+    padding-top: 2mm; /* Adds space at the top to clear the absolutely positioned logo */
 }
 
 .header-right {
@@ -137,70 +137,6 @@ body {
     margin: 2mm 0;
 }
 
-/* Firmas */
-.signatures-title {
-    font-weight: bold;
-    text-align: center;
-    margin: 5mm 0 3mm 0;
-}
-
-.signature-date-place {
-    margin: 5mm 0;
-}
-
-/* Contenedor principal de firmas */
-.signatures-container {
-    **display: flex; /* Use flexbox to arrange children in a row */
-    **justify-content: space-around; /* Distributes items evenly with space around them */
-    **align-items: flex-start; /* Aligns items to the top of the flex container */
-    margin: 5mm 0;
-    **gap: 10mm; /* Adds space between the flex items */
-}
-
-/* Cajas de firma */
-.signature-box {
-    **flex: 1; /* Allows the boxes to grow and shrink, taking equal available space */
-    **min-width: 45%; /* Ensures a minimum width, preventing them from becoming too small */
-    **max-width: 50%; /* Prevents them from becoming too wide */
-    text-align: center;
-}
-
-.signature-label {
-    font-weight: bold;
-    margin-bottom: 2mm;
-    text-align: center;
-}
-
-.signature-line {
-    border-bottom: 1px solid #000;
-    height: 15mm;
-    margin: 3mm auto; /* Centers the line horizontally within its box */
-    width: 80%; /* Adjust line width as needed */
-}
-
-.fingerprint {
-    text-align: center;
-    font-size: 8pt;
-    margin-top: 3mm;
-}
-
-/* Intermediario */
-.intermediary {
-    margin-top: 10mm;
-    font-size: 9pt;
-}
-
-.intermediary p {
-    margin: 1.5mm 0;
-}
-
-/* Aprobación */
-.approval {
-    text-align: center;
-    font-size: 8pt;
-    margin-top: 5mm;
-}
-
 /* Salto de página */
 .page-break {
     page-break-after: always;
@@ -220,61 +156,61 @@ body {
 .signatures-title {
     font-weight: bold;
     text-align: center;
-    margin: 5mm 0 8mm 0; /* Increased bottom margin slightly for spacing */
+    margin: 5mm 0 8mm 0; /* Ensures good spacing above the signature boxes */
 }
 
 /* Contenedor principal de firmas */
 .signatures-container {
-    display: flex; /* Makes it a flex container */
-    justify-content: space-around; /* Distributes items evenly with space around them */
-    align-items: flex-start; /* Aligns items to the top of the flex container */
-    margin: 10mm 0 15mm 0; /* Adjust vertical margins for better spacing to other sections */
-    width: 100%; /* Ensure it takes full available width */
+    display: flex; /* Absolutely critical for side-by-side layout */
+    justify-content: space-around; /* Distributes items with space around them */
+    align-items: flex-start; /* Aligns items to the top */
+    margin: 10mm 0 15mm 0; /* Vertical spacing for the container */
+    width: 100%; /* Ensures the flex container uses full available width */
+    flex-wrap: nowrap; /* Prevents items from wrapping to the next line */
 }
 
 /* Cajas de firma */
 .signature-box {
     flex: 1; /* Allows boxes to grow and shrink, taking equal space */
-    min-width: 45%; /* Ensures each box has a minimum width */
-    max-width: 48%; /* Caps the max width to ensure they don't touch and allow for gap */
+    min-width: 48%; /* Ensures each box takes at least 48% of the container's width */
+    max-width: 49%; /* Caps the maximum width to prevent overlap and maintain a small gap */
     text-align: center;
-    padding: 0 5mm; /* Add some horizontal padding inside each box */
-    box-sizing: border-box; /* Include padding in the width calculation */
+    padding: 0 2mm; /* Reduced horizontal padding slightly */
+    box-sizing: border-box; /* Includes padding in the width calculation */
 }
 
 .signature-label {
     font-weight: bold;
-    margin-bottom: 2mm; /* Reduced margin */
+    margin-bottom: 2mm;
     text-align: center;
 }
 
 .signature-line {
     border-bottom: 1px solid #000;
-    height: 15mm; /* Provides space for the actual signature */
-    margin: 3mm auto; /* Centers the line horizontally and adds vertical spacing */
-    width: 80%; /* Adjust line width as needed for visual balance */
+    height: 15mm;
+    margin: 3mm auto;
+    width: 80%;
 }
 
 .fingerprint {
     text-align: center;
     font-size: 8pt;
-    margin-top: 3mm; /* Spacing below the signature line */
+    margin-top: 3mm;
 }
 
-/* Intermediario */
+/* Intermediary and Approval (unchanged, but context included for completeness) */
 .intermediary {
-    margin-top: 15mm; /* Increased margin to separate from signatures */
+    margin-top: 15mm;
     font-size: 9pt;
-    text-align: left; /* Align intermediary text to the left if not already */
+    text-align: left;
 }
 
 .intermediary p {
-    margin: 2mm 0; /* Spacing for each line of intermediary info */
+    margin: 2mm 0;
 }
 
-/* Aprobación */
 .approval {
     text-align: center;
     font-size: 8pt;
-    margin-top: 10mm; /* Increased margin for better separation at the bottom */
+    margin-top: 10mm;
 }

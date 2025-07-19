@@ -592,10 +592,13 @@ class UserDatosController extends Controller
 
         $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg'); 
 
+        $firmas = Yii::getAlias('@webroot/img/firmas.png'); 
+
         // Render the HTML content for the PDF
         $content = $this->renderPartial('_contrato_pdf', [
             'data' => $data,
-            'logo' => $logo
+            'logo' => $logo,
+            'firmas' => $firmas
         ]);
 
          $url_css = Yii::getAlias('@webroot') . '/css/affiliation-pdf.css';
