@@ -78,15 +78,14 @@ if (!$model->isNewRecord) {
             ]) ?>
         </div>
         <div class="col-md-3">
-            <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
-                'mask' => '(9999) 999-9999',
-                'options' => [
-                    'placeholder' => '(XXXX) XXX-XXXX',
-                    'class' => 'form-control form-control-lg',
-                    'maxlength' => true,
-                ]
-            ]) ?>
-        </div>
+    <?= $form->field($model, 'telefono')->textInput([
+        'maxlength' => 11, // Asegura que solo se puedan ingresar 11 dígitos, ya que el patrón lo espera así.
+        'placeholder' => 'Ej: 04121234567', // Cambia el placeholder a un formato sin máscara
+        'class' => 'form-control form-control-lg',
+        // Puedes añadir 'type' => 'tel' para móviles, aunque no es estrictamente necesario
+        'type' => 'tel', 
+    ]) ?>
+</div>
     </div>
 
     <div class="row g-3 mb-3">
@@ -297,29 +296,24 @@ if (!$model->isNewRecord) {
     <div class="row g-3 mb-3">
         <div class="col-md-12">
             <?php
-            $usersData = User::find()
-                ->joinWith('userDatos')
-                ->orderBy('user_datos.nombres') // Ordenar por nombre del empleado
-                ->all();
-
-            $usersList = ArrayHelper::map($usersData, 'id', function($user) {
-                return ($user->userDatos) ? $user->userDatos->nombres . ' ' . $user->userDatos->apellidos . ' (ID: ' . $user->id . ')' : $user->username . ' (ID: ' . $user->id . ')';
-            });
+            // Ahora usamos el método de UserHelper para obtener solo los afiliados
+            $afiliadosList = UserHelper::getAfiliadosList(); // <-- ¡Aquí está el cambio!
 
             echo $form->field($model, 'users_ids')->widget(Select2::class, [
-                'data' => $usersList,
+                'data' => $afiliadosList, // <-- Usamos la lista filtrada
                 'options' => [
-                    'placeholder' => 'Seleccione uno o varios empleados...',
+                    'placeholder' => 'Seleccione uno o varios afiliados...', // Cambia el placeholder para reflejar el filtro
                     'multiple' => true,
-                    'class' => 'form-control form-control-lg', // Clase de tamaño consistente
+                    'class' => 'form-control form-control-lg',
                 ],
                 'pluginOptions' => [
                     'allowClear' => true
                 ],
-            ])->label('Empleados Asociados');
+            ])->label('Afiliados Asociados'); // Puedes cambiar también la etiqueta del campo
             ?>
         </div>
     </div>
+
 
     <div class="form-group text-right mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar ', ['class' => 'btn btn-success btn-lg']) ?>

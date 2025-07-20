@@ -56,10 +56,26 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                         'responsiveWrap' => false,
                         'persistResize' => false,
                         'columns' => [
-                            // COLUMNA SERIAL - Ajustada
                             [
-                                'class' => 'kartik\grid\SerialColumn',
-                                'headerOptions' => ['class' => 'tu-clase-de-cabecera-de-tema'], // <-- Añade la clase aquí
+                                'attribute' => 'rowNumber', // Usamos el atributo virtual
+                                'label' => 'No.', // La etiqueta para el encabezado
+                                'options' => ['style' => 'width: 50px; text-align: center;'],
+                                'headerOptions' => [
+                                    'class' => 'gridview-header-custom', // Usamos la clase personalizada para estilos (si la creaste)
+                                    // O si las clases no funcionan, el estilo directo con !important
+                                    // 'style' => 'background-color: #007bff !important; color: white !important; text-align: center; width: 50px;',
+                                ],
+                                'contentOptions' => ['class' => 'text-center'], // Para centrar los números
+                                'filterInputOptions' => [
+                                    'placeholder' => 'No.', // El placeholder para el campo de búsqueda
+                                    'class' => 'form-control text-center', // Clases para el input de búsqueda
+                                ],
+                                'value' => function ($model, $key, $index, $column) use ($dataProvider) {
+                                    // Calcula el número de fila basado en la paginación
+                                    $pagination = $dataProvider->getPagination();
+                                    return ($pagination->page * $pagination->pageSize) + $index + 1;
+                                },
+                                'width' => '50px',
                             ],
 
                             'nombre',
@@ -137,14 +153,13 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
 
                             // COLUMNA DE ACCIONES - Ajustada
                             [
-                                'class' => ActionColumn::class, // Usar ActionColumn de Kartik
-                                'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // Incluye delete
-                                'options' => ['style' => 'width:100px; min-width:100px;'], // Ajusta el ancho total de la columna
-                                'headerOptions' => ['style' => 'color: white!important; text-align: center;'], // Aplica estilo de texto y centra el encabezado
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'], // Centra el contenido y ajusta el padding
-
-                                'buttons' => [
+                                'class' => 'yii\grid\ActionColumn',
+                                    'header' => 'ACCIONES',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                    'options' => ['style' => 'width:55px; min-width:55px;'],
+                                    'headerOptions' => ['style' => 'color: white!important;'],
+                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                    'buttons' => [
                                     'view' => function ($url, $model, $key) {
                                         return Html::a(
                                             '<i class="fa fa-eye"></i>',
