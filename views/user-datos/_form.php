@@ -9,6 +9,7 @@ use kartik\widgets\SwitchInput; // No usado en este fragmento, pero puede manten
 use kartik\widgets\DatePicker;
 use kartik\depdrop\DepDrop;
 use yii\helpers\Url;
+use app\models\UserDatosType;
 
 $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 
@@ -95,6 +96,33 @@ $(document).ready(function() {
     }
 });
 
+// Lógica para mostrar/ocultar el campo de afiliado corporativo
+function toggleAfiliadoCorporativoField() {
+    var selectedTypeId = $('#user_datos_type_id_field').val();
+    // CAMBIO CLAVE AQUÍ: Asume que el ID para 'Simple' es 1 (verifica tus datos en user_datos_type)
+    if (selectedTypeId == 1) { // <-- ¡AHORA SE MUESTRA SI ES TIPO 'SIMPLE'!
+        $('#afiliado_corporativo_container').show();
+        // Si el campo es requerido, puedes añadir aquí lógica para setearlo como requerido
+        // Por ejemplo: $('#afiliado_corporativo_id_field').prop('required', true);
+    } else {
+        $('#afiliado_corporativo_container').hide();
+        // Opcional: Limpiar el valor y desmarcarlo como requerido si se oculta
+        $('#afiliado_corporativo_id_field').val('').trigger('change');
+        // $('#afiliado_corporativo_id_field').prop('required', false);
+    }
+}
+
+// Ejecutar al cargar la página para establecer el estado inicial
+$(document).ready(function() {
+    toggleAfiliadoCorporativoField(); // Ejecuta al cargar la página
+});
+
+// Escuchar cambios en el selector de tipo de afiliado
+$('#user_datos_type_id_field').on('change', function() {
+    toggleAfiliadoCorporativoField(); // Ejecuta cada vez que cambia la selección
+});
+
+
 JS;
 $this->registerJs($js);
 ?>
@@ -164,10 +192,37 @@ if (!$model->isNewRecord) { ?>
 
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="tab13">
+
             <div class="row">
                 <div class="col-md-6">
-                    <?= $form->field($model, 'codigoAsesor')->textInput(['class' => 'form-control form-control-lg',]) ?>
+                    <?= $form->field($model, 'user_datos_type_id')->widget(Select2::class, [
+                        'data' => UserDatosType::getList(), // Usamos el método estático del modelo
+                        'options' => [
+                            'placeholder' => 'Seleccionar tipo de afiliado...',
+                            'class' => 'form-control form-control-lg',
+                            'id' => 'user_datos_type_id_field', // Añadir un ID para JavaScript
+                        ],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                        ],
+                    ])->label('Tipo de Afiliado') ?>
                 </div>
+
+                <div class="col-md-6" id="afiliado_corporativo_container" style="display: none;">
+
+                    <?= $form->field($model, 'afiliado_corporativo_id')->widget(Select2::class, [
+                        'data' => UserHelper::getCorporativoList(), // Usamos el método estático del modelo
+                        'options' => [
+                            'placeholder' => 'Seleccione.',
+                            'class' => 'form-control form-control-lg',
+                        ],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                        ],
+                    ])->label('Tipo de Afiliado') ?>
+
+                </div>
+
                 <div class="col-md-6">
                     <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
                             'data' => UserHelper::getAgenteFuerzaList(),
@@ -354,6 +409,7 @@ if (!$model->isNewRecord) { ?>
                         ]);  ?>
                 </div>
             </div>
+
             <br>
             <h1>Datos del Contrato</h1>
                 <br>

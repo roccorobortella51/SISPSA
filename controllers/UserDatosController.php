@@ -18,6 +18,7 @@ use app\models\Contratos;
 use app\models\RmClinica;
 use app\models\Planes;
 use yii\base\Security;
+use yii\helpers\ArrayHelper;
 
 /**
  * UserDatosController implements the CRUD actions for UserDatos model.
@@ -136,6 +137,8 @@ class UserDatosController extends Controller
 
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
+
+
                 if($model->save()){
             
                     // Asignar el username generado al modelo de usuario
@@ -210,6 +213,8 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+
+
 
                 if($model->user_login_id == "" || $model->user_login_id == null){
 
@@ -324,6 +329,27 @@ class UserDatosController extends Controller
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
         ]);
+    }
+
+    public function actionGetCorporativeAffiliates($q = null)
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = ['results' => ['id' => '', 'text' => '']];
+        if (!is_null($q)) {
+            $query = UserDatos::find()
+                ->where(['user_datos_type_id' => 2]) // Asume que ID 2 es 'Corporativo'
+                ->andFilterWhere(['ilike', 'nombres', $q])
+                ->orFilterWhere(['ilike', 'apellidos', $q])
+                ->limit(20); // Limita los resultados
+
+            $command = $query->createCommand();
+            $data = $command->queryAll();
+
+            $out['results'] = array_values(ArrayHelper::map($data, 'id', function($item) {
+                return $item['nombres'] . ' ' . $item['apellidos'] . ' (' . $item['cedula'] . ')';
+            }));
+        }
+        return $out;
     }
     
 }
