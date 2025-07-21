@@ -209,29 +209,20 @@ if (!$model->isNewRecord) { ?>
                 </div>
 
                 <div class="col-md-6" id="afiliado_corporativo_container" style="display: none;">
+
                     <?= $form->field($model, 'afiliado_corporativo_id')->widget(Select2::class, [
+                        'data' => UserHelper::getCorporativoList(), // Usamos el método estático del modelo
                         'options' => [
-                            'placeholder' => 'Seleccionar afiliado principal...',
+                            'placeholder' => 'Seleccione.',
                             'class' => 'form-control form-control-lg',
-                            'id' => 'afiliado_corporativo_id_field', // Añadir un ID para JavaScript
                         ],
                         'pluginOptions' => [
                             'allowClear' => true,
-                            'ajax' => [ // Configuración AJAX para cargar dinámicamente los afiliados corporativos
-                                'url' => Url::to(['user-datos/get-corporative-affiliates']), // URL que devuelve los afiliados corporativos
-                                'dataType' => 'json',
-                                'data' => new \yii\web\JsExpression('function(params) { return {q:params.term}; }')
-                            ],
                         ],
-                    ])->label('Afiliado Corporativo Principal') ?>
-                </div>
-            </div>
+                    ])->label('Tipo de Afiliado') ?>
 
-
-            <div class="row">
-                <div class="col-md-6">
-                    <?= $form->field($model, 'codigoAsesor')->textInput(['class' => 'form-control form-control-lg',]) ?>
                 </div>
+
                 <div class="col-md-6">
                     <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
                             'data' => UserHelper::getAgenteFuerzaList(),

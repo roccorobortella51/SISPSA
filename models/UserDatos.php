@@ -71,7 +71,6 @@ class UserDatos extends ActiveRecord
      * Esta propiedad NO existe como columna en la tabla 'user_datos' de la base de datos.
      */
     public $cedulaFormatted;
-    public $afiliado_corporativo_id;
 
     /**
      * {@inheritdoc}

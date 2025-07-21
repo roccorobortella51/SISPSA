@@ -138,30 +138,6 @@ class UserDatosController extends Controller
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
 
-                if ($model->user_datos_type_id == 1 && !empty($model->afiliado_corporativo_id)) { // condicion de que si es simple la cosa
-                    // AQUI ES DONDE NECESITAS PERSISTIR LA RELACIÓN EN LA DB SI ES NECESARIO.
-                    // Si tienes una columna en `user_datos` llamada `afiliado_corporativo_principal_id`
-                    // que guarda el ID del afiliado principal, harías algo como:
-                    // $model->afiliado_corporativo_principal_id = $model->afiliado_corporativo_id;
-            
-                    // Si no tienes una columna directa, y esta relación se maneja en una tabla intermedia,
-                    // tendrías que crear una nueva instancia de ese modelo de tabla intermedia aquí
-                    // y guardarla.
-            
-                    // Si el campo `afiliado_corporativo_id` es **solo para el formulario** y la relación
-                    // se define de otra forma (o no se guarda en este modelo), puedes dejar este bloque
-                    // tal como está (sin asignar a una columna de DB) ya que la lógica del formulario
-                    // ya lo maneja para la selección.
-                    Yii::debug("Afiliado Corporativo Principal seleccionado para el tipo SIMPLE: " . $model->afiliado_corporativo_id);
-                } else {
-                    // Si el tipo NO es simple o no se selecciona un afiliado principal,
-                    // asegúrate de que el campo de la DB sea null si existe (ej: $model->afiliado_corporativo_principal_id = null;)
-                    // Esto es importante para limpiar el valor si un afiliado SIMPLE cambia a CORPORATIVO,
-                    // o si simplemente no se seleccionó un afiliado principal.
-                    // Si `afiliado_corporativo_id` solo es una propiedad temporal, no hace falta hacer nada aquí.
-                    // Por ejemplo, si tienes la columna `afiliado_corporativo_principal_id` en tu tabla `user_datos`:
-                    // $model->afiliado_corporativo_principal_id = null;
-                }
 
                 if($model->save()){
             
@@ -237,6 +213,8 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+
+
 
                 if($model->user_login_id == "" || $model->user_login_id == null){
 
