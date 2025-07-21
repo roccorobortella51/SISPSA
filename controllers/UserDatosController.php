@@ -19,6 +19,7 @@ use app\models\RmClinica;
 use app\models\Planes;
 use yii\base\Security;
 use kartik\mpdf\Pdf;
+use yii\helpers\ArrayHelper;
 
 /**
  * UserDatosController implements the CRUD actions for UserDatos model.
@@ -137,6 +138,8 @@ class UserDatosController extends Controller
 
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
+
+
                 if($model->save()){
             
                     // Asignar el username generado al modelo de usuario
@@ -211,6 +214,8 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+
+
 
                 if($model->user_login_id == "" || $model->user_login_id == null){
 
@@ -327,174 +332,16 @@ class UserDatosController extends Controller
         ]);
     }
 
-    public function actionVerContrato($id)
-    {
-        $model = $this->findModel($id);
-        
-        // Obtener datos relacionados
-        $estado = ''; // Obtener según tu lógica
-        $ciudad = ''; // Obtener según tu lógica
-        
-        return $this->render('contrato_html', [
-            'model' => $model,
-            'estado' => $estado,
-            'ciudad' => $ciudad,
-        ]);
-    }
-
-    public function actionGenerarContrato($id)
-    {
-        $model = $this->findModel($id);
-        
-        // Obtener datos relacionados
-        $estado = ''; // Obtener según tu lógica
-        $ciudad = ''; // Obtener según tu lógica
-        
-        $pdf = new Pdf([
-            'mode' => Pdf::MODE_UTF8,
-            'format' => Pdf::FORMAT_LETTER,
-            'orientation' => Pdf::ORIENT_PORTRAIT,
-            'destination' => Pdf::DEST_BROWSER,
-            'content' => $this->renderPartial('contrato_html', [
-                'model' => $model,
-                'estado' => $estado,
-                'ciudad' => $ciudad,
-            ]),
-            'cssInline' => '
-                @page {
-            size: letter;
-            margin: 1cm;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 10pt;
-            line-height: 1.2;
-            width: 21.59cm;
-            margin: 0 auto;
-            padding: 0.5cm;
-            color: #000;
-        }
-        .header {
-            text-align: center;
-            font-weight: bold;
-            font-size: 12pt;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-        .section-title {
-            font-weight: bold;
-            background-color: #f0f0f0;
-            padding: 3px 5px;
-            margin: 8px 0 4px 0;
-            font-size: 10pt;
-        }
-        table.form-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 5px;
-            table-layout: fixed;
-        }
-        table.form-table td, table.form-table th {
-            border: 1px solid #000;
-            padding: 4px 5px;
-            vertical-align: top;
-            font-size: 9.5pt;
-            height: 18px;
-            overflow: hidden;
-        }
-        table.form-table th {
-            background-color: #f0f0f0;
-        }
-        .checkbox {
-            border: 1px solid #000;
-            width: 12px;
-            height: 12px;
-            display: inline-block;
-            margin-right: 3px;
-            vertical-align: middle;
-        }
-        .underline {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 100px;
-            height: 15px;
-            margin: 0 5px;
-        }
-        .signature-area {
-            margin-top: 40px;
-        }
-        .signature-box {
-            width: 45%;
-            float: left;
-            margin-bottom: 20px;
-        }
-        .signature-line {
-            border-top: 1px solid #000;
-            width: 80%;
-            margin-top: 30px;
-        }
-        .clearfix {
-            clear: both;
-        }
-        .page-break {
-            page-break-after: always;
-        }
-        .two-columns {
-            display: flex;
-            justify-content: space-between;
-        }
-        .column {
-            width: 48%;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .text-uppercase {
-            text-transform: uppercase;
-        }
-        .no-border td {
-            border: none !important;
-        }
-        .full-width {
-            width: 100%;
-        }
-        .small-text {
-            font-size: 8pt;
-        }
-        .print-button {
-            text-align: center;
-            margin: 20px 0;
-        }
-        @media print {
-            .print-button {
-                display: none;
-            }
-            body {
-                padding: 0;
-            }
-        }
-            ',
-            'options' => ['title' => 'Solicitud de Afiliación'],
-            'methods' => [
-                'SetHeader' => false,
-                'SetFooter' => false,
-            ],
-            'cssInline' => '
-                .print-button { display: none; }
-                body { padding: 0; margin: 0; }
-            ',
-        ]);
-        
-        return $pdf->render();
-    }
 
     public function actionGenerarContratov($id)
     {
+
+        $model = $this->findModel($id);
          // Get your data, for example, from a form submission or database
         $data = [
             'affiliation_type' => '',
-            'proposed_affiliate_name' => 'John Doe',
-            'proposed_affiliate_ci' => 'V-12345678',
+            'proposed_affiliate_name' => $model->nombres." ".$model->apellidos,
+            'proposed_affiliate_ci' => $model->tipo_cedula."-".$model->cedula,
             'proposed_affiliate_nationality' => 'Venezuelan',
             'proposed_affiliate_marital_status' => 'Single',
             'proposed_affiliate_birthplace' => 'Caracas',
@@ -625,111 +472,25 @@ class UserDatosController extends Controller
         return $pdf->render();
     }
 
-
-    public function actionGenerarContratovv($id)
+    public function actionGetCorporativeAffiliates($q = null)
     {
-        $model = $this->findModel($id);
-        
-        // Obtener datos relacionados
-        $estado = ''; // Obtener según tu lógica
-        $ciudad = ''; // Obtener según tu lógica
-        
-        // Configurar PDF
-        $pdf = new Pdf([
-            'mode' => Pdf::MODE_UTF8,
-            'format' => [215.9, 279.4], // Tamaño carta en mm (similar al original)
-            'orientation' => Pdf::ORIENT_PORTRAIT,
-            'destination' => Pdf::DEST_BROWSER,
-            'content' => $this->renderPartial('_contrato_pdf', [
-                'model' => $model,
-                'estado' => $estado,
-                'ciudad' => $ciudad,
-            ]),
-            'cssInline' => '
-                body {
-                    font-family: Arial, sans-serif;
-                    font-size: 9.5pt;
-                    line-height: 1.3;
-                    margin: 0;
-                    padding: 10px 15px;
-                }
-                .header {
-                    text-align: center;
-                    font-weight: bold;
-                    font-size: 11pt;
-                    margin-bottom: 12px;
-                }
-                .section-title {
-                    font-weight: bold;
-                    font-size: 9.5pt;
-                    margin: 8px 0 4px 0;
-                    background-color: #f0f0f0;
-                    padding: 2px 5px;
-                }
-                table.form-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 5px;
-                }
-                table.form-table td, table.form-table th {
-                    border: 0.5px solid #000;
-                    padding: 3px 5px;
-                    vertical-align: top;
-                    font-size: 9pt;
-                }
-                table.form-table th {
-                    background-color: #f0f0f0;
-                }
-                .underline {
-                    border-bottom: 1px solid #000;
-                    display: inline-block;
-                    min-width: 120px;
-                    height: 15px;
-                    margin: 0 5px;
-                }
-                .checkbox {
-                    border: 1px solid #000;
-                    width: 10px;
-                    height: 10px;
-                    display: inline-block;
-                    margin-right: 3px;
-                    vertical-align: middle;
-                }
-                .signature-box {
-                    margin-top: 40px;
-                    width: 45%;
-                    float: left;
-                }
-                .signature-line {
-                    border-top: 1px solid #000;
-                    width: 100%;
-                    margin: 5px 0;
-                }
-                .clearfix {
-                    clear: both;
-                }
-                .page-break {
-                    page-break-after: always;
-                }
-                .two-columns {
-                    display: flex;
-                    justify-content: space-between;
-                }
-                .column {
-                    width: 48%;
-                }
-                .small-text {
-                    font-size: 8pt;
-                }
-            ',
-            'options' => ['title' => 'Solicitud de Afiliación'],
-            'methods' => [
-                'SetHeader' => false,
-                'SetFooter' => false,
-            ]
-        ]);
-        
-        return $pdf->render();
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = ['results' => ['id' => '', 'text' => '']];
+        if (!is_null($q)) {
+            $query = UserDatos::find()
+                ->where(['user_datos_type_id' => 2]) // Asume que ID 2 es 'Corporativo'
+                ->andFilterWhere(['ilike', 'nombres', $q])
+                ->orFilterWhere(['ilike', 'apellidos', $q])
+                ->limit(20); // Limita los resultados
+
+            $command = $query->createCommand();
+            $data = $command->queryAll();
+
+            $out['results'] = array_values(ArrayHelper::map($data, 'id', function($item) {
+                return $item['nombres'] . ' ' . $item['apellidos'] . ' (' . $item['cedula'] . ')';
+            }));
+        }
+        return $out;
     }
     
 }
