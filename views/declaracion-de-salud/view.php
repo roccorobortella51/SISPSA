@@ -45,7 +45,7 @@ $preguntas = [
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3><?= Html::encode($this->title) ?></h3><br>
     <div class="d-flex align-items-center">
-        <?= Html::a('<i class="fas fa-file-pdf"></i> Imprimir Declaración de Salud', ['generar-pdf', 'id' => $model->id], [
+        <?= Html::a('<i class="fas fa-file-pdf"></i> Dec Salud', ['generar-pdf', 'id' => $model->id], [
             'class' => 'btn btn-danger btn-sm my-spaced-button',
             'target' => '_blank'
         ]) ?>
