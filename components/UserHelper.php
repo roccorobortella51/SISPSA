@@ -19,6 +19,9 @@ use app\models\Contratos;
 use app\models\AuthItem;
 use yii\helpers\ArrayHelper;
 use yii\rbac\DbManager;
+use app\models\AuthAssignment;
+use app\models\UserDatos;
+use app\models\Corporativo;
 use yii\httpclient\Client; // Necesario para hacer peticiones HTTP a la API de Supabase
 
 
@@ -247,6 +250,44 @@ class UserHelper
         );
     }
 
+    public static function getAfiliadosList()
+{
+    $query = User::find()
+        ->leftJoin(AuthAssignment::tableName(), '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+        ->leftJoin(UserDatos::tableName(), '"user"."id" = "user_datos"."user_login_id"')
+        ->select([
+            'user.id AS id',
+            new \yii\db\Expression("CONCAT(user_datos.nombres, ' ', user_datos.apellidos) AS name")
+        ])
+        // Asegúrate que el rol es 'afiliado' (en minúsculas, como confirmaste)
+        ->where(['auth_assignment.item_name' => 'afiliado'])
+        ->andWhere(['user.status' => User::STATUS_ACTIVE])
+        ->orderBy('user_datos.nombres, user_datos.apellidos')
+        ->asArray();
+
+    // --- INICIO DE DEPURACIÓN ---
+    // Descomenta las siguientes líneas para ver el SQL y los resultados
+    // Esto DETENDRÁ la ejecución de la página y mostrará la información.
+
+    // Imprime la consulta SQL generada
+    // \Yii::warning("SQL for getAfiliadosList: " . $query->createCommand()->rawSql);
+    // var_dump($query->createCommand()->rawSql);
+    // die(); // Detiene la ejecución aquí para ver el SQL
+
+    // Imprime el resultado real de la consulta antes de mapearlo
+    $afiliados = $query->all();
+    // \Yii::warning("Afiliados data: " . json_encode($afiliados));
+    // var_dump($afiliados);
+    // die(); // Detiene la ejecución aquí para ver los datos
+
+    // --- FIN DE DEPURACIÓN ---
+
+
+    $list = ArrayHelper::map($afiliados, 'id', 'name');
+
+    return $list;
+}
+
     public static function generateUniqueUsername($baseUsername)
     {
         $username = $baseUsername;
@@ -426,5 +467,26 @@ class UserHelper
             Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al eliminar archivo: " . $e->getMessage());
             return false;
         }
+    }
+
+    public static function getCorporativoList()
+    {
+        // 1. Obtener los agentes reales de la base de datos
+        $corporativo = Corporativo::find()
+            ->select(['id AS id', 'nombre AS name'])
+            ->where(['estatus' => "Activo"])
+            ->asArray()
+            ->all();
+
+        // 2. Mapear los resultados a un array ID => Nombre
+        $list = ArrayHelper::map($corporativo, 'id', 'name');
+
+        // 3. Añadir la opción "No Asignado" al principio del array
+        $defaultOption = ['0' => 'No Asignado']; // Usamos 0 como clave para "No Asignado"
+
+        // Fusionar la opción predeterminada con la lista de agentes reales
+        $finalList = $defaultOption + $list; // El operador '+' fusiona arrays manteniendo las claves.
+
+        return $finalList;
     }
 }
