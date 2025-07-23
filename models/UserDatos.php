@@ -145,7 +145,7 @@ class UserDatos extends ActiveRecord
         
             // 6. Validaciones para carga de archivos (se mantienen igual)
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
-            [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
+            [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
             [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
 
             // 7. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)

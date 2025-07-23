@@ -465,7 +465,7 @@ if (!$model->isNewRecord) { ?>
                     ?>    
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'imagen_identificacion')->widget(FileInput::classname(),[
+                    <?= $form->field($model, 'imagenIdentificacionFile')->widget(FileInput::classname(),[
                         'name' => 'attachments',
                         'pluginOptions' => [
                             'browseClass' => 'btn btn-primary',

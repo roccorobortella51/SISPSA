@@ -36,16 +36,32 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="ms-panel-body">
              <!-- Foto de perfil -->
             <div class="profile-header text-center">
-                <?php if ($model->selfie): ?>
-                    <?= Html::img($model->selfie, [
-                        'alt' => 'Foto de Perfil',
-                        'class' => 'profile-img',
-                        'style' => 'width: 200px; height: 200px; border-radius: 50%;',
-                    ]) ?>
-                    <p><strong>Foto de Perfil</strong></p>
-                <?php else: ?>
-                    <p><em>No hay foto de perfil</em></p>
-                <?php endif; ?>
+                <div class="row">
+                    <div class="col-md-6">
+                        <?php if ($model->selfie): ?>
+                            <?= Html::img($model->selfie, [
+                                'alt' => 'Foto de Perfil',
+                                'class' => 'profile-img',
+                                'style' => 'width: 300px; height: 200px;',
+                            ]) ?>
+                            <p><strong>Foto de Perfil</strong></p>
+                        <?php else: ?>
+                            <p><em>No hay foto de perfil</em></p>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <?php if ($model->imagen_identificacion): ?>
+                            <?= Html::img($model->imagen_identificacion, [
+                                'alt' => 'Foto de Identificación',
+                                'class' => 'profile-img',
+                                'style' => 'width: 200px; height: 200px;',
+                            ]) ?>
+                            <p><strong>Foto de Identificación</strong></p>
+                        <?php else: ?>
+                            <p><em>No hay foto de identificación</em></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
             <!-- Datos personales -->
             <hr>
@@ -68,12 +84,10 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'attribute' => 'cedulaFormatted',
                                 'label' => 'Cédula de Identidad',
                             ],
-
                             [
                                 'attribute' => 'sexo',
                                 'label' => 'Sexo',
                             ],
-
                             [
                                 'attribute' => 'email',
                                 'format' => 'email',
