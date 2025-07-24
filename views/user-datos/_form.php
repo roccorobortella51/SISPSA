@@ -465,15 +465,23 @@ if (!$model->isNewRecord) { ?>
             </div>
 
 
-            <div class="row">
-                <div class="col-md-12">
-                    <?= $form->field($model, 'direccion')->textInput(['class' => 'form-control form-control-lg',]) ?>
-                </div>
-                <div class="col-md-12">
-                    <div class="form-group text-end mt-4"> <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?> <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-warning btn-lg']); ?>
-                    </div>
-                </div>
+          <div class="row mt-4">
+            <div class="col-12 d-flex justify-content-start">
+                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-5']) ?>
+                
+                <?php
+                
+                if ($model->isNewRecord) {
+                    echo Html::button('<i class="fas fa-sync-alt"></i> Refrescar', [
+                        'class' => 'btn btn-info btn-lg',
+                        'id' => 'btn-refrescar-form'
+                    ]);
+                }
+                ?>
             </div>
+        </div>
+
+
         </div>
     </div>
 

@@ -333,113 +333,145 @@ class UserDatosController extends Controller
     }
 
 
-    public function actionGenerarContratov($id)
+public function actionGenerarContratov($id)
     {
-
         $model = $this->findModel($id);
-         // Get your data, for example, from a form submission or database
+
+        // Obtener los IDs de ubicación del modelo
+        $estadoId = (int) $model->estado;
+        $municipioId = (int) $model->municipio;
+        $parroquiaId = (int) $model->parroquia;
+        $ciudadId = (int) $model->ciudad;
+
+        // Buscar los nombres correspondientes a los IDs
+        // Usamos findOne()->nombre para obtener el nombre directamente de la base de datos
+        // Si el ID es 0 o nulo, o no se encuentra, se asigna una cadena vacía
+        $estadoNombre = RmEstado::findOne($estadoId)->nombre ?? '';
+        $municipioNombre = RmMunicipio::findOne($municipioId)->nombre ?? '';
+        $parroquiaNombre = RmParroquia::findOne($parroquiaId)->nombre ?? '';
+        $ciudadNombre = RmCiudad::findOne($ciudadId)->nombre ?? '';
+
+        // Elimina el var_dump y die() que usaste para depurar
+        // var_dump ($estadoNombre); die();
+
+        // Construir la dirección de residencia completa
+        $residenceAddressParts = [];
+        if (!empty($model->direccion)) $residenceAddressParts[] = $model->direccion;
+        if (!empty($parroquiaNombre)) $residenceAddressParts[] = $parroquiaNombre;
+        if (!empty($municipioNombre)) $residenceAddressParts[] = $municipioNombre;
+        if (!empty($ciudadNombre)) $residenceAddressParts[] = $ciudadNombre;
+        if (!empty($estadoNombre)) $residenceAddressParts[] = $estadoNombre;
+        $fullResidenceAddress = implode(', ', array_filter($residenceAddressParts));
+
+
+        // Preparar los datos para el PDF
         $data = [
-            'affiliation_type' => '',
-            'proposed_affiliate_name' => $model->nombres." ".$model->apellidos,
-            'proposed_affiliate_ci' => $model->tipo_cedula."-".$model->cedula,
-            'proposed_affiliate_nationality' => 'Venezuelan',
-            'proposed_affiliate_marital_status' => 'Single',
-            'proposed_affiliate_birthplace' => 'Caracas',
-            'proposed_affiliate_birthdate' => '1990-01-01',
-            'proposed_affiliate_sex' => 'Male',
-            'proposed_affiliate_profession' => 'Engineer',
-            'proposed_affiliate_occupation' => 'Software Engineer',
-            'proposed_affiliate_economic_activity' => 'Independent',
-            'proposed_affiliate_annual_income' => 'De 6 a 10 Salarios mínimos',
-            'proposed_affiliate_residence_address' => 'Av. Francisco de Miranda, Edificio XYZ, Caracas',
-            'proposed_affiliate_phone_residence' => '0212-1234567',
-            'proposed_affiliate_office_address' => 'Calle A, Edificio B, Oficina C, Caracas',
-            'proposed_affiliate_phone_office' => '0212-7654321',
-            'proposed_affiliate_billing_address' => 'Av. Francisco de Miranda, Edificio XYZ, Caracas',
-            'proposed_affiliate_cell_phone' => '0412-9876543',
-            'proposed_affiliate_email' => 'john.doe@example.com',
+            // Datos del Afiliado Propuesto
+            'affiliation_type' => $model->userDatosType ? $model->userDatosType->nombre : '', // Asume relación userDatosType y campo nombre_tipo
+            'proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
+            'proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula, // Usa tipo_cedula y cedula directamente
+            'proposed_affiliate_nationality' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_marital_status' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_birthplace' => $ciudadNombre, // Usa el nombre de la ciudad resuelto
+            'proposed_affiliate_birthdate' => Yii::$app->formatter->asDate($model->fechanac, 'yyyy-MM-dd'), // Formato YYYY-MM-DD
+            'proposed_affiliate_sex' => $model->sexo,
+            'proposed_affiliate_profession' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_occupation' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_economic_activity' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_annual_income' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_residence_address' => $fullResidenceAddress, // Dirección completa construida
+            'proposed_affiliate_phone_residence' => $model->telefono, // Asume que afterFind ya lo formateó para visualización
+            'proposed_affiliate_office_address' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_phone_office' => '', // No en UserDatos, se deja vacío
+            'proposed_affiliate_billing_address' => $fullResidenceAddress, // Se asume igual que la de residencia si no hay campo específico
+            'proposed_affiliate_cell_phone' => $model->telefono, // Se asume igual que el teléfono de residencia
+            'proposed_affiliate_email' => $model->email,
 
-            'contracting_party_name' => 'Jane Smith',
-            'contracting_party_ci' => 'V-87654321',
-            'contracting_party_nationality' => 'Venezuelan',
-            'contracting_party_marital_status' => 'Married',
-            'contracting_party_birthplace' => 'Maracaibo',
-            'contracting_party_birthdate' => '1985-05-10',
-            'contracting_party_sex' => 'Female',
-            'contracting_party_profession' => 'Doctor',
-            'contracting_party_occupation' => 'General Practitioner',
-            'contracting_party_economic_activity' => 'Professional',
-            'contracting_party_annual_income' => 'De 11 a 20 Salarios mínimos',
-            'contracting_party_residence_address' => 'Av. Libertador, Edificio ABC, Caracas',
-            'contracting_party_phone_residence' => '0212-2345678',
-            'contracting_party_office_address' => 'Calle D, Edificio E, Oficina F, Caracas',
-            'contracting_party_phone_office' => '0212-8765432',
-            'contracting_party_billing_address' => 'Av. Libertador, Edificio ABC, Caracas',
-            'contracting_party_cell_phone' => '0414-1234567',
-            'contracting_party_email' => 'jane.smith@example.com',
+            // Datos de la Parte Contratante (se dejan vacíos si no hay campos en UserDatos)
+            'contracting_party_name' => '',
+            'contracting_party_ci' => '',
+            'contracting_party_nationality' => '',
+            'contracting_party_marital_status' => '',
+            'contracting_party_birthplace' => '',
+            'contracting_party_birthdate' => '',
+            'contracting_party_sex' => '',
+            'contracting_party_profession' => '',
+            'contracting_party_occupation' => '',
+            'contracting_party_economic_activity' => '',
+            'contracting_party_annual_income' => '',
+            'contracting_party_residence_address' => '',
+            'contracting_party_phone_residence' => '',
+            'contracting_party_office_address' => '',
+            'contracting_party_phone_office' => '',
+            'contracting_party_billing_address' => '',
+            'contracting_party_cell_phone' => '',
+            'contracting_party_email' => '',
 
-            'corporate_social_reason' => 'Empresa Ejemplo C.A.',
-            'corporate_rif' => 'J-123456789',
-            'corporate_mercantile_register_number' => '12345',
-            'corporate_tomo_number' => '123-A',
-            'corporate_registration_date' => '2000-01-01',
-            'corporate_economic_activity' => 'Comercial',
-            'corporate_address' => 'Av. Principal, Edificio GHI, Caracas',
-            'corporate_phone' => '0212-3456789',
-            'corporate_products_services' => 'Consulting and IT Services',
-            'corporate_previous_year_utility' => '1,500,000.00',
-            'corporate_net_worth' => '5,000,000.00',
+            // Información Corporativa (se dejan vacíos si no hay campos en UserDatos)
+            'corporate_social_reason' => '',
+            'corporate_rif' => '',
+            'corporate_mercantile_register_number' => '',
+            'corporate_tomo_number' => '',
+            'corporate_registration_date' => '',
+            'corporate_economic_activity' => '',
+            'corporate_address' => '',
+            'corporate_phone' => '',
+            'corporate_products_services' => '',
+            'corporate_previous_year_utility' => '',
+            'corporate_net_worth' => '',
 
-            'legal_representative_name' => 'Roberto Perez',
-            'legal_representative_ci' => 'V-98765432',
-            'legal_representative_nationality' => 'Venezuelan',
-            'legal_representative_marital_status' => 'Married',
-            'legal_representative_birthplace' => 'Valencia',
-            'legal_representative_birthdate' => '1975-11-20',
-            'legal_representative_sex' => 'Male',
-            'legal_representative_profession' => 'Lawyer',
-            'legal_representative_occupation' => 'Legal Manager',
-            'legal_representative_activity_description' => 'Dependiente',
-            'legal_representative_address' => 'Calle Larga, Casa 10, Valencia',
-            'legal_representative_phone' => '0424-5678901',
+            // Representante Legal (se dejan vacíos si no hay campos en UserDatos)
+            'legal_representative_name' => '',
+            'legal_representative_ci' => '',
+            'legal_representative_nationality' => '',
+            'legal_representative_marital_status' => '',
+            'legal_representative_birthplace' => '',
+            'legal_representative_birthdate' => '',
+            'legal_representative_sex' => '',
+            'legal_representative_profession' => '',
+            'legal_representative_occupation' => '',
+            'legal_representative_activity_description' => '',
+            'legal_representative_address' => '',
+            'legal_representative_phone' => '',
 
-            'plan_selected' => 'DIAMANTE', // Or ORO, PLATA, PLATINO, ESMERALDA, BASICO, BRONCE, ESMERALDA PLUS
-            'plan_currency' => 'BS',
-            'plan_deductible' => '500',
-            'plan_coverage_limit' => '100000',
-            'maternity_coverage' => true, // true or false
-            'maternity_deductible' => '100',
-            'maternity_coverage_limit' => '5000',
+            // Datos del Plan (se usan del modelo Plan relacionado)
+            'plan_selected' => $model->plan ? $model->plan->nombre_plan : '', // Asume 'nombre_plan' en el modelo Planes
+            'plan_currency' => '', // No en UserDatos/Planes, se deja vacío
+            'plan_deductible' => '', // No en UserDatos/Planes, se deja vacío
+            'plan_coverage_limit' => '', // No en UserDatos/Planes, se deja vacío
+            'maternity_coverage' => false, // No en UserDatos/Planes, se deja false
+            'maternity_deductible' => '', // No en UserDatos/Planes, se deja vacío
+            'maternity_coverage_limit' => '', // No en UserDatos/Planes, se deja vacío
 
-            'family_group' => [
-                ['name' => 'Child One', 'ci' => 'V-11111111', 'relationship' => 'Son', 'sex' => 'Male', 'birthdate' => '2010-03-15'],
-                ['name' => 'Child Two', 'ci' => 'V-22222222', 'relationship' => 'Daughter', 'sex' => 'Female', 'birthdate' => '2012-07-20'],
-            ],
+            // Grupo Familiar (se deja array vacío si no hay tabla o relación específica)
+            'family_group' => [],
 
-            'beneficiary_name' => 'Another Beneficiary',
-            'beneficiary_ci' => 'V-33333333',
-            'beneficiary_relationship' => 'Spouse',
-            'beneficiary_sex' => 'Female',
-            'beneficiary_birthdate' => '1990-01-01',
+            // Beneficiario (se dejan vacíos si no hay campos en UserDatos)
+            'beneficiary_name' => '',
+            'beneficiary_ci' => '',
+            'beneficiary_relationship' => '',
+            'beneficiary_sex' => '',
+            'beneficiary_birthdate' => '',
 
-            'bank_account_holder_name' => 'John Doe',
-            'bank_account_ci' => 'V-12345678',
-            'bank_account_email' => 'john.doe@example.com',
-            'bank_account_type' => 'Cuenta Corriente', // Or Cuenta Ahorro, Tarjeta Crédito Visa, Tarjeta Crédito MasterCard
-            'bank_account_number' => '01020304050607080910',
-            'bank_name' => 'Banco Nacional de Crédito',
+            // Cuenta Bancaria (se dejan vacíos si no hay campos en UserDatos)
+            'bank_account_holder_name' => '',
+            'bank_account_ci' => '',
+            'bank_account_email' => '',
+            'bank_account_type' => '',
+            'bank_account_number' => '',
+            'bank_name' => '',
 
-            'declaration_proposed_affiliate_name' => 'John Doe',
-            'declaration_proposed_affiliate_ci' => 'V-12345678',
-            'declaration_contracting_party_name' => 'Jane Smith',
-            'declaration_contracting_party_ci' => 'V-87654321',
-            'declaration_place' => 'Caracas',
-            'declaration_date' => '19/07/2025',
+            // Declaración
+            'declaration_proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
+            'declaration_proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
+            'declaration_contracting_party_name' => '', // No en UserDatos, se deja vacío
+            'declaration_contracting_party_ci' => '', // No en UserDatos, se deja vacío
+            'declaration_place' => $ciudadNombre, // Usa el nombre de la ciudad resuelto
+            'declaration_date' => date('d/m/Y'), // Fecha actual en formato DD/MM/YYYY
         ];
 
-        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg'); 
-
-        $firmas = Yii::getAlias('@webroot/img/firmas.png'); 
+        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+        $firmas = Yii::getAlias('@webroot/img/firmas.png');
 
         // Render the HTML content for the PDF
         $content = $this->renderPartial('_contrato_pdf', [
@@ -448,10 +480,7 @@ class UserDatosController extends Controller
             'firmas' => $firmas
         ]);
 
-         $url_css = Yii::getAlias('@webroot') . '/css/affiliation-pdf.css';
-
-
-      
+        $url_css = Yii::getAlias('@webroot') . '/css/affiliation-pdf.css';
 
         $pdf = new Pdf([
             'mode' => Pdf::MODE_UTF8,
@@ -471,6 +500,8 @@ class UserDatosController extends Controller
 
         return $pdf->render();
     }
+
+
 
     public function actionGetCorporativeAffiliates($q = null)
     {

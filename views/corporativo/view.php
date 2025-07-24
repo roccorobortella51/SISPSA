@@ -1,31 +1,101 @@
 <?php
 
 use yii\helpers\Html;
-use yii\helpers\Url; // Para usar Url::to()
+use yii\helpers\Url;
 
 /** @var yii\web\View $this */
 /** @var app\models\Corporativo $model */
 
 $this->title = 'DETALLES DEL AFILIADO CORPORATIVO: ' . Html::encode($model->nombre);
 $this->params['breadcrumbs'][] = ['label' => 'Corporativos', 'url' => ['index']];
-$this->params['breadcrumbs'][] = Html::encode($model->nombre); // Solo el nombre para el breadcrumb
+$this->params['breadcrumbs'][] = Html::encode($model->nombre);
 \yii\web\YiiAsset::register($this);
+
+// Función auxiliar para formatear fechas, manejando valores nulos
+function formatUpdatedAt($value) {
+    if (empty($value)) {
+        return 'No se ha modificado';
+    }
+    return Yii::$app->formatter->asDatetime($value, 'medium');
+}
+
 ?>
 
-<div class="corporativo-view container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3><?= Html::encode($this->title) ?></h3>
-        <div class="btn-group" role="group" aria-label="Acciones de Corporativo">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= Html::encode($this->title) ?></title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Un gris claro para el fondo */
+            margin: 0;
+            padding: 20px; /* Espaciado general */
+            box-sizing: border-box;
+        }
+        /* Estilos para el breadcrumb de Yii */
+        .breadcrumb {
+            background-color: transparent;
+            padding: 0;
+            margin-bottom: 1rem;
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "/";
+            padding-right: 0.5rem;
+            padding-left: 0.5rem;
+            color: #6b7280; /* gray-500 */
+        }
+        .breadcrumb-item a {
+            color: #2563eb; /* blue-600 */
+            text-decoration: none;
+        }
+        .breadcrumb-item.active {
+            color: #4b5563; /* gray-600 */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mx-auto p-4 bg-gray-50 min-h-screen rounded-lg shadow-md">
+    <!-- Breadcrumbs -->
+    <nav class="mb-6" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <?php foreach ($this->params['breadcrumbs'] as $i => $breadcrumb): ?>
+                <li class="breadcrumb-item <?= $i === count($this->params['breadcrumbs']) - 1 ? 'active' : '' ?>">
+                    <?php if (is_array($breadcrumb)): ?>
+                        <?= Html::a(Html::encode($breadcrumb['label']), $breadcrumb['url']) ?>
+                    <?php else: ?>
+                        <?= Html::encode($breadcrumb) ?>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </nav>
+
+    <!-- Encabezado y Botones de Acción -->
+    <div class="flex flex-col justify-start items-start mb-6 p-4 bg-white rounded-lg shadow-sm">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4"><?= Html::encode($this->title) ?></h1>
+        <div class="flex flex-wrap gap-3 w-full justify-start">
             <?= Html::a(
-                '<i class="fas fa-edit"></i> Actualizar',
+                '<i class="fas fa-edit mr-2"></i> Actualizar',
                 ['update', 'id' => $model->id],
-                ['class' => 'btn btn-primary btn-xs text-white me-2'] // 'btn-xs' para extra pequeño, 'text-white' y 'me-2' para margen derecho
+                ['class' => 'px-5 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out flex items-center text-sm font-medium']
             ) ?>
             <?= Html::a(
-                '<i class="fas fa-trash-alt"></i> Eliminar',
+                '<i class="fas fa-trash-alt mr-2"></i> Eliminar',
                 ['delete', 'id' => $model->id],
                 [
-                    'class' => 'btn btn-danger btn-xs text-white me-2', // 'btn-xs', 'text-white' y 'me-2'
+                    'class' => 'px-5 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out flex items-center text-sm font-medium',
                     'data' => [
                         'confirm' => '¿Está seguro de que desea eliminar este corporativo?',
                         'method' => 'post',
@@ -33,157 +103,151 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombre); // Solo el nombre
                 ]
             ) ?>
             <?= Html::a(
-                '<i class="fas fa-undo"></i> Volver',
+                '<i class="fas fa-undo mr-2"></i> Volver',
                 Url::to(['index']),
                 [
-                    'class' => 'btn btn-outline-secondary btn-xs', // 'btn-xs' para extra pequeño
+                    'class' => 'px-5 py-2 bg-gray-200 text-gray-800 rounded-lg shadow-md hover:bg-gray-300 transition duration-300 ease-in-out flex items-center text-sm font-medium',
                     'title' => 'Volver a la lista de corporativos',
                 ]
             ) ?>
         </div>
     </div>
 
-    <div class="card card-outline card-primary shadow-sm mb-4">
-        <div class="card-header bg-primary"> 
-            <h3 class="card-title text-bold text-white">Información General del Corporativo</h3>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Nombre:</strong> <?= Html::encode($model->nombre) ?></p>
-                    <p><strong>Email:</strong> <?= Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email)) ?></p>
-                    <p><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>RIF:</strong> <?= Html::encode($model->rif) ?></p>
-                    <p><strong>Estatus:</strong> <?= Html::encode($model->estatus) ?></p>
-                    <p><strong>Código Asesor:</strong> <?= Html::encode($model->codigo_asesor) ?></p>
-                </div>
+    <!-- Tarjeta de Información General del Corporativo -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-blue-600">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+            <i class="fas fa-info-circle text-blue-600 mr-3"></i> Información General del Corporativo
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Nombre:</strong> <?= Html::encode($model->nombre) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Email:</strong> <?= Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500 hover:underline']) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></p>
             </div>
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <p><strong>Fecha de Creación:</strong> <?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'medium')) ?></p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Última Actualización:</strong> <?= Html::encode(Yii::$app->formatter->asDatetime($model->updated_at, 'medium')) ?></p>
-                </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>RIF:</strong> <?= Html::encode($model->rif) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Estatus:</strong> <span class="px-2 py-1 rounded-full text-xs font-semibold <?= $model->estatus == 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>"><?= Html::encode($model->estatus) ?></span></p>
+                <p class="text-gray-700 mb-2"><strong>Código Asesor:</strong> <?= Html::encode($model->codigo_asesor) ?></p>
             </div>
         </div>
-    </div>
-
-    <div class="card card-outline card-info shadow-sm mb-4">
-        <div class="card-header bg-info"> 
-            <h3 class="card-title text-bold text-white">Ubicación Geográfica</h3> 
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Estado:</strong> <?= Html::encode($model->rmEstado ? $model->rmEstado->nombre : $model->estado) ?></p>
-                    <p><strong>Municipio:</strong> <?= Html::encode($model->rmMunicipio ? $model->rmMunicipio->nombre : $model->municipio) ?></p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Parroquia:</strong> <?= Html::encode($model->rmParroquia ? $model->rmParroquia->nombre : $model->parroquia) ?></p>
-                    <p><strong>Ciudad:</strong> <?= Html::encode($model->rmCiudad ? $model->rmCiudad->nombre : $model->ciudad) ?></p>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 mt-4 pt-4 border-t border-gray-100">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Fecha de Creación:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'medium')) ?></span></p>
             </div>
-            <p class="mt-3"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
-        </div>
-    </div>
-
-    <div class="card card-outline card-secondary shadow-sm mb-4">
-        <div class="card-header bg-secondary"> 
-            <h3 class="card-title text-bold text-white">Información Registral</h3> 
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Lugar de Registro:</strong> <?= Html::encode($model->lugar_registro) ?></p>
-                    <p><strong>Fecha Registro Mercantil:</strong> <?= Html::encode(Yii::$app->formatter->asDate($model->fecha_registro_mercantil, 'long')) ?></p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Tomo de Registro:</strong> <?= Html::encode($model->tomo_registro) ?></p>
-                    <p><strong>Folio de Registro:</strong> <?= Html::encode($model->folio_registro) ?></p>
-                </div>
-            </div>
-            <p class="mt-3"><strong>Domicilio Fiscal:</strong> <?= nl2br(Html::encode($model->domicilio_fiscal)) ?></p>
-        </div>
-    </div>
-
-    <div class="card card-outline card-warning shadow-sm mb-4">
-        <div class="card-header bg-warning"> 
-            <h3 class="card-title text-bold text-white">Contacto Principal</h3> 
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Nombre Contacto:</strong> <?= Html::encode($model->contacto_nombre) ?></p>
-                    <p><strong>Cédula Contacto:</strong> <?= Html::encode($model->contacto_cedula) ?></p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Teléfono Contacto:</strong> <?= Html::encode($model->contacto_telefono) ?></p>
-                    <p><strong>Cargo Contacto:</strong> <?= Html::encode($model->contacto_cargo) ?></p>
-                </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Última Actualización:</strong> <span class="font-medium"><?= Html::encode(formatUpdatedAt($model->updated_at)) ?></span></p>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card card-outline card-success shadow-sm mb-4">
-                <div class="card-header bg-success"> 
-                    <h3 class="card-title text-bold text-white">Clínicas Asociadas</h3>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($model->clinicas)): ?>
-                        <ul class="list-group list-group-flush">
-                            <?php foreach ($model->clinicas as $clinica): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <?= Html::a(Html::encode($clinica->nombre), ['rm-clinica/view', 'id' => $clinica->id], ['class' => 'text-primary text-bold']) ?>
-                                        <small class="text-muted">(RIF: <?= Html::encode($clinica->rif) ?>)</small>
-                                    </span>
-                                    <i class="fas fa-hospital text-muted"></i>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>
-                        <p class="text-muted">No hay clínicas asociadas a este corporativo.</p>
-                    <?php endif; ?>
-                </div>
+    <!-- Tarjeta de Ubicación Geográfica -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-indigo-600">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+            <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación Geográfica
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Estado:</strong> <?= Html::encode($model->rmEstado ? $model->rmEstado->nombre : $model->estado) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Municipio:</strong> <?= Html::encode($model->rmMunicipio ? $model->rmMunicipio->nombre : $model->municipio) ?></p>
+            </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Parroquia:</strong> <?= Html::encode($model->rmParroquia ? $model->rmParroquia->nombre : $model->parroquia) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Ciudad:</strong> <?= Html::encode($model->rmCiudad ? $model->rmCiudad->nombre : $model->ciudad) ?></p>
             </div>
         </div>
+        <p class="text-gray-700 mt-4 pt-4 border-t border-gray-100"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
+    </div>
 
-        <div class="col-md-6">
-            <div class="card card-outline card-dark shadow-sm mb-4">
-                <div class="card-header bg-dark"> 
-                    <h3 class="card-title text-bold text-white">Empleados Asociados</h3>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($model->users)): ?>
-                        <ul class="list-group list-group-flush">
-                            <?php foreach ($model->users as $user): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <?php
-                                            $nombreCompleto = '';
-                                            if ($user->userDatos) {
-                                                $nombreCompleto = $user->userDatos->nombres . ' ' . $user->userDatos->apellidos;
-                                            } else {
-                                                $nombreCompleto = $user->username; // Fallback
-                                            }
-                                        ?>
-                                        <?= Html::a(Html::encode($nombreCompleto), ['user/view', 'id' => $user->id], ['class' => 'text-primary text-bold']) ?>
-                                        <small class="text-muted">(Usuario: <?= Html::encode($user->username) ?>)</small>
-                                    </span>
-                                    <i class="fas fa-user-tie text-muted"></i>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>
-                        <p class="text-muted">No hay empleados asociados a este corporativo.</p>
-                    <?php endif; ?>
-                </div>
+    <!-- Tarjeta de Información Registral -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-gray-600">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+            <i class="fas fa-file-alt text-gray-600 mr-3"></i> Información Registral
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Lugar de Registro:</strong> <?= Html::encode($model->lugar_registro) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Fecha Registro Mercantil:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fecha_registro_mercantil, 'long')) ?></span></p>
             </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Tomo de Registro:</strong> <?= Html::encode($model->tomo_registro) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Folio de Registro:</strong> <?= Html::encode($model->folio_registro) ?></p>
+            </div>
+        </div>
+        <p class="text-gray-700 mt-4 pt-4 border-t border-gray-100"><strong>Domicilio Fiscal:</strong> <?= nl2br(Html::encode($model->domicilio_fiscal)) ?></p>
+    </div>
+
+    <!-- Tarjeta de Contacto Principal -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-yellow-600">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+            <i class="fas fa-user-circle text-yellow-600 mr-3"></i> Contacto Principal
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Nombre Contacto:</strong> <?= Html::encode($model->contacto_nombre) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Cédula Contacto:</strong> <?= Html::encode($model->contacto_cedula) ?></p>
+            </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Teléfono Contacto:</strong> <?= Html::encode($model->contacto_telefono) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Cargo Contacto:</strong> <?= Html::encode($model->contacto_cargo) ?></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secciones de Clínicas y Empleados Asociados -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Tarjeta de Clínicas Asociadas -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-600">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                <i class="fas fa-hospital text-green-600 mr-3"></i> Clínicas Asociadas
+            </h3>
+            <?php if (!empty($model->clinicas)): ?>
+                <ul class="divide-y divide-gray-200">
+                    <?php foreach ($model->clinicas as $clinica): ?>
+                        <li class="py-3 flex justify-between items-center">
+                            <span>
+                                <?= Html::a(Html::encode($clinica->nombre), ['rm-clinica/view', 'id' => $clinica->id], ['class' => 'text-blue-500 hover:underline font-medium']) ?>
+                                <small class="text-gray-500 block sm:inline">(RIF: <?= Html::encode($clinica->rif) ?>)</small>
+                            </span>
+                            <i class="fas fa-arrow-right text-gray-400"></i>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p class="text-gray-500">No hay clínicas asociadas a este corporativo.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Tarjeta de Empleados Asociados -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-t-4 border-gray-800">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                <i class="fas fa-user-tie text-gray-800 mr-3"></i> Empleados Asociados
+            </h3>
+            <?php if (!empty($model->users)): ?>
+                <ul class="divide-y divide-gray-200">
+                    <?php foreach ($model->users as $user): ?>
+                        <li class="py-3 flex justify-between items-center">
+                            <span>
+                                <?php
+                                    $nombreCompleto = '';
+                                    if ($user->userDatos) {
+                                        $nombreCompleto = $user->userDatos->nombres . ' ' . $user->userDatos->apellidos;
+                                    } else {
+                                        $nombreCompleto = $user->username; // Fallback
+                                    }
+                                ?>
+                                <?= Html::a(Html::encode($nombreCompleto), ['user/view', 'id' => $user->id], ['class' => 'text-blue-500 hover:underline font-medium']) ?>
+                                <small class="text-gray-500 block sm:inline">(Usuario: <?= Html::encode($user->username) ?>)</small>
+                            </span>
+                            <i class="fas fa-arrow-right text-gray-400"></i>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p class="text-gray-500">No hay empleados asociados a este corporativo.</p>
+            <?php endif; ?>
         </div>
     </div>
 </div>
+
+</body>
+</html>
