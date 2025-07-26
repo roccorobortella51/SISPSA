@@ -6,7 +6,7 @@ use yii\helpers\Html;
 /** @var app\models\UserDatos $model */
 
 $this->title = 'Actualizar datos de la atención: '.$afiliado->nombres." ".$afiliado->apellidos." ".$afiliado->tipo_cedula."-".$afiliado->cedula;
-$this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index', 'user_id' => $afiliado->id]];
 $this->params['breadcrumbs'][] = 'Actualizar';
 ?>
 <div class="col-xl-12 col-md-12">
