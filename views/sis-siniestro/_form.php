@@ -70,7 +70,9 @@ use kartik\select2\Select2; // Para los selectores de estado y estatus
                     <?php ActiveForm::end(); ?>
                 </div>
                 <div class="col-md-6">
-                    <?php echo $this->render('/user-datos/view', ['model' => $afiliado]); ?>
+                    <div class="card">
+                        <?php echo $this->render('/user-datos/view', ['model' => $afiliado]); ?>
+                    </div>
                 </div>
             </div>
         </div>
