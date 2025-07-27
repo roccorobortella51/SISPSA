@@ -143,49 +143,50 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             ],
 
                            // Columna de Acciones (Ver, Editar, Eliminar)
-                            [
+                      [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // ¡CAMBIO AQUÍ! Añadimos {view} y removemos {delete}
-                                'options' => ['style' => 'width:80px; min-width:80px;'],
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
+                                'template' => '<div class="d-flex justify-content-center gap-2">{view}{update}</div>', // Ajustado a gap-2 para un pequeño espacio
+                                'options' => ['style' => 'width:80px; min-width:80px;'], // Mantener el ancho de la columna
+                                'headerOptions' => ['class' => 'text-white'], // Usando clase CSS en lugar de estilo inline
+                                'contentOptions' => ['class' => 'text-center'], // Usando clase CSS en lugar de estilo inline
                                 'buttons' => [
-                                    'view' => function ($url, $model, $key) { // ¡BOTÓN 'VIEW' AÑADIDO!
+                                    'view' => function ($url, $model, $key) {
                                         return Html::a(
-                                            '<i class="fa fa-eye ms-text-primary"></i>', // Icono de ojo
-                                            Url::to(['view', 'id' => $model->id]), // URL a la acción 'view'
+                                            '<i class="fa fa-eye text-primary"></i>', // Icono de ojo, usando text-primary de sipsa.css
+                                            Url::to(['view', 'id' => $model->id]),
                                             [
                                                 'title' => 'Ver Detalle',
-                                                'class' => 'btn btn-link btn-sm text-info', // Estilo de botón de información
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                'class' => 'btn btn-sm', // Usando clases de Bootstrap/sipsa.css, sin estilos inline
                                             ]
                                         );
                                     },
                                     'update' => function ($url, $model, $key) {
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt ms-text-success"></i>',
+                                            '<i class="fas fa-pencil-alt text-success"></i>', // Usando text-success de sipsa.css
                                             Url::to(['update', 'id' => $model->id]),
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn btn-link btn-sm text-success',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                'class' => 'btn btn-sm', // Usando clases de Bootstrap/sipsa.css, sin estilos inline
                                             ]
                                         );
                                     },
-                                    /*'delete' => function ($url, $model, $key) { // ¡BOTÓN 'DELETE' COMENTADO/ELIMINADO!
-                                        return Html::a(
-                                            '<i class="fas fa-trash-alt"></i>',
-                                            Url::to(['delete', 'id' => $model->id]),
-                                            [
-                                                'title' => 'Eliminar',
-                                                'class' => 'btn btn-link btn-sm text-danger',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
-                                                'data-confirm' => '¿Estás seguro de que quieres eliminar este elemento?',
-                                                'data-method' => 'post'
-                                            ]
-                                        );
-                                    },*/
+                                    // Si tenías un botón 'delete' y quieres que vuelva, asegúrate de añadirlo aquí con las clases correctas.
+                                    // Por ejemplo:
+                                    // 'delete' => function ($url, $model, $key) {
+                                    //     return Html::a(
+                                    //         '<i class="fas fa-trash-alt text-danger"></i>',
+                                    //         Url::to(['delete', 'id' => $model->id]),
+                                    //         [
+                                    //             'title' => 'Eliminar',
+                                    //             'class' => 'btn btn-link btn-sm',
+                                    //             'data' => [
+                                    //                 'confirm' => '¿Está seguro de que desea eliminar este elemento?',
+                                    //                 'method' => 'post',
+                                    //             ],
+                                    //         ]
+                                    //     );
+                                    // },
                                 ],
                             ],
                         ], // Fin de columns
