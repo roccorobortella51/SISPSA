@@ -13,7 +13,7 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
 
 <div class="col-md-12 text-end">
     <div class="float-right" style="margin-bottom:10px;">
-        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-warning']) ?>
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-primary']) ?>
     </div>
 </div>
 
