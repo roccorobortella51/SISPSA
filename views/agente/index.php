@@ -30,7 +30,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
             <div>
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-success']) ?>
             </div>
 
         </div>
@@ -143,50 +143,35 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             ],
 
                            // Columna de Acciones (Ver, Editar, Eliminar)
-                      [
+                        [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-2">{view}{update}</div>', // Ajustado a gap-2 para un pequeño espacio
-                                'options' => ['style' => 'width:80px; min-width:80px;'], // Mantener el ancho de la columna
-                                'headerOptions' => ['class' => 'text-white'], // Usando clase CSS en lugar de estilo inline
-                                'contentOptions' => ['class' => 'text-center'], // Usando clase CSS en lugar de estilo inline
+                                'template' => '{view}&nbsp;{update}',
+                                'options' => ['class' => 'action-buttons'],
+                                'headerOptions' => ['class' => 'text-white'],
+                                'contentOptions' => ['class' => 'text-center'],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) {
                                         return Html::a(
-                                            '<i class="fa fa-eye text-primary"></i>', // Icono de ojo, usando text-primary de sipsa.css
-                                            Url::to(['view', 'id' => $model->id]),
+                                            '<i class="fas fa-eye"></i>',
+                                            $url,
                                             [
                                                 'title' => 'Ver Detalle',
-                                                'class' => 'btn btn-sm', // Usando clases de Bootstrap/sipsa.css, sin estilos inline
+                                                'class' => 'btn-action view'
                                             ]
                                         );
                                     },
                                     'update' => function ($url, $model, $key) {
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt text-success"></i>', // Usando text-success de sipsa.css
-                                            Url::to(['update', 'id' => $model->id]),
+                                            '<i class="fas fa-pen"></i>',
+                                            $url,
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn btn-sm', // Usando clases de Bootstrap/sipsa.css, sin estilos inline
+                                                'class' => 'btn-action edit'
                                             ]
                                         );
                                     },
-                                    // Si tenías un botón 'delete' y quieres que vuelva, asegúrate de añadirlo aquí con las clases correctas.
-                                    // Por ejemplo:
-                                    // 'delete' => function ($url, $model, $key) {
-                                    //     return Html::a(
-                                    //         '<i class="fas fa-trash-alt text-danger"></i>',
-                                    //         Url::to(['delete', 'id' => $model->id]),
-                                    //         [
-                                    //             'title' => 'Eliminar',
-                                    //             'class' => 'btn btn-link btn-sm',
-                                    //             'data' => [
-                                    //                 'confirm' => '¿Está seguro de que desea eliminar este elemento?',
-                                    //                 'method' => 'post',
-                                    //             ],
-                                    //         ]
-                                    //     );
-                                    // },
+                             
                                 ],
                             ],
                         ], // Fin de columns

@@ -213,8 +213,7 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                                                 Url::to(['view', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Detalle de la Clínica',
-                                                    'class' => 'btn btn-link btn-sm text-success',
-                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                    'class' => 'btn-action view'
                                                 ]
                                             );
                                         },*/
@@ -224,8 +223,7 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                                                 Url::to(['update', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Editar',
-                                                    'class' => 'btn btn-link btn-sm text-success',
-                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                    'class' => 'btn-action view'
                                                 ]
                                             );
                                         },
@@ -237,8 +235,7 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                                                     'title' => 'Eliminar',
                                                     'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
                                                     'data-method' => 'post',
-                                                    'class' => 'btn btn-link btn-sm text-danger',
-                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                    'class' => 'btn-action view'
                                                 ]
                                             );
                                         },*/

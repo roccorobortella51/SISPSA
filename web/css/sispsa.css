@@ -10200,3 +10200,40 @@ h3.section-title i {
 .text-yellow-600 { color: #eab308; }
 .text-gray-600 { color: #4b5563; }
 .text-blue-500 { color: #3b82f6; }
+
+/* Estilos para botones de acción en tablas */
+.action-buttons {
+    width: 70px !important;
+    min-width: 70px !important;
+}
+
+.action-buttons .btn-action {
+    padding: 0;
+    margin: 0 2px;
+    min-width: 20px;
+    font-size: 1em;
+    background: none;
+    border: none;
+    color: #6c757d;
+    transition: all 0.2s;
+    display: inline-block;
+    text-align: center;
+}
+
+.action-buttons .btn-action.view {
+    color: #17a2b8;
+}
+
+.action-buttons .btn-action.edit {
+    color: #007bff;
+}
+
+.action-buttons .btn-action.delete {
+    color: #dc3545;
+}
+
+.action-buttons .btn-action:hover {
+    opacity: 0.8;
+    text-decoration: none;
+    transform: scale(1.1);
+}

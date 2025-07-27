@@ -267,7 +267,8 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                                                 Url::to(['update', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Renovar Check List de la Clínica', // Tooltip
-                                                    'class' => 'btn-action view'
+                                                    'class' => 'btn btn-link btn-sm text-info',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
                                         }
@@ -280,7 +281,8 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                                                 Url::to(['view', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Detalle de la Verificación',
-                                                    'class' => 'btn-action view'
+                                                    'class' => 'btn btn-link btn-sm text-success',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
                                         },
