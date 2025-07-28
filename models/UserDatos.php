@@ -64,6 +64,7 @@ class UserDatos extends ActiveRecord
     public $imagenIdentificacionFile;
     public $videoFile;
     public $codigoAsesor;
+    public $masivoFile;
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)

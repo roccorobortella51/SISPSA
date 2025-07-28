@@ -6,243 +6,166 @@ use yii\helpers\Url;
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
+/** @var string $estado Nombre del estado resuelto para mostrar */
+/** @var string $municipio Nombre del municipio resuelto para mostrar */
+/** @var string $parroquia Nombre de la parroquia resuelta para mostrar */
+/** @var string $ciudad Nombre de la ciudad resuelta para mostrar */
 
-$this->title = $model->id;
+$this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
 $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
+$this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
 \yii\web\YiiAsset::register($this);
 
 ?>
 
-<div class="col-xl-12 col-md-12">
-    <div class="ms-panel ms-panel-fh">
-        <div class="ms-panel-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="text-primary"><?= Html::encode("Perfil del Afiliado #{$model->id}") ?></h4>
-                <div class="float-right" style="margin-bottom:10px;">
-                    <?= Html::a('<i class="fas fa-file-pdf"></i> Contrato', ['index'], ['class' => 'btn btn-outline-primary btn-sm']) ?>
-                    <?= Html::a(
-                    '<i class="fas fa-undo"></i> Volver', 
-                    '#', 
-                    [
-                        'class' => 'btn btn-primary btn-sm', 
-                        'onclick' => 'window.history.back(); return false;', 
-                        'title' => 'Volver a la página anterior', 
-                    ]
-                ) ?> 
-                </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= Html::encode($this->title) ?></title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>     
+        /* Estilos específicos para la foto de perfil */
+        .profile-img-container {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #e2e8f0; /* gray-200 */
+        }
+        .profile-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mx-auto p-4 bg-gray-50 min-h-screen rounded-lg shadow-md">
+    <!-- Breadcrumbs -->
+
+
+    <!-- Encabezado y Botones de Acción -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 p-4 bg-white rounded-lg shadow-sm">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0"><?= Html::encode("Perfil del Afiliado #{$model->id}") ?></h1>
+        <div class="flex flex-wrap gap-3">
+            <?= Html::a(
+                '<i class="fas fa-file-pdf mr-2"></i> Contrato',
+                ['user-datos/generar-contratov', 'id' => $model->id],
+                [
+                    'class' => 'px-5 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out flex items-center text-sm font-medium',
+                    'target' => '_blank',
+                    'data-pjax' => '0'
+                ]
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-edit mr-2"></i> Actualizar',
+                ['update', 'id' => $model->id],
+                ['class' => 'px-5 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out flex items-center text-sm font-medium']
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-undo mr-2"></i> Volver',
+                '#',
+                [
+                    'class' => 'px-5 py-2 bg-gray-200 text-gray-800 rounded-lg shadow-md hover:bg-gray-300 transition duration-300 ease-in-out flex items-center text-sm font-medium',
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
+                ]
+            ) ?>
+        </div>
+    </div>
+
+    <!-- Sección de Foto de Perfil y Datos Personales -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-blue-600 text-center">
+        <div class='row'>
+            <div class="col-md-6">
+                <?php if ($model->selfie): ?>
+                    <?= Html::img($model->selfie, [
+                        'alt' => 'Foto de Perfil',
+                        'class' => 'profile-img'
+                    ]) ?>
+                <?php else: ?>
+                    <i class="fas fa-user-circle text-gray-400" style="font-size: 80px;"></i>
+                <?php endif; ?>
+            </div>
+            <div class='col-md-6'>
+                <?php if ($model->imagen_identificacion): ?>
+                    <?= Html::img($model->imagen_identificacion, [
+                        'alt' => 'Foto de Identificacion',
+                        'class' => 'profile-img'
+                    ]) ?>
+                <?php else: ?>
+                    <i class="fas fa-user-circle text-gray-400" style="font-size: 80px;"></i>
+                <?php endif; ?> 
             </div>
         </div>
-        <div class="ms-panel-body">
-             <!-- Foto de perfil -->
-            <div class="profile-header text-center">
-                <div class="row">
-                    <div class="col-md-6">
-                        <?php if ($model->selfie): ?>
-                            <?= Html::img($model->selfie, [
-                                'alt' => 'Foto de Perfil',
-                                'class' => 'profile-img',
-                                'style' => 'width: 300px; height: 200px;',
-                            ]) ?>
-                            <p><strong>Foto de Perfil</strong></p>
-                        <?php else: ?>
-                            <p><em>No hay foto de perfil</em></p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="col-md-6">
-                        <?php if ($model->imagen_identificacion): ?>
-                            <?= Html::img($model->imagen_identificacion, [
-                                'alt' => 'Foto de Identificación',
-                                'class' => 'profile-img',
-                                'style' => 'width: 200px; height: 200px;',
-                            ]) ?>
-                            <p><strong>Foto de Identificación</strong></p>
-                        <?php else: ?>
-                            <p><em>No hay foto de identificación</em></p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <!-- Datos personales -->
-            <hr>
-            <h5>Datos Personales</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'nombres',
-                                'label' => 'Nombres',
-                            ],
-                            [
-                                'attribute' => 'cedulaFormatted',
-                                'label' => 'Cédula de Identidad',
-                            ],
-                            [
-                                'attribute' => 'sexo',
-                                'label' => 'Sexo',
-                            ],
-                            [
-                                'attribute' => 'email',
-                                'format' => 'email',
-                                'label' => 'Correo Electrónico',
-                            ],
-                        ],
-                    ]) ?>
-                </div>
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
 
-                            [
-                                'attribute' => 'apellidos',
-                                'label' => 'Apellidos',
-                            ],
-                            [
-                                'attribute' => 'fechanac',
-                                'label' => 'Fecha de Nacimiento',
-                                'format' => ['date', 'php:d-m-Y'],
-                            ],
-                            [
-                                'attribute' => 'telefono',
-                                'label' => 'Teléfono',
-                            ],
-                        ],
-                    ]) ?>
-                </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center justify-center">
+            <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-left">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Nombres:</strong> <?= Html::encode($model->nombres) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Cédula de Identidad:</strong> <?= Html::encode($model->cedulaFormatted) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Sexo:</strong> <?= Html::encode($model->sexo) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500 hover:underline']) ?></p>
             </div>
-            <!-- Dirección y ubicación -->
-            <hr>
-            <h5>Ubicación</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'estado',
-                                'label' => 'Estado',
-                                'value' => function($model) use($estado) {
-                                        return $estado;
-                                }
-                            ],
-                            [
-                                'attribute' => 'ciudad',
-                                'label' => 'Ciudad',
-                                'value' => function($model) use($ciudad) {
-                                        return $ciudad;
-                                }
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Apellidos:</strong> <?= Html::encode($model->apellidos) ?></p>
+                <p class="text-gray-700 mb-2"><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y')) ?></span></p>
+                <p class="text-gray-700 mb-2"><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></p>
+            </div>
+        </div>
+    </div>
 
-                            ],
-                        ],
-                    ]) ?>
-                </div>
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'municipio',
-                                'label' => 'Municipio',
-                                'value' => function($model) use($municipio) {
-                                        return $municipio;
-                                }
-                            ],
-                            [
-                                'attribute' => 'parroquia',
-                                'label' => 'Parroquia',
-                                'value' => function($model) use($parroquia) {
-                                        return $parroquia;
-                                }
-                            ],
-                        ],
-                    ]) ?>
-                </div>
+    <!-- Tarjeta de Ubicación -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-indigo-600">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+            <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Estado:</strong> <?= Html::encode($estado ?? 'N/A') ?></p>
+                <p class="text-gray-700 mb-2"><strong>Ciudad:</strong> <?= Html::encode($ciudad ?? 'N/A') ?></p>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            'direccion',
-                        ],
-                    ]) ?>
-                </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Municipio:</strong> <?= Html::encode($municipio ?? 'N/A') ?></p>
+                <p class="text-gray-700 mb-2"><strong>Parroquia:</strong> <?= Html::encode($parroquia ?? 'N/A') ?></p>
             </div>
-            <!-- Información adicional -->
-            <hr>
-            <h5>Información Adicional</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless'],
-                        'template' => '
-                                    <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                                    <tr><td colspan="2">{value}</td></tr>
-                                ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'clinica.nombre',
-                                'label' => 'Clínica',
-                                'value' => $model->clinica ? $model->clinica->nombre : 'No asignada',
-                            ],
-                            [
-                                'attribute' => 'asesor.nombre',
-                                'label' => 'Asesor',
-                                'value' => $model->asesor ? $model->asesor->nom : 'Sin asignar',
-                            ],
-                            'tipo_sangre',
-                        ],
-                    ]) ?>
-                </div>
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless'],
-                        'template' => '
-                                    <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                                    <tr><td colspan="2">{value}</td></tr>
-                                ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'plan.nombre',
-                                'label' => 'Plan',
-                                'value' => $model->plan ? $model->plan->nombre : 'No asignado',
-                            ],
+        </div>
+        <p class="text-gray-700 mt-4 pt-4 border-t border-gray-100"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
+    </div>
 
-                            'estatus:ntext',
-                        ],
-                    ]) ?>
-                </div>
+    <!-- Tarjeta de Información Adicional -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-gray-600">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+            <i class="fas fa-info-circle text-gray-600 mr-3"></i> Información Adicional
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></p>
+                <p class="text-gray-700 mb-2"><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->nombre : 'Sin asignar') ?></p>
+                <p class="text-gray-700 mb-2"><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre) ?></p>
+            </div>
+            <div>
+                <p class="text-gray-700 mb-2"><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre : 'No asignado') ?></p>
+                <p class="text-gray-700 mb-2"><strong>Estatus:</strong> <span class="px-2 py-1 rounded-full text-xs font-semibold <?= $model->estatus == 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>"><?= Html::encode($model->estatus) ?></span></p>
             </div>
         </div>
     </div>
 </div>
+
+</body>
+</html>

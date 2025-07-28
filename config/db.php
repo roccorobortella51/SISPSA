@@ -1,6 +1,6 @@
 <?php
 
-/*return [
+return [
     'class' => 'yii\db\Connection',
     'dsn' => 'pgsql:host=localhost;dbname=sispsa3',
     'username' => 'postgres',
@@ -11,7 +11,7 @@
     //'enableSchemaCache' => true,
     //'schemaCacheDuration' => 60,
     //'schemaCache' => 'cache',Sipsa123456*
-];*/
+];
 
 /*return [
     'class' => 'yii\db\Connection',
@@ -28,7 +28,7 @@
 ];*/
 
 
-return [
+/*return [
     'class' => 'yii\db\Connection',
     'dsn' => 'pgsql:host=aws-0-us-east-2.pooler.supabase.com;port=6543;dbname=postgres', // Reemplaza xxxxxxxxxxxxx con el valor de tu host
     'username' => 'postgres.mzatwtlqduhcphhnvwvk', // Reemplaza si tu usuario es diferente
@@ -40,5 +40,5 @@ return [
     'attributes' => [
         PDO::ATTR_PERSISTENT => true // Opcional: Para conexiones persistentes (útil en algunos entornos)
     ],
-];
+];*/
 

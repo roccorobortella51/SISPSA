@@ -37,7 +37,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
     <div> 
         <?= Html::a(
             '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', 
-            ['#'], 
+            ['masivo'], 
             // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
             ['class' => 'btn btn-outline-primary btn-lg me-3']
         ) ?> 

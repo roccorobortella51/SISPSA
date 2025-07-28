@@ -435,6 +435,14 @@ if (!$model->isNewRecord) { ?>
                         ]);  ?>
                 </div>
             </div>
+            <div class='row'>
+                <div class="col-md-12">
+                    <?= $form->field($model, 'direccion')->textInput([
+                        'class' => 'form-control form-control-lg',
+                        'placeholder' => 'Ingrese la dirección'
+                    ])->label('Dirección') ?>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-6">
                     <?= $form->field($model, 'selfieFile')->widget(FileInput::classname(),[
@@ -492,9 +500,8 @@ if (!$model->isNewRecord) { ?>
                         ])->label('Imagen de identificacion');
                     ?>    
                 </div>
-            <br>
+            </div>
             <h1>Datos del Contrato</h1>
-                <br>
             <div class = 'row'>
                 <div class="col-md-6">
                     <?= $form->field($model, 'clinica_id')->widget(Select2::classname(), [

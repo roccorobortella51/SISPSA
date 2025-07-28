@@ -20,6 +20,9 @@ use app\models\Planes;
 use yii\base\Security;
 use yii\helpers\ArrayHelper;
 use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
+use PhpOffice\PhpSpreadsheet\IOFactory; // Importa la clase principal
+use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
+use DateTime;
 
 
 /**
@@ -43,6 +46,194 @@ class UserDatosController extends Controller
                 ],
             ]
         );
+    }
+
+    /*public function actionMasivo()
+    {
+        $modelContrato = new Contratos();
+        $model = new UserDatos();
+        if ($this->request->isPost && $model->load($this->request->post()) ) {
+            $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
+            if ($masivoFiles) {
+                $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $masivoFiles[0]->baseName . '.' . $masivoFiles[0]->extension);
+                $masivoFiles[0]->saveAs($filePath);
+            } 
+            else {
+                Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo.');
+                //return $this->redirect(['index']);
+                return $this->render('masivo', [
+                    'model' => $model,
+                    'modelContrato' => $modelContrato,
+        
+                ]);
+            }
+            //leer archivo .xlsx
+            $objPHPExcel = IOFactory::load($filePath);
+            $sheetData = $objPHPExcel->getActiveSheet()->toArray(null, true, true, true);
+            $sheetData = array_slice($sheetData, 1);
+
+            var_dump($sheetData);exit;
+
+        }    
+        return $this->render('masivo', [
+            'model' => $model,
+            'modelContrato' => $modelContrato,
+
+        ]);
+    }*/
+
+    public function actionMasivo()
+    {
+        $modelContrato = new Contratos();
+        $model = new UserDatos();
+
+        if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+            // Obtener el archivo subido
+            $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
+
+            if (empty($masivoFiles) || !$masivoFiles[0]->tempName) {
+                // Si no se subió ningún archivo o el archivo está vacío
+                Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o el archivo está corrupto.');
+                return $this->render('masivo', [
+                    'model' => $model,
+                    'modelContrato' => $modelContrato,
+                ]);
+            }
+
+            $uploadedFile = $masivoFiles[0];
+            $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $uploadedFile->baseName . '.' . $uploadedFile->extension);
+
+            if (!$uploadedFile->saveAs($filePath)) {
+                Yii::$app->session->setFlash('error', 'Error al guardar el archivo subido.');
+                return $this->render('masivo', [
+                    'model' => $model,
+                    'modelContrato' => $modelContrato,
+                ]);
+            }
+            $clinica_id = $model->clinica_id;
+            $plan_id = $model->plan_id;
+            $monto = $modelContrato->monto;
+            $fecha_ini = $modelContrato->fecha_ini;
+            $fecha_ven = $modelContrato->fecha_ven;
+            $fechaCreacion = date('Y-m-d H:i:s');   
+            try {
+                // Leer archivo .xlsx
+                $spreadsheet = IOFactory::load($filePath);
+                $sheet = $spreadsheet->getActiveSheet();
+
+                // Establecer el rango de columnas a leer (de A a N)
+                // Usamos getHighestRow() para encontrar la última fila con datos
+                $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
+                $range = 'A1:N' . $highestRow; // Rango de A1 hasta la columna N de la última fila con datos
+
+                // Obtener los datos del rango especificado
+                $sheetData = $sheet->rangeToArray(
+                    $range,     // El rango de celdas a leer
+                    null,       // No aplicar pre-casteo de valores
+                    true,       // Formatear celdas (por ejemplo, fechas)
+                    true,       // Incluir celdas nulas (vacías en el rango)
+                    true        // Incluir las columnas como claves si TRUE (A, B, C...)
+                );
+
+                // Filtrar filas vacías (todas las columnas de A a N están vacías)
+                $filteredData = [];
+                foreach ($sheetData as $row) {
+                    // Revisa si TODAS las celdas en el rango A-N de la fila están vacías
+                    $isEmptyRow = true;
+                    foreach ($row as $cellValue) {
+                        // Si encuentra cualquier valor no nulo o no una cadena vacía, la fila no está vacía
+                        if ($cellValue !== null && $cellValue !== '') {
+                            $isEmptyRow = false;
+                            break;
+                        }
+                    }
+                    if (!$isEmptyRow) {
+                        $filteredData[] = $row;
+                    }
+                }
+
+                // Si la primera fila es un encabezado, la dejamos fuera del array principal de datos
+                // y la manejamos por separado si es necesario.
+                // Aquí, asumimos que la primera fila podría ser el encabezado y ya fue incluida
+                // en $filteredData si tenía datos. Si quieres ignorar el encabezado, puedes:
+                if (!empty($filteredData)) {
+                    $headers = array_shift($filteredData); // Si la primera fila es el encabezado
+                }
+
+
+                // Aquí $filteredData contendrá solo las filas de la A a la N que tienen datos
+                foreach ($filteredData as $row) {
+                    $contrato = new Contratos();
+                    $contrato->clinica_id = $clinica_id;
+                    $contrato->plan_id = $plan_id;
+                    $contrato->monto = $monto;
+                    $contrato->fecha_ini = $fecha_ini;
+                    $contrato->fecha_ven = $fecha_ven;
+                    $contrato->created_at = $fechaCreacion;
+                    $guardadoContrato = $contrato->save();
+                    if ($guardadoContrato) {
+                        Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
+                    } else {
+                        Yii::$app->session->setFlash('error', 'Error al guardar el contrato.');
+                        print_r($contrato->getErrors());
+                        exit;
+                    }
+                    $model = new UserDatos();
+                    $model->email = $row['A'];
+                    $model->telefono = $row['B'];
+                    $model->nombres = $row['C'];
+                    $model->apellidos = $row['D'];
+                    $model->tipo_cedula = $row['E'];
+                    $model->cedula = $row['F'];
+                    $fechaNacimiento = DateTime::createFromFormat('d/m/Y', $row['G']);
+                    $model->fechanac = $fechaNacimiento->format('Y-m-d');
+                    $model->sexo = $row['H'];
+                    $model->tipo_sangre = $row['I'];
+                    $model->estado = $row['J'];
+                    $model->municipio = $row['K'];
+                    $model->parroquia = $row['L'];
+                    $model->ciudad = $row['M'];
+                    $model->direccion = $row['N'];
+                    $model->contrato_id = $contrato->id;
+                    $guardo = $model->save();
+                    if ($guardo) {
+                        Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
+                    } else {
+                        Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
+                        print_r($model->getErrors());
+                        exit;
+                    }
+                    $modelContrato->user_id = $model->id;
+                    $modelContrato->save();
+                }
+                Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
+                return $this->redirect(['index']);
+
+            } catch (Exception $e) {
+                Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
+                Yii::$app->session->setFlash('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
+                // Asegúrate de eliminar el archivo subido si hubo un error al leerlo
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            } catch (\Exception $e) { // Captura otras excepciones generales
+                Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
+                Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+
+            return $this->render('masivo', [
+                'model' => $model,
+                'modelContrato' => $modelContrato,
+            ]);
+        }
+
+        return $this->render('masivo', [
+            'model' => $model,
+            'modelContrato' => $modelContrato,
+        ]);
     }
 
     /**
