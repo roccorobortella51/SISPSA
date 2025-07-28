@@ -315,22 +315,30 @@ if (!$model->isNewRecord) {
     </div>
 
 
-    <div class="row mt-4">
+        <div class="row mt-4">
             <div class="col-12 d-flex justify-content-start">
-                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-5']) ?>
+                <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-4']) ?>
                 
+                <?= Html::a(
+                        '<i class="fas fa-undo mr-2"></i> Volver', 
+                        ['index'],
+                        [
+                            'class' => 'btn btn-secondary btn-lg mr-4',
+                            'onclick' => 'window.history.back(); return false;', 
+                            'title' => 'Volver a la página anterior', 
+                        ]
+                    ) ?>
+
                 <?php
-                // Condición para mostrar el botón "Refrescar"
-                // Solo muestra el botón "Refrescar" si el modelo es un NUEVO REGISTRO
-                if ($model->isNewRecord) {
-                    echo Html::button('<i class="fas fa-sync-alt"></i> Refrescar', [
+                if (isset($isNewRecord) && $isNewRecord) { 
+                    echo Html::button('<i class="fas fa-sync-alt mr-2"></i> Refrescar', [
                         'class' => 'btn btn-info btn-lg',
                         'id' => 'btn-refrescar-form'
                     ]);
                 }
                 ?>
             </div>
-    </div>
+        </div>
 
     <?php ActiveForm::end(); ?>
 

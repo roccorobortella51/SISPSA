@@ -42,6 +42,7 @@ function formatUpdatedAt($value) {
     <!-- Encabezado y Botones de Acción Principal -->
     <div class="header-section"> <!-- Usando la clase 'header-section' definida en el fragmento CSS -->
         <h1><?= Html::encode($this->title) ?></h1>
+
         <div class="header-buttons-group"> <!-- Usando la clase 'header-buttons-group' definida en el fragmento CSS -->
             <?= Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',

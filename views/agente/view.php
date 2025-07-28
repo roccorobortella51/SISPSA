@@ -28,27 +28,27 @@ $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
 
 ?>
 
-<div class="view-main-container"> 
+<div class="main-container"> 
    
-    <!-- Encabezado y Botones de Acción -->
-    <div class="ms-panel-header"> 
-        <h4 class="mb-0"><?= Html::encode($this->title) ?></h4> 
+    <!-- Encabezado y Botones de Acción Principal -->
+    <div class="header-section"> 
+        <h1><?= Html::encode($this->title) ?></h1>
        
-        <div class="button-group-spacing">
+        <div class="header-buttons-group">
             <?= Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',
                 ['update', 'id' => $model->id],
-                ['class' => 'btn btn-primary'] 
+                ['class' => 'btn-base btn-blue'] 
             ) ?>
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',
-                ['index'],
+                ['index'], // Cambiado para volver al índice de agencias
                 [
-                    'class' => 'btn btn-secondary', // Clases de Bootstrap, estilizadas por sipsa.css
+                    'class' => 'btn-base btn-gray', 
                     'title' => 'Volver a la lista de agencias',
                 ]
             ) ?>
-      
+           
         </div>
     </div>
 

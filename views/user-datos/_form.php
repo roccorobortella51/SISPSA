@@ -466,13 +466,22 @@ if (!$model->isNewRecord) { ?>
 
 
           <div class="row mt-4">
-            <div class="col-12 d-flex justify-content-start">
-                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-5']) ?>
+            <div class="col-12 d-flex justify-content-start gap-3"> <!-- Añadida la clase gap-3 aquí -->
+                <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
                 
+                <?= Html::a(
+                        '<i class="fas fa-undo mr-2"></i> Volver', 
+                        '#', // Or a specific URL like ['index'] if you don't want history.back()
+                        [
+                            'class' => 'btn btn-secondary btn-lg', 
+                            'onclick' => 'window.history.back(); return false;', 
+                            'title' => 'Volver a la página anterior', 
+                        ]
+                    ) ?>
+
                 <?php
-                
-                if ($model->isNewRecord) {
-                    echo Html::button('<i class="fas fa-sync-alt"></i> Refrescar', [
+                if ($model->isNewRecord) { // Condición actualizada para usar directamente $model->isNewRecord
+                    echo Html::button('<i class="fas fa-sync-alt mr-2"></i> Refrescar', [
                         'class' => 'btn btn-info btn-lg',
                         'id' => 'btn-refrescar-form'
                     ]);

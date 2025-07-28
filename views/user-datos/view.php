@@ -1,23 +1,26 @@
-<?php
+    <?php
 
-use yii\helpers\Html;
-use yii\helpers\Url;
+    use yii\helpers\Html;
+    use yii\helpers\Url;
 
-/** @var yii\web\View $this */
-/** @var app\models\UserDatos $model */
-/** @var string $estado Nombre del estado resuelto para mostrar */
-/** @var string $municipio Nombre del municipio resuelto para mostrar */
-/** @var string $parroquia Nombre de la parroquia resuelta para mostrar */
-/** @var string $ciudad Nombre de la ciudad resuelta para mostrar */
+    /** @var yii\web\View $this */
+    /** @var app\models\UserDatos $model */
+    /** @var string $estado Nombre del estado resuelto para mostrar */
+    /** @var string $municipio Nombre del municipio resuelto para mostrar */
+    /** @var string $parroquia Nombre de la parroquia resuelta para mostrar */
+    /** @var string $ciudad Nombre de la ciudad resuelta para mostrar */
 
-$this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
-$this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
-$this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
-\yii\web\YiiAsset::register($this);
-?>
+    $this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
+    $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
+    $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
+    \yii\web\YiiAsset::register($this); // Registra los assets por defecto de Yii (AppAsset se encargará del resto)
 
+    // Función para formatear fechas y horas (si no está disponible globalmente)
+    function formatDateTime($value) {
+        return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
+    }
 
-
+    ?>
 
     <!-- Breadcrumbs -->
     <nav class="mb-6" aria-label="breadcrumb">
@@ -35,14 +38,14 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->ap
     </nav>
 
     <!-- Encabezado y Botones de Acción -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 p-4 bg-white rounded-lg shadow-sm">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0"><?= Html::encode("Perfil del Afiliado #{$model->id}") ?></h1>
-        <div class="flex flex-wrap gap-3">
+    <div class="ms-panel-header"> 
+        <h1 class="mb-0"><?= Html::encode($this->title) ?></h1> 
+        <div class="button-group-spacing">
             <?= Html::a(
                 '<i class="fas fa-file-pdf mr-2"></i> Contrato',
                 ['user-datos/generar-contratov', 'id' => $model->id],
                 [
-                    'class' => 'px-5 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out flex items-center text-sm font-medium',
+                    'class' => 'btn btn-danger', // Usando btn-danger para el contrato PDF
                     'target' => '_blank',
                     'data-pjax' => '0'
                 ]
@@ -50,13 +53,13 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->ap
             <?= Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',
                 ['update', 'id' => $model->id],
-                ['class' => 'px-5 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out flex items-center text-sm font-medium']
+                ['class' => 'btn btn-primary']
             ) ?>
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',
                 '#',
                 [
-                    'class' => 'px-5 py-2 bg-gray-200 text-gray-800 rounded-lg shadow-md hover:bg-gray-300 transition duration-300 ease-in-out flex items-center text-sm font-medium',
+                    'class' => 'btn btn-secondary',
                     'onclick' => 'window.history.back(); return false;',
                     'title' => 'Volver a la página anterior',
                 ]
@@ -65,69 +68,83 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->ap
     </div>
 
     <!-- Sección de Foto de Perfil y Datos Personales -->
-    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-blue-600 text-center">
-        <div class="profile-img-container">
-            <?php if ($model->selfie): ?>
-                <?= Html::img(Yii::$app->request->baseUrl . '/' . $model->selfie, [
-                    'alt' => 'Foto de Perfil',
-                    'class' => 'profile-img'
-                ]) ?>
-            <?php else: ?>
-                <i class="fas fa-user-circle text-gray-400" style="font-size: 80px;"></i>
-            <?php endif; ?>
-        </div>
-        <p class="text-lg font-semibold text-gray-800 mb-4"><?= Html::encode($model->nombres . ' ' . $model->apellidos) ?></p>
-
-        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center justify-center">
-            <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-left">
-            <div>
-                <p class="text-gray-700 mb-2"><strong>Nombres:</strong> <?= Html::encode($model->nombres) ?></p>
-                <p class="text-gray-700 mb-2"><strong>Cédula de Identidad:</strong> <?= Html::encode($model->cedulaFormatted) ?></p>
-                <p class="text-gray-700 mb-2"><strong>Sexo:</strong> <?= Html::encode($model->sexo) ?></p>
-                <p class="text-gray-700 mb-2"><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500 hover:underline']) ?></p>
+    <div class="ms-panel border-blue text-center"> <!-- Añadido text-center para centrar la imagen -->
+        <div class="ms-panel-body">
+            <div class="profile-img-container">
+                <?php if ($model->selfie): ?>
+                    <?= Html::img(Yii::$app->request->baseUrl . $model->selfie, [ // Asegúrate de que $model->selfie contenga la ruta relativa correcta
+                        'alt' => 'Foto de Perfil',
+                        'class' => 'profile-img'
+                    ]) ?>
+                <?php else: ?>
+                    <i class="fas fa-user-circle text-gray-400" style="font-size: 80px;"></i>
+                <?php endif; ?>
             </div>
-            <div>
-                <p class="text-gray-700 mb-2"><strong>Apellidos:</strong> <?= Html::encode($model->apellidos) ?></p>
-                <p class="text-gray-700 mb-2"><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y')) ?></span></p>
-                <p class="text-gray-700 mb-2"><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></p>
+            <p class="text-lg font-semibold text-gray-800 mb-4"><?= Html::encode($model->nombres . ' ' . $model->apellidos) ?></p>
+
+            <h3 class="section-title justify-content-center"> <!-- Añadido justify-content-center para centrar el título con icono -->
+                <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
+            </h3>
+            <div class="info-grid text-left"> <!-- Añadido text-left para alinear el texto a la izquierda en la cuadrícula -->
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Nombres:</strong> <?= Html::encode($model->nombres ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Cédula de Identidad:</strong> <?= Html::encode($model->tipo_cedula . '-' . $model->cedula ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Sexo:</strong> <?= Html::encode($model->sexo ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Correo Electrónico:</strong> <?= !empty($model->email) ? Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-primary']) : 'N/A' ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Apellidos:</strong> <?= Html::encode($model->apellidos ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></p>
+                    <p class="text-gray-700 mb-2"><strong>Teléfono:</strong> <?= Html::encode($model->telefono ?? 'N/A') ?></p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Tarjeta de Ubicación -->
-    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-indigo-600">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
-            <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-            <div>
-                <p class="text-gray-700 mb-2"><strong>Estado:</strong> <?= Html::encode($estado ?? 'N/A') ?></p>
-                <p class="text-gray-700 mb-2"><strong>Ciudad:</strong> <?= Html::encode($ciudad ?? 'N/A') ?></p>
+    <div class="ms-panel border-indigo">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Estado:</strong> <?= Html::encode($estado ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Ciudad:</strong> <?= Html::encode($ciudad ?? 'N/A') ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Municipio:</strong> <?= Html::encode($municipio ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Parroquia:</strong> <?= Html::encode($parroquia ?? 'N/A') ?></p>
+                </div>
             </div>
-            <div>
-                <p class="text-gray-700 mb-2"><strong>Municipio:</strong> <?= Html::encode($municipio ?? 'N/A') ?></p>
-                <p class="text-gray-700 mb-2"><strong>Parroquia:</strong> <?= Html::encode($parroquia ?? 'N/A') ?></p>
-            </div>
+            <p class="text-gray-700 mt-4 pt-4 border-top"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion ?? 'N/A')) ?></p>
         </div>
-        <p class="text-gray-700 mt-4 pt-4 border-t border-gray-100"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
     </div>
 
     <!-- Tarjeta de Información Adicional -->
-    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-gray-600">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
-            <i class="fas fa-info-circle text-gray-600 mr-3"></i> Información Adicional
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-            <div>
-                <p class="text-gray-700 mb-2"><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></p>
-                <p class="text-gray-700 mb-2"><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->nombre : 'Sin asignar') ?></p>
-                <p class="text-gray-700 mb-2"><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre) ?></p>
-            </div>
-            <div>
-                <p class="text-gray-700 mb-2"><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre : 'No asignado') ?></p>
-                <p class="text-gray-700 mb-2"><strong>Estatus:</strong> <span class="px-2 py-1 rounded-full text-xs font-semibold <?= $model->estatus == 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>"><?= Html::encode($model->estatus) ?></span></p>
+    <div class="ms-panel border-gray">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-info-circle text-gray-600 mr-3"></i> Información Adicional
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->nombre : 'Sin asignar') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre ?? 'N/A') ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre_plan : 'No asignado') ?></p>
+                    <?php
+                        $estatusText = $model->estatus ?? 'N/A';
+                        $estatusClass = 'inactive';
+                        if ($estatusText === 'Activo' || $estatusText === 'Registrado') { // Asume 'Registrado' también es un estado "activo" para el badge
+                            $estatusClass = 'active';
+                        }
+                    ?>
+                    <p class="text-gray-700 mb-2"><strong>Estatus:</strong> <span class="status-badge <?= $estatusClass ?>"><?= Html::encode($estatusText) ?></span></p>
+                </div>
             </div>
         </div>
     </div>
+    

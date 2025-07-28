@@ -2,21 +2,14 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2; // Para los selectores de estado y estatus
-use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
+use kartik\select2\Select2;
+use yii\widgets\MaskedInput;
 use app\components\UserHelper;
 use yii\helpers\Url;
-use app\models\Agente; // Asegúrate de que tu modelo Agente esté correctamente importado
+use app\models\Agente;
 
-
-
-
-// Asegúrate de que estas variables siempre tengan un valor para evitar errores
-// si el controlador no las pasa por alguna razón (aunque el controlador sí las pasa).
-$mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
-$isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
-
-
+$mode = $mode ?? 'create';
+$isNewRecord = $isNewRecord ?? true;
 
 if ($model->isNewRecord) {
     $readOnly = false;
@@ -30,24 +23,31 @@ if ($model->isNewRecord) {
         <?php $form = ActiveForm::begin(); ?>
 
         <?php if (!$model->isNewRecord) { ?>
-            <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-undo"></i> Volver',
-                        ['index'], // Ruta para "Volver"
-                        ['class' => 'btn btn-primary btn-lg w-100']
-                    ) ?>
-                </div>
+<div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-undo mr-2"></i> Volver',
+            ['index'],
+            [
+                'class' => 'btn btn-primary btn-lg w-100', // Mantengo btn-lg y w-100
+                'style' => 'padding: 2rem 3rem; font-size: 1.5rem;', // Estilos en línea para hacerlo más grande y grueso
+            ]
+        ) ?>
+    </div>
 
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-users"></i> FUERZA DE VENTA',
-                        ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
-                        ['class' => 'btn btn-primary btn-lg w-100']
-                    ) ?>
-                </div>
-            </div>
-        <?php } ?>
+    <div class="col">
+        <?= Html::a(
+            '<i class="fas fa-users mr-2"></i> FUERZA DE VENTA',
+            ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
+            [
+                'class' => 'btn btn-primary btn-lg w-100', // Mantengo btn-lg y w-100
+                'style' => 'padding: 2rem 3rem; font-size: 1.5rem;', // Estilos en línea para hacerlo más grande y grueso
+            ]
+        ) ?>
+    </div>
+</div>
+<?php } ?>
+
         <br>
 
         <div class="row mb-3">
@@ -62,23 +62,17 @@ if ($model->isNewRecord) {
 
             <div class="col-md-4">
                 <?= $form->field($model, 'sudeaseg')->label('CÓDIGO SUDEASEG')->textInput([
-                    'maxlength' => true, // Asegúrate que el 'maxlength' aquí coincida con el VARCHAR de tu BD y el 'max' en rules()
+                    'maxlength' => true,
                     'class' => 'form-control form-control-lg',
                     'placeholder' => 'Ingrese el código SUDEASEG',
                 ]) ?>
             </div>
 <div class="col-md-4">
     <?php
-    // Paso 1: Obtener la lista de agentes de tu UserHelper
-    $agentesList = UserHelper::getAgentesList();
+    $agentesList = UserHelper::getAgenteFuerzaList();
 
-    // Paso 2: Determinar si la lista *realmente* contiene agentes reales.
-    // Esto asume que tu UserHelper siempre incluye la opción '0' => 'No Asignado' o '' => 'No Asignado'.
-    // Si el conteo total del array es 1 y esa única entrada es tu opción "no asignada",
-    // significa que no hay agentes reales para seleccionar.
     $hasRealAgents = (count($agentesList) > 1) || (count($agentesList) === 1 && !isset($agentesList['0']) && !isset($agentesList['']));
 
-    // Paso 3: Configurar dinámicamente las opciones del Select2
     $select2Options = [
         'data' => $agentesList,
         'options' => [
@@ -90,16 +84,11 @@ if ($model->isNewRecord) {
         ],
     ];
 
-    // Si no hay agentes reales, ajustamos el placeholder y deshabilitamos el Select2
     if (!$hasRealAgents) {
         $select2Options['options']['placeholder'] = 'No Disponible';
-        $select2Options['options']['disabled'] = true; // Deshabilita el Select2
-        // Opcionalmente, si quieres que la opción "No Asignado" no aparezca en la lista
-        // cuando no hay agentes reales, puedes filtrar 'data' aquí:
-        // $select2Options['data'] = ['' => 'No Disponible']; // O ['0' => 'No Disponible']
+        $select2Options['options']['disabled'] = true;
     }
 
-    // Paso 4: Renderizar el Select2 con las opciones configuradas
     echo $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->widget(Select2::classname(), $select2Options);
     ?>
 </div>
@@ -167,12 +156,21 @@ if ($model->isNewRecord) {
 
         <div class="row mt-4">
             <div class="col-12 d-flex justify-content-start">
-                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-5']) ?> <!-- Clase mr-5 para mayor margen a la derecha -->
+                <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-3']) ?>
                 
+                <?= Html::a(
+                        '<i class="fas fa-undo mr-2"></i> Volver', 
+                        '#',
+                        [
+                            'class' => 'btn btn-secondary btn-lg mr-3',
+                            'onclick' => 'window.history.back(); return false;', 
+                            'title' => 'Volver a la página anterior', 
+                        ]
+                    ) ?>
+
                 <?php
-                // Condición para mostrar el botón "Refrescar"
                 if (isset($isNewRecord) && $isNewRecord) { 
-                    echo Html::button('<i class="fas fa-sync-alt"></i> Refrescar', [
+                    echo Html::button('<i class="fas fa-sync-alt mr-2"></i> Refrescar', [
                         'class' => 'btn btn-info btn-lg',
                         'id' => 'btn-refrescar-form'
                     ]);
@@ -187,17 +185,9 @@ if ($model->isNewRecord) {
 </div>
 
 <?php
-// Añadir JavaScript para el botón Refrescar
 $js = <<<JS
 $('#btn-refrescar-form').on('click', function() {
-    // Busca el formulario actual por su ID y lo resetea
-    // Si tu ActiveForm tiene un ID específico (ej: 'agente-form'), puedes usarlo:
-    // $('#agente-form')[0].reset();
-    // Si no tiene ID específico, ActiveForm.begin() a menudo genera uno como 'active-form'
-    // O puedes apuntar al formulario más cercano al botón
     $(this).closest('form')[0].reset(); 
-    // Si necesitas recargar la página para limpiar realmente los datos del modelo:
-    // window.location.reload(); 
 });
 JS;
 $this->registerJs($js);

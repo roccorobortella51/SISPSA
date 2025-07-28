@@ -321,8 +321,8 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                                     Url::to(['/sis-siniestro/index', 'user_id' => $model->id]),
                                                     [
                                                         'title' => 'Siniestros',
-                                                        'class' => 'btn btn-link btn-sm text-success',
-                                                        'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                        'title' => 'Editar Usuario',
+                                                        'class' => 'btn-action view'
                                                     ]
                                                 );
                                             },
