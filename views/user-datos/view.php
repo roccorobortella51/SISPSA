@@ -16,71 +16,9 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->ap
 \yii\web\YiiAsset::register($this);
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= Html::encode($this->title) ?></title>
-    <!-- Carga de Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome para iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Un gris claro para el fondo */
-            margin: 0;
-            padding: 20px; /* Espaciado general */
-            box-sizing: border-box;
-        }
-        /* Estilos para el breadcrumb de Yii */
-        .breadcrumb {
-            background-color: transparent;
-            padding: 0;
-            margin-bottom: 1rem;
-            list-style: none;
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: "/";
-            padding-right: 0.5rem;
-            padding-left: 0.5rem;
-            color: #6b7280; /* gray-500 */
-        }
-        .breadcrumb-item a {
-            color: #2563eb; /* blue-600 */
-            text-decoration: none;
-        }
-        .breadcrumb-item.active {
-            color: #4b5563; /* gray-600 */
-        }
-        /* Estilos específicos para la foto de perfil */
-        .profile-img-container {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 4px solid #fff;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            margin: 0 auto 1rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #e2e8f0; /* gray-200 */
-        }
-        .profile-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-    </style>
-</head>
-<body>
 
-<div class="container mx-auto p-4 bg-gray-50 min-h-screen rounded-lg shadow-md">
+
+
     <!-- Breadcrumbs -->
     <nav class="mb-6" aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -193,7 +131,3 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->ap
             </div>
         </div>
     </div>
-</div>
-
-</body>
-</html>
