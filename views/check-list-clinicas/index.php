@@ -148,7 +148,7 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                         '#',
                         [
                             // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
-                            'class' => 'btn btn-primary btn-lg me-3', 
+                            'class' => 'btn btn-secondary btn-lg me-3', 
                             'onclick' => 'window.history.back(); return false;', 
                             'title' => 'Volver a la página anterior', 
                         ]

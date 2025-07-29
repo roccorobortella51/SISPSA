@@ -65,9 +65,70 @@ class RmClinicaController extends Controller
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
      */
-     public function actionView($id)
+    public function actionView($id)
     {
         $model = $this->findModel($id);
+
+        // --- CÓDIGO PARA OBTENER LAS LISTAS DE UBICACIÓN ---
+        // Obtener la lista de estados (desde UserHelper)
+        $estadosList = UserHelper::getEstadosList();
+        
+        // --- ¡CÓDIGO AJUSTADO PARA MUNICIPIOS! ---
+        // Obtenemos la lista de municipios directamente de RmMunicipio,
+        // mapeando por 'codigo_muni' para que coincida con $model->municipio.
+        $municipiosList = [];
+        if (!empty($model->estado)) {
+            $municipiosList = ArrayHelper::map(
+                RmMunicipio::find()
+                    ->where(['estado_codigo' => $model->estado])
+                    ->asArray()
+                    ->all(),
+                'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
+                'nombre'
+            );
+        }
+        // ------------------------------------
+
+        // Obtener la lista de parroquias (desde UserHelper)
+        $parroquiasList = $model->municipio ? UserHelper::getParroquiasList($model->municipio) : [];
+
+        // Obtener la lista de ciudades (desde RmCiudad)
+        $ciudadesList = [];
+        if (!empty($model->estado)) {
+            $ciudadesList = ArrayHelper::map(
+                RmCiudad::find()
+                    ->where(['estado_codigo' => $model->estado])
+                    ->asArray()
+                    ->all(),
+                'id',
+                'nombre'
+            );
+        
+        }
+        // ------------------------------------
+
+       
+        return $this->render('view', [
+            'model' => $model,
+            'estadosList' => $estadosList,
+            'municipiosList' => $municipiosList, // ¡Esta es la lista correctamente mapeada!
+            'parroquiaList' => $parroquiasList,
+            'ciudadesList' => $ciudadesList,
+            'listaEstatus' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],
+        ]);
+    }
+
+    public function actionViewClinica()
+    {
+        $id = UserHelper::getMyClinicaId();
+        
+        if ($id == null) {
+            return $this->redirect(['site/index']);
+        }
+        
+        $model = $this->findModel($id);
+
+        
 
         // --- CÓDIGO PARA OBTENER LAS LISTAS DE UBICACIÓN ---
         // Obtener la lista de estados (desde UserHelper)

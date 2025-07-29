@@ -81,6 +81,16 @@ use yii\web\View;
                         <div class="col-md-12">
                             <?= $form->field($model, 'descripcion')->textarea(['rows' => 3, 'class' => 'form-control form-control-lg'])->label('Descripción del Siniestro') ?>
                         </div>
+
+                        <div class="form-group text-end mt-4">
+                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?>
+                <?= Html::a('Cancelar', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-warning btn-lg me-2']); ?>
+                <?php if ($model->isNewRecord): ?>
+                    <?= Html::a('Limpiar', ['create', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-dark btn-lg']); ?>
+                <?php endif; ?>
+            </div>
+
+
                     </div>
                 </div>
                 
@@ -98,13 +108,7 @@ use yii\web\View;
                 </div>
             </div>
             
-            <div class="form-group text-end mt-4">
-                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?>
-                <?= Html::a('Cancelar', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-warning btn-lg me-2']); ?>
-                <?php if ($model->isNewRecord): ?>
-                    <?= Html::a('Limpiar', ['create', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-dark btn-lg']); ?>
-                <?php endif; ?>
-            </div>
+          
         </div>
     </div>
     <?php ActiveForm::end(); ?>

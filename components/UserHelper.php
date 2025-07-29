@@ -420,4 +420,25 @@ class UserHelper
 
         return $finalList;
     }
+
+
+
+    public static function getMyClinicaId()
+    {
+        $clinica_id = '';
+        $rol = self::getMyRol();
+        
+
+        if ($rol == "Administrador-clinica") {
+
+            $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+            if ($userdatos) {
+                $clinica_id = $userdatos->clinica_id;
+            }
+       
+        } 
+
+        return $clinica_id;
+    }
+      
 }

@@ -11,6 +11,15 @@ use app\components\UserHelper;
 /** @var app\models\UserSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
+$rol = UserHelper::getMyRol();
+
+$permisos = false;
+
+if ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor') 
+{
+    $permisos = true;
+}
+
 
 // --- BREADCRUMBS ---
 
@@ -32,23 +41,31 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
 
 
         <div class="ms-panel-header d-flex justify-content-between align-items-center">
-    <h1><?= $this->title = 'Gestión de Afiliados'; ?></h1>
-
-    <div> 
-        <?= Html::a(
-            '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', 
-            ['#'], 
-            // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
-            ['class' => 'btn btn-outline-primary btn-lg me-3']
-        ) ?> 
-        <?= Html::a(
-            '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
-            ['create'], 
-            // Este es el último botón, no necesita margen a la derecha
-            ['class' => 'btn btn-outline-primary btn-lg'] 
-        ) ?> 
+        <h1><?= Html::encode($this->title) ?></h1>
+        <div class="d-flex gap-3"> <!-- Contenedor flex para los botones con espacio -->
+            <?php if ($permisos == true) { ?>
+                <?= Html::a(
+                    '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS', 
+                    ['#'], 
+                    ['class' => 'btn btn-outline-primary btn-lg']
+                ) ?> 
+                <?= Html::a(
+                    '<i class="fas fa-plus mr-2"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
+                    ['create'], 
+                    ['class' => 'btn btn-outline-primary btn-lg'] 
+                ) ?> 
+            <?php } ?>
+            <?= Html::a(
+                '<i class="fas fa-undo mr-2"></i> Volver',
+                '#',
+                [
+                    'class' => 'btn btn-outline-secondary btn-lg', // Estilo ajustado para coincidir
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
+                ]
+            ) ?>
+        </div>
     </div>
-</div>
 
 
             <div class="ms-panel-body">
@@ -305,15 +322,20 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                                     ]
                                                 );
                                             },
-                                            'update' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                    Url::to(['update', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Editar Usuario',
-                                                        'class' => 'btn-action view'
-                                                    ]
-                                                );
+
+                                            
+                                            'update' => function ($url, $model, $key) use ($permisos) {
+                                                if ($permisos == true) {
+                                                    return Html::a(
+                                                        '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                        Url::to(['update', 'id' => $model->id]),
+                                                        [
+                                                            'title' => 'Editar Usuario',
+                                                            'class' => 'btn-action view'
+                                                        ]
+                                                    );
+                                                }
+                                               
                                             },
                                             'siniestro' => function ($url, $model, $key) {
                                                 return Html::a(
