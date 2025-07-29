@@ -48,39 +48,6 @@ class UserDatosController extends Controller
         );
     }
 
-    /*public function actionMasivo()
-    {
-        $modelContrato = new Contratos();
-        $model = new UserDatos();
-        if ($this->request->isPost && $model->load($this->request->post()) ) {
-            $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
-            if ($masivoFiles) {
-                $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $masivoFiles[0]->baseName . '.' . $masivoFiles[0]->extension);
-                $masivoFiles[0]->saveAs($filePath);
-            } 
-            else {
-                Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo.');
-                //return $this->redirect(['index']);
-                return $this->render('masivo', [
-                    'model' => $model,
-                    'modelContrato' => $modelContrato,
-        
-                ]);
-            }
-            //leer archivo .xlsx
-            $objPHPExcel = IOFactory::load($filePath);
-            $sheetData = $objPHPExcel->getActiveSheet()->toArray(null, true, true, true);
-            $sheetData = array_slice($sheetData, 1);
-
-            var_dump($sheetData);exit;
-
-        }    
-        return $this->render('masivo', [
-            'model' => $model,
-            'modelContrato' => $modelContrato,
-
-        ]);
-    }*/
 
     public function actionMasivo()
     {
@@ -111,7 +78,7 @@ class UserDatosController extends Controller
                 ]);
             }
             $clinica_id = $model->clinica_id;
-            $plan_id = $model->plan_id;
+            $plan_id = $modelContrato->plan_id;
             $monto = $modelContrato->monto;
             $fecha_ini = $modelContrato->fecha_ini;
             $fecha_ven = $modelContrato->fecha_ven;
@@ -170,6 +137,7 @@ class UserDatosController extends Controller
                     $contrato->fecha_ini = $fecha_ini;
                     $contrato->fecha_ven = $fecha_ven;
                     $contrato->created_at = $fechaCreacion;
+                    $contrato->estatus = 'Creado';
                     $guardadoContrato = $contrato->save();
                     if ($guardadoContrato) {
                         Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
@@ -179,6 +147,9 @@ class UserDatosController extends Controller
                         exit;
                     }
                     $model = new UserDatos();
+                    $model->role = 'afiliado';
+                    $model->estatus = 'Creado';
+                    $model->user_datos_type_id = 1;
                     $model->email = $row['A'];
                     $model->telefono = $row['B'];
                     $model->nombres = $row['C'];
@@ -195,16 +166,54 @@ class UserDatosController extends Controller
                     $model->ciudad = $row['M'];
                     $model->direccion = $row['N'];
                     $model->contrato_id = $contrato->id;
+                    $model->clinica_id = $clinica_id;
+                    $model->plan_id = $plan_id;
+                    $model->created_at = $fechaCreacion;
+                    $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
                     $guardo = $model->save();
                     if ($guardo) {
+                        $contrato->user_id = $model->id;
+                        $contrato->save(false);
                         Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
+                        $pass = 'sispsa'.$model->cedula;
+                        $modelUser = new User();
+                        $modelUser->username = $model->email;
+                        $modelUser->password_hash = User::setPassword($pass);
+                        $modelUser->auth_key = User::generateAuthKey();
+                        $modelUser->email = $model->email;
+                        $modelUser->status = 1;
+                        $guardadoUser = $modelUser->save();
+                        if ($guardadoUser) {
+                            Yii::$app->session->setFlash('success', 'Usuario guardado correctamente.');
+                            $auth = Yii::$app->authManager;
+                            $roleName = 'afiliado';
+                            $role = $auth->getRole($roleName);
+                            if ($role) {
+                                try {
+                                    $auth->revokeAll($modelUser->id);
+                                    $auth->assign($role, $modelUser->id);
+                                    Yii::$app->cache->flush();
+                                    $model->user_login_id = $modelUser->id;
+                                    $model->save();
+                                    
+                                } catch (\Exception $e) {
+                                    Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                                print_r($modelUser->getErrors());
+                                exit;
+                            }
+                        } else {
+                            Yii::$app->session->setFlash('error', 'Error al guardar el usuario.');
+                            print_r($modelUser->getErrors());
+                            exit;
+                        }
                     } else {
                         Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
                         print_r($model->getErrors());
                         exit;
                     }
-                    $modelContrato->user_id = $model->id;
-                    $modelContrato->save();
                 }
                 Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
                 return $this->redirect(['index']);
@@ -334,15 +343,6 @@ class UserDatosController extends Controller
 
 
                 if($model->save()){
-            
-                    // Asignar el username generado al modelo de usuario
-                    $modelUser->username = $model->email;;
-                    //var_dump($modelUser->username);exit;
-                    $pass = 'sispsa'.$model->cedula;//Yii::$app->security->generateRandomString(8);
-                    $modelUser->password_hash = User::setPassword($pass);
-                    $modelUser->auth_key = User::generateAuthKey();
-                    $modelUser->email = $model->email;
-                    $modelUser->status = 1;
                     // Obtener archivos directamente del formulario
                     $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
                     $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
@@ -446,6 +446,14 @@ class UserDatosController extends Controller
                         }
 
                     }
+            
+                    // Asignar el username generado al modelo de usuario
+                    $modelUser->username = $model->email;;
+                    $pass = 'sispsa'.$model->cedula;//Yii::$app->security->generateRandomString(8);
+                    $modelUser->password_hash = User::setPassword($pass);
+                    $modelUser->auth_key = User::generateAuthKey();
+                    $modelUser->email = $model->email;
+                    $modelUser->status = 1;
                     if($modelUser->save()){
                         
                         
