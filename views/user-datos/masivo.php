@@ -100,7 +100,7 @@ $this->registerJs($validationJs);
 ?>
 <style>
 .file-input .file-toolbar{
-    width: 150px !important;
+    width: 250px !important;
     margin: 0 auto;
     box-sizing: border-box;
 }
@@ -267,59 +267,6 @@ $this->registerJs($validationJs);
                     'options' => ['enctype' => 'multipart/form-data']
                 ]); 
                 ?>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="alert alert-info">
-                            <h5><i class="fas fa-info-circle"></i> Información sobre el archivo Excel</h5>
-                            <p><strong>Formato requerido:</strong> El archivo debe tener las siguientes columnas:</p>
-                            <ul>
-                                <li><strong>A:</strong> Email (obligatorio, formato válido)</li>
-                                <li><strong>B:</strong> Teléfono (obligatorio, formato venezolano)</li>
-                                <li><strong>C:</strong> Nombres (obligatorio, mínimo 2 caracteres)</li>
-                                <li><strong>D:</strong> Apellidos (obligatorio, mínimo 2 caracteres)</li>
-                                <li><strong>E:</strong> Tipo Cédula (obligatorio: V, E, P, J)</li>
-                                <li><strong>F:</strong> Cédula (obligatorio, 6-10 dígitos numéricos)</li>
-                                <li><strong>G:</strong> Fecha Nacimiento (obligatorio, formato DD/MM/YYYY)</li>
-                                <li><strong>H:</strong> Sexo (obligatorio: M, F, Masculino, Femenino)</li>
-                                <li><strong>I:</strong> Tipo Sangre (opcional: A+, A-, B+, B-, AB+, AB-, O+, O-)</li>
-                                <li><strong>J:</strong> Estado ID (opcional, ID numérico)</li>
-                                <li><strong>K:</strong> Municipio ID (opcional, ID numérico)</li>
-                                <li><strong>L:</strong> Parroquia ID (opcional, ID numérico)</li>
-                                <li><strong>M:</strong> Ciudad ID (opcional, ID numérico)</li>
-                                <li><strong>N:</strong> Dirección (obligatorio, mínimo 10 caracteres)</li>
-                            </ul>
-                            <p><strong>Nota:</strong> La primera fila debe contener los encabezados. Descarga la plantilla de ejemplo para ver el formato correcto.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-12">
-                        <?= $form->field($model, 'masivoFile')->widget(FileInput::classname(),[
-                                'name' => 'attachments',
-                                'pluginOptions' => [
-                                    'browseClass' => 'btn btn-primary',
-                                        'removeClass' => 'btn btn-secondary',
-                                        'removeIcon' => '<i class="fas fa-trash"></i> ',
-                                        'showUpload' => false,
-                                        'showCancel' => false,
-                                        'previewFileType' => 'image',
-                                        'maxFileSize' => 2800,
-                                        'previewSettings' => [
-                                            'image' => ['width' => '150px', 'height' => 'auto'],
-                                        ],
-                                        //'initialPreview' => $initialPreview,
-                                        //'initialPreviewAsData' => true,
-                                        //'initialPreviewConfig' => $initialPreviewConfig,
-                                        //'overwriteInitial' => true,
-                                        //'layoutTemplates' => [
-                                        //    'preview' => '<div class="file-preview {class}" style="width: 200px;"></div>',
-                                        //],
-                                    ],
-                                    'options' => [
-                                        //'disabled' => $disabled,
-                                    ],
-                                    ])->label('Foto del usuario');
-                            ?>    
-                    </div>
-                </div>
                 <h1>Datos del Contrato</h1>
                 <div class = 'row'>
                     <div class="col-md-6">
@@ -366,7 +313,69 @@ $this->registerJs($validationJs);
                                     ])->label('Fecha de Vencimiento') ?>
                     </div>
                     <div class="col-md-4">
-                        <?= $form->field($modelContrato, 'monto')->textInput(['class' => 'form-control  form-control-lg', 'type' => 'number']) ?>
+                        <?= $form->field($modelContrato, 'monto')->textInput([
+                            'class' => 'form-control  form-control-lg', 
+                            'type' => 'number',
+                            'readonly' => true, // Monto se calcula automáticamente
+                            ]) ?>
+                    </div>
+                </div>
+                <div class  = "row">
+                    <div class="col-md-12">
+                        <h1>Archivo de Datos del Afiliado</h1>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle"></i> Información sobre el archivo Excel</h5>
+                            <p><strong>Formato requerido:</strong> El archivo debe tener las siguientes columnas:</p>
+                            <ul>
+                                <li><strong>A:</strong> Email (obligatorio, formato válido)</li>
+                                <li><strong>B:</strong> Teléfono (obligatorio, formato venezolano)</li>
+                                <li><strong>C:</strong> Nombres (obligatorio, mínimo 2 caracteres)</li>
+                                <li><strong>D:</strong> Apellidos (obligatorio, mínimo 2 caracteres)</li>
+                                <li><strong>E:</strong> Tipo Cédula (obligatorio: V, E, P, J)</li>
+                                <li><strong>F:</strong> Cédula (obligatorio, 6-10 dígitos numéricos)</li>
+                                <li><strong>G:</strong> Fecha Nacimiento (obligatorio, formato DD/MM/YYYY)</li>
+                                <li><strong>H:</strong> Sexo (obligatorio: M, F, Masculino, Femenino)</li>
+                                <li><strong>I:</strong> Tipo Sangre (opcional: A+, A-, B+, B-, AB+, AB-, O+, O-)</li>
+                                <li><strong>J:</strong> Estado ID (opcional, ID numérico)</li>
+                                <li><strong>K:</strong> Municipio ID (opcional, ID numérico)</li>
+                                <li><strong>L:</strong> Parroquia ID (opcional, ID numérico)</li>
+                                <li><strong>M:</strong> Ciudad ID (opcional, ID numérico)</li>
+                                <li><strong>N:</strong> Dirección (obligatorio, mínimo 10 caracteres)</li>
+                            </ul>
+                            <p><strong>Nota:</strong> La primera fila debe contener los encabezados. Descarga la plantilla de ejemplo para ver el formato correcto.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <?= $form->field($model, 'masivoFile')->widget(FileInput::classname(),[
+                                'name' => 'attachments',
+                                'pluginOptions' => [
+                                    'browseClass' => 'btn btn-primary',
+                                        'removeClass' => 'btn btn-secondary',
+                                        'removeIcon' => '<i class="fas fa-trash"></i> ',
+                                        'showUpload' => false,
+                                        'showCancel' => false,
+                                        'previewFileType' => 'image',
+                                        'maxFileSize' => 2800,
+                                        'previewSettings' => [
+                                            'image' => ['width' => '150px', 'height' => 'auto'],
+                                        ],
+                                        //'initialPreview' => $initialPreview,
+                                        //'initialPreviewAsData' => true,
+                                        //'initialPreviewConfig' => $initialPreviewConfig,
+                                        //'overwriteInitial' => true,
+                                        //'layoutTemplates' => [
+                                        //    'preview' => '<div class="file-preview {class}" style="width: 200px;"></div>',
+                                        //],
+                                    ],
+                                    'options' => [
+                                        //'disabled' => $disabled,
+                                    ],
+                                    ])->label(false);
+                            ?>    
                     </div>
                 </div>
                 <div class="form-group text-end mt-4"> <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?> <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-warning btn-lg']); ?>

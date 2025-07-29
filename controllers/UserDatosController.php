@@ -111,7 +111,7 @@ class UserDatosController extends Controller
             }
 
             // Validar cédula (columna F)
-            if (empty($row['F'])) {
+            if (empty($row['F']) && !is_numeric($row['F'])) {
                 $rowErrors[] = 'Cédula es obligatoria';
             } elseif (!is_numeric($row['F']) || strlen($row['F']) < 6 || strlen($row['F']) > 10) {
                 $rowErrors[] = 'Cédula debe ser numérica y tener entre 6 y 10 dígitos';
@@ -148,30 +148,24 @@ class UserDatosController extends Controller
                 }
             }
 
-            // Validar estado (columna J) - opcional pero si se proporciona debe ser numérico
-            if (!empty($row['J']) && !is_numeric($row['J'])) {
-                $rowErrors[] = 'Estado debe ser un ID numérico';
+            // Validar estado - municipio - parroquia (columna J) 
+            if (empty($row['J'])) {
+                $rowErrors[] = 'Estado - municipio - parroquia es obligatorio';
+            } elseif (strlen($row['J']) < 2) {
+                $rowErrors[] = 'Estado - municipio - parroquia debe tener al menos 2 caracteres';
             }
 
             // Validar municipio (columna K) - opcional pero si se proporciona debe ser numérico
-            if (!empty($row['K']) && !is_numeric($row['K'])) {
-                $rowErrors[] = 'Municipio debe ser un ID numérico';
-            }
-
-            // Validar parroquia (columna L) - opcional pero si se proporciona debe ser numérico
-            if (!empty($row['L']) && !is_numeric($row['L'])) {
-                $rowErrors[] = 'Parroquia debe ser un ID numérico';
-            }
-
-            // Validar ciudad (columna M) - opcional pero si se proporciona debe ser numérico
-            if (!empty($row['M']) && !is_numeric($row['M'])) {
-                $rowErrors[] = 'Ciudad debe ser un ID numérico';
+            if (empty($row['K'])) {
+                $rowErrors[] = 'Ciudad es obligatorio';
+            } elseif (strlen($row['K']) < 2) {
+                $rowErrors[] = 'Ciudad debe tener al menos 2 caracteres';
             }
 
             // Validar dirección (columna N)
-            if (empty($row['N'])) {
+            if (empty($row['L'])) {
                 $rowErrors[] = 'Dirección es obligatoria';
-            } elseif (strlen($row['N']) < 10) {
+            } elseif (strlen($row['L']) < 10) {
                 $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
             }
 
@@ -218,7 +212,6 @@ class UserDatosController extends Controller
             $email = trim($row['A']);
             $cedula = trim($row['F']);
             $tipoCedula = trim($row['E']);
-
             // Verificar duplicados en el archivo
             if (!empty($email)) {
                 if (in_array($email, $emails)) {
@@ -360,9 +353,7 @@ class UserDatosController extends Controller
                 $html .= 'I: ' . htmlspecialchars($groupedError['data']['I'] ?? '') . '<br>';
                 $html .= 'J: ' . htmlspecialchars($groupedError['data']['J'] ?? '') . '<br>';
                 $html .= 'K: ' . htmlspecialchars($groupedError['data']['K'] ?? '') . '<br>';
-                $html .= 'L: ' . htmlspecialchars($groupedError['data']['L'] ?? '') . '<br>';
-                $html .= 'M: ' . htmlspecialchars($groupedError['data']['M'] ?? '') . '<br>';
-                $html .= 'N: ' . htmlspecialchars($groupedError['data']['N'] ?? '');
+                $html .= 'L: ' . htmlspecialchars($groupedError['data']['L'] ?? '');
                 $html .= '</small></td>';
                 $html .= '</tr>';
             }
@@ -374,110 +365,6 @@ class UserDatosController extends Controller
         $html .= '</div>';
         
         return $html;
-    }
-
-    /**
-     * Valida que los IDs de ubicación existan en la base de datos
-     * @param array $data Los datos del archivo Excel
-     * @return array Array con errores encontrados
-     */
-    private function validateLocationIds($data)
-    {
-        $errors = [];
-        $estados = [];
-        $municipios = [];
-        $parroquias = [];
-        $ciudades = [];
-        $rowNumber = 1;
-
-        // Recolectar todos los IDs únicos
-        foreach ($data as $row) {
-            $rowNumber++;
-            
-            // Validar que la fila no esté completamente vacía
-            $isEmptyRow = true;
-            foreach ($row as $cellValue) {
-                if ($cellValue !== null && $cellValue !== '') {
-                    $isEmptyRow = false;
-                    break;
-                }
-            }
-            if ($isEmptyRow) {
-                continue;
-            }
-
-            if (!empty($row['J']) && is_numeric($row['J'])) {
-                $estados[] = (int)$row['J'];
-            }
-            if (!empty($row['K']) && is_numeric($row['K'])) {
-                $municipios[] = (int)$row['K'];
-            }
-            if (!empty($row['L']) && is_numeric($row['L'])) {
-                $parroquias[] = (int)$row['L'];
-            }
-            if (!empty($row['M']) && is_numeric($row['M'])) {
-                $ciudades[] = (int)$row['M'];
-            }
-        }
-
-        // Verificar existencia en la base de datos
-        $existingEstados = RmEstado::find()->where(['id' => array_unique($estados)])->select('id')->column();
-        $existingMunicipios = RmMunicipio::find()->where(['id' => array_unique($municipios)])->select('id')->column();
-        $existingParroquias = RmParroquia::find()->where(['id' => array_unique($parroquias)])->select('id')->column();
-        $existingCiudades = RmCiudad::find()->where(['id' => array_unique($ciudades)])->select('id')->column();
-
-        // Verificar cada fila
-        $rowNumber = 1;
-        foreach ($data as $row) {
-            $rowNumber++;
-            
-            $isEmptyRow = true;
-            foreach ($row as $cellValue) {
-                if ($cellValue !== null && $cellValue !== '') {
-                    $isEmptyRow = false;
-                    break;
-                }
-            }
-            if ($isEmptyRow) {
-                continue;
-            }
-
-            $rowErrors = [];
-
-            if (!empty($row['J']) && is_numeric($row['J'])) {
-                if (!in_array((int)$row['J'], $existingEstados)) {
-                    $rowErrors[] = 'Estado con ID ' . $row['J'] . ' no existe en la base de datos';
-                }
-            }
-
-            if (!empty($row['K']) && is_numeric($row['K'])) {
-                if (!in_array((int)$row['K'], $existingMunicipios)) {
-                    $rowErrors[] = 'Municipio con ID ' . $row['K'] . ' no existe en la base de datos';
-                }
-            }
-
-            if (!empty($row['L']) && is_numeric($row['L'])) {
-                if (!in_array((int)$row['L'], $existingParroquias)) {
-                    $rowErrors[] = 'Parroquia con ID ' . $row['L'] . ' no existe en la base de datos';
-                }
-            }
-
-            if (!empty($row['M']) && is_numeric($row['M'])) {
-                if (!in_array((int)$row['M'], $existingCiudades)) {
-                    $rowErrors[] = 'Ciudad con ID ' . $row['M'] . ' no existe en la base de datos';
-                }
-            }
-
-            if (!empty($rowErrors)) {
-                $errors[] = [
-                    'row' => $rowNumber,
-                    'errors' => $rowErrors,
-                    'data' => $row
-                ];
-            }
-        }
-
-        return $errors;
     }
 
     /**
@@ -610,10 +497,10 @@ class UserDatosController extends Controller
                 $spreadsheet = IOFactory::load($filePath);
                 $sheet = $spreadsheet->getActiveSheet();
 
-                // Establecer el rango de columnas a leer (de A a N)
+                // Establecer el rango de columnas a leer (de A a L)
                 // Usamos getHighestRow() para encontrar la última fila con datos
                 $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
-                $range = 'A1:N' . $highestRow; // Rango de A1 hasta la columna N de la última fila con datos
+                $range = 'A1:L' . $highestRow; // Rango de A1 hasta la columna L de la última fila con datos
 
                 // Obtener los datos del rango especificado
                 $sheetData = $sheet->rangeToArray(
@@ -652,9 +539,8 @@ class UserDatosController extends Controller
                 // Validar los datos antes de procesarlos
                 $validationErrors = $this->validateExcelData($filteredData);
                 $duplicateErrors = $this->validateDuplicates($filteredData);
-                $locationErrors = $this->validateLocationIds($filteredData);
                 
-                $allErrors = array_merge($validationErrors, $duplicateErrors, $locationErrors);
+                $allErrors = array_merge($validationErrors, $duplicateErrors);
                 
                 if (!empty($allErrors)) {
                     // Si hay errores de validación, mostrar el reporte HTML y no procesar
