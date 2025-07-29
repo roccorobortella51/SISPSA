@@ -9394,6 +9394,292 @@ th a {
 
 
 
+/* Contenedor principal de la vista de la clínica */
+.main-container {
+  padding: 1.5rem 2.5rem; /* Ajustado el padding horizontal para dejar un poco de margen en los bordes */
+  background-color: #fcfcfd;
+  min-height: calc(100vh - 40px);
+  border-radius: 0.8rem;
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+  margin-bottom: 25px;
+  width: 100%; /* ¡Ahora ocupará el 100% del ancho disponible! */
+  /* max-width: 1600px; <-- ELIMINADO O COMENTADO */
+  margin-left: auto; /* Mantiene el centrado si hay espacio extra, pero no limita el ancho */
+  margin-right: auto; /* Mantiene el centrado si hay espacio extra, pero no limita el ancho */
+  border: 1px solid #e2e8f0;
+}
+
+/* También puedes añadir un padding general al body para que el contenido no se pegue a los bordes de la ventana */
+body {
+  font-family: 'Inter', sans-serif !important;
+  padding: 20px; /* Añadido padding general al body */
+  background-color: #f0f2f5; /* Un gris claro para el fondo */
+}
+
+/* Estilos para el contenedor de cada imagen (Selfie y Identificación) */
+.profile-img-container {
+  width: 380px; /* AUMENTADO: Ancho fijo para el contenedor */
+  height: 430px; /* AUMENTADO: Alto fijo para el contenedor */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+}
+
+/* Estilos para las imágenes dentro del contenedor */
+.profile-img-container img.profile-img {
+  width: 340px; /* AUMENTADO: Ancho fijo para la imagen */
+  height: 340px; /* AUMENTADO: Alto fijo para la imagen (para hacerla cuadrada) */
+  object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+  border-radius: 4px; /* Ligeramente redondeado para las imágenes */
+  margin-bottom: 10px; /* Espacio entre la imagen y el texto */
+}
+
+/* Estilos para los iconos de fallback */
+.profile-img-container .fas {
+  margin-bottom: 10px;
+}
+
+/* Ajustes para el título de las imágenes */
+.profile-img-container h6 {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+/* Ajustes para el texto "No hay..." */
+.profile-img-container p.text-muted {
+  font-size: 0.9em;
+}
+
+/* Estilos generales para las secciones de información */
+.ms-panel {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ms-panel-body {
+  padding: 25px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #343a40;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+.section-title .fas {
+  margin-right: 10px;
+  font-size: 1.2em;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px 30px;
+}
+
+.info-grid p {
+  margin-bottom: 0;
+}
+
+.info-grid strong {
+  color: #555;
+}
+
+.border-top {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 15px;
+  margin-top: 15px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.3em 0.6em;
+  border-radius: 0.25rem;
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: white;
+}
+
+.status-badge.active {
+  background-color: #28a745; /* Verde para activo */
+}
+
+.status-badge.inactive {
+  background-color: #dc3545; /* Rojo para inactivo */
+}
+
+/* Colores de borde para los paneles */
+.ms-panel.border-blue { border-left: 5px solid #007bff; }
+.ms-panel.border-indigo { border-left: 5px solid #6610f2; }
+.ms-panel.border-gray { border-left: 5px solid #6c757d; }
+
+/* Header section styles */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-section h1 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #343a40;
+  margin-bottom: 0;
+}
+
+.header-buttons-group {
+  display: flex;
+  gap: 0.75rem; /* gap-3 */
+  flex-wrap: wrap; /* Permite que los botones se envuelvan en pantallas pequeñas */
+  justify-content: flex-end; /* Alinea los botones a la derecha */
+}
+
+/* Base button style */
+.btn-base {
+  padding: 0.75rem 1.25rem; /* py-3 px-5 */
+  border-radius: 0.5rem; /* rounded-lg */
+  font-weight: 600; /* font-semibold */
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap; /* Evita que el texto del botón se rompa en varias líneas */
+}
+
+.btn-base i {
+  margin-right: 0.5rem; /* mr-2 */
+}
+
+/* Specific button colors */
+.btn-blue {
+  background-color: #007bff; /* bg-blue-500 */
+  color: white;
+  border: 1px solid #007bff;
+}
+.btn-blue:hover {
+  background-color: #0056b3; /* hover:bg-blue-600 */
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-red {
+  background-color: #dc3545; /* bg-red-500 */
+  color: white;
+  border: 1px solid #dc3545;
+}
+.btn-red:hover {
+  background-color: #c82333; /* hover:bg-red-600 */
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-gray {
+  background-color: #6c757d; /* bg-gray-500 */
+  color: white;
+  border: 1px solid #6c757d;
+}
+.btn-gray:hover {
+  background-color: #5a6268; /* hover:bg-gray-600 */
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid de botones de navegación (Baremo, Planes, etc.) */
+.nav-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr)); /* grid-cols-1 */
+  gap: 1rem; /* gap-4 */
+  margin-bottom: 1.5rem; /* mb-6 */
+}
+@media (min-width: 640px) { /* sm breakpoint */
+  .nav-buttons-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)); /* sm:grid-cols-2 */
+  }
+}
+@media (min-width: 1024px) { /* lg breakpoint */
+  .nav-buttons-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr)); /* lg:grid-cols-4 */
+  }
+}
+
+.nav-btn-base {
+  padding: 1rem 1.5rem !important; /* ¡AUMENTADO! Antes 0.75rem 1.25rem */
+  color: #fff;
+  border-radius: 0.5rem; /* rounded-lg */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem !important; /* ¡AUMENTADO! Antes 1rem */
+  font-weight: 500; /* font-medium */
+  width: 100%; /* w-full */
+  text-decoration: none;
+}
+.nav-btn-base i {
+  margin-right: 0.5rem; /* mr-2 */
+}
+.nav-btn-base:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* Colores específicos para nav-btn-base */
+.nav-btn-blue { background-color: #2563eb; } /* bg-blue-600 */
+.nav-btn-blue:hover { background-color: #1d4ed8; } /* hover:bg-blue-700 */
+.nav-btn-indigo { background-color: #4f46e5; } /* bg-indigo-600 */
+.nav-btn-indigo:hover { background-color: #4338ca; } /* hover:bg-indigo-700 */
+.nav-btn-teal { background-color: #14b8a6; } /* bg-teal-500 */
+.nav-btn-teal:hover { background-color: #0d9488; } /* hover:bg-teal-600 */
+.nav-btn-cyan { background-color: #06b6d4; } /* bg-cyan-500 */
+.nav-btn-cyan:hover { background-color: #0891b2; } /* hover:bg-cyan-600 */
+.nav-btn-pink { background-color: #ec4899; } /* bg-pink-500 */
+.nav-btn-pink:hover { background-color: #be185d; } /* hover:bg-pink-600 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ----------------------- estilos de las vistas ----------------------------------------------------------------**/
 
 /* ==========================================================================

@@ -26,12 +26,21 @@ $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado-
     </div>
     <div class="col-md-12">
         <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1><?= $this->title ?></h1>
-                <div>
-                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA ATENCIÓN', ['create', 'user_id' => $user_id], ['class' => 'btn btn-outline-primary btn-lg']) ?>
-                </div>
+        <div class="ms-panel-header d-flex justify-content-between align-items-center">
+            <h1><?= $this->title ?></h1>
+            <div class="d-flex gap-3"> <!-- Contenedor flex para los botones con espacio -->
+                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA ATENCIÓN', ['create', 'user_id' => $user_id], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+                <?= Html::a(
+                    '<i class="fas fa-undo mr-2"></i> Volver',
+                    '#',
+                    [
+                        'class' => 'btn btn-outline-secondary btn-lg', // Estilo ajustado para coincidir
+                        'onclick' => 'window.history.back(); return false;',
+                        'title' => 'Volver a la página anterior',
+                    ]
+                ) ?>
             </div>
+        </div>
             <div class="ms-panel-body">
                 <div class="table-responsive">
                     <?= GridView::widget([
