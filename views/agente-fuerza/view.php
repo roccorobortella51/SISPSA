@@ -1,15 +1,15 @@
 <?php
 
 use yii\helpers\Html;
-use yii\widgets\DetailView; // Mantendremos DetailView si lo prefieres para algunos campos, pero la mayoría será manual
-use app\models\Agente;
-use app\models\User;
+use yii\helpers\Url;
+use app\models\Agente; // Asegúrate de que Agente esté importado
+use app\models\User; // Asegúrate de que User esté importado
 
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
 
 $this->title = 'DETALLES DE ASESOR VENDEDOR: ';
-$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA'];
+$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA', 'url' => ['index']]; // Añadido URL para breadcrumb
 $this->params['breadcrumbs'][] = 'DETALLES';
 
 \yii\web\YiiAsset::register($this);
@@ -20,178 +20,168 @@ if ($model->agente) {
     $agenciaNombre = $model->agente->nom;
 }
 
-// Preparar el nombre de usuario
-$nombreUsuario = 'N/A';
-if ($model->idusuario && $model->getRelation('usuario', false) !== null && $model->usuario) {
-    $nombreUsuario = $model->usuario->username;
+// Preparar el nombre de usuario (asumiendo que userDatos tiene nombres y apellidos)
+$nombreCompletoUsuario = 'N/A';
+$telefonoUsuario = 'N/A';
+$emailUsuario = 'N/A';
+
+if ($model->user && $model->user->userDatos) { // Acceder a userDatos a través de la relación user
+    $nombreCompletoUsuario = $model->user->userDatos->nombres . ' ' . $model->user->userDatos->apellidos;
+    $telefonoUsuario = $model->user->userDatos->telefono ?? 'N/A';
+    $emailUsuario = $model->user->userDatos->email ?? 'N/A';
+} elseif ($model->user) {
+    $nombreCompletoUsuario = $model->user->username; // Fallback al username si no hay userDatos
 }
 
-// Función auxiliar para mostrar Sí/No con íconos
+// Función auxiliar para mostrar Sí/No con íconos y clases de CSS
 function formatBooleanIcon($value) {
-    return $value ? '<span class="text-success me-1"><i class="fas fa-check-circle"></i></span> Sí' : '<span class="text-danger me-1"><i class="fas fa-times-circle"></i></span> No';
+    if ($value) {
+        return '<span class="text-green-600 mr-1"><i class="fas fa-check-circle"></i></span> Sí';
+    } else {
+        return '<span class="text-red-600 mr-1"><i class="fas fa-times-circle"></i></span> No';
+    }
 }
 
 ?>
 
+<div class="view-main-container">
+   
 
-
-<div class="agente-fuerza-view">
-
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0"><?= Html::encode($this->title) ?></h3>
-        </div>
-        <div class="card-body">
-
-<div class="row row-cols-1 row-cols-md-3 g-3 mb-3">
-    <div class="col">
-        <?= Html::a(
-            '<i class="fas fa-edit"></i> ACTUALIZAR AGENTE', // Icono sugerido
-            ['update', 'id' => $model->id], // Ruta original
-            ['class' => 'btn btn-info btn-sm w-100'] // CAMBIO: Ahora es 'btn-sm'
-        ) ?>
-    </div>
-
-    <div class="col">
-        <?= Html::a(
-            '<i class="fas fa-arrow-left"></i> VOLVER A LA LISTA', // Icono sugerido
-            ['agente-fuerza/index-by-agente', 'agente_id' => $model->agente_id], // Ruta original
-            ['class' => 'btn btn-secondary btn-sm w-100'] // CAMBIO: Ahora es 'btn-sm'
-        ) ?>
-    </div>
-
-    <div class="col">
-        <?= Html::a(
-            '<i class="fas fa-trash-alt"></i> ELIMINAR AGENTE', // Icono sugerido
-            ['delete', 'id' => $model->id], // Ruta original
-            [
-                'class' => 'btn btn-danger btn-sm w-100', // CAMBIO: Ahora es 'btn-sm'
-                'data' => [
-                    'confirm' => '¿Estás seguro de que quieres eliminar este agente de fuerza? Esta acción no se puede deshacer.',
-                    'method' => 'post',
-                ],
-            ]
-        ) ?>
-    </div>
-</div>
-
-
-            <h5 class="mt-4 mb-3">Porcentajes de Comisión</h5>
-            <div class="row mb-4 g-3">
-                <div class="col-md-3">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Venta</h6>
-                        <p class="h4 text-info"><?= Yii::$app->formatter->asPercent($model->por_venta / 100) ?></p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Asesoría</h6>
-                        <p class="h4 text-info"><?= Yii::$app->formatter->asPercent($model->por_asesor / 100) ?></p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Cobranza</h6>
-                        <p class="h4 text-info"><?= Yii::$app->formatter->asPercent($model->por_cobranza / 100) ?></p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Post Venta</h6>
-                        <p class="h4 text-info"><?= Yii::$app->formatter->asPercent($model->por_post_venta / 100) ?></p>
-                    </div>
-                </div>
-                 <div class="col-md-3">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Registro</h6>
-                        <p class="h4 text-info"><?= Yii::$app->formatter->asPercent($model->por_registrar / 100) ?></p>
-                    </div>
-                </div>
-            </div>
-
-            
-
-            <h5 class="mt-4 mb-3">Permisos de Acceso</h5>
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h6 class="mb-0">Venta y Asesoría</h6>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    Puede Vender
-                                    <span class="badge bg-<?= $model->puede_vender ? 'success' : 'danger' ?> fs-6">
-                                        <?= formatBooleanIcon($model->puede_vender) ?>
-                                    </span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    Puede Asesorar
-                                    <span class="badge bg-<?= $model->puede_asesorar ? 'success' : 'danger' ?> fs-6">
-                                        <?= formatBooleanIcon($model->puede_asesorar) ?>
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h6 class="mb-0">Gestión y Cobranza</h6>
-                        </div>
-                        <div class="card-body">
-                             <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    Puede Cobrar
-                                    <span class="badge bg-<?= $model->puede_cobrar ? 'success' : 'danger' ?> fs-6">
-                                        <?= formatBooleanIcon($model->puede_cobrar) ?>
-                                    </span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    Puede Post Venta
-                                    <span class="badge bg-<?= $model->puede_post_venta ? 'success' : 'danger' ?> fs-6">
-                                        <?= formatBooleanIcon($model->puede_post_venta) ?>
-                                    </span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    Puede Registrar
-                                    <span class="badge bg-<?= $model->puede_registrar ? 'success' : 'danger' ?> fs-6">
-                                        <?= formatBooleanIcon($model->puede_registrar) ?>
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-    
-
-            <h5 class="mt-4 mb-3">Fechas de Gestión</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Fecha de Creación</h6>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->created_at) ?></p>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Última Actualización</h6>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->updated_at) ?></p>
-                    </div>
-                </div>
-                <!-- <div class="col-md-4">
-                    <div class="card card-body bg-light text-center">
-                        <h6 class="text-muted">Fecha de Eliminación</h6>
-                        <p class="h5 text-dark"><?= $model->deleted_at ? Yii::$app->formatter->asDatetime($model->deleted_at) : 'N/A' ?></p>
-                    </div>
-                </div> -->
-            </div>
-
+    <!-- Encabezado y Botones de Acción -->
+    <div class="ms-panel-header">
+        <h1><?= Html::encode($this->title) ?></h1>
+        <div class="button-group-spacing">
+            <?= Html::a(
+                '<i class="fas fa-edit"></i> Actualizar',
+                ['update', 'id' => $model->id],
+                ['class' => 'btn btn-primary']
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-arrow-left"></i> Volver',
+                ['agente-fuerza/index-by-agente', 'agente_id' => $model->agente_id],
+                [
+                    'class' => 'btn btn-secondary',
+                    'title' => 'Volver a la lista de agentes de fuerza',
+                ]
+            ) ?>
+           
         </div>
     </div>
+
+    <!-- Tarjeta de Información General del Asesor -->
+    <div class="ms-panel border-blue">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-user-tie text-blue-600"></i> Información General del Asesor
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p><strong>Usuario:</strong> <?= Html::encode($nombreCompletoUsuario) ?></p>
+                    <p><strong>Teléfono:</strong> <?= Html::encode($telefonoUsuario) ?></p>
+                </div>
+                <div>
+                    <p><strong>Agencia Asociada:</strong> <?= Html::encode($agenciaNombre) ?></p>
+                    <p><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($emailUsuario), 'mailto:' . Html::encode($emailUsuario), ['class' => 'text-primary']) ?></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Porcentajes de Comisión -->
+    <div class="ms-panel border-purple">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-percent text-purple-600"></i> Porcentajes de Comisión
+            </h3>
+            <div class="info-grid-percentages">
+                <div class="info-card-body">
+                    <h6>Venta</h6>
+                    <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_venta / 100) ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Asesoría</h6>
+                    <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_asesor / 100) ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Cobranza</h6>
+                    <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_cobranza / 100) ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Post Venta</h6>
+                    <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_post_venta / 100) ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Registro</h6>
+                    <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_registrar / 100) ?></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Permisos de Acceso -->
+    <div class="ms-panel border-green">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-lock text-green-600"></i> Permisos de Acceso
+            </h3>
+            <div class="info-grid">
+                <div class="info-card-body">
+                    <h6 class="section-subtitle">Venta y Asesoría</h6>
+                    <ul class="divide-y">
+                        <li class="py-3 flex justify-between items-center text-gray-700">
+                            Puede Vender
+                            <span><?= formatBooleanIcon($model->puede_vender) ?></span>
+                        </li>
+                        <li class="py-3 flex justify-between items-center text-gray-700">
+                            Puede Asesorar
+                            <span><?= formatBooleanIcon($model->puede_asesorar) ?></span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="info-card-body">
+                    <h6 class="section-subtitle">Gestión y Cobranza</h6>
+                    <ul class="divide-y">
+                        <li class="py-3 flex justify-between items-center text-gray-700">
+                            Puede Cobrar
+                            <span><?= formatBooleanIcon($model->puede_cobrar) ?></span>
+                        </li>
+                        <li class="py-3 flex justify-between items-center text-gray-700">
+                            Puede Post Venta
+                            <span><?= formatBooleanIcon($model->puede_post_venta) ?></span>
+                        </li>
+                        <li class="py-3 flex justify-between items-center text-gray-700">
+                            Puede Registrar
+                            <span><?= formatBooleanIcon($model->puede_registrar) ?></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Fechas de Gestión -->
+    <div class="ms-panel border-gray">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-calendar-alt text-gray-600"></i> Fechas de Gestión
+            </h3>
+            <div class="info-grid">
+                <div class="info-card-body">
+                    <h6>Fecha de Creación</h6>
+                    <p class="h5"><?= Yii::$app->formatter->asDatetime($model->created_at) ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Última Actualización</h6>
+                    <p class="h5"><?= Yii::$app->formatter->asDatetime($model->updated_at) ?></p>
+                </div>
+                <?php /*
+                <div class="info-card-body">
+                    <h6>Fecha de Eliminación</h6>
+                    <p class="h5"><?= $model->deleted_at ? Yii::$app->formatter->asDatetime($model->deleted_at) : 'N/A' ?></p>
+                </div>
+                */ ?>
+            </div>
+        </div>
+    </div>
+
 </div>

@@ -66,7 +66,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
             'idclinica' => 'Idclinica',
             'fecha' => 'Fecha',
             'hora' => 'Hora',
-            'idbaremo' => 'Idbaremo',
+            'idbaremo' => 'Baremo',
             'atendido' => 'Atendido',
             'fecha_atencion' => 'Fecha Atencion',
             'hora_atencion' => 'Hora Atencion',
@@ -83,7 +83,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getIdbaremo0()
+    public function getBaremo()
     {
         return $this->hasOne(Baremo::class, ['id' => 'idbaremo']);
     }
@@ -93,7 +93,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getIdclinica0()
+    public function getClinica()
     {
         return $this->hasOne(RmClinica::class, ['id' => 'idclinica']);
     }
@@ -106,6 +106,11 @@ class SisSiniestro extends \yii\db\ActiveRecord
     public function getSisConsultas()
     {
         return $this->hasMany(SisConsulta::class, ['idsiniestro' => 'id']);
+    }
+
+    public function getAfiliado()
+    {
+        return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
     }
 
 }

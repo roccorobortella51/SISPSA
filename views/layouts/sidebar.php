@@ -16,7 +16,7 @@ use mdm\admin\components\MenuHelper;
                 <img src="<?= Yii::getAlias('@web/img/dashboard/employee-list/employee-(2).jpg')?>" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info text-center">
-                <b><a href="#" class="d-block" style="color: black !important;"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a></b>
+                <b><a href="#" class="d-block" style="color: white !important;"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a></b>
             </div>
         </div>
 

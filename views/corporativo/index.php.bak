@@ -166,7 +166,8 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                             Url::to(['view', 'id' => $model->id]),
                                             [
                                                 'title' => 'Detalle de Corporativo',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn btn-link btn-sm text-success',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                             ]
                                         );
                                     },
@@ -176,7 +177,8 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                             Url::to(['update', 'id' => $model->id]),
                                             [
                                                 'title' => 'Editar Corporativo',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn btn-link btn-sm text-primary',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                             ]
                                         );
                                     },

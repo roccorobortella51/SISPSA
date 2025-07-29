@@ -1,233 +1,150 @@
-<?php
+    <?php
 
-use yii\helpers\Html;
-use yii\widgets\DetailView;
-use yii\helpers\Url;
+    use yii\helpers\Html;
+    use yii\helpers\Url;
 
-/** @var yii\web\View $this */
-/** @var app\models\UserDatos $model */
+    /** @var yii\web\View $this */
+    /** @var app\models\UserDatos $model */
+    /** @var string $estado Nombre del estado resuelto para mostrar */
+    /** @var string $municipio Nombre del municipio resuelto para mostrar */
+    /** @var string $parroquia Nombre de la parroquia resuelta para mostrar */
+    /** @var string $ciudad Nombre de la ciudad resuelta para mostrar */
 
-$this->title = $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
-\yii\web\YiiAsset::register($this);
+    $this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
+    $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
+    $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
+    \yii\web\YiiAsset::register($this); // Registra los assets por defecto de Yii (AppAsset se encargará del resto)
 
-?>
+    // Función para formatear fechas y horas (si no está disponible globalmente)
+    function formatDateTime($value) {
+        return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
+    }
 
-<div class="col-xl-12 col-md-12">
-    <div class="ms-panel ms-panel-fh">
-        <div class="ms-panel-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="text-primary"><?= Html::encode("Perfil del Afiliado #{$model->id}") ?></h4>
-                <div class="float-right" style="margin-bottom:10px;">
-                    <?= Html::a('<i class="fas fa-file-pdf"></i> Contrato', ['index'], ['class' => 'btn btn-outline-primary btn-sm']) ?>
-                    <?= Html::a(
-                    '<i class="fas fa-undo"></i> Volver', 
-                    '#', 
-                    [
-                        'class' => 'btn btn-primary btn-sm', 
-                        'onclick' => 'window.history.back(); return false;', 
-                        'title' => 'Volver a la página anterior', 
-                    ]
-                ) ?> 
-                </div>
-            </div>
+    ?>
+
+    <!-- Breadcrumbs -->
+    <nav class="mb-6" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <?php foreach ($this->params['breadcrumbs'] as $i => $breadcrumb): ?>
+                <li class="breadcrumb-item <?= $i === count($this->params['breadcrumbs']) - 1 ? 'active' : '' ?>">
+                    <?php if (is_array($breadcrumb)): ?>
+                        <?= Html::a(Html::encode($breadcrumb['label']), $breadcrumb['url']) ?>
+                    <?php else: ?>
+                        <?= Html::encode($breadcrumb) ?>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </nav>
+
+    <!-- Encabezado y Botones de Acción -->
+    <div class="ms-panel-header"> 
+        <h1 class="mb-0"><?= Html::encode($this->title) ?></h1> 
+        <div class="button-group-spacing">
+            <?= Html::a(
+                '<i class="fas fa-file-pdf mr-2"></i> Contrato',
+                ['user-datos/generar-contratov', 'id' => $model->id],
+                [
+                    'class' => 'btn btn-danger', // Usando btn-danger para el contrato PDF
+                    'target' => '_blank',
+                    'data-pjax' => '0'
+                ]
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-edit mr-2"></i> Actualizar',
+                ['update', 'id' => $model->id],
+                ['class' => 'btn btn-primary']
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-undo mr-2"></i> Volver',
+                '#',
+                [
+                    'class' => 'btn btn-secondary',
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
+                ]
+            ) ?>
         </div>
+    </div>
+
+    <!-- Sección de Foto de Perfil y Datos Personales -->
+    <div class="ms-panel border-blue text-center"> <!-- Añadido text-center para centrar la imagen -->
         <div class="ms-panel-body">
-             <!-- Foto de perfil -->
-            <div class="profile-header text-center">
+            <div class="profile-img-container">
                 <?php if ($model->selfie): ?>
-                    <?= Html::img(Yii::$app->request->baseUrl . '/' . $model->selfie, [
+                    <?= Html::img(Yii::$app->request->baseUrl . $model->selfie, [ // Asegúrate de que $model->selfie contenga la ruta relativa correcta
                         'alt' => 'Foto de Perfil',
                         'class' => 'profile-img'
                     ]) ?>
-                    <p><strong>Foto de Perfil</strong></p>
                 <?php else: ?>
-                    <p><em>No hay foto de perfil</em></p>
+                    <i class="fas fa-user-circle text-gray-400" style="font-size: 80px;"></i>
                 <?php endif; ?>
             </div>
-            <!-- Datos personales -->
-            <hr>
-            <h5>Datos Personales</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'nombres',
-                                'label' => 'Nombres',
-                            ],
-                            [
-                                'attribute' => 'cedulaFormatted',
-                                'label' => 'Cédula de Identidad',
-                            ],
+            <p class="text-lg font-semibold text-gray-800 mb-4"><?= Html::encode($model->nombres . ' ' . $model->apellidos) ?></p>
 
-                            [
-                                'attribute' => 'sexo',
-                                'label' => 'Sexo',
-                            ],
-
-                            [
-                                'attribute' => 'email',
-                                'format' => 'email',
-                                'label' => 'Correo Electrónico',
-                            ],
-                        ],
-                    ]) ?>
+            <h3 class="section-title justify-content-center"> <!-- Añadido justify-content-center para centrar el título con icono -->
+                <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
+            </h3>
+            <div class="info-grid text-left"> <!-- Añadido text-left para alinear el texto a la izquierda en la cuadrícula -->
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Nombres:</strong> <?= Html::encode($model->nombres ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Cédula de Identidad:</strong> <?= Html::encode($model->tipo_cedula . '-' . $model->cedula ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Sexo:</strong> <?= Html::encode($model->sexo ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Correo Electrónico:</strong> <?= !empty($model->email) ? Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-primary']) : 'N/A' ?></p>
                 </div>
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-
-                            [
-                                'attribute' => 'apellidos',
-                                'label' => 'Apellidos',
-                            ],
-                            [
-                                'attribute' => 'fechanac',
-                                'label' => 'Fecha de Nacimiento',
-                                'format' => ['date', 'php:d-m-Y'],
-                            ],
-                            [
-                                'attribute' => 'telefono',
-                                'label' => 'Teléfono',
-                            ],
-                        ],
-                    ]) ?>
-                </div>
-            </div>
-            <!-- Dirección y ubicación -->
-            <hr>
-            <h5>Ubicación</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'estado',
-                                'label' => 'Estado',
-                                'value' => function($model) use($estado) {
-                                        return $estado;
-                                }
-                            ],
-                            [
-                                'attribute' => 'ciudad',
-                                'label' => 'Ciudad',
-                                'value' => function($model) use($ciudad) {
-                                        return $ciudad;
-                                }
-
-                            ],
-                        ],
-                    ]) ?>
-                </div>
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'municipio',
-                                'label' => 'Municipio',
-                                'value' => function($model) use($municipio) {
-                                        return $municipio;
-                                }
-                            ],
-                            [
-                                'attribute' => 'parroquia',
-                                'label' => 'Parroquia',
-                                'value' => function($model) use($parroquia) {
-                                        return $parroquia;
-                                }
-                            ],
-                        ],
-                    ]) ?>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless w-100'],
-                        'template' => '
-                            <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                            <tr><td colspan="2">{value}</td></tr>
-                        ',
-                        'attributes' => [
-                            'direccion',
-                        ],
-                    ]) ?>
-                </div>
-            </div>
-            <!-- Información adicional -->
-            <hr>
-            <h5>Información Adicional</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless'],
-                        'template' => '
-                                    <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                                    <tr><td colspan="2">{value}</td></tr>
-                                ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'clinica.nombre',
-                                'label' => 'Clínica',
-                                'value' => $model->clinica ? $model->clinica->nombre : 'No asignada',
-                            ],
-                            [
-                                'attribute' => 'asesor.nombre',
-                                'label' => 'Asesor',
-                                'value' => $model->asesor ? $model->asesor->nombre : 'Sin asignar',
-                            ],
-                            'tipo_sangre',
-                        ],
-                    ]) ?>
-                </div>
-                <div class="col-md-6">
-                    <?= DetailView::widget([
-                        'model' => $model,
-                        'options' => ['class' => 'table table-borderless'],
-                        'template' => '
-                                    <tr><td colspan="2"><strong>{label}</strong></td></tr>
-                                    <tr><td colspan="2">{value}</td></tr>
-                                ',
-                        'attributes' => [
-                            [
-                                'attribute' => 'plan.nombre',
-                                'label' => 'Plan',
-                                'value' => $model->plan ? $model->plan->nombre : 'No asignado',
-                            ],
-
-                            'estatus:ntext',
-                        ],
-                    ]) ?>
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Apellidos:</strong> <?= Html::encode($model->apellidos ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></p>
+                    <p class="text-gray-700 mb-2"><strong>Teléfono:</strong> <?= Html::encode($model->telefono ?? 'N/A') ?></p>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Tarjeta de Ubicación -->
+    <div class="ms-panel border-indigo">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Estado:</strong> <?= Html::encode($estado ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Ciudad:</strong> <?= Html::encode($ciudad ?? 'N/A') ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Municipio:</strong> <?= Html::encode($municipio ?? 'N/A') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Parroquia:</strong> <?= Html::encode($parroquia ?? 'N/A') ?></p>
+                </div>
+            </div>
+            <p class="text-gray-700 mt-4 pt-4 border-top"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion ?? 'N/A')) ?></p>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Información Adicional -->
+    <div class="ms-panel border-gray">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-info-circle text-gray-600 mr-3"></i> Información Adicional
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->nombre : 'Sin asignar') ?></p>
+                    <p class="text-gray-700 mb-2"><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre ?? 'N/A') ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-700 mb-2"><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre_plan : 'No asignado') ?></p>
+                    <?php
+                        $estatusText = $model->estatus ?? 'N/A';
+                        $estatusClass = 'inactive';
+                        if ($estatusText === 'Activo' || $estatusText === 'Registrado') { // Asume 'Registrado' también es un estado "activo" para el badge
+                            $estatusClass = 'active';
+                        }
+                    ?>
+                    <p class="text-gray-700 mb-2"><strong>Estatus:</strong> <span class="status-badge <?= $estatusClass ?>"><?= Html::encode($estatusText) ?></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
