@@ -21,7 +21,7 @@ function formatUpdatedAt($value) {
 
 ?>
 
-<div class="view-main-container">
+<div class="main-container"> 
 
     <!-- Encabezado y Botones de Acción -->
     <div class="ms-panel-header">

@@ -290,7 +290,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                             [
                                         'class' => 'yii\grid\ActionColumn',
                                         'header' => 'ACCIONES',
-                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}</div>',
                                         'options' => ['style' => 'width:55px; min-width:55px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -310,6 +310,17 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                                     '<i class="fas fa-pencil-alt ms-text-primary"></i>',
                                                     Url::to(['update', 'id' => $model->id]),
                                                     [
+                                                        'title' => 'Editar Usuario',
+                                                        'class' => 'btn-action view'
+                                                    ]
+                                                );
+                                            },
+                                            'siniestro' => function ($url, $model, $key) {
+                                                return Html::a(
+                                                    '<i class="fas fa-address-card ms-text-success"></i>',
+                                                    Url::to(['/sis-siniestro/index', 'user_id' => $model->id]),
+                                                    [
+                                                        'title' => 'Siniestros',
                                                         'title' => 'Editar Usuario',
                                                         'class' => 'btn-action view'
                                                     ]

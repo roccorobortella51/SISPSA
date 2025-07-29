@@ -3582,7 +3582,7 @@ input:checked+.ms-switch-slider.ms-switch-dark {
   color: #fff;
 }
 
-.btn-link {
+.vistas {
   color: #3377e8;
 }
 
@@ -9396,7 +9396,7 @@ th a {
 
 
 
-/* ----------------------- estilos de los view prueba de juniel ----------------------------------------------------------------**/
+/* ----------------------- estilos de las vistas ----------------------------------------------------------------**/
 
 /* ==========================================================================
    Estilos Personalizados Globales de la Aplicación (sipsa.css)
@@ -9410,7 +9410,8 @@ th a {
  */
 body {
     font-family: 'Inter', sans-serif !important;
-    /* El color de fondo de la página y el espacio alrededor ya los maneja el sistema principal. */
+    padding: 20px; /* Añadido padding general al body */
+    background-color: #f0f2f5; /* Un gris claro para el fondo */
 }
 
 /*
@@ -9954,15 +9955,16 @@ h3.section-title i {
 
 /* Contenedor principal de la vista de la clínica */
 .main-container {
-    padding: 1.5rem;
+    padding: 1.5rem 2.5rem; /* Ajustado el padding horizontal para dejar un poco de margen en los bordes */
     background-color: #fcfcfd;
     min-height: calc(100vh - 40px);
     border-radius: 0.8rem;
     box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
     margin-bottom: 25px;
-    max-width: 1600px;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%; /* ¡Ahora ocupará el 100% del ancho disponible! */
+    /* max-width: 1600px; <-- ELIMINADO O COMENTADO */
+    margin-left: auto; /* Mantiene el centrado si hay espacio extra, pero no limita el ancho */
+    margin-right: auto; /* Mantiene el centrado si hay espacio extra, pero no limita el ancho */
     border: 1px solid #e2e8f0;
 }
 

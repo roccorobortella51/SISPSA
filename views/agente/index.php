@@ -30,7 +30,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
             <div>
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-success']) ?>
+                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
             </div>
 
         </div>
@@ -148,7 +148,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 'header' => 'ACCIONES',
                                 'template' => '{view}&nbsp;{update}',
                                 'options' => ['class' => 'action-buttons'],
-                                'headerOptions' => ['class' => 'text-white'],
+                                'headerOptions' => ['style' => 'color: white!important;'], 
                                 'contentOptions' => ['class' => 'text-center'],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) {
