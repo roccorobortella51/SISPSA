@@ -49,6 +49,527 @@ class UserDatosController extends Controller
         );
     }
 
+    /**
+     * Valida los campos del archivo Excel antes de procesarlo
+     * @param array $data Los datos del archivo Excel
+     * @return array Array con errores encontrados
+     */
+    private function validateExcelData($data)
+    {
+        $errors = [];
+        $rowNumber = 1; // Comenzamos en 1 para incluir el encabezado
+
+        foreach ($data as $row) {
+            $rowNumber++;
+            $rowErrors = [];
+
+            // Validar que la fila no esté completamente vacía
+            $isEmptyRow = true;
+            foreach ($row as $cellValue) {
+                if ($cellValue !== null && $cellValue !== '') {
+                    $isEmptyRow = false;
+                    break;
+                }
+            }
+            if ($isEmptyRow) {
+                continue; // Saltar filas completamente vacías
+            }
+
+            // Validar email (columna A)
+            if (empty($row['A'])) {
+                $rowErrors[] = 'Email es obligatorio';
+            } elseif (!filter_var($row['A'], FILTER_VALIDATE_EMAIL)) {
+                $rowErrors[] = 'Email no tiene formato válido';
+            }
+
+            // Validar teléfono (columna B)
+            if (empty($row['B'])) {
+                $rowErrors[] = 'Teléfono es obligatorio';
+            } elseif (!preg_match('/^[0-9+\-\s\(\)]{7,15}$/', $row['B'])) {
+                $rowErrors[] = 'Teléfono no tiene formato válido';
+            }
+
+            // Validar nombres (columna C)
+            if (empty($row['C'])) {
+                $rowErrors[] = 'Nombres es obligatorio';
+            } elseif (strlen($row['C']) < 2) {
+                $rowErrors[] = 'Nombres debe tener al menos 2 caracteres';
+            }
+
+            // Validar apellidos (columna D)
+            if (empty($row['D'])) {
+                $rowErrors[] = 'Apellidos es obligatorio';
+            } elseif (strlen($row['D']) < 2) {
+                $rowErrors[] = 'Apellidos debe tener al menos 2 caracteres';
+            }
+
+            // Validar tipo de cédula (columna E)
+            if (empty($row['E'])) {
+                $rowErrors[] = 'Tipo de cédula es obligatorio';
+            } elseif (!in_array(strtoupper($row['E']), ['V', 'E', 'P', 'J'])) {
+                $rowErrors[] = 'Tipo de cédula debe ser V, E, P o J';
+            }
+
+            // Validar cédula (columna F)
+            if (empty($row['F'])) {
+                $rowErrors[] = 'Cédula es obligatoria';
+            } elseif (!is_numeric($row['F']) || strlen($row['F']) < 6 || strlen($row['F']) > 10) {
+                $rowErrors[] = 'Cédula debe ser numérica y tener entre 6 y 10 dígitos';
+            }
+
+            // Validar fecha de nacimiento (columna G)
+            if (empty($row['G'])) {
+                $rowErrors[] = 'Fecha de nacimiento es obligatoria';
+            } else {
+                $fechaNacimiento = DateTime::createFromFormat('d/m/Y', $row['G']);
+                if (!$fechaNacimiento) {
+                    $rowErrors[] = 'Fecha de nacimiento debe tener formato DD/MM/YYYY';
+                } else {
+                    $hoy = new DateTime();
+                    $edad = $hoy->diff($fechaNacimiento)->y;
+                    if ($edad < 0 || $edad > 120) {
+                        $rowErrors[] = 'Fecha de nacimiento no es válida (edad entre 0 y 120 años)';
+                    }
+                }
+            }
+
+            // Validar sexo (columna H)
+            if (empty($row['H'])) {
+                $rowErrors[] = 'Sexo es obligatorio';
+            } elseif (!in_array(strtoupper($row['H']), ['M', 'F', 'MASCULINO', 'FEMENINO'])) {
+                $rowErrors[] = 'Sexo debe ser M, F, Masculino o Femenino';
+            }
+
+            // Validar tipo de sangre (columna I) - opcional pero si se proporciona debe ser válido
+            if (!empty($row['I'])) {
+                $tiposSangre = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+                if (!in_array(strtoupper($row['I']), $tiposSangre)) {
+                    $rowErrors[] = 'Tipo de sangre debe ser uno de: A+, A-, B+, B-, AB+, AB-, O+, O-';
+                }
+            }
+
+            // Validar estado (columna J) - opcional pero si se proporciona debe ser numérico
+            if (!empty($row['J']) && !is_numeric($row['J'])) {
+                $rowErrors[] = 'Estado debe ser un ID numérico';
+            }
+
+            // Validar municipio (columna K) - opcional pero si se proporciona debe ser numérico
+            if (!empty($row['K']) && !is_numeric($row['K'])) {
+                $rowErrors[] = 'Municipio debe ser un ID numérico';
+            }
+
+            // Validar parroquia (columna L) - opcional pero si se proporciona debe ser numérico
+            if (!empty($row['L']) && !is_numeric($row['L'])) {
+                $rowErrors[] = 'Parroquia debe ser un ID numérico';
+            }
+
+            // Validar ciudad (columna M) - opcional pero si se proporciona debe ser numérico
+            if (!empty($row['M']) && !is_numeric($row['M'])) {
+                $rowErrors[] = 'Ciudad debe ser un ID numérico';
+            }
+
+            // Validar dirección (columna N)
+            if (empty($row['N'])) {
+                $rowErrors[] = 'Dirección es obligatoria';
+            } elseif (strlen($row['N']) < 10) {
+                $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
+            }
+
+            // Si hay errores en esta fila, agregarlos al array de errores
+            if (!empty($rowErrors)) {
+                $errors[] = [
+                    'row' => $rowNumber,
+                    'errors' => $rowErrors,
+                    'data' => $row
+                ];
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Valida que no existan duplicados de email o cédula en el archivo y en la base de datos
+     * @param array $data Los datos del archivo Excel
+     * @return array Array con errores encontrados
+     */
+    private function validateDuplicates($data)
+    {
+        $errors = [];
+        $emails = [];
+        $cedulas = [];
+        $rowNumber = 1; // Comenzamos en 1 para incluir el encabezado
+
+        foreach ($data as $row) {
+            $rowNumber++;
+            
+            // Validar que la fila no esté completamente vacía
+            $isEmptyRow = true;
+            foreach ($row as $cellValue) {
+                if ($cellValue !== null && $cellValue !== '') {
+                    $isEmptyRow = false;
+                    break;
+                }
+            }
+            if ($isEmptyRow) {
+                continue; // Saltar filas completamente vacías
+            }
+
+            $email = trim($row['A']);
+            $cedula = trim($row['F']);
+            $tipoCedula = trim($row['E']);
+
+            // Verificar duplicados en el archivo
+            if (!empty($email)) {
+                if (in_array($email, $emails)) {
+                    $errors[] = [
+                        'row' => $rowNumber,
+                        'errors' => ['Email duplicado en el archivo'],
+                        'data' => $row
+                    ];
+                } else {
+                    $emails[] = $email;
+                }
+            }
+
+            if (!empty($cedula)) {
+                $cedulaCompleta = $tipoCedula . '-' . $cedula;
+                if (in_array($cedulaCompleta, $cedulas)) {
+                    $errors[] = [
+                        'row' => $rowNumber,
+                        'errors' => ['Cédula duplicada en el archivo'],
+                        'data' => $row
+                    ];
+                } else {
+                    $cedulas[] = $cedulaCompleta;
+                }
+            }
+        }
+
+        // Verificar duplicados en la base de datos
+        if (!empty($emails)) {
+            $existingEmails = UserDatos::find()
+                ->where(['email' => $emails])
+                ->select('email')
+                ->column();
+
+            foreach ($data as $index => $row) {
+                $rowNumber = $index + 2; // +2 porque comenzamos en 1 y tenemos encabezado
+                
+                $email = trim($row['A']);
+                if (!empty($email) && in_array($email, $existingEmails)) {
+                    $errors[] = [
+                        'row' => $rowNumber,
+                        'errors' => ['Email ya existe en la base de datos'],
+                        'data' => $row
+                    ];
+                }
+            }
+        }
+
+        if (!empty($cedulas)) {
+            $existingCedulas = UserDatos::find()
+                ->where(['cedula' => array_map(function($cedula) {
+                    return explode('-', $cedula)[1] ?? $cedula;
+                }, $cedulas)])
+                ->select('cedula')
+                ->column();
+
+            foreach ($data as $index => $row) {
+                $rowNumber = $index + 2; // +2 porque comenzamos en 1 y tenemos encabezado
+                
+                $cedula = trim($row['F']);
+                if (!empty($cedula) && in_array($cedula, $existingCedulas)) {
+                    $errors[] = [
+                        'row' => $rowNumber,
+                        'errors' => ['Cédula ya existe en la base de datos'],
+                        'data' => $row
+                    ];
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Genera un reporte de validación en formato HTML para mostrar al usuario
+     * @param array $errors Array de errores de validación
+     * @param int $totalRows Total de filas procesadas
+     * @return string HTML del reporte
+     */
+    private function generateValidationReport($errors, $totalRows)
+    {
+        // Agrupar errores por fila
+        $groupedErrors = [];
+        foreach ($errors as $error) {
+            $row = $error['row'];
+            if (!isset($groupedErrors[$row])) {
+                $groupedErrors[$row] = [
+                    'row' => $row,
+                    'errors' => [],
+                    'data' => $error['data']
+                ];
+            }
+            // Agregar todos los errores de esta fila
+            $groupedErrors[$row]['errors'] = array_merge($groupedErrors[$row]['errors'], $error['errors']);
+        }
+        
+        // Ordenar por número de fila
+        ksort($groupedErrors);
+        
+        $validRows = $totalRows - count($groupedErrors);
+        $errorRows = count($groupedErrors);
+        
+        $html = '<div class="validation-report">';
+        $html .= '<h3>Reporte de Validación del Archivo Excel</h3>';
+        $html .= '<div class="summary">';
+        $html .= '<p><strong>Resumen:</strong></p>';
+        $html .= '<ul>';
+        $html .= '<li>Total de filas procesadas: ' . $totalRows . '</li>';
+        $html .= '<li>Filas válidas: <span style="color: green;">' . $validRows . '</span></li>';
+        $html .= '<li>Filas con errores: <span style="color: red;">' . $errorRows . '</span></li>';
+        $html .= '<li>Total de errores encontrados: <span style="color: red;">' . count($errors) . '</span></li>';
+        $html .= '</ul>';
+        $html .= '</div>';
+        
+        if (!empty($groupedErrors)) {
+            $html .= '<div class="errors">';
+            $html .= '<h4>Errores encontrados por fila:</h4>';
+            $html .= '<table class="table table-bordered table-striped">';
+            $html .= '<thead><tr><th>Fila</th><th>Errores (' . count($errors) . ' total)</th><th>Datos del Registro</th></tr></thead>';
+            $html .= '<tbody>';
+            
+            foreach ($groupedErrors as $groupedError) {
+                $html .= '<tr>';
+                $html .= '<td><strong>' . $groupedError['row'] . '</strong></td>';
+                $html .= '<td><ul>';
+                foreach ($groupedError['errors'] as $fieldError) {
+                    $html .= '<li style="color: red;">' . htmlspecialchars($fieldError) . '</li>';
+                }
+                $html .= '</ul></td>';
+                $html .= '<td><small>';
+                $html .= 'A: ' . htmlspecialchars($groupedError['data']['A'] ?? '') . '<br>';
+                $html .= 'B: ' . htmlspecialchars($groupedError['data']['B'] ?? '') . '<br>';
+                $html .= 'C: ' . htmlspecialchars($groupedError['data']['C'] ?? '') . '<br>';
+                $html .= 'D: ' . htmlspecialchars($groupedError['data']['D'] ?? '') . '<br>';
+                $html .= 'E: ' . htmlspecialchars($groupedError['data']['E'] ?? '') . '<br>';
+                $html .= 'F: ' . htmlspecialchars($groupedError['data']['F'] ?? '') . '<br>';
+                $html .= 'G: ' . htmlspecialchars($groupedError['data']['G'] ?? '') . '<br>';
+                $html .= 'H: ' . htmlspecialchars($groupedError['data']['H'] ?? '') . '<br>';
+                $html .= 'I: ' . htmlspecialchars($groupedError['data']['I'] ?? '') . '<br>';
+                $html .= 'J: ' . htmlspecialchars($groupedError['data']['J'] ?? '') . '<br>';
+                $html .= 'K: ' . htmlspecialchars($groupedError['data']['K'] ?? '') . '<br>';
+                $html .= 'L: ' . htmlspecialchars($groupedError['data']['L'] ?? '') . '<br>';
+                $html .= 'M: ' . htmlspecialchars($groupedError['data']['M'] ?? '') . '<br>';
+                $html .= 'N: ' . htmlspecialchars($groupedError['data']['N'] ?? '');
+                $html .= '</small></td>';
+                $html .= '</tr>';
+            }
+            
+            $html .= '</tbody></table>';
+            $html .= '</div>';
+        }
+        
+        $html .= '</div>';
+        
+        return $html;
+    }
+
+    /**
+     * Valida que los IDs de ubicación existan en la base de datos
+     * @param array $data Los datos del archivo Excel
+     * @return array Array con errores encontrados
+     */
+    private function validateLocationIds($data)
+    {
+        $errors = [];
+        $estados = [];
+        $municipios = [];
+        $parroquias = [];
+        $ciudades = [];
+        $rowNumber = 1;
+
+        // Recolectar todos los IDs únicos
+        foreach ($data as $row) {
+            $rowNumber++;
+            
+            // Validar que la fila no esté completamente vacía
+            $isEmptyRow = true;
+            foreach ($row as $cellValue) {
+                if ($cellValue !== null && $cellValue !== '') {
+                    $isEmptyRow = false;
+                    break;
+                }
+            }
+            if ($isEmptyRow) {
+                continue;
+            }
+
+            if (!empty($row['J']) && is_numeric($row['J'])) {
+                $estados[] = (int)$row['J'];
+            }
+            if (!empty($row['K']) && is_numeric($row['K'])) {
+                $municipios[] = (int)$row['K'];
+            }
+            if (!empty($row['L']) && is_numeric($row['L'])) {
+                $parroquias[] = (int)$row['L'];
+            }
+            if (!empty($row['M']) && is_numeric($row['M'])) {
+                $ciudades[] = (int)$row['M'];
+            }
+        }
+
+        // Verificar existencia en la base de datos
+        $existingEstados = RmEstado::find()->where(['id' => array_unique($estados)])->select('id')->column();
+        $existingMunicipios = RmMunicipio::find()->where(['id' => array_unique($municipios)])->select('id')->column();
+        $existingParroquias = RmParroquia::find()->where(['id' => array_unique($parroquias)])->select('id')->column();
+        $existingCiudades = RmCiudad::find()->where(['id' => array_unique($ciudades)])->select('id')->column();
+
+        // Verificar cada fila
+        $rowNumber = 1;
+        foreach ($data as $row) {
+            $rowNumber++;
+            
+            $isEmptyRow = true;
+            foreach ($row as $cellValue) {
+                if ($cellValue !== null && $cellValue !== '') {
+                    $isEmptyRow = false;
+                    break;
+                }
+            }
+            if ($isEmptyRow) {
+                continue;
+            }
+
+            $rowErrors = [];
+
+            if (!empty($row['J']) && is_numeric($row['J'])) {
+                if (!in_array((int)$row['J'], $existingEstados)) {
+                    $rowErrors[] = 'Estado con ID ' . $row['J'] . ' no existe en la base de datos';
+                }
+            }
+
+            if (!empty($row['K']) && is_numeric($row['K'])) {
+                if (!in_array((int)$row['K'], $existingMunicipios)) {
+                    $rowErrors[] = 'Municipio con ID ' . $row['K'] . ' no existe en la base de datos';
+                }
+            }
+
+            if (!empty($row['L']) && is_numeric($row['L'])) {
+                if (!in_array((int)$row['L'], $existingParroquias)) {
+                    $rowErrors[] = 'Parroquia con ID ' . $row['L'] . ' no existe en la base de datos';
+                }
+            }
+
+            if (!empty($row['M']) && is_numeric($row['M'])) {
+                if (!in_array((int)$row['M'], $existingCiudades)) {
+                    $rowErrors[] = 'Ciudad con ID ' . $row['M'] . ' no existe en la base de datos';
+                }
+            }
+
+            if (!empty($rowErrors)) {
+                $errors[] = [
+                    'row' => $rowNumber,
+                    'errors' => $rowErrors,
+                    'data' => $row
+                ];
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Genera y descarga una plantilla Excel de ejemplo
+     * @return \yii\web\Response
+     */
+    public function actionDownloadTemplate()
+    {
+        // Crear un nuevo objeto Spreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Definir los encabezados
+        $headers = [
+            'A1' => 'Email',
+            'B1' => 'Teléfono',
+            'C1' => 'Nombres',
+            'D1' => 'Apellidos',
+            'E1' => 'Tipo Cédula',
+            'F1' => 'Cédula',
+            'G1' => 'Fecha Nacimiento',
+            'H1' => 'Sexo',
+            'I1' => 'Tipo Sangre',
+            'J1' => 'Estado ID',
+            'K1' => 'Municipio ID',
+            'L1' => 'Parroquia ID',
+            'M1' => 'Ciudad ID',
+            'N1' => 'Dirección'
+        ];
+
+        // Aplicar encabezados
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Agregar datos de ejemplo
+        $exampleData = [
+            'A2' => 'ejemplo@email.com',
+            'B2' => '0412-1234567',
+            'C2' => 'Juan',
+            'D2' => 'Pérez',
+            'E2' => 'V',
+            'F2' => '12345678',
+            'G2' => '15/03/1990',
+            'H2' => 'M',
+            'I2' => 'O+',
+            'J2' => '1',
+            'K2' => '1',
+            'L2' => '1',
+            'M2' => '1',
+            'N2' => 'Av. Principal, Casa #123'
+        ];
+
+        foreach ($exampleData as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Aplicar formato a los encabezados
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4472C4'],
+            ],
+        ];
+
+        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+
+        // Autoajustar columnas
+        foreach (range('A', 'N') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Crear el archivo temporal
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $tempFile = Yii::getAlias('@runtime/template_afiliados.xlsx');
+        $writer->save($tempFile);
+
+        // Enviar el archivo al navegador
+        return Yii::$app->response->sendFile($tempFile, 'plantilla_afiliados.xlsx', [
+            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'inline' => false
+        ])->on(\yii\web\Response::EVENT_AFTER_SEND, function($event) use ($tempFile) {
+            // Eliminar el archivo temporal después de enviarlo
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        });
+    }
 
     public function actionMasivo()
     {
@@ -128,7 +649,32 @@ class UserDatosController extends Controller
                     $headers = array_shift($filteredData); // Si la primera fila es el encabezado
                 }
 
+                // Validar los datos antes de procesarlos
+                $validationErrors = $this->validateExcelData($filteredData);
+                $duplicateErrors = $this->validateDuplicates($filteredData);
+                $locationErrors = $this->validateLocationIds($filteredData);
+                
+                $allErrors = array_merge($validationErrors, $duplicateErrors, $locationErrors);
+                
+                if (!empty($allErrors)) {
+                    // Si hay errores de validación, mostrar el reporte HTML y no procesar
+                    $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
+                    
+                    // Guardar el reporte en la sesión para mostrarlo en la vista
+                    Yii::$app->session->setFlash('error', $validationReport);
+                    
+                    // Eliminar el archivo subido
+                    if (file_exists($filePath)) {
+                        unlink($filePath);
+                    }
+                    
+                    return $this->render('masivo', [
+                        'model' => $model,
+                        'modelContrato' => $modelContrato,
+                    ]);
+                }
 
+                // Si no hay errores de validación, proceder con el procesamiento
                 // Aquí $filteredData contendrá solo las filas de la A a la N que tienen datos
                 foreach ($filteredData as $row) {
                     $contrato = new Contratos();
