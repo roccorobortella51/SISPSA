@@ -40,6 +40,7 @@ class AppAsset extends AssetBundle
         'cssMedboard/css/toastr.min.css',
         'vendors/iconic-fonts/font-awesome/css/all.min.css',
         'css/iconos.css.map',
+        //'css/affiliation-pdf.css'
     ];
    public $js = [
         // ¡IMPORTANTE! Comenta o elimina estas líneas para evitar la doble carga de Bootstrap JS y Popper.js

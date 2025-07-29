@@ -3582,7 +3582,7 @@ input:checked+.ms-switch-slider.ms-switch-dark {
   color: #fff;
 }
 
-.btn-link {
+.vistas {
   color: #3377e8;
 }
 
@@ -9391,3 +9391,851 @@ th a {
 }
 
 
+
+
+
+/* ----------------------- estilos de las vistas ----------------------------------------------------------------**/
+
+/* ==========================================================================
+   Estilos Personalizados Globales de la Aplicación (sipsa.css)
+   ========================================================================== */
+
+/*
+ * Esto es para que todo el texto de nuestra aplicación use una letra bonita y moderna,
+ * que se llama 'Inter'. Así todo se ve uniforme.
+ *
+ * Cómo usar: Esto se aplica solo, no tienes que hacer nada.
+ */
+body {
+    font-family: 'Inter', sans-serif !important;
+    padding: 20px; /* Añadido padding general al body */
+    background-color: #f0f2f5; /* Un gris claro para el fondo */
+}
+
+/*
+ * Esta parte es para las "migas de pan" o "breadcrumb", que son esos enlaces
+ * que te dicen dónde estás en la página (Inicio > Agencias > Crear Agencia).
+ * Los hacemos pequeños y ordenados.
+ *
+ * Cómo usar:
+ * - El contenedor principal de las migas de pan debe tener la clase 'breadcrumb'.
+ * - Cada parte de la ruta (cada enlace) debe tener la clase 'breadcrumb-item'.
+ * - Para el enlace de la página donde estás ahora, añade también la clase 'active'.
+ */
+.breadcrumb {
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 1rem !important;
+    list-style: none !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+}
+/* Esto es para poner la barra "/" entre cada enlace de las migas de pan. */
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "/" !important;
+    padding-right: 0.5rem !important;
+    padding-left: 0.5rem !important;
+    color: #a0aec0 !important;
+}
+/* Esto es para los enlaces de las migas de pan. */
+.breadcrumb-item a {
+    color: #2563eb !important;
+    text-decoration: none !important;
+    transition: color 0.2s ease-in-out !important;
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
+}
+/* Esto cambia el color del enlace cuando pasas el ratón por encima. */
+.breadcrumb-item a:hover {
+    color: #1d4ed8 !important;
+}
+/* Esto es para el enlace de la página actual en las migas de pan (se ve un poco diferente). */
+.breadcrumb-item.active {
+    color: #64748b !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+}
+
+/*
+ * Esta es la "caja" principal de cada página. Es como el lienzo donde va todo el contenido.
+ * Le da un fondo claro, esquinas redondas, una sombra suave y un ancho fijo para que se vea bien.
+ *
+ * Cómo usar: Pon la clase 'view-main-container' en el `div` más grande de tu página.
+ */
+.view-main-container {
+    padding: 1.5rem !important;
+    background-color: #fcfcfd !important;
+    min-height: calc(100vh - 40px) !important;
+    border-radius: 0.8rem !important;
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04) !important;
+    margin-bottom: 25px !important;
+    max-width: 1600px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+/*
+ * Estas son las "tarjetas" o "paneles" que usamos para agrupar información dentro de la página.
+ * Tienen un fondo blanco, esquinas redondas, una sombra y una línea de color arriba.
+ *
+ * Cómo usar: Pon la clase 'ms-panel' en los `div` que quieras que se vean como estas tarjetas.
+ *
+ * Efecto al pasar el ratón: La tarjeta se levanta un poquito y la sombra se hace más notoria.
+ */
+.ms-panel {
+    background-color: #ffffff !important;
+    border-radius: 0.8rem !important;
+    box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    margin-bottom: 1.5rem !important;
+    overflow: hidden !important;
+    border-top: 3px solid #2563eb !important;
+    transition: all 0.25s ease-in-out !important;
+}
+/* Esto es lo que pasa cuando pones el ratón encima de una tarjeta. */
+.ms-panel:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.08) !important;
+}
+/*
+ * Estas clases cambian el color de la línea de arriba de las tarjetas 'ms-panel'.
+ * Así puedes hacer que cada tarjeta tenga un color distinto según su tipo de información.
+ *
+ * Cómo usar: Añade una de estas clases al mismo `div` que tiene 'ms-panel'.
+ * Por ejemplo: `<div class="ms-panel border-purple">...</div>`
+ */
+.ms-panel.border-blue { border-top-color: #2563eb !important; }
+.ms-panel.border-purple { border-top-color: #7c3aed !important; }
+.ms-panel.border-indigo { border-top-color: #4f46e5 !important; }
+.ms-panel.border-yellow { border-top-color: #eab308 !important; }
+.ms-panel.border-gray { border-top-color: #4b5563 !important; }
+.ms-panel.border-green { border-top-color: #16a34a !important; }
+.ms-panel.border-red { border-top-color: #dc2626 !important; }
+
+
+/*
+ * Esta es la parte de arriba de un panel (la sección de la tarjeta).
+ * Aquí va el título grande de la sección y los botones de acción.
+ *
+ * Cómo usar: Pon la clase 'ms-panel-header' en el `div` que contiene el título (<h1>)
+ * y los botones en la parte superior de tu panel.
+ */
+.ms-panel-header {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    margin-bottom: 1.5rem !important;
+    padding: 1.5rem !important;
+    background-color: #fff !important;
+    border-radius: 0.6rem !important;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/*
+ * Esto le da estilo al título principal (<h1>) dentro del encabezado del panel.
+ * Es el título más importante de la vista.
+ *
+ * Cómo usar: Usa la etiqueta <h1> dentro de un `div` con la clase 'ms-panel-header'.
+ */
+.ms-panel-header h1 {
+    font-size: 1.8rem !important;
+    font-weight: 800 !important;
+    color: #1a202c !important;
+    margin-bottom: 1rem !important;
+    margin-top: 0 !important;
+    text-shadow: 0.6px 0.6px 2.5px rgba(0,0,0,0.08) !important;
+}
+
+/*
+ * Esta clase ayuda a organizar un grupo de botones, dejando espacio entre ellos
+ * y haciendo que se vean bien en cualquier tamaño de pantalla.
+ *
+ * Cómo usar: Pon la clase 'button-group-spacing' en un `div` que contenga tus botones.
+ */
+.button-group-spacing {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.8rem !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+}
+
+/*
+ * Esto le da estilo a los títulos de las sub-secciones dentro de las tarjetas.
+ * Son títulos más pequeños que el principal, y sirven para organizar el contenido.
+ * Tienen un icono y una línea abajo.
+ *
+ * Cómo usar: Pon la clase 'section-title' en las etiquetas <h3> que uses como títulos de sección.
+ * Los iconos se añaden con la etiqueta <i> (Font Awesome).
+ */
+h3.section-title {
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    color: #2d3748 !important;
+    margin-bottom: 0.8rem !important;
+    padding-bottom: 0.6rem !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    display: flex !important;
+    align-items: center !important;
+    margin-top: 0 !important;
+    text-shadow: 0.4px 0.4px 1px rgba(0,0,0,0.03) !important;
+}
+/*
+ * Esto le da estilo a los iconos (<i>) que van dentro de los títulos de sección.
+ * Los pone en su lugar y les da un color bonito.
+ *
+ * Cómo usar: Pon un icono de Font Awesome (etiqueta <i>) dentro de un <h3> con 'section-title'.
+ */
+h3.section-title i {
+    margin-right: 0.6rem !important;
+    font-size: 1.4rem !important;
+    color: #2563eb !important;
+}
+
+/*
+ * Esta sección le da estilo a las "tarjetas de información" pequeñas.
+ * Son las que muestran datos importantes (como números o porcentajes).
+ * Tienen fondo blanco, esquinas redondas, sombra y se elevan al pasar el ratón.
+ *
+ * Cómo usar: Pon la clase 'info-card-body' en los `div` que uses para estas tarjetas de datos.
+ */
+.info-card-body {
+    background-color: #ffffff !important;
+    border-radius: 0.6rem !important;
+    padding: 1rem !important;
+    text-align: center !important;
+    box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out !important;
+    border: 1px solid #f0f2f5 !important;
+}
+/* Esto hace que la tarjeta se eleve y su sombra cambie al pasar el ratón. */
+.info-card-body:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 6px 14px 0 rgba(0, 0, 0, 0.12), 0 3px 6px 0 rgba(0, 0, 0, 0.08) !important;
+}
+
+/*
+ * Esto le da estilo a los títulos pequeños (<h6>) dentro de las tarjetas de información.
+ * Se usan para las etiquetas de los datos.
+ */
+.info-card-body h6 {
+    color: #718096 !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+}
+/*
+ * Esto le da estilo a los números grandes o datos importantes (<p> con clase .h4)
+ * dentro de las tarjetas de información. Se ven grandes y resaltados.
+ */
+.info-card-body p.h4 {
+    font-size: 1.8rem !important;
+    font-weight: 900 !important;
+    color: #1d4ed8 !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0 !important;
+    text-shadow: 0.4px 0.4px 1px rgba(0,0,0,0.04) !important;
+}
+/*
+ * Esto le da estilo a los textos secundarios o valores menos prominentes (<p> con clase .h5)
+ * dentro de las tarjetas de información. Son más pequeños que los .h4.
+ */
+.info-card-body p.h5 {
+    font-size: 1.1rem !important;
+    font-weight: 800 !important;
+    color: #2d3748 !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0 !important;
+    text-shadow: 0.4px 0.4px 1px rgba(0,0,0,0.02) !important;
+}
+
+/*
+ * Esto define el espacio interno (padding) para el contenido de cualquier panel.
+ *
+ * Cómo usar: Pon la clase 'ms-panel-body' en el `div` que contiene el contenido principal
+ * dentro de un 'ms-panel'.
+ */
+.ms-panel-body {
+    padding: 1.2rem !important;
+}
+
+/*
+ * Esto le da estilo a los párrafos de texto que van dentro de los paneles.
+ * Son para mostrar información general.
+ *
+ * Cómo usar: Usa la etiqueta <p> para los párrafos de texto dentro de un 'ms-panel-body'.
+ */
+.ms-panel-body p {
+    color: #4a5568 !important;
+    margin-bottom: 0.5rem !important;
+    line-height: 1.5 !important;
+    font-size: 0.88rem !important;
+}
+/* Esto quita el espacio de abajo del último párrafo, para que no quede un hueco al final. */
+.ms-panel-body p:last-child {
+    margin-bottom: 0 !important;
+}
+/*
+ * Esto le da estilo al texto que está en negrita (<strong>) dentro de los párrafos.
+ * Se usa para resaltar palabras o frases importantes.
+ *
+ * Cómo usar: Envuelve el texto que quieres que se vea en negrita con la etiqueta <strong>.
+ */
+.ms-panel-body strong {
+    font-weight: 700 !important;
+    color: #2d3748 !important;
+}
+
+/*
+ * Estas clases son para cambiar el color de los iconos y el texto.
+ * Son como atajos para poner colores específicos de nuestra paleta.
+ *
+ * Cómo usar: Añade una de estas clases a un icono (<i>) o a un texto (<span>, <p>, etc.)
+ * Por ejemplo: `<i class="fas fa-check text-green-600"></i>`.
+ */
+.text-blue-600 { color: #2563eb !important; }
+.text-purple-600 { color: #7c3aed !important; }
+.text-gray-600 { color: #4b5563 !important; }
+.text-green-600 { color: #16a34a !important; }
+.text-red-600 { color: #dc2626 !important; }
+.text-indigo-600 { color: #4f46e5 !important; }
+.text-yellow-600 { color: #eab308 !important; }
+.text-pink-600 { color: #db2777 !important; }
+/*
+ * Este es el color principal para los enlaces y textos importantes,
+ * y se subraya cuando pasas el ratón.
+ */
+.text-primary { color: #2563eb !important; }
+.text-primary:hover { text-decoration: underline !important; color: #1d4ed8 !important; }
+
+
+/*
+ * Estas clases añaden un pequeño espacio a la derecha de un elemento.
+ * Son útiles para separar iconos del texto, por ejemplo.
+ *
+ * Cómo usar: Pon 'mr-2' o 'mr-3' en el elemento que necesita espacio a su derecha.
+ * Por ejemplo: `<i class="fas fa-icon mr-2"></i> Mi Texto`.
+ */
+.mr-2 { margin-right: 0.3rem !important; }
+.mr-3 { margin-right: 0.5rem !important; }
+
+/*
+ * Esta clase crea una línea divisoria en la parte de arriba de una sección,
+ * con algo de espacio. Sirve para separar bloques de contenido.
+ *
+ * Cómo usar: Pon la clase 'border-top' en un `div` para crear esta línea.
+ */
+.border-top {
+    border-top: 1px solid #e2e8f0 !important;
+    padding-top: 1rem !important;
+    margin-top: 1rem !important;
+}
+
+/*
+ * Estas reglas son para que nuestras filas y columnas (como las de Bootstrap)
+ * funcionen bien y se adapten a diferentes tamaños de pantalla.
+ *
+ * Cómo usar: Pon 'row' en un `div` para crear una fila, y 'col-md-4', 'col-md-6', etc.,
+ * en los `div` de adentro para dividir el espacio en columnas.
+ */
+.row { display: flex !important; flex-wrap: wrap !important; margin-right: -8px !important; margin-left: -8px !important; }
+.col-md-4 { flex: 0 0 33.333333% !important; max-width: 33.333333% !important; }
+.col-md-6 { flex: 0 0 50% !important; max-width: 50% !important; }
+.col-xl-12 { flex: 0 0 100% !important; max-width: 100% !important; }
+.col { position: relative !important; width: 100% !important; padding-right: 8px !important; padding-left: 8px !important; }
+
+/*
+ * Estas reglas definen los espacios entre las columnas y filas de nuestra cuadrícula.
+ * Es como el 'gap' de Bootstrap.
+ *
+ * Cómo usar: Pon la clase 'g-3' en el `div` que contiene tus filas para añadir estos espacios.
+ */
+.g-3 {
+    --bs-gutter-x: 1rem !important;
+    --bs-gutter-y: 1rem !important;
+    margin-right: calc(var(--bs-gutter-x) * -.5) !important;
+    margin-left: calc(var(--bs-gutter-x) * -.5) !important;
+    margin-top: calc(var(--bs-gutter-y) * -.5) !important;
+}
+.g-3 > .col,
+.g-3 > [class*="col-"] {
+    padding-right: calc(var(--bs-gutter-x) * .5) !important;
+    padding-left: calc(var(--bs-gutter-x) * .5) !important;
+    padding-top: calc(var(--bs-gutter-y) * .5) !important;
+}
+
+/*
+ * Estas son clases de texto básicas que usamos para alinear o cambiar el color del texto.
+ *
+ * Cómo usar: Aplica estas clases a cualquier elemento de texto.
+ * Por ejemplo: `<p class="text-center">Mi texto centrado</p>`.
+ */
+.text-center { text-align: center !important; }
+.text-muted { color: #a0aec0 !important; }
+.text-info { color: #3182ce !important; }
+.text-dark { color: #2d3748 !important; }
+
+/*
+ * Estas clases son para añadir o quitar espacios alrededor de los elementos (márgenes y rellenos).
+ * Son muy útiles para controlar el diseño.
+ *
+ * Cómo usar: Aplica estas clases a cualquier elemento.
+ * Por ejemplo: 'mb-2' para un pequeño margen abajo, 'pt-4' para un relleno arriba.
+ */
+.mb-0 { margin-bottom: 0 !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+.mb-6 { margin-bottom: 1.5rem !important; }
+.mt-4 { margin-top: 1.5rem !important; }
+.pt-4 { padding-top: 1.5rem !important; }
+
+/*
+ * Esto le da estilo a todos los botones de la aplicación.
+ * Los hace modernos, con esquinas redondas, sombras y una animación suave al pasar el ratón.
+ *
+ * Cómo usar: Pon la clase 'btn' en tus botones (pueden ser etiquetas `<button>` o `<a>`).
+ * Luego, añade una de las clases de color (como 'btn-primary') para darle el color.
+ */
+.btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    border: 1px solid transparent !important;
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.9rem !important;
+    border-radius: 0.5rem !important;
+    transition: all 0.2s ease-in-out !important;
+    box-shadow: 0 3px 6px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -0.5px rgba(0, 0, 0, 0.05) !important;
+}
+
+/*
+ * Esto hace que el botón se eleve un poco y su sombra cambie cuando pasas el ratón por encima.
+ */
+.btn:hover {
+    transform: translateY(-1.5px) !important;
+    box-shadow: 0 5px 10px -2px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+}
+
+/*
+ * Estas clases le dan los colores a los botones.
+ *
+ * Cómo usar: Añade una de estas clases junto con 'btn' a tu botón.
+ * Por ejemplo: `<button class="btn btn-primary">Guardar</button>`.
+ */
+.btn-primary {
+    color: #fff !important;
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+.btn-primary:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+}
+
+.btn-secondary {
+    color: #374151 !important;
+    background-color: #e5e7eb !important;
+    border-color: #e5e7eb !important;
+}
+.btn-secondary:hover {
+    background-color: #d1d5db !important;
+    border-color: #d1d5db !important;
+}
+
+.btn-danger {
+    color: #fff !important;
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+}
+.btn-danger:hover {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+}
+
+/*
+ * Esto le da estilo a las "etiquetas de estado" o "badges".
+ * Son como pequeñas etiquetas que muestran si algo está "Activo" o "Inactivo".
+ * Tienen esquinas muy redondas, texto en mayúsculas y una sombra muy suave.
+ *
+ * Cómo usar: Pon la clase 'status-badge' en un `span` o similar.
+ * Luego, añade 'active' o 'inactive' para el color específico.
+ * Por ejemplo: `<span class="status-badge active">Activo</span>`.
+ */
+.status-badge {
+    padding: 0.25rem 0.7rem !important;
+    border-radius: 9999px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    box-shadow: 0 0.5px 1.5px 0 rgba(0,0,0,0.03) !important;
+}
+/*
+ * Estos son los colores específicos para las etiquetas de estado.
+ */
+.status-badge.active {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+}
+.status-badge.inactive {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+}
+/*
+ * Esta parte es para las listas de cosas, como las clínicas o los empleados asociados.
+ * Hace que cada elemento de la lista tenga una línea divisoria arriba.
+ *
+ * Cómo usar: Pon la clase 'divide-y' en el contenedor de tu lista (ej. `<ul>`).
+ * Cada elemento de la lista (ej. `<li>`) tendrá una línea arriba.
+ *
+ * Las clases 'py-3', 'flex', 'justify-between', 'items-center' ayudan a que los elementos
+ * de la lista se vean bien, con espacio y el contenido alineado (texto a la izquierda, icono a la derecha).
+ */
+.divide-y > * + * {
+    border-top-width: 1px !important;
+    border-color: #e2e8f0 !important;
+}
+.py-3 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.flex { display: flex !important; }
+.justify-between { justify-content: space-between !important; }
+.items-center { align-items: center !important; }
+.font-medium { font-weight: 500 !important; }
+/*
+ * Estas clases cambian el color de los enlaces dentro de las listas.
+ */
+.text-blue-500 { color: #3b82f6 !important; }
+.text-blue-500:hover { text-decoration: underline !important; color: #2563eb !important; }
+.text-gray-500 { color: #718096 !important; }
+.block { display: block !important; }
+/*
+ * Esto hace que un elemento sea de bloque en pantallas pequeñas,
+ * y se ponga en línea (al lado de otro) en pantallas medianas y grandes.
+ */
+.sm\:inline {
+    display: block !important;
+}
+@media (min-width: 640px) {
+    .sm\:inline {
+        display: inline !important;
+    }
+}
+/*
+ * Esto le da estilo al icono de flecha derecha (Font Awesome) que se usa en las listas
+ * para indicar que puedes hacer clic y ver más detalles.
+ * También tiene una animación suave.
+ */
+.fas.fa-arrow-right {
+    color: #6366f1 !important;
+    font-size: 0.9rem !important;
+    transition: transform 0.2s ease-in-out !important;
+}
+/*
+ * Esto hace que la flecha se mueva un poquito a la derecha cuando pasas el ratón por encima
+ * del elemento de la lista.
+ */
+.py-3:hover .fas.fa-arrow-right {
+    transform: translateX(5px) !important;
+}
+
+/* ==========================================================================
+   para la Vista rm-clinica
+   
+   ========================================================================== */
+
+/* Contenedor principal de la vista de la clínica */
+.main-container {
+    padding: 1.5rem 2.5rem; /* Ajustado el padding horizontal para dejar un poco de margen en los bordes */
+    background-color: #fcfcfd;
+    min-height: calc(100vh - 40px);
+    border-radius: 0.8rem;
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+    margin-bottom: 25px;
+    width: 100%; /* ¡Ahora ocupará el 100% del ancho disponible! */
+    /* max-width: 1600px; <-- ELIMINADO O COMENTADO */
+    margin-left: auto; /* Mantiene el centrado si hay espacio extra, pero no limita el ancho */
+    margin-right: auto; /* Mantiene el centrado si hay espacio extra, pero no limita el ancho */
+    border: 1px solid #e2e8f0;
+}
+
+/* Encabezado de la sección principal (título y botones) */
+.header-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 0.6rem;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid #e2e8f0;
+    gap: 1.5rem; /* Espacio entre el título y el grupo de botones */
+}
+
+.header-section h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #1a202c;
+    margin-bottom: 0; /* Ya el gap del flexbox maneja la separación */
+    margin-top: 0;
+    text-shadow: 0.6px 0.6px 2.5px rgba(0,0,0,0.08);
+}
+
+/* Grupo de botones dentro del encabezado */
+.header-buttons-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+/* Base para botones generales */
+.btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 3px 6px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -0.5px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+}
+.btn-base:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 5px 10px -2px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08);
+}
+.btn-base i {
+    margin-right: 0.5rem;
+}
+
+/* Colores específicos para btn-base */
+.btn-base.btn-blue { color: #fff; background-color: #2563eb; border-color: #2563eb; }
+.btn-base.btn-blue:hover { background-color: #1d4ed8; border-color: #1d4ed8; }
+.btn-base.btn-red { color: #fff; background-color: #dc2626; border-color: #dc2626; }
+.btn-base.btn-red:hover { background-color: #b91c1c; border-color: #b91c1c; }
+.btn-base.btn-gray { color: #374151; background-color: #e5e7eb; border-color: #e5e7eb; }
+.btn-base.btn-gray:hover { background-color: #d1d5db; border-color: #d1d5db; }
+
+
+/* Grid de botones de navegación (Baremo, Planes, etc.) */
+.nav-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr)); /* grid-cols-1 */
+    gap: 1rem; /* gap-4 */
+    margin-bottom: 1.5rem; /* mb-6 */
+}
+@media (min-width: 640px) { /* sm breakpoint */
+    .nav-buttons-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* sm:grid-cols-2 */
+    }
+}
+@media (min-width: 1024px) { /* lg breakpoint */
+    .nav-buttons-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)); /* lg:grid-cols-4 */
+    }
+}
+
+.nav-btn-base {
+    padding: 0.75rem 1.25rem; /* px-5 py-3 */
+    color: #fff;
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem; /* text-base */
+    font-weight: 500; /* font-medium */
+    width: 100%; /* w-full */
+    text-decoration: none;
+}
+.nav-btn-base i {
+    margin-right: 0.5rem; /* mr-2 */
+}
+.nav-btn-base:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* Colores específicos para nav-btn-base */
+.nav-btn-blue { background-color: #2563eb; } /* bg-blue-600 */
+.nav-btn-blue:hover { background-color: #1d4ed8; } /* hover:bg-blue-700 */
+.nav-btn-indigo { background-color: #4f46e5; } /* bg-indigo-600 */
+.nav-btn-indigo:hover { background-color: #4338ca; } /* hover:bg-indigo-700 */
+.nav-btn-teal { background-color: #14b8a6; } /* bg-teal-500 */
+.nav-btn-teal:hover { background-color: #0d9488; } /* hover:bg-teal-600 */
+.nav-btn-cyan { background-color: #06b6d4; } /* bg-cyan-500 */
+.nav-btn-cyan:hover { background-color: #0891b2; } /* hover:bg-cyan-600 */
+.nav-btn-pink { background-color: #ec4899; } /* bg-pink-500 */
+.nav-btn-pink:hover { background-color: #be185d; } /* hover:bg-pink-600 */
+
+
+/* Tarjetas de información (info-card) */
+.info-card {
+    background-color: #fff;
+    border-radius: 0.75rem; /* rounded-xl */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+    padding: 1.5rem; /* p-6 */
+    margin-bottom: 1.5rem; /* mb-6 */
+    border: 1px solid #e2e8f0; /* Borde sutil */
+}
+
+/* Bordes superiores para info-card */
+.info-card-border-blue { border-top: 4px solid #2563eb; } /* border-t-4 border-blue-600 */
+.info-card-border-indigo { border-top: 4px solid #4f46e5; } /* border-t-4 border-indigo-600 */
+.info-card-border-yellow { border-top: 4px solid #eab308; } /* border-t-4 border-yellow-600 */
+.info-card-border-gray { border-top: 4px solid #4b5563; } /* border-t-4 border-gray-600 */
+
+/* Títulos dentro de info-card */
+.info-card h3 {
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 600; /* font-semibold */
+    color: #1f2937; /* text-gray-800 */
+    margin-bottom: 1rem; /* mb-4 */
+    padding-bottom: 0.5rem; /* pb-2 */
+    border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+    display: flex;
+    align-items: center;
+}
+.info-card h3 i {
+    margin-right: 0.75rem; /* mr-3 */
+}
+.info-card h3 .text-blue-600 { color: #2563eb; }
+.info-card h3 .text-indigo-600 { color: #4f46e5; }
+.info-card h3 .text-yellow-600 { color: #eab308; }
+.info-card h3 .text-gray-600 { color: #4b5563; }
+
+/* Grid de información dentro de info-card */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr)); /* grid-cols-1 */
+    row-gap: 1rem; /* gap-y-4 */
+    column-gap: 2rem; /* gap-x-8 */
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* md:grid-cols-2 */
+    }
+}
+.info-grid p {
+    color: #4a5568; /* text-gray-700 */
+    margin-bottom: 0.5rem; /* mb-2 */
+    font-size: 0.95rem; /* Slightly larger for readability */
+}
+.info-grid p:last-child {
+    margin-bottom: 0;
+}
+.info-grid strong {
+    font-weight: 700; /* font-bold */
+    color: #2d3748; /* text-gray-800 */
+}
+.info-grid .text-blue-500 { color: #3b82f6; } /* text-blue-500 */
+.info-grid .text-blue-500:hover { text-decoration: underline; } /* hover:underline */
+
+
+/* Sección interna de tarjeta para fechas (inner-card-section) */
+.inner-card-section {
+    background-color: #f9fafb; /* bg-gray-50 */
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 1rem; /* p-4 */
+    text-align: center; /* text-center */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+    border: 1px solid #e2e8f0; /* Borde sutil */
+}
+.inner-card-section h6 {
+    color: #4b5563; /* text-gray-600 */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
+    margin-bottom: 0.25rem;
+}
+.inner-card-section p {
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 700; /* font-bold */
+    color: #1f2937; /* text-gray-800 */
+    margin-top: 0.25rem;
+}
+
+/* Borde superior para secciones (border-top-section) */
+.border-top-section {
+    border-top: 1px solid #e5e7eb; /* border-t border-gray-100 */
+    padding-top: 1rem; /* pt-4 */
+    margin-top: 1rem; /* mt-4 */
+}
+
+/* Badges de estatus */
+.status-badge {
+    padding: 0.25rem 0.7rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 0.5px 1.5px 0 rgba(0,0,0,0.03);
+}
+.status-badge.active { background-color: #d1fae5; color: #065f46; }
+.status-badge.inactive { background-color: #fee2e2; color: #991b1b; }
+
+/* Utilidades generales de texto y espaciado */
+.mb-6 { margin-bottom: 1.5rem; }
+.mr-2 { margin-right: 0.5rem; }
+.mr-3 { margin-right: 0.75rem; }
+.text-blue-600 { color: #2563eb; }
+.text-indigo-600 { color: #4f46e5; }
+.text-yellow-600 { color: #eab308; }
+.text-gray-600 { color: #4b5563; }
+.text-blue-500 { color: #3b82f6; }
+
+/* Estilos para botones de acción en tablas */
+.action-buttons {
+    width: 70px !important;
+    min-width: 70px !important;
+}
+
+.action-buttons .btn-action {
+    padding: 0;
+    margin: 0 2px;
+    min-width: 20px;
+    font-size: 1em;
+    background: none;
+    border: none;
+    color: #6c757d;
+    transition: all 0.2s;
+    display: inline-block;
+    text-align: center;
+}
+
+.action-buttons .btn-action.view {
+    color: #17a2b8;
+}
+
+.action-buttons .btn-action.edit {
+    color: #007bff;
+}
+
+.action-buttons .btn-action.delete {
+    color: #dc3545;
+}
+
+.action-buttons .btn-action:hover {
+    opacity: 0.8;
+    text-decoration: none;
+    transform: scale(1.1);
+}

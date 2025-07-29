@@ -116,7 +116,8 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                                 Url::to(['view', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Detalle de la Declaración de Salud',
-                                                    'class' => 'btn-action view'
+                                                    'class' => 'btn btn-link btn-sm text-success',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
                                         },    
@@ -126,7 +127,8 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                                 Url::to(['generar-pdf', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Declaración de salud',
-                                                    'class' => 'btn-action view',
+                                                    'class' => 'btn btn-link btn-sm text-success',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
                                                     'target' => '_blank'
                                                 ]
                                             );
@@ -137,7 +139,8 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                                 Url::to(['update', 'id' => $model->id]),
                                                 [
                                                     'title' => 'Editar',
-                                                    'class' => 'btn-action view'
+                                                    'class' => 'btn btn-link btn-sm text-success',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
                                         },
@@ -149,7 +152,8 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
                                                     'title' => 'Eliminar',
                                                     'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
                                                     'data-method' => 'post',
-                                                    'class' => 'btn-action view'
+                                                    'class' => 'btn btn-link btn-sm text-danger',
+                                                    'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                                                 ]
                                             );
                                         },*/

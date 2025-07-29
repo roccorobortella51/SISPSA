@@ -1,219 +1,183 @@
 <?php
 
 use yii\helpers\Html;
-use kartik\form\ActiveForm;
-use kartik\select2\Select2; // Para los selectores de estado y estatus
-use yii\widgets\MaskedInput; // Para campos con máscaras como RIF y teléfono
-use yii\helpers\Url; // Necesario para Url::to
-use app\components\UserHelper; // Asumo que esto se usa en getAgenteFuerzaList() y getClinicasList()
-use kartik\depdrop\DepDrop;
+use yii\helpers\Url;
+use app\components\UserHelper; // Importar el UserHelper
 
 /** @var yii\web\View $this */
 /** @var app\models\RmClinica $model */
-/** @var yii\widgets\ActiveForm $form */
-/** @var array $listaEstados */ // Espera la lista de estados para el Select2
-/** @var array $listaEstatus */ // Espera la lista de estatus para el Select2
-/** @var string $mode */ // Para saber si es 'create' o 'edit'
-/** @var bool $isNewRecord */ // Para saber si es un nuevo registro
+/** @var array $estadosList */
+/** @var array $municipiosList */
+/** @var array $parroquiaList */
+/** @var array $ciudadesList */
+/** @var array $listaEstatus */
 
 // Asegúrate de que estas variables siempre tengan un valor para evitar errores
-// si el controlador no las pasa por alguna razón (aunque el controlador sí las pasa).
-$listaEstados = $listaEstados ?? [];
+$estadosList = $estadosList ?? [];
+$municipiosList = $municipiosList ?? [];
+$parroquiaList = $parquiaList ?? [];
+$ciudadesList = $ciudadesList ?? [];
 $listaEstatus = $listaEstatus ?? [];
-$mode = $mode ?? 'create'; // Por defecto es 'create' si no se especifica
-$isNewRecord = $isNewRecord ?? true; // Por defecto es true para este formulario
 
-// --- PRE-CARGA DE LISTAS PARA LA TRADUCCIÓN ---
+$this->title = 'DETALLES DE LA CLÍNICA: ' . Html::encode($model->nombre);
+$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['index']];
+$this->params['breadcrumbs'][] = Html::encode($model->nombre);
 
+\yii\web\YiiAsset::register($this); // Esto registra los assets por defecto de Yii
 
-$this->title = 'DETALLES DE LA CLINICA: ' . $model->nombre;
-$this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'ACTUALIZAR';
+// Función auxiliar para formatear fechas, manejando valores nulos
+function formatUpdatedAt($value) {
+    if (empty($value)) {
+        return 'No se ha modificado';
+    }
+    // Asume que updated_at es un timestamp o fecha válida que Yii puede formatear
+    return Yii::$app->formatter->asDatetime($value, 'medium');
+}
 
 ?>
 
-<style>
-.nav-tabs .nav-link.active {
-    background-color: #007bff !important; /* Bootstrap primary blue */
-    color: white !important;
-    border-color: #007bff #007bff #fff !important;
-}
-</style>
+<div class="main-container"> <!-- Usando la clase 'main-container' definida en el fragmento CSS -->
+   
 
+    <!-- Encabezado y Botones de Acción Principal -->
+    <div class="header-section"> <!-- Usando la clase 'header-section' definida en el fragmento CSS -->
+        <h1><?= Html::encode($this->title) ?></h1>
 
-
-<div class="col-xl-12 col-md-12">
-    <div class="ms-panel ms-panel-fh">
-    <div class="ms-panel-header d-flex justify-content-between align-items-center">
-    <h1><?= Html::encode($this->title = 'Detalle de la Clínica'); ?></h1>
-    
-    <div>
-        <?= Html::a(
-            '<i class="fas fa-undo"></i> Volver', 
-            '#',
-            [
-                'class' => 'btn btn-primary btn-lg', 
-                'onclick' => 'window.history.back(); return false;', 
-                'title' => 'Volver a la página anterior', 
-            ]
-        ) ?> 
+        <div class="header-buttons-group"> <!-- Usando la clase 'header-buttons-group' definida en el fragmento CSS -->
+            <?= Html::a(
+                '<i class="fas fa-edit mr-2"></i> Actualizar',
+                ['update', 'id' => $model->id],
+                ['class' => 'btn-base btn-blue'] /* Usando clases de botón definidas en el fragmento CSS */
+            ) ?>
+           
+            <?= Html::a(
+                '<i class="fas fa-undo mr-2"></i> Volver',
+                '#',
+                [
+                    'class' => 'btn-base btn-gray', /* Usando clases de botón definidas en el fragmento CSS */
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
+                ]
+            ) ?>
+        </div>
     </div>
-</div>
-        <div class="ms-panel-body">
 
-            <div class="row row-cols-1 row-cols-md-4 g-3 mb-4">
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-file-invoice-dollar"></i> Baremo',
-                        ['baremo/index', 'clinica_id' => $model->id],
-                        ['class' => 'btn btn-primary btn-lg w-100']
-                    ) ?>
-                </div>
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-clipboard-list"></i> Planes',
-                        ['planes/index', 'clinica_id' => $model->id],
-                        ['class' => 'btn btn-primary btn-lg w-100']
-                    ) ?>
-                </div>
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-users"></i> Afiliados',
-                        ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                        ['class' => 'btn btn-primary btn-lg w-100']
-                    ) ?>
-                </div>
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-tasks"></i> Check List', // Icono y texto en la misma línea
-                        ['check-list-clinicas/index', 'clinica_id' => $model->id],
-                        ['class' => 'btn btn-primary btn-lg w-100'] // Quitamos 'py-4'
-                    ) ?>
-                </div>
+    <!-- Sección de Botones de Navegación Específicos de Clínica -->
+    <div class="nav-buttons-grid"> <!-- Usando la clase 'nav-buttons-grid' definida en el fragmento CSS -->
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
+                ['baremo/index', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-blue'] /* Usando las nuevas clases de botones de navegación */
+            ) ?>
+        </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-clipboard-list mr-2"></i> Planes',
+                ['planes/index', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-indigo'] /* Usando las nuevas clases de botones de navegación */
+            ) ?>
+        </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-users mr-2"></i> Afiliados',
+                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-teal'] /* Usando las nuevas clases de botones de navegación */
+            ) ?>
+        </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-tasks mr-2"></i> Check List',
+                ['check-list-clinicas/index', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-cyan'] /* Usando las nuevas clases de botones de navegación */
+            ) ?>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Información General de la Clínica -->
+    <div class="info-card info-card-border-blue"> <!-- Usando las clases 'info-card' y 'info-card-border-blue' definidas en el fragmento CSS -->
+        <h3>
+            <i class="fas fa-hospital-alt text-blue-600 mr-3"></i> Información General de la Clínica
+        </h3>
+        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+            <div>
+                <p><strong>Nombre:</strong> <?= Html::encode($model->nombre) ?></p>
+                <p><strong>RIF:</strong> <?= Html::encode($model->rif) ?></p>
             </div>
-            <?php $form = ActiveForm::begin([]); ?>
-
-            <div class="row">
-                <div class="col-md-4">
-                    <?= $form->field($model, 'nombre')->textInput([
-                        'readonly' => true,
-                        'autofocus' => true,
-                        'placeholder' => 'Ingrese el nombre de la clínica',
-                        'class' => 'form-control form-control-lg',
-                    ]) ?>
-                </div>
-                <div class="col-md-2">
-                    <?= $form->field($model, 'rif')->widget(MaskedInput::class, [
-                        'mask' => 'J-99999999-9',
-                        'options' => [
-                            'placeholder' => 'J-XXXXXXXX-X',
-                            'class' => 'form-control form-control-lg',
-                            'readonly' => true,
-                        ]
-                    ]) ?>
-                </div>
-                <div class="col-md-2">
-                    <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
-                        'mask' => '(9999) 999-9999',
-                        'options' => [
-                            'placeholder' => '(XXXX) XXX-XXXX',
-                            'class' => 'form-control form-control-lg',
-                            'readonly' => true,
-                        ]
-                    ]) ?>
-                </div>
-                    <div class="col-md-4">
-                   <?= $form->field($model, 'correo')->textInput([
-                    'readonly' => true,
-                    'placeholder' => 'Ingrese el correo electrónico',
-                    'class' => 'form-control form-control-lg',
-                    ]) ?>
-                </div>
+            <div>
+                <p><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></p>
+                <p><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($model->correo), 'mailto:' . Html::encode($model->correo), ['class' => 'text-blue-500']) ?></p>
             </div>
-
-            <div class="row">
-
-               
-                 <div class="col-md-3">
-                    <?= $form->field($model, 'estado')->textInput([
-                        'readonly' => true,
-                        'class' => 'form-control form-control-lg',
-                        'value' => $estadosList[$model->estado] ?? 'N/A'
-                    ]) ?>
-                </div>
-
-               <div class="col-md-3">
-    <?= $form->field($model, 'municipio')->textInput([
-        'readonly' => true,
-        'class' => 'form-control form-control-lg',
-        // ¡ASEGÚRATE DE QUE LA LÍNEA DE 'value' ESTÉ EXACTAMENTE ASÍ!
-        'value' => (isset($municipiosList[(string)$model->municipio]) ? $municipiosList[(string)$model->municipio] : 'N/A')
-    ]) ?>
-</div>
-                <div class="col-md-3">
-                    <?= $form->field($model, 'parroquia')->textInput([
-                        'readonly' => true,
-                        'class' => 'form-control form-control-lg',
-                        // --- AQUÍ ES DONDE TRADUCIMOS EL ID A NOMBRE ---
-                        // Asegúrate de que la variable sea la correcta, ej. $parroquiaList
-                        'value' => $parroquiaList[$model->parroquia] ?? 'N/A' // ¡CAMBIADO a $parroquiaList!
-                    ]) ?>
-                </div>
-
-                <div class="col-md-3">
-                    <?= $form->field($model, 'ciudad')->textInput([
-                        'readonly' => true,
-                        'class' => 'form-control form-control-lg',
-                        // --- AQUÍ ES DONDE TRADUCIMOS EL ID A NOMBRE ---
-                        'value' => $ciudadesList[$model->ciudad] ?? 'N/A'
-                    ]) ?>
-                </div>
+        </div>
+        <div class="info-grid border-top-section"> <!-- Usando la clase 'border-top-section' definida en el fragmento CSS -->
+            <div>
+                <p><strong>Código de Clínica:</strong> <?= Html::encode($model->codigo_clinica) ?></p>
             </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <?= $form->field($model, 'direccion')->textarea([
-                        'rows' => 3,
-                        'readonly' => true,
-                        'placeholder' => 'Ingrese la dirección completa',
-                        'class' => 'form-control form-control-lg',
-                    ]) ?>
-                </div>
+            <div>
+                <p><strong>Estatus:</strong> <span class="status-badge <?= $model->estatus == 'Activo' ? 'active' : 'inactive' ?>"><?= Html::encode($listaEstatus[$model->estatus] ?? $model->estatus) ?></span></p>
             </div>
+        </div>
+    </div>
 
-            <div class="row">
-
-             <div class="col-md-3">
-                    <?= $form->field($model, 'estatus')->widget(Select2::classname(), [
-                        'data' => $listaEstatus,
-                        'options' => [
-                            'placeholder' => 'Seleccione un estatus...',
-                            'class' => 'form-control form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'allowClear' => true,
-                        ],
-                    ]) ?>
-                </div>
-            
-                <div class="col-md-3">
-                    <?= $form->field($model, 'webpage')->textInput(['readonly' => true, 'placeholder' => 'Ej: www.ejemplo.com', 'class' => 'form-control form-control-lg',]) ?>
-                </div>
-                <div class="col-md-3">
-                    <?= $form->field($model, 'rs_instagram')->textInput(['readonly' => true, 'placeholder' => 'Ej: @tu_clinica', 'class' => 'form-control form-control-lg',]) ?>
-                </div>
-                <div class="col-md-3">
-                    <?= $form->field($model, 'codigo_clinica')->textInput(['readonly' => true, 'placeholder' => 'Código interno de clínica', 'class' => 'form-control form-control-lg',]) ?>
-                </div>
+    <!-- Tarjeta de Ubicación Geográfica -->
+    <div class="info-card info-card-border-indigo"> <!-- Usando las clases 'info-card' y 'info-card-border-indigo' definidas en el fragmento CSS -->
+        <h3>
+            <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación Geográfica
+        </h3>
+        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+            <div>
+                <p><strong>Estado:</strong> <?= Html::encode($estadosList[$model->estado] ?? 'N/A') ?></p>
+                <p><strong>Municipio:</strong> <?= Html::encode($municipiosList[(string)$model->municipio] ?? 'N/A') ?></p>
             </div>
-
-            <div class="row mt-4 mb-3"> <div class="col-12 d-flex justify-content-center gap-3"> <?= Html::a('Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-lg btn-success']) ?>
-                </div>
+            <div>
+                <p><strong>Parroquia:</strong> <?= Html::encode($parroquiaList[$model->parroquia] ?? 'N/A') ?></p>
+                <p><strong>Ciudad:</strong> <?= Html::encode($ciudadesList[$model->ciudad] ?? 'N/A') ?></p>
             </div>
+        </div>
+        <p class="border-top-section"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
+    </div>
 
-            <?php ActiveForm::end(); ?>
+    <!-- Tarjeta de Información de Contacto y Redes Sociales -->
+    <div class="info-card info-card-border-yellow"> <!-- Usando las clases 'info-card' y 'info-card-border-yellow' definidas en el fragmento CSS -->
+        <h3>
+            <i class="fas fa-globe text-yellow-600 mr-3"></i> Web y Redes Sociales
+        </h3>
+        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+            <div>
+                <p><strong>Página Web:</strong>
+                    <?php if (!empty($model->webpage)): ?>
+                        <?= Html::a(Html::encode($model->webpage), $model->webpage, ['target' => '_blank', 'class' => 'text-blue-500']) ?>
+                    <?php else: ?>
+                        N/A
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div>
+                <p><strong>Instagram:</strong>
+                    <?php if (!empty($model->rs_instagram)): ?>
+                        <?= Html::a(Html::encode($model->rs_instagram), 'https://instagram.com/' . ltrim($model->rs_instagram, '@'), ['target' => '_blank', 'class' => 'text-blue-500']) ?>
+                    <?php else: ?>
+                        N/A
+                    <?php endif; ?>
+                </p>
+            </div>
+        </div>
+    </div>
 
+    <!-- Tarjeta de Fechas de Gestión -->
+    <div class="info-card info-card-border-gray"> <!-- Usando las clases 'info-card' y 'info-card-border-gray' definidas en el fragmento CSS -->
+        <h3>
+            <i class="fas fa-calendar-alt text-gray-600 mr-3"></i> Fechas de Gestión
+        </h3>
+        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+            <div class="inner-card-section"> <!-- Usando la clase 'inner-card-section' definida en el fragmento CSS -->
+                <h6>Fecha de Creación</h6>
+                <p><?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'medium')) ?></p>
+            </div>
+            <div class="inner-card-section"> <!-- Usando la clase 'inner-card-section' definida en el fragmento CSS -->
+                <h6>Última Actualización</h6>
+                <p><?= Html::encode(formatUpdatedAt($model->updated_at)) ?></p>
+            </div>
         </div>
     </div>
 </div>

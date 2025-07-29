@@ -30,7 +30,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
             <div>
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
             </div>
 
         </div>
@@ -143,49 +143,35 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             ],
 
                            // Columna de Acciones (Ver, Editar, Eliminar)
-                            [
+                        [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // ¡CAMBIO AQUÍ! Añadimos {view} y removemos {delete}
-                                'options' => ['style' => 'width:80px; min-width:80px;'],
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
+                                'template' => '{view}&nbsp;{update}',
+                                'options' => ['class' => 'action-buttons'],
+                                'headerOptions' => ['style' => 'color: white!important;'], 
+                                'contentOptions' => ['class' => 'text-center'],
                                 'buttons' => [
-                                    'view' => function ($url, $model, $key) { // ¡BOTÓN 'VIEW' AÑADIDO!
+                                    'view' => function ($url, $model, $key) {
                                         return Html::a(
-                                            '<i class="fa fa-eye ms-text-primary"></i>', // Icono de ojo
-                                            Url::to(['view', 'id' => $model->id]), // URL a la acción 'view'
+                                            '<i class="fas fa-eye"></i>',
+                                            $url,
                                             [
                                                 'title' => 'Ver Detalle',
-                                                'class' => 'btn btn-link btn-sm text-info', // Estilo de botón de información
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                'class' => 'btn-action view'
                                             ]
                                         );
                                     },
                                     'update' => function ($url, $model, $key) {
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt ms-text-success"></i>',
-                                            Url::to(['update', 'id' => $model->id]),
+                                            '<i class="fas fa-pen"></i>',
+                                            $url,
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn btn-link btn-sm text-success',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                'class' => 'btn-action edit'
                                             ]
                                         );
                                     },
-                                    /*'delete' => function ($url, $model, $key) { // ¡BOTÓN 'DELETE' COMENTADO/ELIMINADO!
-                                        return Html::a(
-                                            '<i class="fas fa-trash-alt"></i>',
-                                            Url::to(['delete', 'id' => $model->id]),
-                                            [
-                                                'title' => 'Eliminar',
-                                                'class' => 'btn btn-link btn-sm text-danger',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
-                                                'data-confirm' => '¿Estás seguro de que quieres eliminar este elemento?',
-                                                'data-method' => 'post'
-                                            ]
-                                        );
-                                    },*/
+                             
                                 ],
                             ],
                         ], // Fin de columns
