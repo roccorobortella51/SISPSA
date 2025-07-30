@@ -78,9 +78,12 @@ class RmClinicaController extends Controller
         // mapeando por 'codigo_muni' para que coincida con $model->municipio.
         $municipiosList = [];
         if (!empty($model->estado)) {
+
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+
             $municipiosList = ArrayHelper::map(
                 RmMunicipio::find()
-                    ->where(['estado_codigo' => $model->estado])
+                    ->where(['estado_codigo' => $estado->id])
                     ->asArray()
                     ->all(),
                 'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
@@ -95,9 +98,11 @@ class RmClinicaController extends Controller
         // Obtener la lista de ciudades (desde RmCiudad)
         $ciudadesList = [];
         if (!empty($model->estado)) {
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+
             $ciudadesList = ArrayHelper::map(
                 RmCiudad::find()
-                    ->where(['estado_codigo' => $model->estado])
+                    ->where(['estado_codigo' => $estado->id])
                     ->asArray()
                     ->all(),
                 'id',
@@ -202,9 +207,7 @@ class RmClinicaController extends Controller
 
                 return $this->redirect(['view', 'id' => $model->id]);
             }
-        } else {
-            $model->loadDefaultValues();
-        }
+        } 
 
         return $this->render('create', [
             'model' => $model,
