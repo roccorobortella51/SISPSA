@@ -206,6 +206,7 @@ class RmClinicaController extends Controller
                 if($model->save()){
                     return $this->redirect(['view', 'id' => $model->id]);
 
+
                 }else{
 
                     echo "MODEL NOT SAVED";
