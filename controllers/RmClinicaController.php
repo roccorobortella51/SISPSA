@@ -193,8 +193,7 @@ class RmClinicaController extends Controller
     {
         $model = new RmClinica();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post())) {
+            if ($this->request->isPost && $model->load($this->request->post())) {
 
                 $estado = RmEstado::find()->where(['id' => $model->estado])->one();
 
@@ -203,12 +202,20 @@ class RmClinicaController extends Controller
                 }
 
                 $model->estatus = "Activo";
-                $model->save();
 
-                return $this->redirect(['view', 'id' => $model->id]);
+                if($model->save()){
+                    return $this->redirect(['view', 'id' => $model->id]);
+
+                }else{
+
+                    echo "MODEL NOT SAVED";
+                      print_r($model->getAttributes());
+                      print_r($model->getErrors());
+                      exit;
+                }
+
             }
-        } 
-
+         
         return $this->render('create', [
             'model' => $model,
         ]);
@@ -225,8 +232,18 @@ class RmClinicaController extends Controller
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($this->request->isPost && $model->load($this->request->post())) {
+
+                if($model->save()){
+                    return $this->redirect(['view', 'id' => $model->id]);
+
+                }else{
+
+                    echo "MODEL NOT SAVED";
+                      print_r($model->getAttributes());
+                      print_r($model->getErrors());
+                      exit;
+                }        
         }
 
         return $this->render('update', [
