@@ -8,6 +8,7 @@ use app\assets\AppAsset;
 use yii\helpers\Html;
 use yii\bootstrap4\BootstrapAsset;
 use yii\bootstrap4\BootstrapPluginAsset;
+use yii\bootstrap4\Alert; 
 
 BootstrapAsset::register($this);
 BootstrapPluginAsset::register($this);
@@ -43,7 +44,9 @@ $this->registerJsFile($publishedRes[1].'/control_sidebar.js', ['depends' => '\ha
     </style>
 </head>
 <body class="hold-transition sidebar-mini">
+
 <?php $this->beginBody() ?>
+
 
 <div class="wrapper">
     <!-- Navbar -->

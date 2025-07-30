@@ -64,6 +64,7 @@ class UserDatos extends ActiveRecord
     public $imagenIdentificacionFile;
     public $videoFile;
     public $codigoAsesor;
+    public $masivoFile;
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -145,7 +146,7 @@ class UserDatos extends ActiveRecord
         
             // 6. Validaciones para carga de archivos (se mantienen igual)
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
-            [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
+            [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
             [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
 
             // 7. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
@@ -154,7 +155,11 @@ class UserDatos extends ActiveRecord
             // 8. Campos seguros (timestamps)
             // CAMBIO: 'cedula' se marca como 'safe'. Esto le dice a Yii que está bien si el valor de 'cedula'
             // se modifica programáticamente (en 'beforeSave()') y no directamente desde un input del formulario.
-            [['created_at', 'updated_at', 'deleted_at', 'cedula', 'fechanac','clinica_id'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
+            [['created_at', 'updated_at', 'deleted_at', 'fechanac','clinica_id'], 'safe'],
+            
+            // Validación específica para cédula - debe ser numérica
+            [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
+            [['cedula'], 'string', 'max' => 10, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)

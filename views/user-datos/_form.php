@@ -9,6 +9,8 @@ use kartik\widgets\SwitchInput; // No usado en este fragmento, pero puede manten
 use kartik\widgets\DatePicker;
 use kartik\depdrop\DepDrop;
 use yii\helpers\Url;
+use kartik\widgets\FileInput;
+
 use app\models\UserDatosType;
 
 $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
@@ -34,6 +36,27 @@ $currentRoute = Yii::$app->controller->getRoute(); // 'controlador/accion'
 .btn.active {
     padding: .5rem 1rem !important; /* Ajusta según el padding estándar de btn-lg */
     /* Asegúrate de que el color de fondo y borde también sean consistentes con el diseño de botón activo */
+}
+
+.file-input {
+    width: 150px !important;
+}
+
+.file-input .file-toolbar{
+    width: 150px !important;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.file-input .file-preview {
+    width: 60rem !important;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.file-input .file-caption {
+    width: 150px !important;
+    box-sizing: border-box;
 }
 </style>
 
@@ -128,7 +151,10 @@ $this->registerJs($js);
 ?>
 
 <div class="user-datos-form">
-<?php $form = ActiveForm::begin(['id' => 'user-datos-form']); ?>
+<?php $form = ActiveForm::begin([
+    'id' => 'user-datos-form',
+    'options' => ['enctype' => 'multipart/form-data']
+    ]); ?>
 
 <?php
 $jsValidation = <<<JS
@@ -409,10 +435,73 @@ if (!$model->isNewRecord) { ?>
                         ]);  ?>
                 </div>
             </div>
-
-            <br>
+            <div class='row'>
+                <div class="col-md-12">
+                    <?= $form->field($model, 'direccion')->textInput([
+                        'class' => 'form-control form-control-lg',
+                        'placeholder' => 'Ingrese la dirección'
+                    ])->label('Dirección') ?>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <?= $form->field($model, 'selfieFile')->widget(FileInput::classname(),[
+                        'name' => 'attachments',
+                        'pluginOptions' => [
+                            'browseClass' => 'btn btn-primary',
+                            'removeClass' => 'btn btn-secondary',
+                            'removeIcon' => '<i class="fas fa-trash"></i> ',
+                            'showUpload' => false,
+                            'showCancel' => false,
+                            'previewFileType' => 'image',
+                            'maxFileSize' => 2800,
+                            'previewSettings' => [
+                                'image' => ['width' => '150px', 'height' => 'auto'],
+                            ],
+                            //'initialPreview' => $initialPreview,
+                            //'initialPreviewAsData' => true,
+                            //'initialPreviewConfig' => $initialPreviewConfig,
+                            //'overwriteInitial' => true,
+                            //'layoutTemplates' => [
+                            //    'preview' => '<div class="file-preview {class}" style="width: 200px;"></div>',
+                            //],
+                        ],
+                        'options' => [
+                            //'disabled' => $disabled,
+                        ],
+                        ])->label('Foto del usuario');
+                    ?>    
+                </div>
+                <div class="col-md-6">
+                    <?= $form->field($model, 'imagenIdentificacionFile')->widget(FileInput::classname(),[
+                        'name' => 'attachments',
+                        'pluginOptions' => [
+                            'browseClass' => 'btn btn-primary',
+                            'removeClass' => 'btn btn-secondary',
+                            'removeIcon' => '<i class="fas fa-trash"></i> ',
+                            'previewFileType' => 'image',
+                            'showUpload' => false,
+                            'showCancel' => false,
+                            'maxFileSize' => 2800,
+                            'previewSettings' => [
+                                'image' => ['width' => '150px', 'height' => 'auto'],
+                            ],
+                            //'initialPreview' => $initialPreview,
+                            //'initialPreviewAsData' => true,
+                            //'initialPreviewConfig' => $initialPreviewConfig,
+                            //'overwriteInitial' => true,
+                            //'layoutTemplates' => [
+                            //    'preview' => '<div class="file-preview {class}" style="width: 200px;"></div>',
+                            //],
+                        ],
+                        'options' => [
+                            //'disabled' => $disabled,
+                        ],
+                        ])->label('Imagen de identificacion');
+                    ?>    
+                </div>
+            </div>
             <h1>Datos del Contrato</h1>
-                <br>
             <div class = 'row'>
                 <div class="col-md-6">
                     <?= $form->field($model, 'clinica_id')->widget(Select2::classname(), [

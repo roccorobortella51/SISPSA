@@ -18,15 +18,35 @@ $js = <<<JS
         $('#pagos-monto_pagado').on('change keyup', function(){
             var monto_pagado = $(this).val();
             var tasa = $('#pagos-tasa').val();
-            var monto_total = monto_pagado * tasa;
-            $('#pagos-monto_usd').val(monto_total);
+            if ($('#pagos-metodo_pago').val() != 'Zelle'){
+                var monto_total = monto_pagado * tasa;
+                $('#pagos-monto_usd').val(monto_total);
+            }else{
+                $('#pagos-monto_usd').val(monto_pagado);
+            }
             console.log(monto_total);
         })
+        $('#pagos-metodo_pago').on('change', function(){
+            $('#pagos-monto_usd').val(0);
+            $('#pagos-monto_pagado').val(0);
+            if ($(this).val() == 'Zelle'){
+                $('.field-pagos-tasa').hide();
+            }else{
+                $('.field-pagos-tasa').show();
+            }            
+        });
     })
 JS;
 $this->registerJs($js);
 
 ?>
+<style>
+    .file-input .file-caption{
+        width: 50% !important;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+</style>
 <div class="pagos-form">
 
 <?php $form = ActiveForm::begin([
@@ -102,24 +122,27 @@ $this->registerJs($js);
         </div>
     </div>
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <?php
             $initialPreview = [];
             $initialPreviewConfig = [];
             if (!$model->isNewRecord && $model->imagen_prueba) {
-                $initialPreview[] = \yii\helpers\Url::to('@web/' . $model->imagen_prueba);
+                $initialPreview[] = \yii\helpers\Url::to($model->imagen_prueba);
                 $initialPreviewConfig[] = ['caption' => basename($model->imagen_prueba), 'key' => 1];
             }
             ?>
             <?= $form->field($model, 'imagen_prueba_file')->widget(FileInput::classname(),[
                 'name' => 'attachments',
                 'pluginOptions' => [
-                    'browseClass' => 'btn btn-success',
-                    'uploadClass' => 'btn btn-info',
-                    'removeClass' => 'btn btn-danger',
+                    'browseClass' => 'btn btn-primary',
+                    'removeClass' => 'btn btn-secondary',
                     'removeIcon' => '<i class="fas fa-trash"></i> ',
                     'previewFileType' => 'image',
-                    'showUpload' => true,
+                    'showUpload' => false,
+                    'showCancel' => false,
+                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                    'previewFileType' => 'image',
+                    'showUpload' => false,
                     'maxFileSize' => 2800,
                     'previewSettings' => [
                         'image' => ['width' => '150px', 'height' => 'auto'],
