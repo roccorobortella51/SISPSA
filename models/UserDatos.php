@@ -155,7 +155,11 @@ class UserDatos extends ActiveRecord
             // 8. Campos seguros (timestamps)
             // CAMBIO: 'cedula' se marca como 'safe'. Esto le dice a Yii que está bien si el valor de 'cedula'
             // se modifica programáticamente (en 'beforeSave()') y no directamente desde un input del formulario.
-            [['created_at', 'updated_at', 'deleted_at', 'cedula', 'fechanac','clinica_id'], 'safe'], // <-- ¡'cedula' AHORA ESTÁ AQUÍ!
+            [['created_at', 'updated_at', 'deleted_at', 'fechanac','clinica_id'], 'safe'],
+            
+            // Validación específica para cédula - debe ser numérica
+            [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
+            [['cedula'], 'string', 'max' => 10, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
