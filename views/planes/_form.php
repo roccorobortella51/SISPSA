@@ -81,10 +81,10 @@ use kartik\select2\Select2;
                     <table class="table table-bordered table-hover">
                         <thead class="thead-light">
                             <tr>
-                                <th>Servicio</th>
-                                <th width="15%">% Cobertura</th>
+                                <th>Servicio (Baremos)</th>
+                                <!--<th width="15%">% Cobertura</th> -->
                                 <th width="15%">Límite</th>
-                                <th width="20%">Plazo Espera</th>
+                                <th width="20%">Plazo Espera Mes</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -95,11 +95,13 @@ use kartik\select2\Select2;
                                         <?= Html::activeHiddenInput($item, "[$index]nombre_servicio") ?>
                                         <?= $item->baremo->nombre_servicio ?>
                                     </td>
+                                    <?php /*
                                     <td>
                                         <?= $form->field($item, "[$index]porcentaje_cobertura")
                                             ->textInput(['type' => 'number', 'min' => 0, 'max' => 100])
                                             ->label(false) ?>
                                     </td>
+                                    */?>
                                     <td>
                                         <?= $form->field($item, "[$index]cantidad_limite")
                                             ->textInput(['type' => 'number', 'min' => 0])
@@ -107,7 +109,7 @@ use kartik\select2\Select2;
                                     </td>
                                     <td>
                                         <?= $form->field($item, "[$index]plazo_espera")
-                                            ->textInput(['placeholder' => 'Ej: 30 días'])
+                                            ->textInput(['type' => 'number', 'min' => 0, 'max' => 100])
                                             ->label(false) ?>
                                     </td>
                                 </tr>
