@@ -22,6 +22,16 @@ $this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['/rm-clinica/
 
 $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la página y breadcrumbs
 
+$rol = UserHelper::getMyRol();
+
+$permisos = false;
+
+if ($rol == 'superadmin') 
+{
+    $permisos = true;
+}
+
+
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -45,38 +55,22 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                             ) ?> 
                         </div>
         </div>
-        
-            <div class="ms-panel-body">
-                <div class="row">
-                    <?php $form = ActiveForm::begin(); ?>
-                    <div class="col-md-2">
-                        <?= $form->field($model, 'nombre')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba un nombre para el plan']) ?>
-                    </div>
-                    <div class="col-md-4">
-                         <?= $form->field($model, 'descripcion')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Escriba una descripción para el plan']) ?>
-                    </div>
-                    <div class="col-md-2">
-                         <?= $form->field($model, 'cobertura')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
-                    </div>
-                    <div class="col-md-2">
-                         <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0.00']) ?>
-                    </div>
-                    <div class="col-md-1">
-                         <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>
-                    </div>
-                    <div class="col-md-1">
-                         <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number', 'class' => 'form-control form-control-lg', 'placeholder' => '0']) ?>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="form-group text-rigth mt-4" style="margin-right:10px;">
-                            <div class="form-group text-rigth mt-4" style="margin-right:10px;">
-                                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
-                            </div>
+        <?php if($permisos == true){?>
+                    <div class="ms-panel-header d-flex justify-content-between align-items-center">
+                    <?php if($permisos == true){?>
+                        <div> 
+                            
+                            <?= Html::a(
+                                '<i class="fas fa-plus"></i> CREAR NUEVO PLÁN', 
+                                ['create', 'clinica_id' => $clinica->id], 
+                                // Este es el último botón, no necesita margen a la derecha
+                                ['class' => 'btn btn-outline-primary btn-lg'] 
+                            ) ?> 
                         </div>
+                    <?php }?>
                     </div>
-                     <?php ActiveForm::end(); ?>
-                </div>
-            </div>
+        
+        <?php }?>
         </div>
      </div>
     </div>
@@ -202,30 +196,32 @@ $this->title = 'Gestión de Planes'; // Este sigue siendo el título para la pá
                                 [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{update}</div>',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
                                     'options' => ['style' => 'width:55px; min-width:55px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                     'buttons' => [
-                                        /*'view' => function ($url, $model, $key) {
+                                       'view' => function ($url, $model, $key) {
                                             return Html::a(
                                                 '<i class="fa fa-eye"></i>',
                                                 Url::to(['view', 'id' => $model->id]),
                                                 [
-                                                    'title' => 'Detalle de la Clínica',
+                                                    'title' => 'Detalles de Plán',
                                                     'class' => 'btn-action view'
                                                 ]
                                             );
-                                        },*/
-                                        'update' => function ($url, $model, $key) {
-                                            return Html::a(
-                                                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                Url::to(['update', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Editar',
-                                                    'class' => 'btn-action view'
-                                                ]
-                                            );
+                                        },
+                                        'update' => function ($url, $model, $key)use($permisos) {
+                                            if($permisos == true){
+                                                return Html::a(
+                                                    '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                    Url::to(['update', 'id' => $model->id]),
+                                                    [
+                                                        'title' => 'Editar',
+                                                        'class' => 'btn-action view'
+                                                    ]
+                                                );
+                                            }
                                         },
                                         /*'delete' => function ($url, $model, $key) {
                                             return Html::a(

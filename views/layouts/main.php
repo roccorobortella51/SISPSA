@@ -25,6 +25,8 @@ $assetDir = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/admi
 $publishedRes = Yii::$app->assetManager->publish('@vendor/hail812/yii2-adminlte3/src/web/js');
 $this->registerJsFile($publishedRes[1].'/control_sidebar.js', ['depends' => '\hail812\adminlte3\assets\AdminLteAsset']);
 
+$logo_pestana = Yii::getAlias('@web/img/sispsa.svg');
+
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
@@ -33,9 +35,14 @@ $this->registerJsFile($publishedRes[1].'/control_sidebar.js', ['depends' => '\ha
     <meta charset="<?= Yii::$app->charset ?>">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
     <?php $this->registerCsrfMetaTags() ?>
     <title><?= Html::encode($this->title) ?></title>
+    
+    <link rel="icon" href=<?= $logo_pestana?> sizes="32x32" />
+    <link rel="icon" href=<?= $logo_pestana?> sizes="192x192" />
+    <link rel="apple-touch-icon" href=<?= $logo_pestana?> />
+    <meta name="msapplication-TileImage" content=<?= $logo_pestana?> />
+
     <?php $this->head() ?>
     <style>
         body.sidebar-collapse .hide-on-sidebar-collapse {

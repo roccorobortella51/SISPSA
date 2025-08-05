@@ -166,4 +166,50 @@ class BaremoController extends Controller
             }
         }
     }
+
+   
+        public function actionExportExcel()
+        {
+            // Obtén los datos del dataProvider. Aquí asumo que tienes una forma de obtener el dataProvider
+            // con los filtros aplicados. Esto es un ejemplo.
+            $searchModel = new \app\models\BaremoSearch(); // O el nombre de tu SearchModel
+            $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+            $dataProvider->pagination = false; // Desactivar la paginación para obtener todos los registros
+
+            // Nombres de las columnas para el archivo CSV
+            $headers = [
+                'Area',
+                'Nombre del Servicio',
+                'Descripción',
+                'Costo',
+                'Precio',
+                'Estatus'
+            ];
+
+            // Abre un stream de memoria para escribir el archivo CSV
+            $fileName = 'baremo-export-' . date('Y-m-d') . '.csv';
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $fileName . '"');
+
+            $out = fopen('php://output', 'w');
+            fputs($out, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF))); // Agregar BOM para compatibilidad con Excel
+            fputcsv($out, $headers);
+
+            // Iterar sobre los datos y escribir en el archivo
+            foreach ($dataProvider->getModels() as $model) {
+                $areaName = $model->area ? $model->area->nombre : "";
+                $row = [
+                    $areaName,
+                    $model->nombre_servicio,
+                    $model->descripcion,
+                    $model->costo,
+                    $model->precio,
+                    $model->estatus === 1 ? 'Activo' : 'Inactivo',
+                ];
+                fputcsv($out, $row);
+            }
+            
+            fclose($out);
+            exit();
+        }
 }

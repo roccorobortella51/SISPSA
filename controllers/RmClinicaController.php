@@ -80,6 +80,10 @@ class RmClinicaController extends Controller
         if (!empty($model->estado)) {
 
             $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+            if($estado){
+
+                $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+                if($estado){
 
             $municipiosList = ArrayHelper::map(
                 RmMunicipio::find()
@@ -88,7 +92,8 @@ class RmClinicaController extends Controller
                     ->all(),
                 'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
                 'nombre'
-            );
+            );}
+            }
         }
         // ------------------------------------
 
@@ -99,15 +104,18 @@ class RmClinicaController extends Controller
         $ciudadesList = [];
         if (!empty($model->estado)) {
             $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+                if($estado){
 
-            $ciudadesList = ArrayHelper::map(
-                RmCiudad::find()
-                    ->where(['estado_codigo' => $estado->id])
-                    ->asArray()
-                    ->all(),
-                'id',
-                'nombre'
-            );
+                $ciudadesList = ArrayHelper::map(
+                    RmCiudad::find()
+                        ->where(['estado_codigo' => $estado->id])
+                        ->asArray()
+                        ->all(),
+                    'id',
+                    'nombre'
+                );
+            }
         
         }
         // ------------------------------------
@@ -144,14 +152,19 @@ class RmClinicaController extends Controller
         // mapeando por 'codigo_muni' para que coincida con $model->municipio.
         $municipiosList = [];
         if (!empty($model->estado)) {
-            $municipiosList = ArrayHelper::map(
-                RmMunicipio::find()
-                    ->where(['estado_codigo' => $model->estado])
-                    ->asArray()
-                    ->all(),
-                'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
-                'nombre'
-            );
+
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+            if($estado){
+
+                $municipiosList = ArrayHelper::map(
+                    RmMunicipio::find()
+                        ->where(['estado_codigo' => $estado->id])
+                        ->asArray()
+                        ->all(),
+                    'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
+                    'nombre'
+                );
+            }
         }
         // ------------------------------------
 
@@ -161,14 +174,19 @@ class RmClinicaController extends Controller
         // Obtener la lista de ciudades (desde RmCiudad)
         $ciudadesList = [];
         if (!empty($model->estado)) {
-            $ciudadesList = ArrayHelper::map(
-                RmCiudad::find()
-                    ->where(['estado_codigo' => $model->estado])
-                    ->asArray()
-                    ->all(),
-                'id',
-                'nombre'
-            );
+
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+                if($estado){
+
+                    $ciudadesList = ArrayHelper::map(
+                        RmCiudad::find()
+                            ->where(['estado_codigo' => $estado->id])
+                            ->asArray()
+                            ->all(),
+                        'id',
+                        'nombre'
+                    );
+            }
         
         }
         // ------------------------------------
@@ -206,7 +224,6 @@ class RmClinicaController extends Controller
                 if($model->save()){
                     return $this->redirect(['view', 'id' => $model->id]);
 
-
                 }else{
 
                     echo "MODEL NOT SAVED";
@@ -233,18 +250,8 @@ class RmClinicaController extends Controller
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post())) {
-
-                if($model->save()){
-                    return $this->redirect(['view', 'id' => $model->id]);
-
-                }else{
-
-                    echo "MODEL NOT SAVED";
-                      print_r($model->getAttributes());
-                      print_r($model->getErrors());
-                      exit;
-                }        
+        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
+            return $this->redirect(['view', 'id' => $model->id]);
         }
 
         return $this->render('update', [

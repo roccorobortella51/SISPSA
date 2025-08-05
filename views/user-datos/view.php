@@ -4,23 +4,6 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use app\components\UserHelper;
 
-/** @var yii\web\View $this */
-/** @var app\models\UserDatos $model */
-/** @var string $estado Nombre del estado resuelto para mostrar */
-/** @var string $municipio Nombre del municipio resuelto para mostrar */
-/** @var string $parroquia Nombre de la parroquia resuelta para mostrar */
-/** @var string $ciudad Nombre de la ciudad resuelta para mostrar */
-
-$this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
-$this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
-$this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
-\yii\web\YiiAsset::register($this); // Registra los assets por defecto de Yii (AppAsset se encargará del resto)
-
-// Función para formatear fechas y horas (si no está disponible globalmente)
-function formatDateTime($value) {
-    return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
-}
-
 $rol = UserHelper::getMyRol();
 
 $permisos = false;
@@ -30,8 +13,29 @@ if ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor')
     $permisos = true;
 }
 
-?>
+/** @var yii\web\View $this */
+/** @var app\models\UserDatos $model */
+/** @var string $estado Nombre del estado resuelto para mostrar */
+/** @var string $municipio Nombre del municipio resuelto para mostrar */
+/** @var string $parroquia Nombre de la parroquia resuelta para mostrar */
+/** @var string $ciudad Nombre de la ciudad resuelta para mostrar */
 
+if($permisos == true){
+    $this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
+    $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
+    $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
+}
+\yii\web\YiiAsset::register($this); // Registra los assets por defecto de Yii (AppAsset se encargará del resto)
+
+// Función para formatear fechas y horas (si no está disponible globalmente)
+function formatDateTime($value) {
+    return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
+}
+
+
+
+?>
+<?php if ($permisos): ?>
 <!-- Breadcrumbs -->
 <nav class="mb-6" aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -46,12 +50,12 @@ if ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor')
         <?php endforeach; ?>
     </ol>
 </nav>
-
+<?php endif; ?>
 <!-- Encabezado y Botones de Acción -->
 <div class="ms-panel-header"> 
     <h1 class="mb-0"><?= Html::encode($this->title) ?></h1> 
-    <div class="button-group-spacing">
-        <?= Html::a(
+    <div  align="center">
+        <?php echo Html::a(
             '<i class="fas fa-file-pdf mr-2"></i> Contrato',
             ['user-datos/generar-contratov', 'id' => $model->id],
             [
@@ -68,17 +72,18 @@ if ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor')
                 ['update', 'id' => $model->id],
                 ['class' => 'btn btn-primary']
             ) ?>
-        <?php endif; ?>
+     
         
-        <?= Html::a(
-            '<i class="fas fa-undo mr-2"></i> Volver',
-            '#',
-            [
-                'class' => 'btn btn-secondary',
-                'onclick' => 'window.history.back(); return false;',
-                'title' => 'Volver a la página anterior',
-            ]
-        ) ?>
+            <?php  Html::a(
+                '<i class="fas fa-undo mr-2"></i> Volver',
+                '#',
+                [
+                    'class' => 'btn btn-secondary',
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
+                ]
+            ) ?>
+        <?php endif; ?>
     </div>
 </div>
 

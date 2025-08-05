@@ -105,18 +105,18 @@ class Planes extends \yii\db\ActiveRecord
         return [
             'id' => 'ID',
             'created_at' => 'Creado en',
-            'nombre' => 'NOMBRE',
-            'descripcion' => 'DESCRIPCIÓN',
-            'precio' => 'PRECIO',
-            'estatus' => 'ESTATUS',
-            'nota' => 'NOTA',
-            'tipo' => 'TIPO',
-            'clinica_id' => 'CLÍNICA',
-            'cobertura' => 'COBERTURA',
+            'nombre' => 'Nombre del Plán',
+            'descripcion' => 'Descripción',
+            'precio' => 'Precio',
+            'estatus' => 'Estatus',
+            'nota' => 'Nota',
+            'tipo' => 'Tipo',
+            'clinica_id' => 'Clínica',
+            'cobertura' => 'Cobertura',
             'PDF' => 'PDF',
-            'comision' => 'COMISIÓN',
-            'edad_minima' => 'EDAD MÍNIMA',
-            'edad_limite' => 'EDAD LÍMITE',
+            'comision' => 'Comisión',
+            'edad_minima' => 'Edad Mínima',
+            'edad_limite' => 'Edad Límite',
             'deleted_at' => 'Eliminado en',
             'updated_at' => 'Actualizado en',
         ];
@@ -150,6 +150,11 @@ class Planes extends \yii\db\ActiveRecord
     public function getPlanesItemsCoberturas()
     {
         return $this->hasMany(PlanesItemsCobertura::class, ['plan_id' => 'id']);
+    }
+
+    public function getBaremo()
+    {
+        return $this->hasOne(Baremo::class, ['id' => 'baremo_id']);
     }
 
 }
