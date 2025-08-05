@@ -1,99 +1,141 @@
 <?php
 
 use yii\helpers\Html;
-use yii\helpers\ArrayHelper;
-use yii\widgets\GridView;
+use yii\helpers\Url;
+use app\components\UserHelper; // Importar el UserHelper
+use app\models\RmClinica; // Importar el modelo de la clínica
+use app\models\Baremo; // Importar el modelo de Baremo para los servicios
 
-/* @var $this yii\web\View */
-/* @var $model app\models\Planes */
-/* @var $itemsCobertura app\models\PlanesItemsCobertura[] */
-/* @var $baremosFaltantes app\models\Baremo[] */
+/** @var yii\web\View $this */
+/** @var app\models\Planes $model */
+/** @var app\models\PlanesItemsCobertura[] $itemsCobertura */
+/** @var app\models\Baremo[] $baremosFaltantes */
+/** @var int|null $clinica_id // Se asume que el ID de la clínica se pasa a esta vista, puede ser nulo */
 
-$this->title = "DETALLES DEL PLÁN: " . $model->nombre;
-$this->params['breadcrumbs'][] = ['label' => 'PLANES', 'url' => ['index', 'clinica_id' => $model->clinica_id]];
-$this->params['breadcrumbs'][] = $this->title;
 
-// Formatear fechas
-$createdAt = Yii::$app->formatter->asDatetime($model->created_at);
-$updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
+if (!isset($clinica_id)) {
+    $clinica_id = Yii::$app->request->get('clinica_id');
+}
+
+
+if (empty($clinica_id) && !empty($model->clinica_id)) {
+    $clinica_id = $model->clinica_id;
+}
+
+$clinica = null;
+if (!empty($clinica_id)) {
+    $clinica = RmClinica::findOne((int)$clinica_id);
+    if (!$clinica) {
+        $clinica = (object)['id' => (int)$clinica_id, 'nombre' => 'Clínica Desconocida'];
+    }
+} else {
+    $clinica = (object)['id' => null, 'nombre' => 'Clínica Desconocida'];
+}
+
+$this->title = 'DETALLES DEL PLÁN: ' . Html::encode($model->nombre);
+
+$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
+
+if ($clinica->id !== null) {
+    $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
+    $this->params['breadcrumbs'][] = ['label' => 'PLANES', 'url' => ['index', 'clinica_id' => $clinica->id]];
+} else {
+    $this->params['breadcrumbs'][] = ['label' => 'PLANES', 'url' => ['index']];
+}
+$this->params['breadcrumbs'][] = Html::encode($model->nombre);
+
+\yii\web\YiiAsset::register($this);
+
+if (!function_exists('formatDateTime')) { 
+    function formatDateTime($value) {
+        return $value ? Yii::$app->formatter->asDatetime($value, 'medium') : 'N/A';
+    }
+}
+
+// Lógica de permisos
+$rol = UserHelper::getMyRol();
+$canManage = ($rol == 'superadmin');
+
 ?>
-<div class="planes-view">
 
-    <!-- Header con título y botones -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="mb-0"><?= Html::encode($this->title) ?></h1> 
-
+<div class="main-container"> <!-- Contenedor principal de la vista -->
+   
+    <!-- Encabezado y Botones de Acción Principal -->
+    <div class="header-section"> 
+        <h1><?= Html::encode($this->title) ?></h1>
+        <div class="header-buttons-group">
+            <?php if ($canManage) : ?>
+                <?= Html::a(
+                    '<i class="fas fa-edit mr-2"></i> Actualizar',
+                    ['update', 'id' => $model->id, 'clinica_id' => $clinica->id], 
+                    ['class' => 'btn-base btn-blue'] 
+                ) ?>
+                <?= Html::a(
+                    '<i class="fas fa-trash-alt mr-2"></i> Eliminar',
+                    ['delete', 'id' => $model->id, 'clinica_id' => $clinica->id], 
+                    [
+                        'class' => 'btn-base btn-red', 
+                        'data' => [
+                            'confirm' => '¿Estás seguro de que quieres eliminar este plan?',
+                            'method' => 'post',
+                        ],
+                    ]
+                ) ?>
+            <?php endif; ?>
+            <?php if ($clinica->id !== null) : ?>
+                <?= Html::a(
+                    '<i class="fas fa-undo mr-2"></i> Volver', 
+                    ['index', 'clinica_id' => $clinica->id], 
+                    [
+                        'class' => 'btn-base btn-gray', 
+                        'title' => 'Volver a la lista de planes de esta clínica',
+                    ]
+                ) ?>
+            <?php endif; ?>
+        </div>
     </div>
 
-    <div class="row">
-        <!-- Columna izquierda - Datos del Plan -->
+    <div class="row g-3"> 
         <div class="col-lg-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-info-circle"></i> Información General
+            <div class="ms-panel border-blue"> 
+                <div class="ms-panel-body"> 
+                    <h3 class="section-title">
+                        <i class="fas fa-info-circle text-blue-600 mr-3"></i> Información General del Plan
                     </h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <h5 class="text-muted mb-1">Nombre del Plan</h5>
-                                <p class="lead"><?= Html::encode($model->nombre) ?></p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <h5 class="text-muted mb-1">Precio</h5>
-                                <p class="lead text-success font-weight-bold">
-                                    <?= $model->precio ?>
-                                </p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <h5 class="text-muted mb-1">Comisión</h5>
-                                <p class="lead">
-                                    <?= $model->comision ? $model->comision . '%' : 'N/A' ?>
-                                </p>
-                            </div>
+                    <div class="info-grid"> 
+                        <div>
+                            <p><strong>Nombre del Plan:</strong> <?= Html::encode($model->nombre) ?></p>
+                            <p><strong>Precio:</strong> <?= Html::encode(Yii::$app->formatter->asCurrency($model->precio)) ?></p>
+                            <p><strong>Comisión:</strong> <?= $model->comision ? Html::encode(Yii::$app->formatter->asPercent((float)$model->comision / 100)) : 'N/A' ?></p>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <h5 class="text-muted mb-1">Estatus</h5>
-                                <span class="badge badge-<?= $model->estatus == 'activo' ? 'success' : 'secondary' ?> p-2">
-                                    <?= strtoupper($model->estatus) ?>
+                        <div>
+                            <p><strong>Estatus:</strong> 
+                                <span class="status-badge <?= $model->estatus == 'Activo' || $model->estatus == 1 ? 'active' : 'inactive' ?>">
+                                    <?= strtoupper($model->estatus == 1 ? 'Activo' : 'Inactivo') ?>
                                 </span>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <h5 class="text-muted mb-1">Rango de Edad</h5>
-                                <p class="lead">
-                                    <?= $model->edad_minima ?> - 
-                                    <?= $model->edad_limite ? $model->edad_limite : 'Sin límite' ?> años
-                                </p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <h5 class="text-muted mb-1">Clínica</h5>
-                                <p><?= $model->clinica ? $model->clinica->nombre : 'N/A' ?></p>
-                            </div>
+                            </p>
+                            <p><strong>Rango de Edad:</strong> 
+                                <?= Html::encode($model->edad_minima) ?> - 
+                                <?= Html::encode($model->edad_limite ? $model->edad_limite . ' años' : 'Sin límite') ?>
+                            </p>
+                            <p><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'N/A') ?></p>
                         </div>
                     </div>
                     
-                    <div class="mt-4">
-                        <h5 class="text-muted mb-2">Descripción</h5>
-                        <div class="border rounded p-3 bg-light">
-                            <?= $model->descripcion ? nl2br(Html::encode($model->descripcion)) : 'Sin descripción' ?>
-                        </div>
+                    <div class="border-top-section mt-4 pt-4">
+                        <h3 class="section-title">
+                            <i class="fas fa-align-left text-gray-600 mr-3"></i> Descripción del Plan
+                        </h3>
+                        <p><?= $model->descripcion ? nl2br(Html::encode($model->descripcion)) : 'Sin descripción' ?></p>
                     </div>
                 </div>
-                <div class="card-footer text-muted small">
+                <div class="ms-panel-body border-top-section text-muted small"> <!-- Pie de panel para fechas -->
                     <div class="row">
                         <div class="col-md-6">
-                            <i class="far fa-calendar-plus"></i> Creado: <?= $createdAt ?>
+                            <i class="far fa-calendar-plus mr-2"></i> Creado: <?= formatDateTime($model->created_at) ?>
                         </div>
-                        <div class="col-md-6 text-right">
-                            <i class="far fa-calendar-check"></i> Actualizado: <?= $updatedAt ?>
+                        <div class="col-md-6 text-end">
+                            <i class="far fa-calendar-check mr-2"></i> Actualizado: <?= formatDateTime($model->updated_at) ?>
                         </div>
                     </div>
                 </div>
@@ -103,30 +145,30 @@ $updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
         <!-- Columna derecha - Coberturas -->
         <div class="col-lg-6">
             <!-- Tarjeta de coberturas incluidas -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-shield-alt"></i> Coberturas Incluidas
-                        <span class="badge badge-light float-right">
+            <div class="ms-panel border-indigo mb-4"> 
+                <div class="ms-panel-body">
+                    <h3 class="section-title">
+                        <i class="fas fa-shield-alt text-indigo-600 mr-3"></i> Coberturas Incluidas
+                        <span class="status-badge active float-end"> 
                             <?= count($itemsCobertura) ?> servicios
                         </span>
                     </h3>
-                </div>
-                <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Servicio (Baremos)</th>
-                                    <!-- <th class="text-center">Cobertura</th> -->
                                     <th class="text-center">Límite</th>
                                     <th class="text-center">Espera</th>
+                                    <?php if ($canManage) : ?>
+                                        <th class="text-center">Acciones</th> 
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($itemsCobertura)): ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
+                                        <td colspan="<?= $canManage ? '4' : '3' ?>" class="text-center text-muted py-4">
                                             <i class="fas fa-info-circle fa-2x mb-2"></i><br>
                                             No hay coberturas registradas
                                         </td>
@@ -137,24 +179,32 @@ $updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
                                             <td>
                                                 <strong><?= Html::encode($item->baremo->nombre_servicio) ?></strong>
                                             </td>
-                                            <?php /* ?>
                                             <td class="text-center">
-                                                <span class="badge badge-pill badge-primary">
-                                                    <?php $item->porcentaje_cobertura ?>%
-                                                </span>
-                                            </td>
-                                            <?php */ ?>
-                                            <td class="text-center">
-                                                 <span class="badge badge-pill badge-warning">
+                                                 <span class="status-badge border-yellow text-yellow-600"> 
                                                    <?= $item->cantidad_limite ?: 'N/A' ?>
                                                 </span>
                                             </td>
-
                                             <td class="text-center">
-                                                <span class="badge badge-pill badge-primary">
+                                                <span class="status-badge border-blue text-blue-600"> 
                                                    <?= $item->plazo_espera ?: 'N/A' ?>
                                                 </span>
                                             </td>
+                                            <?php if ($canManage) : ?>
+                                                <td class="text-center">
+                                                    <?= Html::a(
+                                                        '<i class="far fa-trash-alt"></i>', 
+                                                        ['remove-cobertura', 'id' => $item->id, 'plan_id' => $model->id, 'clinica_id' => $clinica->id], // Pasa plan_id y clinica_id
+                                                        [
+                                                            'title' => 'Eliminar cobertura',
+                                                            'class' => 'btn-action delete', // Clase de sipsa.css
+                                                            'data' => [
+                                                                'confirm' => '¿Estás seguro de que quieres eliminar esta cobertura del plan?',
+                                                                'method' => 'post',
+                                                            ],
+                                                        ]
+                                                    ) ?>
+                                                </td>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -166,27 +216,25 @@ $updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
 
             <!-- Tarjeta de servicios disponibles para agregar -->
             <?php if (!empty($baremosFaltantes)): ?>
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h3 class="card-title mb-0">
-                            <i class="fas fa-plus-circle"></i> Servicios Disponibles
-                            <span class="badge badge-light float-right">
+                <div class="ms-panel border-yellow"> 
+                    <div class="ms-panel-body">
+                        <h3 class="section-title">
+                            <i class="fas fa-plus-circle text-yellow-600 mr-3"></i> Servicios Disponibles
+                            <span class="status-badge active float-end"> 
                                 <?= count($baremosFaltantes) ?> disponibles
                             </span>
                         </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group">
+                        <div class="divide-y"> 
                             <?php foreach ($baremosFaltantes as $baremo): ?>
-                                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div class="py-3 flex justify-between items-center"> 
                                     <div>
-                                        <h6 class="mb-1"><?= Html::encode($baremo->nombre_servicio) ?></h6>
-                                        <small class="text-muted"><?= Html::encode($baremo->descripcion) ?></small>
+                                        <p class="font-medium mb-0"><?= Html::encode($baremo->nombre_servicio) ?></p>
+                                        <small class="text-muted block sm:inline"><?= Html::encode($baremo->descripcion) ?></small>
                                     </div>
                                     <?= Html::a(
-                                        '<i class="fas fa-plus"></i> Agregar', 
-                                        ['add-cobertura', 'plan_id' => $model->id, 'baremo_id' => $baremo->id],
-                                        ['class' => 'btn btn-sm btn-success']
+                                        '<i class="fas fa-plus mr-2"></i> Agregar', 
+                                        ['add-cobertura', 'plan_id' => $model->id, 'baremo_id' => $baremo->id, 'clinica_id' => $clinica->id], 
+                                        ['class' => 'btn-base btn-blue btn-sm'] 
                                     ) ?>
                                 </div>
                             <?php endforeach; ?>
@@ -197,41 +245,3 @@ $updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
         </div>
     </div>
 </div>
-
-<!-- Estilos personalizados -->
-<style>
-    .card {
-        border: none;
-        border-radius: 10px;
-        overflow: hidden;
-        transition: transform 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-2px);
-    }
-    .card-header {
-        border-bottom: none;
-        padding: 1.25rem 1.5rem;
-    }
-    .table th {
-        border-top: none;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-    }
-    .badge-pill {
-        padding: 0.5em 0.8em;
-        min-width: 50px;
-    }
-    .list-group-item {
-        border-left: none;
-        border-right: none;
-    }
-    .list-group-item:first-child {
-        border-top: none;
-    }
-    .list-group-item:last-child {
-        border-bottom: none;
-    }
-</style>
