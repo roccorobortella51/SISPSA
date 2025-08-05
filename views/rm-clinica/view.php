@@ -34,6 +34,15 @@ function formatUpdatedAt($value) {
     return Yii::$app->formatter->asDatetime($value, 'medium');
 }
 
+$rol = UserHelper::getMyRol();
+
+$permisos = false;
+
+if ($rol == 'superadmin') 
+{
+    $permisos = true;
+}
+
 ?>
 
 <div class="main-container"> <!-- Usando la clase 'main-container' definida en el fragmento CSS -->
@@ -44,11 +53,13 @@ function formatUpdatedAt($value) {
         <h1><?= Html::encode($this->title) ?></h1>
 
         <div class="header-buttons-group"> <!-- Usando la clase 'header-buttons-group' definida en el fragmento CSS -->
-            <?= Html::a(
+            <?php
+            if($permisos == true){
+             echo Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',
                 ['update', 'id' => $model->id],
                 ['class' => 'btn-base btn-blue'] /* Usando clases de botón definidas en el fragmento CSS */
-            ) ?>
+            );} ?>
            
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',

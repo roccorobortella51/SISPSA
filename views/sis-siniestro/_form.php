@@ -11,6 +11,12 @@ use yii\web\View;
 /* @var $form yii\widgets\ActiveForm */
 /* @var $afiliado app\models\UserDatos */
 
+$timezone = new DateTimeZone('America/Caracas');
+// Crea un objeto DateTime con la hora actual en esa zona horaria
+$dateTime = new DateTime('now', $timezone);
+// Formatea la hora en el formato 12 horas con am/pm (ej. 3:30 pm)
+$venezuelaTime = $dateTime->format('g:i a');
+
 ?>
 
 <div class="sis-siniestro-form">
@@ -41,7 +47,11 @@ use yii\web\View;
                         </div>
                         
                         <div class="col-md-6">
-                            <?= $form->field($model, 'hora')->textInput(['type' => 'time', 'class' => 'form-control form-control-lg'])->label('Hora del Siniestro') ?>
+                             <?= $form->field($model, 'hora')->textInput([
+                                'type' => 'text', // Cambiado a 'text' para permitir el formato con 'am/pm'
+                                'class' => 'form-control form-control-lg', 
+                                'value' => $venezuelaTime, // Asignamos el valor de la hora de Venezuela en formato 12 horas
+                            ])->label('Hora del Siniestro') ?>
                         </div>
                         
                         <div class="col-md-12">
@@ -75,7 +85,11 @@ use yii\web\View;
                         </div>
                         
                         <div class="col-md-6">
-                            <?= $form->field($model, 'hora_atencion')->textInput(['type' => 'time', 'class' => 'form-control form-control-lg'])->label('Hora de Atención') ?>
+                            <?= $form->field($model, 'hora_atencion')->textInput([
+                                'type' => 'text', // Cambiado a 'text' para permitir el formato con 'am/pm'
+                                'class' => 'form-control form-control-lg', 
+                                'value' => $venezuelaTime, // Asignamos el valor de la hora de Venezuela en formato 12 horas
+                            ])->label('Hora de Atención') ?>
                         </div>
                         
                         <div class="col-md-12">

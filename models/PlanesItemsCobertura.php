@@ -35,17 +35,18 @@ class PlanesItemsCobertura extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public function rules()
-    {
-        return [
-            [['porcentaje_cobertura', 'cantidad_limite', 'plazo_espera', 'plan_id', 'nombre_servicio', 'updated_at', 'deleted_at', 'baremo_id'], 'default', 'value' => null],
-            [['created_at', 'updated_at', 'deleted_at'], 'safe'],
-            [['porcentaje_cobertura', 'cantidad_limite', 'plan_id', 'baremo_id'], 'default', 'value' => null],
-            [['porcentaje_cobertura', 'cantidad_limite', 'plan_id', 'baremo_id'], 'integer'],
-            [['plazo_espera', 'nombre_servicio'], 'string'],
-            [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id']],
-        ];
-    }
+    // En PlanesItemsCobertura.php
+        public function rules()
+        {
+            return [
+                [['baremo_id', 'plan_id'], 'required'],
+                [['porcentaje_cobertura'], 'integer', 'min' => 0, 'max' => 100],
+                [['cantidad_limite'], 'integer', 'min' => 0],
+                [['plazo_espera'], 'string', 'max' => 50],
+                [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id']],
+                [['baremo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Baremo::class, 'targetAttribute' => ['baremo_id' => 'id']],
+            ];
+        }
 
     /**
      * {@inheritdoc}
@@ -74,6 +75,11 @@ class PlanesItemsCobertura extends \yii\db\ActiveRecord
     public function getPlan()
     {
         return $this->hasOne(Planes::class, ['id' => 'plan_id']);
+    }
+
+    public function getBaremo()
+    {
+        return $this->hasOne(Baremo::class, ['id' => 'baremo_id']);
     }
 
 }

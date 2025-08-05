@@ -43,7 +43,7 @@ class PlanesSearch extends Planes
      */
     public function search($params, $formName = null)
     {
-        $query = Planes::find();
+        $query = Planes::find()->select('*');
 
         // add conditions that should always apply here
 

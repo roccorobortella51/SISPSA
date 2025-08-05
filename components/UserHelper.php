@@ -566,5 +566,23 @@ class UserHelper
 
         return $clinica_id;
     }
+
+    public static function getMyClinicaName()
+    {
+        $clinica_id = '';
+        $rol = self::getMyRol();
+        
+
+        if ($rol == "Administrador-clinica") {
+
+            $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+            if ($userdatos) {
+                $clinica_id = $userdatos->clinica->nombre;
+            }
+       
+        } 
+
+        return $clinica_id;
+    }
       
 }

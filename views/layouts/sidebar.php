@@ -1,6 +1,13 @@
 <?php
 use yii\bootstrap4\Nav;
 use mdm\admin\components\MenuHelper;
+use app\components\UserHelper; 
+
+$rol = UserHelper::getMyRol();
+$clinica = "";
+if($rol == "Administrador-clinica"){
+    $clinica = UserHelper::getMyClinicaName();
+}
 ?>
 <aside class="main-sidebar sidebar-dark-primary elevation-4" style="border-bottom: none; background-color: #009efb !important; color: white !important;">
     <!-- Brand Logo -->
@@ -13,9 +20,11 @@ use mdm\admin\components\MenuHelper;
         <!-- Sidebar user panel -->
         <div class="user-panel d-flex flex-column align-items-center">
             <div class="image mb-2">
-                <img src="<?= Yii::getAlias('@web/img/dashboard/employee-list/employee-(2).jpg')?>" class="img-circle elevation-2" alt="User Image">
+                <img src="<?= Yii::getAlias('@web/img/sispsa.png')?>" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info text-center">
+                <p><b><?= $clinica ?></b></p>
+                <p><b><?= $rol ?></b></p><br>
                 <b><a href="#" class="d-block" style="color: white !important;"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a></b>
             </div>
         </div>

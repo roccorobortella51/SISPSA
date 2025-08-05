@@ -45,7 +45,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return [
             [['fecha_atencion', 'hora_atencion', 'descripcion', 'updated_at', 'deleted_at'], 'default', 'value' => null],
             [['atendido'], 'default', 'value' => 0],
-            [['idclinica', 'fecha', 'hora', 'idbaremo', 'iduser'], 'required'],
+            [['idclinica', 'fecha', 'hora', 'idbaremo', 'iduser', 'descripcion'], 'required'],
             [['idclinica', 'idbaremo', 'atendido', 'iduser'], 'default', 'value' => null],
             [['idclinica', 'idbaremo', 'atendido', 'iduser'], 'integer'],
             [['fecha', 'fecha_atencion', 'created_at', 'updated_at', 'deleted_at'], 'safe'],

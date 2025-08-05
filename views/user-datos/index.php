@@ -28,6 +28,16 @@ $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
 
 
 $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la página y breadcrumbs
+
+$rol = UserHelper::getMyRol();
+
+$permisos = false;
+
+if ($rol == 'superadmin') 
+{
+    $permisos = true;
+}
+
 ?>
 <div class=row style="margin:3px !important;">
 <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
@@ -42,21 +52,22 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
 
         <div class="ms-panel-header d-flex justify-content-between align-items-center">
     <h1><?= $this->title = 'Gestión de Afiliados'; ?></h1>
-
-    <div> 
-        <?= Html::a(
-            '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', 
-            ['masivo'], 
-            // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
-            ['class' => 'btn btn-outline-primary btn-lg me-3']
-        ) ?> 
-        <?= Html::a(
-            '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
-            ['create'], 
-            // Este es el último botón, no necesita margen a la derecha
-            ['class' => 'btn btn-outline-primary btn-lg'] 
-        ) ?> 
-    </div>
+        <?php if($permisos == true){?>
+            <div> 
+                <?= Html::a(
+                    '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS', 
+                    ['masivo'], 
+                    // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
+                    ['class' => 'btn btn-outline-primary btn-lg me-3']
+                ) ?> 
+                <?= Html::a(
+                    '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
+                    ['create'], 
+                    // Este es el último botón, no necesita margen a la derecha
+                    ['class' => 'btn btn-outline-primary btn-lg'] 
+                ) ?> 
+            </div>
+        <?php }?>
 </div>
 
 
@@ -79,18 +90,24 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                 'attribute' => 'created_at',
                                 'hAlign' => 'center',
                                 'vAlign' => 'middle',
+                                'label' => 'Fecha Alificación',
                                 'value' => function ($model, $key, $index, $widget) {
-                                    return $model->created_at;
+                                    // Usa el formatter de Yii2 para convertir la fecha a un formato de texto.
+                                    // El mes se mostrará en español si el 'language' de tu aplicación está en 'es'.
+                                    return !empty($model->created_at) ? Yii::$app->formatter->asDate($model->created_at, 'd/M/Y HH:mm:ss') : '';
                                 },
                                 'width' => '12%',
                                 'filterType' => \kartik\grid\GridView::FILTER_DATE_RANGE,
-                                'format' => 'date',
+                                'format' => 'raw', // Usa 'raw' para que el valor formateado no sea procesado de nuevo
                                 'filterInputOptions' => ['placeholder' => 'Seleccione un rango de fechas', 'class' => 'form-control'],
                                 'filterWidgetOptions' => [
                                     'presetDropdown' => true,
                                     'pluginOptions' => [
-                                        'locale' => ['format' => 'YYYY/MM/DD'],
-                                        'separator' => ' A ',
+                                        // Configura el local para el filtro también en español
+                                        'locale' => [
+                                            'format' => 'DD/MM/YYYY',
+                                            'separator' => ' a ',
+                                        ],
                                         'placeholder' => 'Fecha de creación',
                                         'placeholder' => "Filter",
                                     ],
@@ -183,6 +200,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                 'label' => 'Fecha de Nacimiento',
                                 'hAlign' => 'center',
                                 'vAlign' => 'middle',
+                                'visible' => $permisos,
                                 'value' => function ($model, $key, $index, $widget) {
                                     return $model->created_at;
                                 },
@@ -239,6 +257,7 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                 'attribute' => 'clinica_id',
                                 'vAlign' => 'middle',
                                 'label' => 'Clínicas',
+                                'visible' => $permisos,
                                 'value' => function ($model) {
                                     $clinica = '';
                                     $plan = '';
@@ -264,6 +283,22 @@ $this->title = 'Gestión de Afiliados'; // Este sigue siendo el título para la 
                                 'format' => 'raw',
                             ],
 
+                            [
+                                'attribute' => 'estatus_solvente',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'value' => function($model) {
+
+                                     $isTrue = $model->estatus_solvente;
+
+                                     return $isTrue == "Si" ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
+
+
+
+                                    //return $model->atendido ? 'Sí' : 'No';
+                                },
+                                'filter' => [0 => 'No', 1 => 'Sí'],
+                            ],
                             
                            
                             //'selfie:ntext',

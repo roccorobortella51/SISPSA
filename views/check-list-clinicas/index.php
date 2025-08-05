@@ -186,6 +186,8 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                     'clinica.rif',
                     [
                         'label' => '% Seleccionados',
+                        // Usamos la clase 'text-center' de Bootstrap para centrar el contenido
+                        'contentOptions' => ['class' => 'text-center', 'style' => 'padding: 10 !important;'], 
                         'format' => 'raw',
                         'value' => function ($model) use ($booleanColumns) {
                             $totalColumns = count($booleanColumns);
@@ -208,13 +210,12 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                                 // Establecer el color de la barra (verde)
                                 'barOptions' => ['class' => $barColorClass],
                                 'options' => [
-                                    'style' => 'width: 100px; height: 20px; background-color: #e9ecef;', // Fondo gris claro
+                                    'style' => 'width: auto; height: 20px; background-color: #e9ecef;', // Fondo gris claro
                                 ],
                                 // Envolver el label en un <span> con estilo de color azul
                                 'label' => Html::tag('span', $percentage . '%', ['style' => 'color: black;']),
-                            ]);
+                            ]) . "<br>" . $percentage . "%";
                         },
-                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'headerOptions' => ['style' => 'text-align: center;'],
                     ],
                     /*[
