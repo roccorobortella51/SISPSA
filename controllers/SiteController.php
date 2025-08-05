@@ -227,6 +227,16 @@ class SiteController extends Controller
         return $valor;
     }
 
+
+     public function actionWelcome()
+    {
+        
+        if (Yii::$app->user->isGuest) {
+            return $this->goHome(); 
+        }
+        return $this->render('welcome');
+    }
+
     
 
 }
