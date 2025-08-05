@@ -117,8 +117,8 @@ $updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
                         <table class="table table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>Servicio</th>
-                                    <th class="text-center">Cobertura</th>
+                                    <th>Servicio (Baremos)</th>
+                                    <!-- <th class="text-center">Cobertura</th> -->
                                     <th class="text-center">Límite</th>
                                     <th class="text-center">Espera</th>
                                 </tr>
@@ -137,16 +137,23 @@ $updatedAt = Yii::$app->formatter->asDatetime($model->updated_at);
                                             <td>
                                                 <strong><?= Html::encode($item->baremo->nombre_servicio) ?></strong>
                                             </td>
+                                            <?php /* ?>
                                             <td class="text-center">
                                                 <span class="badge badge-pill badge-primary">
-                                                    <?= $item->porcentaje_cobertura ?>%
+                                                    <?php $item->porcentaje_cobertura ?>%
                                                 </span>
                                             </td>
+                                            <?php */ ?>
                                             <td class="text-center">
-                                                <?= $item->cantidad_limite ?: 'N/A' ?>
+                                                 <span class="badge badge-pill badge-warning">
+                                                   <?= $item->cantidad_limite ?: 'N/A' ?>
+                                                </span>
                                             </td>
+
                                             <td class="text-center">
-                                                <?= $item->plazo_espera ?: 'N/A' ?>
+                                                <span class="badge badge-pill badge-primary">
+                                                   <?= $item->plazo_espera ?: 'N/A' ?>
+                                                </span>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
