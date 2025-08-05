@@ -370,7 +370,7 @@ if ($rol == 'superadmin')
                                                     Url::to(['/sis-siniestro/index', 'user_id' => $model->id]),
                                                     [
                                                         'title' => 'Siniestros',
-                                                        'title' => 'Editar Usuario',
+                                                        'title' => 'Listado de atención',
                                                         'class' => 'btn-action view'
                                                     ]
                                                 );
