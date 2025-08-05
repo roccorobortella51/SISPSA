@@ -56,6 +56,17 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         ],
 
                         'columns' => [
+                            // Columna ID añadida aquí
+                            [
+                                'attribute' => 'id',
+                                'label' => 'ID',
+                                'headerOptions' => ['style' => 'color: white!important; width: 80px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar ID',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
                             // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
                                 'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**

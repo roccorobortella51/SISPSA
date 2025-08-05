@@ -15,13 +15,14 @@ $this->params['breadcrumbs'][] = 'ACTUALIZAR';
 <div class="col-xl-12 col-md-12">
     <div class="ms-panel ms-panel-fh">
         <div class="ms-panel-header">
-            <h3><?= $this->title = 'ACTUALIZAR AGENCIA'; ?></h3> </div>
+            <!-- Título con el ID del agente -->
+            <h3><?= Html::encode('ACTUALIZAR AGENCIA'); ?> <span class="text-primary">#<?= $model->id ?></span></h3>
+        </div>
         <div class="ms-panel-body">
-            <?= $this->render('_form', [ // Renderiza el _form de agente
+            <?= $this->render('_form', [ 
                 'model' => $model,
                 'isNewRecord' => $isNewRecord,
             ]) ?>        
         </div>
     </div>
 </div>
-
