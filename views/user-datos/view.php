@@ -111,7 +111,7 @@ if (!function_exists('formatDateTime')) {
                 <div class="profile-img-container text-center"> <!-- AÑADIDO: text-center para centrar su contenido -->
                     <h6>Foto de Perfil</h6>
                     <?php if ($model->selfie): ?>
-                        <?= Html::img(Yii::$app->request->baseUrl . $model->selfie, [
+                        <?= Html::img( $model->selfie, [
                             'alt' => 'Foto de Perfil',
                             'class' => 'profile-img rounded-full w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block' // AÑADIDO: inline-block
                         ]) ?>
@@ -123,7 +123,7 @@ if (!function_exists('formatDateTime')) {
                 <div class="profile-img-container text-center"> <!-- AÑADIDO: text-center para centrar su contenido -->
                     <h6>Imagen de Identificación</h6>
                     <?php if ($model->imagen_identificacion): ?>
-                        <?= Html::img(Yii::$app->request->baseUrl . $model->imagen_identificacion, [
+                        <?= Html::img($model->imagen_identificacion, [
                             'alt' => 'Imagen de Identificación',
                             'class' => 'profile-img w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block' // AÑADIDO: inline-block
                         ]) ?>

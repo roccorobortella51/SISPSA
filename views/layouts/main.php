@@ -111,7 +111,7 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 <?php $this->endBody() ?>
 
 <script>
-$(function () {
+/*$(function () {
     // Inicialización del PushMenu de AdminLTE
     $('[data-widget="pushmenu"]').PushMenu();
 
@@ -177,7 +177,7 @@ $(function () {
             console.warn('El spinner global ha sido ocultado por el fallback de 5 segundos.');
             pageSpinner.hide();
         }
-    }, 5000);
+    }, 2000);
 });
 
 // Ocultar el spinner también en el evento 'pageshow' para
@@ -187,7 +187,7 @@ window.addEventListener('pageshow', function(event) {
         // La página se carga desde la caché
         $('#global-page-spinner').fadeOut(200);
     }
-});
+});*/
 </script>
 </body>
 </html>
