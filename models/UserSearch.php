@@ -49,8 +49,16 @@ class UserSearch extends User
      */
     public function search($params, $formName = null)
     {
+        $rol = UserHelper::getMyRol();
+
         $query = User::find();
         $query->innerJoinWith(['userDatos']);
+
+
+        if($rol == "Agente"){
+            $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+            ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
+        }
 
         // add conditions that should always apply here
 
@@ -86,7 +94,75 @@ class UserSearch extends User
             'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'id' => $this->id,
+            'user.id' => $this->id,
+        ]);
+
+        $query->andFilterWhere(['ilike', 'username', $this->username])
+            ->andFilterWhere(['ilike', 'auth_key', $this->auth_key])
+            ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
+            ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
+            ->andFilterWhere(['ilike', 'email', $this->email])
+            ->andFilterWhere(['like', 'user_datos.role', $this->roleName]);
+
+                // Filtro para el nombre completo
+        if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO
+            $query->andFilterWhere(['or',
+                ['ilike', 'user_datos.nombres', $this->nombrecompleto],
+                ['ilike', 'user_datos.apellidos', $this->nombrecompleto]
+            ]);
+        }
+
+        return $dataProvider;
+    }
+
+    public function searchAgentes($params, $formName = null)
+    {
+        $rol = UserHelper::getMyRol();
+
+        $query = User::find();
+        $query->innerJoinWith(['userDatos']);
+
+
+        if($rol == "Agente"){
+            $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+            ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
+        }
+
+        // add conditions that should always apply here
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => 10,
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'created_at' => SORT_DESC,
+                ],
+                // Permite ordenar por roleName, apuntando a la columna real en la tabla unida
+                'attributes' => array_merge(parent::attributes(), [
+                    'roleName' => [
+                         'asc' => ['user_datos.role' => SORT_ASC],
+                        'desc' => ['user_datos.role' => SORT_DESC],
+                    ],
+                ]),
+            ],
+        ]);
+
+        $this->load($params, $formName);
+
+        if (!$this->validate()) {
+            // uncomment the following line if you do not want to return any records when validation fails
+            // $query->where('0=1');
+            return $dataProvider;
+        }
+
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'status' => $this->status,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'user.id' => $this->id,
         ]);
 
         $query->andFilterWhere(['ilike', 'username', $this->username])

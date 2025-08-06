@@ -99,7 +99,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
             </div>
             <div class="col-md-6">
                 <?= $form->field($model, 'idusuario')->widget(Select2::classname(), [
-                        'data' => UserHelper::getAgenteFuerzaList(),
+                        'data' => UserHelper::getAsesor(),
                         'options' => [
                             'placeholder' => 'Seleccione el asesor', // Placeholder adaptado
                             'class' => 'form-control form-control-lg',

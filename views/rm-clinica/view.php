@@ -52,13 +52,13 @@ if ($rol == 'superadmin')
     <div class="header-section"> <!-- Usando la clase 'header-section' definida en el fragmento CSS -->
         <h1><?= Html::encode($this->title) ?></h1>
 
-        <div class="header-buttons-group"> <!-- Usando la clase 'header-buttons-group' definida en el fragmento CSS -->
+        <div class="header-buttons-group"> 
             <?php
             if($permisos == true){
              echo Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',
                 ['update', 'id' => $model->id],
-                ['class' => 'btn-base btn-blue'] /* Usando clases de botón definidas en el fragmento CSS */
+                ['class' => 'btn-base btn-blue'] 
             );} ?>
            
             <?= Html::a(
@@ -86,14 +86,14 @@ if ($rol == 'superadmin')
             <?= Html::a(
                 '<i class="fas fa-clipboard-list mr-2"></i> Planes',
                 ['planes/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-indigo'] /* Usando las nuevas clases de botones de navegación */
+                ['class' => 'nav-btn-base nav-btn-indigo'] 
             ) ?>
         </div>
         <div>
             <?= Html::a(
                 '<i class="fas fa-users mr-2"></i> Afiliados',
                 ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-teal'] /* Usando las nuevas clases de botones de navegación */
+                ['class' => 'nav-btn-base nav-btn-teal'] 
             ) ?>
         </div>
         <div>

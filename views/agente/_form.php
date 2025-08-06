@@ -69,7 +69,7 @@ if ($model->isNewRecord) {
             </div>
 <div class="col-md-4">
     <?php
-    $agentesList = UserHelper::getAgenteFuerzaList();
+    $agentesList = UserHelper::getAgentesList();
 
     $hasRealAgents = (count($agentesList) > 1) || (count($agentesList) === 1 && !isset($agentesList['0']) && !isset($agentesList['']));
 

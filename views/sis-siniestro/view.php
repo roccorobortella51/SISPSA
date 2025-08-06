@@ -37,14 +37,15 @@ function formatBooleanIcon($value) {
                     ],
                 ]
             ) ?>
-        <?= Html::a(
-            '<i class="fas fa-undo mr-2"></i> Volver',
-            ['index', 'user_id' => $model->iduser],
-            [
-                'class' => 'btn-base btn-gray',
-                'title' => 'Volver al inicio',
-            ]
-        ) ?>
+            <?= Html::a(
+                '<i class="fas fa-undo mr-2"></i> Volver',
+                '#',
+                [
+                    'class' => 'btn-base btn-gray',
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
+                ]
+            ) ?>
         </div>
     </div>
 

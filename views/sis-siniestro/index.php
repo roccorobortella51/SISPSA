@@ -71,24 +71,15 @@ $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado-
                                 'value' => 'baremo.nombre_servicio', // Corregido para usar la relación 'baremo' y el campo 'nombre_servicio'
                                 'label' => 'Baremo',
                             ],
-                            'fecha_atencion',
-                            'hora_atencion',
                             [
                                 'attribute' => 'atendido',
-                                'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
-
-                                     $isTrue = (bool)$model->atendido;
-
-                                     return $isTrue ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
-
-
-
-                                    //return $model->atendido ? 'Sí' : 'No';
+                                    return $model->atendido ? 'Sí' : 'No';
                                 },
                                 'filter' => [0 => 'No', 1 => 'Sí'],
                             ],
+                            'fecha_atencion',
+                            'hora_atencion',
                             [
                                 'class' => 'yii\grid\ActionColumn',
                                 'header' => 'ACCIONES',
