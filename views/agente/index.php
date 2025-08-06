@@ -1,11 +1,12 @@
 <?php
 
-// Importaciones necesarias
 use yii\helpers\Html;
 use yii\helpers\Url;
-use kartik\grid\GridView; // Asegúrate de tener kartik/yii2-grid instalado
+use kartik\grid\GridView; 
 use yii\grid\ActionColumn;
-use app\models\Agente; // Asegúrate de que tu modelo Agente esté correctamente importado
+use app\models\Agente; 
+use app\models\AgenteFuerza;
+use app\models\User;
 
 /**
  * @var yii\web\View $this
@@ -139,7 +140,14 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 'value' => function($model) {
                                     
                                     
-                                    $count = $model->agenteFuerzaCount; // O $model->getAgenteFuerzaCount() si prefieres la forma explícita
+                                    $count = User::find()
+                                            ->joinWith('userDatos')
+                                            ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                                            ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user"."id"')
+                                            ->where(['auth_assignment.item_name' => "Asesor"])
+                                            ->andWhere(['agente_id' => $model->id])
+                                            ->andWhere(['is not', 'agente_fuerza.idusuario', null])
+                                            ->count();
                             
                                     return Html::a(
                                         $count, // El texto del enlace será el número de asesores

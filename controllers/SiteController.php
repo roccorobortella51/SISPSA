@@ -70,7 +70,8 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
-        return $this->render('sispsa');
+        //return $this->render('sispsa');
+        return $this->render('welcome');
     }
 
     /**
