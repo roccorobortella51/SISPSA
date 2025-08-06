@@ -136,7 +136,7 @@ class AgenteFuerza extends ActiveRecord
         // Esta relación es un ejemplo. Depende de cómo tengas estructuradas tus tablas.
         // Podría ser hasOne a User y luego a UserDatos, o directamente si idusuario es FK a UserDatos.
         // Ejemplo: Si UserDatos tiene 'id_usuario' como FK.
-        return $this->hasOne(UserDatos::class, ['id_usuario' => 'idusuario']);
+        return $this->hasOne(UserDatos::class, ['id' => 'idusuario']);
     }
 
     public function getcodigoAsesor()

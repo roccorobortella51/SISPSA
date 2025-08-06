@@ -22,6 +22,7 @@ use yii\rbac\DbManager;
 use app\models\AuthAssignment;
 use app\models\UserDatos;
 use app\models\Corporativo;
+use app\models\AgenteFuerza;
 use yii\httpclient\Client; // Necesario para hacer peticiones HTTP a la API de Supabase
 
 
@@ -235,14 +236,35 @@ class UserHelper
         return $finalList;
     }
 
-    public static function getAgenteFuerzaList()
+    public static function getAsesor()
     {
         return \yii\helpers\ArrayHelper::map(
             User::find()
-                
+                ->select([
+                    new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    'user.id AS id'
+                ])                ->joinWith('userDatos')
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-                ->select(['user.id AS id', 'username AS name'])
                 ->where(['auth_assignment.item_name' => "Asesor"])
+                ->asArray()
+                ->all(),
+            'id',
+            'name'
+        );
+    }
+
+     public static function getAgenteFuerzaList()
+    {
+       return \yii\helpers\ArrayHelper::map(
+            User::find()
+                ->select([
+                    new \yii\db\Expression("CONCAT('N° de Vendedor/Asesor: ', agente_fuerza.id, ' - ' , nombres, '  ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    'user.id AS id'
+                ])                ->joinWith('userDatos')
+                ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user"."id"')
+                ->where(['auth_assignment.item_name' => "Asesor"])
+                ->andWhere(['is not', 'agente_fuerza.idusuario', null])
                 ->asArray()
                 ->all(),
             'id',
