@@ -20,11 +20,7 @@ $this->title = 'Bienvenido a SISPSA Clínicas';
             
             <!-- Logo SISPSA -->
             <div class="mb-8">
-                <img src="<?= Yii::getAlias('@web') ?>/images/Captura desde 2025-08-05 23-28-46.png"
-                     alt="Logo SISPSA"
-                     class="logo-sipsa"
-                     onerror="this.onerror=null;this.src='https://placehold.co/300x100/2563EB/FFFFFF?text=Logo+SISPSA';"
-                >
+                <img src="<?= Yii::getAlias('@web/img/sispsa.png')?>" class="img-circle elevation-2" alt="User Image">
             </div>
 
             <h1 class="main-title">
@@ -47,8 +43,8 @@ $this->title = 'Bienvenido a SISPSA Clínicas';
                     <div class="icon-container">
                         <span class="icon icon-stethoscope"></span> <!-- Icono de ejemplo -->
                     </div>
-                    <h3>Gestión de Informacion</h3>
-                    <p>Accede y administra.</p>
+                    <h3 class="text-center">Gestión de Expedientes</h3>
+                    <p>Accede y administra de forma segura los historiales clínicos de tus pacientes.</p>
                 </div>
                 <!-- Característica 2 -->
                 <div class="info-card">
@@ -56,7 +52,7 @@ $this->title = 'Bienvenido a SISPSA Clínicas';
                         <span class="icon icon-chart-line"></span> <!-- Icono de ejemplo -->
                     </div>
                     <h3>Reportes y Estadísticas</h3>
-                    <p>Obtén información valiosa.</p>
+                    <p>Obtén información valiosa para optimizar la operación de tu clínica.</p>
                 </div>
                 <!-- Característica 3 -->
                 <div class="info-card">
@@ -64,19 +60,10 @@ $this->title = 'Bienvenido a SISPSA Clínicas';
                         <span class="icon icon-user-md"></span> <!-- Icono de ejemplo -->
                     </div>
                     <h3>Administración de Personal</h3>
-                    <p>Gestiona eficientemente a tu equipo administrativo.</p>
+                    <p>Gestiona eficientemente a tu equipo médico y administrativo.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="footer-content">
-            <p>&copy; <?= date('Y') ?> SISPSA. Todos los derechos reservados.</p>
-            <div class="footer-links">
-                <a href="#">Política de Privacidad</a> |
-                <a href="#">Términos de Servicio</a>
-            </div>
-        </div>
-    </footer>
+   

@@ -10527,3 +10527,302 @@ h3.section-title i {
     text-decoration: none;
     transform: scale(1.1);
 }
+
+
+
+
+
+
+
+
+
+
+ /* Definición de variables CSS para los colores del proyecto */
+:root {
+    --sipsa-blue-primary: #2563eb;
+    --sipsa-blue-dark: #1d4ed8;
+    --sipsa-indigo-accent: #4f46e5;
+    --sipsa-red: #dc2626;
+    --sipsa-gray-secondary: #e5e7eb;
+    --sipsa-gray-dark: #374151;
+    --sipsa-gray-text-muted: #a0aec0;
+    --sipsa-gray-text-active: #64748b;
+    --sipsa-gray-border: #e2e8f0;
+    --sipsa-gray-bg-light: #f0f2f5;
+    --sipsa-gray-bg-panel: #fcfcfd;
+    --sipsa-panel-bg: #ffffff;
+    --sipsa-text-heading: #1a202c;
+    --sipsa-text-section-title: #2d3748;
+    --sipsa-text-paragraph: #4a5568;
+    --sipsa-green-active: #065f46;
+    --sipsa-green-bg: #d1fae5;
+    --sipsa-red-inactive: #991b1b;
+    --sipsa-red-bg: #fee2e2;
+    --sipsa-yellow: #eab308;
+    --sipsa-teal: #14b8a6;
+    --sipsa-cyan: #06b6d4;
+    --sipsa-pink: #ec4899;
+
+    /* Colores suaves para el fondo principal */
+    --sipsa-hero-bg-start: #E0ECFF; /* Azul muy claro */
+    --sipsa-hero-bg-end: #F0F4F8;   /* Gris azulado muy claro */
+}
+
+/* ----------------------- Estilos Personalizados Globales de la Aplicación (sipsa.css) ----------------------- */
+/* Reset universal para asegurar que no haya márgenes ni rellenos por defecto en HTML/BODY */
+html, body {
+    margin: 0 !important; /* Forzar eliminación de margen */
+    padding: 0 !important; /* Forzar eliminación de padding */
+    height: 100%; /* Asegura que html y body ocupen toda la altura disponible */
+    width: 100%; /* Asegura que html y body ocupen todo el ancho disponible */
+    overflow-x: hidden; /* Evita scroll horizontal si hay elementos que sobresalen */
+    display: flex; /* Usar flexbox para el body para mejor control del flujo vertical */
+    flex-direction: column; /* Apilar los elementos del body verticalmente */
+}
+
+body {
+    font-family: 'Inter', sans-serif !important; /* Se mantendrá sans-serif si Inter no está localmente */
+    background-color: var(--sipsa-gray-bg-light);
+    /* El padding global de 20px se elimina aquí para que el contenido suba */
+    /* Si necesitas padding alrededor de todo el contenido, considera aplicarlo a un contenedor interno */
+}
+
+/* Eliminar márgenes y rellenos superiores de los primeros elementos dentro del body */
+/* Esto es una medida agresiva para asegurar que el contenido suba */
+body > *:first-child,
+main, .container, .wrap, #w0, #app, #page-wrapper, .content-wrapper, .wrapper, .content-header, .main-header, .navbar {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    min-height: auto !important; /* Evita que min-height empuje el contenido hacia abajo */
+}
+
+/* También, asegúrate de que el elemento que contiene el $content en tu layout no tenga padding superior */
+/* Si tu layout tiene un div alrededor de <?= $content ?>, también podrías necesitar ajustarlo */
+.content-wrapper > .content { /* Ejemplo para AdminLTE */
+    padding-top: 0 !important;
+}
+
+
+/* Hero Section - Fondo principal de bienvenida */
+.hero-section {
+    position: relative;
+    height: 60vh; /* Altura de la sección principal */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+    border-bottom-left-radius: 0.75rem; /* rounded-b-xl */
+    border-bottom-right-radius: 0.75rem; /* rounded-b-xl */
+    background: linear-gradient(135deg, var(--sipsa-hero-bg-start) 0%, var(--sipsa-hero-bg-end) 100%);
+    margin-top: 0 !important; /* Asegura que no haya margen superior en la sección */
+}
+
+/* Capa de superposición para legibilidad */
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.1); /* Más sutil */
+    z-index: 0;
+}
+
+/* Panel de contenido central en la sección de bienvenida */
+.welcome-content-panel {
+    position: relative;
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.5); /* Blanco semi-transparente, más visible */
+    backdrop-filter: blur(8px); /* Efecto de desenfoque más pronunciado */
+    -webkit-backdrop-filter: blur(8px); /* Compatibilidad con Safari */
+    border-radius: 1.5rem; /* Esquinas muy redondeadas */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* Sombra intensa */
+    border: 1px solid rgba(255, 255, 255, 0.5); /* Borde blanco sutil, más visible */
+    padding: 2rem; /* Relleno por defecto */
+    max-width: 960px; /* Equivalente a max-w-4xl (64rem * 15px/rem) */
+    margin-left: auto;
+    margin-right: auto;
+    transition: all 0.7s ease-out;
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .welcome-content-panel {
+        padding: 3rem; /* Más relleno en pantallas grandes */
+    }
+}
+
+/* Estilos para el logo SISPSA */
+.logo-sipsa {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 16rem; /* w-64 */
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 3px rgba(0,0,0,0.07)) drop-shadow(0 2px 2px rgba(0,0,0,0.06)); /* drop-shadow-lg */
+    transition: transform 0.5s ease-in-out;
+    margin-bottom: 2rem; /* mb-8 */
+}
+.logo-sipsa:hover {
+    transform: scale(1.05); /* hover:scale-105 */
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .logo-sipsa {
+        width: 20rem; /* md:w-80 */
+    }
+}
+
+/* Estilos para el título principal */
+.main-title {
+    font-size: 2.25rem; /* text-4xl */
+    font-weight: 800; /* font-extrabold */
+    color: var(--sipsa-text-heading);
+    margin-bottom: 1rem; /* mb-4 */
+    line-height: 1.25; /* leading-tight */
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .main-title {
+        font-size: 3.75rem; /* md:text-6xl */
+    }
+}
+
+/* Estilos para el subtítulo/párrafo */
+.subtitle-paragraph {
+    font-size: 1.125rem; /* text-lg */
+    color: var(--sipsa-text-paragraph);
+    margin-bottom: 0; /* mb-0 */
+    max-width: 42rem; /* max-w-2xl (672px) */
+    margin-left: auto;
+    margin-right: auto;
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .subtitle-paragraph {
+        font-size: 1.25rem; /* md:text-xl */
+    }
+}
+
+/* Sección de Información/Características */
+.info-section {
+    padding-top: 4rem; /* py-16 */
+    padding-bottom: 4rem; /* py-16 */
+    background-color: var(--sipsa-panel-bg); /* bg-sipsa-panel-bg */
+}
+
+.info-section-container {
+    max-width: 1152px; /* max-w-6xl (1152px) */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem; /* px-6 */
+    padding-right: 1.5rem; /* px-6 */
+    text-align: center;
+}
+
+.info-section-title {
+    font-size: 1.875rem; /* text-3xl */
+    font-weight: 800; /* font-extrabold */
+    color: var(--sipsa-blue-primary);
+    margin-bottom: 3rem; /* mb-12 */
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .info-section-title {
+        font-size: 2.25rem; /* md:text-4xl */
+    }
+}
+
+.info-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr)); /* grid-cols-1 */
+    gap: 2.5rem; /* gap-10 */
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .info-cards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)); /* md:grid-cols-3 */
+    }
+}
+
+/* Clases de tu CSS original */
+.info-card {
+    background-color: var(--sipsa-panel-bg);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--sipsa-gray-border);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Añadido para el hover */
+    text-align: center; /* <-- Añadido para centrar todo el contenido de la tarjeta */
+}
+.info-card:hover {
+    transform: translateY(-4px); /* Efecto de elevación */
+    box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.15), 0 6px 10px -3px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
+}
+
+.info-card .icon-container {
+    color: var(--sipsa-indigo-accent);
+    font-size: 3rem; /* text-5xl */
+    margin-bottom: 1rem; /* mb-4 */
+    display: block; /* Asegura que el contenedor de icono sea un bloque para centrar con margin: auto */
+    margin-left: auto; /* Centra el icono */
+    margin-right: auto; /* Centra el icono */
+}
+
+.info-card h3 {
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 600; /* font-semibold */
+    color: var(--sipsa-text-section-title);
+    margin-bottom: 0.75rem; /* mb-3 */
+    /* text-align: center !important; <-- Eliminado, ya lo centra el padre .info-card */
+}
+
+.info-card p {
+    color: var(--sipsa-text-paragraph);
+    font-size: 0.95rem; /* Slightly larger for readability */
+}
+
+/* Footer */
+.main-footer {
+    background-color: var(--sipsa-blue-primary);
+    color: var(--sipsa-gray-text-muted);
+    padding-top: 2rem; /* py-8 */
+    padding-bottom: 2rem; /* py-8 */
+    text-align: center;
+    border-top-left-radius: 0.75rem; /* rounded-t-xl */
+    border-top-right-radius: 0.75rem; /* rounded-t-xl */
+}
+
+.footer-content {
+    max-width: 1152px; /* max-w-6xl */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem; /* px-6 */
+    padding-right: 1.5rem; /* px-6 */
+}
+
+.footer-links {
+    margin-top: 1rem; /* mt-4 */
+    font-size: 0.875rem; /* text-sm */
+}
+
+.footer-links a {
+    color: inherit; /* Hereda el color del padre */
+    text-decoration: none;
+    margin-left: 0.5rem; /* mx-2 */
+    margin-right: 0.5rem; /* mx-2 */
+    transition: color 0.2s ease-in-out;
+}
+.footer-links a:hover {
+    color: var(--sipsa-white); /* hover:text-white */
+}
+
+/* --- Iconos (simulados con texto o SVG simple ya que no hay Font Awesome CDN) --- */
+.icon {
+    /* Estilos base para iconos */
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
+}
+.icon-stethoscope::before { content: "🩺"; } /* Unicode para estetoscopio */
+.icon-chart-line::before { content: "📈"; } /* Unicode para gráfico de línea */
+.icon-user-md::before { content: "👨‍⚕️"; } /* Unicode para médico */
+/* Puedes reemplazar estos con SVGs incrustados si prefieres iconos vectoriales */

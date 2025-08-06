@@ -70,7 +70,10 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
+<<<<<<< HEAD
         //return $this->render('sispsa');
+=======
+>>>>>>> 76c0dd9 (index general)
         return $this->render('welcome');
     }
 
@@ -226,16 +229,6 @@ class SiteController extends Controller
         $valor = str_replace(',', '.', $tasa_bcv->item(0)->nodeValue);
         $valor = floatval($valor);
         return $valor;
-    }
-
-
-     public function actionWelcome()
-    {
-        
-        if (Yii::$app->user->isGuest) {
-            return $this->goHome(); 
-        }
-        return $this->render('welcome');
     }
 
     
