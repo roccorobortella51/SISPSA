@@ -206,6 +206,16 @@ class UserHelper
                 'name'
             );
         }
+
+        if(self::getMyRol() == "Agente"){
+            return \yii\helpers\ArrayHelper::map(
+                AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->andWhere(['name' => 'Asesor'])->asArray()->all(),
+                'name',
+                'name'
+            );
+        }
+
+
         return \yii\helpers\ArrayHelper::map(
             AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->asArray()->all(),
             'name',

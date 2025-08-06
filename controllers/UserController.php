@@ -51,6 +51,18 @@ class UserController extends Controller
         ]);
     }
 
+    public function actionIndexUserByAgente()
+    {
+        $searchModel = new UserSearch();
+        $dataProvider = $searchModel->searchAgentes($this->request->queryParams);
+
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+
+
     public function actionIndexClinicas($clinica_id = "")
     {
         $searchModel = new UserSearch();
