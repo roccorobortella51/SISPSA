@@ -159,7 +159,7 @@
 
             // grid filtering conditions
             $query->andFilterWhere([
-                'id' => $this->id,
+                'agente_fuerza.id' => $this->id,
                 'idusuario' => $this->idusuario,
                 'agente_id' => $this->agente_id,
                 'por_venta' => $this->por_venta,

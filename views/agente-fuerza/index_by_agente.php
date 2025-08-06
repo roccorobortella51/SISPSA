@@ -97,6 +97,18 @@ if (!$agente->isNewRecord) { ?>
                         ],
                         
                         'columns' => [
+                             [
+                                'attribute' => 'id', // <--- ¡Debe coincidir con el nombre del atributo virtual!
+                                'label' => 'N° de Vendedor/Asesor',
+                                'value' => function($model) {
+                                    return $model->id;
+                                },
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar N° de Vendedor/Asesor',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
                             // ['class' => 'kartik\grid\SerialColumn'], // Usamos SerialColumn de Kartik para consistencia
                             
                             // Asegúrate de que estos atributos existan en tu modelo AgenteFuerza

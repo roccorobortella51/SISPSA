@@ -227,9 +227,12 @@ class UserHelper
     {
         // 1. Obtener los agentes reales de la base de datos
         $agentes = User::find()
+            ->select([
+                    new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    'user.id AS id'
+                ])   
             ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->leftJoin('user_datos', '"user"."id" = "user_datos"."user_login_id"')
-            ->select(['user.id AS id', 'user_datos.nombres AS name'])
             ->where(['auth_assignment.item_name' => "Agente"])
             ->asArray()
             ->all();
