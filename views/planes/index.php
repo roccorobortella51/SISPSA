@@ -72,31 +72,7 @@ $permisos = ($rol == 'superadmin');
     </div>
 
     <?php if ($permisos && isset($model)) : ?>
-        <div class="ms-panel ms-panel-fh border-blue"> 
-            <div class="ms-panel-header">
-                <h3 class="section-title">
-                    <i class="fas fa-plus-circle mr-3 text-blue-600"></i> Agregar Nuevo Plan a la Clínica
-                </h3>
-            </div>
-            <div class="ms-panel-body">
-                <?php $form = ActiveForm::begin([
-                    'action' => ['create', 'clinica_id' => $clinica->id], 
-                ]); ?>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <?= $form->field($model, 'nombre')->textInput(['class' => 'form-control', 'placeholder' => 'Nombre del Plan'])->label('Nombre del Plan') ?>
-                    </div>
-                    <div class="col-md-6">
-                        <?= $form->field($model, 'descripcion')->textarea(['rows' => 3, 'class' => 'form-control', 'placeholder' => 'Descripción del Plan'])->label('Descripción') ?>
-                    </div>
-                    <!-- Agrega más campos según tu modelo de Plan -->
-                    <div class="col-md-12 text-end mt-4">
-                        <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar Plan', ['class' => 'btn-base btn-blue']) ?>
-                    </div>
-                </div>
-                <?php ActiveForm::end(); ?>
-            </div>
-        </div>
+   
     <?php endif; ?>
 
     <div class="ms-panel ms-panel-fh border-indigo"> 
