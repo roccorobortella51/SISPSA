@@ -29,7 +29,7 @@ $this->params['breadcrumbs'][] = 'BAREMOS';
 $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre); 
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol = "Administrador-clinica"); 
+$permisos = ($rol == 'superadmin'); 
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->
@@ -183,27 +183,34 @@ $permisos = ($rol == 'superadmin' || $rol = "Administrador-clinica");
                             'format' => 'raw',
                             'headerOptions' => ['class' => 'text-left header-link'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
-                            'value' => function ($model) {
-                                $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
-                                
-                                return SwitchInput::widget([
-                                    'name' => 'status_'.$model->id,
-                                    'value' => $isActive,
-                                    'pluginEvents' => [
-                                        'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
-                                    ],
-                                    'pluginOptions' => [
-                                        'onText' => 'Activo',
-                                        'offText' => 'Inactivo',
-                                        'onColor' => 'success',
-                                        'offColor' => 'danger',
-                                        'state' => $isActive
-                                    ],
-                                    'options' => [
-                                        'id' => 'status-switch-'.$model->id
-                                    ],
-                                    'labelOptions' => ['style' => 'font-size: 12px;'],
-                                ]);
+                            'value' => function ($model)use($permisos) {
+
+                                if($permisos){
+                                    $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
+                                    
+                                    return SwitchInput::widget([
+                                        'name' => 'status_'.$model->id,
+                                        'value' => $isActive,
+                                        'pluginEvents' => [
+                                            'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
+                                        ],
+                                        'pluginOptions' => [
+                                            'onText' => 'Activo',
+                                            'offText' => 'Inactivo',
+                                            'onColor' => 'success',
+                                            'offColor' => 'danger',
+                                            'state' => $isActive
+                                        ],
+                                        'options' => [
+                                            'id' => 'status-switch-'.$model->id
+                                        ],
+                                        'labelOptions' => ['style' => 'font-size: 12px;'],
+                                    ]);
+                                }else{
+
+                                    return '<span class="status-badge ' . ($model->estatus == 'Activo' ? 'active' : 'inactive') . '">' .
+                                         ($model->estatus == 'Activo' ? 'Activo' : 'Inactivo') . '</span>';
+                                }
                             },
                             'filterType' => GridView::FILTER_SELECT2,
                             'filter' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],
