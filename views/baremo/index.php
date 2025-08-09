@@ -29,7 +29,7 @@ $this->params['breadcrumbs'][] = 'BAREMOS';
 $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre); 
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin'); 
+$permisos = ($rol == 'superadmin' || $rol = "Administrador-clinica"); 
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->
