@@ -39,13 +39,7 @@ $permisos = ($rol == 'superadmin');
     <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
-            <?php if ($permisos) : ?>
-                <?= Html::a(
-                    '<i class="fas fa-plus mr-2"></i> AGREGAR BAREMO', 
-                    ['create', 'clinica_id' => $clinica->id], 
-                    ['class' => 'btn-base btn-blue'] 
-                ) ?>
-            <?php endif; ?>
+            
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
                 ['/rm-clinica/view', 'id' => $clinica->id], 
@@ -67,7 +61,7 @@ $permisos = ($rol == 'superadmin');
             </div>
             <div class="ms-panel-body">
                 <?php $form = ActiveForm::begin([
-                    'action' => ['create', 'clinica_id' => $clinica->id], 
+                    'action' => ['index', 'clinica_id' => $clinica->id], 
                 ]); ?>
                 <div class="row g-3"> 
                     <div class="col-md-2">
@@ -75,7 +69,7 @@ $permisos = ($rol == 'superadmin');
                             'data' => UserHelper::getAreaList(),
                             'options' => [
                                 'placeholder' => 'Seleccione un área...',
-                                'class' => 'form-control', 
+                                'class' => 'form-control form-control-lg', 
                             ],
                             'pluginOptions' => [
                                 'allowClear' => false,
@@ -84,27 +78,27 @@ $permisos = ($rol == 'superadmin');
                     </div>
                     <div class="col-md-2">
                         <?= $form->field($model, 'nombre_servicio')->textInput([ 
-                            'class' => 'form-control', 
+                            'class' => 'form-control form-control-lg', 
                             'placeholder' => 'Nombre del Baremo'
                         ])->label('Nombre del Servicio') ?>
                     </div>
                     <div class="col-md-4">
                          <?= $form->field($model, 'descripcion')->textInput([ 
-                            'class' => 'form-control', 
+                            'class' => 'form-control form-control-lg', 
                             'placeholder' => 'Descripción del Baremo'
                         ])->label('Descripción') ?>
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'costo')->textInput([
                             'type' => 'number',
-                            'class' => 'form-control', 
+                            'class' => 'form-control form-control-lg', 
                             'placeholder' => '0.00' 
                         ])->label('Costo') ?>
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'precio')->textInput([
                             'type' => 'number', 
-                            'class' => 'form-control', 
+                            'class' => 'form-control form-control-lg', 
                             'placeholder' => '0.00'
                         ])->label('Precio') ?>
                     </div>
@@ -189,27 +183,34 @@ $permisos = ($rol == 'superadmin');
                             'format' => 'raw',
                             'headerOptions' => ['class' => 'text-left header-link'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
-                            'value' => function ($model) {
-                                $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
-                                
-                                return SwitchInput::widget([
-                                    'name' => 'status_'.$model->id,
-                                    'value' => $isActive,
-                                    'pluginEvents' => [
-                                        'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
-                                    ],
-                                    'pluginOptions' => [
-                                        'onText' => 'Activo',
-                                        'offText' => 'Inactivo',
-                                        'onColor' => 'success',
-                                        'offColor' => 'danger',
-                                        'state' => $isActive
-                                    ],
-                                    'options' => [
-                                        'id' => 'status-switch-'.$model->id
-                                    ],
-                                    'labelOptions' => ['style' => 'font-size: 12px;'],
-                                ]);
+                            'value' => function ($model)use($permisos) {
+
+                                if($permisos){
+                                    $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
+                                    
+                                    return SwitchInput::widget([
+                                        'name' => 'status_'.$model->id,
+                                        'value' => $isActive,
+                                        'pluginEvents' => [
+                                            'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
+                                        ],
+                                        'pluginOptions' => [
+                                            'onText' => 'Activo',
+                                            'offText' => 'Inactivo',
+                                            'onColor' => 'success',
+                                            'offColor' => 'danger',
+                                            'state' => $isActive
+                                        ],
+                                        'options' => [
+                                            'id' => 'status-switch-'.$model->id
+                                        ],
+                                        'labelOptions' => ['style' => 'font-size: 12px;'],
+                                    ]);
+                                }else{
+
+                                    return '<span class="status-badge ' . ($model->estatus == 'Activo' ? 'active' : 'inactive') . '">' .
+                                         ($model->estatus == 'Activo' ? 'Activo' : 'Inactivo') . '</span>';
+                                }
                             },
                             'filterType' => GridView::FILTER_SELECT2,
                             'filter' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],

@@ -111,14 +111,14 @@ $canManage = ($rol == 'superadmin'); // Asumimos que 'superadmin' es el único r
                     <p><strong>Nombre del Servicio:</strong> <?= Html::encode($model->nombre_servicio) ?></p>
                     <p><strong>Área:</strong> <?= Html::encode($model->area ? $model->area->nombre : 'N/A') ?></p>
                     <p><strong>Estatus:</strong> 
-                        <span class="status-badge <?= $model->estatus == 1 ? 'active' : 'inactive' ?>">
-                            <?= $model->estatus == 1 ? 'Activo' : 'Inactivo' ?>
+                        <span class="status-badge <?= $model->estatus == "Activo" ? 'active' : 'inactive' ?>">
+                            <?= $model->estatus == "Activo" ? 'Activo' : 'Inactivo' ?>
                         </span>
                     </p>
                 </div>
                 <div class="col">
-                    <p><strong>Costo:</strong> <?= Html::encode(Yii::$app->formatter->asCurrency($model->costo)) ?></p>
-                    <p><strong>Precio:</strong> <?= Html::encode(Yii::$app->formatter->asCurrency($model->precio)) ?></p>
+                    <p><strong>Costo:</strong> <?= $model->costo ?></p>
+                    <p><strong>Precio:</strong> <?= $model->precio ?></p>
                 </div>
             </div>
             

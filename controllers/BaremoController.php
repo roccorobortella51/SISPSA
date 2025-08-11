@@ -40,7 +40,7 @@ class BaremoController extends Controller
      */
     public function actionIndex($clinica_id = "")
     {
-        $clinica = RmClinica::find()->where(['id' => $clinica_id])->andWhere(['is','deleted_at', null])->one();
+        $clinica = RmClinica::find()->where(['id' => $clinica_id])->one();
         $searchModel = new BaremoSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
@@ -84,22 +84,7 @@ class BaremoController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate()
-    {
-        $model = new Baremo();
-
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
-        }
-
-        return $this->render('create', [
-            'model' => $model,
-        ]);
-    }
+   
 
     /**
      * Updates an existing Baremo model.
