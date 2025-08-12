@@ -26,6 +26,10 @@ function formatDateTime($value) {
 
 $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
 
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION'); 
+
 ?>
 
 <div class="main-container"> 
@@ -35,11 +39,15 @@ $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
         <h1><?= Html::encode($this->title) ?></h1>
        
         <div class="header-buttons-group">
-            <?= Html::a(
-                '<i class="fas fa-edit mr-2"></i> Actualizar',
-                ['update', 'id' => $model->id],
-                ['class' => 'btn-base btn-blue'] 
-            ) ?>
+
+            <?php 
+            if($permisos){
+                echo Html::a(
+                    '<i class="fas fa-edit mr-2"></i> Actualizar',
+                    ['update', 'id' => $model->id],
+                    ['class' => 'btn-base btn-blue'] 
+                );
+                } ?>
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',
                 ['index'], // Cambiado para volver al índice de agencias

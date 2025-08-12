@@ -40,7 +40,7 @@ if ($clinica && $clinica->id !== null) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor'); // Lógica de permisos original
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor'); // Lógica de permisos original
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->

@@ -7,7 +7,7 @@ use yii\grid\ActionColumn; // Para la columna de acciones
 use yii\web\JqueryAsset; // Asegúrate de tener este 'use' si tu JS de paneles lo requiere
 use app\models\AgenteFuerza; // Tu modelo AgenteFuerza
 use app\models\Agente; // Tu modelo Agente
-
+use app\components\UserHelper;
 
 
 /** @var yii\web\View $this */
@@ -20,6 +20,9 @@ $this->title = 'FUERZA DE VENTA'; //PARA AGENTE: ' . $agente->nom;
 $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['agente/index']];
 $this->params['breadcrumbs'][] = ['label' => $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
 $this->params['breadcrumbs'][] = $this->title;
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
 
 
 ?>
@@ -45,7 +48,7 @@ if (!$agente->isNewRecord) { ?>
                     ['class' => 'btn btn-secondary btn-lg w-100']
                 ) ?>
             </div>
-
+            <?php if($permisos){ ?>
             <div class="col">
                 <?= Html::a(
                     '<i class="fas fa-undo"></i> VOLVER PARA AGENCIA PRINCIPAL',
@@ -53,14 +56,15 @@ if (!$agente->isNewRecord) { ?>
                     ['class' => 'btn btn-info btn-lg w-100']
                 ) ?>
             </div>
+          
+                <div class="col">
+                    <?= Html::a(
+                        '<i class="fas fa-plus"></i> CREAR UN MIEMBRO DE FUERZA DE VENTA',
+                        ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
+                        ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
+                    ) ?>
+                </div>
 
-            <div class="col">
-                <?= Html::a(
-                    '<i class="fas fa-plus"></i> CREAR UN MIEMBRO DE FUERZA DE VENTA',
-                    ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
-                    ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
-                ) ?>
-            </div>
 
             <div class="col">
                 <?= Html::a(
@@ -69,6 +73,7 @@ if (!$agente->isNewRecord) { ?>
                     ['class' => 'btn btn-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
                 ) ?>
             </div>
+            <?php } ?>
         </div>
     </div>
 <?php } ?>
@@ -183,7 +188,7 @@ if (!$agente->isNewRecord) { ?>
                             [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{afiliados}</div>',
                                 'options' => ['style' => 'width:80px; min-width:80px;'],
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
@@ -199,7 +204,9 @@ if (!$agente->isNewRecord) { ?>
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key) use ($id_agente, $agente) {
+                                    'update' => function ($url, $model, $key) use ($id_agente, $agente, $permisos) {
+
+                                        if($permisos)
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt ms-text-primary"></i>',
                                             Url::to(['agente-fuerza/update', 'id' => $model->id]),
@@ -210,19 +217,20 @@ if (!$agente->isNewRecord) { ?>
                                             ]
                                         );
                                     },
-                                    // 'delete' => function ($url, $model, $key) {
-                                    //     return Html::a(
-                                    //         '<i class="fas fa-trash-alt"></i>',
-                                    //         Url::to(['agente-fuerza/delete', 'id' => $model->id]),
-                                    //         [
-                                    //             'title' => 'Eliminar',
-                                    //             'class' => 'btn btn-link btn-sm text-danger',
-                                    //             'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
-                                    //             'data-confirm' => '¿Estás seguro de que quieres eliminar este miembro de la fuerza de venta?',
-                                    //             'data-method' => 'post'
-                                    //         ]
-                                    //     );
-                                    // },
+                                    'afiliados' => function ($url, $model, $key) use ($id_agente, $agente, $permisos) {
+
+                                        //if($permisos)
+                                        return Html::a(
+                                            '<i class="fas fa-users ms-text-primary"></i>',
+                                            Url::to(['user-datos/index-by-afiliado', 'asesor_id' => $model->id]),
+                                            [
+                                                'title' => 'Afiliados',
+                                                'class' => 'btn btn-link btn-sm text-success',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                            ]
+                                        );
+                                    },
+                                   
                                 ],
                             ],
                         ], // Fin de columns
