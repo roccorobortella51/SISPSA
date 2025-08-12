@@ -285,7 +285,12 @@ class User extends ActiveRecord implements IdentityInterface
 
     public function getAgenteFuerza()
     {
-        return $this->hasOne(AuthAssignment::class, ['idusuario' => 'id']);
+        return $this->hasOne(AgenteFuerza::class, ['idusuario' => 'id']);
+    }
+
+     public function getAgente()
+    {
+        return $this->hasOne(Agente::class, ['idusuariopropietario' => 'id']);
     }
 
     public static function getStatusLabels()

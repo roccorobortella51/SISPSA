@@ -10,7 +10,7 @@ use app\models\User;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-
+use app\components\UserHelper; 
 /**
  * AgenteFuerzaController implements the CRUD actions for AgenteFuerza model.
  */
@@ -161,8 +161,24 @@ class AgenteFuerzaController extends Controller
      * @throws NotFoundHttpException si el ID del Agente es inválido.
      */
     
-     public function actionIndexByAgente($agente_id) // <-- Usamos $agente_id aquí
+    public function actionIndexByAgente($agente_id = "") 
     {
+
+        if($agente_id == ""){
+            $rol = UserHelper::getMyRol();
+            $permisos = ($rol == 'Agente'); 
+
+            if($permisos){
+
+                $fuerza = Agente::find()->where(['idusuariopropietario' => UserHelper::getUserId() ])->one();
+
+                if($fuerza){
+
+                    $agente_id = $fuerza->id;
+                }
+            }
+        }
+
         $agente = Agente::findOne($agente_id); // <-- Usamos $agente_id
         if ($agente === null) {
             throw new NotFoundHttpException('El agente especificado no existe.');

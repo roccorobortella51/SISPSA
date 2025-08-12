@@ -207,9 +207,17 @@ class UserHelper
             );
         }
 
-        if(self::getMyRol() == "Agente"){
-            return \yii\helpers\ArrayHelper::map(
-                AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->andWhere(['name' => 'Asesor'])->asArray()->all(),
+        if(self::getMyRol() == "GERENTE-COMERCIALIZACION"){
+
+            //listar agente y asesor
+           return \yii\helpers\ArrayHelper::map(
+                AuthItem::find()
+                    ->select(['name', 'name'])
+                    ->andWhere(['type' => 1])
+                    ->andWhere(['name' => 'Asesor'])
+                    ->orWhere(['name' => 'Agente'])
+                    ->asArray()
+                    ->all(),
                 'name',
                 'name'
             );
@@ -618,6 +626,11 @@ class UserHelper
         } 
 
         return $clinica_id;
+    }
+
+    public static function getUserId()
+    {
+        return Yii::$app->user->identity->id;
     }
       
 }

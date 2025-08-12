@@ -43,7 +43,12 @@ if ($clinica && $clinica->id !== null) {
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
 
+<<<<<<< HEAD
 
+=======
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor'); // Lógica de permisos original
+>>>>>>> 53ed6d4472eeb44ed7711912d041609d89b92eef
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->

@@ -16,7 +16,8 @@ $secondEmailFieldId = Html::getInputId($model2, 'email');
 // --- Fin de cálculo de IDs ---
 
 
-
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin'); 
 ?>
 
 <div class="user-form">
@@ -64,19 +65,22 @@ $secondEmailFieldId = Html::getInputId($model2, 'email');
             ]);
             ?>
         </div>
-        <div class="col-md-4">
-                    <?= $form->field($model2, 'clinica_id')->widget(Select2::classname(), [
-                            'data' => UserHelper::getClinicasList(),
-                            'options' => [
-                                'placeholder' => 'Seleccione',
-                                'class' => 'form-control  form-control-lg',
-                                'id' => 'clinica_id'
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => false,
-                            ],
-                        ])->label('Clinica'); ?>
-        </div>
+
+        <?php if($permisos){?>
+            <div class="col-md-4">
+                        <?= $form->field($model2, 'clinica_id')->widget(Select2::classname(), [
+                                'data' => UserHelper::getClinicasList(),
+                                'options' => [
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                    'id' => 'clinica_id'
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => false,
+                                ],
+                            ])->label('Clinica'); ?>
+            </div>
+        <?php }?>
         <div class="col-md-4 d-flex align-items-center mt-3">
              <?= $form->field($model, 'status')->label('ESTATUS', ['class' => 'me-3'])->widget(SwitchInput::classname(), [
                 'options' => [

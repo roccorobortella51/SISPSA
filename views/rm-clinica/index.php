@@ -24,6 +24,8 @@ $clinicNames = json_encode(array_column($chartData, 'clinicName'));
 $percentages = json_encode(array_column($chartData, 'percentage'));
 $clinicIds = json_encode(array_column($chartData, 'clinicId')); // <-- ¡NUEVO! Pasar los IDs de las clínicas
 $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
+
+
 ?>
 
 <div class=row style="margin:3px !important;">

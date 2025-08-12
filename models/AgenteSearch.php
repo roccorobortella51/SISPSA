@@ -6,6 +6,10 @@ use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Agente;
 
+use app\components\UserHelper;
+
+
+
 /**
  * AgenteSearch represents the model behind the search form of `app\models\Agente`.
  */
@@ -46,10 +50,19 @@ public function rules()
      */
     public function search($params, $formName = null)
     {
+        $rol = UserHelper::getMyRol();
+
+        $filtro_gente = ($rol == 'Agente'); 
+
+
         $query = Agente::find();
 
         // add conditions that should always apply here
         $query->with(['propietario', 'agenteFuerzas']); 
+
+        if($filtro_gente){
+            $query->andFilterWhere(['idusuariopropietario' => UserHelper::getUserId()]);
+        }
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
