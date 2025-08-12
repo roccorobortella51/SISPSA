@@ -25,9 +25,13 @@ if (!empty($clinica_id_param)) {
     }
 }
 
-// --- BREADCRUMBS CONDICIONALES ---
-$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']]; // Siempre se muestra la raíz de clínicas
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor'); // Lógica de permisos original
 
+// --- BREADCRUMBS CONDICIONALES ---
+if($permisos == true){
+$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']]; // Siempre se muestra la raíz de clínicas
+}
 if ($clinica && $clinica->id !== null) {
     // Si estamos en el contexto de una clínica, añadirla a las migas de pan
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
@@ -39,8 +43,7 @@ if ($clinica && $clinica->id !== null) {
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
 
-$rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor'); // Lógica de permisos original
+
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->

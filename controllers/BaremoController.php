@@ -52,8 +52,10 @@ class BaremoController extends Controller
                 $model->estatus = "Activo";
                 if($model->save()){
                 }else{
-                     var_dump($model->errors); die();
+                    Yii::$app->session->setFlash('error', 'Error al crear el baremo');
+                return $this->redirect(['index', 'clinica_id' => $clinica->id]);
                 };
+                Yii::$app->session->setFlash('success', 'Baremo creado correctamente');
                 return $this->redirect(['index', 'clinica_id' => $clinica->id]);
             }
        

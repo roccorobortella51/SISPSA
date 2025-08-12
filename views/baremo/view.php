@@ -2,7 +2,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use app\components\UserHelper; // Importar el UserHelper
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\Baremo $model */
@@ -31,9 +31,16 @@ if (!empty($clinica_id)) {
 
 $this->title = 'DETALLES DEL BAREMO: ' . Html::encode($model->nombre_servicio);
 
+$rol = UserHelper::getMyRol();
+$canManage = ($rol == 'superadmin');
+
 // --- BREADCRUMBS CORREGIDOS ---
-// Se verifica si el ID de la clínica es válido antes de generar los enlaces
+
+
+if($canManage == true){
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
+};
+
 
 if ($clinica->id !== null) { // Solo si tenemos un ID de clínica válido
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
@@ -56,8 +63,7 @@ if (!function_exists('formatUpdatedAt')) { // Evita redefinir si ya existe globa
     }
 }
 
-$rol = UserHelper::getMyRol();
-$canManage = ($rol == 'superadmin'); // Asumimos que 'superadmin' es el único rol que puede gestionar
+
 
 ?>
 
