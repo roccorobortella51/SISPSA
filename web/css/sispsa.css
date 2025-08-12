@@ -10528,6 +10528,38 @@ h3.section-title i {
     transform: scale(1.1);
 }
 
+/* 1. Asegura que el ícono de expandir/colapsar sea blanco */
+/* Apunta al ícono de colapsar (flecha hacia abajo) */
+.kv-expand-header-icon .glyphicon-collapse-down {
+  color: white !important; /* Fuerza el color blanco */
+}
+
+/* Apunta al ícono de expandir (flecha hacia la derecha/más) */
+.kv-expand-header-icon .glyphicon-expand {
+  color: white !important; /* Fuerza el color blanco */
+}
+
+/* 2. Alinea la celda de la cabecera (el TH) que contiene el ícono */
+th.kv-expand-header-cell {
+  /* Centra el contenido de la celda verticalmente */
+  vertical-align: middle !important;
+  /* Centra el contenido de la celda horizontalmente */
+  text-align: center !important;
+  /* Remueve cualquier padding que pueda estar empujando el recuadro hacia abajo */
+  padding: 0 !important;
+}
+
+/* 3. Alinea el contenedor "cuadrado" del ícono dentro de la celda */
+th.kv-expand-header-cell div.kv-expand-header-icon {
+  /* Usa flexbox para centrar perfectamente el ícono dentro de este div */
+  display: flex;
+  align-items: center;   /* Centra verticalmente el ícono */
+  justify-content: center; /* Centra horizontalmente el ícono */
+  width: 100%;           /* Asegura que ocupe todo el ancho disponible */
+  height: 100%;          /* Asegura que ocupe toda la altura disponible para un centrado preciso */
+}
+
+
 
 
 

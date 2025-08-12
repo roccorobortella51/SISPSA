@@ -26,7 +26,7 @@ if (!empty($clinica_id_param)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor'); // Lógica de permisos original
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente'); // Lógica de permisos original
 
 // --- BREADCRUMBS CONDICIONALES ---
 if($permisos == true){
@@ -43,12 +43,8 @@ if ($clinica && $clinica->id !== null) {
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
 
-<<<<<<< HEAD
-
-=======
 $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor'); // Lógica de permisos original
->>>>>>> 53ed6d4472eeb44ed7711912d041609d89b92eef
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->
