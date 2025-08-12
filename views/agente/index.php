@@ -7,7 +7,7 @@ use yii\grid\ActionColumn;
 use app\models\Agente; 
 use app\models\AgenteFuerza;
 use app\models\User;
-
+use app\components\UserHelper;
 /**
  * @var yii\web\View $this
  * @var app\models\AgenteSearch $searchModel
@@ -20,6 +20,9 @@ $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 
 $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION'); 
+
 ?>
 <div class="row" style="margin:3px !important;">
    
@@ -30,9 +33,11 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
         <div class="ms-panel-header d-flex justify-content-between align-items-center mb-3">
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
-            <div>
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
-            </div>
+            <?php if($permisos){ ?>
+                <div>
+                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
+                </div>
+            <?php } ?>
 
         </div>
 
@@ -180,7 +185,8 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key) {
+                                    'update' => function ($url, $model, $key)use($permisos) {
+                                        if($permisos)
                                         return Html::a(
                                             '<i class="fas fa-pen"></i>',
                                             $url,

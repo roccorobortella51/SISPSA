@@ -152,9 +152,4 @@ class Planes extends \yii\db\ActiveRecord
         return $this->hasMany(PlanesItemsCobertura::class, ['plan_id' => 'id']);
     }
 
-    public function getBaremo()
-    {
-        return $this->hasOne(Baremo::class, ['id' => 'baremo_id']);
-    }
-
 }

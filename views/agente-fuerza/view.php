@@ -4,12 +4,13 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use app\models\Agente; // Asegúrate de que Agente esté importado
 use app\models\User; // Asegúrate de que User esté importado
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
 
 $this->title = 'DETALLES DE ASESOR VENDEDOR: ';
-$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA', 'url' => ['index']]; // Añadido URL para breadcrumb
+$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA', 'url' => ['index-by-agente']]; // Añadido URL para breadcrumb
 $this->params['breadcrumbs'][] = 'DETALLES';
 
 \yii\web\YiiAsset::register($this);
@@ -42,6 +43,10 @@ function formatBooleanIcon($value) {
     }
 }
 
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
+
 ?>
 
 <div class="view-main-container">
@@ -51,11 +56,13 @@ function formatBooleanIcon($value) {
     <div class="ms-panel-header">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="button-group-spacing">
-            <?= Html::a(
-                '<i class="fas fa-edit"></i> Actualizar',
-                ['update', 'id' => $model->id],
-                ['class' => 'btn btn-primary']
-            ) ?>
+            <?php if($permisos){ ?>
+                <?= Html::a(
+                    '<i class="fas fa-edit"></i> Actualizar',
+                    ['update', 'id' => $model->id],
+                    ['class' => 'btn btn-primary']
+                ) ?>
+            <?php } ?>
             <?= Html::a(
                 '<i class="fas fa-arrow-left"></i> Volver',
                 ['agente-fuerza/index-by-agente', 'agente_id' => $model->agente_id],
@@ -94,23 +101,23 @@ function formatBooleanIcon($value) {
                 <i class="fas fa-percent text-purple-600"></i> Porcentajes de Comisión
             </h3>
             <div class="info-grid-percentages">
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Venta</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_venta / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Asesoría</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_asesor / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Cobranza</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_cobranza / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Post Venta</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_post_venta / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Registro</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_registrar / 100) ?></p>
                 </div>
