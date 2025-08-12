@@ -29,7 +29,7 @@ if (!empty($clinica_id_from_url)) {
 // No se intenta obtener clinica_id de $model->clinica_id para determinar el contexto de navegación.
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'Agente' || $rol == 'Asesor');
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor');
 
 // --- Título y BREADCRUMBS CONDICIONALES ---
 $this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);

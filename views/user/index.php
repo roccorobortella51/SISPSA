@@ -5,10 +5,9 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
-use app\components\UserHelper;
 use kartik\select2\Select2;
 use app\models\AuthItem; 
-
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -22,6 +21,9 @@ $this->params['breadcrumbs'][] = ['label' => 'Usuarios', 'url' => ['index']];
 
 
 $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la página y breadcrumbs
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -110,6 +112,31 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                             'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
                                         ],
                                     ],
+
+                                    [
+                                        'attribute' => 'userDatos.telefono',
+                                        'format' => 'ntext',
+                                        'label' => 'Teléfono',
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'options' => ['style' => 'width: 50px;'],
+                                        // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                        'filterInputOptions' => [
+                                            'placeholder' => 'Búsqueda',
+                                            'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                        ],
+                                    ],
+
+                                    [  
+                                        'label' => 'Agencia',
+                                        'attribute' => 'id',
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'format' => 'raw',
+                                        'value' => function ($model) {
+                                            return $model->agenteFuerza->agente->nom ?? 'No asignado';
+                                        },
+                                        'contentOptions' => ['class' => 'text-center'],
+                                    ],
+
 
                                     // --- COLUMNA PARA EL ROL ---
                                     [  
