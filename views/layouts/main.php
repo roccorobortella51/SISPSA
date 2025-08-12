@@ -7,7 +7,6 @@ use kartik\spinner\Spinner;
 use yii\helpers\Html;
 use yii\bootstrap4\BootstrapAsset;
 use yii\bootstrap4\BootstrapPluginAsset;
-use yii\bootstrap4\Alert;
 
 BootstrapAsset::register($this);
 BootstrapPluginAsset::register($this);
@@ -95,7 +94,6 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 
     <!-- Main Sidebar Container -->
     <?= $this->render('sidebar', ['assetDir' => $assetDir]) ?>
-
     <!-- Content Wrapper. Contains page content -->
     <?= $this->render('content', ['content' => $content, 'assetDir' => $assetDir]) ?>
     <!-- /.content-wrapper -->

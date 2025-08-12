@@ -30,9 +30,12 @@ if (!isset($clinica)) {
     }
 }
 
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin'); 
 
+if($permisos == true){
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
-
+}
 if ($clinica->id !== null) { 
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
 }
@@ -40,8 +43,7 @@ $this->params['breadcrumbs'][] = 'PLANES';
 
 $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre); 
 
-$rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin'); 
+
 ?>
 
 <div class="main-container"> 

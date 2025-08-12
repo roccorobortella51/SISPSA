@@ -20,16 +20,20 @@ use kartik\select2\Select2;
 if (!isset($clinica)) {
     $clinica = (object)['id' => null, 'nombre' => 'Clínica Desconocida'];
 }
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin'); 
 
 // --- BREADCRUMBS ---
+if($permisos == true){
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
+}
 $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
+
 $this->params['breadcrumbs'][] = 'BAREMOS'; 
 
 $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre); 
 
-$rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin'); 
+
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->

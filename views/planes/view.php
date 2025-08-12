@@ -34,7 +34,13 @@ if (!empty($clinica_id)) {
 
 $this->title = 'DETALLES DEL PLÁN: ' . Html::encode($model->nombre);
 
+// Lógica de permisos
+$rol = UserHelper::getMyRol();
+$canManage = ($rol == 'superadmin');
+
+if($canManage == true){
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
+}
 
 if ($clinica->id !== null) {
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
@@ -52,9 +58,6 @@ if (!function_exists('formatDateTime')) {
     }
 }
 
-// Lógica de permisos
-$rol = UserHelper::getMyRol();
-$canManage = ($rol == 'superadmin');
 
 ?>
 

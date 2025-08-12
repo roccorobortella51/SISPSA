@@ -15,9 +15,6 @@ use app\models\CheckListClinicas;
 /* @var $searchModel app\models\CheckListClinicasSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
-$this->title = 'LISTA DE VERIFICACIÓN DE CLÍNICAS';
-$this->params['breadcrumbs'][] = $this->title;
-
 // Helper para opciones de filtro booleano
 $booleanFilterOptions = [
     '1' => 'Sí',
@@ -108,13 +105,13 @@ $latestCreatedAt = CheckListClinicas::find()->max('created_at');
  */
 
 // --- BREADCRUMBS ---
-
-$this->params['breadcrumbs'][] = ['label' => 'CLINICA', 'url' => ['rm-clinica/update?id='. $clinica->id]];
+$this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
+$this->title = 'LISTA DE VERIFICACIÓN DE CLÍNICAS';
+$this->params['breadcrumbs'][] = $this->title;
+// $this->params['breadcrumbs'][] = ['label' => 'CLINICA', 'url' => ['rm-clinica/update?id='. $clinica->id]];
 // --- FIN  --- 
 
-
-$this->title = 'Verificación de Clínicas'; // Este sigue siendo el título para la página y breadcrumbs
-
+$this->title = 'Verificación de Clínicas'; 
 ?>
 
 <div class=row style="margin:3px !important;">

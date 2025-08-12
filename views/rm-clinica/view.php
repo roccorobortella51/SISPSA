@@ -19,8 +19,19 @@ $parroquiaList = $parquiaList ?? [];
 $ciudadesList = $ciudadesList ?? [];
 $listaEstatus = $listaEstatus ?? [];
 
+$rol = UserHelper::getMyRol();
+
+$permisos = false;
+
+if ($rol == 'superadmin') 
+{
+    $permisos = true;
+}
+
 $this->title = 'DETALLES DE LA CLÍNICA: ' . Html::encode($model->nombre);
+if($permisos == true){
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['index']];
+}
 $this->params['breadcrumbs'][] = Html::encode($model->nombre);
 
 \yii\web\YiiAsset::register($this); // Esto registra los assets por defecto de Yii
@@ -34,47 +45,45 @@ function formatUpdatedAt($value) {
     return Yii::$app->formatter->asDatetime($value, 'medium');
 }
 
-$rol = UserHelper::getMyRol();
 
-$permisos = false;
-
-if ($rol == 'superadmin') 
-{
-    $permisos = true;
-}
 
 ?>
 
-<div class="main-container"> <!-- Usando la clase 'main-container' definida en el fragmento CSS -->
+<div class="main-container"> 
    
 
     <!-- Encabezado y Botones de Acción Principal -->
-    <div class="header-section"> <!-- Usando la clase 'header-section' definida en el fragmento CSS -->
+    <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
 
         <div class="header-buttons-group"> 
             <?php
+
             if($permisos == true){
              echo Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',
                 ['update', 'id' => $model->id],
-                ['class' => 'btn-base btn-blue'] 
-            );} ?>
+                ['class' => 'btn-base btn-blue']
+            );
+
+            echo Html::a(
+                    '<i class="fas fa-undo mr-2"></i> Volver',
+                    '#',
+                    [
+                        'class' => 'btn-base btn-gray', /* Usando clases de botón definidas en el fragmento CSS */
+                        'onclick' => 'window.history.back(); return false;',
+                        'title' => 'Volver a la página anterior',
+                    ]
+                );          
+
+            } ?>
            
-            <?= Html::a(
-                '<i class="fas fa-undo mr-2"></i> Volver',
-                '#',
-                [
-                    'class' => 'btn-base btn-gray', /* Usando clases de botón definidas en el fragmento CSS */
-                    'onclick' => 'window.history.back(); return false;',
-                    'title' => 'Volver a la página anterior',
-                ]
-            ) ?>
+            
         </div>
     </div>
 
     <!-- Sección de Botones de Navegación Específicos de Clínica -->
-    <div class="nav-buttons-grid"> <!-- Usando la clase 'nav-buttons-grid' definida en el fragmento CSS -->
+    <div class="nav-buttons-grid"> 
         <div>
             <?= Html::a(
                 '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',

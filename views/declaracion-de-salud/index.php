@@ -26,15 +26,10 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
 ?>
 
 <div class=row style="margin:3px !important;">
-    <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/user-datos/update', 'id' => $afiliado->id], ['class' => 'btn btn-warning btn-lg']) ?> 
-        </div>
-    </div>
-    <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            <?= Html::a('<i class="fas fa-plus"></i> CREAR DECLARACIÓN DE SALUD', ['create', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
-        </div>
+    <!-- Nuevo contenedor para los botones "Volver" y "Crear Declaración de Salud" -->
+    <div class="col-md-12 d-flex justify-content-center gap-3" style="margin-bottom:10px;">
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['/user-datos/update', 'id' => $afiliado->id], ['class' => 'btn btn-secondary btn-lg rounded-pill px-7 shadow-sm']) ?> 
+        <?= Html::a('<i class="fas fa-plus"></i> CREAR DECLARACIÓN DE SALUD', ['create', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-primary btn-lg']) ?> 
     </div>
 
 
@@ -165,5 +160,3 @@ $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue s
             </div>
             <div class="clearfix"></div>
         </div>
-
-
