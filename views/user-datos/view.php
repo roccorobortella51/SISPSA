@@ -32,7 +32,18 @@ $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor');
 
 // --- Título y BREADCRUMBS CONDICIONALES ---
-$this->title = 'PERFIL DEL AFILIADO: ' . Html::encode($model->nombres . ' ' . $model->apellidos);
+$titulo = 'PERFIL DEL AFILIADO: '. 
+$model->nombres . ' ' . $model->apellidos ;
+
+$titulo2 = 'ASESOR: ' . 
+$model->asesor->id . ' - ' . 
+$model->asesor->userDatos->nombres . " " . 
+$model->asesor->userDatos->apellidos .
+ " (" . $model->asesor->userDatos->user->username . ")";
+
+$this->title = $titulo;
+
+
 
 // Siempre se muestra la raíz de clínicas
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
@@ -62,6 +73,7 @@ if (!function_exists('formatDateTime')) {
     <!-- Encabezado y Botones de Acción Principal -->
     <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1> 
+        <h1><?= Html::encode($titulo2) ?></h1>
         <div class="header-buttons-group">
             <?php if ($permisos): ?>
                 <?= Html::a(
@@ -182,7 +194,8 @@ if (!function_exists('formatDateTime')) {
             <div class="info-grid">
                 <div>
                     <p><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></p>
-                    <p><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->nom : 'Sin asignar') ?></p>
+                    <p><strong>Agencia:</strong> <?= Html::encode($model->asesor ? $model->asesor->agente->nom : 'Sin asignar') ?></p>
+                    <p><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->userDatos->nombres . " " . $model->asesor->userDatos->apellidos . " (" . $model->asesor->userDatos->user->username . ")" : 'Sin asignar') ?></p>
                     <p><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre ?? 'N/A') ?></p>
                 </div>
                 <div>

@@ -237,7 +237,7 @@ class UserHelper
         $agentes = User::find()
             ->select([
                     new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
-                    'user.id AS id'
+                    'user_datos.id AS id'
                 ])   
             ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->leftJoin('user_datos', '"user"."id" = "user_datos"."user_login_id"')
@@ -263,8 +263,9 @@ class UserHelper
             User::find()
                 ->select([
                     new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
-                    'user.id AS id'
-                ])                ->joinWith('userDatos')
+                    'user_datos.id AS id'
+                ])                
+                ->joinWith('userDatos')
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
                 ->where(['auth_assignment.item_name' => "Asesor"])
                 ->asArray()
@@ -280,7 +281,7 @@ class UserHelper
             User::find()
                 ->select([
                     new \yii\db\Expression("CONCAT('N° de Vendedor/Asesor: ', agente_fuerza.id, ' - ' , nombres, '  ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
-                    'user.id AS id'
+                    'agente_fuerza.id AS id'
                 ])                ->joinWith('userDatos')
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
                 ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user"."id"')

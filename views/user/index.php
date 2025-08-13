@@ -68,6 +68,9 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                         'attribute' => 'id',
                                         'options' => ['style' => 'width: 100px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
+                                        'value' => function ($model) {
+                                            return $model->agenteFuerza->agente->id ?? 'No asignado';
+                                        },
                                         // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
                                         'filterInputOptions' => [
                                             'placeholder' => 'Búsqueda',

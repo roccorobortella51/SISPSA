@@ -107,9 +107,9 @@ class AgenteFuerza extends ActiveRecord
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getUser()
+    public function getUserDatos()
     {
-        return $this->hasOne(User::class, ['id' => 'idusuario']);
+        return $this->hasOne(UserDatos::class, ['id' => 'idusuario']);
     }
 
     /**
@@ -131,15 +131,8 @@ class AgenteFuerza extends ActiveRecord
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getUserDatos()
-    {
-        // Esta relación es un ejemplo. Depende de cómo tengas estructuradas tus tablas.
-        // Podría ser hasOne a User y luego a UserDatos, o directamente si idusuario es FK a UserDatos.
-        // Ejemplo: Si UserDatos tiene 'id_usuario' como FK.
-        return $this->hasOne(UserDatos::class, ['id' => 'idusuario']);
-    }
 
-    public function getcodigoAsesor()
+    public function getcodigoAgente()
     {
         return $this->hasOne(Agente::class, ['id' => 'agente_id']);
     }
