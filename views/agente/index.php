@@ -76,7 +76,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                             // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
                                 'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**
-                                'label' => 'Nombre', // Etiqueta visible en la cabecera
+                                'label' => 'AGENCIAS', // Etiqueta visible en la cabecera
                                 'format' => 'ntext',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'options' => ['style' => 'width: 250px;'],
