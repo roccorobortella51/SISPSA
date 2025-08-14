@@ -137,4 +137,9 @@ class AgenteFuerza extends ActiveRecord
         return $this->hasOne(Agente::class, ['id' => 'agente_id']);
     }
 
+    public function getUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'idusuario']);
+    }
+
 }

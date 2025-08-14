@@ -3,7 +3,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use app\components\UserHelper;
-use app\models\RmClinica; // Importar el modelo de la clínica
+use app\models\RmClinica;
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
@@ -14,19 +14,15 @@ use app\models\RmClinica; // Importar el modelo de la clínica
 /** @var int|null $clinica_id // Se asume que este parámetro puede venir de la URL */
 
 // --- Detección y Carga de Clínica (para contexto) ---
-// La vista solo se considerará en el contexto de una clínica si el 'clinica_id' viene explícitamente en la URL.
 $clinica = null;
 $clinica_id_from_url = Yii::$app->request->get('clinica_id'); 
 
 if (!empty($clinica_id_from_url)) {
     $clinica = RmClinica::findOne((int)$clinica_id_from_url);
     if (!$clinica) {
-        // Fallback si la clínica del ID de la URL no se encuentra
         $clinica = (object)['id' => (int)$clinica_id_from_url, 'nombre' => 'Clínica Desconocida'];
     }
 }
-// Si $clinica_id_from_url está vacío, $clinica permanece nulo, lo que activa la ruta de navegación general.
-// No se intenta obtener clinica_id de $model->clinica_id para determinar el contexto de navegación.
 
 $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor');
@@ -43,36 +39,54 @@ $model->asesor->userDatos->apellidos .
 
 $this->title = $titulo;
 
-
-
 // Siempre se muestra la raíz de clínicas
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
 
 // La miga de pan de la clínica y el enlace a 'AFILIADOS' son condicionales al contexto de la clínica
 if ($clinica && $clinica->id !== null) {
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
-    $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index-clinicas', 'clinica_id' => $clinica->id]]; // Enlace a la lista de afiliados de esta clínica
+    $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index-clinicas', 'clinica_id' => $clinica->id]];
 } else {
-    // Si no estamos en el contexto de una clínica, miga de pan genérica a la lista principal
     $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index']];
 }
-$this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos); // Último elemento como texto
+$this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->apellidos);
 
-\yii\web\YiiAsset::register($this); // Registra los assets por defecto de Yii
+\yii\web\YiiAsset::register($this);
 
-// Función para formatear fechas y horas (si no está disponible globalmente)
 if (!function_exists('formatDateTime')) {
     function formatDateTime($value) {
         return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
     }
 }
+
+// --- DATOS DEL PLAN Y CONSUMO (CORREGIDO) ---
+$nombrePlan = $model->plan->nombre ?? 'N/A';
+$precioPlan = $model->plan->precio_dolar ?? 0;
+$saldoInicial = $model->plan->cobertura_dolar ?? 0;
+$consumoActual = 1200.50; // ¡AQUÍ DEBES USAR EL DATO REAL DE TU BBDD!
+$saldoDisponible = $saldoInicial - $consumoActual;
+
+// Manejo del error de división por cero
+$porcentajeConsumido = 0;
+if ($saldoInicial > 0) {
+    $porcentajeConsumido = round(($consumoActual / $saldoInicial) * 100);
+}
+
+// Función auxiliar para mostrar Sí/No con íconos y clases de CSS
+function formatBooleanIcon($value) {
+    if ($value) {
+        return '<span class="text-green-600 mr-1"><i class="fas fa-check-circle"></i></span> Sí';
+    } else {
+        return '<span class="text-red-600 mr-1"><i class="fas fa-times-circle"></i></span> No';
+    }
+}
+
 ?>
 
-<div class="main-container"> <!-- Contenedor principal de la vista -->
+<div class="main-container user-profile-view">
 
-    <!-- Encabezado y Botones de Acción Principal -->
-    <div class="header-section"> 
-        <h1><?= Html::encode($this->title) ?></h1> 
+    <div class="header-section">
+        <h1><?= Html::encode($this->title) ?></h1>
         <h1><?= Html::encode($titulo2) ?></h1>
         <div class="header-buttons-group">
             <?php if ($permisos): ?>
@@ -80,22 +94,20 @@ if (!function_exists('formatDateTime')) {
                     '<i class="fas fa-file-pdf mr-2"></i> Contrato',
                     ['user-datos/generar-contratov', 'id' => $model->id],
                     [
-                        'class' => 'btn-base btn-red', // Usando btn-base y btn-red para el contrato PDF
+                        'class' => 'btn-base btn-red',
                         'target' => '_blank',
                         'data-pjax' => '0'
                     ]
                 ) ?>
                 <?= Html::a(
                     '<i class="fas fa-edit mr-2"></i> Actualizar',
-                    // Pasa clinica_id si está disponible para mantener el contexto en el update
                     Url::to(array_merge(['update', 'id' => $model->id], ($clinica && $clinica->id !== null ? ['clinica_id' => $clinica->id] : []))),
                     ['class' => 'btn-base btn-blue']
                 ) ?>
-                <!-- Botón "Volver" condicional y estilizado -->
-                <?php if (!empty($clinica_id_from_url)) : // Condición basada directamente en el parámetro de la URL ?>
+                <?php if (!empty($clinica_id_from_url)) : ?>
                     <?= Html::a(
                         '<i class="fas fa-undo mr-2"></i> Volver a Afiliados', 
-                        ['index-clinicas', 'clinica_id' => $clinica->id], // Vuelve a la lista de afiliados de esta clínica
+                        ['index-clinicas', 'clinica_id' => $clinica->id],
                         [
                             'class' => 'btn-base btn-gray', 
                             'title' => 'Volver a la lista de afiliados de esta clínica',
@@ -104,7 +116,7 @@ if (!function_exists('formatDateTime')) {
                 <?php else: ?>
                     <?= Html::a(
                         '<i class="fas fa-undo mr-2"></i> Volver a Afiliados', 
-                        ['index'], // Vuelve a la lista general de afiliados
+                        ['index'],
                         [
                             'class' => 'btn-base btn-gray', 
                             'title' => 'Volver a la lista general de afiliados',
@@ -115,38 +127,36 @@ if (!function_exists('formatDateTime')) {
         </div>
     </div>
 
-    <!-- Sección de Foto de Perfil y Datos Personales -->
-    <div class="ms-panel border-blue"> <!-- Usando ms-panel y borde azul -->
+    <div class="ms-panel border-blue">
         <div class="ms-panel-body">
-            <!-- Contenedor de imágenes de perfil e identificación -->
-            <div class="flex justify-center items-center flex-wrap gap-4 mb-4"> <!-- Usando flexbox y gap de Tailwind -->
-                <div class="profile-img-container text-center"> <!-- AÑADIDO: text-center para centrar su contenido -->
+            <div class="flex justify-center items-center flex-wrap gap-4 mb-4">
+                <div class="profile-img-container text-center">
                     <h6>Foto de Perfil</h6>
                     <?php if ($model->selfie): ?>
                         <?= Html::img( $model->selfie, [
                             'alt' => 'Foto de Perfil',
-                            'class' => 'profile-img rounded-full w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block' // AÑADIDO: inline-block
+                            'class' => 'profile-img rounded-full w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block'
                         ]) ?>
                     <?php else: ?>
-                        <i class="fas fa-user-circle text-gray-400 inline-block" style="font-size: 80px;"></i> <!-- AÑADIDO: inline-block -->
+                        <i class="fas fa-user-circle text-gray-400 inline-block" style="font-size: 80px;"></i>
                         <p class="text-muted mt-2">No hay selfie</p>
                     <?php endif; ?>
                 </div>
-                <div class="profile-img-container text-center"> <!-- AÑADIDO: text-center para centrar su contenido -->
+                <div class="profile-img-container text-center">
                     <h6>Imagen de Identificación</h6>
                     <?php if ($model->imagen_identificacion): ?>
                         <?= Html::img($model->imagen_identificacion, [
                             'alt' => 'Imagen de Identificación',
-                            'class' => 'profile-img w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block' // AÑADIDO: inline-block
+                            'class' => 'profile-img w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block'
                         ]) ?>
                     <?php else: ?>
-                        <i class="fas fa-id-card text-gray-400 inline-block" style="font-size: 80px;"></i> <!-- AÑADIDO: inline-block -->
+                        <i class="fas fa-id-card text-gray-400 inline-block" style="font-size: 80px;"></i>
                         <p class="text-muted mt-2">No hay imagen de identificación</p>
                     <?php endif; ?>
                 </div>
             </div>
             
-            <h3 class="section-title justify-center"> <!-- justify-center para centrar el título -->
+            <h3 class="section-title justify-center">
                 <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
             </h3>
             <div class="info-grid text-left">
@@ -165,8 +175,49 @@ if (!function_exists('formatDateTime')) {
         </div>
     </div>
 
-    <!-- Tarjeta de Ubicación -->
-    <div class="ms-panel border-indigo"> <!-- Usando ms-panel y borde índigo -->
+    <div class="ms-panel border-purple">
+        <div class="ms-panel-body">
+            <h3 class="section-title text-center">
+                <i class="fas fa-hand-holding-usd text-purple-600 mr-3"></i> Detalles del Plan
+            </h3>
+            
+            <div class="info-grid-2x2">
+                <div class="info-card-body">
+                    <h6>Plan</h6>
+                    <p class="h5"><?= Html::encode($nombrePlan) ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Precio</h6>
+                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($precioPlan, 'USD') ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Cobertura Total</h6>
+                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($saldoInicial, 'USD') ?></p>
+                </div>
+                <div class="info-card-body">
+                    <h6>Consumido</h6>
+                    <p class="h5 text-danger"><?= Yii::$app->formatter->asCurrency($consumoActual, 'USD') ?></p>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="balance-available">
+                <i class="fas fa-piggy-bank text-blue-600"></i>
+                <h6>Saldo Disponible</h6>
+                <p class="h3 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></p>
+            </div>
+
+            <div class="progress-bar-container mt-4">
+                <div class="progress-bar" style="width: <?= $porcentajeConsumido ?>%; background-color: #6c757d;"></div>
+            </div>
+            <p class="text-sm text-center text-muted mt-2">
+                <?= $porcentajeConsumido ?>% del plan consumido.
+            </p>
+        </div>
+    </div>
+
+    <div class="ms-panel border-indigo">
         <div class="ms-panel-body">
             <h3 class="section-title">
                 <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación
@@ -185,8 +236,7 @@ if (!function_exists('formatDateTime')) {
         </div>
     </div>
 
-    <!-- Tarjeta de Información Adicional -->
-    <div class="ms-panel border-gray"> <!-- Usando ms-panel y borde gris -->
+    <div class="ms-panel border-gray">
         <div class="ms-panel-body">
             <h3 class="section-title">
                 <i class="fas fa-info-circle text-gray-600 mr-3"></i> Información Adicional
@@ -203,7 +253,7 @@ if (!function_exists('formatDateTime')) {
                     <?php
                         $estatusText = $model->estatus ?? 'N/A';
                         $estatusClass = 'inactive';
-                        if ($estatusText === 'Activo' || $estatusText === 'Registrado') { // Asume 'Registrado' también es un estado "activo" para el badge
+                        if ($estatusText === 'Activo' || $estatusText === 'Registrado') {
                             $estatusClass = 'active';
                         }
                     ?>
@@ -213,3 +263,4 @@ if (!function_exists('formatDateTime')) {
         </div>
     </div>
 </div>
+
