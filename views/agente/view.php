@@ -2,44 +2,54 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use app\components\UserHelper; // Importar el UserHelper
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\Agente $model */
 
-$this->title = 'DETALLES DE LA AGENCIA: ' . Html::encode($model->nom); // Changed title for better context
+$this->title = 'DETALLES DE LA AGENCIA: ' . Html::encode($model->nom);
 $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
-$this->params['breadcrumbs'][] = Html::encode($model->nom); // Changed breadcrumb to agent's name
-\yii\web\YiiAsset::register($this); // Registra los assets por defecto de Yii (AppAsset se encargará del resto)
+$this->params['breadcrumbs'][] = Html::encode($model->nom);
+\yii\web\YiiAsset::register($this);
 
-// Function to format percentages (assuming they are stored as integers representing percentage points)
 function formatPercentage($value) {
-    // Ensure value is treated as a number before division
     return Yii::$app->formatter->asPercent((float)$value / 100);
 }
 
-// Function to format dates
 function formatDateTime($value) {
     return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
 }
 
-
 $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
-
-
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION'); 
+$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
+
+// --- DATOS DE EJEMPLO PARA LA GRÁFICA ---
+$gananciasPorMes = [
+    'Enero' => 12500,
+    'Febrero' => 14300,
+    'Marzo' => 13800,
+    'Abril' => 16500,
+    'Mayo' => 17200,
+    'Junio' => 15300,
+];
+
+// Preparamos los datos y las etiquetas para el JavaScript
+$meses = array_keys($gananciasPorMes);
+$datos = array_values($gananciasPorMes);
+
+// Codificamos los datos para que JavaScript pueda usarlos fácilmente
+$mesesJs = json_encode($meses);
+$datosJs = json_encode($datos);
 
 ?>
 
 <div class="main-container"> 
    
-    <!-- Encabezado y Botones de Acción Principal -->
     <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
        
         <div class="header-buttons-group">
-
             <?php 
             if($permisos){
                 echo Html::a(
@@ -47,22 +57,20 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                     ['update', 'id' => $model->id],
                     ['class' => 'btn-base btn-blue'] 
                 );
-                } ?>
+            } ?>
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',
-                ['index'], // Cambiado para volver al índice de agencias
+                ['index'],
                 [
                     'class' => 'btn-base btn-gray', 
                     'title' => 'Volver a la lista de agencias',
                 ]
             ) ?>
-           
         </div>
     </div>
 
-    <!-- Tarjeta de Información General de la Agencia -->
-    <div class="ms-panel"> <!-- Usando clase global de sipsa.css -->
-        <div class="ms-panel-body"> <!-- Contenedor de cuerpo de panel -->
+    <div class="ms-panel">
+        <div class="ms-panel-body">
             <h3 class="section-title">
                 <i class="fas fa-building text-blue-600 mr-3"></i> Información General de la Agencia
             </h3>
@@ -80,9 +88,8 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
         </div>
     </div>
 
-    <!-- Tarjeta de Porcentajes de Comisión -->
-    <div class="ms-panel"> <!-- Usando clase global de sipsa.css -->
-        <div class="ms-panel-body"> <!-- Contenedor de cuerpo de panel -->
+    <div class="ms-panel">
+        <div class="ms-panel-body">
             <h3 class="section-title">
                 <i class="fas fa-percent text-purple-600 mr-3"></i> Porcentajes de Comisión
             </h3>
@@ -127,9 +134,19 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
         </div>
     </div>
 
-    <!-- Tarjeta de Fechas de Gestión -->
-    <div class="ms-panel"> <!-- Usando clase global de sipsa.css -->
-        <div class="ms-panel-body"> <!-- Contenedor de cuerpo de panel -->
+    <div class="ms-panel">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-chart-line text-green-600 mr-3"></i> Ganancias de los Últimos 6 Meses
+            </h3>
+            <div class="chart-container" style="height: 250px;">
+                <canvas id="gananciasChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="ms-panel">
+        <div class="ms-panel-body">
             <h3 class="section-title">
                 <i class="fas fa-calendar-alt text-gray-600 mr-3"></i> Fechas de Gestión
             </h3>
@@ -149,5 +166,73 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
             </div>
         </div>
     </div>
-
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const meses = <?= $mesesJs ?>;
+        const datos = <?= $datosJs ?>;
+
+        const ctx = document.getElementById('gananciasChart').getContext('2d');
+        const gananciasChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: meses, // El eje X usa los nombres de los meses
+                datasets: [{
+                    label: 'Ganancias',
+                    data: datos,
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: {
+                            // Esta función de callback se encarga de mostrar el mes y el monto
+                            callback: function(val, index) {
+                                // Devolvemos un array con el mes y el valor formateado
+                                const monto = datos[index].toLocaleString('en-US', {
+                                    style: 'currency',
+                                    currency: 'USD',
+                                    minimumFractionDigits: 2
+                                });
+                                return [meses[index], monto];
+                            },
+                            font: {
+                                size: 12 // Opcional: ajusta el tamaño de la fuente
+                            },
+                            padding: 10 // Opcional: agrega espacio entre la línea del eje y las etiquetas
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Ganancia: $' + context.raw.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>

@@ -124,8 +124,8 @@ if (!$agente->isNewRecord) { ?>
                                 'attribute' => 'agenteFuerzaUserNombres', // <--- ¡Debe coincidir con el nombre del atributo virtual!
                                 'label' => 'Nombre',
                                 'value' => function($model) {
-                                    if ($model->user && $model->user->userDatos) {
-                                        return $model->user->userDatos->nombres . ' ' . $model->user->userDatos->apellidos;
+                                    if ($model->userDatos) {
+                                        return $model->userDatos->nombres . ' ' . $model->userDatos->apellidos;
                                     }
                                     return 'N/A';
                                 },
@@ -138,8 +138,8 @@ if (!$agente->isNewRecord) { ?>
                             [
                                 'label' => 'Cedula de identidad',
                                 'value' => function($model) {
-                                    if ($model->user && $model->user->userDatos) {
-                                        return $model->user->userDatos->cedula;
+                                    if ($model->userDatos) {
+                                        return $model->userDatos->cedula;
                                     }
                                     return 'No disponible';
                                 },
@@ -155,8 +155,8 @@ if (!$agente->isNewRecord) { ?>
                             [
                                 'label' => 'Correo Electrónico',
                                 'value' => function($model) {
-                                    if ($model->user && $model->user->userDatos) {
-                                        return $model->user->userDatos->email;
+                                    if ($model->userDatos) {
+                                        return $model->userDatos->email;
                                     }
                                     return 'No disponible';
                                 },
@@ -174,7 +174,7 @@ if (!$agente->isNewRecord) { ?>
                                 'value' => function($model) {
                                     // Asumiendo que la columna en user_datos es 'telefono' o 'telf'
                                     // Ajusta 'telefono' al nombre real de tu columna
-                                    return $model->user->userDatos->telefono ?? 'No disponible';
+                                    return $model->userDatos->telefono ?? 'No disponible';
                                 },
                                 // Asegúrate de que este 'attribute' sea correcto para el SearchModel
                                 'attribute' => 'agenteFuerzaUserTelefono', // Cambia 'telefono' si el nombre de tu columna es diferente

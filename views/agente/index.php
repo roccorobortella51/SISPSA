@@ -99,7 +99,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                             // Propietario (asumimos 'idusuariopropietario'. Si necesitas el nombre real,
                             // tu modelo 'Agente' necesitará una relación o un campo 'value' aquí)
                             [
-                                'attribute' => 'propietario.username', // CORRECTO, si 'username' es donde está el nombre en el modelo User
+                                'attribute' => 'propietario',
                                 'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
@@ -108,7 +108,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                 ],
                                 // Opcional: para manejar el caso de que no haya propietario y no mostrar error, puedes usar 'value':
                                 'value' => function($model) {
-                                    return $model->propietario ? $model->propietario->username : 'No asignado';
+                                    return $model->propietario ? $model->propietario->nombres : 'No asignado';
                                 }
                             ],
                             
@@ -128,7 +128,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                 'value' => function ($model) {
                                     // $model aquí es una instancia de Agente.
                                     // Accedemos a su relación 'propietario', y luego a los 'userDatos' del propietario.
-                                    return ($model->propietario && $model->propietario->userDatos) ? $model->propietario->userDatos->cedula : 'N/A';
+                                    return ($model->propietario && $model->propietario->cedula) ? $model->propietario->cedula : 'N/A';
                                 },
                             ],
                
