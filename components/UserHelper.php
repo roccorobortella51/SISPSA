@@ -282,9 +282,10 @@ class UserHelper
                 ->select([
                     new \yii\db\Expression("CONCAT('N° de Vendedor/Asesor: ', agente_fuerza.id, ' - ' , nombres, '  ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
                     'agente_fuerza.id AS id'
-                ])                ->joinWith('userDatos')
+                ])
+                ->joinWith('userDatos')
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-                ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user"."id"')
+                ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
                 ->where(['auth_assignment.item_name' => "Asesor"])
                 ->andWhere(['is not', 'agente_fuerza.idusuario', null])
                 ->asArray()

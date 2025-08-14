@@ -72,7 +72,7 @@ class AgenteFuerza extends ActiveRecord
             [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'default', 'value' => 0],
 
             // Reglas para relaciones (foreign keys)
-            [['idusuario'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['idusuario' => 'id']],
+            [['idusuario'], 'exist', 'skipOnError' => true, 'targetClass' => UserDatos::class, 'targetAttribute' => ['idusuario' => 'id']],
             [['agente_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['agente_id' => 'id']],
         ];
     }
