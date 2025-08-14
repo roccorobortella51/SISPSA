@@ -64,12 +64,28 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                     'class' => 'grid-view-container table-responsive',
                                 ],
                                 'columns' => [
-                                    [
+                                     /*[
                                         'attribute' => 'id',
+                                        'label' => 'id Usuario',
                                         'options' => ['style' => 'width: 100px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'value' => function ($model) {
-                                            return $model->agenteFuerza->agente->id ?? 'No asignado';
+                                            return $model->id ?? 'No asignado';
+                                        },
+                                        // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                        'filterInputOptions' => [
+                                            'placeholder' => 'Búsqueda',
+                                            'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                        ],
+                                    ],*/
+
+                                    [
+                                        'attribute' => 'idasesor',
+                                        'label' => 'Asesor id',
+                                        'options' => ['style' => 'width: 100px;'],
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'value' => function ($model) {
+                                            return $model->userDatos->asesor->id ?? 'No asignado';
                                         },
                                         // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
                                         'filterInputOptions' => [
@@ -131,11 +147,11 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 
                                     [  
                                         'label' => 'Agencia',
-                                        'attribute' => 'id',
+                                        'attribute' => 'agencia',
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'format' => 'raw',
                                         'value' => function ($model) {
-                                            return $model->agenteFuerza->agente->nom ?? 'No asignado';
+                                            return $model->userDatos->asesor->agente->nom ?? 'No asignado';
                                         },
                                         'contentOptions' => ['class' => 'text-center'],
                                     ],

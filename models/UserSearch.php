@@ -16,17 +16,19 @@ class UserSearch extends User
 {
 
     public $roleName;
+    public $idasesor;
 
 
     public $nombrecompleto;
+    public $agencia;
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email', 'nombrecompleto','roleName'], 'safe'],
-            [['status', 'created_at', 'updated_at', 'id'], 'integer'],
+            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email', 'nombrecompleto','roleName', 'agencia'], 'safe'],
+            [['status', 'created_at', 'updated_at', 'id', 'idasesor'], 'integer'],
         ];
     }
 
@@ -121,6 +123,8 @@ class UserSearch extends User
 
         $query = User::find();
         $query->innerJoinWith(['userDatos']);
+        $query->joinWith(['userDatos.asesor']);
+        $query->joinWith(['userDatos.asesor.agente']);
 
 
         if($rol == "GERENTE-COMERCIALIZACION"){
@@ -163,6 +167,7 @@ class UserSearch extends User
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'user.id' => $this->id,
+            'agente_fuerza.id' => $this->idasesor
         ]);
 
         $query->andFilterWhere(['ilike', 'username', $this->username])
@@ -170,7 +175,8 @@ class UserSearch extends User
             ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
             ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
             ->andFilterWhere(['ilike', 'email', $this->email])
-            ->andFilterWhere(['like', 'user_datos.role', $this->roleName]);
+            ->andFilterWhere(['like', 'user_datos.role', $this->roleName])
+            ->andFilterWhere(['like', 'agente.nom', $this->agencia]);
 
                 // Filtro para el nombre completo
         if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO
