@@ -183,14 +183,10 @@ if (!function_exists('formatDateTime')) {
                                                 <strong><?= Html::encode($item->baremo->nombre_servicio) ?></strong>
                                             </td>
                                             <td class="text-center">
-                                                 <H5 class="status-badge border-yellow text-yellow-600"> 
                                                    <?= $item->cantidad_limite ?: 'N/A' ?>
-                                                </H5>
                                             </td>
                                             <td class="text-center">
-                                                <H5 class="status-badge border-blue text-blue-600"> 
                                                    <?= $item->plazo_espera ?: 'N/A' ?>
-                                                </H5>
                                             </td>
                                             <?php if ($canManage) : ?>
                                                 <td class="text-center">
