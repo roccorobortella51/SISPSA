@@ -4,6 +4,8 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use app\components\UserHelper;
 use app\models\RmClinica;
+use app\models\AgenteFuerza;
+
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
@@ -31,11 +33,16 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
 $titulo = 'PERFIL DEL AFILIADO: '. 
 $model->nombres . ' ' . $model->apellidos ;
 
+$asesor = AgenteFuerza::find()->where(['id' => $model->asesor_id])->one();
+
+$titulo2 = "";
+if($asesor){
 $titulo2 = 'ASESOR: ' . 
-$model->asesor->id . ' - ' . 
-$model->asesor->userDatos->nombres . " " . 
-$model->asesor->userDatos->apellidos .
- " (" . $model->asesor->userDatos->user->username . ")";
+$asesor->id . ' - ' . 
+$asesor->userDatos->nombres . " " . 
+$asesor->userDatos->apellidos .
+ " (" . $asesor->userDatos->user->username . ")";
+}
 
 $this->title = $titulo;
 
@@ -64,8 +71,8 @@ $nombrePlan = $model->plan->nombre ?? 'N/A';
 $precioPlan = $model->plan->precio_dolar ?? 0;
 $saldoInicial = $model->plan->cobertura_dolar ?? 0;
 $consumoActual = 1200.50; // ¡AQUÍ DEBES USAR EL DATO REAL DE TU BBDD!
-$saldoDisponible = $saldoInicial - $consumoActual;
-
+//$saldoDisponible = $saldoInicial - $consumoActual;
+$saldoDisponible = 10000;
 // Manejo del error de división por cero
 $porcentajeConsumido = 0;
 if ($saldoInicial > 0) {
@@ -131,7 +138,7 @@ function formatBooleanIcon($value) {
         <div class="ms-panel-body">
             <div class="flex justify-center items-center flex-wrap gap-4 mb-4">
                 <div class="profile-img-container text-center">
-                    <h6>Foto de Perfil</h6>
+                    <h5>Foto de Perfil</h5>
                     <?php if ($model->selfie): ?>
                         <?= Html::img( $model->selfie, [
                             'alt' => 'Foto de Perfil',
@@ -139,11 +146,11 @@ function formatBooleanIcon($value) {
                         ]) ?>
                     <?php else: ?>
                         <i class="fas fa-user-circle text-gray-400 inline-block" style="font-size: 80px;"></i>
-                        <p class="text-muted mt-2">No hay selfie</p>
+                        <p class="text-muted mt-2">No hay selfie</h5>
                     <?php endif; ?>
                 </div>
                 <div class="profile-img-container text-center">
-                    <h6>Imagen de Identificación</h6>
+                    <h5>Imagen de Identificación</h5>
                     <?php if ($model->imagen_identificacion): ?>
                         <?= Html::img($model->imagen_identificacion, [
                             'alt' => 'Imagen de Identificación',
@@ -151,25 +158,25 @@ function formatBooleanIcon($value) {
                         ]) ?>
                     <?php else: ?>
                         <i class="fas fa-id-card text-gray-400 inline-block" style="font-size: 80px;"></i>
-                        <p class="text-muted mt-2">No hay imagen de identificación</p>
+                        <p class="text-muted mt-2">No hay imagen de identificación</h5>
                     <?php endif; ?>
                 </div>
             </div>
             
-            <h3 class="section-title justify-center">
+            <h5 class="section-title justify-center">
                 <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
-            </h3>
+            </h5>
             <div class="info-grid text-left">
                 <div>
-                    <p><strong>Nombres:</strong> <?= Html::encode($model->nombres ?? 'N/A') ?></p>
-                    <p><strong>Cédula de Identidad:</strong> <?= Html::encode(($model->tipo_cedula ? $model->tipo_cedula . '-' : '') . ($model->cedula ?? 'N/A')) ?></p>
-                    <p><strong>Sexo:</strong> <?= Html::encode($model->sexo ?? 'N/A') ?></p>
-                    <p><strong>Correo Electrónico:</strong> <?= !empty($model->email) ? Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500']) : 'N/A' ?></p>
+                    <h5><strong>Nombres:</strong> <?= Html::encode($model->nombres ?? 'N/A') ?></h5>
+                    <h5><strong>Cédula de Identidad:</strong> <?= Html::encode(($model->tipo_cedula ? $model->tipo_cedula . '-' : '') . ($model->cedula ?? 'N/A')) ?></h5>
+                    <h5><strong>Sexo:</strong> <?= Html::encode($model->sexo ?? 'N/A') ?></h5>
+                    <h5><strong>Correo Electrónico:</strong> <?= !empty($model->email) ? Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500']) : 'N/A' ?></h5>
                 </div>
                 <div>
-                    <p><strong>Apellidos:</strong> <?= Html::encode($model->apellidos ?? 'N/A') ?></p>
-                    <p><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></p>
-                    <p><strong>Teléfono:</strong> <?= Html::encode($model->telefono ?? 'N/A') ?></p>
+                    <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellidos ?? 'N/A') ?></h5>
+                    <h5><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></h5>
+                    <h5><strong>Teléfono:</strong> <?= Html::encode($model->telefono ?? 'N/A') ?></h5>
                 </div>
             </div>
         </div>
@@ -177,26 +184,26 @@ function formatBooleanIcon($value) {
 
     <div class="ms-panel border-purple">
         <div class="ms-panel-body">
-            <h3 class="section-title text-center">
+            <h5 class="section-title text-center">
                 <i class="fas fa-hand-holding-usd text-purple-600 mr-3"></i> Detalles del Plan
-            </h3>
+            </h5>
             
             <div class="info-grid-2x2">
                 <div class="info-card-body">
-                    <h6>Plan</h6>
-                    <p class="h5"><?= Html::encode($nombrePlan) ?></p>
+                    <h5>Plan</h5>
+                    <p class="h5"><?= Html::encode($nombrePlan) ?></h5>
                 </div>
                 <div class="info-card-body">
-                    <h6>Precio</h6>
-                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($precioPlan, 'USD') ?></p>
+                    <h5>Precio</h5>
+                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($precioPlan, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
-                    <h6>Cobertura Total</h6>
-                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($saldoInicial, 'USD') ?></p>
+                    <h5>Cobertura Total</h5>
+                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($saldoInicial, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
-                    <h6>Consumido</h6>
-                    <p class="h5 text-danger"><?= Yii::$app->formatter->asCurrency($consumoActual, 'USD') ?></p>
+                    <h5>Consumido</h5>
+                    <p class="h5 text-danger"><?= Yii::$app->formatter->asCurrency($consumoActual, 'USD') ?></h5>
                 </div>
             </div>
 
@@ -204,8 +211,8 @@ function formatBooleanIcon($value) {
 
             <div class="balance-available">
                 <i class="fas fa-piggy-bank text-blue-600"></i>
-                <h6>Saldo Disponible</h6>
-                <p class="h3 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></p>
+                <h5>Saldo Disponible</h5>
+                <p class="h5 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></h5>
             </div>
 
             <div class="progress-bar-container mt-4">
@@ -213,43 +220,43 @@ function formatBooleanIcon($value) {
             </div>
             <p class="text-sm text-center text-muted mt-2">
                 <?= $porcentajeConsumido ?>% del plan consumido.
-            </p>
+            </h5>
         </div>
     </div>
 
     <div class="ms-panel border-indigo">
         <div class="ms-panel-body">
-            <h3 class="section-title">
+            <h5 class="section-title">
                 <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación
-            </h3>
+            </h5>
             <div class="info-grid">
                 <div>
-                    <p><strong>Estado:</strong> <?= Html::encode($estado ?? 'N/A') ?></p>
-                    <p><strong>Ciudad:</strong> <?= Html::encode($ciudad ?? 'N/A') ?></p>
+                    <h5><strong>Estado:</strong> <?= Html::encode($estado ?? 'N/A') ?></h5>
+                    <h5><strong>Ciudad:</strong> <?= Html::encode($ciudad ?? 'N/A') ?></h5>
                 </div>
                 <div>
-                    <p><strong>Municipio:</strong> <?= Html::encode($municipio ?? 'N/A') ?></p>
-                    <p><strong>Parroquia:</strong> <?= Html::encode($parroquia ?? 'N/A') ?></p>
+                    <h5><strong>Municipio:</strong> <?= Html::encode($municipio ?? 'N/A') ?></h5>
+                    <h5><strong>Parroquia:</strong> <?= Html::encode($parroquia ?? 'N/A') ?></h5>
                 </div>
             </div>
-            <p class="border-top-section mt-4 pt-4"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion ?? 'N/A')) ?></p>
+            <p class="border-top-section mt-4 pt-4"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion ?? 'N/A')) ?></h5>
         </div>
     </div>
 
     <div class="ms-panel border-gray">
         <div class="ms-panel-body">
-            <h3 class="section-title">
+            <h5 class="section-title">
                 <i class="fas fa-info-circle text-gray-600 mr-3"></i> Información Adicional
-            </h3>
+            </h5>
             <div class="info-grid">
                 <div>
-                    <p><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></p>
-                    <p><strong>Agencia:</strong> <?= Html::encode($model->asesor ? $model->asesor->agente->nom : 'Sin asignar') ?></p>
-                    <p><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->userDatos->nombres . " " . $model->asesor->userDatos->apellidos . " (" . $model->asesor->userDatos->user->username . ")" : 'Sin asignar') ?></p>
-                    <p><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre ?? 'N/A') ?></p>
+                    <h5><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'No asignada') ?></h5>
+                    <h5><strong>Agencia:</strong> <?= Html::encode($model->asesor ? $model->asesor->agente->nom : 'Sin asignar') ?></h5>
+                    <h5><strong>Asesor:</strong> <?= Html::encode($model->asesor ? $model->asesor->userDatos->nombres . " " . $model->asesor->userDatos->apellidos . " (" . $model->asesor->userDatos->user->username . ")" : 'Sin asignar') ?></h5>
+                    <h5><strong>Tipo de Sangre:</strong> <?= Html::encode($model->tipo_sangre ?? 'N/A') ?></h5>
                 </div>
                 <div>
-                    <p><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre : 'No asignado') ?></p>
+                    <h5><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre : 'No asignado') ?></h5>
                     <?php
                         $estatusText = $model->estatus ?? 'N/A';
                         $estatusClass = 'inactive';
@@ -257,7 +264,7 @@ function formatBooleanIcon($value) {
                             $estatusClass = 'active';
                         }
                     ?>
-                    <p><strong>Estatus:</strong> <span class="status-badge <?= $estatusClass ?>"><?= Html::encode($estatusText) ?></span></p>
+                    <h5><strong>Estatus:</strong> <span class="status-badge <?= $estatusClass ?>"><?= Html::encode($estatusText) ?></span></h5>
                 </div>
             </div>
         </div>
