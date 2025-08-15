@@ -71,8 +71,8 @@ $nombrePlan = $model->plan->nombre ?? 'N/A';
 $precioPlan = $model->plan->precio_dolar ?? 0;
 $saldoInicial = $model->plan->cobertura_dolar ?? 0;
 $consumoActual = 1200.50; // ¡AQUÍ DEBES USAR EL DATO REAL DE TU BBDD!
-$saldoDisponible = $saldoInicial - $consumoActual;
-
+//$saldoDisponible = $saldoInicial - $consumoActual;
+$saldoDisponible = 10000;
 // Manejo del error de división por cero
 $porcentajeConsumido = 0;
 if ($saldoInicial > 0) {

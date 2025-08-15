@@ -148,7 +148,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                     $count = User::find()
                                             ->joinWith('userDatos')
                                             ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-                                            ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user"."id"')
+                                            ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
                                             ->where(['auth_assignment.item_name' => "Asesor"])
                                             ->andWhere(['agente_id' => $model->id])
                                             ->andWhere(['is not', 'agente_fuerza.idusuario', null])
