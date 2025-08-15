@@ -584,7 +584,7 @@ class UserHelper
         $list = ArrayHelper::map($corporativo, 'id', 'name');
 
         // 3. Añadir la opción "No Asignado" al principio del array
-        $defaultOption = ['0' => 'No Asignado']; // Usamos 0 como clave para "No Asignado"
+        $defaultOption = ['' => 'No Asignado']; // Usamos 0 como clave para "No Asignado"
 
         // Fusionar la opción predeterminada con la lista de agentes reales
         $finalList = $defaultOption + $list; // El operador '+' fusiona arrays manteniendo las claves.
