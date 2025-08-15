@@ -634,5 +634,13 @@ class UserHelper
     {
         return Yii::$app->user->identity->id;
     }
+
+    public static function getUserDatosId()
+    {
+        $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+        if ($userdatos) {
+            return $userdatos->id;
+        }
+    }
       
 }

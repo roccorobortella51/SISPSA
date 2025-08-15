@@ -61,7 +61,7 @@ public function rules()
         $query->with(['propietario', 'agenteFuerzas']); 
 
         if($filtro_gente){
-            $query->andFilterWhere(['idusuariopropietario' => UserHelper::getUserId()]);
+            $query->andFilterWhere(['idusuariopropietario' => UserHelper::getUserDatosId()]);
         }
 
         $dataProvider = new ActiveDataProvider([
