@@ -151,6 +151,9 @@ class PlanesController extends Controller
                         
                         if (!$item->save()) {
                             throw new \Exception('Error al guardar items de cobertura');
+                        }else{
+
+                            var_dump($item->getErrors); die();
                         }
                     }
                     
