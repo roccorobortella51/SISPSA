@@ -55,9 +55,9 @@ use kartik\select2\Select2;
                     'Inactivo' => 'Inactivo'
                 ], ['prompt' => 'Seleccione...']) ?>
                 
+                <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number']) ?>
                 <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number']) ?>
                 
-                <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number']) ?>
                 
                 <?= $form->field($model, 'comision')->textInput(['type' => 'number', 'step' => '0.01']) ?>
                 <?= $form->field($model, 'cobertura')->textInput(['type' => 'number', 'step' => '0.01']) ?>

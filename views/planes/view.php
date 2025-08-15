@@ -107,21 +107,21 @@ if (!function_exists('formatDateTime')) {
                     </h3>
                     <div class="info-grid"> 
                         <div>
-                            <p><strong>Nombre del Plan:</strong> <?= Html::encode($model->nombre) ?></p>
-                            <p><strong>Precio:</strong> <?= Html::encode(Yii::$app->formatter->asCurrency($model->precio)) ?></p>
-                            <p><strong>Comisión:</strong> <?= $model->comision ? Html::encode(Yii::$app->formatter->asPercent((float)$model->comision / 100)) : 'N/A' ?></p>
+                            <h5><strong>Nombre del Plan:</strong> <?= Html::encode($model->nombre) ?></h5>
+                            <h5><strong>Precio:</strong> <?= Yii::$app->formatter->asCurrency($model->precio, 'USD') ?></h5>
+                            <h5><strong>Comisión:</strong> <?= $model->comision ? Html::encode(Yii::$app->formatter->asPercent((float)$model->comision / 100)) : 'N/A' ?></h5>
                         </div>
                         <div>
-                            <p><strong>Estatus:</strong> 
+                            <h5><strong>Estatus:</strong> 
                                 <span class="status-badge <?= $model->estatus == 'Activo' || $model->estatus == 1 ? 'active' : 'inactive' ?>">
                                     <?= strtoupper($model->estatus == 1 ? 'Activo' : 'Inactivo') ?>
                                 </span>
-                            </p>
-                            <p><strong>Rango de Edad:</strong> 
+                            </h5>
+                            <h5><strong>Rango de Edad:</strong> 
                                 <?= Html::encode($model->edad_minima) ?> - 
                                 <?= Html::encode($model->edad_limite ? $model->edad_limite . ' años' : 'Sin límite') ?>
-                            </p>
-                            <p><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'N/A') ?></p>
+                            </h5>
+                            <h5><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'N/A') ?></h5>
                         </div>
                     </div>
                     
@@ -129,7 +129,7 @@ if (!function_exists('formatDateTime')) {
                         <h3 class="section-title">
                             <i class="fas fa-align-left text-gray-600 mr-3"></i> Descripción del Plan
                         </h3>
-                        <p><?= $model->descripcion ? nl2br(Html::encode($model->descripcion)) : 'Sin descripción' ?></p>
+                        <h5><?= $model->descripcion ? nl2br(Html::encode($model->descripcion)) : 'Sin descripción' ?></h5>
                     </div>
                 </div>
                 <div class="ms-panel-body border-top-section text-muted small"> <!-- Pie de panel para fechas -->
@@ -183,18 +183,18 @@ if (!function_exists('formatDateTime')) {
                                                 <strong><?= Html::encode($item->baremo->nombre_servicio) ?></strong>
                                             </td>
                                             <td class="text-center">
-                                                 <span class="status-badge border-yellow text-yellow-600"> 
+                                                 <H5 class="status-badge border-yellow text-yellow-600"> 
                                                    <?= $item->cantidad_limite ?: 'N/A' ?>
-                                                </span>
+                                                </H5>
                                             </td>
                                             <td class="text-center">
-                                                <span class="status-badge border-blue text-blue-600"> 
+                                                <H5 class="status-badge border-blue text-blue-600"> 
                                                    <?= $item->plazo_espera ?: 'N/A' ?>
-                                                </span>
+                                                </H5>
                                             </td>
                                             <?php if ($canManage) : ?>
                                                 <td class="text-center">
-                                                    <?= Html::a(
+                                                    <?php Html::a(
                                                         '<i class="far fa-trash-alt"></i>', 
                                                         ['remove-cobertura', 'id' => $item->id, 'plan_id' => $model->id, 'clinica_id' => $clinica->id], // Pasa plan_id y clinica_id
                                                         [
@@ -231,7 +231,7 @@ if (!function_exists('formatDateTime')) {
                             <?php foreach ($baremosFaltantes as $baremo): ?>
                                 <div class="py-3 flex justify-between items-center"> 
                                     <div>
-                                        <p class="font-medium mb-0"><?= Html::encode($baremo->nombre_servicio) ?></p>
+                                        <h5 class="font-medium mb-0"><?= Html::encode($baremo->nombre_servicio) ?></h5>
                                         <small class="text-muted block sm:inline"><?= Html::encode($baremo->descripcion) ?></small>
                                     </div>
                                     <?= Html::a(

@@ -29,7 +29,7 @@ class PlanesItemsCobertura extends \yii\db\ActiveRecord
      */
     public static function tableName()
     {
-        return 'planes_Items_Cobertura';
+        return 'planes_items_cobertura';
     }
 
     /**

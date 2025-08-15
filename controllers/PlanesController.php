@@ -145,15 +145,24 @@ class PlanesController extends Controller
                     $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
                     
                     foreach ($itemsData as $itemData) {
-                        $item = new PlanesItemsCobertura();
-                        $item->load($itemData, '');
-                        $item->plan_id = $model->id;
-                        
-                        if (!$item->save()) {
-                            throw new \Exception('Error al guardar items de cobertura');
-                        }else{
 
-                            var_dump($item->getErrors); die();
+                        // Crear una nueva instancia del modelo en cada iteración
+                        $item = new PlanesItemsCobertura();
+
+                        // Asignar los atributos del modelo directamente
+                        $item->porcentaje_cobertura = ""; // Puedes dejarlo vacío o asignar un valor por defecto
+                        $item->cantidad_limite = $itemData['cantidad_limite'];
+                        $item->plazo_espera = $itemData['plazo_espera'];
+                        $item->plan_id = $model->id; // Asignar el ID del modelo principal
+                        $item->nombre_servicio = $itemData['nombre_servicio'];
+                        $item->baremo_id = $itemData['baremo_id'];
+
+                        if (!$item->save()) {
+                            // En lugar de una excepción genérica, puedes ser más específico
+                            echo "MODEL NOT SAVED";
+                            print_r($item->getAttributes());
+                            print_r($item->getErrors()); // Esto te mostrará por qué falla la validación
+                            exit;
                         }
                     }
                     
@@ -218,14 +227,24 @@ class PlanesController extends Controller
                     $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
                     
                     foreach ($itemsData as $itemData) {
-                        if (!empty($itemData['porcentaje_cobertura'])) { // Solo guardar si tiene porcentaje
-                            $item = new PlanesItemsCobertura();
-                            $item->load($itemData, '');
-                            $item->plan_id = $model->id;
-                            
-                            if (!$item->save()) {
-                                throw new \Exception('Error al guardar items de cobertura: ' . print_r($item->errors, true));
-                            }
+
+                        // Crear una nueva instancia del modelo en cada iteración
+                        $item = new PlanesItemsCobertura();
+
+                        // Asignar los atributos del modelo directamente
+                        $item->porcentaje_cobertura = ""; // Puedes dejarlo vacío o asignar un valor por defecto
+                        $item->cantidad_limite = $itemData['cantidad_limite'];
+                        $item->plazo_espera = $itemData['plazo_espera'];
+                        $item->plan_id = $model->id; // Asignar el ID del modelo principal
+                        $item->nombre_servicio = $itemData['nombre_servicio'];
+                        $item->baremo_id = $itemData['baremo_id'];
+
+                        if (!$item->save()) {
+                            // En lugar de una excepción genérica, puedes ser más específico
+                            echo "MODEL NOT SAVED";
+                            print_r($item->getAttributes());
+                            print_r($item->getErrors()); // Esto te mostrará por qué falla la validación
+                            exit;
                         }
                     }
                     
