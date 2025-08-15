@@ -236,6 +236,8 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                     if ($clinica && $clinica->id !== null) {
                                         $params['clinica_id'] = $clinica->id;
                                     }
+
+                                    if($model->clinica_id){
                                     return Html::a(
                                         '<i class="fas fa-address-card ms-text-success"></i>',
                                         Url::to($params), // Asegurar clinica_id condicionalmente
@@ -243,7 +245,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                             'title' => 'Siniestros',
                                             'class' => 'btn-action view'
                                         ]
-                                    );
+                                    );}
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {
