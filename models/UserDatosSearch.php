@@ -68,8 +68,14 @@ class UserDatosSearch extends UserDatos
         */
 
         if($rol == "Asesor"){
-            $query->where(['asesor_id' => Yii::$app->user->id]);
+            $query->where(['asesor_id' => UserHelper::getUserDatosId()]);
+        }else{
+
+            $asesor_id = $_GET['asesor_id'];
+            $query->where(['asesor_id' => $asesor_id]);
         }
+
+
 
         // add conditions that should always apply here
 

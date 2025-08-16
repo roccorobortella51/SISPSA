@@ -39,11 +39,13 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
     
    
     <div class="col-md-2 text-end"> 
-       <?= Html::a(
+       <?php 
+       if($permisos)
+        echo Html::a(
         '<i class="fas fa-plus"></i> CREAR NUEVO USUARIO',
         ['create'],
         ['class' => 'btn btn-outline-primary btn-lg w-100']
-    ) ?>
+    ); ?>
     </div>
 </div>
             <div class="ms-panel-body">
@@ -189,28 +191,69 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                         'buttons' => [
-                                            'view' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="fa fa-eye"></i>',
-                                                    Url::to(['view', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Detalle de Usuario',
-                                                        'class' => 'btn-action view'
-                                                    ]
-                                                );
+                                            'view' => function ($url, $model, $key)use($rol) {
+
+                                                 if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+
+                                                    $asesor_id =  $model->userDatos->asesor->id ?? '0';
+
+                                                    if($asesor_id > 0){
+
+                                                        return Html::a(
+                                                                '<i class="fa fa-eye"></i>',
+                                                                Url::to(['/agente-fuerza/view', 'id' => $asesor_id]),
+                                                                [
+                                                                    'title' => 'Detalle de Usuario',
+                                                                    'class' => 'btn-action view'
+                                                                ]
+                                                            );
+                                                    }
+
+                                                 }else{
+
+                                                    return Html::a(
+                                                            '<i class="fa fa-eye"></i>',
+                                                            Url::to(['view', 'id' => $model->id]),
+                                                            [
+                                                                'title' => 'Detalle de Usuario',
+                                                                'class' => 'btn-action view'
+                                                            ]
+                                                        );
+
+                                                 }
+                                                
                                             },
-                                            'update' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                    Url::to(['update', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Editar Usuario',
-                                                        'class' => 'btn-action view'
-                                                    ]
-                                                );
+                                            'update' => function ($url, $model, $key)use($rol) {
+
+                                               if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+
+                                                    $asesor_id =  $model->userDatos->asesor->id ?? '0';
+
+                                                    if($asesor_id > 0){
+
+                                                        return Html::a(
+                                                                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                                Url::to(['/agente-fuerza/update', 'id' => $asesor_id]),
+                                                                [
+                                                                    'title' => 'Detalle de Usuario',
+                                                                    'class' => 'btn-action view'
+                                                                ]
+                                                            );
+                                                    }
+
+                                                 }else{
+
+                                                    return Html::a(
+                                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                            Url::to(['update', 'id' => $model->id]),
+                                                            [
+                                                                'title' => 'Detalle de Usuario',
+                                                                'class' => 'btn-action view'
+                                                            ]
+                                                        );
+
+                                                 }
                                             },
-                                         
-                                            
                                         ],
                                     ],
                                 ],

@@ -635,11 +635,13 @@ class UserHelper
         return Yii::$app->user->identity->id;
     }
 
-    public static function getUserDatosId()
+    public static function getAgenteId()
     {
         $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+
         if ($userdatos) {
-            return $userdatos->id;
+            $agencia = Agente::find()->where(['idusuariopropietario' => $userdatos->id])->one();
+            return $agencia->id;
         }
     }
       
