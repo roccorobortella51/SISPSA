@@ -652,5 +652,15 @@ class UserHelper
             return $agencia->id;
         }
     }
+
+    public static function getAgenteFuerzaId()
+    {
+        $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+
+        if ($userdatos) {
+            $agencia = AgenteFuerza::find()->where(['idusuario' => $userdatos->id])->one();
+            return $agencia->id;
+        }
+    }
       
 }
