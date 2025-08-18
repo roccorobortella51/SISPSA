@@ -19,152 +19,127 @@ use yii\helpers\Html;
         <span class="checkbox-group"><span class="checkbox"><?= ($data['affiliation_type'] ?? '') == 'COLECTIVO' ? '☑' : '☐' ?></span> COLECTIVO</span>
     </div>
 
-    <div class="section-title">DATOS DEL PROPUESTO AFILIADO TITULAR</div>
-    <table class="data-table">
+    <table class="family-table">
+        <thead>
+            <tr>
+                <th colspan="8">DATOS DEL PROPUESTO AFILIADO TITULAR</th>
+            </tr>
+        </thead>
         <tr>
-            <td width="15%">Nombre y Apellido:</td>
-            <td width="20%" class="underline"><?= $data['proposed_affiliate_name'] ?? '' ?></td>
-            <td width="15%">C.I. / R.I.F./ Pasaporte:</td>
-            <td width="15%" class="underline"><?= $data['proposed_affiliate_ci'] ?? '' ?></td>
-            <td width="10%">Nacionalidad:</td>
-            <td width="10%" class="underline"><?= $data['proposed_affiliate_nationality'] ?? '' ?></td>
-            <td width="10%">Estado civil:</td>
-            <td width="10%" class="underline"><?= $data['proposed_affiliate_marital_status'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nombre y Apellido: <?= $data['proposed_affiliate_name'] ?? '' ?><br></td>
+            <td colspan="2" style="font-size: 10px;">C.I. / R.I.F./ Pasaporte: <?= $data['proposed_affiliate_ci'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nacionalidad: <?= $data['proposed_affiliate_nationality'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Estado civil: <?= $data['proposed_affiliate_marital_status'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Lugar Nacimiento:</td>
-            <td class="underline"><?= $data['proposed_affiliate_birthplace'] ?? '' ?></td>
-            <td>Fecha Nacimiento:</td>
-            <td class="underline"><?= isset($data['proposed_affiliate_birthdate']) && $data['proposed_affiliate_birthdate'] ? date('d/m/Y', strtotime($data['proposed_affiliate_birthdate'])) : '' ?></td>
-            <td>Sexo:</td>
-            <td class="underline"><?= $data['proposed_affiliate_sex'] ?? '' ?></td>
-            <td>Profesión:</td>
-            <td class="underline"><?= $data['proposed_affiliate_profession'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">Lugar Nacimiento: <?= $data['proposed_affiliate_birthplace'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">Fecha Nacimiento: <?= isset($data['proposed_affiliate_birthdate']) && $data['proposed_affiliate_birthdate'] ? date('d/m/Y', strtotime($data['proposed_affiliate_birthdate'])) : '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Sexo: <?= $data['proposed_affiliate_sex'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Profesión: <?= $data['proposed_affiliate_profession'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Ocupación: <?= $data['proposed_affiliate_occupation'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Ocupación:</td>
-            <td class="underline"><?= $data['proposed_affiliate_occupation'] ?? '' ?></td>
-            <td colspan="6">
-                Actividad Económica:
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Industrial' ? '☑' : '☐' ?></span> Industrial</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Comercial' ? '☑' : '☐' ?></span> Comercial</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Profesional' ? '☑' : '☐' ?></span> Profesional</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Gubernamental' ? '☑' : '☐' ?></span> Gubernamental</span>
+            <td colspan="4" style="font-size: 10px;">
+            Actividad Económica:<br>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Industrial' ? '☑' : '☐' ?></span> Industrial</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Comercial' ? '☑' : '☐' ?></span> Comercial</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Profesional' ? '☑' : '☐' ?></span> Profesional</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_economic_activity'] ?? '') == 'Gubernamental' ? '☑' : '☐' ?></span> Gubernamental</span>
+            </td>
+            <td colspan="2" style="font-size: 10px;">Si es Comerciante indicar Ramo: <?= $data['proposed_affiliate_commercial_branch'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;"><br>
+            Descripción de la Actividad:<br>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
             </td>
         </tr>
         <tr>
-            <td colspan="2">
-                Ingreso Anual Bs:
+            <td colspan="8" style="font-size: 10px;">
+                Ingreso Anual Bs:<br>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_annual_income'] ?? '') == 'De 1 a 5 Salarios mínimos' ? '☑' : '☐' ?></span> De 1 a 5</span>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_annual_income'] ?? '') == 'De 6 a 10 Salarios mínimos' ? '☑' : '☐' ?></span> De 6 a 10</span>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_annual_income'] ?? '') == 'De 11 a 20 Salarios mínimos' ? '☑' : '☐' ?></span> De 11 a 20</span>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_annual_income'] ?? '') == 'De 20 Salarios mínimos en adelante' ? '☑' : '☐' ?></span> 20+</span>
             </td>
-            <td colspan="2">Si es Comerciante indicar Ramo:</td>
-            <td colspan="4" class="underline"><?= $data['proposed_affiliate_commercial_branch'] ?? '' ?></td>
         </tr>
         <tr>
-            <td colspan="8">
-                Descripción de la Actividad:
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['proposed_affiliate_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
-            </td>
+            <td colspan="6" style="font-size: 10px;">Dirección de Residencia: <?= $data['proposed_affiliate_residence_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono Residencia: <?= $data['proposed_affiliate_phone_residence'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Dirección de Residencia:</td>
-            <td colspan="3" class="underline"><?= $data['proposed_affiliate_residence_address'] ?? '' ?></td>
-            <td colspan="2">Teléfono Residencia:</td>
-            <td colspan="2" class="underline"><?= $data['proposed_affiliate_phone_residence'] ?? '' ?></td>
+            <td colspan="6" style="font-size: 10px;">Dirección de Oficina: <?= $data['proposed_affiliate_office_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono Oficina: <?= $data['proposed_affiliate_phone_office'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Dirección de Oficina:</td>
-            <td colspan="3" class="underline"><?= $data['proposed_affiliate_office_address'] ?? '' ?></td>
-            <td colspan="2">Teléfono de Oficina:</td>
-            <td colspan="2" class="underline"><?= $data['proposed_affiliate_phone_office'] ?? '' ?></td>
+            <td colspan="8" style="font-size: 10px;">Dirección de Cobro: <?= $data['proposed_affiliate_office_address'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Dirección de Cobro:</td>
-            <td colspan="3" class="underline"><?= $data['proposed_affiliate_billing_address'] ?? '' ?></td>
-            <td>Teléfono Celular:</td>
-            <td class="underline"><?= $data['proposed_affiliate_cell_phone'] ?? '' ?></td>
-            <td>Correo Electrónico:</td>
-            <td class="underline"><?= $data['proposed_affiliate_email'] ?? '' ?></td>
+            <td colspan="3" style="font-size: 10px;">Teléfono Celular: <?= $data['proposed_affiliate_cell_phone'] ?? '' ?></td>
+            <td colspan="5" style="font-size: 10px;">Correo Electrónico: <?= $data['proposed_affiliate_email'] ?? '' ?></td>
         </tr>
     </table>
 
-    <div class="section-title">DATOS DEL CONTRATANTE (De ser diferente al PROPUESTO AFILIADO TITULAR)</div>
-    <table class="data-table">
+    <table class="family-table">
+         <thead>
+            <tr>
+                <th colspan="8">DATOS DEL CONTRATANTE (De ser diferente al PROPUESTO AFILIADO TITULAR)</th>
+            </tr>
+        </thead>
         <tr>
-            <td width="15%">Nombre y Apellido:</td>
-            <td width="20%" class="underline"><?= $data['contracting_party_name'] ?? '' ?></td>
-            <td width="15%">C.I. / R.I.F./ Pasaporte:</td>
-            <td width="15%" class="underline"><?= $data['contracting_party_ci'] ?? '' ?></td>
-            <td width="10%">Nacionalidad:</td>
-            <td width="10%" class="underline"><?= $data['contracting_party_nationality'] ?? '' ?></td>
-            <td width="10%">Estado civil:</td>
-            <td width="10%" class="underline"><?= $data['contracting_party_marital_status'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nombre y Apellido: <?= $data['contracting_party_name'] ?? '' ?><br></td>
+            <td colspan="2" style="font-size: 10px;">C.I. / R.I.F./ Pasaporte: <?= $data['contracting_party_ci'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nacionalidad: <?= $data['contracting_party_nationality'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Estado civil: <?= $data['contracting_party_marital_status'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Lugar Nacimiento:</td>
-            <td class="underline"><?= $data['contracting_party_birthplace'] ?? '' ?></td>
-            <td>Fecha Nacimiento:</td>
-            <td class="underline"><?= isset($data['contracting_party_birthdate']) && $data['contracting_party_birthdate'] ? date('d/m/Y', strtotime($data['contracting_party_birthdate'])) : '' ?></td>
-            <td>Sexo:</td>
-            <td class="underline"><?= $data['contracting_party_sex'] ?? '' ?></td>
-            <td>Profesión:</td>
-            <td class="underline"><?= $data['contracting_party_profession'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">Lugar Nacimiento: <?= $data['contracting_party_birthplace'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">Fecha Nacimiento: <?= isset($data['contracting_party_birthdate']) && $data['contracting_party_birthdate'] ? date('d/m/Y', strtotime($data['proposed_affiliate_birthdate'])) : '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Sexo: <?= $data['contracting_party_sex'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Profesión: <?= $data['contracting_party_profession'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Ocupación: <?= $data['contracting_party_occupation'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Ocupación:</td>
-            <td class="underline"><?= $data['contracting_party_occupation'] ?? '' ?></td>
-            <td colspan="6">
-                Actividad Económica:
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Industrial' ? '☑' : '☐' ?></span> Industrial</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Comercial' ? '☑' : '☐' ?></span> Comercial</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Profesional' ? '☑' : '☐' ?></span> Profesional</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Gubernamental' ? '☑' : '☐' ?></span> Gubernamental</span>
+         <td colspan="4" style="font-size: 10px;">
+            Actividad Económica:<br>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Industrial' ? '☑' : '☐' ?></span> Industrial</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Comercial' ? '☑' : '☐' ?></span> Comercial</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Profesional' ? '☑' : '☐' ?></span> Profesional</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_economic_activity'] ?? '') == 'Gubernamental' ? '☑' : '☐' ?></span> Gubernamental</span>
+            </td>
+            <td colspan="2" style="font-size: 10px;">Si es Comerciante indicar Ramo: <?= $data['proposed_affiliate_commercial_branch'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;"><br>
+            Descripción de la Actividad:<br>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
             </td>
         </tr>
         <tr>
-            <td colspan="2">
-                Ingreso Anual Bs:
+            <td colspan="8" style="font-size: 10px;">
+                Ingreso Anual Bs:<br>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_annual_income'] ?? '') == 'De 1 a 5 Salarios mínimos' ? '☑' : '☐' ?></span> De 1 a 5</span>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_annual_income'] ?? '') == 'De 6 a 10 Salarios mínimos' ? '☑' : '☐' ?></span> De 6 a 10</span>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_annual_income'] ?? '') == 'De 11 a 20 Salarios mínimos' ? '☑' : '☐' ?></span> De 11 a 20</span>
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_annual_income'] ?? '') == 'De 20 Salarios mínimos en adelante' ? '☑' : '☐' ?></span> 20+</span>
             </td>
-            <td colspan="2">Si es Comerciante indicar Ramo:</td>
-            <td colspan="4" class="underline"><?= $data['contracting_party_commercial_branch'] ?? '' ?></td>
         </tr>
         <tr>
-            <td colspan="8">
-                Descripción de la Actividad:
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['contracting_party_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
-            </td>
+            <td colspan="6" style="font-size: 10px;">Dirección de Residencia: <?= $data['contracting_party_residence_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono Residencia: <?= $data['contracting_party_phone_residence'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Dirección de Residencia:</td>
-            <td colspan="3" class="underline"><?= $data['contracting_party_residence_address'] ?? '' ?></td>
-            <td colspan="2">Teléfono Residencia:</td>
-            <td colspan="2" class="underline"><?= $data['contracting_party_phone_residence'] ?? '' ?></td>
+            <td colspan="6" style="font-size: 10px;">Dirección de Oficina: <?= $data['contracting_party_office_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono Oficina: <?= $data['contracting_party_phone_office'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Dirección de Oficina:</td>
-            <td colspan="3" class="underline"><?= $data['contracting_party_office_address'] ?? '' ?></td>
-            <td colspan="2">Teléfono de Oficina:</td>
-            <td colspan="2" class="underline"><?= $data['contracting_party_phone_office'] ?? '' ?></td>
+            <td colspan="8" style="font-size: 10px;">Dirección de Cobro: <?= $data['contracting_party_office_address'] ?? '' ?></td>
         </tr>
         <tr>
-            <td>Dirección de Cobro:</td>
-            <td colspan="3" class="underline"><?= $data['contracting_party_billing_address'] ?? '' ?></td>
-            <td>Teléfono Celular:</td>
-            <td class="underline"><?= $data['contracting_party_cell_phone'] ?? '' ?></td>
-            <td>Correo Electrónico:</td>
-            <td class="underline"><?= $data['contracting_party_email'] ?? '' ?></td>
+            <td colspan="3" style="font-size: 10px;">Teléfono Celular: <?= $data['contracting_party_cell_phone'] ?? '' ?></td>
+            <td colspan="5" style="font-size: 10px;">Correo Electrónico: <?= $data['contracting_party_email'] ?? '' ?></td>
         </tr>
+        
     </table>
 
     <div class="section-title">PLAN SOLICITADO</div>
