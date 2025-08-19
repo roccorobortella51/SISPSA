@@ -1,23 +1,33 @@
 <?php
 use yii\helpers\Html;
 ?>
-
-<img src="<?= Html::encode($logo) ?>" alt="Logo SISPSA" class="logo-superior-izquierda">
 <div class="pdf-container">
-    <div class="header">
-        <div class="header-right">
-            <div>Contrato de Servicios de Medicina Prepagada</div>
-            <div>Solicitud de Afiliación</div>
-        </div>
-    </div>
 
-    <div class="title">SOLICITUD DE AFILIACIÓN</div>
-    <div class="rif">RIF J-506549220</div>
 
-    <div class="affiliation-type">
-        <span class="checkbox-group"><span class="checkbox"><?= ($data['affiliation_type'] ?? '') == 'INDIVIDUAL' ? '☑' : '☐' ?></span> INDIVIDUAL</span>
-        <span class="checkbox-group"><span class="checkbox"><?= ($data['affiliation_type'] ?? '') == 'COLECTIVO' ? '☑' : '☐' ?></span> COLECTIVO</span>
-    </div>
+<table style="width: 100%;">
+    <tr>
+        <td style="vertical-align: top; width: 65%;">
+            <img src="<?= Html::encode($logo) ?>" alt="Logo SISPSA" class="logo-superior-izquierda" style="width: 100px;">
+            <div style="font-size: 10px;">
+                <div>Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013</div>
+                <div>R.I.F.: J-50654922</div>
+            </div>
+        </td>
+        <td style="vertical-align: top; width: 40%;">
+            <div class="header" style="margin-top: 30px;">
+                <div class="header-right">
+                    <div>Contrato de Servicios de Medicina Prepagada</div>
+                    <div>Solicitud de Afiliación</div>
+                </div>
+            </div>
+            <div class="affiliation-type">
+                <span class="checkbox-group"><span class="checkbox"><?= ($data['affiliation_type'] ?? '') == 'INDIVIDUAL' ? '☑' : '☐' ?></span> INDIVIDUAL</span>
+                <span class="checkbox-group"><span class="checkbox"><?= ($data['affiliation_type'] ?? '') == 'COLECTIVO' ? '☑' : '☐' ?></span> COLECTIVO</span>
+            </div>
+        </td>
+    </tr>
+</table>
+<br>
 
     <table class="family-table">
         <thead>
@@ -139,49 +149,99 @@ use yii\helpers\Html;
             <td colspan="3" style="font-size: 10px;">Teléfono Celular: <?= $data['contracting_party_cell_phone'] ?? '' ?></td>
             <td colspan="5" style="font-size: 10px;">Correo Electrónico: <?= $data['contracting_party_email'] ?? '' ?></td>
         </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;"><b>En caso de ser Persona Jurídica, Datos Corporativos:</b></td>
+        </tr>
+         <tr>
+            <td colspan="2" style="font-size: 10px;">Razón Social: <?= $data['corporate_name'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">R.I.F.: <?= $data['corporate_rif'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nº de Registro Mercantil: <?= $data['corporate_mercantile_register'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nº de Tomo: <?= $data['corporate_tome'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">F/Registro: <?= isset($data['corporate_registration_date']) && $data['corporate_registration_date'] ? date('d/m/Y', strtotime($data['corporate_registration_date'])) : '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;">
+                Actividad Económica:
+            </td>
+        </tr>
+        <tr>
+            <td colspan="6" style="font-size: 10px;">Dirección: <?= $data['corporate_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono: <?= $data['corporate_phone'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;">
+                Productos y Servicios que ofrece:
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size: 10px;">Utilidad del ejercicio económico inmediatamente anterior, cuando aplique: <?= $data['corporate_profit'] ?? '' ?></td>
+            <td colspan="4" style="font-size: 10px;">Patrimonio, según último estado de resultados o estado de ganancias y pérdidas: <?= $data['corporate_equity'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;"><b>Datos del Representante Legal:</b></td>
+        </tr>
+        <tr>
+            <td colspan="2" style="font-size: 10px;">Nombre y Apellido: <?= $data['legal_representative_name'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">C.I. / R.I.F./ Pasaporte: <?= $data['legal_representative_ci'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nacionalidad: <?= $data['legal_representative_nationality'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Estado civil: <?= $data['legal_representative_marital_status'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="1" style="font-size: 10px;">Lugar Nacimiento: <?= $data['legal_representative_birthplace'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">Fecha Nacimiento: <?= isset($data['legal_representative_birthdate']) && $data['legal_representative_birthdate'] ? date('d/m/Y', strtotime($data['legal_representative_birthdate'])) : '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Sexo: <?= $data['legal_representative_sex'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Profesión: <?= $data['legal_representative_profession'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Ocupación: <?= $data['legal_representative_occupation'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size: 10px;">
+            Descripción de la Actividad:<br>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
+            </td>
+            <td colspan="2" style="font-size: 10px;">Dirección: <?= $data['legal_representative_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono: <?= $data['legal_representative_phone'] ?? '' ?></td>
+        </tr>
         
     </table>
+    
+  <table class="family-table">
+    <tr>
+        <th colspan="2">PLAN SOLICITADO</th>
+        <th colspan="2">Moneda</th>
+        <th colspan="2">Deducible</th>
+        <th colspan="2">Límite de Cobertura</th>
+    </tr>
+    <tr>
+        <td colspan="2"><?= $data['plan_selected'] ?? '' ?></td>
+        <td colspan="2"><?= $data['plan_currency'] ?? '' ?></td>
+        <td colspan="2"><?= $data['plan_deductible'] ?? '' ?></td>
+        <td colspan="2"><?= $data['plan_coverage_limit'] ?? '' ?></td>
+    </tr>
+    <tr>
+        <th colspan="4">Cobertura Opcional (El Contratante no está obligado a contratar esta cobertura)</th>
+        <th colspan="2">Deducible</th>
+        <th colspan="2">Límite de Cobertura</th>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['maternity_coverage'] ?? false) ? '☑' : '☐' ?></span> Servicio de Maternidad</span>
+        </td>
+        <td colspan="2"><?= $data['maternity_deductible'] ?? '' ?></td>
+        <td colspan="2"><?= $data['maternity_coverage_limit'] ?? '' ?></td>
+    </tr>
+</table>
 
-    <div class="section-title">PLAN SOLICITADO</div>
-    <table class="plan-table">
-        <tr>
-            <td width="50%">
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'DIAMANTE' ? '☑' : '☐' ?></span> DIAMANTE</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'ORO' ? '☑' : '☐' ?></span> ORO</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'PLATA' ? '☑' : '☐' ?></span> PLATA</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'PLATINO' ? '☑' : '☐' ?></span> PLATINO</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'BRONCE' ? '☑' : '☐' ?></span> BRONCE</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'ESMERALDA' ? '☑' : '☐' ?></span> ESMERALDA</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['plan_selected'] ?? '') == 'BASICO' ? '☑' : '☐' ?></span> BÁSICO</span>
-            </td>
-            <td width="15%">Moneda</td>
-            <td width="15%">Deducible</td>
-            <td width="20%">Límite de Cobertura</td>
-        </tr>
-        <tr>
-            <td><?= $data['plan_currency'] ?? '' ?></td>
-            <td><?= $data['plan_deductible'] ?? '' ?></td>
-            <td><?= $data['plan_coverage_limit'] ?? '' ?></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td colspan="4"><strong>Cobertura Opcional (El Contratante no está obligado a contratar esta cobertura)</strong></td>
-        </tr>
-        <tr>
-            <td>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['maternity_coverage'] ?? false) ? '☑' : '☐' ?></span> Servicio de Maternidad</span>
-            </td>
-            <td><?= $data['maternity_deductible'] ?? '' ?></td>
-            <td><?= $data['maternity_coverage_limit'] ?? '' ?></td>
-            <td></td>
-        </tr>
-    </table>
+
 </div>
 
 <div class="pdf-container">
-    <div class="section-title">GRUPO FAMILIAR: (PERSONAS A ASEGURAR, ADEMÁS DEL AFILIADO TITULAR)</div>
     <table class="family-table">
         <thead>
+            <tr>
+                <th colspan="5">GRUPO FAMILIAR: (PERSONAS A ASEGURAR, ADEMÁS DEL AFILIADO TITULAR)</th>
+            </tr>
             <tr>
                 <th width="30%">Apellidos y Nombres</th>
                 <th width="20%">Cédula de Identidad</th>
@@ -214,9 +274,11 @@ use yii\helpers\Html;
         </tbody>
     </table>
 
-    <div class="section-title">BENEFICIARIO EN CASO DE MUERTE DEL PROPUESTO AFILIADO TITULAR</div>
     <table class="family-table">
         <thead>
+            <tr>
+                <th colspan="5">BENEFICIARIO EN CASO DE MUERTE DEL PROPUESTO AFILIADO TITULAR</th>
+            </tr>
             <tr>
                 <th width="30%">Apellidos y Nombres</th>
                 <th width="20%">Cédula de Identidad</th>
@@ -235,19 +297,57 @@ use yii\helpers\Html;
             </tr>
         </tbody>
     </table>
+    
+</div>
+
     <p class="note">En caso de muerte de algún otro AFILIADO en este seguro el BENEFICIARIO es el propuesto AFILIADO TITULAR</p>
 
-    <div class="section-title">DATOS BANCARIOS DEL CONTRATANTE</div>
-    <table class="data-table">
+<div class=""></div>
+
+<table class="family-table">
+    <tr>
+        <th colspan="8">DATOS BANCARIOS DEL CONTRATANTE</th>
+    </tr>
+    <tbody>
+    <tr>
+        <td width="25%">Nombre del Titular:</td>
+        <td width="25%">C.I.:</td>
+        <td width="25%">Nro. Cuenta/Tarjeta:</td>
+        <td width="25%">Banco:</td>
+    </tr>
+    <tr>
+        <td class="underline"><?= $data['bank_account_holder_name'] ?? '' ?></td>
+        <td class="underline"><?= $data['bank_account_ci'] ?? '' ?></td>
+        <td class="underline"><?= $data['bank_account_number'] ?? '' ?></td>
+        <td class="underline"><?= $data['bank_name'] ?? '' ?></td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Cuenta Corriente' ? '☑' : '☐' ?></span> Cuenta Corriente</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Cuenta Ahorro' ? '☑' : '☐' ?></span> Cuenta Ahorro</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito Visa' ? '☑' : '☐' ?></span> Tarjeta Crédito Visa</span>
+            <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito MasterCard' ? '☑' : '☐' ?></span> Tarjeta Crédito MasterCard</span>
+        </td>
+    </tr>
+</tbody>
+</table>
+
+
+
+<div class="section-title">DATOS BANCARIOS DEL CONTRATANTE</div>
+<table class="family-table">
+    <tbody>
         <tr>
             <td width="25%">Nombre del Titular:</td>
-            <td width="25%" class="underline"><?= $data['bank_account_holder_name'] ?? '' ?></td>
-            <td width="15%">C.I.:</td>
-            <td width="35%" class="underline"><?= $data['bank_account_ci'] ?? '' ?></td>
+            <td width="25%">C.I.:</td>
+            <td width="25%">Nro. Cuenta/Tarjeta:</td>
+            <td width="25%">Banco:</td>
         </tr>
         <tr>
-            <td>Correo Electrónico:</td>
-            <td colspan="3" class="underline"><?= $data['bank_account_email'] ?? '' ?></td>
+            <td class="underline"><?= $data['bank_account_holder_name'] ?? '' ?></td>
+            <td class="underline"><?= $data['bank_account_ci'] ?? '' ?></td>
+            <td class="underline"><?= $data['bank_account_number'] ?? '' ?></td>
+            <td class="underline"><?= $data['bank_name'] ?? '' ?></td>
         </tr>
         <tr>
             <td colspan="4">
@@ -257,23 +357,29 @@ use yii\helpers\Html;
                 <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito MasterCard' ? '☑' : '☐' ?></span> Tarjeta Crédito MasterCard</span>
             </td>
         </tr>
+    </tbody>
+</table>
+
+<table class="family-table">
+    <tbody>
         <tr>
-            <td>Nro. Cuenta/Tarjeta:</td>
-            <td class="underline"><?= $data['bank_account_number'] ?? '' ?></td>
-            <td>Banco:</td>
-            <td class="underline"><?= $data['bank_name'] ?? '' ?></td>
+            <td colspan="4">
+                <div class="section-title" style="border-bottom: none;">DECLARACIONES Y AUTORIZACIONES</div>
+                <p>Yo, <span class="underline"><?= $data['declaration_proposed_affiliate_name'] ?? '' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_proposed_affiliate_ci'] ?? '' ?></span>en mi carácter de PROPUESTO AFILIADO TITULAR,</p>
+                <p>* Declaro que he leído cuidadosamente y totalmente, una a una, todas las preguntas y respuestas consignadas en esta solicitud de seguro y que ellas son verdaderas, amplias, completas y exactas.</p>
+                <p>* Declaro que el correo electrónico suministrado me pertenece e identifica plenamente, por lo que autorizo expresamente a Sistema Integral de Salud Programado Medicina Prepagada, S.A. para enviarme todos los documentos que forman parte del contrato y cualquier comunicación pertinente por este medio.</p>
+
+                <p>Yo, <span class="underline"><?= $data['declaration_contracting_party_name'] ?? '' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_contracting_party_ci'] ?? '' ?></span>en mi carácter de CONTRATANTE,</p>
+                <p>* Doy fe de que el dinero utilizado para el pago de las cuotas, provienen de una fuente lícita y su origen no guarda relación alguna con capitales, bienes, haberes, valores, títulos u operaciones, producto de actividades ilícitas o que provenga de los delitos de Delincuencia Organizada u otras conductas tipificadas en la legislación venezolana.</p>
+                <p>* Autorizo a Sistema Integral de Salud Programado Medicina Prepagada, S.A. a debitar de la Cuenta Bancaria / o cargar en la Tarjeta de Crédito, cuyos datos proporciono en esta solicitud, los cobros de cuotas de este servicio de medicina prepagada durante su vigencia a partir de su emisión. Y me comprometo a mantener el monto suficiente para cumplir con la obligación del pago de la cuota correspondiente.</p>
+            </td>
         </tr>
-    </table>
-    <div class="section-title">DECLARACIONES Y AUTORIZACIONES</div>
-    <p>Yo, <span class="underline"><?= $data['declaration_proposed_affiliate_name'] ?? '' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_proposed_affiliate_ci'] ?? '' ?></span>en mi carácter de PROPUESTO AFILIADO TITULAR,</p>
-    <p>* Declaro que he leído cuidadosamente y totalmente, una a una, todas las preguntas y respuestas consignadas en esta solicitud de seguro y que ellas son verdaderas, amplias, completas y exactas.</p>
-    <p>* Declaro que el correo electrónico suministrado me pertenece e identifica plenamente, por lo que autorizo expresamente a Sistema Integral de Salud Programado Medicina Prepagada, S.A. para enviarme todos los documentos que forman parte del contrato y cualquier comunicación pertinente por este medio.</p>
-
-    <p>Yo, <span class="underline"><?= $data['declaration_contracting_party_name'] ?? '' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_contracting_party_ci'] ?? '' ?></span>en mi carácter de CONTRATANTE,</p>
-    <p>* Doy fe de que el dinero utilizado para el pago de las cuotas, provienen de una fuente lícita y su origen no guarda relación alguna con capitales, bienes, haberes, valores, títulos u operaciones, producto de actividades ilícitas o que provenga de los delitos de Delincuencia Organizada u otras conductas tipificadas en la legislación venezolana.</p>
-    <p>* Autorizo a Sistema Integral de Salud Programado Medicina Prepagada, S.A. a debitar de la Cuenta Bancaria / o cargar en la Tarjeta de Crédito, cuyos datos proporciono en esta solicitud, los cobros de cuotas de este servicio de medicina prepagada durante su vigencia a partir de su emisión. Y me comprometo a mantener el monto suficiente para cumplir con la obligación del pago de la cuota correspondiente.</p>
-    <div class="signatures-title">Firmas y Huellas:</div>
-    <img src="<?= Html::encode($firmas) ?>" alt="firmas">
-    <p class="approval">Aprobado por la Superintendencia de la Actividad Aseguradora según Providencia Nº SAA-SUT-34169 de fecha 13/02/2025</p>
-</div>
-
+        <tr>
+            <td colspan="4">
+                
+                <img src="<?= Html::encode($firmas) ?>" alt="firmas" style="width: 100%;">
+                <p class="approval">Aprobado por la Superintendencia de la Actividad Aseguradora según Providencia Nº SAA-SUT-34169 de fecha 13/02/2025</p>
+            </td>
+        </tr>
+    </tbody>
+</table>

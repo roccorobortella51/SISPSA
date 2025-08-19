@@ -2,28 +2,29 @@
 body {
     font-family: Arial, sans-serif;
     font-size: 9pt;
-    margin: 0;
-    padding: 10mm 15mm; /* Maintain reasonable padding */
+    /* Ajuste clave: reduce el padding para subir y expandir el contenido.
+       El valor "5mm" para arriba y abajo sube el contenido.
+       El valor "10mm" para los lados expande el espacio horizontal. */
+    padding: 5mm 10mm;
     line-height: 1.2;
     color: #000;
 }
 
 /* Contenedor principal */
 .pdf-container {
-    width: 210mm;
-    /* Removed min-height to allow content to flow naturally */
+    /* Ajuste clave: el 100% de ancho hace que el contenedor se ajuste al espacio disponible */
+    width: 100%;
     margin: 0 auto;
-    box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
-    position: relative; /* Essential for absolute positioning of the logo within the page */
+    box-sizing: border-box;
 }
 
 /* Encabezado */
 .header {
     display: flex;
-    justify-content: flex-end; /* Pushes the header-right content to the right */
+    justify-content: flex-end;
     margin-bottom: 1mm;
     align-items: flex-end;
-    padding-top: 2mm; /* Adds space at the top to clear the absolutely positioned logo */
+    padding-top: 2mm;
 }
 
 .header-right {
@@ -85,7 +86,7 @@ body {
 .data-table td {
     padding: 0.5mm 1mm;
     vertical-align: top;
-    height: auto; /* Allow height to adjust naturally based on content */
+    height: auto;
     line-height: 1.2;
 }
 
@@ -94,7 +95,7 @@ body {
     min-width: 20mm;
     display: inline-block;
     padding-bottom: 0.5mm;
-    height: auto; /* Allow height to adjust naturally */
+    height: auto;
 }
 
 /* Tabla de planes */
@@ -108,7 +109,7 @@ body {
     padding: 1.5mm;
     border: 1px solid #000;
     vertical-align: middle;
-    height: auto; /* Allow height to adjust naturally */
+    height: auto;
 }
 
 /* Tabla de familia */
@@ -121,8 +122,8 @@ body {
 .family-table th, .family-table td {
     border: 1px solid #000;
     padding: 1mm;
-    height: auto; /* Allow height to adjust naturally */
-    text-align: center;
+    height: auto;
+    text-align: left;
 }
 
 .family-table th {
@@ -145,8 +146,8 @@ body {
 /* Logo superior izquierda - positioned absolutely */
 .logo-superior-izquierda {
     position: absolute;
-    top: 15px; /* Adjust based on your header content */
-    left: 15px; /* Adjust based on your page margins */
+    top: 15px;
+    left: 15px;
     max-width: 150px;
     height: auto;
     z-index: 1000;
@@ -156,27 +157,27 @@ body {
 .signatures-title {
     font-weight: bold;
     text-align: center;
-    margin: 5mm 0 8mm 0; /* Ensures good spacing above the signature boxes */
+    margin: 5mm 0 8mm 0;
 }
 
 /* Contenedor principal de firmas */
 .signatures-container {
-    display: flex; /* Absolutely critical for side-by-side layout */
-    justify-content: space-around; /* Distributes items with space around them */
-    align-items: flex-start; /* Aligns items to the top */
-    margin: 10mm 0 15mm 0; /* Vertical spacing for the container */
-    width: 100%; /* Ensures the flex container uses full available width */
-    flex-wrap: nowrap; /* Prevents items from wrapping to the next line */
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    margin: 10mm 0 15mm 0;
+    width: 100%;
+    flex-wrap: nowrap;
 }
 
 /* Cajas de firma */
 .signature-box {
-    flex: 1; /* Allows boxes to grow and shrink, taking equal space */
-    min-width: 48%; /* Ensures each box takes at least 48% of the container's width */
-    max-width: 49%; /* Caps the maximum width to prevent overlap and maintain a small gap */
+    flex: 1;
+    min-width: 48%;
+    max-width: 49%;
     text-align: center;
-    padding: 0 2mm; /* Reduced horizontal padding slightly */
-    box-sizing: border-box; /* Includes padding in the width calculation */
+    padding: 0 2mm;
+    box-sizing: border-box;
 }
 
 .signature-label {
@@ -198,7 +199,7 @@ body {
     margin-top: 3mm;
 }
 
-/* Intermediary and Approval (unchanged, but context included for completeness) */
+/* Intermediary and Approval */
 .intermediary {
     margin-top: 15mm;
     font-size: 9pt;
@@ -213,4 +214,8 @@ body {
     text-align: center;
     font-size: 8pt;
     margin-top: 10mm;
+}
+
+.th {
+    border: 1px;
 }
