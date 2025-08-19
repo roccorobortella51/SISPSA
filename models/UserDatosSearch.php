@@ -69,11 +69,11 @@ class UserDatosSearch extends UserDatos
 
         if($rol == "Asesor"){
             $query->where(['asesor_id' => UserHelper::getAgenteFuerzaId()]);
-        }else{
+        }/*else{
 
             $asesor_id = $_GET['asesor_id'];
             $query->where(['asesor_id' => $asesor_id]);
-        }
+        }*/
 
 
 
