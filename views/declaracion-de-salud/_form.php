@@ -78,15 +78,17 @@ $preguntas = [
                     <div class="card-body">
                         <div class="form-group mb-3">
                             <label class="form-label"><strong>Pregunta <?= $i ?>:</strong> <?= Html::encode($preguntas[$i]) ?></label>
-                            <div class="d-flex mt-2"> <?= $form->field($model, "p{$i}_sino")->radioList($sinoOptions, [
-                                    'item' => function($index, $label, $name, $checked, $value) {
-                                        return '<div class="form-check me-4">' . // Agregamos margen con me-4
+                            <div class="d-flex mt-2">
+                                <?= $form->field($model, "p{$i}_sino")->radioList($sinoOptions, [
+                                    'item' => function($index, $label, $name, $checked, $value) use ($i) { // <--- ¡AQUÍ ESTÁ EL CAMBIO!
+                                        // La estructura es crucial: input dentro de la etiqueta label, con clases de Bootstrap
+                                        return '<div class="form-check form-check-inline">' . // Usa form-check-inline para alinear horizontalmente
                                                Html::radio($name, $checked, [
                                                    'value' => $value,
-                                                   'id' => 'radio_p' . ($index + 1) . '_' . $value, // ID único para el script
+                                                   'id' => 'radio_p' . $i . '_' . $value, // Usa $i directamente para el ID único
                                                    'class' => 'form-check-input'
                                                ]) .
-                                               Html::label($label, 'radio_p' . ($index + 1) . '_' . $value, ['class' => 'form-check-label']) .
+                                               Html::label($label, 'radio_p' . $i . '_' . $value, ['class' => 'form-check-label']) .
                                                '</div>';
                                     },
                                     'encode' => false, // IMPORTANTE: permite que la función item devuelva HTML
@@ -120,7 +122,8 @@ $preguntas = [
                         <div class="d-flex mt-2">
                             <?= $form->field($model, 'ver_si_no')->radioList($sinoOptions, [
                                 'item' => function($index, $label, $name, $checked, $value) {
-                                    return '<div class="form-check me-4">' .
+                                    // Aplica la misma lógica de form-check-inline
+                                    return '<div class="form-check form-check-inline">' .
                                            Html::radio($name, $checked, [
                                                'value' => $value,
                                                'id' => 'radio_ver_' . $value,
