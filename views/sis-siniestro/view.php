@@ -57,49 +57,49 @@ function formatBooleanIcon($value) {
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Clínica Asociada</h6>
+                        <h5 class="text-muted">Clínica Asociada</h5>
                         <p class="h4 text-dark"><?= Html::encode($model->clinica->nombre) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Servicio de Baremo</h6>
+                        <h5 class="text-muted">Servicio de Baremo</h5>
                         <p class="h4 text-dark"><?= Html::encode($model->baremo->nombre_servicio) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Fecha del Siniestro</h6>
+                        <h5 class="text-muted">Fecha del Siniestro</h5>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asDate($model->fecha) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Hora del Siniestro</h6>
+                        <h5 class="text-muted">Hora del Siniestro</h5>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Fecha de Atención</h6>
+                        <h5 class="text-muted">Fecha de Atención</h5>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asDate($model->fecha_atencion) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Hora de Atención</h6>
+                        <h5 class="text-muted">Hora de Atención</h5>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora_atencion) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Atendido</h6>
+                        <h5 class="text-muted">Atendido</h5>
                         <p class="h5 text-dark"><?= formatBooleanIcon($model->atendido) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Afiliado</h6>
+                        <h5 class="text-muted">Afiliado</h5>
                         <p class="h5 text-dark"><?= Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " (" . $afiliado->tipo_cedula . "-" . $afiliado->cedula . ")") ?></h5>
                     </div>
                 </div>
@@ -126,13 +126,13 @@ function formatBooleanIcon($value) {
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Fecha de Creación</h6>
+                        <h5 class="text-muted">Fecha de Creación</h5>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->created_at) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h6 class="text-muted">Última Actualización</h6>
+                        <h5 class="text-muted">Última Actualización</h5>
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->updated_at) ?></h5>
                     </div>
                 </div>
