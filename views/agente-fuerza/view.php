@@ -67,7 +67,7 @@ $datosJs = json_encode($datos);
 
 ?>
 
-<div class="view-main-container">
+<div class="view-main-container agente-view">
    
 
     <div class="ms-panel-header">

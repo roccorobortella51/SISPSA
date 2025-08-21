@@ -38,11 +38,11 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                 <?php if($permisos){ echo  Html::a('<i class="fas fa-plus"></i> CREAR NUEVA ATENCIÓN', ['create', 'user_id' => $user_id], ['class' => 'btn btn-outline-primary btn-lg']); } ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver',
-                    '#',
+                    ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id],
                     [
-                        'class' => 'btn btn-outline-secondary btn-lg', // Estilo ajustado para coincidir
-                        'onclick' => 'window.history.back(); return false;',
-                        'title' => 'Volver a la página anterior',
+                        'class' => 'btn btn-outline-secondary btn-lg',
+                        'title' => 'Volver a la lista de afiliados',
+                        'data' => ['pjax' => 0],
                     ]
                 ) ?>
             </div>
@@ -72,12 +72,38 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                             ],
                             'fecha',
                             'hora',
+
                             [
-                                'attribute' => 'idbaremo',
-                                'value' => 'baremo.nombre_servicio', // Corregido para usar la relación 'baremo' y el campo 'nombre_servicio'
-                                'label' => 'Baremo',
+                                'attribute' => 'baremos',
+                                'format' => 'raw',
+                                'contentOptions' => ['style' => 'max-width: 250px; white-space: normal;'],
+                                'value' => function($model) {
+                                    $baremos = $model->baremos;
+                                    if (empty($baremos)) {
+                                        return '<span class="text-muted">No hay baremos</span>';
+                                    }
+                                    
+                                    $items = [];
+                                    foreach ($baremos as $baremo) {
+                                        if (is_array($baremo) && isset($baremo['nombre_servicio'])) {
+                                            $items[] = Html::tag('div', 
+                                                Html::encode($baremo['nombre_servicio']),
+                                                ['class' => 'mb-1']
+                                            );
+                                        } elseif (is_object($baremo) && property_exists($baremo, 'nombre_servicio')) {
+                                            $items[] = Html::tag('div', 
+                                                Html::encode($baremo->nombre_servicio),
+                                                ['class' => 'mb-1']
+                                            );
+                                        }
+                                    }
+                                    
+                                    return !empty($items) ? implode('', $items) : '<span class="text-muted">No hay baremos</span>';
+                                },
+                                'label' => 'Baremos',
                             ],
-                            
+
+
                             'fecha_atencion',
                             'hora_atencion',
                             

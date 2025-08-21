@@ -10491,6 +10491,13 @@ h3.section-title i {
 .text-gray-600 { color: #4b5563; }
 .text-blue-500 { color: #3b82f6; }
 
+/* Estilos para párrafos en la vista de agente */
+.agente-view p {
+    font-size: 1.2rem !important;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
 /* Estilos para botones de acción en tablas */
 .action-buttons {
     width: 70px !important;
