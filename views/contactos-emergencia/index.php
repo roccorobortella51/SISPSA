@@ -23,7 +23,12 @@ $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos
 
 $this->title = 'Gestión de Contactos del Afiliado'; // Este sigue siendo el título para la página y breadcrumbs
 
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
+
 ?>
+
+<?php if($permisos){?>
 
 <div class=row style="margin:3px !important;">
     <div class="col-md-12 text-end">
@@ -70,6 +75,9 @@ $this->title = 'Gestión de Contactos del Afiliado'; // Este sigue siendo el tí
         </div>
      </div>
     </div>
+<?php }?>
+
+
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
@@ -117,15 +125,18 @@ $this->title = 'Gestión de Contactos del Afiliado'; // Este sigue siendo el tí
                                                 ]
                                             );
                                         },*/
-                                        'update' => function ($url, $model, $key) {
-                                            return Html::a(
-                                                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                Url::to(['update', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Editar',
-                                                    'class' => 'btn-action view'
-                                                ]
-                                            );
+                                        'update' => function ($url, $model, $key)use($permisos){
+
+                                            if($permisos){
+                                                return Html::a(
+                                                    '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                    Url::to(['update', 'id' => $model->id]),
+                                                    [
+                                                        'title' => 'Editar',
+                                                        'class' => 'btn-action view'
+                                                    ]
+                                                );
+                                            }
                                         },
                                         /*'delete' => function ($url, $model, $key) {
                                             return Html::a(
