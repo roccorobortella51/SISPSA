@@ -26,7 +26,7 @@ function formatBooleanIcon($value) {
                 ['update', 'id' => $model->id],
                 ['class' => 'btn-base btn-blue']
             ) ?>
-            <?= Html::a(
+            <?php Html::a(
                 '<i class="fas fa-trash-alt mr-2"></i> Eliminar',
                 ['delete', 'id' => $model->id],
                 [

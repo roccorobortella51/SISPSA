@@ -5,6 +5,7 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
+use app\components\UserHelper;
 
 /**
  * @var yii\web\View $this
@@ -16,6 +17,10 @@ use kartik\widgets\SwitchInput;
 
 $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
 $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS");
+
+                                   
 
 ?>
 
@@ -29,7 +34,8 @@ $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado-
         <div class="ms-panel-header d-flex justify-content-between align-items-center">
             <h1><?= $this->title ?></h1>
             <div class="d-flex gap-3"> <!-- Contenedor flex para los botones con espacio -->
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA ATENCIÓN', ['create', 'user_id' => $user_id], ['class' => 'btn btn-outline-primary btn-lg']) ?>
+
+                <?php if($permisos){ echo  Html::a('<i class="fas fa-plus"></i> CREAR NUEVA ATENCIÓN', ['create', 'user_id' => $user_id], ['class' => 'btn btn-outline-primary btn-lg']); } ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver',
                     '#',
@@ -71,15 +77,22 @@ $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado-
                                 'value' => 'baremo.nombre_servicio', // Corregido para usar la relación 'baremo' y el campo 'nombre_servicio'
                                 'label' => 'Baremo',
                             ],
+                            
+                            'fecha_atencion',
+                            'hora_atencion',
+                            
                             [
                                 'attribute' => 'atendido',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
-                                    return $model->atendido ? 'Sí' : 'No';
+                                     $isTrue = $model->atendido;
+                                     return $isTrue == "Si" ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
                                 },
                                 'filter' => [0 => 'No', 1 => 'Sí'],
                             ],
-                            'fecha_atencion',
-                            'hora_atencion',
+
+
                             [
                                 'class' => 'yii\grid\ActionColumn',
                                 'header' => 'ACCIONES',
@@ -98,7 +111,9 @@ $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado-
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key) {
+                                    'update' => function ($url, $model, $key)use($permisos) {
+
+                                        if($permisos){
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt"></i>', // Icono sin ms-text-primary, ya que btn-action maneja el color
                                             Url::to(['update', 'id' => $model->id, 'user_id' => $model->iduser]), // Asegura que user_id se pase para la navegación
@@ -106,7 +121,7 @@ $this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado-
                                                 'title' => 'Editar',
                                                 'class' => 'btn-action edit'
                                             ]
-                                        );
+                                        );}
                                     },
                                     // El botón de eliminar está comentado en tu código original, lo mantengo así.
                                     /*'delete' => function ($url, $model, $key) {
