@@ -134,11 +134,10 @@ class UserSearch extends User
 
         if($rol == "Agente"){
             
-
             $query->andFilterWhere(['agente_fuerza.agente_id' => UserHelper::getAgenteId()]);
-
         }
 
+        
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([

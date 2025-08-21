@@ -600,7 +600,7 @@ class UserHelper
         $rol = self::getMyRol();
         
 
-        if ($rol == "Administrador-clinica") {
+        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN") {
 
             $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
             if ($userdatos) {

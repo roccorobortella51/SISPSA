@@ -69,12 +69,12 @@ class UserDatosSearch extends UserDatos
 
         if($rol == "Asesor"){
             $query->where(['asesor_id' => UserHelper::getAgenteFuerzaId()]);
-        }/*else{
+        }
 
-            $asesor_id = $_GET['asesor_id'];
-            $query->where(['asesor_id' => $asesor_id]);
-        }*/
+        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN") {
 
+            $query->andFilterWhere(['clinica_id' => UserHelper::getMyClinicaId()]);
+        }
 
 
         // add conditions that should always apply here
