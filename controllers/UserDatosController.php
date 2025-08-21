@@ -776,6 +776,8 @@ class UserDatosController extends Controller
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
 
+            $model->plan_id = $modelContrato->plan_id;
+
 
                 if($model->save()){
                     $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
@@ -932,7 +934,7 @@ class UserDatosController extends Controller
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-
+            $model->plan_id = $modelContrato->plan_id;
 
                 if($model->user_login_id == "" || $model->user_login_id == null){
 
@@ -1152,7 +1154,7 @@ public function actionGenerarContratov($id)
             'legal_representative_phone' => '',
 
             // Datos del Plan (se usan del modelo Plan relacionado)
-            'plan_selected' => $model->plan ? $model->plan->nombre_plan : '', // Asume 'nombre_plan' en el modelo Planes
+            'plan_selected' => $model->plan ? $model->plan->nombre : '', // Asume 'nombre_plan' en el modelo Planes
             'plan_currency' => '', // No en UserDatos/Planes, se deja vacío
             'plan_deductible' => '', // No en UserDatos/Planes, se deja vacío
             'plan_coverage_limit' => '', // No en UserDatos/Planes, se deja vacío

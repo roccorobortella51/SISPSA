@@ -20,6 +20,7 @@ $ciudadesList = $ciudadesList ?? [];
 $listaEstatus = $listaEstatus ?? [];
 
 $rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Administrador-clinica');
 
 $permisos = false;
 
@@ -82,37 +83,39 @@ function formatUpdatedAt($value) {
         </div>
     </div>
 
-    <!-- Sección de Botones de Navegación Específicos de Clínica -->
-    <div class="nav-buttons-grid"> 
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
-                ['baremo/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-blue'] /* Usando las nuevas clases de botones de navegación */
-            ) ?>
+    <?php if($permisos) {?>
+        <!-- Sección de Botones de Navegación Específicos de Clínica -->
+        <div class="nav-buttons-grid"> 
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
+                    ['baremo/index', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-blue'] /* Usando las nuevas clases de botones de navegación */
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-clipboard-list mr-2"></i> Planes',
+                    ['planes/index', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-indigo'] 
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-users mr-2"></i> Afiliados',
+                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-tasks mr-2"></i> Check List',
+                    ['check-list-clinicas/index', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-cyan'] /* Usando las nuevas clases de botones de navegación */
+                ) ?>
+            </div>
         </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-clipboard-list mr-2"></i> Planes',
-                ['planes/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-indigo'] 
-            ) ?>
-        </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-users mr-2"></i> Afiliados',
-                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-teal'] 
-            ) ?>
-        </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-tasks mr-2"></i> Check List',
-                ['check-list-clinicas/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-cyan'] /* Usando las nuevas clases de botones de navegación */
-            ) ?>
-        </div>
-    </div>
+    <?php } ?>
 
     <!-- Tarjeta de Información General de la Clínica -->
     <div class="info-card info-card-border-blue"> <!-- Usando las clases 'info-card' y 'info-card-border-blue' definidas en el fragmento CSS -->
@@ -121,20 +124,20 @@ function formatUpdatedAt($value) {
         </h3>
         <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
             <div>
-                <p><strong>Nombre:</strong> <?= Html::encode($model->nombre) ?></p>
-                <p><strong>RIF:</strong> <?= Html::encode($model->rif) ?></p>
+                <h5><strong>Nombre:</strong> <?= Html::encode($model->nombre) ?></h5>
+                <h5><strong>RIF:</strong> <?= Html::encode($model->rif) ?></h5>
             </div>
             <div>
-                <p><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></p>
-                <p><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($model->correo), 'mailto:' . Html::encode($model->correo), ['class' => 'text-blue-500']) ?></p>
+                <h5><strong>Teléfono:</strong> <?= Html::encode($model->telefono) ?></h5>
+                <h5><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($model->correo), 'mailto:' . Html::encode($model->correo), ['class' => 'text-blue-500']) ?></h5>
             </div>
         </div>
         <div class="info-grid border-top-section"> <!-- Usando la clase 'border-top-section' definida en el fragmento CSS -->
             <div>
-                <p><strong>Código de Clínica:</strong> <?= Html::encode($model->codigo_clinica) ?></p>
+                <h5><strong>Código de Clínica:</strong> <?= Html::encode($model->codigo_clinica) ?></h5>
             </div>
             <div>
-                <p><strong>Estatus:</strong> <span class="status-badge <?= $model->estatus == 'Activo' ? 'active' : 'inactive' ?>"><?= Html::encode($listaEstatus[$model->estatus] ?? $model->estatus) ?></span></p>
+                <h5><strong>Estatus:</strong> <span class="status-badge <?= $model->estatus == 'Activo' ? 'active' : 'inactive' ?>"><?= Html::encode($listaEstatus[$model->estatus] ?? $model->estatus) ?></span></h5>
             </div>
         </div>
     </div>
@@ -146,15 +149,15 @@ function formatUpdatedAt($value) {
         </h3>
         <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
             <div>
-                <p><strong>Estado:</strong> <?= Html::encode($estadosList[$model->estado] ?? 'N/A') ?></p>
-                <p><strong>Municipio:</strong> <?= Html::encode($municipiosList[(string)$model->municipio] ?? 'N/A') ?></p>
+                <h5><strong>Estado:</strong> <?= Html::encode($estadosList[$model->estado] ?? 'N/A') ?></h5>
+                <h5><strong>Municipio:</strong> <?= Html::encode($municipiosList[(string)$model->municipio] ?? 'N/A') ?></h5>
             </div>
             <div>
-                <p><strong>Parroquia:</strong> <?= Html::encode($parroquiaList[$model->parroquia] ?? 'N/A') ?></p>
-                <p><strong>Ciudad:</strong> <?= Html::encode($ciudadesList[$model->ciudad] ?? 'N/A') ?></p>
+                <h5><strong>Parroquia:</strong> <?= Html::encode($parroquiaList[$model->parroquia] ?? 'N/A') ?></h5>
+                <h5><strong>Ciudad:</strong> <?= Html::encode($ciudadesList[$model->ciudad] ?? 'N/A') ?></h5>
             </div>
         </div>
-        <p class="border-top-section"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
+        <p class="border-top-section"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></h5>
     </div>
 
     <!-- Tarjeta de Información de Contacto y Redes Sociales -->
@@ -164,22 +167,22 @@ function formatUpdatedAt($value) {
         </h3>
         <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
             <div>
-                <p><strong>Página Web:</strong>
+                <h5><strong>Página Web:</strong>
                     <?php if (!empty($model->webpage)): ?>
                         <?= Html::a(Html::encode($model->webpage), $model->webpage, ['target' => '_blank', 'class' => 'text-blue-500']) ?>
                     <?php else: ?>
                         N/A
                     <?php endif; ?>
-                </p>
+                </h5>
             </div>
             <div>
-                <p><strong>Instagram:</strong>
+                <h5><strong>Instagram:</strong>
                     <?php if (!empty($model->rs_instagram)): ?>
                         <?= Html::a(Html::encode($model->rs_instagram), 'https://instagram.com/' . ltrim($model->rs_instagram, '@'), ['target' => '_blank', 'class' => 'text-blue-500']) ?>
                     <?php else: ?>
                         N/A
                     <?php endif; ?>
-                </p>
+                </h5>
             </div>
         </div>
     </div>
@@ -192,11 +195,11 @@ function formatUpdatedAt($value) {
         <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
             <div class="inner-card-section"> <!-- Usando la clase 'inner-card-section' definida en el fragmento CSS -->
                 <h6>Fecha de Creación</h6>
-                <p><?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'medium')) ?></p>
+                <h5><?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'medium')) ?></h5>
             </div>
             <div class="inner-card-section"> <!-- Usando la clase 'inner-card-section' definida en el fragmento CSS -->
                 <h6>Última Actualización</h6>
-                <p><?= Html::encode(formatUpdatedAt($model->updated_at)) ?></p>
+                <h5><?= Html::encode(formatUpdatedAt($model->updated_at)) ?></h5>
             </div>
         </div>
     </div>

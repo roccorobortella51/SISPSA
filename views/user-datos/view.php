@@ -87,8 +87,27 @@ function formatBooleanIcon($value) {
         return '<span class="text-red-600 mr-1"><i class="fas fa-times-circle"></i></span> No';
     }
 }
-
+$currentRoute = Yii::$app->controller->getRoute();
 ?>
+
+<div class="row row-cols-1 row-cols-md-4 justify-content-center g-3 mb-4">
+    <div class="col"> <h4><?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
+        ]) ?></h4>
+    </div>
+
+    <div class="col"> <h4><?= Html::a('<i class="fas fa-phone-alt"></i> Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
+            'data-pjax' => '0'
+        ]) ?></h4>
+    </div>
+
+    <div class="col"> <h4><?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
+            'data-pjax' => '0'
+        ]) ?></h4>
+    </div>
+</div>
 
 <div class="main-container user-profile-view">
 
