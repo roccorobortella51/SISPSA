@@ -43,8 +43,6 @@ if ($clinica && $clinica->id !== null) {
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
 
-$rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor'); // Lógica de permisos original
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->
@@ -231,7 +229,8 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                         );
                                     }
                                 },
-                                'siniestro' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
+                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
+                                    if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
                                     $params = ['/sis-siniestro/index', 'user_id' => $model->id];
                                     if ($clinica && $clinica->id !== null) {
                                         $params['clinica_id'] = $clinica->id;
@@ -246,6 +245,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                             'class' => 'btn-action view'
                                         ]
                                     );}
+                                    }
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {
