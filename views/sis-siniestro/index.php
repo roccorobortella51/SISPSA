@@ -106,6 +106,13 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
 
                             'fecha_atencion',
                             'hora_atencion',
+
+                            [
+                                'attribute' => 'costo_total',
+                                'format' => ['currency', ''],
+                                'contentOptions' => ['style' => 'text-align: right;'],
+                                'filter' => false
+                            ],
                             
                             [
                                 'attribute' => 'atendido',

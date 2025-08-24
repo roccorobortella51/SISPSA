@@ -34,6 +34,7 @@ class SisSiniestroBaremo extends ActiveRecord
         return [
             [['siniestro_id', 'baremo_id'], 'required'],
             [['siniestro_id', 'baremo_id'], 'integer'],
+            [['costo'], 'number'],
             [['created_at', 'updated_at'], 'safe'],
             [['siniestro_id', 'baremo_id'], 'unique', 'targetAttribute' => ['siniestro_id', 'baremo_id']],
             [['baremo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Baremo::class, 'targetAttribute' => ['baremo_id' => 'id']],

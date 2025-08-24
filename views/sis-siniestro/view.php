@@ -131,6 +131,9 @@ function formatBooleanIcon($value) {
             <div class="info-card-body">
                 <h5><strong>Descripción:</strong> <?= nl2br(Html::encode($model->descripcion)) ?></h5>
             </div>
+            <div class="alert alert-success" align="center">
+                <h2><strong>Total:</strong> <?= nl2br(Html::encode($model->costo_total)) ?> Bs</h2>
+            </div>
         </div>
     </div>
 
