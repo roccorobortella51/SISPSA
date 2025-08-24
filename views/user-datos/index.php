@@ -26,7 +26,7 @@ if (!empty($clinica_id_param)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente'); // Lógica de permisos original
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA"); // Lógica de permisos original
 
 // --- BREADCRUMBS CONDICIONALES ---
 if($permisos == true){
