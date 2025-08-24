@@ -45,16 +45,97 @@ use yii\web\View;
                         </div>
                         
                         <div class="col-md-12">
-                            <?= $form->field($model, 'idbaremo')->widget(Select2::class, [
-                                'data' =>  \yii\helpers\ArrayHelper::map(\app\models\Baremo::find()->where(['clinica_id' => $afiliado->clinica_id])->andWhere(['estatus' => 'Activo'])->all(), 'id', 'nombre_servicio'),
-                                'options' => [
-                                    'placeholder' => 'Seleccione un Baremo',
-                                    'class' => 'form-control form-control-lg',
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ])->label('Baremo') ?>
+                        <?php
+                        // 1. Primero forzamos valores de prueba
+                        $selectedBaremos = [1, 2]; // Valores de prueba
+                        
+                        // 2. Obtenemos los baremos disponibles
+                        $baremosDisponibles = \yii\helpers\ArrayHelper::map(
+                            \app\models\Baremo::find()
+                                ->where(['clinica_id' => $afiliado->clinica_id])
+                                ->andWhere(['estatus' => 'Activo'])
+                                ->all(), 
+                            'id', 
+                            'nombre_servicio'
+                        );
+                        
+                        // 3. Depuración detallada
+                        echo "<!-- ===== INICIO DEPURACIÓN ===== -->\n";
+                        echo "<!-- Modelo ID: " . $model->id . " -->\n";
+                        echo "<!-- Modelo atributos: " . print_r($model->attributes, true) . " -->\n";
+                        
+                        // Verificar si hay baremos en el modelo
+                        if (method_exists($model, 'getBaremos')) {
+                            $baremosRelacion = $model->getBaremos()->all();
+                            echo "<!-- Baremos desde relación (count): " . count($baremosRelacion) . " -->\n";
+                            echo "<!-- Baremos desde relación: " . print_r(\yii\helpers\ArrayHelper::toArray($baremosRelacion), true) . " -->\n";
+                            
+                            // Si no hay baremos en la relación, intentamos con una consulta directa
+                            if (empty($baremosRelacion)) {
+                                $baremosDirectos = (new \yii\db\Query())
+                                    ->select(['baremo_id'])
+                                    ->from('sis_siniestro_baremo')
+                                    ->where(['siniestro_id' => $model->id])
+                                    ->column();
+                                echo "<!-- Baremos desde consulta directa: " . print_r($baremosDirectos, true) . " -->\n";
+                                
+                                if (!empty($baremosDirectos)) {
+                                    $selectedBaremos = $baremosDirectos;
+                                }
+                            } else {
+                                $selectedBaremos = \yii\helpers\ArrayHelper::getColumn($baremosRelacion, 'id');
+                            }
+                        }
+                        
+                        echo "<!-- Baremos seleccionados (final): " . print_r($selectedBaremos, true) . " -->\n";
+                        echo "<!-- Baremos disponibles (count): " . count($baremosDisponibles) . " -->\n";
+                        echo "<!-- ===== FIN DEPURACIÓN ===== -->\n";
+                        ?>
+                        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [
+                            'data' => $baremosDisponibles,
+                            'options' => [
+                                'multiple' => true,
+                                'value' => $selectedBaremos, // Mover value aquí
+                                'placeholder' => 'Seleccione uno o más Baremos',
+                                'class' => 'form-control form-control-lg',
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => true,
+                                'closeOnSelect' => false,
+                                'tags' => false,
+                                'tokenSeparators' => [',', ' '],
+                            ],
+                            'pluginEvents' => [
+                                'select2:select' => 'function(e) { console.log("Selected:", e.params.data); }',
+                                'select2:unselect' => 'function(e) { console.log("Unselected:", e.params.data); }',
+                            ]
+                        ])->label('Baremos') ?>
+                        
+                        <script>
+                        // Forzar la selección después de que se cargue el Select2
+                        document.addEventListener('DOMContentLoaded', function() {
+                            var selectedBaremos = <?= json_encode($selectedBaremos) ?>;
+                            console.log('Baremos a seleccionar (JS):', selectedBaremos);
+                            
+                            // Esperar a que se inicialice Select2
+                            var checkSelect2 = setInterval(function() {
+                                var $select = $('#sis-siniestro-idbaremo');
+                                if ($select.hasClass('select2-hidden-accessible')) {
+                                    clearInterval(checkSelect2);
+                                    console.log('Select2 inicializado, estableciendo valores...');
+                                    
+                                    // Establecer los valores seleccionados
+                                    $select.val(selectedBaremos).trigger('change');
+                                    
+                                    // Verificar los valores seleccionados
+                                    console.log('Valores seleccionados después de setear:', $select.val());
+                                    
+                                    // Forzar la actualización visual de Select2
+                                    $select.trigger('select2:select');
+                                }
+                            }, 100);
+                        });
+                        </script>
                         </div>
                         
                         <div class="col-md-12">

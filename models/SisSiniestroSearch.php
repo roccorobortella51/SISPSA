@@ -42,13 +42,17 @@ class SisSiniestroSearch extends SisSiniestro
      */
     public function search($params)
     {
-        $query = SisSiniestro::find();
-
-        // add conditions that should always apply here
-        if ($this->iduser) {
-            $query->andWhere(['iduser' => $this->iduser]);
-        }
-
+        // Primero obtenemos la consulta base con join a la tabla intermedia
+        $query = SisSiniestro::find()
+            ->select(['sis_siniestro.*'])
+            ->joinWith(['sisSiniestroBaremos sb'])
+            ->with(['baremos'])
+            ->groupBy('sis_siniestro.id');
+        
+        // Aplicamos las condiciones de búsqueda
+        $this->load($params);
+        
+        // Configuramos el data provider
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
@@ -59,31 +63,38 @@ class SisSiniestroSearch extends SisSiniestro
             ],
         ]);
 
-        $this->load($params);
-
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
-        // grid filtering conditions
+        // Agregamos condiciones de búsqueda
         $query->andFilterWhere([
-            'id' => $this->id,
-            'idclinica' => $this->idclinica,
-            'fecha' => $this->fecha,
-            'idbaremo' => $this->idbaremo,
-            'atendido' => $this->atendido,
-            'fecha_atencion' => $this->fecha_atencion,
-            'iduser' => $this->iduser,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-            'deleted_at' => $this->deleted_at,
+            'sis_siniestro.id' => $this->id,
+            'sis_siniestro.idclinica' => $this->idclinica,
+            'sis_siniestro.atendido' => $this->atendido,
+            'sis_siniestro.iduser' => $this->iduser,
         ]);
+        
+        // Condiciones de fecha
+        if ($this->fecha) {
+            $query->andFilterWhere(['>=', 'sis_siniestro.fecha', $this->fecha]);
+        }
+        
+        // Filtro por baremo si se especifica
+        if ($this->idbaremo) {
+            $query->andFilterWhere(['sb.baremo_id' => $this->idbaremo]);
+        }
 
-        $query->andFilterWhere(['ilike', 'hora', $this->hora])
-            ->andFilterWhere(['ilike', 'hora_atencion', $this->hora_atencion])
-            ->andFilterWhere(['ilike', 'descripcion', $this->descripcion]);
+        // Filtros de texto
+        $query->andFilterWhere(['ilike', 'sis_siniestro.hora', $this->hora])
+            ->andFilterWhere(['ilike', 'sis_siniestro.hora_atencion', $this->hora_atencion])
+            ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion]);
+            
+        // Filtros de fecha adicionales
+        $query->andFilterWhere(['>=', 'sis_siniestro.fecha_atencion', $this->fecha_atencion])
+            ->andFilterWhere(['>=', 'sis_siniestro.created_at', $this->created_at])
+            ->andFilterWhere(['>=', 'sis_siniestro.updated_at', $this->updated_at])
+            ->andFilterWhere(['>=', 'sis_siniestro.deleted_at', $this->deleted_at]);
 
         return $dataProvider;
     }

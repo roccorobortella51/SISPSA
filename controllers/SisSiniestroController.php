@@ -39,8 +39,51 @@ class SisSiniestroController extends Controller
     {
         $searchModel = new SisSiniestroSearch();
         $searchModel->iduser = $user_id;
+        
+        // Cargar los datos del afiliado
+        $afiliado = UserDatos::findOne($user_id);
+        
+        // Configurar el dataProvider para cargar la relación con baremos
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+        
+        // Depurar la consulta principal
+        $query = $dataProvider->query;
+        $sql = $query->createCommand()->rawSql;
+        Yii::info('CONSULTA PRINCIPAL: ' . $sql, 'app');
+        
+        // Cargar todos los siniestros con sus baremos en una sola consulta
+        $models = $dataProvider->getModels();
+        $siniestroIds = [];
+        
+        // Obtener todos los IDs de siniestros
+        foreach ($models as $model) {
+            $siniestroIds[] = $model->id;
+        }
+        
+        // Cargar todos los baremos para estos siniestros en una sola consulta
+        $baremosPorSiniestro = [];
+        if (!empty($siniestroIds)) {
+            $baremos = (new \yii\db\Query())
+                ->select(['sb.siniestro_id', 'b.*'])
+                ->from(['sb' => 'sis_siniestro_baremo'])
+                ->leftJoin(['b' => 'baremo'], 'sb.baremo_id = b.id')
+                ->where(['sb.siniestro_id' => $siniestroIds])
+                ->all();
+            
+            // Organizar los baremos por siniestro_id
+            foreach ($baremos as $baremo) {
+                $baremosPorSiniestro[$baremo['siniestro_id']][] = $baremo;
+            }
+        }
+        
+        // Asignar los baremos a cada modelo
+        foreach ($models as $model) {
+            $baremos = isset($baremosPorSiniestro[$model->id]) ? $baremosPorSiniestro[$model->id] : [];
+            $model->populateRelation('baremos', $baremos);
+        }
+        
+        $dataProvider->setModels($models);
+        
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -58,13 +101,16 @@ class SisSiniestroController extends Controller
      */
     public function actionView($id)
     {
-
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
+        
+        // Cargar los baremos a través de la relación muchos a muchos
+        $baremos = $model->baremos;
 
         return $this->render('view', [
             'model' => $model,
-            'afiliado' => $afiliado
+            'afiliado' => $afiliado,
+            'baremos' => $baremos
         ]);
     }
 
@@ -83,13 +129,21 @@ class SisSiniestroController extends Controller
         $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
 
         if ($model->load($this->request->post())) {
-            // Convertir hora a formato correcto si es necesario
-            /*if (!empty($model->hora)) {
-                $model->hora = date('H:i:s', strtotime($model->hora));
-            }*/
-            
-            if ($model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                if ($model->save()) {
+                    // Guardar la relación muchos a muchos
+                    if (isset($_POST['SisSiniestro']['idbaremo']) && is_array($_POST['SisSiniestro']['idbaremo'])) {
+                        if (!$model->saveBaremos($_POST['SisSiniestro']['idbaremo'])) {
+                            throw new \Exception('Error al guardar los baremos');
+                        }
+                    }
+                    $transaction->commit();
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', $e->getMessage());
             }
         }
 
@@ -111,14 +165,41 @@ class SisSiniestroController extends Controller
     {
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
+        // Cargar los baremos de la misma manera que en actionView
+        $baremos = $model->baremos;
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($model->load(Yii::$app->request->post())) {
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                if ($model->save()) {
+                    // Guardar la relación muchos a muchos
+                    $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+                    if (!is_array($baremoIds)) {
+                        $baremoIds = [];
+                    }
+                    
+                    if (!$model->saveBaremos($baremoIds)) {
+                        throw new \Exception('Error al actualizar los baremos');
+                    }
+                    
+                    // Forzar recarga de la relación baremos
+                    $model->refresh();
+                    
+                    $transaction->commit();
+                    Yii::$app->session->setFlash('success', 'Siniestro actualizado correctamente.');
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', $e->getMessage());
+                Yii::error('Error al actualizar siniestro: ' . $e->getMessage(), __METHOD__);
+            }
         }
 
         return $this->render('update', [
             'model' => $model,
-            'afiliado' => $afiliado
+            'afiliado' => $afiliado,
+            'baremos' => $baremos
         ]);
     }
 

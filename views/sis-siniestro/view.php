@@ -39,11 +39,17 @@ function formatBooleanIcon($value) {
             ) ?>
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',
-                '#',
+                [
+                    'index', 
+                    'user_id' => $model->iduser,
+                    'clinica_id' => $model->idclinica
+                ],
                 [
                     'class' => 'btn-base btn-gray',
-                    'onclick' => 'window.history.back(); return false;',
-                    'title' => 'Volver a la página anterior',
+                    'title' => 'Volver a la lista de siniestros',
+                    'data' => [
+                        'pjax' => 0,
+                    ],
                 ]
             ) ?>
         </div>
@@ -63,8 +69,18 @@ function formatBooleanIcon($value) {
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Servicio de Baremo</h5>
-                        <p class="h4 text-dark"><?= Html::encode($model->baremo->nombre_servicio) ?></h5>
+                        <h5 class="text-muted">Servicios de Baremo</h5>
+                        <?php 
+                        if (!empty($baremos) && is_array($baremos)) {
+                            $nombresBaremos = [];
+                            foreach ($baremos as $baremo) {
+                                $nombresBaremos[] = Html::encode($baremo->nombre_servicio);
+                            }
+                            echo '<p class="h5 text-dark">' . implode(', ', $nombresBaremos) . '</p>';
+                        } else {
+                            echo '<p class="text-muted">No se han seleccionado servicios de baremo</p>';
+                        }
+                        ?>
                     </div>
                 </div>
                 <div class="col-md-6">
