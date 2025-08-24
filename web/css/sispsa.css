@@ -9680,8 +9680,6 @@ body {
 
 
 
-
-
 /* ----------------------- estilos de las vistas ----------------------------------------------------------------**/
 
 /* ==========================================================================
@@ -10610,6 +10608,206 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
   height: 100%;
   transition: width 0.4s ease;
 }
+
+/* --- CSS Adicional para la vista 'Monitor de Fondos de Clínica' --- */
+
+/* Contenedor principal de la vista: Ocupa todo el ancho y ajusta el padding */
+.monitor-fondos-clinica-content-wrapper {
+    padding: 1.2rem 2rem !important; /* Ligeramente menos padding */
+    background-color: #fcfcfd !important;
+    min-height: calc(100vh - 40px) !important;
+    border-radius: 0.8rem !important;
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04) !important;
+    margin-bottom: 25px !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+/* Estilos para las tarjetas de fondos */
+.fund-card {
+    border-left: 0.25rem solid;
+    border-radius: 0.35rem;
+    height: 100%;
+}
+.fund-card-primary {
+    border-color: #4e73df!important;
+}
+.fund-card-success {
+    border-color: #1cc88a!important;
+}
+
+/* Estilos para el contenedor del medidor (gauge-container) */
+.gauge-container {
+    position: relative;
+    width: 100%;
+    height: 32px; /* Ligeramente menos altura */
+    /* El gradiente de fondo para las ZONAS con colores vibrantes se define INLINE en el PHP */
+    border-radius: 16px; /* Bordes más redondeados */
+    margin-top: 25px; /* Más espacio arriba */
+    overflow: hidden;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.25); /* Sombra más pronunciada */
+}
+
+/* Estilos para la barra de progreso (gauge-progress) */
+.gauge-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 16px; /* Mismo borde redondeado que el contenedor */
+    transition: width 0.6s ease-in-out, background-color 0.6s ease-in-out; /* Animación más suave */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Alinea el texto a la derecha de la barra de progreso */
+    color: white;
+    font-weight: bold;
+    padding-right: 8px; /* Pequeño padding para el porcentaje */
+    box-sizing: border-box; /* Incluye padding y borde en el ancho/alto */
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.6); /* Sombra de texto más fuerte */
+    font-size: 1.1em; /* Tamaño de letra más pequeño para el porcentaje */
+}
+/* Asegura que el texto dentro de gauge-progress no se rompa */
+.gauge-progress span {
+    white-space: nowrap;
+}
+
+/* Clases de color para la barra de progreso del medidor (gauge-progress) - Usando colores Bootstrap estándar */
+.gauge-progress.bg-success { background-color: #28a745; } /* Verde vibrante */
+.gauge-progress.bg-warning { background-color: #ffc107; } /* Amarillo vibrante */
+.gauge-progress.bg-danger { background-color: #dc3545; } /* Rojo vibrante */
+
+
+.gauge-label {
+    position: relative;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px; /* Más espacio arriba */
+    font-size: 1.05em; /* Tamaño de letra más pequeño para las etiquetas de las zonas */
+    color: #444;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    font-weight: 600; /* Más peso para las etiquetas */
+}
+.gauge-label span {
+    padding: 0 10px; /* Padding para las etiquetas */
+    line-height: 1.6; /* Mayor interlineado */
+}
+
+/* Barra paralela de consumo */
+.secondary-bar-container {
+    position: relative;
+    width: 100%;
+    height: 28px; /* Un poco menos alta */
+    background-color: #e9ecef;
+    border-radius: 14px;
+    margin-top: 35px; /* Más espacio */
+    overflow: hidden;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.secondary-bar-progress {
+    height: 100%;
+    background-color: #007bff;
+    border-radius: 14px;
+    transition: width 0.6s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 0.95em; /* Ajustado para ser legible */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Modificación para los párrafos dentro de ms-panel-body (letras más pequeñas) */
+.ms-panel-body p {
+    color: #4a5568 !important;
+    margin-bottom: 0.9rem !important;
+    line-height: 1.8 !important; /* Interlineado para mejor lectura */
+    font-size: 1.15rem !important; /* Tamaño de fuente más pequeño para todos los párrafos */
+}
+.ms-panel-body p:last-child {
+    margin-bottom: 0 !important;
+}
+.ms-panel-body strong {
+    font-weight: 700 !important;
+    color: #2d3748 !important;
+}
+
+/* Regla específica para el párrafo de "Consumo Actual" para hacerlo más prominente */
+.ms-panel-body p.mb-4 {
+    font-size: 1.35rem !important; /* Tamaño más ajustado para este párrafo */
+    font-weight: 700 !important; /* Más peso */
+    color: #1a202c !important; /* Más oscuro */
+    margin-bottom: 1.5rem !important; /* Más espacio */
+}
+.ms-panel-body p.mb-4 strong {
+    color: #000000 !important; /* Negrita total */
+}
+
+/* Estilos para las migas de pan (breadcrumbs) */
+.breadcrumb-item, .breadcrumb-item a, .breadcrumb-item.active {
+    font-size: 1.0rem !important; /* Tamaño más ajustado para las migas de pan */
+    font-weight: 500 !important;
+}
+.breadcrumb {
+    padding-left: 0 !important; /* Elimina padding por defecto si lo hay */
+}
+
+/* Título principal de la sección */
+.h3.mb-4 {
+    font-size: 1.5rem !important; /* Título principal más ajustado */
+    font-weight: 700 !important;
+    color: #2d3748 !important;
+}
+
+/* Título de los paneles */
+.section-title {
+    font-size: 1.2rem !important; /* Título del panel más ajustado */
+    font-weight: 600 !important;
+    color: #2d3748 !important;
+}
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+    .gauge-label {
+        flex-direction: column;
+        font-size: 0.95em;
+    }
+    .gauge-label span {
+        margin-bottom: 6px;
+    }
+    .monitor-fondos-clinica-content-wrapper {
+        padding: 0.8rem 1.2rem !important;
+    }
+    .ms-panel-body p {
+        font-size: 1.05rem !important;
+    }
+    .ms-panel-body p.mb-4 {
+        font-size: 1.25rem !important;
+    }
+    .gauge-progress {
+        font-size: 1em;
+        padding-right: 6px;
+    }
+    .breadcrumb-item, .breadcrumb-item a, .breadcrumb-item.active {
+        font-size: 0.9rem !important;
+    }
+    .h3.mb-4 {
+        font-size: 1.3rem !important;
+    }
+    .section-title {
+        font-size: 1.1rem !important;
+    }
+    .secondary-bar-progress {
+        font-size: 0.9em;
+    }
+}
+
 
 
 
