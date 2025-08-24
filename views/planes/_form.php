@@ -93,7 +93,9 @@ use kartik\select2\Select2;
                                     <td>
                                         <?= Html::activeHiddenInput($item, "[$index]baremo_id") ?>
                                         <?= Html::activeHiddenInput($item, "[$index]nombre_servicio") ?>
-                                        <?= $item->baremo->nombre_servicio ?>
+                                        <b>Servicio:</b> <?= $item->baremo->nombre_servicio ?><br>
+                                        <b>Descripcion:</b> <?= $item->baremo->descripcion ?><br>
+                                        <b>Area:</b> <?= $item->baremo->area->nombre ?>
                                     </td>
                                     <?php /*
                                     <td>
