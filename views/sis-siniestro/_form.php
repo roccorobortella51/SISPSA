@@ -199,6 +199,26 @@ $css = <<<CSS
     color: #6c757d;
     z-index: 5;
 }
+
+/* Estilo adicional para mostrar el cálculo en tiempo real */
+.costo-total-container {
+    background-color: #e8f5e9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    border-left: 4px solid #4caf50;
+}
+
+.costo-total-label {
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.costo-total-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1b5e20;
+}
 CSS;
 
 $this->registerCss($css);
@@ -215,12 +235,89 @@ $this->registerCss($css);
         </div>
         <div class="ms-panel-body">
             <div class="row">
+                       <div class="col-md-12">
+                    <?php
+                    // Consulta corregida para listar los baremos de ese plan y clínica
+                    $baremosDisponibles = \yii\helpers\ArrayHelper::map(
+                        \app\models\PlanesItemsCobertura::find()
+                            ->joinWith('baremo')
+                            ->joinWith('plan')
+                            ->joinWith('baremo.area')
+                            ->where(['planes.clinica_id' => $afiliado->clinica_id])
+                            ->andWhere(['baremo.estatus' => 'Activo'])
+                            ->andWhere(['planes.id' => $afiliado->plan_id])
+                            ->select(["CONCAT('AREA: ', area.nombre, ' - SERVICIO: ', baremo.nombre_servicio, '- DESCRIPCIÓN: ', baremo.descripcion) AS nombre_servicio", "baremo.id as id"])
+                            ->all(),
+                        'id',
+                        "nombre_servicio"
+                    );
+
+                    // Obtener baremos seleccionados
+                    $selectedBaremos = [];
+                    if (method_exists($model, 'getBaremos')) {
+                        $baremosRelacion = $model->getBaremos()->all();
+                        
+                        if (empty($baremosRelacion) && !$model->isNewRecord) {
+                            $baremosDirectos = (new \yii\db\Query())
+                                ->select(['baremo_id'])
+                                ->from('sis_siniestro_baremo')
+                                ->where(['siniestro_id' => $model->id])
+                                ->column();
+                            
+                            if (!empty($baremosDirectos)) {
+                                $selectedBaremos = $baremosDirectos;
+                            }
+                        } else {
+                            $selectedBaremos = \yii\helpers\ArrayHelper::getColumn($baremosRelacion, 'id');
+                        }
+                    }
+                    ?>
+                    
+                    <div class="field-with-icon">
+                        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [
+                            'data' => $baremosDisponibles,
+                            'options' => [
+                                'multiple' => true,
+                                'value' => $selectedBaremos,
+                                'placeholder' => 'Seleccione uno o más Baremos',
+                                'class' => 'form-control form-control-lg',
+                                'id' => 'baremos-select' // Agregamos un ID para facilitar la selección con JS
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => true,
+                                'closeOnSelect' => true,
+                                'tags' => false,
+                                'tokenSeparators' => [',', ' '],
+                            ],
+                        ])->label('Baremos') ?>
+                    </div>
+                    
+                    <!-- Contenedor para mostrar el cálculo en tiempo real -->
+                    <div class="costo-total-container" id="costo-total-container" style="display: none;">
+                        <div class="costo-total-label">Total calculado:</div>
+                        <div class="costo-total-value" id="costo-total-value">Bs. 0.00</div>
+                    </div>
+                    <br>
+                </div>
+                
+                <div class="col-md-12">
+                    <?= $form->field($model, 'costo_total')->textInput([
+                        'class' => 'form-control form-control-lg',
+                        'placeholder' => '0.00',
+                        'autocomplete' => 'off',
+                        'id' => 'costo-total-input', // Agregamos un ID para el campo
+                        'readonly' => true, // Lo hacemos de solo lectura ya que se calculará automáticamente
+                    ])->label('Total') ?>
+                </div>
                 <div class="col-md-6">
                     <div class="row g-3">
                         <div class="col-md-12" style="display: none;">
                              <?= $form->field($model, 'idclinica')->textInput(['value' => $afiliado->clinica_id]) ?>
                         </div>
+
                         
+                        
+
                         <div class="col-md-6 field-with-icon">
                             <i class="fas fa-calendar-day"></i>
                             <?= $form->field($model, 'fecha')->textInput([
@@ -239,102 +336,7 @@ $this->registerCss($css);
                             ])->label('Hora del Siniestro') ?>
                         </div>
                         
-                        <div class="col-md-12">
-                        <?php
-                        // 1. Primero forzamos valores de prueba
-                        $selectedBaremos = []; // Valores de prueba
-                        
-                        // 2. Obtenemos los baremos disponibles
-                        $baremosDisponibles = \yii\helpers\ArrayHelper::map(
-                            \app\models\Baremo::find()
-                                ->where(['clinica_id' => $afiliado->clinica_id])
-                                ->andWhere(['estatus' => 'Activo'])
-                                ->all(), 
-                            'id', 
-                            'nombre_servicio'
-                        );
-                        
-                        // 3. Depuración detallada
-                        echo "<!-- ===== INICIO DEPURACIÓN ===== -->\n";
-                        echo "<!-- Modelo ID: " . $model->id . " -->\n";
-                        echo "<!-- Modelo atributos: " . print_r($model->attributes, true) . " -->\n";
-                        
-                        // Verificar si hay baremos en el modelo
-                        if (method_exists($model, 'getBaremos')) {
-                            $baremosRelacion = $model->getBaremos()->all();
-                            echo "<!-- Baremos desde relación (count): " . count($baremosRelacion) . " -->\n";
-                            echo "<!-- Baremos desde relación: " . print_r(\yii\helpers\ArrayHelper::toArray($baremosRelacion), true) . " -->\n";
-                            
-                            // Si no hay baremos en la relación, intentamos con una consulta directa
-                            if (empty($baremosRelacion)) {
-                                $baremosDirectos = (new \yii\db\Query())
-                                    ->select(['baremo_id'])
-                                    ->from('sis_siniestro_baremo')
-                                    ->where(['siniestro_id' => $model->id])
-                                    ->column();
-                                echo "<!-- Baremos desde consulta directa: " . print_r($baremosDirectos, true) . " -->\n";
-                                
-                                if (!empty($baremosDirectos)) {
-                                    $selectedBaremos = $baremosDirectos;
-                                }
-                            } else {
-                                $selectedBaremos = \yii\helpers\ArrayHelper::getColumn($baremosRelacion, 'id');
-                            }
-                        }
-                        
-                        echo "<!-- Baremos seleccionados (final): " . print_r($selectedBaremos, true) . " -->\n";
-                        echo "<!-- Baremos disponibles (count): " . count($baremosDisponibles) . " -->\n";
-                        echo "<!-- ===== FIN DEPURACIÓN ===== -->\n";
-                        ?>
-                        
-                        <div class="field-with-icon">
-                            <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [
-                                'data' => $baremosDisponibles,
-                                'options' => [
-                                    'multiple' => true,
-                                    'value' => $selectedBaremos,
-                                    'placeholder' => 'Seleccione uno o más Baremos',
-                                    'class' => 'form-control form-control-lg',
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                    'closeOnSelect' => false,
-                                    'tags' => false,
-                                    'tokenSeparators' => [',', ' '],
-                                ],
-                                'pluginEvents' => [
-                                    'select2:select' => 'function(e) { console.log("Selected:", e.params.data); }',
-                                    'select2:unselect' => 'function(e) { console.log("Unselected:", e.params.data); }',
-                                ]
-                            ])->label('Baremos') ?>
-                        </div>
-                        
-                        <script>
-                        // Forzar la selección después de que se cargue el Select2
-                        document.addEventListener('DOMContentLoaded', function() {
-                            var selectedBaremos = <?= json_encode($selectedBaremos) ?>;
-                            console.log('Baremos a seleccionar (JS):', selectedBaremos);
-                            
-                            // Esperar a que se inicialice Select2
-                            var checkSelect2 = setInterval(function() {
-                                var $select = $('#sis-siniestro-idbaremo');
-                                if ($select.hasClass('select2-hidden-accessible')) {
-                                    clearInterval(checkSelect2);
-                                    console.log('Select2 inicializado, estableciendo valores...');
-                                    
-                                    // Establecer los valores seleccionados
-                                    $select.val(selectedBaremos).trigger('change');
-                                    
-                                    // Verificar los valores seleccionados
-                                    console.log('Valores seleccionados después de setear:', $select.val());
-                                    
-                                    // Forzar la actualización visual de Select2
-                                    $select.trigger('select2:select');
-                                }
-                            }, 100);
-                        });
-                        </script>
-                        </div>
+
                         
                         <div class="col-md-12">
                             <?= $form->field($model, 'atendido')->dropDownList(
@@ -401,3 +403,58 @@ $this->registerCss($css);
     </div>
     <?php ActiveForm::end(); ?>
 </div>
+<?php
+// JavaScript para calcular la suma de los baremos seleccionados
+$js = <<<JS
+// Función para calcular el total
+function calcularTotal() {
+    var baremosSeleccionados = $('#baremos-select').val();
+    
+    if (!baremosSeleccionados || baremosSeleccionados.length === 0) {
+        $('#costo-total-container').hide();
+        $('#costo-total-input').val('0.00');
+        return;
+    }
+    
+    // Mostrar cargando
+    $('#costo-total-value').html('Calculando...');
+    $('#costo-total-container').show();
+    
+    // Hacer la petición AJAX al servidor
+    $.ajax({
+        url: 'calcular-total', // Necesitarás crear esta acción en tu controlador
+        type: 'POST',
+        data: {
+            baremos: baremosSeleccionados
+        },
+        success: function(response) {
+            if (response.success) {
+                var total = parseFloat(response.total);
+                $('#costo-total-value').html('Bs ' + total.toFixed(2));
+                $('#costo-total-input').val(total.toFixed(2));
+            } else {
+                console.error('Error al calcular el total:', response.error);
+                $('#costo-total-container').hide();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error en la petición AJAX:', error);
+            $('#costo-total-container').hide();
+        }
+    });
+}
+
+// Calcular el total cuando cambia la selección de baremos
+$('#baremos-select').on('change', function() {
+    calcularTotal();
+});
+
+// Calcular el total al cargar la página si hay baremos seleccionados
+$(document).ready(function() {
+    if ($('#baremos-select').val() && $('#baremos-select').val().length > 0) {
+        calcularTotal();
+    }
+});
+JS;
+
+$this->registerJs($js);

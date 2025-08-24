@@ -46,6 +46,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['fecha_atencion', 'hora_atencion', 'descripcion', 'updated_at', 'deleted_at'], 'default', 'value' => null],
             [['atendido'], 'default', 'value' => 0],
             [['idclinica', 'fecha', 'hora', 'idbaremo', 'iduser', 'descripcion'], 'required'],
+            [['costo_total'], 'number'],
             [['idclinica', 'atendido', 'iduser'], 'default', 'value' => null],
             [['idbaremo'], 'default', 'value' => ''],
             [['idclinica', 'atendido', 'iduser'], 'integer'],
@@ -179,10 +180,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
         
         // Agregar las nuevas relaciones
         foreach ($baremoIds as $baremoId) {
+
+            $baremocosto = Baremo::find()->where(['id' => $baremoId])->one()->precio;
+
             if (!empty($baremoId)) {
                 $relacion = new SisSiniestroBaremo([
                     'siniestro_id' => $this->id,
-                    'baremo_id' => $baremoId
+                    'baremo_id' => $baremoId,
+                    'costo' => $baremocosto
                 ]);
                 
                 if (!$relacion->save()) {
