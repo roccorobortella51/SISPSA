@@ -604,7 +604,7 @@ $this->registerJs($jsValidation);
                                     'id' => 'clinica_id'
                                 ],
                                 'pluginOptions' => [
-                                    'allowClear' => false,
+                                    'allowClear' => true,
                                 ],
                             ])->label('Clínica'); ?>
                         </div>
@@ -615,6 +615,7 @@ $this->registerJs($jsValidation);
                                     'id'=>'plan_id',
                                     'placeholder' => 'Seleccione',
                                     'class' => 'form-control  form-control-lg',
+                                    'allowClear' => true,
                                 ],
                                 'pluginOptions'=>[
                                     'depends'=>['clinica_id'],
