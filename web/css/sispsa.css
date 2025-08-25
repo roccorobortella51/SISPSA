@@ -10609,6 +10609,18 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
   transition: width 0.4s ease;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 /* --- CSS Adicional para la vista 'Monitor de Fondos de Clínica' --- */
 
 /* Contenedor principal de la vista: Ocupa todo el ancho y ajusta el padding */
@@ -10662,7 +10674,8 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
     display: flex;
     align-items: center;
     justify-content: flex-end; /* Alinea el texto a la derecha de la barra de progreso */
-    color: white;
+    /* === CAMBIO AQUÍ: Color del texto en blanco === */
+    color: white!important;
     font-weight: bold;
     padding-right: 8px; /* Pequeño padding para el porcentaje */
     box-sizing: border-box; /* Incluye padding y borde en el ancho/alto */
@@ -10672,6 +10685,8 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
 /* Asegura que el texto dentro de gauge-progress no se rompa */
 .gauge-progress span {
     white-space: nowrap;
+    /* === OPCIONAL: Podrías ponerle un color diferente si el fondo es muy claro en algún punto === */
+    /* color: white; */
 }
 
 /* Clases de color para la barra de progreso del medidor (gauge-progress) - Usando colores Bootstrap estándar */
@@ -10772,6 +10787,74 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
     color: #2d3748 !important;
 }
 
+/* --- Estilos para los controles de límite --- */
+.limit-controls {
+    background-color: #ffffff; /* Fondo blanco para los controles */
+    border: 1px solid #e0e0e0;
+    padding: 25px !important;
+    border-radius: 0.75rem;
+    margin-top: 40px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.limit-controls .form-group {
+    margin-bottom: 20px;
+}
+
+.limit-controls label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+    color: #34495e;
+}
+
+.limit-controls output {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 40px; /* Para mantener el espacio */
+    display: inline-block;
+    text-align: right;
+    margin-left: 5px;
+}
+
+.form-control-range {
+    width: 100%;
+    -webkit-appearance: none; /* Oculta el estilo por defecto del navegador */
+    height: 8px; /* Altura de la barra deslizante */
+    background: #dcdcdc; /* Color de la pista */
+    border-radius: 4px;
+    outline: none;
+    transition: opacity .2s;
+}
+
+.form-control-range:hover {
+    opacity: 1; /* Transparencia al pasar el ratón */
+}
+
+.form-control-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px; /* Tamaño del "mango" */
+    height: 20px; /* Tamaño del "mango" */
+    border-radius: 50%; /* Circular */
+    background: #007bff; /* Color del "mango" */
+    cursor: grab;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.form-control-range::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: grab;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+
 /* Media queries para responsividad */
 @media (max-width: 768px) {
     .gauge-label {
@@ -10806,16 +10889,18 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
     .secondary-bar-progress {
         font-size: 0.9em;
     }
+    .transaction-table thead th,
+    .transaction-table tbody td {
+        padding: 8px 10px;
+        font-size: 0.9em;
+    }
+    .limit-controls {
+        padding: 15px !important;
+    }
+    .limit-controls label {
+        font-size: 1em;
+    }
+    .limit-controls output {
+        font-size: 1em;
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
