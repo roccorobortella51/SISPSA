@@ -18,7 +18,7 @@ $this->params['breadcrumbs'][] = $this->title;
     // para todos los campos de formulario dentro de este bloque.
     $form = ActiveForm::begin(); 
     ?>
-    <div class="ms-panel ms-panel-fh">
+    <div class="card">
         <div class="ms-panel-header d-flex justify-content-between align-items-center">
             <h1><?= Html::encode($this->title); ?></h1>
             <div>
@@ -41,5 +41,5 @@ $this->params['breadcrumbs'][] = $this->title;
             ]) ?>        
         </div>
     </div>
-
 </div>
+
