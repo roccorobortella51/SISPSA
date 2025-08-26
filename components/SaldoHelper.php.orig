@@ -26,7 +26,7 @@ class SaldoHelper extends Component
         // Obtener información del plan
         $plan = Planes::findOne($planId);
         $precioPlan = $plan ? $plan->precio : 0;
-        $coberturaPlan = $plan ? $plan->cobertura : 0;
+        $coberturaPlan = $plan ? $plan->precio : 0;
         
         // Calcular la sumatoria de siniestros del afiliado
         $sumatoriaSiniestros = SisSiniestro::find()

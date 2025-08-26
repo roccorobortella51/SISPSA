@@ -102,4 +102,9 @@ class Pagos extends \yii\db\ActiveRecord
         }
         return null;
     }
+
+    public function getUserDatos()
+    {
+        return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
+    }
 }

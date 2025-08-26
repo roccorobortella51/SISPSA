@@ -13,7 +13,7 @@ use yii\web\View;
 
 // Obtener información del plan del afiliado
 $plan = \app\models\Planes::findOne($afiliado->plan_id);
-$precioPlan = $plan ? $plan->precio : 0;
+$precioPlan = $plan ? $plan->cobertura : 0;
 
 // Obtener la sumatoria de siniestros del afiliado
 $sumatoriaSiniestros = \app\models\SisSiniestro::find()
@@ -296,7 +296,7 @@ $this->registerCss($css);
                     <span class="plan-info-value"><?= $afiliado->plan->nombre ?></span>
                 </div>
                 <div class="plan-info-item">
-                    <span class="plan-info-label">Precio del Plan:</span>
+                    <span class="plan-info-label">Cobertura del Plan:</span>
                     <span class="plan-info-value"><?= number_format($precioPlan, 2) ?></span>
                 </div>
                 <div class="plan-info-item">
