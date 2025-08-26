@@ -42,7 +42,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
        <?php 
        if($permisos)
         echo Html::a(
-        '<i class="fas fa-plus"></i> CREAR NUEVO USUARIO',
+        '<i class="fas fa-plus"></i>&nbsp;CREAR NUEVO USUARIO',
         ['create'],
         ['class' => 'btn btn-outline-primary btn-lg w-100']
     ); ?>

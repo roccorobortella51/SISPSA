@@ -304,4 +304,60 @@ class RmClinicaController extends Controller
             }
         }
     }
+
+    public function actionFondo()
+    {
+        // --- Datos Ficticios para la Demostración ---
+        // Estos valores deben ser reemplazados por datos reales de tu base de datos o configuraciones.
+        $fondoAnualTotal = 1200000.00; // Ejemplo: $1,200,000
+        $fondoMensualTotal = 100000.00; // Ejemplo: $100,000
+        $consumoMensualActual = 65000.00; // Ejemplo: $65,000 (consumido del mensual)
+
+        // Calcular el porcentaje consumido del fondo mensual
+        $porcentajeConsumido = ($fondoMensualTotal > 0) ? ($consumoMensualActual / $fondoMensualTotal) * 100 : 0;
+        $porcentajeConsumido = round($porcentajeConsumido, 2); // Redondear a dos decimales
+
+        // --- Límites de los Colores (futura configuración de administrador) ---
+        // Estos límites son para la representación visual de la barra de "gasolina".
+        // Por ahora, son fijos. En el futuro, un administrador podría configurarlos desde una interfaz.
+        $limiteVerde = 70; // Hasta 70% de consumo es verde (Ideal)
+        $limiteAmarillo = 90; // De 70% a 90% de consumo es amarillo (Advertencia)
+        // Más del 90% es rojo (Peligro)
+
+        // Determinar el color actual de la barra de progreso
+        $colorClase = 'bg-success'; // Verde por defecto
+        if ($porcentajeConsumido >= $limiteAmarillo) {
+            $colorClase = 'bg-danger'; // Rojo si supera el límite de amarillo
+        } elseif ($porcentajeConsumido >= $limiteVerde) {
+            $colorClase = 'bg-warning'; // Amarillo si supera el límite de verde
+        }
+        
+        // ----- Envío de Correos (para futura implementación) ----
+        // Aquí iría la lógica para verificar si se deben enviar correos.
+        // Esto requeriría almacenar el estado de los correos enviados (por ejemplo, en la DB)
+        // para evitar enviar múltiples correos por el mismo evento dentro de un periodo.
+        /*
+        // Ejemplo de lógica futura:
+        if ($porcentajeConsumido >= $limiteAmarillo && $porcentajeConsumido < $limiteRojo && !$fondoModel->warningEmailSentThisMonth) {
+            // Lógica para enviar correo de advertencia al administrador
+            // Yii::$app->mailer->compose(...)
+            // Actualizar $fondoModel->warningEmailSentThisMonth = true; $fondoModel->save();
+        }
+        if ($porcentajeConsumido >= $limiteRojo && !$fondoModel->dangerEmailSentThisMonth) {
+            // Lógica para enviar correo de peligro al administrador
+            // Yii::$app->mailer->compose(...)
+            // Actualizar $fondoModel->dangerEmailSentThisMonth = true; $fondoModel->save();
+        }
+        */
+
+        return $this->render('fondo', [ // La vista ahora se llama 'fondo'
+            'fondoAnualTotal' => $fondoAnualTotal,
+            'fondoMensualTotal' => $fondoMensualTotal,
+            'consumoMensualActual' => $consumoMensualActual,
+            'porcentajeConsumido' => $porcentajeConsumido,
+            'limiteVerde' => $limiteVerde,
+            'limiteAmarillo' => $limiteAmarillo,
+            'colorClase' => $colorClase,
+        ]);
+    }
 }

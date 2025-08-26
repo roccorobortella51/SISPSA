@@ -25,12 +25,12 @@ $totalDisponible = $precioPlan - $sumatoriaSiniestros;
 
 // CSS personalizado
 $css = <<<CSS
-.sis-siniestro-form {
+/*.sis-siniestro-form {
     background-color: #f8f9fa;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+}*/
 
 .section-title {
     font-size: 18px;
