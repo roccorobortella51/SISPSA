@@ -10611,6 +10611,30 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
   transition: width 0.4s ease;
 }
 
+/* Estilos para la barra de progreso */
+.progress-bar-container {
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+/* Estilos para la tabla de siniestros */
+.table-responsive {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.table-sm th, .table-sm td {
+    padding: 0.3rem;
+    font-size: 0.875rem;
+}
 
 
 
