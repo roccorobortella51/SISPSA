@@ -76,7 +76,7 @@ $datosJs = json_encode($datos);
         </h2>
         <div class="row">
             <div class="col-md-6">
-                <p class="text-gray-700 mb-2 text-lg-18"><strong>Nombre del Propietario:</strong> <?= Html::encode($model->propietario->userDatos->nombres ?? 'N/A') . ' ' . Html::encode($model->propietario->userDatos->apellidos ?? '') ?></p>
+                <p class="text-gray-700 mb-2 text-lg-18"><strong>Nombre del Propietario:</strong> <?= Html::encode(($model->propietario->nombres ?? 'N/A') . ' ' . ($model->propietario->apellidos ?? '')) ?></p>
                 <p class="text-gray-700 mb-2 text-lg-18"><strong>RIF:</strong> <?= Html::encode($ownerContactInfo['rif']) ?></p>
             </div>
             <div class="col-md-6">

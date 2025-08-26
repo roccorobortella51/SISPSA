@@ -332,7 +332,7 @@ class RmClinicaController extends Controller
             $colorClase = 'bg-warning'; // Amarillo si supera el límite de verde
         }
         
-        // --- Envío de Correos (para futura implementación) ---
+        // ----- Envío de Correos (para futura implementación) ----
         // Aquí iría la lógica para verificar si se deben enviar correos.
         // Esto requeriría almacenar el estado de los correos enviados (por ejemplo, en la DB)
         // para evitar enviar múltiples correos por el mismo evento dentro de un periodo.

@@ -108,15 +108,6 @@ $this->params['breadcrumbs'][] = $this->title;
 <!-- Contenedor principal de todo el contenido de la vista. -->
 <div class="monitor-fondos-clinica-content-wrapper">
 
-    <!-- Bloque de "Migas de Pan" (Breadcrumbs): Para la navegación del usuario. -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="<?= Url::to(['/']) ?>"><i class="fas fa-home mr-2"></i>Inicio</a></li>
-            <li class="breadcrumb-item"><a href="<?= Url::to(['/rm-clinica/index']) ?>">Clínicas</a></li>
-            <li class="breadcrumb-item active" aria-current="page"><?= Html::encode($this->title) ?></li>
-        </ol>
-    </nav>
-
     <!-- Título principal visible de la página. -->
     <h1 class="h3 mb-4 text-gray-800"><?= Html::encode($this->title) ?></h1>
 
@@ -162,6 +153,16 @@ $this->params['breadcrumbs'][] = $this->title;
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Ingresos Anuales vs Mensuales (colocado antes de la barra de fondo) -->
+    <div class="ms-panel border-info mb-4">
+        <div class="ms-panel-header">
+            <h3 class="section-title mb-0"><i class="fas fa-chart-bar"></i> Ingresos Anuales vs Mensuales</h3>
+        </div>
+        <div class="ms-panel-body" style="height: 260px;">
+            <canvas id="ingresosChart"></canvas>
         </div>
     </div>
 
@@ -235,15 +236,77 @@ $this->params['breadcrumbs'][] = $this->title;
 
 </div> <!-- Cierre del div .monitor-fondos-clinica-content-wrapper -->
 
-<?php
-// --- SECCIÓN: SCRIPTS JAVASCRIPT ---
-// Este bloque registra código JavaScript directamente en la página.
-// La sintaxis `<<<JS ... JS;` es un "Heredoc" de PHP, que permite escribir bloques de texto largos
-// y multilínea sin necesidad de escapar comillas, pero requiere especial atención a las variables PHP.
+<!-- (El gráfico fue movido arriba, antes de la barra de fondo) -->
 
+<?php
+// Incluir Chart.js desde CDN
+$this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js', ['position' => \yii\web\View::POS_END]);
+
+// Datos desde PHP
+$anual = (float)$fondoAnualTotal;
+$mensual = (float)$fondoMensualTotal;
+
+// --- SECCIÓN: SCRIPTS JAVASCRIPT ---
+// Bloque existente + inicialización del gráfico
 $this->registerJs(<<<JS
 (function() {
-    // Obtenemos referencias a los elementos HTML con los que vamos a interactuar.
+    // Inicialización del gráfico de barras (dos conjuntos: Anual y Mensual)
+    const ctx = document.getElementById('ingresosChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Ingresos'],
+                datasets: [
+                    {
+                        label: 'Anual',
+                        data: [{$anual}],
+                        backgroundColor: '#4e79a7',
+                        borderRadius: 6,
+                        maxBarThickness: 60
+                    },
+                    {
+                        label: 'Mensual',
+                        data: [{$mensual}],
+                        backgroundColor: '#f28e2b',
+                        borderRadius: 6,
+                        maxBarThickness: 60
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.parsed.y || 0;
+                                try {
+                                    return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', maximumFractionDigits: 2 }).format(val);
+                                } catch (e) {
+                                    return val.toLocaleString('es-VE');
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                try { return value.toLocaleString('es-VE'); } catch (e) { return value; }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Código JS existente a continuación
     const sliderLimiteVerde = document.getElementById('sliderLimiteVerde');
     const outputLimiteVerde = document.getElementById('outputLimiteVerde');
     const sliderLimiteAmarillo = document.getElementById('sliderLimiteAmarillo');

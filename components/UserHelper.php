@@ -304,9 +304,8 @@ class UserHelper
      */
     public static function getAgenteOwnerContactInfo($agenteId)
     {
-        // 1. Encontrar el modelo Agente por su ID
-        $agente = Agente::findOne($agenteId);
-
+        // 1) Buscar la agencia
+        $agente = \app\models\Agente::findOne($agenteId);
         if ($agente === null) {
             return [
                 'rif' => 'N/A',
@@ -316,22 +315,8 @@ class UserHelper
             ];
         }
 
-        // 2. Encontrar el modelo User (propietario) usando el idusuariopropietario del agente
-        $ownerUser = User::findOne($agente->idusuariopropietario);
-
-        if ($ownerUser === null) {
-            return [
-                'rif' => 'N/A',
-                'email' => 'N/A',
-                'telefono' => 'N/A',
-                'direccion' => 'N/A',
-            ];
-        }
-
-        // 3. Encontrar el modelo UserDatos asociado a ese User
-        // Asume que UserDatos tiene una columna 'user_login_id' que es la FK al 'id' de la tabla User
-        $ownerDatos = UserDatos::findOne(['user_login_id' => $ownerUser->id]);
-
+        // 2) idusuariopropietario apunta a user_datos.id, así que buscamos UserDatos directamente
+        $ownerDatos = \app\models\UserDatos::findOne($agente->idusuariopropietario);
         if ($ownerDatos === null) {
             return [
                 'rif' => 'N/A',
@@ -341,9 +326,17 @@ class UserHelper
             ];
         }
 
-        // 4. Devolver los datos de contacto
+        // 3) Devolver los datos de contacto desde UserDatos
+        // RIF: si no existe columna/valor rif, construir desde tipo_cedula + cedula
+        $rif = null;
+        if (isset($ownerDatos->rif) && !empty($ownerDatos->rif)) {
+            $rif = $ownerDatos->rif;
+        } elseif (!empty($ownerDatos->tipo_cedula) && !empty($ownerDatos->cedula)) {
+            $rif = $ownerDatos->tipo_cedula . '-' . $ownerDatos->cedula;
+        }
+
         return [
-            'rif' => $ownerDatos->rif ?? 'N/A',
+            'rif' => $rif ?? 'N/A',
             'email' => $ownerDatos->email ?? 'N/A',
             'telefono' => $ownerDatos->telefono ?? 'N/A',
             'direccion' => $ownerDatos->direccion ?? 'N/A',
