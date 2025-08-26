@@ -169,13 +169,13 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                         ],
                         [
                             'attribute' => 'costo',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
                         [
                             'attribute' => 'precio',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
