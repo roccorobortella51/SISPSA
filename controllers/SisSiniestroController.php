@@ -233,6 +233,30 @@ class SisSiniestroController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
+    /*public function actionCalcularTotal()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        try {
+            $baremosIds = Yii::$app->request->post('baremos', []);
+            
+            if (empty($baremosIds)) {
+                return ['success' => true, 'total' => 0];
+            }
+            
+            // Calcular la suma de los precios de los baremos seleccionados
+            $total = \app\models\Baremo::find()
+                ->where(['id' => $baremosIds])
+                ->sum('precio');
+            
+            return ['success' => true, 'total' => $total ?: 0];
+            
+        } catch (\Exception $e) {
+            Yii::error("Error al calcular total: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }*/
+
     public function actionCalcularTotal()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
