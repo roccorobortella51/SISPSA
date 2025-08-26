@@ -10626,10 +10626,10 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
 }
 
 /* Estilos para la tabla de siniestros */
-.table-responsive {
+/*.table-responsive {
     max-height: 200px;
     overflow-y: auto;
-}
+}*/
 
 .table-sm th, .table-sm td {
     padding: 0.3rem;
