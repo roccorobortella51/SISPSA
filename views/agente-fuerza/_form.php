@@ -40,7 +40,10 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 }
 // --- Fin de la corrección de errores ---
 
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
 ?>
+
    
 <div class="agente-fuerza-form">
     <div class="ms-panel-body">
@@ -62,8 +65,8 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 
         <div class="col">
             <?= Html::a(
-                '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR(EN CONSTRUCCION)', // Icono para afiliados
-                ['user-datos/index-by-afiliado', 'asesor_id' => $model->idusuario],
+                '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR', // Icono para afiliados
+                ['user-datos/index-by-afiliado', 'asesor_id' => $model->id],
                 ['class' => 'btn btn-success btn-lg w-100'] // Estilo de botón
             ) ?>
         </div>
@@ -99,7 +102,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
             </div>
             <div class="col-md-6">
                 <?= $form->field($model, 'idusuario')->widget(Select2::classname(), [
-                        'data' => UserHelper::getAgenteFuerzaList(),
+                        'data' => UserHelper::getAsesor(),
                         'options' => [
                             'placeholder' => 'Seleccione el asesor', // Placeholder adaptado
                             'class' => 'form-control form-control-lg',
@@ -242,7 +245,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 
         <div class="col-md-12">
             <div class="form-group text-end mt-4" style="margin-right:10px;">
-                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
+                <?php if($permisos){ echo Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']); } ?>
                 
                
 

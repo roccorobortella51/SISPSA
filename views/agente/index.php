@@ -1,12 +1,13 @@
 <?php
 
-// Importaciones necesarias
 use yii\helpers\Html;
 use yii\helpers\Url;
-use kartik\grid\GridView; // Asegúrate de tener kartik/yii2-grid instalado
+use kartik\grid\GridView; 
 use yii\grid\ActionColumn;
-use app\models\Agente; // Asegúrate de que tu modelo Agente esté correctamente importado
-
+use app\models\Agente; 
+use app\models\AgenteFuerza;
+use app\models\User;
+use app\components\UserHelper;
 /**
  * @var yii\web\View $this
  * @var app\models\AgenteSearch $searchModel
@@ -19,6 +20,9 @@ $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 
 $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION'); 
+
 ?>
 <div class="row" style="margin:3px !important;">
    
@@ -29,9 +33,11 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
         <div class="ms-panel-header d-flex justify-content-between align-items-center mb-3">
             <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
-            <div>
-                <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
-            </div>
+            <?php if($permisos){ ?>
+                <div>
+                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
+                </div>
+            <?php } ?>
 
         </div>
 
@@ -56,10 +62,21 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                         ],
 
                         'columns' => [
+                            // Columna ID añadida aquí
+                            [
+                                'attribute' => 'id',
+                                'label' => 'ID',
+                                'headerOptions' => ['style' => 'color: white!important; width: 80px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar ID',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
                             // Nombre (asumimos 'nom' como el atributo para el nombre del agente)
                             [
                                 'attribute' => 'nom', // **VERIFICA que 'nom' es el campo correcto para el nombre**
-                                'label' => 'Nombre', // Etiqueta visible en la cabecera
+                                'label' => 'AGENCIAS', // Etiqueta visible en la cabecera
                                 'format' => 'ntext',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'options' => ['style' => 'width: 250px;'],
@@ -82,7 +99,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                             // Propietario (asumimos 'idusuariopropietario'. Si necesitas el nombre real,
                             // tu modelo 'Agente' necesitará una relación o un campo 'value' aquí)
                             [
-                                'attribute' => 'propietario.username', // CORRECTO, si 'username' es donde está el nombre en el modelo User
+                                'attribute' => 'propietario',
                                 'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
@@ -91,7 +108,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 ],
                                 // Opcional: para manejar el caso de que no haya propietario y no mostrar error, puedes usar 'value':
                                 'value' => function($model) {
-                                    return $model->propietario ? $model->propietario->username : 'No asignado';
+                                    return $model->propietario ? $model->propietario->nombres : 'No asignado';
                                 }
                             ],
                             
@@ -111,7 +128,7 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 'value' => function ($model) {
                                     // $model aquí es una instancia de Agente.
                                     // Accedemos a su relación 'propietario', y luego a los 'userDatos' del propietario.
-                                    return ($model->propietario && $model->propietario->userDatos) ? $model->propietario->userDatos->cedula : 'N/A';
+                                    return ($model->propietario && $model->propietario->cedula) ? $model->propietario->cedula : 'N/A';
                                 },
                             ],
                
@@ -128,7 +145,14 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                 'value' => function($model) {
                                     
                                     
-                                    $count = $model->agenteFuerzaCount; // O $model->getAgenteFuerzaCount() si prefieres la forma explícita
+                                    $count = User::find()
+                                            ->joinWith('userDatos')
+                                            ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                                            ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
+                                            ->where(['auth_assignment.item_name' => "Asesor"])
+                                            ->andWhere(['agente_id' => $model->id])
+                                            ->andWhere(['is not', 'agente_fuerza.idusuario', null])
+                                            ->count();
                             
                                     return Html::a(
                                         $count, // El texto del enlace será el número de asesores
@@ -161,7 +185,8 @@ $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key) {
+                                    'update' => function ($url, $model, $key)use($permisos) {
+                                        if($permisos)
                                         return Html::a(
                                             '<i class="fas fa-pen"></i>',
                                             $url,

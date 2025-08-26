@@ -80,7 +80,7 @@ class RmClinicaController extends Controller
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
      */
-     public function actionView($id)
+    public function actionView($id)
     {
         $model = $this->findModel($id);
 
@@ -93,14 +93,22 @@ class RmClinicaController extends Controller
         // mapeando por 'codigo_muni' para que coincida con $model->municipio.
         $municipiosList = [];
         if (!empty($model->estado)) {
+
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+            if($estado){
+
+                $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+                if($estado){
+
             $municipiosList = ArrayHelper::map(
                 RmMunicipio::find()
-                    ->where(['estado_codigo' => $model->estado])
+                    ->where(['estado_codigo' => $estado->id])
                     ->asArray()
                     ->all(),
                 'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
                 'nombre'
-            );
+            );}
+            }
         }
         // ------------------------------------
 
@@ -110,14 +118,90 @@ class RmClinicaController extends Controller
         // Obtener la lista de ciudades (desde RmCiudad)
         $ciudadesList = [];
         if (!empty($model->estado)) {
-            $ciudadesList = ArrayHelper::map(
-                RmCiudad::find()
-                    ->where(['estado_codigo' => $model->estado])
-                    ->asArray()
-                    ->all(),
-                'id',
-                'nombre'
-            );
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+                if($estado){
+
+                $ciudadesList = ArrayHelper::map(
+                    RmCiudad::find()
+                        ->where(['estado_codigo' => $estado->id])
+                        ->asArray()
+                        ->all(),
+                    'id',
+                    'nombre'
+                );
+            }
+        
+        }
+        // ------------------------------------
+
+       
+        return $this->render('view', [
+            'model' => $model,
+            'estadosList' => $estadosList,
+            'municipiosList' => $municipiosList, // ¡Esta es la lista correctamente mapeada!
+            'parroquiaList' => $parroquiasList,
+            'ciudadesList' => $ciudadesList,
+            'listaEstatus' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],
+        ]);
+    }
+
+    public function actionViewClinica()
+    {
+        $id = UserHelper::getMyClinicaId();
+        
+        if ($id == null) {
+            return $this->redirect(['site/index']);
+        }
+        
+        $model = $this->findModel($id);
+
+        
+
+        // --- CÓDIGO PARA OBTENER LAS LISTAS DE UBICACIÓN ---
+        // Obtener la lista de estados (desde UserHelper)
+        $estadosList = UserHelper::getEstadosList();
+        
+        // --- ¡CÓDIGO AJUSTADO PARA MUNICIPIOS! ---
+        // Obtenemos la lista de municipios directamente de RmMunicipio,
+        // mapeando por 'codigo_muni' para que coincida con $model->municipio.
+        $municipiosList = [];
+        if (!empty($model->estado)) {
+
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+            if($estado){
+
+                $municipiosList = ArrayHelper::map(
+                    RmMunicipio::find()
+                        ->where(['estado_codigo' => $estado->id])
+                        ->asArray()
+                        ->all(),
+                    'codigo_muni', // ¡Mapeamos por 'codigo_muni' aquí!
+                    'nombre'
+                );
+            }
+        }
+        // ------------------------------------
+
+        // Obtener la lista de parroquias (desde UserHelper)
+        $parroquiasList = $model->municipio ? UserHelper::getParroquiasList($model->municipio) : [];
+
+        // Obtener la lista de ciudades (desde RmCiudad)
+        $ciudadesList = [];
+        if (!empty($model->estado)) {
+
+            $estado = RmEstado::find()->where(['nombre' => $model->estado])->one();
+                if($estado){
+
+                    $ciudadesList = ArrayHelper::map(
+                        RmCiudad::find()
+                            ->where(['estado_codigo' => $estado->id])
+                            ->asArray()
+                            ->all(),
+                        'id',
+                        'nombre'
+                    );
+            }
         
         }
         // ------------------------------------
@@ -142,8 +226,7 @@ class RmClinicaController extends Controller
     {
         $model = new RmClinica();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post())) {
+            if ($this->request->isPost && $model->load($this->request->post())) {
 
                 $estado = RmEstado::find()->where(['id' => $model->estado])->one();
 
@@ -152,14 +235,20 @@ class RmClinicaController extends Controller
                 }
 
                 $model->estatus = "Activo";
-                $model->save();
 
-                return $this->redirect(['view', 'id' => $model->id]);
+                if($model->save()){
+                    return $this->redirect(['view', 'id' => $model->id]);
+
+                }else{
+
+                    echo "MODEL NOT SAVED";
+                      print_r($model->getAttributes());
+                      print_r($model->getErrors());
+                      exit;
+                }
+
             }
-        } else {
-            $model->loadDefaultValues();
-        }
-
+         
         return $this->render('create', [
             'model' => $model,
         ]);
@@ -229,5 +318,61 @@ class RmClinicaController extends Controller
                 $model->save(false);
             }
         }
+    }
+
+    public function actionFondo()
+    {
+        // --- Datos Ficticios para la Demostración ---
+        // Estos valores deben ser reemplazados por datos reales de tu base de datos o configuraciones.
+        $fondoAnualTotal = 1200000.00; // Ejemplo: $1,200,000
+        $fondoMensualTotal = 100000.00; // Ejemplo: $100,000
+        $consumoMensualActual = 65000.00; // Ejemplo: $65,000 (consumido del mensual)
+
+        // Calcular el porcentaje consumido del fondo mensual
+        $porcentajeConsumido = ($fondoMensualTotal > 0) ? ($consumoMensualActual / $fondoMensualTotal) * 100 : 0;
+        $porcentajeConsumido = round($porcentajeConsumido, 2); // Redondear a dos decimales
+
+        // --- Límites de los Colores (futura configuración de administrador) ---
+        // Estos límites son para la representación visual de la barra de "gasolina".
+        // Por ahora, son fijos. En el futuro, un administrador podría configurarlos desde una interfaz.
+        $limiteVerde = 70; // Hasta 70% de consumo es verde (Ideal)
+        $limiteAmarillo = 90; // De 70% a 90% de consumo es amarillo (Advertencia)
+        // Más del 90% es rojo (Peligro)
+
+        // Determinar el color actual de la barra de progreso
+        $colorClase = 'bg-success'; // Verde por defecto
+        if ($porcentajeConsumido >= $limiteAmarillo) {
+            $colorClase = 'bg-danger'; // Rojo si supera el límite de amarillo
+        } elseif ($porcentajeConsumido >= $limiteVerde) {
+            $colorClase = 'bg-warning'; // Amarillo si supera el límite de verde
+        }
+        
+        // ----- Envío de Correos (para futura implementación) ----
+        // Aquí iría la lógica para verificar si se deben enviar correos.
+        // Esto requeriría almacenar el estado de los correos enviados (por ejemplo, en la DB)
+        // para evitar enviar múltiples correos por el mismo evento dentro de un periodo.
+        /*
+        // Ejemplo de lógica futura:
+        if ($porcentajeConsumido >= $limiteAmarillo && $porcentajeConsumido < $limiteRojo && !$fondoModel->warningEmailSentThisMonth) {
+            // Lógica para enviar correo de advertencia al administrador
+            // Yii::$app->mailer->compose(...)
+            // Actualizar $fondoModel->warningEmailSentThisMonth = true; $fondoModel->save();
+        }
+        if ($porcentajeConsumido >= $limiteRojo && !$fondoModel->dangerEmailSentThisMonth) {
+            // Lógica para enviar correo de peligro al administrador
+            // Yii::$app->mailer->compose(...)
+            // Actualizar $fondoModel->dangerEmailSentThisMonth = true; $fondoModel->save();
+        }
+        */
+
+        return $this->render('fondo', [ // La vista ahora se llama 'fondo'
+            'fondoAnualTotal' => $fondoAnualTotal,
+            'fondoMensualTotal' => $fondoMensualTotal,
+            'consumoMensualActual' => $consumoMensualActual,
+            'porcentajeConsumido' => $porcentajeConsumido,
+            'limiteVerde' => $limiteVerde,
+            'limiteAmarillo' => $limiteAmarillo,
+            'colorClase' => $colorClase,
+        ]);
     }
 }

@@ -68,8 +68,14 @@ class UserDatosSearch extends UserDatos
         */
 
         if($rol == "Asesor"){
-            $query->where(['asesor_id' => Yii::$app->user->id]);
+            $query->where(['asesor_id' => UserHelper::getAgenteFuerzaId()]);
         }
+
+        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
+
+            $query->andFilterWhere(['clinica_id' => UserHelper::getMyClinicaId()]);
+        }
+
 
         // add conditions that should always apply here
 

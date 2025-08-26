@@ -15,9 +15,6 @@ use app\models\CheckListClinicas;
 /* @var $searchModel app\models\CheckListClinicasSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
-$this->title = 'LISTA DE VERIFICACIÓN DE CLÍNICAS';
-$this->params['breadcrumbs'][] = $this->title;
-
 // Helper para opciones de filtro booleano
 $booleanFilterOptions = [
     '1' => 'Sí',
@@ -108,13 +105,13 @@ $latestCreatedAt = CheckListClinicas::find()->max('created_at');
  */
 
 // --- BREADCRUMBS ---
-
-$this->params['breadcrumbs'][] = ['label' => 'CLINICA', 'url' => ['rm-clinica/update?id='. $clinica->id]];
+$this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
+$this->title = 'LISTA DE VERIFICACIÓN DE CLÍNICAS';
+$this->params['breadcrumbs'][] = $this->title;
+// $this->params['breadcrumbs'][] = ['label' => 'CLINICA', 'url' => ['rm-clinica/update?id='. $clinica->id]];
 // --- FIN  --- 
 
-
-$this->title = 'Verificación de Clínicas'; // Este sigue siendo el título para la página y breadcrumbs
-
+$this->title = 'Verificación de Clínicas'; 
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -148,7 +145,7 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                         '#',
                         [
                             // CAMBIO AQUÍ: Añadimos 'me-3' (Bootstrap 5) o 'mr-3' (Bootstrap 4)
-                            'class' => 'btn btn-primary btn-lg me-3', 
+                            'class' => 'btn btn-secondary btn-lg me-3', 
                             'onclick' => 'window.history.back(); return false;', 
                             'title' => 'Volver a la página anterior', 
                         ]
@@ -186,6 +183,8 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                     'clinica.rif',
                     [
                         'label' => '% Seleccionados',
+                        // Usamos la clase 'text-center' de Bootstrap para centrar el contenido
+                        'contentOptions' => ['class' => 'text-center', 'style' => 'padding: 10 !important;'], 
                         'format' => 'raw',
                         'value' => function ($model) use ($booleanColumns) {
                             $totalColumns = count($booleanColumns);
@@ -208,13 +207,12 @@ $this->title = 'Verificación de Clínicas'; // Este sigue siendo el título par
                                 // Establecer el color de la barra (verde)
                                 'barOptions' => ['class' => $barColorClass],
                                 'options' => [
-                                    'style' => 'width: 100px; height: 20px; background-color: #e9ecef;', // Fondo gris claro
+                                    'style' => 'width: auto; height: 20px; background-color: #e9ecef;', // Fondo gris claro
                                 ],
                                 // Envolver el label en un <span> con estilo de color azul
                                 'label' => Html::tag('span', $percentage . '%', ['style' => 'color: black;']),
-                            ]);
+                            ]) . "<br>" . $percentage . "%";
                         },
-                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'headerOptions' => ['style' => 'text-align: center;'],
                     ],
                     /*[

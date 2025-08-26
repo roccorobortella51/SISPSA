@@ -2,14 +2,15 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use app\models\Agente; // Asegúrate de que Agente esté importado
-use app\models\User; // Asegúrate de que User esté importado
+use app\models\Agente;
+use app\models\User;
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
 
 $this->title = 'DETALLES DE ASESOR VENDEDOR: ';
-$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA', 'url' => ['index']]; // Añadido URL para breadcrumb
+$this->params['breadcrumbs'][] = ['label' => 'AGENTES DE FUERZA', 'url' => ['index-by-agente']];
 $this->params['breadcrumbs'][] = 'DETALLES';
 
 \yii\web\YiiAsset::register($this);
@@ -25,12 +26,12 @@ $nombreCompletoUsuario = 'N/A';
 $telefonoUsuario = 'N/A';
 $emailUsuario = 'N/A';
 
-if ($model->user && $model->user->userDatos) { // Acceder a userDatos a través de la relación user
+if ($model->user && $model->user->userDatos) {
     $nombreCompletoUsuario = $model->user->userDatos->nombres . ' ' . $model->user->userDatos->apellidos;
     $telefonoUsuario = $model->user->userDatos->telefono ?? 'N/A';
     $emailUsuario = $model->user->userDatos->email ?? 'N/A';
 } elseif ($model->user) {
-    $nombreCompletoUsuario = $model->user->username; // Fallback al username si no hay userDatos
+    $nombreCompletoUsuario = $model->user->username;
 }
 
 // Función auxiliar para mostrar Sí/No con íconos y clases de CSS
@@ -42,20 +43,43 @@ function formatBooleanIcon($value) {
     }
 }
 
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
+
+
+// --- DATOS DE EJEMPLO PARA LA GRÁFICA ---
+// Reemplaza esto con los datos reales que pasarás desde el controlador
+$gananciasPorMes = [
+    'Enero' => 520,
+    'Febrero' => 610,
+    'Marzo' => 580,
+    'Abril' => 750,
+    'Mayo' => 840,
+    'Junio' => 790,
+];
+
+// Codificamos los datos para que JavaScript pueda usarlos
+$meses = array_keys($gananciasPorMes);
+$datos = array_values($gananciasPorMes);
+$mesesJs = json_encode($meses);
+$datosJs = json_encode($datos);
+
 ?>
 
-<div class="view-main-container">
+<div class="view-main-container agente-view">
    
 
-    <!-- Encabezado y Botones de Acción -->
     <div class="ms-panel-header">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="button-group-spacing">
-            <?= Html::a(
-                '<i class="fas fa-edit"></i> Actualizar',
-                ['update', 'id' => $model->id],
-                ['class' => 'btn btn-primary']
-            ) ?>
+            <?php if($permisos){ ?>
+                <?= Html::a(
+                    '<i class="fas fa-edit"></i> Actualizar',
+                    ['update', 'id' => $model->id],
+                    ['class' => 'btn btn-primary']
+                ) ?>
+            <?php } ?>
             <?= Html::a(
                 '<i class="fas fa-arrow-left"></i> Volver',
                 ['agente-fuerza/index-by-agente', 'agente_id' => $model->agente_id],
@@ -68,7 +92,6 @@ function formatBooleanIcon($value) {
         </div>
     </div>
 
-    <!-- Tarjeta de Información General del Asesor -->
     <div class="ms-panel border-blue">
         <div class="ms-panel-body">
             <h3 class="section-title">
@@ -87,30 +110,29 @@ function formatBooleanIcon($value) {
         </div>
     </div>
 
-    <!-- Tarjeta de Porcentajes de Comisión -->
     <div class="ms-panel border-purple">
         <div class="ms-panel-body">
             <h3 class="section-title">
                 <i class="fas fa-percent text-purple-600"></i> Porcentajes de Comisión
             </h3>
             <div class="info-grid-percentages">
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Venta</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_venta / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Asesoría</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_asesor / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Cobranza</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_cobranza / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Post Venta</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_post_venta / 100) ?></p>
                 </div>
-                <div class="info-card-body">
+                <div class="info-card-body col-md-2" style="margin-right:10px; margin-bottom:10px;">
                     <h6>Registro</h6>
                     <p class="h4"><?= Yii::$app->formatter->asPercent($model->por_registrar / 100) ?></p>
                 </div>
@@ -118,7 +140,17 @@ function formatBooleanIcon($value) {
         </div>
     </div>
 
-    <!-- Tarjeta de Permisos de Acceso -->
+    <div class="ms-panel">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-chart-line text-green-600 mr-3"></i> Ganancias de los Últimos 6 Meses
+            </h3>
+            <div class="chart-container" style="height: 250px;">
+                <canvas id="gananciasChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <div class="ms-panel border-green">
         <div class="ms-panel-body">
             <h3 class="section-title">
@@ -159,7 +191,6 @@ function formatBooleanIcon($value) {
         </div>
     </div>
 
-    <!-- Tarjeta de Fechas de Gestión -->
     <div class="ms-panel border-gray">
         <div class="ms-panel-body">
             <h3 class="section-title">
@@ -185,3 +216,70 @@ function formatBooleanIcon($value) {
     </div>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const meses = <?= $mesesJs ?>;
+        const datos = <?= $datosJs ?>;
+
+        const ctx = document.getElementById('gananciasChart').getContext('2d');
+        const gananciasChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: 'Ganancias',
+                    data: datos,
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: {
+                            callback: function(val, index) {
+                                const monto = datos[index].toLocaleString('en-US', {
+                                    style: 'currency',
+                                    currency: 'USD',
+                                    minimumFractionDigits: 2
+                                });
+                                return [meses[index], monto];
+                            },
+                            font: {
+                                size: 12
+                            },
+                            padding: 10
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Ganancia: $' + context.raw.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>

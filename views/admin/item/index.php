@@ -40,11 +40,11 @@ unset($rules[RouteRule::RULE_NAME]);
                                     'attribute' => 'name',
                                     'label' => Yii::t('rbac-admin', 'Name'),
                                 ],
-                                [
+                                /*[
                                     'attribute' => 'ruleName',
                                     'label' => Yii::t('rbac-admin', 'Rule Name'),
                                     'filter' => $rules
-                                ],
+                                ],*/
                                 [
                                     'attribute' => 'description',
                                     'label' => Yii::t('rbac-admin', 'Description'),

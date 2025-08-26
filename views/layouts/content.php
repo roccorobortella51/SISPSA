@@ -3,6 +3,7 @@
 
 use yii\bootstrap4\Breadcrumbs; // O yii\widgets\Breadcrumbs; si usas Bootstrap 3
 use yii\helpers\Html; // Importar Html para su uso
+use app\widgets\Alert;
 
 ?>
 <div class="content-wrapper">
@@ -10,6 +11,7 @@ use yii\helpers\Html; // Importar Html para su uso
         <div class="container-fluid">
             <div class="row">
                 <div class="col-sm-12">
+                    <?= Alert::widget() ?>
                     <?php
                     echo Breadcrumbs::widget([
                         'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],

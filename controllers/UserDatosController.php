@@ -763,7 +763,7 @@ class UserDatosController extends Controller
         $modelContrato = new Contratos();
         $model->created_at = date('Y-m-d H:i:s');
         $model->updated_at = date('Y-m-d H:i:s');
-        $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion(); //generar codigo de validacion de 6 digitos
+        $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
         $model->role = 'afiliado';
         $model->estatus = 'Creado';
         
@@ -776,9 +776,10 @@ class UserDatosController extends Controller
         //if ($this->request->isPost) {
             if ($model->load($this->request->post()) ) {
 
+            $model->plan_id = $modelContrato->plan_id;
+
 
                 if($model->save()){
-                    // Obtener archivos directamente del formulario
                     $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
                     $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
 
@@ -786,21 +787,15 @@ class UserDatosController extends Controller
                     $model->selfieFile = !empty($selfieFiles) ? reset($selfieFiles) : null;
 
                    
-                    if ($imagenIdentificacionFiles[0]->size > 0) {
+                    if (!empty($imagenIdentificacionFiles) && $imagenIdentificacionFiles[0]->size > 0) {
                         $folder = 'documentos';
-                        // Generamos un nombre de archivo único para evitar colisiones
                         $fileName = uniqid('imagen_identificacion_') . '.' . $model->imagenIdentificacionFile->extension;
-                        // Definimos la ruta temporal en el directorio @runtime (fuera del acceso web directo por seguridad)
                         $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
                         if ($model->imagenIdentificacionFile->saveAs($tempFilePath)) {
                             Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
 
-                            // La "clave" del archivo en Supabase Storage (su nombre y ruta dentro del bucket).
-                            // En este caso, solo es el nombre del archivo para que se guarde en la raíz del bucket 'usuarios'.
-                            // Si quisieras una subcarpeta, sería por ejemplo 'pagos_imagenes/' . $fileName;
                             $fileKeyInBucket = $fileName;
 
-                            // Llamamos a la función dedicada a subir el archivo a Supabase Storage via API
                             Yii::info("Subiendo archivo a Supabase Storage: " . $fileName, __METHOD__);
                             $publicUrl = UserHelper::uploadFileToSupabaseApi(
                                 $tempFilePath,
@@ -809,23 +804,19 @@ class UserDatosController extends Controller
                                 $folder
                             );
 
-                            // Eliminamos el archivo temporal del servidor DESPUÉS de que la operación de subida
-                            // a Supabase haya concluido (ya sea con éxito o error). Esto evita "Stream is detached".
                             if (file_exists($tempFilePath)) {
                                 unlink($tempFilePath);
                                 Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
                             }
 
                             if ($publicUrl) {
-                                // Si la subida a Supabase fue exitosa, guardamos la URL pública en el modelo del pago
                                 $model->imagen_identificacion = $publicUrl;
-                                if ($model->save(false)) { // Guardamos el modelo de pago en la base de datos
+                                if ($model->save(false)) {
                                     Yii::$app->session->setFlash('success', 'Identificacion subido con éxito.');
                                 } else {
                                     Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
                                 }
                             } else {
-                                // Si la subida a Supabase falló, el mensaje de error ya se estableció en la función de subida.
                                 Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
                             }
                         } else {
@@ -834,21 +825,15 @@ class UserDatosController extends Controller
                         }
 
                     }
-                    if ($selfieFiles[0]->size > 0) {
+                    if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
                         $folder = 'FotoPerfil';
-                        // Generamos un nombre de archivo único para evitar colisiones
                         $fileName = uniqid('selfie_') . '.' . $model->selfieFile->extension;
-                        // Definimos la ruta temporal en el directorio @runtime (fuera del acceso web directo por seguridad)
                         $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
                         if ($model->selfieFile->saveAs($tempFilePath)) {
                             Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
 
-                            // La "clave" del archivo en Supabase Storage (su nombre y ruta dentro del bucket).
-                            // En este caso, solo es el nombre del archivo para que se guarde en la raíz del bucket 'usuarios'.
-                            // Si quisieras una subcarpeta, sería por ejemplo 'pagos_imagenes/' . $fileName;
                             $fileKeyInBucket = $fileName;
 
-                            // Llamamos a la función dedicada a subir el archivo a Supabase Storage via API
                             $publicUrl = UserHelper::uploadFileToSupabaseApi(
                                 $tempFilePath,
                                 $model->selfieFile->type,
@@ -856,23 +841,19 @@ class UserDatosController extends Controller
                                 $folder
                             );
 
-                            // Eliminamos el archivo temporal del servidor DESPUÉS de que la operación de subida
-                            // a Supabase haya concluido (ya sea con éxito o error). Esto evita "Stream is detached".
                             if (file_exists($tempFilePath)) {
                                 unlink($tempFilePath);
                                 Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
                             }
 
                             if ($publicUrl) {
-                                // Si la subida a Supabase fue exitosa, guardamos la URL pública en el modelo del pago
                                 $model->selfie = $publicUrl;
-                                if ($model->save(false)) { // Guardamos el modelo de pago en la base de datos
+                                if ($model->save(false)) {
                                     Yii::$app->session->setFlash('success', 'Selfie subido con éxito.');
                                 } else {
                                     Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
                                 }
                             } else {
-                                // Si la subida a Supabase falló, el mensaje de error ya se estableció en la función de subida.
                                 Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
                             }
                         } else {
@@ -882,9 +863,8 @@ class UserDatosController extends Controller
 
                     }
             
-                    // Asignar el username generado al modelo de usuario
                     $modelUser->username = $model->email;;
-                    $pass = 'sispsa'.$model->cedula;//Yii::$app->security->generateRandomString(8);
+                    $pass = 'sispsa'.$model->cedula;
                     $modelUser->password_hash = User::setPassword($pass);
                     $modelUser->auth_key = User::generateAuthKey();
                     $modelUser->email = $model->email;
@@ -954,7 +934,7 @@ class UserDatosController extends Controller
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-
+            $model->plan_id = $modelContrato->plan_id;
 
                 if($model->user_login_id == "" || $model->user_login_id == null){
 
@@ -1174,7 +1154,7 @@ public function actionGenerarContratov($id)
             'legal_representative_phone' => '',
 
             // Datos del Plan (se usan del modelo Plan relacionado)
-            'plan_selected' => $model->plan ? $model->plan->nombre_plan : '', // Asume 'nombre_plan' en el modelo Planes
+            'plan_selected' => $model->plan ? $model->plan->nombre : '', // Asume 'nombre_plan' en el modelo Planes
             'plan_currency' => '', // No en UserDatos/Planes, se deja vacío
             'plan_deductible' => '', // No en UserDatos/Planes, se deja vacío
             'plan_coverage_limit' => '', // No en UserDatos/Planes, se deja vacío

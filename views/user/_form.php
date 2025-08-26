@@ -15,8 +15,11 @@ $firstEmailFieldId = Html::getInputId($model, 'email');
 $secondEmailFieldId = Html::getInputId($model2, 'email');
 // --- Fin de cálculo de IDs ---
 
+// ID del campo de rol
+$roleFieldId = Html::getInputId($model2, 'role');
 
-
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin'); 
 ?>
 
 <div class="user-form">
@@ -64,6 +67,22 @@ $secondEmailFieldId = Html::getInputId($model2, 'email');
             ]);
             ?>
         </div>
+
+        <?php if($permisos){?>
+            <div class="col-md-4" id="clinica_field_container" style="display:none;">
+                        <?= $form->field($model2, 'clinica_id')->widget(Select2::classname(), [
+                                'data' => UserHelper::getClinicasList(),
+                                'options' => [
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                    'id' => 'clinica_id'
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => false,
+                                ],
+                            ])->label('Clinica'); ?>
+            </div>
+        <?php }?>
         <div class="col-md-4 d-flex align-items-center mt-3">
              <?= $form->field($model, 'status')->label('ESTATUS', ['class' => 'me-3'])->widget(SwitchInput::classname(), [
                 'options' => [
@@ -80,7 +99,11 @@ $secondEmailFieldId = Html::getInputId($model2, 'email');
                 ],
             ]); ?>
         </div>
+
+        
     </div>
+    
+              
 
     <br>
     <hr>
@@ -256,15 +279,15 @@ $secondEmailFieldId = Html::getInputId($model2, 'email');
 
 <?php
 
-
-
-
-// ... (el resto de tu código del formulario) ...
-
 $js = <<<JS
 // Obtener los elementos jQuery usando los IDs calculados
 var \$firstEmailField = $('#{$firstEmailFieldId}');
 var \$secondEmailField = $('#{$secondEmailFieldId}');
+
+// Elementos para mostrar/ocultar clínica según el rol
+var \$roleField = $('#{$roleFieldId}');
+var \$clinicaContainer = $('#clinica_field_container');
+var \$clinicaSelect = $('#clinica_id');
 
 // Función para copiar el valor
 function copyEmailToPersonal() {
@@ -283,6 +306,38 @@ function copyEmailToPersonal() {
 // cópialo al segundo campo una vez.
 if (\$firstEmailField.val() !== '') {
     copyEmailToPersonal();
+}
+
+// --- Mostrar/Ocultar campo Clínica según rol seleccionado ---
+function toggleClinicaByRole() {
+    if (!\$roleField.length || !\$clinicaContainer.length) return;
+    var val = \$roleField.val();
+    var text = \$roleField.find('option:selected').text();
+    var allowed = [
+        'COORDINADOR-CLINICA',
+        'ADMISION',
+        'CONTROL DE CITAS',
+        'ATENCIÓN',
+        'Administrador-clinica',
+        'Afiliado',
+        'Afiliado corporativo'
+    ];
+    var match = (val && allowed.indexOf(val) !== -1) || (text && allowed.indexOf(text) !== -1);
+    if (match) {
+        \$clinicaContainer.show();
+    } else {
+        \$clinicaContainer.hide();
+        if (\$clinicaSelect.length) {
+            \$clinicaSelect.val(null).trigger('change');
+        }
+    }
+}
+
+if (\$roleField.length) {
+    // Escucha cambios (Select2 dispara 'change' sobre el select base)
+    \$roleField.on('change', toggleClinicaByRole);
+    // Evaluar estado inicial (en edición o al cargar)
+    toggleClinicaByRole();
 }
 JS;
 $this->registerJs($js);

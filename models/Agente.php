@@ -136,13 +136,13 @@ class Agente extends \yii\db\ActiveRecord
     public function getPropietario()
     {
         // Relaciona idusuariopropietario de Agente con id de User
-        return $this->hasOne(User::class, ['id' => 'idusuariopropietario']);
+        return $this->hasOne(UserDatos::class, ['id' => 'idusuariopropietario']);
     }
 
     public function getUserDatos()
-{
-    return $this->hasOne(UserDatos::class, ['user_login_id' => 'id']); // Asegúrate que 'user_login_id' es la FK en UserDatos
-}
+    {
+        return $this->hasOne(UserDatos::class, ['user_login_id' => 'id']); // Asegúrate que 'user_login_id' es la FK en UserDatos
+    }
 
 
 }

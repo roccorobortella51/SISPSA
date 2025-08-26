@@ -9,8 +9,9 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use app\models\RmClinica;
 use Yii;
-
-
+use app\models\Baremo;
+use app\models\PlanesItemsCobertura;
+use yii\helpers\ArrayHelper;
 /**
  * PlanesController implements the CRUD actions for Planes model.
  */
@@ -75,8 +76,19 @@ class PlanesController extends Controller
      */
     public function actionView($id)
     {
+        $model = $this->findModel($id);
+        $itemsCobertura = $model->planesItemsCoberturas;
+        
+        // Obtener baremos faltantes
+        $baremosFaltantes = Baremo::find()
+            ->where(['clinica_id' => $model->clinica_id])
+            ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsCobertura, 'baremo_id')])
+            ->all();
+        
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $model,
+            'itemsCobertura' => $itemsCobertura,
+            'baremosFaltantes' => $baremosFaltantes,
         ]);
     }
 
@@ -85,7 +97,7 @@ class PlanesController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate()
+    /*public function actionCreate()
     {
         $model = new Planes();
 
@@ -100,6 +112,77 @@ class PlanesController extends Controller
         return $this->render('create', [
             'model' => $model,
         ]);
+    }*/
+
+    // En tu controlador PlanesController.php
+
+    public function actionCreate()
+    {
+        $model = new Planes();
+        $itemsModels = [];
+
+        // Obtener baremos de la clínica si viene el parámetro
+        if (Yii::$app->request->get('clinica_id')) {
+            $baremos = Baremo::find()->where(['clinica_id' => Yii::$app->request->get('clinica_id')])->andWhere(['estatus' => 'Activo'])->all();
+            $clinica = RmClinica::find()->where(['id' => Yii::$app->request->get('clinica_id')])->one();
+            
+            // Crear modelos para cada baremo
+            foreach ($baremos as $baremo) {
+                $item = new PlanesItemsCobertura();
+                $item->baremo_id = $baremo->id;
+                $item->nombre_servicio = $baremo->nombre_servicio;
+                $itemsModels[] = $item;
+            }
+        }
+
+        if ($model->load(Yii::$app->request->post())) {
+
+                $model->clinica_id = $clinica->id;
+            
+                // Guardar el plan principal
+                if ($model->save()) {
+                    // Procesar items de cobertura
+                    $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
+                    
+                    foreach ($itemsData as $itemData) {
+
+                        // Crear una nueva instancia del modelo en cada iteración
+                        $item = new PlanesItemsCobertura();
+
+                        // Asignar los atributos del modelo directamente
+                        $item->porcentaje_cobertura = ""; // Puedes dejarlo vacío o asignar un valor por defecto
+                        $item->cantidad_limite = $itemData['cantidad_limite'];
+                        $item->plazo_espera = $itemData['plazo_espera'];
+                        $item->plan_id = $model->id; // Asignar el ID del modelo principal
+                        $item->nombre_servicio = $itemData['nombre_servicio'];
+                        $item->baremo_id = $itemData['baremo_id'];
+
+                        if (!$item->save()) {
+                            // En lugar de una excepción genérica, puedes ser más específico
+                            echo "MODEL NOT SAVED";
+                            print_r($item->getAttributes());
+                            print_r($item->getErrors()); // Esto te mostrará por qué falla la validación
+                            exit;
+                        }
+                    }
+                    
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }else{
+
+                    echo "MODEL NOT SAVED";
+                      print_r($model->getAttributes());
+                      print_r($model->getErrors());
+                      exit;
+
+                }
+            
+        }
+
+        return $this->render('create', [
+            'model' => $model,
+            'itemsModels' => $itemsModels,
+            'clinica' => $clinica
+        ]);
     }
 
     /**
@@ -109,16 +192,76 @@ class PlanesController extends Controller
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
+    // En PlanesController.php
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $itemsModels = $model->planesItemsCoberturas;
+        $clinica = RmClinica::find()->where(['id' => $model->clinica_id])->one();
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        
+        // Obtener baremos faltantes
+        $baremosFaltantes = Baremo::find()
+            ->where(['clinica_id' => $model->clinica_id])
+            ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsModels, 'baremo_id')])
+            ->all();
+        
+        // Crear modelos para baremos faltantes
+        foreach ($baremosFaltantes as $baremo) {
+            $item = new PlanesItemsCobertura([
+                'baremo_id' => $baremo->id,
+                'nombre_servicio' => $baremo->nombre_servicio,
+                'porcentaje_cobertura' => 80, // Valor por defecto
+            ]);
+            $itemsModels[] = $item;
+        }
+
+        if ($model->load(Yii::$app->request->post())) {
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                if ($model->save()) {
+                    // Eliminar coberturas existentes primero
+                    PlanesItemsCobertura::deleteAll(['plan_id' => $model->id]);
+                    
+                    // Guardar las coberturas
+                    $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
+                    
+                    foreach ($itemsData as $itemData) {
+
+                        // Crear una nueva instancia del modelo en cada iteración
+                        $item = new PlanesItemsCobertura();
+
+                        // Asignar los atributos del modelo directamente
+                        $item->porcentaje_cobertura = ""; // Puedes dejarlo vacío o asignar un valor por defecto
+                        $item->cantidad_limite = $itemData['cantidad_limite'];
+                        $item->plazo_espera = $itemData['plazo_espera'];
+                        $item->plan_id = $model->id; // Asignar el ID del modelo principal
+                        $item->nombre_servicio = $itemData['nombre_servicio'];
+                        $item->baremo_id = $itemData['baremo_id'];
+
+                        if (!$item->save()) {
+                            // En lugar de una excepción genérica, puedes ser más específico
+                            echo "MODEL NOT SAVED";
+                            print_r($item->getAttributes());
+                            print_r($item->getErrors()); // Esto te mostrará por qué falla la validación
+                            exit;
+                        }
+                    }
+                    
+                    $transaction->commit();
+                    Yii::$app->session->setFlash('success', 'Plan actualizado correctamente');
+                    return $this->redirect(['view', 'id' => $model->id]);
+                }
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', 'Error al actualizar: ' . $e->getMessage());
+            }
         }
 
         return $this->render('update', [
             'model' => $model,
+            'itemsModels' => $itemsModels,
+            'clinica' => $clinica
         ]);
     }
 
@@ -167,4 +310,83 @@ class PlanesController extends Controller
             }
         }
     }
+
+    // En PlanesController.php
+
+/**
+ * Agrega una nueva cobertura (servicio de baremo) a un plan existente
+ * 
+ * @param int $plan_id ID del plan al que se agregará la cobertura
+ * @param int $baremo_id ID del baremo (servicio) a agregar
+ * @return \yii\web\Response
+ * @throws NotFoundHttpException Si el plan o baremo no existen
+ */
+   public function actionAddCobertura($plan_id, $baremo_id)
+{
+    // Buscar el plan y verificar existencia
+    $plan = $this->findModel($plan_id);
+    $baremo = Baremo::findOne($baremo_id);
+    
+    if (!$baremo) {
+        Yii::$app->session->setFlash('error', 'El servicio solicitado no existe en el sistema.');
+        return $this->redirect(['view', 'id' => $plan_id]);
+    }
+    
+    // Verificar que el baremo pertenezca a la misma clínica que el plan
+    if ($baremo->clinica_id != $plan->clinica_id) {
+        Yii::$app->session->setFlash('warning', 'El servicio no pertenece a la clínica asociada a este plan.');
+        return $this->redirect(['view', 'id' => $plan_id]);
+    }
+    
+    // Verificar que no exista ya esta cobertura en el plan
+    $existente = PlanesItemsCobertura::find()
+        ->where(['plan_id' => $plan_id, 'baremo_id' => $baremo_id])
+        ->one();
+        
+    if ($existente) {
+        Yii::$app->session->setFlash('info', 'Este servicio ya está incluido en el plan.');
+        return $this->redirect(['view', 'id' => $plan_id]);
+    }
+    
+    // Crear el nuevo item de cobertura
+    $model = new PlanesItemsCobertura([
+        'plan_id' => $plan_id,
+        'baremo_id' => $baremo_id,
+        'nombre_servicio' => $baremo->nombre_servicio, // Corregido: era $baremo-snombre_servicio
+        'porcentaje_cobertura' => 80, // Valor por defecto (corregido typo "porcentaje")
+        'cantidad_limite' => 1, // Valor por defecto (corregido typo "cantidad_linite")
+    ]);
+    
+    // Redirigir directamente o mostrar formulario para completar datos
+    if (Yii::$app->request->isPost) {
+        // Si viene por POST (formulario de creación)
+        if ($model->load(Yii::$app->request->post())) { // Corregido: Yli::$app a Yii::$app
+            if ($model->save()) {
+                Yii::$app->session->setFlash('success', // Corregido: Yli::$app a Yii::$app
+                    "El servicio <strong>{$baremo->nombre_servicio}</strong> se agregó al plan correctamente.");
+                return $this->redirect(['view', 'id' => $plan_id]);
+            } else {
+                Yii::$app->session->setFlash('error', // Corregido: Yli::$app a Yii::$app
+                    'Error al guardar la cobertura: ' . implode(', ', $model->firstErrors)); // Corregido comillas y concatenación
+            }
+        }
+    } else {
+        // Si viene por GET (enlace simple)
+        if ($model->save()) {
+            Yii::$app->session->setFlash('success',
+                "El servicio <strong>{$baremo->nombre_servicio}</strong> se agregó al plan con valores por defecto.");
+        } else {
+            Yii::$app->session->setFlash('error',
+                'Error al agregar el servicio al plan: ' . implode(', ', $model->firstErrors));
+        }
+        return $this->redirect(['view', 'id' => $plan_id]);
+    }
+    
+    // Mostrar formulario para completar datos si es necesario
+    return $this->render('add-cobertura', [
+        'model' => $model,
+        'plan' => $plan,
+        'baremo' => $baremo,
+    ]);
+}
 }

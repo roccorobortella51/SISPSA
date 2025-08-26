@@ -2,6 +2,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url; // Necesario para generar URLs
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\DeclaracionDeSalud $model */
@@ -37,7 +38,8 @@ $preguntas = [
 ];
 
 // Intenta cargar el modelo de usuario asociado si existe
-
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 
 ?>
 <div class="declaracion-de-salud-view-custom container mt-4">
@@ -49,14 +51,17 @@ $preguntas = [
             'class' => 'btn btn-danger btn-sm my-spaced-button',
             'target' => '_blank'
         ]) ?>
-        <?= Html::a('<i class="fas fa-edit"></i> Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary btn-sm my-spaced-button']) // Agregamos 'my-spaced-button' ?>
-        <?= Html::a('<i class="fas fa-trash-alt"></i> Eliminar', ['delete', 'id' => $model->id], [
-            'class' => 'btn btn-danger btn-sm my-spaced-button', // Agregamos 'my-spaced-button'
-            'data' => [
-                'confirm' => '¿Está seguro de que desea eliminar esta Declaración de Salud?',
-                'method' => 'post',
-            ],
-        ]) ?>
+
+        <?php if($permisos){?>
+            <?= Html::a('<i class="fas fa-edit"></i> Actualizar', ['update', 'id' => $model->id], ['class' => 'btn btn-primary btn-sm my-spaced-button']) // Agregamos 'my-spaced-button' ?>
+            <?= Html::a('<i class="fas fa-trash-alt"></i> Eliminar', ['delete', 'id' => $model->id], [
+                'class' => 'btn btn-danger btn-sm my-spaced-button', // Agregamos 'my-spaced-button'
+                'data' => [
+                    'confirm' => '¿Está seguro de que desea eliminar esta Declaración de Salud?',
+                    'method' => 'post',
+                ],
+            ]) ?>
+        <?php } ?>
         <?= Html::a('<i class="fas fa-list"></i> Volver', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-secondary btn-sm']) // El último no necesita margen derecho ?>
     </div>
 </div>

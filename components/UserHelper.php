@@ -22,6 +22,7 @@ use yii\rbac\DbManager;
 use app\models\AuthAssignment;
 use app\models\UserDatos;
 use app\models\Corporativo;
+use app\models\AgenteFuerza;
 use yii\httpclient\Client; // Necesario para hacer peticiones HTTP a la API de Supabase
 
 
@@ -205,6 +206,24 @@ class UserHelper
                 'name'
             );
         }
+
+        if(self::getMyRol() == "GERENTE-COMERCIALIZACION"){
+
+            //listar agente y asesor
+           return \yii\helpers\ArrayHelper::map(
+                AuthItem::find()
+                    ->select(['name', 'name'])
+                    ->andWhere(['type' => 1])
+                    ->andWhere(['name' => 'Asesor'])
+                    ->orWhere(['name' => 'Agente'])
+                    ->asArray()
+                    ->all(),
+                'name',
+                'name'
+            );
+        }
+
+
         return \yii\helpers\ArrayHelper::map(
             AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->asArray()->all(),
             'name',
@@ -216,9 +235,12 @@ class UserHelper
     {
         // 1. Obtener los agentes reales de la base de datos
         $agentes = User::find()
+            ->select([
+                    new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    'user_datos.id AS id'
+                ])   
             ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->leftJoin('user_datos', '"user"."id" = "user_datos"."user_login_id"')
-            ->select(['user.id AS id', 'user_datos.nombres AS name'])
             ->where(['auth_assignment.item_name' => "Agente"])
             ->asArray()
             ->all();
@@ -235,14 +257,37 @@ class UserHelper
         return $finalList;
     }
 
-    public static function getAgenteFuerzaList()
+    public static function getAsesor()
     {
         return \yii\helpers\ArrayHelper::map(
             User::find()
-                
+                ->select([
+                    new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    'user_datos.id AS id'
+                ])                
+                ->joinWith('userDatos')
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-                ->select(['user.id AS id', 'username AS name'])
                 ->where(['auth_assignment.item_name' => "Asesor"])
+                ->asArray()
+                ->all(),
+            'id',
+            'name'
+        );
+    }
+
+     public static function getAgenteFuerzaList()
+    {
+       return \yii\helpers\ArrayHelper::map(
+            User::find()
+                ->select([
+                    new \yii\db\Expression("CONCAT('N° de Vendedor/Asesor: ', agente_fuerza.id, ' - ' , nombres, '  ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    'agente_fuerza.id AS id'
+                ])
+                ->joinWith('userDatos')
+                ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
+                ->where(['auth_assignment.item_name' => "Asesor"])
+                ->andWhere(['is not', 'agente_fuerza.idusuario', null])
                 ->asArray()
                 ->all(),
             'id',
@@ -259,9 +304,8 @@ class UserHelper
      */
     public static function getAgenteOwnerContactInfo($agenteId)
     {
-        // 1. Encontrar el modelo Agente por su ID
-        $agente = Agente::findOne($agenteId);
-
+        // 1) Buscar la agencia
+        $agente = \app\models\Agente::findOne($agenteId);
         if ($agente === null) {
             return [
                 'rif' => 'N/A',
@@ -271,22 +315,8 @@ class UserHelper
             ];
         }
 
-        // 2. Encontrar el modelo User (propietario) usando el idusuariopropietario del agente
-        $ownerUser = User::findOne($agente->idusuariopropietario);
-
-        if ($ownerUser === null) {
-            return [
-                'rif' => 'N/A',
-                'email' => 'N/A',
-                'telefono' => 'N/A',
-                'direccion' => 'N/A',
-            ];
-        }
-
-        // 3. Encontrar el modelo UserDatos asociado a ese User
-        // Asume que UserDatos tiene una columna 'user_login_id' que es la FK al 'id' de la tabla User
-        $ownerDatos = UserDatos::findOne(['user_login_id' => $ownerUser->id]);
-
+        // 2) idusuariopropietario apunta a user_datos.id, así que buscamos UserDatos directamente
+        $ownerDatos = \app\models\UserDatos::findOne($agente->idusuariopropietario);
         if ($ownerDatos === null) {
             return [
                 'rif' => 'N/A',
@@ -296,9 +326,17 @@ class UserHelper
             ];
         }
 
-        // 4. Devolver los datos de contacto
+        // 3) Devolver los datos de contacto desde UserDatos
+        // RIF: si no existe columna/valor rif, construir desde tipo_cedula + cedula
+        $rif = null;
+        if (isset($ownerDatos->rif) && !empty($ownerDatos->rif)) {
+            $rif = $ownerDatos->rif;
+        } elseif (!empty($ownerDatos->tipo_cedula) && !empty($ownerDatos->cedula)) {
+            $rif = $ownerDatos->tipo_cedula . '-' . $ownerDatos->cedula;
+        }
+
         return [
-            'rif' => $ownerDatos->rif ?? 'N/A',
+            'rif' => $rif ?? 'N/A',
             'email' => $ownerDatos->email ?? 'N/A',
             'telefono' => $ownerDatos->telefono ?? 'N/A',
             'direccion' => $ownerDatos->direccion ?? 'N/A',
@@ -539,11 +577,83 @@ class UserHelper
         $list = ArrayHelper::map($corporativo, 'id', 'name');
 
         // 3. Añadir la opción "No Asignado" al principio del array
-        $defaultOption = ['0' => 'No Asignado']; // Usamos 0 como clave para "No Asignado"
+        $defaultOption = ['' => 'No Asignado']; // Usamos 0 como clave para "No Asignado"
 
         // Fusionar la opción predeterminada con la lista de agentes reales
         $finalList = $defaultOption + $list; // El operador '+' fusiona arrays manteniendo las claves.
 
         return $finalList;
     }
+
+
+
+    public static function getMyClinicaId()
+    {
+        $clinica_id = '';
+        $rol = self::getMyRol();
+        
+
+        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN") {
+
+            $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+            if ($userdatos) {
+                $clinica_id = $userdatos->clinica_id;
+            }
+       
+        } 
+
+        return $clinica_id;
+    }
+
+    public static function getMyClinicaName()
+    {
+        $clinica_id = '';
+        $rol = self::getMyRol();
+        
+
+        if ($rol == "Administrador-clinica") {
+
+            $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+            if ($userdatos) {
+                $clinica_id = $userdatos->clinica->nombre;
+            }
+       
+        } 
+
+        return $clinica_id;
+    }
+
+    public static function getUserId()
+    {
+        return Yii::$app->user->identity->id;
+    }
+
+    public static function getUserDatosId()
+    {
+        $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+        if ($userdatos) {
+            return $userdatos->id;
+        }
+    }
+
+    public static function getAgenteId()
+    {
+        $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+
+        if ($userdatos) {
+            $agencia = Agente::find()->where(['idusuariopropietario' => $userdatos->id])->one();
+            return $agencia->id;
+        }
+    }
+
+    public static function getAgenteFuerzaId()
+    {
+        $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
+
+        if ($userdatos) {
+            $agencia = AgenteFuerza::find()->where(['idusuario' => $userdatos->id])->one();
+            return $agencia->id;
+        }
+    }
+      
 }

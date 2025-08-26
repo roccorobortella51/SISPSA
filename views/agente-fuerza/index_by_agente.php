@@ -7,7 +7,7 @@ use yii\grid\ActionColumn; // Para la columna de acciones
 use yii\web\JqueryAsset; // Asegúrate de tener este 'use' si tu JS de paneles lo requiere
 use app\models\AgenteFuerza; // Tu modelo AgenteFuerza
 use app\models\Agente; // Tu modelo Agente
-
+use app\components\UserHelper;
 
 
 /** @var yii\web\View $this */
@@ -20,6 +20,9 @@ $this->title = 'FUERZA DE VENTA'; //PARA AGENTE: ' . $agente->nom;
 $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['agente/index']];
 $this->params['breadcrumbs'][] = ['label' => $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
 $this->params['breadcrumbs'][] = $this->title;
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
 
 
 ?>
@@ -45,7 +48,7 @@ if (!$agente->isNewRecord) { ?>
                     ['class' => 'btn btn-secondary btn-lg w-100']
                 ) ?>
             </div>
-
+            <?php if($permisos){ ?>
             <div class="col">
                 <?= Html::a(
                     '<i class="fas fa-undo"></i> VOLVER PARA AGENCIA PRINCIPAL',
@@ -53,14 +56,15 @@ if (!$agente->isNewRecord) { ?>
                     ['class' => 'btn btn-info btn-lg w-100']
                 ) ?>
             </div>
+          
+                <div class="col">
+                    <?= Html::a(
+                        '<i class="fas fa-plus"></i> CREAR UN MIEMBRO DE FUERZA DE VENTA',
+                        ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
+                        ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
+                    ) ?>
+                </div>
 
-            <div class="col">
-                <?= Html::a(
-                    '<i class="fas fa-plus"></i> CREAR UN MIEMBRO DE FUERZA DE VENTA',
-                    ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
-                    ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
-                ) ?>
-            </div>
 
             <div class="col">
                 <?= Html::a(
@@ -69,6 +73,7 @@ if (!$agente->isNewRecord) { ?>
                     ['class' => 'btn btn-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
                 ) ?>
             </div>
+            <?php } ?>
         </div>
     </div>
 <?php } ?>
@@ -77,7 +82,7 @@ if (!$agente->isNewRecord) { ?>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= Html::encode($this->title) ?></h1> </div>
+                <h1><?= Html::encode($this->title).": ".$agente->nom ?> </h1> </div>
                 <div class="ms-panel-body">
                     <div class="table-responsive">
                         <?= GridView::widget([
@@ -97,6 +102,18 @@ if (!$agente->isNewRecord) { ?>
                         ],
                         
                         'columns' => [
+                             [
+                                'attribute' => 'id', // <--- ¡Debe coincidir con el nombre del atributo virtual!
+                                'label' => 'N° de Vendedor/Asesor',
+                                'value' => function($model) {
+                                    return $model->id;
+                                },
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar N° de Vendedor/Asesor',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
                             // ['class' => 'kartik\grid\SerialColumn'], // Usamos SerialColumn de Kartik para consistencia
                             
                             // Asegúrate de que estos atributos existan en tu modelo AgenteFuerza
@@ -107,8 +124,8 @@ if (!$agente->isNewRecord) { ?>
                                 'attribute' => 'agenteFuerzaUserNombres', // <--- ¡Debe coincidir con el nombre del atributo virtual!
                                 'label' => 'Nombre',
                                 'value' => function($model) {
-                                    if ($model->user && $model->user->userDatos) {
-                                        return $model->user->userDatos->nombres . ' ' . $model->user->userDatos->apellidos;
+                                    if ($model->userDatos) {
+                                        return $model->userDatos->nombres . ' ' . $model->userDatos->apellidos;
                                     }
                                     return 'N/A';
                                 },
@@ -121,8 +138,8 @@ if (!$agente->isNewRecord) { ?>
                             [
                                 'label' => 'Cedula de identidad',
                                 'value' => function($model) {
-                                    if ($model->user && $model->user->userDatos) {
-                                        return $model->user->userDatos->cedula;
+                                    if ($model->userDatos) {
+                                        return $model->userDatos->cedula;
                                     }
                                     return 'No disponible';
                                 },
@@ -138,8 +155,8 @@ if (!$agente->isNewRecord) { ?>
                             [
                                 'label' => 'Correo Electrónico',
                                 'value' => function($model) {
-                                    if ($model->user && $model->user->userDatos) {
-                                        return $model->user->userDatos->email;
+                                    if ($model->userDatos) {
+                                        return $model->userDatos->email;
                                     }
                                     return 'No disponible';
                                 },
@@ -157,7 +174,7 @@ if (!$agente->isNewRecord) { ?>
                                 'value' => function($model) {
                                     // Asumiendo que la columna en user_datos es 'telefono' o 'telf'
                                     // Ajusta 'telefono' al nombre real de tu columna
-                                    return $model->user->userDatos->telefono ?? 'No disponible';
+                                    return $model->userDatos->telefono ?? 'No disponible';
                                 },
                                 // Asegúrate de que este 'attribute' sea correcto para el SearchModel
                                 'attribute' => 'agenteFuerzaUserTelefono', // Cambia 'telefono' si el nombre de tu columna es diferente
@@ -171,7 +188,7 @@ if (!$agente->isNewRecord) { ?>
                             [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{afiliados}</div>',
                                 'options' => ['style' => 'width:80px; min-width:80px;'],
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
@@ -187,7 +204,9 @@ if (!$agente->isNewRecord) { ?>
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key) use ($id_agente, $agente) {
+                                    'update' => function ($url, $model, $key) use ($id_agente, $agente, $permisos) {
+
+                                        if($permisos)
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt ms-text-primary"></i>',
                                             Url::to(['agente-fuerza/update', 'id' => $model->id]),
@@ -198,19 +217,20 @@ if (!$agente->isNewRecord) { ?>
                                             ]
                                         );
                                     },
-                                    // 'delete' => function ($url, $model, $key) {
-                                    //     return Html::a(
-                                    //         '<i class="fas fa-trash-alt"></i>',
-                                    //         Url::to(['agente-fuerza/delete', 'id' => $model->id]),
-                                    //         [
-                                    //             'title' => 'Eliminar',
-                                    //             'class' => 'btn btn-link btn-sm text-danger',
-                                    //             'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;',
-                                    //             'data-confirm' => '¿Estás seguro de que quieres eliminar este miembro de la fuerza de venta?',
-                                    //             'data-method' => 'post'
-                                    //         ]
-                                    //     );
-                                    // },
+                                    'afiliados' => function ($url, $model, $key) use ($id_agente, $agente, $permisos) {
+
+                                        //if($permisos)
+                                        return Html::a(
+                                            '<i class="fas fa-users ms-text-primary"></i>',
+                                            Url::to(['user-datos/index-by-afiliado', 'asesor_id' => $model->id]),
+                                            [
+                                                'title' => 'Afiliados',
+                                                'class' => 'btn btn-link btn-sm text-success',
+                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                            ]
+                                        );
+                                    },
+                                   
                                 ],
                             ],
                         ], // Fin de columns

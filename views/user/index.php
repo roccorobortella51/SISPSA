@@ -5,10 +5,9 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
-use app\components\UserHelper;
 use kartik\select2\Select2;
 use app\models\AuthItem; 
-
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -22,6 +21,9 @@ $this->params['breadcrumbs'][] = ['label' => 'Usuarios', 'url' => ['index']];
 
 
 $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la página y breadcrumbs
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -37,11 +39,13 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
     
    
     <div class="col-md-2 text-end"> 
-       <?= Html::a(
-        '<i class="fas fa-plus"></i> CREAR NUEVO USUARIO',
+       <?php 
+       if($permisos)
+        echo Html::a(
+        '<i class="fas fa-plus"></i>&nbsp;CREAR NUEVO USUARIO',
         ['create'],
         ['class' => 'btn btn-outline-primary btn-lg w-100']
-    ) ?>
+    ); ?>
     </div>
 </div>
             <div class="ms-panel-body">
@@ -62,10 +66,29 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                     'class' => 'grid-view-container table-responsive',
                                 ],
                                 'columns' => [
-                                    [
+                                     /*[
                                         'attribute' => 'id',
+                                        'label' => 'id Usuario',
                                         'options' => ['style' => 'width: 100px;'],
                                         'headerOptions' => ['style' => 'color: white!important;'],
+                                        'value' => function ($model) {
+                                            return $model->id ?? 'No asignado';
+                                        },
+                                        // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                        'filterInputOptions' => [
+                                            'placeholder' => 'Búsqueda',
+                                            'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                        ],
+                                    ],*/
+
+                                    [
+                                        'attribute' => 'idasesor',
+                                        'label' => 'Asesor id',
+                                        'options' => ['style' => 'width: 100px;'],
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'value' => function ($model) {
+                                            return $model->userDatos->asesor->id ?? 'No asignado';
+                                        },
                                         // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
                                         'filterInputOptions' => [
                                             'placeholder' => 'Búsqueda',
@@ -111,6 +134,31 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                         ],
                                     ],
 
+                                    [
+                                        'attribute' => 'userDatos.telefono',
+                                        'format' => 'ntext',
+                                        'label' => 'Teléfono',
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'options' => ['style' => 'width: 50px;'],
+                                        // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
+                                        'filterInputOptions' => [
+                                            'placeholder' => 'Búsqueda',
+                                            'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                        ],
+                                    ],
+
+                                    [  
+                                        'label' => 'Agencia',
+                                        'attribute' => 'agencia',
+                                        'headerOptions' => ['style' => 'color: white!important;'],
+                                        'format' => 'raw',
+                                        'value' => function ($model) {
+                                            return $model->userDatos->asesor->agente->nom ?? 'No asignado';
+                                        },
+                                        'contentOptions' => ['class' => 'text-center'],
+                                    ],
+
+
                                     // --- COLUMNA PARA EL ROL ---
                                     [  
                                         'label' => 'Rol del Usuario',
@@ -143,28 +191,69 @@ $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la p
                                         'headerOptions' => ['style' => 'color: white!important;'],
                                         'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                         'buttons' => [
-                                            'view' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="fa fa-eye"></i>',
-                                                    Url::to(['view', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Detalle de Usuario',
-                                                        'class' => 'btn-action view'
-                                                    ]
-                                                );
+                                            'view' => function ($url, $model, $key)use($rol) {
+
+                                                 if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+
+                                                    $asesor_id =  $model->userDatos->asesor->id ?? '0';
+
+                                                    if($asesor_id > 0){
+
+                                                        return Html::a(
+                                                                '<i class="fa fa-eye"></i>',
+                                                                Url::to(['/agente-fuerza/view', 'id' => $asesor_id]),
+                                                                [
+                                                                    'title' => 'Detalle de Usuario',
+                                                                    'class' => 'btn-action view'
+                                                                ]
+                                                            );
+                                                    }
+
+                                                 }else{
+
+                                                    return Html::a(
+                                                            '<i class="fa fa-eye"></i>',
+                                                            Url::to(['view', 'id' => $model->id]),
+                                                            [
+                                                                'title' => 'Detalle de Usuario',
+                                                                'class' => 'btn-action view'
+                                                            ]
+                                                        );
+
+                                                 }
+                                                
                                             },
-                                            'update' => function ($url, $model, $key) {
-                                                return Html::a(
-                                                    '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                    Url::to(['update', 'id' => $model->id]),
-                                                    [
-                                                        'title' => 'Editar Usuario',
-                                                        'class' => 'btn-action view'
-                                                    ]
-                                                );
+                                            'update' => function ($url, $model, $key)use($rol) {
+
+                                               if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+
+                                                    $asesor_id =  $model->userDatos->asesor->id ?? '0';
+
+                                                    if($asesor_id > 0){
+
+                                                        return Html::a(
+                                                                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                                Url::to(['/agente-fuerza/update', 'id' => $asesor_id]),
+                                                                [
+                                                                    'title' => 'Detalle de Usuario',
+                                                                    'class' => 'btn-action view'
+                                                                ]
+                                                            );
+                                                    }
+
+                                                 }else{
+
+                                                    return Html::a(
+                                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                                            Url::to(['update', 'id' => $model->id]),
+                                                            [
+                                                                'title' => 'Detalle de Usuario',
+                                                                'class' => 'btn-action view'
+                                                            ]
+                                                        );
+
+                                                 }
                                             },
-                                         
-                                            
                                         ],
                                     ],
                                 ],

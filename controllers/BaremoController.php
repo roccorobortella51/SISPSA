@@ -40,7 +40,7 @@ class BaremoController extends Controller
      */
     public function actionIndex($clinica_id = "")
     {
-        $clinica = RmClinica::find()->where(['id' => $clinica_id])->andWhere(['is','deleted_at', null])->one();
+        $clinica = RmClinica::find()->where(['id' => $clinica_id])->one();
         $searchModel = new BaremoSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
@@ -52,8 +52,10 @@ class BaremoController extends Controller
                 $model->estatus = "Activo";
                 if($model->save()){
                 }else{
-                     var_dump($model->errors); die();
+                    Yii::$app->session->setFlash('error', 'Error al crear el baremo');
+                return $this->redirect(['index', 'clinica_id' => $clinica->id]);
                 };
+                Yii::$app->session->setFlash('success', 'Baremo creado correctamente');
                 return $this->redirect(['index', 'clinica_id' => $clinica->id]);
             }
        
@@ -84,22 +86,7 @@ class BaremoController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    public function actionCreate()
-    {
-        $model = new Baremo();
-
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
-        }
-
-        return $this->render('create', [
-            'model' => $model,
-        ]);
-    }
+   
 
     /**
      * Updates an existing Baremo model.
@@ -166,4 +153,50 @@ class BaremoController extends Controller
             }
         }
     }
+
+   
+        public function actionExportExcel()
+        {
+            // Obtén los datos del dataProvider. Aquí asumo que tienes una forma de obtener el dataProvider
+            // con los filtros aplicados. Esto es un ejemplo.
+            $searchModel = new \app\models\BaremoSearch(); // O el nombre de tu SearchModel
+            $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+            $dataProvider->pagination = false; // Desactivar la paginación para obtener todos los registros
+
+            // Nombres de las columnas para el archivo CSV
+            $headers = [
+                'Area',
+                'Nombre del Servicio',
+                'Descripción',
+                'Costo',
+                'Precio',
+                'Estatus'
+            ];
+
+            // Abre un stream de memoria para escribir el archivo CSV
+            $fileName = 'baremo-export-' . date('Y-m-d') . '.csv';
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $fileName . '"');
+
+            $out = fopen('php://output', 'w');
+            fputs($out, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF))); // Agregar BOM para compatibilidad con Excel
+            fputcsv($out, $headers);
+
+            // Iterar sobre los datos y escribir en el archivo
+            foreach ($dataProvider->getModels() as $model) {
+                $areaName = $model->area ? $model->area->nombre : "";
+                $row = [
+                    $areaName,
+                    $model->nombre_servicio,
+                    $model->descripcion,
+                    $model->costo,
+                    $model->precio,
+                    $model->estatus === 1 ? 'Activo' : 'Inactivo',
+                ];
+                fputcsv($out, $row);
+            }
+            
+            fclose($out);
+            exit();
+        }
 }
