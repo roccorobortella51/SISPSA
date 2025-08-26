@@ -130,21 +130,21 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                         // Cobertura
                         [
                             'attribute' => 'cobertura',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
                         // Precio
                         [
                             'attribute' => 'precio',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
                         // Comisión
                         [
                             'attribute' => 'comision',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
