@@ -113,8 +113,8 @@ if (!function_exists('formatDateTime')) {
                         </div>
                         <div>
                             <h5><strong>Estatus:</strong> 
-                                <span class="status-badge <?= $model->estatus == 'Activo' || $model->estatus == 1 ? 'active' : 'inactive' ?>">
-                                    <?= strtoupper($model->estatus == 1 ? 'Activo' : 'Inactivo') ?>
+                                <span class="status-badge <?= $model->estatus == 'Activo' || $model->estatus == "Activo" ? 'active' : 'inactive' ?>">
+                                    <?= strtoupper($model->estatus == "Activo" ? 'Activo' : 'Inactivo') ?>
                                 </span>
                             </h5>
                             <h5><strong>Rango de Edad:</strong> 

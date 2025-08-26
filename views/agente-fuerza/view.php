@@ -26,10 +26,10 @@ $nombreCompletoUsuario = 'N/A';
 $telefonoUsuario = 'N/A';
 $emailUsuario = 'N/A';
 
-if ($model->user && $model->user->userDatos) {
-    $nombreCompletoUsuario = $model->user->userDatos->nombres . ' ' . $model->user->userDatos->apellidos;
-    $telefonoUsuario = $model->user->userDatos->telefono ?? 'N/A';
-    $emailUsuario = $model->user->userDatos->email ?? 'N/A';
+if ($model->userDatos) {
+    $nombreCompletoUsuario = $model->userDatos->nombres . ' ' . $model->userDatos->apellidos;
+    $telefonoUsuario = $model->userDatos->telefono ?? 'N/A';
+    $emailUsuario = $model->userDatos->email ?? 'N/A';
 } elseif ($model->user) {
     $nombreCompletoUsuario = $model->user->username;
 }

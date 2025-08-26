@@ -94,14 +94,12 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'costo')->textInput([
-                            'type' => 'number',
                             'class' => 'form-control form-control-lg', 
                             'placeholder' => '0.00' 
                         ])->label('Costo') ?>
                     </div>
                     <div class="col-md-2">
                          <?= $form->field($model, 'precio')->textInput([
-                            'type' => 'number', 
                             'class' => 'form-control form-control-lg', 
                             'placeholder' => '0.00'
                         ])->label('Precio') ?>
@@ -171,13 +169,13 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                         ],
                         [
                             'attribute' => 'costo',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
                         [
                             'attribute' => 'precio',
-                            'format' => ['currency', ''],
+                            'format' => ['currency', 'USD'],
                             'contentOptions' => ['style' => 'text-align: right;'],
                             'filter' => false
                         ],
