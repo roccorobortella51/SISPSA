@@ -16,6 +16,7 @@ use app\models\CheckListClinicas;
 use yii\helpers\ArrayHelper;
 use app\models\UserDatos;
 use app\models\SisSiniestro;
+use app\models\Pagos;
 
 /**
  * 
@@ -45,12 +46,21 @@ class RmClinicaController extends Controller
     {
         $totalAfiliados = UserDatos::find()->where(['clinica_id' => $id])->count();
         $totalSiniestrosAfiliados = SisSiniestro::find()->where(['idclinica' => $id])->count();
-        $totalPagosAfiliados = SisPago::find()->where(['idclinica' => $id])->count();
+        $totalPagosAfiliados = Pagos::find()
+            ->joinWith('userDatos')
+            ->where(['user_datos.clinica_id' => $id])
+            ->count();
+        $montoTotalPagosAfiliados = Pagos::find()
+            ->joinWith('userDatos')
+            ->where(['user_datos.clinica_id' => $id])
+            ->sum('monto_pagado');
         $model = $this->findModel($id);
         return $this->render('indicator', [
             'model' => $model,
             'totalAfiliados' => $totalAfiliados,
             'totalSiniestrosAfiliados' => $totalSiniestrosAfiliados,
+            'totalPagosAfiliados' => $totalPagosAfiliados,
+            'montoTotalPagosAfiliados' => $montoTotalPagosAfiliados,
         ]);
     }
 

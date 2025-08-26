@@ -117,6 +117,21 @@ function formatUpdatedAt($value) {
                     <h5><strong>Total de Siniestros:</strong> <?= Html::encode($totalSiniestrosAfiliados) ?></h5>
                 </div>
             </div>
+            <div class="info-grid md-col-2">
+                <div>
+                    <h5><strong>Total de Pagos:</strong> <?= Html::encode($totalPagosAfiliados) ?></h5>
+                </div>
+            </div>
+            <div class="info-grid md-col-2">
+                <div>
+                    <h5><strong>Monto Total de Pagos:</strong> <?= Html::encode($montoTotalPagosAfiliados) ?>Bs</h5>
+                </div>
+            </div>
+            <div class="info-grid md-col-2">
+                <div>
+                    <h5><strong>Fondo de clínica:</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7) ?>Bs</h5>
+                </div>
+            </div>
         </div>
     </div>     
 </div>
