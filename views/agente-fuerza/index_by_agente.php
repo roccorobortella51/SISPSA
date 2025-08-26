@@ -82,7 +82,7 @@ if (!$agente->isNewRecord) { ?>
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header">
-                <h1><?= Html::encode($this->title) ?></h1> </div>
+                <h1><?= Html::encode($this->title).": ".$agente->nom ?> </h1> </div>
                 <div class="ms-panel-body">
                     <div class="table-responsive">
                         <?= GridView::widget([
