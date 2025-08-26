@@ -235,8 +235,12 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <p class="h5"><?= Html::encode($model->plan->nombre ?? 'N/A') ?></h5>
                 </div>
                 <div class="info-card-body">
+                    <h5>Cobertura</h5>
+                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($coberturaPlan, 'USD') ?></h5>
+                </div>
+                <div class="info-card-body">
                     <h5>Precio</h5>
-                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($precioPlan, 'USD') ?></h5>
+                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($coberturaPlan, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
                     <h5>Cobertura Total</h5>
