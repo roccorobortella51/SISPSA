@@ -5,7 +5,7 @@ use yii\helpers\Url;
 use app\components\UserHelper;
 use app\models\RmClinica;
 use app\models\AgenteFuerza;
-
+use app\components\SaldoHelper; // Importar el helper
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
@@ -66,18 +66,17 @@ if (!function_exists('formatDateTime')) {
     }
 }
 
-// --- DATOS DEL PLAN Y CONSUMO (CORREGIDO) ---
-$nombrePlan = $model->plan->nombre ?? 'N/A';
-$precioPlan = $model->plan->precio_dolar ?? 0;
-$saldoInicial = $model->plan->cobertura_dolar ?? 0;
-$consumoActual = 1200.50; // ¡AQUÍ DEBES USAR EL DATO REAL DE TU BBDD!
-//$saldoDisponible = $saldoInicial - $consumoActual;
-$saldoDisponible = 10000;
-// Manejo del error de división por cero
-$porcentajeConsumido = 0;
-if ($saldoInicial > 0) {
-    $porcentajeConsumido = round(($consumoActual / $saldoInicial) * 100);
-}
+// --- USAR LA FUNCIÓN GLOBAL PARA CALCULAR SALDO ---
+$datosSaldo = SaldoHelper::calcularSaldoDisponible($model->id);
+$precioPlan = $datosSaldo['precio_plan'];
+$coberturaPlan = $datosSaldo['cobertura_plan'];
+$consumoActual = $datosSaldo['sumatoria_siniestros'];
+$saldoDisponible = $datosSaldo['saldo_disponible'];
+$porcentajeConsumido = $datosSaldo['porcentaje_consumido'];
+$baseCalculo = $datosSaldo['base_calculo'];
+
+// Obtener historial de siniestros
+$historialSiniestros = SaldoHelper::obtenerHistorialSiniestros($model->id);
 
 // Función auxiliar para mostrar Sí/No con íconos y clases de CSS
 function formatBooleanIcon($value) {
@@ -104,6 +103,12 @@ $currentRoute = Yii::$app->controller->getRoute();
 
     <div class="col"> <h4><?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
             'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
+            'data-pjax' => '0'
+        ]) ?></h4>
+    </div>
+    
+    <div class="col"> <h4><?= Html::a('<i class="fas fa-file-medical"></i> Siniestros', Url::to(['sis-siniestro/index', 'user_id' => $model->id]), [
+            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'sis-siniestro/index' ? 'active' : ''),
             'data-pjax' => '0'
         ]) ?></h4>
     </div>
@@ -152,6 +157,23 @@ $currentRoute = Yii::$app->controller->getRoute();
             <?php endif; ?>
         </div>
     </div>
+
+    <div class="balance-available">
+                <i class="fas fa-piggy-bank text-blue-600"></i>
+                <h4>Saldo Disponible</h4>
+                <p class="h5 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></h5>
+    </div>
+
+     <hr class="my-4">
+
+            
+
+            <div class="progress-bar-container mt-4">
+                <div class="progress-bar" style="width: <?= $porcentajeConsumido ?>%; background-color: <?= $porcentajeConsumido > 80 ? '#dc3545' : ($porcentajeConsumido > 50 ? '#ffc107' : '#28a745') ?>;"></div>
+            </div>
+            <p class="text-sm text-center text-muted mt-2">
+                <?= $porcentajeConsumido ?>% del plan consumido.
+            </h5>
 
     <div class="ms-panel border-blue">
         <div class="ms-panel-body">
@@ -210,7 +232,7 @@ $currentRoute = Yii::$app->controller->getRoute();
             <div class="info-grid-2x2">
                 <div class="info-card-body">
                     <h5>Plan</h5>
-                    <p class="h5"><?= Html::encode($nombrePlan) ?></h5>
+                    <p class="h5"><?= Html::encode($model->plan->nombre ?? 'N/A') ?></h5>
                 </div>
                 <div class="info-card-body">
                     <h5>Precio</h5>
@@ -218,7 +240,7 @@ $currentRoute = Yii::$app->controller->getRoute();
                 </div>
                 <div class="info-card-body">
                     <h5>Cobertura Total</h5>
-                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($saldoInicial, 'USD') ?></h5>
+                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($baseCalculo, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
                     <h5>Consumido</h5>
@@ -226,20 +248,39 @@ $currentRoute = Yii::$app->controller->getRoute();
                 </div>
             </div>
 
-            <hr class="my-4">
-
-            <div class="balance-available">
-                <i class="fas fa-piggy-bank text-blue-600"></i>
-                <h5>Saldo Disponible</h5>
-                <p class="h5 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></h5>
+           
+            
+            <!-- Historial de Siniestros (Opcional) -->
+            <?php if (!empty($historialSiniestros)): ?>
+            <div class="mt-4">
+                <h6 class="text-center"><strong>Últimos siniestros registrados:</strong></h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Costo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach (array_slice($historialSiniestros, 0, 3) as $siniestro): ?>
+                            <tr>
+                                <td><?= Yii::$app->formatter->asDate($siniestro->fecha) ?></td>
+                                <td><?= Html::encode(mb_substr($siniestro->descripcion, 0, 30) . (mb_strlen($siniestro->descripcion) > 30 ? '...' : '')) ?></td>
+                                <td class="text-right"><?= Yii::$app->formatter->asCurrency($siniestro->costo_total, 'USD') ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if (count($historialSiniestros) > 3): ?>
+                <p class="text-center">
+                    <small><?= count($historialSiniestros) - 3 ?> siniestros más...</small>
+                </p>
+                <?php endif; ?>
             </div>
-
-            <div class="progress-bar-container mt-4">
-                <div class="progress-bar" style="width: <?= $porcentajeConsumido ?>%; background-color: #6c757d;"></div>
-            </div>
-            <p class="text-sm text-center text-muted mt-2">
-                <?= $porcentajeConsumido ?>% del plan consumido.
-            </h5>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -289,4 +330,3 @@ $currentRoute = Yii::$app->controller->getRoute();
         </div>
     </div>
 </div>
-

@@ -11,6 +11,18 @@ use yii\web\View;
 /* @var $form yii\widgets\ActiveForm */
 /* @var $afiliado app\models\UserDatos */
 
+// Obtener información del plan del afiliado
+$plan = \app\models\Planes::findOne($afiliado->plan_id);
+$precioPlan = $plan ? $plan->precio : 0;
+
+// Obtener la sumatoria de siniestros del afiliado
+$sumatoriaSiniestros = \app\models\SisSiniestro::find()
+    ->where(['iduser' => $afiliado->id])
+    ->andWhere(['not', ['costo_total' => null]])
+    ->sum('costo_total');
+
+$totalDisponible = $precioPlan - $sumatoriaSiniestros;
+
 // CSS personalizado
 $css = <<<CSS
 .sis-siniestro-form {
@@ -19,8 +31,6 @@ $css = <<<CSS
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-
-
 
 .section-title {
     font-size: 18px;
@@ -38,8 +48,6 @@ $css = <<<CSS
 .text-blue-600 {
     color: white !important;
 }
-
-
 
 .select2-container--krajee .select2-selection--multiple,
 .select2-container--krajee .select2-selection--single {
@@ -159,6 +167,72 @@ $css = <<<CSS
     border-radius: 4px;
 }
 
+/* Estilo adicional para mostrar el cálculo en tiempo real */
+.costo-total-container {
+    background-color: #e8f5e9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    border-left: 4px solid #4caf50;
+}
+
+.costo-total-label {
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.costo-total-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1b5e20;
+}
+
+/* Estilo para información del plan */
+.plan-info-container {
+    background-color: #e3f2fd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196f3;
+}
+
+.plan-info-title {
+    font-weight: 600;
+    color: #0d47a1;
+    margin-bottom: 10px;
+}
+
+.plan-info-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #90caf9;
+}
+
+.plan-info-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.plan-info-label {
+    font-weight: 500;
+    color: #1565c0;
+}
+
+.plan-info-value {
+    font-weight: 600;
+    color: #0d47a1;
+}
+
+.plan-info-total {
+    background-color: #bbdefb;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
 @media (max-width: 768px) {
     .sis-siniestro-form {
         padding: 15px;
@@ -199,26 +273,6 @@ $css = <<<CSS
     color: #6c757d;
     z-index: 5;
 }
-
-/* Estilo adicional para mostrar el cálculo en tiempo real */
-.costo-total-container {
-    background-color: #e8f5e9;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 10px;
-    border-left: 4px solid #4caf50;
-}
-
-.costo-total-label {
-    font-weight: 600;
-    color: #2e7d32;
-}
-
-.costo-total-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1b5e20;
-}
 CSS;
 
 $this->registerCss($css);
@@ -234,8 +288,29 @@ $this->registerCss($css);
             </h3>
         </div>
         <div class="ms-panel-body">
+            <!-- Información del plan y total disponible -->
+            <div class="plan-info-container">
+                <div class="plan-info-title">Información del Plan y Límites</div>
+                <div class="plan-info-item">
+                    <span class="plan-info-label">Plan:</span>
+                    <span class="plan-info-value"><?= $afiliado->plan->nombre ?></span>
+                </div>
+                <div class="plan-info-item">
+                    <span class="plan-info-label">Precio del Plan:</span>
+                    <span class="plan-info-value"><?= number_format($precioPlan, 2) ?></span>
+                </div>
+                <div class="plan-info-item">
+                    <span class="plan-info-label">Total de Siniestros Registrados:</span>
+                    <span class="plan-info-value"><?= number_format($sumatoriaSiniestros, 2) ?></span>
+                </div>
+                <div class="plan-info-item plan-info-total">
+                    <span class="plan-info-label">Total Disponible:</span>
+                    <span class="plan-info-value"><?= number_format($totalDisponible, 2) ?></span>
+                </div>
+            </div>
+            
             <div class="row">
-                       <div class="col-md-12">
+                <div class="col-md-12">
                     <?php
                     // Consulta corregida para listar los baremos de ese plan y clínica
                     $baremosDisponibles = \yii\helpers\ArrayHelper::map(
@@ -295,9 +370,8 @@ $this->registerCss($css);
                     <!-- Contenedor para mostrar el cálculo en tiempo real -->
                     <div class="costo-total-container" id="costo-total-container" style="display: none;">
                         <div class="costo-total-label">Total calculado:</div>
-                        <div class="costo-total-value" id="costo-total-value">Bs. 0.00</div>
+                        <div class="costo-total-value" id="costo-total-value">$0.00</div>
                     </div>
-                    <br>
                 </div>
                 
                 <div class="col-md-12">
@@ -309,14 +383,12 @@ $this->registerCss($css);
                         'readonly' => true, // Lo hacemos de solo lectura ya que se calculará automáticamente
                     ])->label('Total') ?>
                 </div>
+                
                 <div class="col-md-6">
                     <div class="row g-3">
                         <div class="col-md-12" style="display: none;">
                              <?= $form->field($model, 'idclinica')->textInput(['value' => $afiliado->clinica_id]) ?>
                         </div>
-
-                        
-                        
 
                         <div class="col-md-6 field-with-icon">
                             <i class="fas fa-calendar-day"></i>
@@ -335,8 +407,6 @@ $this->registerCss($css);
                                 'class' => 'form-control form-control-lg'
                             ])->label('Hora del Siniestro') ?>
                         </div>
-                        
-
                         
                         <div class="col-md-12">
                             <?= $form->field($model, 'atendido')->dropDownList(
@@ -403,6 +473,7 @@ $this->registerCss($css);
     </div>
     <?php ActiveForm::end(); ?>
 </div>
+
 <?php
 // JavaScript para calcular la suma de los baremos seleccionados
 $js = <<<JS
@@ -430,8 +501,14 @@ function calcularTotal() {
         success: function(response) {
             if (response.success) {
                 var total = parseFloat(response.total);
-                $('#costo-total-value').html('Bs ' + total.toFixed(2));
+                $('#costo-total-value').html('$' + total.toFixed(2));
                 $('#costo-total-input').val(total.toFixed(2));
+                
+                // Verificar si el total supera el disponible
+                var totalDisponible = $totalDisponible; // PHP variable
+                if (total > totalDisponible) {
+                    alert('¡Advertencia! El costo total (' + total.toFixed(2) + ') supera el total disponible (' + totalDisponible.toFixed(2) + ') del afiliado.');
+                }
             } else {
                 console.error('Error al calcular el total:', response.error);
                 $('#costo-total-container').hide();
