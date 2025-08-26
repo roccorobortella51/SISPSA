@@ -178,7 +178,7 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
                                 [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{indicator}</div>',
                                     'options' => ['style' => 'width:55px; min-width:55px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -200,6 +200,16 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
                                                 [
                                                     'title' => 'Editar',
                                                     'class' => 'btn-action view'
+                                                ]
+                                            );
+                                        },
+                                        'indicator' => function ($url, $model, $key) {
+                                            return Html::a(
+                                                '<i class="fa fa-chart-line"></i>',
+                                                Url::to(['indicator', 'id' => $model->id]),
+                                                [
+                                                    'title' => 'Indicadores de la Clínica',
+                                                    'class' => 'btn-action indicator'
                                                 ]
                                             );
                                         },

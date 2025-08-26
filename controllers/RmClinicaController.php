@@ -14,6 +14,8 @@ use app\components\UserHelper;
 use app\models\RmCiudad;
 use app\models\CheckListClinicas;
 use yii\helpers\ArrayHelper;
+use app\models\UserDatos;
+use app\models\SisSiniestro;
 
 /**
  * 
@@ -37,6 +39,19 @@ class RmClinicaController extends Controller
                 ],
             ]
         );
+    }
+
+    public function actionIndicator($id)
+    {
+        $totalAfiliados = UserDatos::find()->where(['clinica_id' => $id])->count();
+        $totalSiniestrosAfiliados = SisSiniestro::find()->where(['idclinica' => $id])->count();
+        $totalPagosAfiliados = SisPago::find()->where(['idclinica' => $id])->count();
+        $model = $this->findModel($id);
+        return $this->render('indicator', [
+            'model' => $model,
+            'totalAfiliados' => $totalAfiliados,
+            'totalSiniestrosAfiliados' => $totalSiniestrosAfiliados,
+        ]);
     }
 
     /**
