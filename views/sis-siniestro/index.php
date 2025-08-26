@@ -109,7 +109,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
 
                             [
                                 'attribute' => 'costo_total',
-                                'format' => ['currency', ''],
+                                'format' => ['currency', 'USD'],
                                 'contentOptions' => ['style' => 'text-align: right;'],
                                 'filter' => false
                             ],
