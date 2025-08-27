@@ -6,6 +6,7 @@ use kartik\grid\GridView;
 use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
 use app\components\UserHelper;
+use Yii;
 
 /**
  * @var yii\web\View $this
@@ -70,8 +71,27 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                 'value' => 'clinica.nombre', // Corregido para usar la relación 'clinica'
                                 'label' => 'Clínica',
                             ],
-                            'fecha',
-                            'hora',
+                            [
+
+                            'attribute' => 'fecha',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'value' => function($model) {
+
+                                    return Yii::$app->formatter->asDate($model->fecha):
+                                     
+                                },
+                            ],
+                            [
+                                'attribute' => 'hora',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'value' => function($model) {
+
+                                    return Yii::$app->formatter->asTime($model->hora);
+                                     
+                                },
+                            ],
 
                             [
                                 'attribute' => 'baremos',
@@ -102,10 +122,27 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                 },
                                 'label' => 'Baremos',
                             ],
+                            [
 
+                            'attribute' => 'fecha_atencion',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'value' => function($model) {
 
-                            'fecha_atencion',
-                            'hora_atencion',
+                                    return Yii::$app->formatter->asDate($model->fecha_atencion):
+                                     
+                                },
+                            ],
+                            [
+                                'attribute' => 'hora_atencion',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'value' => function($model) {
+
+                                    return Yii::$app->formatter->asTime($model->hora_atencion);
+                                     
+                                },
+                            ],
 
                             [
                                 'attribute' => 'costo_total',
