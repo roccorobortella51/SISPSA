@@ -235,16 +235,16 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <p class="h5"><?= Html::encode($model->plan->nombre ?? 'N/A') ?></h5>
                 </div>
                 <div class="info-card-body">
-                    <h5>Cobertura</h5>
-                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($coberturaPlan, 'USD') ?></h5>
-                </div>
-                <div class="info-card-body">
                     <h5>Cuota mensual</h5>
                     <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($model->plan->precio, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
-                    <h5>Cobertura Total</h5>
-                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($baseCalculo, 'USD') ?></h5>
+                    <h5>Cobertura</h5>
+                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($coberturaPlan, 'USD') ?></h5>
+                </div>
+                <div class="info-card-body">
+                    <h5>Saldo Disponible</h5>
+                    <p class="h5 text-success"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
                     <h5>Consumido</h5>
