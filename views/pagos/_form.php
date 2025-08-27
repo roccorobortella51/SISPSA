@@ -149,7 +149,7 @@ $this->registerJs($js);
                 'step' => '0.01', // Para permitir decimales
                 'placeholder' => 'Ingrese el monto pagado',
                 'disabled' => $disabled,
-            ])->label('Monto Pagado') ?>
+            ])->label('Monto a Pagar en USD') ?>
         </div>
         <div class="col-md-4">
             <?= $form->field($model, 'tasa')->textInput([
@@ -159,15 +159,15 @@ $this->registerJs($js);
                 'readonly' => true, // Mantener como solo lectura si se actualiza por JS
                 'placeholder' => 'Ingrese la tasa de cambio',
                 'disabled' => $disabled,
-            ])->label('Tasa de Cambio') ?>
+            ])->label('Tasa de Cambio USD a Bs(BCV)') ?>
         </div>
         <div class="col-md-4">
             <?= $form->field($model, 'monto_usd')->textInput([
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'readonly' => true, // Siempre solo lectura
-                'placeholder' => 'Monto en USD (calculado)',
+                'placeholder' => 'Monto en Bs (calculado)',
                 'disabled' => $disabled,
-            ])->label('Monto en USD') ?>
+            ])->label('Monto en Bs') ?>
         </div>
     </div>
 

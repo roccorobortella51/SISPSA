@@ -36,7 +36,13 @@ $this->params['breadcrumbs'][] = $this->title;
             'created_at',
             'recibo_id',
             'fecha_pago',
-            'monto_pagado',
+            //'monto_pagado',
+            [
+                'attribute' => 'monto_pagado',
+                'value' => function ($model) {
+                    return $model->monto_pagado . ' USD';
+                },
+            ],
             //'metodo_pago:ntext',
             //'estatus:ntext',
             //'numero_referencia_pago:ntext',

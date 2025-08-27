@@ -106,30 +106,40 @@ function formatUpdatedAt($value) {
         <h3>
             <i class="fas fa-chart-line text-green-600 mr-3"></i> Indicadores de la Clínica
         </h3>
-        <div class="info-grid">
-            <div class="info-grid md-col-2">
+        <div class="row">
+            <div class="col-md-6">
                 <div>
                     <h5><strong>Total de Afiliados:</strong> <?= Html::encode($totalAfiliados) ?></h5>
                 </div>
             </div>
-            <div class="info-grid md-col-2">
+            <div class="col-md-6">
                 <div>
                     <h5><strong>Total de Siniestros:</strong> <?= Html::encode($totalSiniestrosAfiliados) ?></h5>
                 </div>
             </div>
-            <div class="info-grid md-col-2">
+            <div class="col-md-6">
                 <div>
-                    <h5><strong>Total de Pagos:</strong> <?= Html::encode($totalPagosAfiliados) ?></h5>
+                    <h5><strong>Total de Pagos de afiliados:</strong> <?= Html::encode($totalPagosAfiliados) ?> <a href="<?= Url::to(['pagos/clinica', 'id' => $model->id]) ?>" class="btn-base btn-blue">Ver Pagos</a></h5>
                 </div>
             </div>
-            <div class="info-grid md-col-2">
+            <div class="col-md-6">
                 <div>
-                    <h5><strong>Monto Total de Pagos:</strong> <?= Html::encode($montoTotalPagosAfiliados) ?>Bs</h5>
+                    <h5><strong>Monto Total de Pagos de afiliados(100%):</strong> <?= Html::encode($montoTotalPagosAfiliados) ?>Bs</h5>
                 </div>
             </div>
-            <div class="info-grid md-col-2">
+            <div class="col-md-6">
                 <div>
-                    <h5><strong>Fondo de clínica:</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7) ?>Bs</h5>
+                    <h5><strong>Fondo de clínica sin deducir los siniestros(70%):</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7) ?>Bs</h5>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div>
+                    <h5><strong>Monto Total de Siniestros de afiliados(100%):</strong> <?= Html::encode($montoTotalSiniestrosAfiliados) ?>Bs</h5>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div>
+                <h5><strong>Fondo de clínica deducido los siniestros(<?= $montoTotalPagosAfiliados > 0 ? number_format(100-($montoTotalSiniestrosAfiliados*100)/($montoTotalPagosAfiliados*0.7), 2) : '0.00' ?>%):</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7 - $montoTotalSiniestrosAfiliados) ?>Bs</h5>
                 </div>
             </div>
         </div>

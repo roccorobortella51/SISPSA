@@ -18,7 +18,21 @@ if (!empty($model->pagos)) {
         'hover' => true,
         'columns' => [
             'fecha_pago',
-            'monto_pagado:currency',
+            //'monto_pagado',
+            [
+                'attribute' => 'monto_pagado',
+                'value' => function ($model) {
+                    return $model->monto_pagado . ' USD';
+                },
+                'label' => 'Monto Pagado en USD',
+            ],
+            [
+                'attribute' => 'monto_usd',
+                'value' => function ($model) {
+                    return $model->monto_usd . ' Bs';
+                },
+                'label' => 'Monto Pagado en Bs',
+            ],
             'metodo_pago',
             'numero_referencia_pago',
             [

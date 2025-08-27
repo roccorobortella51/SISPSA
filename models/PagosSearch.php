@@ -83,4 +83,47 @@ class PagosSearch extends Pagos
 
         return $dataProvider;
     }
+
+    public function searchClinica($params, $formName = null, $id)
+    {
+        $query = Pagos::find()
+        ->joinWith('userDatos')
+        ->where(['clinica_id' => $id])
+        ->orderBy(['created_at' => SORT_DESC]);
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+        ]);
+
+        if (!$this->validate()) {
+            // uncomment the following line if you do not want to return any records when validation fails
+            // $query->where('0=1');
+            return $dataProvider;
+        }
+
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'id' => $this->id,
+            'created_at' => $this->created_at,
+            'recibo_id' => $this->recibo_id,
+            'fecha_pago' => $this->fecha_pago,
+            'monto_pagado' => $this->monto_pagado,
+            'updated_at' => $this->updated_at,
+            'user_id' => $this->user_id,
+            'fecha_conciliacion' => $this->fecha_conciliacion,
+            'fecha_registro' => $this->fecha_registro,
+            'deleted_at' => $this->deleted_at,
+            'conciliador_id' => $this->conciliador_id,
+            'conciliado' => $this->conciliado,
+            'monto_usd' => $this->monto_usd,
+        ]);
+
+        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
+            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'imagen_prueba', $this->imagen_prueba])
+            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador]);
+
+        return $dataProvider;
+    }
 }
