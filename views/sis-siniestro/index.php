@@ -120,7 +120,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
                                      $isTrue = $model->atendido;
-                                     return $isTrue == "Si" ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
+                                     return $isTrue == 1 ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
                                 },
                                 'filter' => [0 => 'No', 1 => 'Sí'],
                             ],
