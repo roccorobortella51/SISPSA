@@ -78,7 +78,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
 
-                                    return Yii::$app->formatter->asDate($model->fecha):
+                                    return Yii::$app->formatter->asDate($model->fecha);
                                      
                                 },
                             ],
@@ -129,7 +129,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol 
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
 
-                                    return Yii::$app->formatter->asDate($model->fecha_atencion):
+                                    return Yii::$app->formatter->asDate($model->fecha_atencion);
                                      
                                 },
                             ],
