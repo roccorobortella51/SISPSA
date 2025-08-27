@@ -139,7 +139,7 @@ function formatUpdatedAt($value) {
             </div>
             <div class="col-md-6">
                 <div>
-                    <h5><strong>Fondo de clínica deducido los siniestros(<?= number_format(100-($montoTotalSiniestrosAfiliados*100)/($montoTotalPagosAfiliados*0.7), 2) ?>%):</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7 - $montoTotalSiniestrosAfiliados) ?>Bs</h5>
+                <h5><strong>Fondo de clínica deducido los siniestros(<?= $montoTotalPagosAfiliados > 0 ? number_format(100-($montoTotalSiniestrosAfiliados*100)/($montoTotalPagosAfiliados*0.7), 2) : '0.00' ?>%):</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7 - $montoTotalSiniestrosAfiliados) ?>Bs</h5>
                 </div>
             </div>
         </div>
