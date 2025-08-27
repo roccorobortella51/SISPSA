@@ -119,7 +119,7 @@ function formatUpdatedAt($value) {
             </div>
             <div class="col-md-6">
                 <div>
-                    <h5><strong>Total de Pagos de afiliados:</strong> <?= Html::encode($totalPagosAfiliados) ?></h5>
+                    <h5><strong>Total de Pagos de afiliados:</strong> <?= Html::encode($totalPagosAfiliados) ?> <a href="<?= Url::to(['pagos/clinica', 'id' => $model->id]) ?>" class="btn-base btn-blue">Ver Pagos</a></h5>
                 </div>
             </div>
             <div class="col-md-6">
@@ -139,7 +139,7 @@ function formatUpdatedAt($value) {
             </div>
             <div class="col-md-6">
                 <div>
-                    <h5><strong>Fondo de clínica deducido los siniestros:</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7 - $montoTotalSiniestrosAfiliados) ?>Bs</h5>
+                    <h5><strong>Fondo de clínica deducido los siniestros(<?= number_format(100-($montoTotalSiniestrosAfiliados*100)/($montoTotalPagosAfiliados*0.7), 2) ?>%):</strong> <?= Html::encode($montoTotalPagosAfiliados*0.7 - $montoTotalSiniestrosAfiliados) ?>Bs</h5>
                 </div>
             </div>
         </div>

@@ -11,7 +11,7 @@ use yii\filters\VerbFilter;
 use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use app\models\TasaCambio;
 use app\components\UserHelper;
-
+use app\models\RmClinica;
 
 
 /**
@@ -38,6 +38,17 @@ class PagosController extends Controller
         );
     }
 
+    public function actionClinica($id)
+    {
+        $searchModel = new PagosSearch();
+        $dataProvider = $searchModel->searchClinica($this->request->queryParams, null, $id);
+        $clinica = RmClinica::findOne($id);
+        return $this->render('clinica', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'clinica' => $clinica,
+        ]);
+    }
     
     /**
      * Lists all Pagos models.
