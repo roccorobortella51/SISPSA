@@ -161,7 +161,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
 
     public function getAfiliado()
     {
-        return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
+        return $this->hasOne(UserDatos::class, ['id' => 'iduser']);
     }
     
     /**

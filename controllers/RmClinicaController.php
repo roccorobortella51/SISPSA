@@ -54,6 +54,10 @@ class RmClinicaController extends Controller
             ->joinWith('userDatos')
             ->where(['user_datos.clinica_id' => $id])
             ->sum('monto_pagado');
+        $montoTotalSiniestrosAfiliados = SisSiniestro::find()
+            ->joinWith('afiliado')
+            ->where(['user_datos.clinica_id' => $id])
+            ->sum('costo_total');
         $model = $this->findModel($id);
         return $this->render('indicator', [
             'model' => $model,
@@ -61,6 +65,7 @@ class RmClinicaController extends Controller
             'totalSiniestrosAfiliados' => $totalSiniestrosAfiliados,
             'totalPagosAfiliados' => $totalPagosAfiliados,
             'montoTotalPagosAfiliados' => $montoTotalPagosAfiliados,
+            'montoTotalSiniestrosAfiliados' => $montoTotalSiniestrosAfiliados,
         ]);
     }
 
