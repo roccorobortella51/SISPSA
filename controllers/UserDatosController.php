@@ -488,7 +488,7 @@ class UserDatosController extends Controller
             }
             $clinica_id = $model->clinica_id;
             $plan_id = $modelContrato->plan_id;
-            $monto = $modelContrato->monto;
+            $monto = $model->plan->precio;
             $fecha_ini = $modelContrato->fecha_ini;
             $fecha_ven = $modelContrato->fecha_ven;
             $fechaCreacion = date('Y-m-d H:i:s');   
@@ -774,7 +774,7 @@ class UserDatosController extends Controller
 
 
         //if ($this->request->isPost) {
-            if ($model->load($this->request->post()) ) {
+        if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
             $model->plan_id = $modelContrato->plan_id;
 

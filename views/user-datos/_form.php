@@ -642,7 +642,7 @@ $this->registerJs($jsValidation);
                                 'placeholder' => 'Seleccione la fecha de vencimiento'
                             ])->label('Fecha de Vencimiento') ?>
                         </div>
-                        <div class="col-md-4 field-with-icon">
+                        <div class="col-md-4 field-with-icon" style="display:none;">
                             <i class="fas fa-dollar-sign"></i>
                             <?= $form->field($modelContrato, 'monto')->textInput([
                                 'class' => 'form-control  form-control-lg', 
