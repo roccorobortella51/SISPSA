@@ -102,6 +102,11 @@ $currentRoute = Yii::$app->controller->getRoute();
     justify-content: center;
 }
 
+/* En este formulario, evitar flex en botones para compatibilidad con FileInput */
+.user-datos-form .btn {
+    display: inline-block !important;
+}
+
 .btn i {
     margin-right: 8px;
 }
@@ -157,14 +162,97 @@ $currentRoute = Yii::$app->controller->getRoute();
 
 .file-input .file-preview {
     width: 100% !important;
+    /* quitar restricción que podía causar solapamientos */
+    max-width: none;
     margin: 0 auto;
     box-sizing: border-box;
+    display: block;
+    float: none;
 }
 
 .file-input .file-caption {
     width: 100% !important;
     box-sizing: border-box;
     border-radius: 8px;
+}
+
+/* Hacer que el contenedor de input-group del FileInput envuelva correctamente */
+.file-input .input-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* EXCEPCIÓN: No usar flex en los botones dentro del widget FileInput */
+.file-input .btn,
+.file-input .btn-file {
+    display: inline-block !important;
+    align-items: initial !important;
+    justify-content: initial !important;
+}
+
+/* Asegurar que el input file posicionado encima sea clickeable */
+.file-input .btn-file {
+    position: relative;
+    overflow: hidden;
+    z-index: 10; /* por encima de previews o captions */
+}
+.file-input .btn-file input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+/* Evitar distorsión en previsualización de imágenes (kartik FileInput) */
+.file-input .kv-file-content img,
+.file-input .file-preview-image {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+}
+
+.file-input .file-preview-frame {
+    max-width: 220px;
+}
+
+/* Thumbnails en varias filas sin desbordar */
+.file-input .file-preview-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Evitar que el preview se superponga a los controles */
+.file-input .file-preview,
+.file-input .file-preview-thumbnails,
+.file-input .file-preview-frame {
+    z-index: 1;
+}
+
+/* Evitar que las acciones se salgan de la tarjeta */
+.file-input .file-actions,
+.file-input .file-footer-buttons,
+.file-input .file-preview-status,
+.file-input .fileinput-remove,
+.file-input .fileinput-upload {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Alinear correctamente la barra de botones */
+.file-input .btn-file,
+.file-input .fileinput-remove-button,
+.file-input .fileinput-upload-button {
+    margin-top: 8px;
 }
 
 /* Títulos de sección */
@@ -550,17 +638,35 @@ $this->registerJs($jsValidation);
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'selfieFile')->widget(FileInput::classname(),[
-                                'name' => 'attachments',
+                                // No sobreescribir el name; ActiveForm lo asigna correctamente como UserDatos[selfieFile]
+                                'options' => [
+                                    'accept' => 'image/*',
+                                ],
                                 'pluginOptions' => [
+                                    'theme' => 'fa5',
                                     'browseClass' => 'btn btn-primary',
                                     'removeClass' => 'btn btn-secondary',
                                     'removeIcon' => '<i class="fas fa-trash"></i> ',
                                     'showUpload' => false,
                                     'showCancel' => false,
+                                    'showCaption' => false,
                                     'previewFileType' => 'image',
-                                    'maxFileSize' => 2800,
+                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                    'maxFileSize' => 2048,
+                                    'dropZoneEnabled' => false,
+                                    'showClose' => false,
+                                    'browseLabel' => 'Seleccionar',
+                                    'removeLabel' => 'Quitar',
+                                    'fileActionSettings' => [
+                                        'showZoom' => false,
+                                        'showDrag' => false,
+                                    ],
                                     'previewSettings' => [
                                         'image' => ['width' => '150px', 'height' => 'auto'],
+                                    ],
+                                    'layoutTemplates' => [
+                                        'main1' => "{preview}{browse}{remove}",
+                                        'main2' => "{preview}{browse}{remove}",
                                     ],
                                 ],
                                 ])->label('Foto del usuario');
@@ -568,17 +674,35 @@ $this->registerJs($jsValidation);
                         </div>
                         <div class="col-md-6">
                             <?= $form->field($model, 'imagenIdentificacionFile')->widget(FileInput::classname(),[
-                                'name' => 'attachments',
+                                // No sobreescribir el name; ActiveForm lo asigna correctamente como UserDatos[imagenIdentificacionFile]
+                                'options' => [
+                                    'accept' => 'image/*',
+                                ],
                                 'pluginOptions' => [
+                                    'theme' => 'fa5',
                                     'browseClass' => 'btn btn-primary',
                                     'removeClass' => 'btn btn-secondary',
                                     'removeIcon' => '<i class="fas fa-trash"></i> ',
                                     'previewFileType' => 'image',
                                     'showUpload' => false,
                                     'showCancel' => false,
-                                    'maxFileSize' => 2800,
+                                    'showCaption' => false,
+                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                    'maxFileSize' => 5120,
+                                    'dropZoneEnabled' => false,
+                                    'showClose' => false,
+                                    'browseLabel' => 'Seleccionar',
+                                    'removeLabel' => 'Quitar',
+                                    'fileActionSettings' => [
+                                        'showZoom' => false,
+                                        'showDrag' => false,
+                                    ],
                                     'previewSettings' => [
                                         'image' => ['width' => '150px', 'height' => 'auto'],
+                                    ],
+                                    'layoutTemplates' => [
+                                        'main1' => "{preview}{browse}{remove}",
+                                        'main2' => "{preview}{browse}{remove}",
                                     ],
                                 ],
                                 ])->label('Imagen de identificación');
@@ -683,3 +807,30 @@ $this->registerJs($jsValidation);
 
     <?php ActiveForm::end(); ?>
 </div>
+
+<?php
+$this->registerJs(<<<'JS'
+// Refuerzo de clic y diagnóstico para FileInput en este formulario
+$(function(){
+  var root = $('#user-datos-form');
+  // Asegurar click habilitado
+  root.find('.file-input .btn-file').css({'pointer-events':'auto'});
+  root.find('.file-input .btn-file input[type="file"]').css({'pointer-events':'auto'});
+
+  // Log de eventos para diagnóstico
+  root.on('click', '.file-input .btn-file', function(e){
+    console.log('[FileInput] btn-file click', e.target);
+  });
+  root.on('change', '.file-input input[type="file"]', function(e){
+    console.log('[FileInput] input change -> files:', this.files);
+  });
+
+  // Fallback: si por alguna razón el input no recibe el click, forzarlo
+  root.on('click', '.file-input .fileinput-browse', function(){
+    var $grp = $(this).closest('.file-input');
+    var $inp = $grp.find('.btn-file input[type="file"]').first();
+    if ($inp.length) { $inp.trigger('click'); }
+  });
+});
+JS);
+?>
