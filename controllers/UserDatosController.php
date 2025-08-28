@@ -689,7 +689,8 @@ class UserDatosController extends Controller
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $dataProvider->query->andFilterWhere(['ilike', 'role', 'Afiliado']);
+        // Calificar con el nombre de la tabla para evitar ambigüedad (existe join a user_datos como ud_asesor)
+        $dataProvider->query->andFilterWhere(['ilike', 'user_datos.role', 'Afiliado']);
         
 
         return $this->render('index', [
