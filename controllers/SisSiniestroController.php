@@ -280,4 +280,82 @@ class SisSiniestroController extends Controller
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+ * Muestra siniestros por clínica con gráficos
+     */
+    public function actionPorClinica($clinica_id = null)
+    {
+        $searchModel = new SisSiniestroSearch();
+        
+        // Si se proporciona un ID de clínica, filtrar por esa clínica
+        if ($clinica_id) {
+            $searchModel->idclinica = $clinica_id;
+        }
+        
+        $dataProvider = $searchModel->searchClinica(Yii::$app->request->queryParams);
+        
+        // Obtener estadísticas para el gráfico
+        $estadisticas = $this->obtenerEstadisticasSiniestros($clinica_id);
+        
+        // Obtener lista de clínicas para el filtro
+        $clinicas = \app\models\RmClinica::find()
+            ->where(['estatus' => 'Activo'])
+            ->orderBy('nombre')
+            ->all();
+        
+        return $this->render('por-clinica', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'estadisticas' => $estadisticas,
+            'clinicas' => $clinicas,
+            'clinicaSeleccionada' => $clinica_id,
+        ]);
+    }
+
+    /**
+     * Obtiene estadísticas de siniestros por clínica
+     */
+    private function obtenerEstadisticasSiniestros($clinica_id = null)
+    {
+        $query = SisSiniestro::find();
+        
+        if ($clinica_id) {
+            $query->andWhere(['idclinica' => $clinica_id]);
+        }
+        
+        // Contar total de siniestros
+        $totalSiniestros = $query->count();
+        
+        // Contar siniestros atendidos
+        $atendidos = (clone $query)->andWhere(['atendido' => 1])->count();
+        
+        // Contar siniestros no atendidos
+        $noAtendidos = (clone $query)->andWhere(['atendido' => 0])->orWhere(['atendido' => null])->count();
+        
+        // Obtener datos por clínica (si no se filtró por una clínica específica)
+        $porClinica = [];
+        if (!$clinica_id) {
+            $porClinica = \app\models\RmClinica::find()
+                ->select([
+                    'rm_clinica.id',
+                    'rm_clinica.nombre',
+                    'COUNT(sis_siniestro.id) as total',
+                    'SUM(CASE WHEN sis_siniestro.atendido = 1 THEN 1 ELSE 0 END) as atendidos',
+                    'SUM(CASE WHEN sis_siniestro.atendido = 0 OR sis_siniestro.atendido IS NULL THEN 1 ELSE 0 END) as no_atendidos'
+                ])
+                ->leftJoin('sis_siniestro', 'rm_clinica.id = sis_siniestro.idclinica')
+                ->groupBy('rm_clinica.id, rm_clinica.nombre')
+                ->orderBy('rm_clinica.nombre')
+                ->asArray()
+                ->all();
+        }
+        
+        return [
+            'total' => $totalSiniestros,
+            'atendidos' => $atendidos,
+            'no_atendidos' => $noAtendidos,
+            'por_clinica' => $porClinica,
+        ];
+}
 }

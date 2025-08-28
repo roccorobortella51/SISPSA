@@ -6,6 +6,8 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
+use app\components\UserHelper; // Importar el UserHelper
+
 /**
  * @var yii\web\View $this
  * @var app\models\RmClinicaSearch $searchModel
@@ -24,6 +26,11 @@ $clinicNames = json_encode(array_column($chartData, 'clinicName'));
 $percentages = json_encode(array_column($chartData, 'percentage'));
 $clinicIds = json_encode(array_column($chartData, 'clinicId')); // <-- ¡NUEVO! Pasar los IDs de las clínicas
 $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
+
+$rol = UserHelper::getMyRol();
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Administrador-clinica');
+
+$permisos2 = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 
 
 ?>
@@ -180,7 +187,7 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
                                 [
                                     'class' => 'yii\grid\ActionColumn',
                                     'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{indicator}</div>',
+                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestros}{indicator}</div>',
                                     'options' => ['style' => 'width:55px; min-width:55px;'],
                                     'headerOptions' => ['style' => 'color: white!important;'],
                                     'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -204,6 +211,17 @@ $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
                                                     'class' => 'btn-action view'
                                                 ]
                                             );
+                                        },
+                                        'siniestros' => function ($url, $model, $key)use($permisos2) {
+                                            if($permisos2){
+                                            return Html::a(
+                                                '<i class="fas fa-file-medical"></i>',
+                                                Url::to(['/sis-siniestro/por-clinica', 'clinica_id' => $model->id]),
+                                                [
+                                                    'title' => 'Siniestros de esta Clínica',
+                                                    'class' => 'btn-action view'
+                                                ]
+                                            );}
                                         },
                                         'indicator' => function ($url, $model, $key) {
                                             return Html::a(

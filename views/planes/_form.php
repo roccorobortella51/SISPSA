@@ -83,8 +83,8 @@ use kartik\select2\Select2;
                             <tr>
                                 <th>Servicio (Baremos)</th>
                                 <!--<th width="15%">% Cobertura</th> -->
-                                <th width="15%">Límite</th>
-                                <th width="20%">Plazo Espera Mes</th>
+                                <th width="50%">Límite</th>
+                                <th width="50%">Plazo Espera Mes</th>
                             </tr>
                         </thead>
                         <tbody>
