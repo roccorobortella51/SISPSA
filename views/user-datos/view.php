@@ -177,30 +177,32 @@ $currentRoute = Yii::$app->controller->getRoute();
 
     <div class="ms-panel border-blue">
         <div class="ms-panel-body">
-            <div class="flex justify-center items-center flex-wrap gap-4 mb-4">
-                <div class="profile-img-container text-center">
-                    <h5>Foto de Perfil</h5>
-                    <?php if ($model->selfie): ?>
-                        <?= Html::img( $model->selfie, [
-                            'alt' => 'Foto de Perfil',
-                            'class' => 'profile-img rounded-full w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block'
-                        ]) ?>
-                    <?php else: ?>
-                        <i class="fas fa-user-circle text-gray-400 inline-block" style="font-size: 80px;"></i>
-                        <p class="text-muted mt-2">No hay selfie</h5>
-                    <?php endif; ?>
-                </div>
-                <div class="profile-img-container text-center">
-                    <h5>Imagen de Identificación</h5>
-                    <?php if ($model->imagen_identificacion): ?>
-                        <?= Html::img($model->imagen_identificacion, [
-                            'alt' => 'Imagen de Identificación',
-                            'class' => 'profile-img w-32 h-32 object-cover border-2 border-blue-400 shadow-md inline-block'
-                        ]) ?>
-                    <?php else: ?>
-                        <i class="fas fa-id-card text-gray-400 inline-block" style="font-size: 80px;"></i>
-                        <p class="text-muted mt-2">No hay imagen de identificación</h5>
-                    <?php endif; ?>
+            <div style="display: flex; justify-content: center; align-items: center; width: 100%; padding: 5rem 0;">
+                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; align-items: center; width: 100%;">
+                    <div style="text-align: center; display: flex; flex-direction: column; align-items: center; padding: 2.5rem 0;">
+                        <h5>Foto de Perfil</h5>
+                        <?php if ($model->selfie): ?>
+                            <?= Html::img( $model->selfie, [
+                                'alt' => 'Foto de Perfil',
+                                'class' => 'profile-img rounded-full w-32 h-32 object-cover border-2 border-blue-400 shadow-md'
+                            ]) ?>
+                        <?php else: ?>
+                            <i class="fas fa-user-circle text-gray-400" style="font-size: 80px;"></i>
+                            <p class="text-muted mt-2">No hay selfie</p>
+                        <?php endif; ?>
+                    </div>
+                    <div style="text-align: center; display: flex; flex-direction: column; align-items: center; padding: 2.5rem 0;">
+                        <h5>Imagen de Identificación</h5>
+                        <?php if ($model->imagen_identificacion): ?>
+                            <?= Html::img($model->imagen_identificacion, [
+                                'alt' => 'Imagen de Identificación',
+                                'class' => 'profile-img w-32 h-32 object-cover border-2 border-blue-400 shadow-md'
+                            ]) ?>
+                        <?php else: ?>
+                            <i class="fas fa-id-card text-gray-400" style="font-size: 80px;"></i>
+                            <p class="text-muted mt-2">No hay imagen de identificación</p>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
             
