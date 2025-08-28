@@ -22,6 +22,8 @@ $listaEstatus = $listaEstatus ?? [];
 $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Administrador-clinica');
 
+$permisos2 = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "COORDINADOR-CLINICA");
+
 $permisos = false;
 
 if ($rol == 'superadmin') 
@@ -112,6 +114,19 @@ function formatUpdatedAt($value) {
                     '<i class="fas fa-tasks mr-2"></i> Check List',
                     ['check-list-clinicas/index', 'clinica_id' => $model->id],
                     ['class' => 'nav-btn-base nav-btn-cyan'] /* Usando las nuevas clases de botones de navegación */
+                ) ?>
+            </div>
+        </div>
+    <?php } ?>
+
+    <?php if($permisos2) {?>
+        <!-- Sección de Botones de Navegación Específicos de Clínica -->
+        <div class="nav-buttons-grid"> 
+            <div align="center">
+                <?= Html::a(
+                    '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                    ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-indigo'] /* Usando las nuevas clases de botones de navegación */
                 ) ?>
             </div>
         </div>

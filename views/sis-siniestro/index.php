@@ -6,7 +6,6 @@ use kartik\grid\GridView;
 use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
 use app\components\UserHelper;
-use Yii;
 
 /**
  * @var yii\web\View $this
