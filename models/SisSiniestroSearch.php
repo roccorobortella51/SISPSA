@@ -12,6 +12,8 @@ use app\models\SisSiniestro;
 class SisSiniestroSearch extends SisSiniestro
 {
     public $iduser;
+    public $afiliado_nombre;
+    public $afiliado_cedula;
     
     /**
      * {@inheritdoc}
@@ -20,7 +22,7 @@ class SisSiniestroSearch extends SisSiniestro
     {
         return [
             [['id', 'idclinica', 'idbaremo', 'atendido', 'iduser'], 'integer'],
-            [['fecha', 'hora', 'fecha_atencion', 'hora_atencion', 'descripcion', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
+            [['fecha', 'hora', 'fecha_atencion', 'hora_atencion', 'descripcion', 'created_at', 'updated_at', 'deleted_at', 'afiliado_nombre', 'afiliado_cedula'], 'safe'],
         ];
     }
 
@@ -136,6 +138,20 @@ class SisSiniestroSearch extends SisSiniestro
         // Filtro por baremo si se especifica
         if ($this->idbaremo) {
             $query->andFilterWhere(['sb.baremo_id' => $this->idbaremo]);
+        }
+
+        if (!empty($this->afiliado_nombre)) {
+            $query->andFilterWhere(['or',
+                ['like', 'user_datos.nombres', $this->afiliado_nombre],
+                ['like', 'user_datos.apellidos', $this->afiliado_nombre]
+            ]);
+        }
+
+        if (!empty($this->afiliado_cedula)) {
+            $query->andFilterWhere(['or',
+                ['like', 'user_datos.cedula', $this->afiliado_cedula],
+                ['like', 'user_datos.tipo_cedula', $this->afiliado_cedula]
+            ]);
         }
 
         // Filtros de texto

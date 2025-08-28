@@ -167,6 +167,32 @@ $pieDataJson = json_encode($pieData);
                                         'filter' => \yii\helpers\ArrayHelper::map($clinicas, 'id', 'nombre'),
                                     ],
                                     [
+                                        'attribute' => 'afiliado_nombre',
+                                        'value' => function($model) {
+                                            return $model->afiliado ? 
+                                                Html::encode($model->afiliado->nombres . ' ' . $model->afiliado->apellidos) : 
+                                                'N/A';
+                                        },
+                                        'label' => 'Nombre del Afiliado',
+                                        'filterInputOptions' => [
+                                            'placeholder' => 'Buscar por nombre...',
+                                            'class' => 'form-control',
+                                        ],
+                                    ],
+                                    [
+                                        'attribute' => 'afiliado_cedula',
+                                        'value' => function($model) {
+                                            return $model->afiliado ? 
+                                                Html::encode(($model->afiliado->tipo_cedula ? $model->afiliado->tipo_cedula . '-' : '') . $model->afiliado->cedula) : 
+                                                'N/A';
+                                        },
+                                        'label' => 'Cédula del Afiliado',
+                                        'filterInputOptions' => [
+                                            'placeholder' => 'Buscar por cédula...',
+                                            'class' => 'form-control',
+                                        ],
+                                    ],
+                                    [
                                         'attribute' => 'fecha',
                                         'format' => 'date',
                                         'contentOptions' => ['style' => 'text-align: center;'],
