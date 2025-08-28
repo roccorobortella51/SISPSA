@@ -194,11 +194,13 @@ $pieDataJson = json_encode($pieData);
                                     ],
                                     [
                                         'attribute' => 'fecha',
+                                        'filter' => false,
                                         'format' => 'date',
                                         'contentOptions' => ['style' => 'text-align: center;'],
                                     ],
                                     [
                                         'attribute' => 'hora',
+                                        'filter' => false,
                                         'format' => 'time',
                                         'contentOptions' => ['style' => 'text-align: center;'],
                                     ],
@@ -220,6 +222,7 @@ $pieDataJson = json_encode($pieData);
                                     ],
                                     [
                                         'attribute' => 'fecha_atencion',
+                                        'filter' => false,
                                         'format' => 'date',
                                         'contentOptions' => ['style' => 'text-align: center;'],
                                     ],
