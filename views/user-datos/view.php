@@ -236,7 +236,7 @@ $currentRoute = Yii::$app->controller->getRoute();
                 </div>
                 <div class="info-card-body">
                     <h5>Cuota mensual</h5>
-                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($model->plan->precio, 'USD') ?></h5>
+                    <p class="h5 text-info"><?= Yii::$app->formatter->asCurrency($precioPlan, 'USD') ?></h5>
                 </div>
                 <div class="info-card-body">
                     <h5>Cobertura</h5>
