@@ -59,7 +59,7 @@ class User extends ActiveRecord implements IdentityInterface
             // El resto de tus reglas...
             ['username', 'string', 'max' => 255],
             ['email', 'string', 'max' => 255],
-            ['email', 'email'],
+            [['username', 'email'], 'email'], 
             ['password', 'string', 'min' => 5], // Longitud mínima para la contraseña
             
             // Reglas para roles y status

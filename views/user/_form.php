@@ -11,8 +11,9 @@ use yii\web\JsExpression;
 use kartik\depdrop\DepDrop; 
 
 // --- Calcula los IDs de los campos antes del bloque JS ---
-$firstEmailFieldId = Html::getInputId($model, 'email');
-$secondEmailFieldId = Html::getInputId($model2, 'email');
+$firstEmailFieldId = Html::getInputId($model, 'username');
+$secondEmailFieldId = Html::getInputId($model, 'email');
+$tEmailFieldId = Html::getInputId($model2, 'email');
 // --- Fin de cálculo de IDs ---
 
 // ID del campo de rol
@@ -31,15 +32,7 @@ $permisos = ($rol == 'superadmin');
             <?= $form->field($model, 'username')->label('NOMBRE DE USUARIO')->textInput([
                 'maxlength' => true,
                 'class' => 'form-control form-control-lg',
-                'placeholder' => 'Ej: j.perez',
-                'autofocus' => true,
-            ]) ?>
-        </div>
-        <div class="col-md-4">
-           <?= $form->field($model, 'email')->label('CORREO ELECTRÓNICO (Usuario)')->textInput([
-                'maxlength' => true,
-                'class' => 'form-control form-control-lg',
-                'placeholder' => 'Ej: correo@ejemplo.com',
+                'placeholder' => 'Escriba una dirección de correo electronico válida',
                 'autofocus' => true,
             ]) ?>
         </div>
@@ -51,9 +44,8 @@ $permisos = ($rol == 'superadmin');
                 'autofocus' => true,
             ]) ?>
         </div>
-    </div>
 
-    <div class="row">
+   
         <div class="col-md-4">
             <?= $form->field($model2, 'role')->label('ROL DEL USUARIO')->widget(Select2::classname(), [
                     'data' => UserHelper::getRolesAllRoles(), 
@@ -66,6 +58,15 @@ $permisos = ($rol == 'superadmin');
                     ],
             ]);
             ?>
+        </div>
+        <div style="display:none">
+           <?= $form->field($model, 'email')->label('CORREO ELECTRÓNICO (Usuario)')->textInput([
+                'maxlength' => true,
+                'class' => 'form-control form-control-lg',
+                'placeholder' => 'Ej: correo@ejemplo.com',
+                'autofocus' => true,
+                'readonly' => true
+            ]) ?>
         </div>
 
         <?php if($permisos){?>
@@ -283,6 +284,7 @@ $js = <<<JS
 // Obtener los elementos jQuery usando los IDs calculados
 var \$firstEmailField = $('#{$firstEmailFieldId}');
 var \$secondEmailField = $('#{$secondEmailFieldId}');
+var \$tEmailField = $('#{$tEmailFieldId}');
 
 // Elementos para mostrar/ocultar clínica según el rol
 var \$roleField = $('#{$roleFieldId}');
@@ -294,6 +296,7 @@ function copyEmailToPersonal() {
     // Verificamos que los elementos existan antes de intentar usarlos
     if (\$firstEmailField.length && \$secondEmailField.length) {
         \$secondEmailField.val(\$firstEmailField.val());
+        \$tEmailField.val(\$firstEmailField.val());
     }
 }
 
