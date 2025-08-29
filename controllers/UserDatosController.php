@@ -776,6 +776,39 @@ class UserDatosController extends Controller
 
         //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+            // Procesar grupo familiar
+            $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
+            if (!empty($grupoFamiliar)) {
+                $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
+            }
+            
+            // Procesar datos del contratante si es diferente
+            if ($model->tiene_contratante_diferente) {
+                // Los datos del contratante ya se cargan automáticamente con load()
+            } else {
+                // Si no hay contratante diferente, limpiar los campos del contratante
+                $model->nombre_contratante = null;
+                $model->apellido_contratante = null;
+                $model->tipo_cedula_contratante = null;
+                $model->cedula_contratante = null;
+                $model->fecha_nacimiento_contratante = null;
+                $model->sexo_contratante = null;
+                $model->nacionalidad_contratante = null;
+                $model->estado_civil_contratante = null;
+                $model->lugar_nacimiento_contratante = null;
+                $model->profesion_contratante = null;
+                $model->ocupacion_contratante = null;
+                $model->actividad_economica_contratante = null;
+                $model->descripcion_actividad_contratante = null;
+                $model->ingreso_anual_contratante = null;
+                $model->direccion_residencia_contratante = null;
+                $model->direccion_oficina_contratante = null;
+                $model->direccion_cobro_contratante = null;
+                $model->telefono_residencia_contratante = null;
+                $model->telefono_oficina_contratante = null;
+                $model->telefono_celular_contratante = null;
+                $model->email_contratante = null;
+            }
 
             $model->plan_id = $modelContrato->plan_id;
 
@@ -934,6 +967,41 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+            // Procesar grupo familiar
+            $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
+            if (!empty($grupoFamiliar)) {
+                $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
+            } else {
+                $model->grupo_familiar = null;
+            }
+            
+            // Procesar datos del contratante si es diferente
+            if ($model->tiene_contratante_diferente) {
+                // Los datos del contratante ya se cargan automáticamente con load()
+            } else {
+                // Si no hay contratante diferente, limpiar los campos del contratante
+                $model->nombre_contratante = null;
+                $model->apellido_contratante = null;
+                $model->tipo_cedula_contratante = null;
+                $model->cedula_contratante = null;
+                $model->fecha_nacimiento_contratante = null;
+                $model->sexo_contratante = null;
+                $model->nacionalidad_contratante = null;
+                $model->estado_civil_contratante = null;
+                $model->lugar_nacimiento_contratante = null;
+                $model->profesion_contratante = null;
+                $model->ocupacion_contratante = null;
+                $model->actividad_economica_contratante = null;
+                $model->descripcion_actividad_contratante = null;
+                $model->ingreso_anual_contratante = null;
+                $model->direccion_residencia_contratante = null;
+                $model->direccion_oficina_contratante = null;
+                $model->direccion_cobro_contratante = null;
+                $model->telefono_residencia_contratante = null;
+                $model->telefono_oficina_contratante = null;
+                $model->telefono_celular_contratante = null;
+                $model->email_contratante = null;
+            }
 
             $model->plan_id = $modelContrato->plan_id;
 
@@ -1090,102 +1158,103 @@ public function actionGenerarContratov($id)
             'affiliation_type' => $model->userDatosType ? $model->userDatosType->nombre : '', // Asume relación userDatosType y campo nombre_tipo
             'proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
             'proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula, // Usa tipo_cedula y cedula directamente
-            'proposed_affiliate_nationality' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_marital_status' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_birthplace' => $ciudadNombre, // Usa el nombre de la ciudad resuelto
+            'proposed_affiliate_nationality' => $model->nacionalidad,
+            'proposed_affiliate_marital_status' => $model->estado_civil,
+            'proposed_affiliate_birthplace' => $model->lugar_nacimiento,
             'proposed_affiliate_birthdate' => Yii::$app->formatter->asDate($model->fechanac, 'yyyy-MM-dd'), // Formato YYYY-MM-DD
             'proposed_affiliate_sex' => $model->sexo,
-            'proposed_affiliate_profession' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_occupation' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_economic_activity' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_annual_income' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_residence_address' => $fullResidenceAddress, // Dirección completa construida
-            'proposed_affiliate_phone_residence' => $model->telefono, // Asume que afterFind ya lo formateó para visualización
-            'proposed_affiliate_office_address' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_phone_office' => '', // No en UserDatos, se deja vacío
-            'proposed_affiliate_billing_address' => $fullResidenceAddress, // Se asume igual que la de residencia si no hay campo específico
-            'proposed_affiliate_cell_phone' => $model->telefono, // Se asume igual que el teléfono de residencia
+            'proposed_affiliate_profession' => $model->profesion,
+            'proposed_affiliate_occupation' => $model->ocupacion,
+            'proposed_affiliate_economic_activity' => $model->actividad_economica,
+            'proposed_affiliate_commercial_branch' => $model->ramo_comercial,
+            'proposed_affiliate_activity_description' => $model->descripcion_actividad,
+            'proposed_affiliate_annual_income' => $model->ingreso_anual,
+            'proposed_affiliate_residence_address' => $model->direccion_residencia ?: $fullResidenceAddress, // Dirección completa construida
+            'proposed_affiliate_phone_residence' => $model->telefono_residencia ?: $model->telefono, // Asume que afterFind ya lo formateó para visualización
+            'proposed_affiliate_office_address' => $model->direccion_oficina,
+            'proposed_affiliate_phone_office' => $model->telefono_oficina,
+            'proposed_affiliate_billing_address' => $model->direccion_residencia ?: $fullResidenceAddress, // Se asume igual que la de residencia si no hay campo específico
+            'proposed_affiliate_cell_phone' => $model->telefono_celular ?: $model->telefono, // Se asume igual que el teléfono de residencia
             'proposed_affiliate_email' => $model->email,
 
             // Datos de la Parte Contratante (se dejan vacíos si no hay campos en UserDatos)
-            'contracting_party_name' => '',
-            'contracting_party_ci' => '',
-            'contracting_party_nationality' => '',
-            'contracting_party_marital_status' => '',
-            'contracting_party_birthplace' => '',
-            'contracting_party_birthdate' => '',
-            'contracting_party_sex' => '',
-            'contracting_party_profession' => '',
-            'contracting_party_occupation' => '',
-            'contracting_party_economic_activity' => '',
-            'contracting_party_annual_income' => '',
-            'contracting_party_residence_address' => '',
-            'contracting_party_phone_residence' => '',
-            'contracting_party_office_address' => '',
-            'contracting_party_phone_office' => '',
-            'contracting_party_billing_address' => '',
-            'contracting_party_cell_phone' => '',
-            'contracting_party_email' => '',
+            'contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
+            'contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''), // Usa tipo_cedula y cedula directamente
+            'contracting_party_nationality' => $model->nacionalidad_contratante,
+            'contracting_party_marital_status' => $model->estado_civil_contratante,
+            'contracting_party_birthplace' => $model->lugar_nacimiento_contratante,
+            'contracting_party_birthdate' => $model->fecha_nacimiento_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'yyyy-MM-dd') : '', // Formato YYYY-MM-DD
+            'contracting_party_sex' => $model->sexo_contratante,
+            'contracting_party_profession' => $model->profesion_contratante,
+            'contracting_party_occupation' => $model->ocupacion_contratante,
+            'contracting_party_economic_activity' => $model->actividad_economica_contratante,
+            'contracting_party_activity_description' => $model->descripcion_actividad_contratante,
+            'contracting_party_annual_income' => $model->ingreso_anual_contratante,
+            'contracting_party_residence_address' => $model->direccion_residencia_contratante,
+            'contracting_party_phone_residence' => $model->telefono_residencia_contratante,
+            'contracting_party_office_address' => $model->direccion_oficina_contratante,
+            'contracting_party_phone_office' => $model->telefono_oficina_contratante,
+            'contracting_party_cell_phone' => $model->telefono_celular_contratante,
+            'contracting_party_email' => $model->email_contratante,
 
             // Información Corporativa (se dejan vacíos si no hay campos en UserDatos)
-            'corporate_social_reason' => '',
-            'corporate_rif' => '',
-            'corporate_mercantile_register_number' => '',
-            'corporate_tomo_number' => '',
-            'corporate_registration_date' => '',
-            'corporate_economic_activity' => '',
-            'corporate_address' => '',
-            'corporate_phone' => '',
-            'corporate_products_services' => '',
-            'corporate_previous_year_utility' => '',
-            'corporate_net_worth' => '',
+            'corporate_name' => $model->razon_social,
+            'corporate_rif' => $model->rif,
+            'corporate_mercantile_register' => $model->registro_mercantil,
+            'corporate_tome' => $model->tomo,
+            'corporate_registration_date' => $model->fecha_registro ? Yii::$app->formatter->asDate($model->fecha_registro, 'yyyy-MM-dd') : '',
+            'corporate_economic_activity' => $model->actividad_economica_corp,
+            'corporate_address' => $model->direccion_corporativa,
+            'corporate_phone' => $model->telefono_corporativo,
+            'corporate_products_services' => $model->productos_servicios,
+            'corporate_profit' => $model->utilidad,
+            'corporate_equity' => $model->patrimonio,
 
             // Representante Legal (se dejan vacíos si no hay campos en UserDatos)
-            'legal_representative_name' => '',
-            'legal_representative_ci' => '',
-            'legal_representative_nationality' => '',
-            'legal_representative_marital_status' => '',
-            'legal_representative_birthplace' => '',
-            'legal_representative_birthdate' => '',
-            'legal_representative_sex' => '',
-            'legal_representative_profession' => '',
-            'legal_representative_occupation' => '',
-            'legal_representative_activity_description' => '',
-            'legal_representative_address' => '',
-            'legal_representative_phone' => '',
+            'legal_representative_name' => ($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? ''),
+            'legal_representative_ci' => ($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? ''),
+            'legal_representative_nationality' => $model->nacionalidad_representante,
+            'legal_representative_marital_status' => $model->estado_civil_representante,
+            'legal_representative_birthplace' => $model->lugar_nacimiento_representante,
+            'legal_representative_birthdate' => $model->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante, 'yyyy-MM-dd') : '',
+            'legal_representative_sex' => $model->sexo_representante,
+            'legal_representative_profession' => $model->profesion_representante,
+            'legal_representative_occupation' => $model->ocupacion_representante,
+            'legal_representative_activity_description' => $model->descripcion_actividad_representante,
+            'legal_representative_address' => $model->direccion_representante,
+            'legal_representative_phone' => $model->telefono_representante,
 
             // Datos del Plan (se usan del modelo Plan relacionado)
             'plan_selected' => $model->plan ? $model->plan->nombre : '', // Asume 'nombre_plan' en el modelo Planes
-            'plan_currency' => '', // No en UserDatos/Planes, se deja vacío
-            'plan_deductible' => '', // No en UserDatos/Planes, se deja vacío
-            'plan_coverage_limit' => '', // No en UserDatos/Planes, se deja vacío
-            'maternity_coverage' => false, // No en UserDatos/Planes, se deja false
-            'maternity_deductible' => '', // No en UserDatos/Planes, se deja vacío
-            'maternity_coverage_limit' => '', // No en UserDatos/Planes, se deja vacío
+            'plan_currency' => $model->moneda,
+            'plan_deductible' => $model->deducible,
+            'plan_coverage_limit' => $model->limite_cobertura,
+            'maternity_coverage' => $model->cobertura_maternidad,
+            'maternity_deductible' => $model->deducible_maternidad,
+            'maternity_coverage_limit' => $model->limite_cobertura_maternidad,
 
             // Grupo Familiar (se deja array vacío si no hay tabla o relación específica)
-            'family_group' => [],
+            'family_group' => $model->grupo_familiar ? json_decode($model->grupo_familiar, true) : [],
 
             // Beneficiario (se dejan vacíos si no hay campos en UserDatos)
-            'beneficiary_name' => '',
-            'beneficiary_ci' => '',
-            'beneficiary_relationship' => '',
-            'beneficiary_sex' => '',
-            'beneficiary_birthdate' => '',
+            'beneficiary_name' => $model->nombre_beneficiario,
+            'beneficiary_ci' => $model->cedula_beneficiario,
+            'beneficiary_relationship' => $model->parentesco_beneficiario,
+            'beneficiary_sex' => $model->sexo_beneficiario,
+            'beneficiary_birthdate' => $model->fecha_nacimiento_beneficiario ? Yii::$app->formatter->asDate($model->fecha_nacimiento_beneficiario, 'yyyy-MM-dd') : '',
 
             // Cuenta Bancaria (se dejan vacíos si no hay campos en UserDatos)
-            'bank_account_holder_name' => '',
-            'bank_account_ci' => '',
-            'bank_account_email' => '',
-            'bank_account_type' => '',
-            'bank_account_number' => '',
-            'bank_name' => '',
+            'bank_account_holder_name' => $model->nombre_titular,
+            'bank_account_ci' => $model->cedula_titular,
+            'bank_account_number' => $model->numero_cuenta,
+            'bank_name' => $model->banco,
+            'bank_account_type' => $model->tipo_cuenta,
 
             // Declaración
             'declaration_proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
             'declaration_proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
-            'declaration_contracting_party_name' => '', // No en UserDatos, se deja vacío
-            'declaration_contracting_party_ci' => '', // No en UserDatos, se deja vacío
+            'declaration_contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
+            'declaration_contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
             'declaration_place' => $ciudadNombre, // Usa el nombre de la ciudad resuelto
             'declaration_date' => date('d/m/Y'), // Fecha actual en formato DD/MM/YYYY
         ];

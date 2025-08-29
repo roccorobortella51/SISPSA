@@ -1,221 +1,125 @@
-/* Reset y configuración básica */
+/* Estilos para el PDF de afiliación */
+
+/* Estilos generales */
 body {
     font-family: Arial, sans-serif;
-    font-size: 9pt;
-    /* Ajuste clave: reduce el padding para subir y expandir el contenido.
-       El valor "5mm" para arriba y abajo sube el contenido.
-       El valor "10mm" para los lados expande el espacio horizontal. */
-    padding: 5mm 10mm;
-    line-height: 1.2;
-    color: #000;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #333;
 }
 
-/* Contenedor principal */
 .pdf-container {
-    /* Ajuste clave: el 100% de ancho hace que el contenedor se ajuste al espacio disponible */
     width: 100%;
     margin: 0 auto;
-    box-sizing: border-box;
+    padding: 20px;
 }
 
 /* Encabezado */
 .header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1mm;
-    align-items: flex-end;
-    padding-top: 2mm;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logo-superior-izquierda {
+    float: left;
+    max-width: 100px;
+    height: auto;
 }
 
 .header-right {
     text-align: right;
-    font-size: 8pt;
-}
-
-.title {
-    text-align: center;
-    font-size: 14pt;
     font-weight: bold;
-    margin: 3mm 0;
-    text-transform: uppercase;
+    font-size: 14px;
 }
 
-.rif {
-    text-align: center;
-    font-size: 8pt;
-    margin-bottom: 5mm;
-}
-
-/* Tipo de afiliación */
 .affiliation-type {
-    text-align: center;
-    margin-bottom: 3mm;
-    font-weight: bold;
+    text-align: right;
+    margin-top: 10px;
 }
 
-/* Checkboxes */
 .checkbox-group {
     display: inline-block;
-    margin-right: 5mm;
-    white-space: nowrap;
+    margin-right: 15px;
 }
 
 .checkbox {
-    font-family: "DejaVu Sans", sans-serif;
-    font-size: 10pt;
-    margin-right: 2mm;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 1px solid #000;
+    text-align: center;
+    line-height: 15px;
+    margin-right: 5px;
+}
+
+/* Tablas */
+.family-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 10px;
+}
+
+.family-table th,
+.family-table td {
+    border: 1px solid #000;
+    padding: 5px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.family-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    text-align: center;
+}
+
+.family-table .underline {
+    border-bottom: 1px solid #000;
+    min-height: 20px;
 }
 
 /* Secciones */
 .section-title {
-    font-size: 10pt;
+    font-size: 14px;
     font-weight: bold;
-    margin: 4mm 0 1.5mm 0;
-    border-bottom: 1px solid #000;
-    padding-bottom: 1mm;
-    text-transform: uppercase;
-}
-
-/* Tablas de datos */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 3mm;
-}
-
-.data-table td {
-    padding: 0.5mm 1mm;
-    vertical-align: top;
-    height: auto;
-    line-height: 1.2;
-}
-
-.underline {
-    border-bottom: 1px solid #000;
-    min-width: 20mm;
-    display: inline-block;
-    padding-bottom: 0.5mm;
-    height: auto;
-}
-
-/* Tabla de planes */
-.plan-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 3mm;
-}
-
-.plan-table td {
-    padding: 1.5mm;
-    border: 1px solid #000;
-    vertical-align: middle;
-    height: auto;
-}
-
-/* Tabla de familia */
-.family-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 3mm;
-}
-
-.family-table th, .family-table td {
-    border: 1px solid #000;
-    padding: 1mm;
-    height: auto;
-    text-align: left;
-}
-
-.family-table th {
-    font-weight: bold;
-    background-color: #f0f0f0;
+    margin: 20px 0 10px 0;
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 5px;
 }
 
 /* Notas */
 .note {
+    font-size: 9px;
+    font-style: italic;
     text-align: center;
-    font-size: 8pt;
-    margin: 2mm 0;
-}
-
-/* Salto de página */
-.page-break {
-    page-break-after: always;
-}
-
-/* Logo superior izquierda - positioned absolutely */
-.logo-superior-izquierda {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    max-width: 150px;
-    height: auto;
-    z-index: 1000;
+    margin: 20px 0;
 }
 
 /* Firmas */
-.signatures-title {
-    font-weight: bold;
-    text-align: center;
-    margin: 5mm 0 8mm 0;
-}
-
-/* Contenedor principal de firmas */
-.signatures-container {
-    display: flex;
-    justify-content: space-around;
-    align-items: flex-start;
-    margin: 10mm 0 15mm 0;
-    width: 100%;
-    flex-wrap: nowrap;
-}
-
-/* Cajas de firma */
-.signature-box {
-    flex: 1;
-    min-width: 48%;
-    max-width: 49%;
-    text-align: center;
-    padding: 0 2mm;
-    box-sizing: border-box;
-}
-
-.signature-label {
-    font-weight: bold;
-    margin-bottom: 2mm;
-    text-align: center;
-}
-
-.signature-line {
-    border-bottom: 1px solid #000;
-    height: 15mm;
-    margin: 3mm auto;
-    width: 80%;
-}
-
-.fingerprint {
-    text-align: center;
-    font-size: 8pt;
-    margin-top: 3mm;
-}
-
-/* Intermediary and Approval */
-.intermediary {
-    margin-top: 15mm;
-    font-size: 9pt;
-    text-align: left;
-}
-
-.intermediary p {
-    margin: 2mm 0;
-}
-
 .approval {
+    font-size: 8px;
     text-align: center;
-    font-size: 8pt;
-    margin-top: 10mm;
+    margin-top: 20px;
 }
 
-.th {
-    border: 1px;
+/* Ajustes responsive */
+@media print {
+    body {
+        font-size: 10px;
+    }
+    
+    .pdf-container {
+        padding: 10px;
+    }
+    
+    .family-table {
+        font-size: 9px;
+    }
+    
+    .family-table th,
+    .family-table td {
+        padding: 3px;
+    }
 }
