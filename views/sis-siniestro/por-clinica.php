@@ -152,9 +152,7 @@ $pieDataJson = json_encode($pieData);
                                 'dataProvider' => $dataProvider,
                                 'filterModel' => $searchModel,
                                 'layout' => "{items}{pager}",
-                                'tableOptions' => [
-                                    'class' => 'table table-striped table-bordered table-hover table-sm'
-                                ],
+                                
                                 'columns' => [
                                     [
                                         'attribute' => 'id',

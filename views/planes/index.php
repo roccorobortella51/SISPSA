@@ -91,7 +91,7 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                     'filterModel' => $searchModel,
                     'layout' => "{items}{pager}",
                     'tableOptions' => [
-                        'class' => 'table table-striped table-bordered table-hover table-sm'
+                        'class' => 'table table-striped table-bordered table-hover '
                     ],
                     'options' => [
                         'class' => 'grid-view-container table-responsive',
