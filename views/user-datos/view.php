@@ -259,7 +259,7 @@ $currentRoute = Yii::$app->controller->getRoute();
             <div class="mt-4">
                 <h6 class="text-center"><strong>Últimos siniestros registrados:</strong></h6>
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
+                    <table class="table  table-bordered">
                         <thead>
                             <tr>
                                 <th>Fecha</th>

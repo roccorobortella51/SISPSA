@@ -63,7 +63,7 @@ $permisos2 = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                             'persistResize' => false,
 
                             'tableOptions' => [
-                                'class' => 'table table-striped table-bordered table-hover table-sm'
+                                'class' => 'table table-striped table-bordered table-hover '
                             ],
                             'options' => [
                                 'class' => 'grid-view-container table-responsive',
