@@ -65,6 +65,14 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
+    
+    // Representante legal
+    public $nombre_representante;
+    public $apellido_representante;
+    public $tipo_cedula_representante;
+    public $cedula_representante;
+    public $telefono_representante;
+    public $email_representante;
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -97,6 +105,16 @@ class UserDatos extends ActiveRecord
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
             [['ver_cedula', 'ver_foto'], 'default', 'value' => '0'],
+            [['nombre_representante', 'apellido_representante', 'tipo_cedula_representante', 'email_representante'], 'default', 'value' => null],
+            [['cedula_representante'], 'default', 'value' => null],
+            [['telefono_representante'], 'default', 'value' => null],
+
+            // Validaciones para datos del representante
+            [['nombre_representante', 'apellido_representante'], 'string', 'max' => 100],
+            [['tipo_cedula_representante'], 'string', 'max' => 1],
+            [['cedula_representante'], 'string', 'max' => 20],
+            [['telefono_representante'], 'string', 'max' => 15],
+            [['email_representante'], 'email'],
 
             [['user_id', 'session_id', 'estatus_solvente'], 'string'],
             
@@ -180,6 +198,54 @@ class UserDatos extends ActiveRecord
                 'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'],
             // *** REGLA DE VALIDACIÓN PERSONALIZADA PARA LA EDAD ***
             //[['fechanac'], 'validateAge'],
+
+            // Validaciones para campos de texto (VARCHAR/TEXT)
+            [['nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
+              'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
+              'direccion_residencia', 'direccion_oficina', 'telefono_residencia', 'telefono_oficina',
+              'telefono_celular', 'razon_social', 'rif', 'registro_mercantil', 'tomo',
+              'actividad_economica_corp', 'direccion_corporativa', 'telefono_corporativo',
+              'productos_servicios', 'utilidad', 'patrimonio', 'nombre_representante',
+              'cedula_representante', 'nacionalidad_representante', 'estado_civil_representante',
+              'lugar_nacimiento_representante', 'sexo_representante', 'profesion_representante',
+              'ocupacion_representante', 'descripcion_actividad_representante', 'direccion_representante',
+              'telefono_representante', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
+              'deducible_maternidad', 'limite_cobertura_maternidad', 'nombre_beneficiario',
+              'cedula_beneficiario', 'parentesco_beneficiario', 'sexo_beneficiario',
+              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'banco', 'tipo_cuenta',
+              'nombre_declaracion_afiliado', 'cedula_declaracion_afiliado', 'nombre_declaracion_contratante',
+              'cedula_declaracion_contratante', 'tipo_afiliacion', 'nombre_contratante',
+              'apellido_contratante', 'tipo_cedula_contratante', 'sexo_contratante',
+              'nacionalidad_contratante', 'estado_civil_contratante', 'lugar_nacimiento_contratante',
+              'profesion_contratante', 'ocupacion_contratante', 'actividad_economica_contratante',
+              'descripcion_actividad_contratante', 'ingreso_anual_contratante', 'direccion_residencia_contratante',
+              'direccion_oficina_contratante', 'direccion_cobro_contratante', 'telefono_residencia_contratante',
+              'telefono_oficina_contratante', 'telefono_celular_contratante', 'email_contratante',
+              'razon_social_contratante', 'rif_contratante', 'registro_mercantil_contratante',
+              'tomo_contratante', 'actividad_economica_corp_contratante', 'direccion_corp_contratante',
+              'telefono_corp_contratante', 'productos_servicios_contratante', 'utilidad_contratante',
+              'patrimonio_contratante', 'nombre_representante_contratante', 'apellido_representante_contratante',
+              'tipo_cedula_representante_contratante', 'nacionalidad_representante_contratante',
+              'estado_civil_representante_contratante', 'lugar_nacimiento_representante_contratante',
+              'sexo_representante_contratante', 'profesion_representante_contratante',
+              'ocupacion_representante_contratante', 'descripcion_actividad_representante_contratante',
+              'direccion_representante_contratante', 'telefono_representante_contratante',
+              'nombre_titular_contratante', 'cedula_titular_contratante', 'numero_cuenta_contratante',
+              'banco_contratante', 'tipo_cuenta_contratante'], 'string', 'max' => 255],
+
+            // Validaciones para campos de fecha
+            [['fecha_nacimiento_contratante', 'fecha_registro', 'fecha_nacimiento_representante',
+              'fecha_registro_contratante', 'fecha_nacimiento_representante_contratante',
+              'fecha_nacimiento_beneficiario'], 'date', 'format' => 'yyyy-MM-dd'],
+
+            // Validaciones para campos booleanos
+            [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
+
+            // Validaciones para campos enteros
+            [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
+
+            // Validaciones para campos de texto largo (para JSON)
+            [['grupo_familiar'], 'string'],
         ];
 
     }
@@ -187,15 +253,18 @@ class UserDatos extends ActiveRecord
     /**
      * {@inheritdoc}
      */
-    /*public function attributeLabels()
+    public function attributeLabels()
     {
-        // CAMBIO: Añadimos una etiqueta amigable para 'cedulaFormatted'
-        // Esto hará que el campo en el formulario se muestre con "Cédula de Identidad"
-        // en lugar de "Cedula Formatted".
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
+            'nombre_representante' => 'Nombres del Representante',
+            'apellido_representante' => 'Apellidos del Representante',
+            'tipo_cedula_representante' => 'Tipo de Cédula',
+            'cedula_representante' => 'Cédula del Representante',
+            'telefono_representante' => 'Teléfono del Representante',
+            'email_representante' => 'Correo Electrónico del Representante',
         ]);
-    }*/
+    }
 
     /**
      * Este método se ejecuta AUTOMÁTICAMENTE después de que un registro del modelo

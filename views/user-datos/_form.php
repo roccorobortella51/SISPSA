@@ -422,6 +422,9 @@ $this->registerJs($jsValidation);
                             ])->label('NOMBRE DEL ASESOR')
                             ?>
                         </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'tiene_contratante_diferente')->checkbox(['class' => 'form-control-lg']) ?>
+                        </div>
                     </div>
                     
                     <div class="row">
@@ -546,6 +549,464 @@ $this->registerJs($jsValidation);
                                     'allowClear' => true,
                                 ],
                             ]) ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-user-plus"></i> Datos Adicionales del Afiliado
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-globe"></i>
+                            <?= $form->field($model, 'nacionalidad')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'estado_civil')->widget(Select2::class, [
+                                'data' => [
+                                    'Soltero' => 'Soltero',
+                                    'Casado' => 'Casado',
+                                    'Divorciado' => 'Divorciado',
+                                    'Viudo' => 'Viudo',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el estado civil...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Estado Civil') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <?= $form->field($model, 'lugar_nacimiento')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-briefcase"></i>
+                            <?= $form->field($model, 'profesion')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-user-md"></i>
+                            <?= $form->field($model, 'ocupacion')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'actividad_economica')->widget(Select2::class, [
+                                'data' => [
+                                    'Industrial' => 'Industrial',
+                                    'Comercial' => 'Comercial',
+                                    'Profesional' => 'Profesional',
+                                    'Gubernamental' => 'Gubernamental',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione la actividad económica...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Actividad Económica') ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-store"></i>
+                            <?= $form->field($model, 'ramo_comercial')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'descripcion_actividad')->widget(Select2::class, [
+                                'data' => [
+                                    'Independiente' => 'Independiente',
+                                    'Dependiente' => 'Dependiente',
+                                    'Societaria' => 'Societaria',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione la descripción de la actividad...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Descripción de la Actividad') ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'ingreso_anual')->widget(Select2::class, [
+                                'data' => [
+                                    'De 1 a 5 Salarios mínimos' => 'De 1 a 5 Salarios mínimos',
+                                    'De 6 a 10 Salarios mínimos' => 'De 6 a 10 Salarios mínimos',
+                                    'De 11 a 20 Salarios mínimos' => 'De 11 a 20 Salarios mínimos',
+                                    'De 20 Salarios mínimos en adelante' => 'De 20 Salarios mínimos en adelante',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el ingreso anual...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Ingreso Anual Bs') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-home"></i>
+                            <?= $form->field($model, 'direccion_residencia')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección de residencia'
+                            ])->label('Dirección de Residencia') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-building"></i>
+                            <?= $form->field($model, 'direccion_oficina')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección de oficina'
+                            ])->label('Dirección de Oficina') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-phone"></i>
+                            <?= $form->field($model, 'telefono_residencia')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono residencia'
+                            ])->label('Teléfono Residencia') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-phone-office"></i>
+                            <?= $form->field($model, 'telefono_oficina')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono oficina'
+                            ])->label('Teléfono Oficina') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                            <?= $form->field($model, 'telefono_celular')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono celular'
+                            ])->label('Teléfono Celular') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-user-tie"></i> Datos del Representante Legal
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-signature"></i>
+                            <?= $form->field($model, 'nombre_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-signature"></i>
+                            <?= $form->field($model, 'apellido_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-2">
+                            <?= $form->field($model, 'tipo_cedula_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'V' => 'V',
+                                    'E' => 'E',
+                                    'J' => 'J',
+                                    'P' => 'P',
+                                    'N' => 'N',
+                                    'M' => 'M',
+                                ],
+                                'options' => [
+                                    'placeholder' => 'Tipo',
+                                    'class' => 'form-control form-control-lg',
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                                ])->label('Tipo Cédula')
+                            ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-id-card"></i>
+                            <?= $form->field($model, 'cedula_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ejemplo: 12345678'
+                            ])->label('Cédula de Identidad') ?>
+                        </div>
+                        <div class="col-md-3 field-with-icon">
+                            <i class="fas fa-birthday-cake"></i>
+                            <?= $form->field($model, 'fecha_nacimiento_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'type' => 'date',
+                                'placeholder' => 'Seleccione la fecha de nacimiento'
+                            ])->label('Fecha de Nacimiento') ?>
+                        </div>
+                        <div class="col-md-3">
+                            <?= $form->field($model, 'sexo_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'Masculino' => 'Masculino',
+                                    'Femenino' => 'Femenino',
+                                    'Otro' => 'Otro',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el sexo...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Sexo') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-globe"></i>
+                            <?= $form->field($model, 'nacionalidad_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'estado_civil_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'Soltero' => 'Soltero',
+                                    'Casado' => 'Casado',
+                                    'Divorciado' => 'Divorciado',
+                                    'Viudo' => 'Viudo',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el estado civil...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Estado Civil') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <?= $form->field($model, 'lugar_nacimiento_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-briefcase"></i>
+                            <?= $form->field($model, 'profesion_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-user-md"></i>
+                            <?= $form->field($model, 'ocupacion_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'descripcion_actividad_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'Independiente' => 'Independiente',
+                                    'Dependiente' => 'Dependiente',
+                                    'Societaria' => 'Societaria',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione la descripción de la actividad...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Descripción de la Actividad') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-home"></i>
+                            <?= $form->field($model, 'direccion_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección'
+                            ])->label('Dirección') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-phone"></i>
+                            <?= $form->field($model, 'telefono_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono'
+                            ])->label('Teléfono') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-file-contract"></i> Datos del Plan Solicitado
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-file-contract"></i>
+                            <?= $form->field($model, 'plan_seleccionado')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-coins"></i>
+                            <?= $form->field($model, 'moneda')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-percentage"></i>
+                            <?= $form->field($model, 'deducible')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-chart-line"></i>
+                            <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <?= $form->field($model, 'cobertura_maternidad')->checkbox(['class' => 'form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-percentage"></i>
+                            <?= $form->field($model, 'deducible_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-chart-line"></i>
+                            <?= $form->field($model, 'limite_cobertura_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-users"></i> Grupo Familiar
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="grupo-familiar-container">
+                                <!-- Aquí se agregarán dinámicamente los campos para el grupo familiar -->
+                            </div>
+                            <button type="button" id="agregar-miembro" class="btn btn-primary mt-2">
+                                <i class="fas fa-plus"></i> Agregar Miembro
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-user-tag"></i> Datos del Beneficiario
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-signature"></i>
+                            <?= $form->field($model, 'nombre_beneficiario')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-id-card"></i>
+                            <?= $form->field($model, 'cedula_beneficiario')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'parentesco_beneficiario')->widget(Select2::class, [
+                                'data' => [
+                                    'Padre' => 'Padre',
+                                    'Madre' => 'Madre',
+                                    'Hijo' => 'Hijo',
+                                    'Hija' => 'Hija',
+                                    'Hermano' => 'Hermano',
+                                    'Hermana' => 'Hermana',
+                                    'Cónyuge' => 'Cónyuge',
+                                    'Otro' => 'Otro',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el parentesco...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Parentesco') ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'sexo_beneficiario')->widget(Select2::class, [
+                                'data' => [
+                                    'Masculino' => 'Masculino',
+                                    'Femenino' => 'Femenino',
+                                    'Otro' => 'Otro',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el sexo...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Sexo') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-birthday-cake"></i>
+                            <?= $form->field($model, 'fecha_nacimiento_beneficiario')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'type' => 'date',
+                                'placeholder' => 'Seleccione la fecha de nacimiento'
+                            ])->label('Fecha de Nacimiento') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-money-check-alt"></i> Datos Bancarios
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-user"></i>
+                            <?= $form->field($model, 'nombre_titular')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-id-card"></i>
+                            <?= $form->field($model, 'cedula_titular')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-credit-card"></i>
+                            <?= $form->field($model, 'numero_cuenta')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-university"></i>
+                            <?= $form->field($model, 'banco')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <?= $form->field($model, 'tipo_cuenta')->widget(Select2::class, [
+                                'data' => [
+                                    'Cuenta Corriente' => 'Cuenta Corriente',
+                                    'Cuenta Ahorro' => 'Cuenta Ahorro',
+                                    'Tarjeta Crédito Visa' => 'Tarjeta Crédito Visa',
+                                    'Tarjeta Crédito MasterCard' => 'Tarjeta Crédito MasterCard',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el tipo de cuenta...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Tipo de Cuenta') ?>
                         </div>
                     </div>
                 </div>
@@ -780,6 +1241,224 @@ $this->registerJs($jsValidation);
                 </div>
             </div>
 
+            <div class="card mb-4" id="contratante-section" style="display: none;">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-user-tie"></i> Datos del Contratante
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-signature"></i>
+                            <?= $form->field($model, 'nombre_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-signature"></i>
+                            <?= $form->field($model, 'apellido_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-2">
+                            <?= $form->field($model, 'tipo_cedula_contratante')->widget(Select2::class, [
+                                'data' => [
+                                    'V' => 'V',
+                                    'E' => 'E',
+                                    'J' => 'J',
+                                    'P' => 'P',
+                                    'N' => 'N',
+                                    'M' => 'M',
+                                ],
+                                'options' => [
+                                    'placeholder' => 'Tipo',
+                                    'class' => 'form-control form-control-lg',
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                                ])->label('Tipo Cédula')
+                            ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-id-card"></i>
+                            <?= $form->field($model, 'cedula_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ejemplo: 12345678'
+                            ])->label('Cédula de Identidad') ?>
+                        </div>
+                        <div class="col-md-3 field-with-icon">
+                            <i class="fas fa-birthday-cake"></i>
+                            <?= $form->field($model, 'fecha_nacimiento_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'type' => 'date',
+                                'placeholder' => 'Seleccione la fecha de nacimiento'
+                            ])->label('Fecha de Nacimiento') ?>
+                        </div>
+                        <div class="col-md-3">
+                            <?= $form->field($model, 'sexo_contratante')->widget(Select2::class, [
+                                'data' => [
+                                    'Masculino' => 'Masculino',
+                                    'Femenino' => 'Femenino',
+                                    'Otro' => 'Otro',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el sexo...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Sexo') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-globe"></i>
+                            <?= $form->field($model, 'nacionalidad_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'estado_civil_contratante')->widget(Select2::class, [
+                                'data' => [
+                                    'Soltero' => 'Soltero',
+                                    'Casado' => 'Casado',
+                                    'Divorciado' => 'Divorciado',
+                                    'Viudo' => 'Viudo',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el estado civil...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Estado Civil') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <?= $form->field($model, 'lugar_nacimiento_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-briefcase"></i>
+                            <?= $form->field($model, 'profesion_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <i class="fas fa-user-md"></i>
+                            <?= $form->field($model, 'ocupacion_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'actividad_economica_contratante')->widget(Select2::class, [
+                                'data' => [
+                                    'Industrial' => 'Industrial',
+                                    'Comercial' => 'Comercial',
+                                    'Profesional' => 'Profesional',
+                                    'Gubernamental' => 'Gubernamental',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione la actividad económica...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Actividad Económica') ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'descripcion_actividad_contratante')->widget(Select2::class, [
+                                'data' => [
+                                    'Independiente' => 'Independiente',
+                                    'Dependiente' => 'Dependiente',
+                                    'Societaria' => 'Societaria',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione la descripción de la actividad...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Descripción de la Actividad') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <?= $form->field($model, 'ingreso_anual_contratante')->widget(Select2::class, [
+                                'data' => [
+                                    'De 1 a 5 Salarios mínimos' => 'De 1 a 5 Salarios mínimos',
+                                    'De 6 a 10 Salarios mínimos' => 'De 6 a 10 Salarios mínimos',
+                                    'De 11 a 20 Salarios mínimos' => 'De 11 a 20 Salarios mínimos',
+                                    'De 20 Salarios mínimos en adelante' => 'De 20 Salarios mínimos en adelante',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el ingreso anual...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Ingreso Anual Bs') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-home"></i>
+                            <?= $form->field($model, 'direccion_residencia_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección de residencia'
+                            ])->label('Dirección de Residencia') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-building"></i>
+                            <?= $form->field($model, 'direccion_oficina_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección de oficina'
+                            ])->label('Dirección de Oficina') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-map-pin"></i>
+                            <?= $form->field($model, 'direccion_cobro_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección de cobro'
+                            ])->label('Dirección de Cobro') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-phone"></i>
+                            <?= $form->field($model, 'telefono_residencia_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono residencia'
+                            ])->label('Teléfono Residencia') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-phone-office"></i>
+                            <?= $form->field($model, 'telefono_oficina_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono oficina'
+                            ])->label('Teléfono Oficina') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                            <?= $form->field($model, 'telefono_celular_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono celular'
+                            ])->label('Teléfono Celular') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-envelope"></i>
+                            <?= $form->field($model, 'email_contratante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Correo electrónico',
+                                'type' => 'email'
+                            ])->label('Correo Electrónico') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row mt-4">
                 <div class="col-12 d-flex justify-content-start gap-3">
                     <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
@@ -831,6 +1510,115 @@ $(function(){
     var $inp = $grp.find('.btn-file input[type="file"]').first();
     if ($inp.length) { $inp.trigger('click'); }
   });
+  
+  // Mostrar/ocultar sección de contratante
+  function toggleContratanteSection() {
+    if ($('#userdatos-tiene_contratante_diferente').is(':checked')) {
+      $('#contratante-section').show();
+    } else {
+      $('#contratante-section').hide();
+    }
+  }
+  
+  // Inicializar estado al cargar la página
+  toggleContratanteSection();
+  
+  // Cambiar estado cuando se marca/desmarca el checkbox
+  $('#userdatos-tiene_contratante_diferente').on('change', function() {
+    toggleContratanteSection();
+ });
+ 
+ // Funcionalidad para el grupo familiar
+ var miembroIndex = 0;
+ 
+ // Función para agregar un nuevo miembro al grupo familiar
+ function agregarMiembro() {
+   miembroIndex++;
+   var miembroHtml = `
+     <div class="card mb-3 miembro-familiar" data-index="${miembroIndex}">
+       <div class="card-body">
+         <div class="row">
+           <div class="col-md-12">
+             <h5>Miembro #${miembroIndex} <button type="button" class="btn btn-danger btn-sm float-right eliminar-miembro" data-index="${miembroIndex}"><i class="fas fa-trash"></i></button></h5>
+           </div>
+         </div>
+         <div class="row">
+           <div class="col-md-6 field-with-icon">
+             <i class="fas fa-signature"></i>
+             <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][nombre]" placeholder="Nombre completo">
+           </div>
+           <div class="col-md-6 field-with-icon">
+             <i class="fas fa-id-card"></i>
+             <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][cedula]" placeholder="Cédula de identidad">
+           </div>
+         </div>
+         <div class="row mt-2">
+           <div class="col-md-6">
+             <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][parentesco]">
+               <option value="">Seleccione el parentesco</option>
+               <option value="Padre">Padre</option>
+               <option value="Madre">Madre</option>
+               <option value="Hijo">Hijo</option>
+               <option value="Hija">Hija</option>
+               <option value="Hermano">Hermano</option>
+               <option value="Hermana">Hermana</option>
+               <option value="Cónyuge">Cónyuge</option>
+               <option value="Otro">Otro</option>
+             </select>
+           </div>
+           <div class="col-md-6">
+             <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][sexo]">
+               <option value="">Seleccione el sexo</option>
+               <option value="Masculino">Masculino</option>
+               <option value="Femenino">Femenino</option>
+               <option value="Otro">Otro</option>
+             </select>
+           </div>
+         </div>
+         <div class="row mt-2">
+           <div class="col-md-12 field-with-icon">
+             <i class="fas fa-birthday-cake"></i>
+             <input type="date" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][fecha_nacimiento]" placeholder="Fecha de nacimiento">
+           </div>
+         </div>
+       </div>
+     </div>
+   `;
+   $('#grupo-familiar-container').append(miembroHtml);
+ }
+ 
+ // Función para eliminar un miembro del grupo familiar
+ function eliminarMiembro(index) {
+   $('.miembro-familiar[data-index="' + index + '"]').remove();
+ }
+ 
+ // Evento para agregar miembro
+ $('#agregar-miembro').on('click', function() {
+   agregarMiembro();
+ });
+ 
+ // Evento para eliminar miembro (usando delegación de eventos)
+ $('#grupo-familiar-container').on('click', '.eliminar-miembro', function() {
+   var index = $(this).data('index');
+   eliminarMiembro(index);
+ });
+ 
+ // Mostrar/ocultar sección de afiliado corporativo
+ function toggleAfiliadoCorporativo() {
+   if ($('#userdatos-user_datos_type_id').val() == '2') { // Asumiendo que 2 es el ID para afiliado corporativo
+     $('#afiliado_corporativo_container').show();
+   } else {
+     $('#afiliado_corporativo_container').hide();
+   }
+ }
+ 
+ // Inicializar estado al cargar la página
+ toggleAfiliadoCorporativo();
+ 
+ // Cambiar estado cuando se selecciona un tipo de afiliado
+ $('#userdatos-user_datos_type_id').on('change', function() {
+   toggleAfiliadoCorporativo();
+ });
 });
 JS);
 ?>
