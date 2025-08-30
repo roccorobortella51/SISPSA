@@ -1223,19 +1223,6 @@ public function actionGenerarContratov($id)
             'contracting_party_cell_phone' => $model->telefono_celular_contratante,
             'contracting_party_email' => $model->email_contratante,
 
-            // Información Corporativa (se dejan vacíos si no hay campos en UserDatos)
-            'corporate_name' => $model->razon_social,
-            'corporate_rif' => $model->rif,
-            'corporate_mercantile_register' => $model->registro_mercantil,
-            'corporate_tome' => $model->tomo,
-            'corporate_registration_date' => $model->fecha_registro ? Yii::$app->formatter->asDate($model->fecha_registro, 'yyyy-MM-dd') : '',
-            'corporate_economic_activity' => $model->actividad_economica_corp,
-            'corporate_address' => $model->direccion_corporativa,
-            'corporate_phone' => $model->telefono_corporativo,
-            'corporate_products_services' => $model->productos_servicios,
-            'corporate_profit' => $model->utilidad,
-            'corporate_equity' => $model->patrimonio,
-
             // Representante Legal (se dejan vacíos si no hay campos en UserDatos)
             'legal_representative_name' => ($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? ''),
             'legal_representative_ci' => ($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? ''),

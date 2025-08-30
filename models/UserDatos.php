@@ -46,6 +46,30 @@ use yii\db\ActiveRecord;
  * @property string|null $estatus_solvente
  * @property int|null $user_login_id
  * @property int|null $user_datos_type_id
+ * @property string|null $nacionalidad
+ * @property string|null $estado_civil
+ * @property string|null $lugar_nacimiento
+ * @property string|null $profesion
+ * @property string|null $ocupacion
+ * @property string|null $actividad_economica
+ * @property string|null $ramo_comercial
+ * @property string|null $descripcion_actividad
+ * @property string|null $ingreso_anual
+ * @property string|null $direccion_residencia
+ * @property string|null $direccion_oficina
+ * @property string|null $telefono_residencia
+ * @property string|null $telefono_oficina
+ * @property string|null $telefono_celular
+ * @property string|null $fecha_nacimiento_contratante
+ * @property string|null $fecha_nacimiento_representante
+ * @property string|null $fecha_nacimiento_representante_contratante
+ * @property string|null $fecha_nacimiento_beneficiario
+ * @property bool|null $cobertura_maternidad
+ * @property bool|null $tiene_contratante_diferente
+ * @property int|null $cedula_contratante
+ * @property int|null $cedula_representante_contratante
+ * @property string|null $grupo_familiar
+ * @property int|null $afiliado_corporativo_id
  *
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
@@ -203,9 +227,8 @@ class UserDatos extends ActiveRecord
             [['nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
               'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
               'direccion_residencia', 'direccion_oficina', 'telefono_residencia', 'telefono_oficina',
-              'telefono_celular', 'razon_social', 'rif', 'registro_mercantil', 'tomo',
-              'actividad_economica_corp', 'direccion_corporativa', 'telefono_corporativo',
-              'productos_servicios', 'utilidad', 'patrimonio', 'nombre_representante',
+              'telefono_celular',
+              'nombre_representante',
               'cedula_representante', 'nacionalidad_representante', 'estado_civil_representante',
               'lugar_nacimiento_representante', 'sexo_representante', 'profesion_representante',
               'ocupacion_representante', 'descripcion_actividad_representante', 'direccion_representante',
@@ -221,10 +244,7 @@ class UserDatos extends ActiveRecord
               'descripcion_actividad_contratante', 'ingreso_anual_contratante', 'direccion_residencia_contratante',
               'direccion_oficina_contratante', 'direccion_cobro_contratante', 'telefono_residencia_contratante',
               'telefono_oficina_contratante', 'telefono_celular_contratante', 'email_contratante',
-              'razon_social_contratante', 'rif_contratante', 'registro_mercantil_contratante',
-              'tomo_contratante', 'actividad_economica_corp_contratante', 'direccion_corp_contratante',
-              'telefono_corp_contratante', 'productos_servicios_contratante', 'utilidad_contratante',
-              'patrimonio_contratante', 'nombre_representante_contratante', 'apellido_representante_contratante',
+              'nombre_representante_contratante', 'apellido_representante_contratante',
               'tipo_cedula_representante_contratante', 'nacionalidad_representante_contratante',
               'estado_civil_representante_contratante', 'lugar_nacimiento_representante_contratante',
               'sexo_representante_contratante', 'profesion_representante_contratante',
@@ -234,8 +254,8 @@ class UserDatos extends ActiveRecord
               'banco_contratante', 'tipo_cuenta_contratante'], 'string', 'max' => 255],
 
             // Validaciones para campos de fecha
-            [['fecha_nacimiento_contratante', 'fecha_registro', 'fecha_nacimiento_representante',
-              'fecha_registro_contratante', 'fecha_nacimiento_representante_contratante',
+            [['fecha_nacimiento_contratante', 'fecha_nacimiento_representante',
+              'fecha_nacimiento_representante_contratante',
               'fecha_nacimiento_beneficiario'], 'date', 'format' => 'yyyy-MM-dd'],
 
             // Validaciones para campos booleanos
