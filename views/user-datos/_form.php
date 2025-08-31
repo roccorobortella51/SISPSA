@@ -1605,18 +1605,18 @@ $(function(){
  
  // Mostrar/ocultar sección de afiliado corporativo
  function toggleAfiliadoCorporativo() {
-   if ($('#userdatos-user_datos_type_id').val() == '2') { // Asumiendo que 2 es el ID para afiliado corporativo
+   if ($('#user_datos_type_id_field').val() == '2') { // Asumiendo que 2 es el ID para afiliado corporativo
      $('#afiliado_corporativo_container').show();
    } else {
      $('#afiliado_corporativo_container').hide();
    }
  }
- 
+
  // Inicializar estado al cargar la página
  toggleAfiliadoCorporativo();
- 
+
  // Cambiar estado cuando se selecciona un tipo de afiliado
- $('#userdatos-user_datos_type_id').on('change', function() {
+ $('#user_datos_type_id_field').on('change', function() {
    toggleAfiliadoCorporativo();
  });
 });
