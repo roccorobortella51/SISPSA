@@ -66,6 +66,15 @@ class PagosController extends Controller
         ]);
     }
 
+    public function actionTasacambio()
+    {
+        // Ejecuta el action de otro controlador sin redirección
+        $resultado = Yii::$app->runAction('site/tasacambio');
+        
+        // Puedes usar el resultado
+        return $resultado;
+    }
+
     /**
      * Displays a single Pagos model.
      * @param int $id ID
@@ -86,6 +95,7 @@ class PagosController extends Controller
      */
     public function actionCreate($user_id = null)
     {
+        $tasa_bcv = $this->actionTasacambio();
         $model = new Pagos();
         $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
         $model->user_id = $user_id;
@@ -170,6 +180,7 @@ class PagosController extends Controller
      */
      public function actionUpdate($id)
     {
+        $tasa_bcv = $this->actionTasacambio();
         $model = $this->findModel($id);
         $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
 
