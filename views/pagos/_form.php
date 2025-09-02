@@ -60,10 +60,31 @@ $js = <<<JS
             console.log(tasa)
         }
 
+        // Función para sumar las cuotas seleccionadas y asignar al campo monto_pagado
+        function updateMontoSelected() {
+            var sum = 0;
+            $('.cuota-checkbox:checked').each(function() {
+                var m = parseFloat($(this).data('monto')) || 0;
+                sum += m;
+            });
+            // Si no hay checkboxes marcados valor será 0
+            $('#pagos-monto_pagado').val(sum.toFixed(2));
+            // Recalcular monto en Bs
+            updateMontoUsd();
+        }
+
         // Listener para cambio en monto pagado o tasa
         $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', function(){
             updateMontoUsd();
         });
+
+        // Listener para checkboxes de cuotas: actualizar suma cuando cambian
+        $(document).on('change', '.cuota-checkbox', function() {
+            updateMontoSelected();
+        });
+
+        // Al cargar la página, inicializar el monto según checkboxes (o 0 si ninguno)
+        updateMontoSelected();
 
         // Listener para cambio en método de pago
         $('#pagos-metodo_pago').on('change', function(){
@@ -178,16 +199,19 @@ $this->registerJs($js);
             $i = 0;
             if (!empty($cuotas)): 
             ?>
-                <ul class="list-group rounded-pill">
+                <ul class="list-group ">
                     <?php foreach ($cuotas as $cuota): ?>
                         <?php $i++; ?>
                         <?php $total += $cuota->monto_usd; ?>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong style="font-size: 1.5rem !important;">Cuota #<?= $i ?></strong>
-                                <span style="font-size: 1.5rem !important;">- Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?></span>
+                            <div class="d-flex align-items-center gap-3">
+                                <?= Html::checkbox('selected_cuotas[]', false, ['value' => $cuota->id, 'id' => 'cuota-' . $cuota->id, 'class' => 'cuota-checkbox mr-4', 'data-monto' => $cuota->monto_usd]) ?>
+                                <label for="cuota-<?= $cuota->id ?>" style="margin:0;">
+                                    <strong style="font-size: 1.2rem !important;">Cuota #<?= $i ?></strong>
+                                    <div style="font-size: 1rem !important;">Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?></div>
+                                </label>
                             </div>
-                            <span class="badge bg-primary rounded-pill" style="font-size: 1.5rem !important;">$<?= number_format($cuota->monto_usd, 2) ?></span>
+                            <span class="badge bg-primary rounded-pill" style="font-size: 1.2rem !important;">$<?= number_format($cuota->monto_usd, 2) ?></span>
                         </li>
                     <?php endforeach; ?>
                     <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">
