@@ -332,34 +332,6 @@ use yii\helpers\Html;
 </tbody>
 </table>
 
-
-
-<div class="section-title">DATOS BANCARIOS DEL CONTRATANTE</div>
-<table class="family-table">
-    <tbody>
-        <tr>
-            <td width="25%">Nombre del Titular:</td>
-            <td width="25%">C.I.:</td>
-            <td width="25%">Nro. Cuenta/Tarjeta:</td>
-            <td width="25%">Banco:</td>
-        </tr>
-        <tr>
-            <td class="underline"><?= $data['bank_account_holder_name'] ?? '' ?></td>
-            <td class="underline"><?= $data['bank_account_ci'] ?? '' ?></td>
-            <td class="underline"><?= $data['bank_account_number'] ?? '' ?></td>
-            <td class="underline"><?= $data['bank_name'] ?? '' ?></td>
-        </tr>
-        <tr>
-            <td colspan="4">
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Cuenta Corriente' ? '☑' : '☐' ?></span> Cuenta Corriente</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Cuenta Ahorro' ? '☑' : '☐' ?></span> Cuenta Ahorro</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito Visa' ? '☑' : '☐' ?></span> Tarjeta Crédito Visa</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito MasterCard' ? '☑' : '☐' ?></span> Tarjeta Crédito MasterCard</span>
-            </td>
-        </tr>
-    </tbody>
-</table>
-
 <table class="family-table">
     <tbody>
         <tr>
