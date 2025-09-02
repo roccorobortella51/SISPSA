@@ -61,7 +61,6 @@ use yii\db\ActiveRecord;
  * @property string|null $telefono_oficina
  * @property string|null $telefono_celular
  * @property string|null $fecha_nacimiento_contratante
- * @property string|null $fecha_nacimiento_representante
  * @property string|null $fecha_nacimiento_representante_contratante
  * @property string|null $fecha_nacimiento_beneficiario
  * @property bool|null $cobertura_maternidad
@@ -89,14 +88,6 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
-    
-    // Representante legal
-    public $nombre_representante;
-    public $apellido_representante;
-    public $tipo_cedula_representante;
-    public $cedula_representante;
-    public $telefono_representante;
-    public $email_representante;
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -129,16 +120,6 @@ class UserDatos extends ActiveRecord
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
             [['ver_cedula', 'ver_foto'], 'default', 'value' => '0'],
-            [['nombre_representante', 'apellido_representante', 'tipo_cedula_representante', 'email_representante'], 'default', 'value' => null],
-            [['cedula_representante'], 'default', 'value' => null],
-            [['telefono_representante'], 'default', 'value' => null],
-
-            // Validaciones para datos del representante
-            [['nombre_representante', 'apellido_representante'], 'string', 'max' => 100],
-            [['tipo_cedula_representante'], 'string', 'max' => 1],
-            [['cedula_representante'], 'string', 'max' => 20],
-            [['telefono_representante'], 'string', 'max' => 15],
-            [['email_representante'], 'email'],
 
             [['user_id', 'session_id', 'estatus_solvente'], 'string'],
             
@@ -227,12 +208,7 @@ class UserDatos extends ActiveRecord
             [['nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
               'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
               'direccion_residencia', 'direccion_oficina', 'telefono_residencia', 'telefono_oficina',
-              'telefono_celular',
-              'nombre_representante',
-              'cedula_representante', 'nacionalidad_representante', 'estado_civil_representante',
-              'lugar_nacimiento_representante', 'sexo_representante', 'profesion_representante',
-              'ocupacion_representante', 'descripcion_actividad_representante', 'direccion_representante',
-              'telefono_representante', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
+              'telefono_celular', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
               'deducible_maternidad', 'limite_cobertura_maternidad', 'nombre_beneficiario',
               'cedula_beneficiario', 'parentesco_beneficiario', 'sexo_beneficiario',
               'nombre_titular', 'cedula_titular', 'numero_cuenta', 'banco', 'tipo_cuenta',
@@ -254,7 +230,7 @@ class UserDatos extends ActiveRecord
               'banco_contratante', 'tipo_cuenta_contratante'], 'string', 'max' => 255],
 
             // Validaciones para campos de fecha
-            [['fecha_nacimiento_contratante', 'fecha_nacimiento_representante',
+            [['fecha_nacimiento_contratante',
               'fecha_nacimiento_representante_contratante',
               'fecha_nacimiento_beneficiario'], 'date', 'format' => 'yyyy-MM-dd'],
 
@@ -277,12 +253,7 @@ class UserDatos extends ActiveRecord
     {
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
-            'nombre_representante' => 'Nombres del Representante',
-            'apellido_representante' => 'Apellidos del Representante',
-            'tipo_cedula_representante' => 'Tipo de Cédula',
-            'cedula_representante' => 'Cédula del Representante',
-            'telefono_representante' => 'Teléfono del Representante',
-            'email_representante' => 'Correo Electrónico del Representante',
+        
         ]);
     }
 
