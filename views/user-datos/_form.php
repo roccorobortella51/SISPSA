@@ -666,6 +666,16 @@ $this->registerJs($jsValidation);
                             ])->label('Dirección de Oficina') ?>
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-12 field-with-icon">
+                            <i class="fas fa-building"></i>
+                            <?= $form->field($model, 'direccion_cobro')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección de cobro'
+                            ])->label('Dirección de Cobro') ?>
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <div class="col-md-4 field-with-icon">

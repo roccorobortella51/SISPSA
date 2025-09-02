@@ -1193,7 +1193,7 @@ public function actionGenerarContratov($id)
             'proposed_affiliate_phone_residence' => $model->telefono_residencia ?: $model->telefono, // Asume que afterFind ya lo formateó para visualización
             'proposed_affiliate_office_address' => $model->direccion_oficina,
             'proposed_affiliate_phone_office' => $model->telefono_oficina,
-            'proposed_affiliate_billing_address' => $model->direccion_residencia ?: $fullResidenceAddress, // Se asume igual que la de residencia si no hay campo específico
+            'proposed_affiliate_billing_address' => $model->direccion_cobro ?: ($model->direccion_residencia ?: $fullResidenceAddress), // Usa direccion_cobro si existe, sino la de residencia
             'proposed_affiliate_cell_phone' => $model->telefono_celular ?: $model->telefono, // Se asume igual que el teléfono de residencia
             'proposed_affiliate_email' => $model->email,
 
@@ -1216,6 +1216,7 @@ public function actionGenerarContratov($id)
             'contracting_party_phone_office' => $model->telefono_oficina_contratante,
             'contracting_party_cell_phone' => $model->telefono_celular_contratante,
             'contracting_party_email' => $model->email_contratante,
+            'contracting_party_billing_address' => $model->direccion_cobro_contratante ?: ($model->direccion_residencia_contratante ?: ''),
 
             // Representante Legal (del contratante si no hay corporativo, del corporativo si existe)
             'legal_representative_name' => $hasCorporateRelation

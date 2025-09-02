@@ -82,6 +82,7 @@ use yii\db\ActiveRecord;
  * @property string|null $descripcion_actividad_representante
  * @property string|null $direccion_representante
  * @property string|null $telefono_representante
+ * @property string|null $direccion_cobro
  *
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
@@ -240,7 +241,7 @@ class UserDatos extends ActiveRecord
               'ocupacion_representante_contratante', 'descripcion_actividad_representante_contratante',
               'direccion_representante_contratante', 'telefono_representante_contratante',
               'nombre_titular_contratante', 'cedula_titular_contratante', 'numero_cuenta_contratante',
-              'banco_contratante', 'tipo_cuenta_contratante'], 'string', 'max' => 255],
+              'banco_contratante', 'tipo_cuenta_contratante', 'direccion_cobro'], 'string', 'max' => 255],
 
             // Validaciones para campos de fecha
             [['fecha_nacimiento_contratante',
@@ -266,6 +267,7 @@ class UserDatos extends ActiveRecord
     {
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
+            'direccion_cobro' => 'Dirección de Cobro',
         
         ]);
     }
