@@ -21,6 +21,9 @@ $this->params['breadcrumbs'][] = $this->title;
             <!-- El botón "Volver" y "Guardar Pago" ahora se gestionan dentro del _form.php -->
             <?= $this->render('_form', [
                 'model' => $model,
+                'cuotas' => $cuotas,
+                'modelCuotas' => $modelCuotas,
+                'total' => $total,
             ]) ?>
         </div>
     </div>

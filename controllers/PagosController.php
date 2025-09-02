@@ -12,6 +12,7 @@ use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use app\models\TasaCambio;
 use app\components\UserHelper;
 use app\models\RmClinica;
+use app\models\Cuotas;
 
 
 /**
@@ -103,7 +104,18 @@ class PagosController extends Controller
         $tempFilePath = null; // Inicializamos la ruta temporal a null
         $folder = 'Pago';
         $model->estatus = 'Por Conciliar';
-
+        $modelCuotas = new Cuotas();
+        $cuotas = Cuotas::find()
+            ->select('cuotas.*') // Seleccionar todas las columnas de cuotas
+            ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
+            ->where(['contratos.user_id' => $user_id,'cuotas.Estatus' => 'pendiente'])
+            ->orderBy(['cuotas.fecha_vencimiento' => SORT_ASC])
+            ->all();
+        $total = 0;
+        foreach ($cuotas as $cuota) {
+            $total += $cuota->monto_usd;
+        }
+        $model->monto_pagado = $total;
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
@@ -168,6 +180,9 @@ class PagosController extends Controller
         return $this->render('create', [
             'model' => $model,
             'user_id' => $this->request->get('user_id'), // Pasamos user_id si es necesario para la vista
+            'cuotas' => $cuotas,
+            'modelCuotas' => $modelCuotas,
+            'total' => $total,
         ]);
     }
 

@@ -16,6 +16,34 @@ use yii\helpers\Url;
 
 $js = <<<JS
     $(document).ready(function() {
+        // Función para buscar la tasa de cambio
+        $('#fecha-pago').on('change', function() {
+            var fechaSeleccionada = $(this).val();
+            
+            if (fechaSeleccionada) {
+ 
+                
+                // Hacer llamada AJAX
+                $.ajax({
+                    url: '../site/tasacambio', // Ruta a tu acción
+                    type: 'post',
+                    data: { fecha: fechaSeleccionada },
+                    success: function(response) {
+                        if (response) {
+                            $('#pagos-tasa').val(response);
+                            updateMontoUsd();
+                        } else {
+                            $('#pagos-tasa').val('');
+                            alert('No se encontró tasa para esta fecha');
+                        }
+                    },
+                    error: function() {
+                        $('#pagos-tasa').val('');
+                        alert('Error al buscar la tasa');
+                    }
+                });
+            }
+        });
         // Función para actualizar el monto en USD
         function updateMontoUsd() {
             var monto_pagado = parseFloat($('#pagos-monto_pagado').val()) || 0;
@@ -29,6 +57,7 @@ $js = <<<JS
                 monto_usd_calculated = monto_pagado * tasa;
             }
             $('#pagos-monto_usd').val(monto_usd_calculated.toFixed(2)); // Formatear a 2 decimales
+            console.log(tasa)
         }
 
         // Listener para cambio en monto pagado o tasa
@@ -39,8 +68,8 @@ $js = <<<JS
         // Listener para cambio en método de pago
         $('#pagos-metodo_pago').on('change', function(){
             // Resetear los campos al cambiar el método de pago
-            $('#pagos-monto_usd').val(0);
-            $('#pagos-monto_pagado').val(0);
+            //$('#pagos-monto_usd').val(0);
+            //$('#pagos-monto_pagado').val(0);
             
             if ($(this).val() == 'Zelle'){
                 $('.field-pagos-tasa').hide(); // Ocultar campo de tasa para Zelle
@@ -137,18 +166,47 @@ $this->registerJs($js);
                 'type' => 'date',
                 'placeholder' => 'Seleccione la fecha del pago',
                 'disabled' => $disabled,
+                'id' => 'fecha-pago', // ID único
             ])->label('Fecha de Pago') ?>
         </div>
+    </div>  
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h5 class = "form-label has-star" style="font-size: 1.5rem !important;">Cuotas Pendientes</h5>
+            <?php 
+            $total = 0;
+            $i = 0;
+            if (!empty($cuotas)): 
+            ?>
+                <ul class="list-group rounded-pill">
+                    <?php foreach ($cuotas as $cuota): ?>
+                        <?php $i++; ?>
+                        <?php $total += $cuota->monto_usd; ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong style="font-size: 1.5rem !important;">Cuota #<?= $i ?></strong>
+                                <span style="font-size: 1.5rem !important;">- Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?></span>
+                            </div>
+                            <span class="badge bg-primary rounded-pill" style="font-size: 1.5rem !important;">$<?= number_format($cuota->monto_usd, 2) ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                    <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">
+                        <strong style="font-size: 1.5rem !important;">TOTAL PENDIENTE:</strong>
+                        <strong style="font-size: 1.5rem !important;">$<?= number_format($total, 2) ?></strong>
+                    </li>
+                </ul>
+            <?php else: ?>
+                <div class="alert alert-success rounded-pill">
+                    <strong style="font-size: 1.5rem !important;">✅ No hay cuotas pendientes</strong>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
-
     <div class="row">
         <div class="col-md-4">
             <?= $form->field($model, 'monto_pagado')->textInput([
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
-                'type' => 'number',
-                'step' => '0.01', // Para permitir decimales
                 'placeholder' => 'Ingrese el monto pagado',
-                'disabled' => $disabled,
             ])->label('Monto a Pagar en USD') ?>
         </div>
         <div class="col-md-4">
@@ -156,9 +214,8 @@ $this->registerJs($js);
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'type' => 'number',
                 'step' => '0.0001', // Para tasas con más decimales
-                'readonly' => true, // Mantener como solo lectura si se actualiza por JS
                 'placeholder' => 'Ingrese la tasa de cambio',
-                'disabled' => $disabled,
+                'id' => 'pagos-tasa', // ID único
             ])->label('Tasa de Cambio USD a Bs(BCV)') ?>
         </div>
         <div class="col-md-4">
@@ -166,7 +223,6 @@ $this->registerJs($js);
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'readonly' => true, // Siempre solo lectura
                 'placeholder' => 'Monto en Bs (calculado)',
-                'disabled' => $disabled,
             ])->label('Monto en Bs') ?>
         </div>
     </div>
