@@ -149,6 +149,7 @@ use yii\helpers\Html;
             <td colspan="3" style="font-size: 10px;">Teléfono Celular: <?= $data['contracting_party_cell_phone'] ?? '' ?></td>
             <td colspan="5" style="font-size: 10px;">Correo Electrónico: <?= $data['contracting_party_email'] ?? '' ?></td>
         </tr>
+        <?php if ($data['has_corporate_relation'] ?? false): ?>
         <tr>
             <td colspan="8" style="font-size: 10px;"><b>En caso de ser Persona Jurídica, Datos Corporativos:</b></td>
         </tr>
@@ -161,7 +162,7 @@ use yii\helpers\Html;
         </tr>
         <tr>
             <td colspan="8" style="font-size: 10px;">
-                Actividad Económica:
+                Actividad Económica: <?= $data['corporate_economic_activity'] ?? '' ?>
             </td>
         </tr>
         <tr>
@@ -170,7 +171,7 @@ use yii\helpers\Html;
         </tr>
         <tr>
             <td colspan="8" style="font-size: 10px;">
-                Productos y Servicios que ofrece:
+                Productos y Servicios que ofrece: <?= $data['corporate_products_services'] ?? '' ?>
             </td>
         </tr>
         <tr>
@@ -195,17 +196,73 @@ use yii\helpers\Html;
         </tr>
         <tr>
             <td colspan="4" style="font-size: 10px;">
-            Descripción de la Actividad:<br>
-            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
-            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
-            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
+            Descripción de la Actividad: <?= $data['legal_representative_activity_description'] ?? '' ?>
             </td>
             <td colspan="2" style="font-size: 10px;">Dirección: <?= $data['legal_representative_address'] ?? '' ?></td>
             <td colspan="2" style="font-size: 10px;">Teléfono: <?= $data['legal_representative_phone'] ?? '' ?></td>
         </tr>
-        
+        <?php endif; ?>
+
     </table>
-    
+
+    <?php if ($data['has_corporate_relation'] ?? false): ?>
+    <table class="family-table">
+        <thead>
+            <tr>
+                <th colspan="8">DATOS DEL CORPORATIVO</th>
+            </tr>
+        </thead>
+        <tr>
+            <td colspan="2" style="font-size: 10px;">Razón Social: <?= $data['corporate_name'] ?? '' ?><br></td>
+            <td colspan="1" style="font-size: 10px;">R.I.F.: <?= $data['corporate_rif'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nº de Registro Mercantil: <?= $data['corporate_mercantile_register'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nº de Tomo: <?= $data['corporate_mercantile_register'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">F/Registro: <?= $data['corporate_registration_date'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;">
+                Actividad Económica: <?= $data['corporate_economic_activity'] ?? '' ?>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="6" style="font-size: 10px;">Dirección: <?= $data['corporate_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono: <?= $data['corporate_phone'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;">
+                Productos y Servicios que ofrece: <?= $data['corporate_products_services'] ?? '' ?>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size: 10px;">Utilidad del ejercicio económico inmediatamente anterior: <?= $data['corporate_profit'] ?? '' ?></td>
+            <td colspan="4" style="font-size: 10px;">Patrimonio: <?= $data['corporate_equity'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="8" style="font-size: 10px;"><b>Datos del Representante Legal del Corporativo:</b></td>
+        </tr>
+        <tr>
+            <td colspan="2" style="font-size: 10px;">Nombre y Apellido: <?= $data['corporate_legal_representative_name'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">C.I.: <?= $data['corporate_legal_representative_ci'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Nacionalidad: <?= $data['corporate_legal_representative_nationality'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Estado civil: <?= $data['corporate_legal_representative_marital_status'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="1" style="font-size: 10px;">Lugar Nacimiento: <?= $data['corporate_legal_representative_birthplace'] ?? '' ?></td>
+            <td colspan="1" style="font-size: 10px;">Fecha Nacimiento: <?= $data['corporate_legal_representative_birthdate'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Sexo: <?= $data['corporate_legal_representative_sex'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Profesión: <?= $data['corporate_legal_representative_profession'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Ocupación: <?= $data['corporate_legal_representative_occupation'] ?? '' ?></td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size: 10px;">
+            Descripción de la Actividad: <?= $data['corporate_legal_representative_activity_description'] ?? '' ?>
+            </td>
+            <td colspan="2" style="font-size: 10px;">Dirección: <?= $data['corporate_legal_representative_address'] ?? '' ?></td>
+            <td colspan="2" style="font-size: 10px;">Teléfono: <?= $data['corporate_legal_representative_phone'] ?? '' ?></td>
+        </tr>
+    </table>
+    <?php endif; ?>
+
   <table class="family-table">
     <tr>
         <th colspan="2">PLAN SOLICITADO</th>

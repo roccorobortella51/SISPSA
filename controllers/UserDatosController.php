@@ -6,6 +6,8 @@ use Yii;
 use app\models\UserDatos;
 use app\models\User;
 use app\models\UserDatosSearch;
+use app\models\CorporativoUser;
+use app\models\Corporativo;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -1125,6 +1127,24 @@ public function actionGenerarContratov($id)
     {
         $model = $this->findModel($id);
 
+        // Inicializar variables para datos del corporativo
+        $corporativo = null;
+        $hasCorporateRelation = false;
+
+        // Verificar si el afiliado tiene relación con un corporativo
+        if (!empty($model->afiliado_corporativo_id)) {
+            // Buscar la relación corporativo-user
+            $corporativoUser = CorporativoUser::find()
+                ->where(['corporativo_id' => $model->afiliado_corporativo_id, 'user_id' => $model->user_login_id])
+                ->one();
+
+            if ($corporativoUser) {
+                // Obtener los datos del corporativo
+                $corporativo = $corporativoUser->corporativo;
+                $hasCorporateRelation = true;
+            }
+        }
+
         // Obtener los IDs de ubicación del modelo
         $estadoId = (int) $model->estado;
         $municipioId = (int) $model->municipio;
@@ -1197,19 +1217,43 @@ public function actionGenerarContratov($id)
             'contracting_party_cell_phone' => $model->telefono_celular_contratante,
             'contracting_party_email' => $model->email_contratante,
 
-            // Representante Legal (se dejan vacíos si no hay campos en UserDatos)
-            'legal_representative_name' => ($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? ''),
-            'legal_representative_ci' => ($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? ''),
-            'legal_representative_nationality' => $model->nacionalidad_representante,
-            'legal_representative_marital_status' => $model->estado_civil_representante,
-            'legal_representative_birthplace' => $model->lugar_nacimiento_representante,
-            'legal_representative_birthdate' => $model->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante, 'yyyy-MM-dd') : '',
-            'legal_representative_sex' => $model->sexo_representante,
-            'legal_representative_profession' => $model->profesion_representante,
-            'legal_representative_occupation' => $model->ocupacion_representante,
-            'legal_representative_activity_description' => $model->descripcion_actividad_representante,
-            'legal_representative_address' => $model->direccion_representante,
-            'legal_representative_phone' => $model->telefono_representante,
+            // Representante Legal (del contratante si no hay corporativo, del corporativo si existe)
+            'legal_representative_name' => $hasCorporateRelation
+                ? ($corporativo->nombre_representante ?? '')
+                : (($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? '')),
+            'legal_representative_ci' => $hasCorporateRelation
+                ? ($corporativo->cedula_representante ?? '')
+                : (($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? '')),
+            'legal_representative_nationality' => $hasCorporateRelation
+                ? ($corporativo->nacionalidad_representante ?? '')
+                : ($model->nacionalidad_representante ?? ''),
+            'legal_representative_marital_status' => $hasCorporateRelation
+                ? ($corporativo->estado_civil_representante ?? '')
+                : ($model->estado_civil_representante ?? ''),
+            'legal_representative_birthplace' => $hasCorporateRelation
+                ? ($corporativo->lugar_nacimiento_representante ?? '')
+                : ($model->lugar_nacimiento_representante ?? ''),
+            'legal_representative_birthdate' => $hasCorporateRelation
+                ? ($corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'yyyy-MM-dd') : '')
+                : ($model->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante, 'yyyy-MM-dd') : ''),
+            'legal_representative_sex' => $hasCorporateRelation
+                ? ($corporativo->sexo_representante ?? '')
+                : ($model->sexo_representante ?? ''),
+            'legal_representative_profession' => $hasCorporateRelation
+                ? ($corporativo->profesion_representante ?? '')
+                : ($model->profesion_representante ?? ''),
+            'legal_representative_occupation' => $hasCorporateRelation
+                ? ($corporativo->ocupacion_representante ?? '')
+                : ($model->ocupacion_representante ?? ''),
+            'legal_representative_activity_description' => $hasCorporateRelation
+                ? ($corporativo->descripcion_actividad_representante ?? '')
+                : ($model->descripcion_actividad_representante ?? ''),
+            'legal_representative_address' => $hasCorporateRelation
+                ? ($corporativo->direccion_representante ?? '')
+                : ($model->direccion_representante ?? ''),
+            'legal_representative_phone' => $hasCorporateRelation
+                ? ($corporativo->telefono_representante ?? '')
+                : ($model->telefono_representante ?? ''),
 
             // Datos del Plan (se usan del modelo Plan relacionado)
             'plan_selected' => $model->plan ? $model->plan->nombre : '', // Asume 'nombre_plan' en el modelo Planes
@@ -1244,6 +1288,34 @@ public function actionGenerarContratov($id)
             'declaration_contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
             'declaration_place' => $ciudadNombre, // Usa el nombre de la ciudad resuelto
             'declaration_date' => date('d/m/Y'), // Fecha actual en formato DD/MM/YYYY
+
+            // Datos del Corporativo (solo si tiene relación)
+            'has_corporate_relation' => $hasCorporateRelation,
+            'corporate_name' => $corporativo ? $corporativo->nombre : '',
+            'corporate_rif' => $corporativo ? $corporativo->rif : '',
+            'corporate_mercantile_register' => $corporativo ? $corporativo->tomo_registro . ' ' . $corporativo->folio_registro : '',
+            'corporate_registration_date' => $corporativo && $corporativo->fecha_registro_mercantil ? Yii::$app->formatter->asDate($corporativo->fecha_registro_mercantil, 'dd/MM/yyyy') : '',
+            'corporate_address' => $corporativo ? $corporativo->direccion : '',
+            'corporate_phone' => $corporativo ? $corporativo->telefono : '',
+            'corporate_email' => $corporativo ? $corporativo->email : '',
+            'corporate_economic_activity' => $corporativo ? $corporativo->actividad_economica : '',
+            'corporate_products_services' => $corporativo ? $corporativo->productos_servicios : '',
+            'corporate_profit' => $corporativo ? $corporativo->utilidad_ejercicio_anterior : '',
+            'corporate_equity' => $corporativo ? $corporativo->patrimonio : '',
+
+            // Datos del Representante Legal del Corporativo
+            'corporate_legal_representative_name' => $corporativo ? $corporativo->nombre_representante : '',
+            'corporate_legal_representative_ci' => $corporativo ? $corporativo->cedula_representante : '',
+            'corporate_legal_representative_nationality' => $corporativo ? $corporativo->nacionalidad_representante : '',
+            'corporate_legal_representative_marital_status' => $corporativo ? $corporativo->estado_civil_representante : '',
+            'corporate_legal_representative_birthplace' => $corporativo ? $corporativo->lugar_nacimiento_representante : '',
+            'corporate_legal_representative_birthdate' => $corporativo && $corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'dd/MM/yyyy') : '',
+            'corporate_legal_representative_sex' => $corporativo ? $corporativo->sexo_representante : '',
+            'corporate_legal_representative_profession' => $corporativo ? $corporativo->profesion_representante : '',
+            'corporate_legal_representative_occupation' => $corporativo ? $corporativo->ocupacion_representante : '',
+            'corporate_legal_representative_activity_description' => $corporativo ? $corporativo->descripcion_actividad_representante : '',
+            'corporate_legal_representative_address' => $corporativo ? $corporativo->direccion_representante : '',
+            'corporate_legal_representative_phone' => $corporativo ? $corporativo->telefono_representante : '',
         ];
 
         $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
