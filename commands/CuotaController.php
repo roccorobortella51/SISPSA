@@ -27,7 +27,7 @@ class CuotaController extends Controller
         
         // Obtener contratos que necesitan cuotas generadas (incluyendo diferentes estatus válidos)
         $contratos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']]) // Incluir múltiples estatus válidos
+            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado','suspendido']]) // Incluir múltiples estatus válidos
             ->all();
             
         $cuotasGeneradas = 0;
@@ -68,7 +68,6 @@ class CuotaController extends Controller
         $fechaInicio = $ultimaCuotaPagada ? 
             date('Y-m-d', strtotime($ultimaCuotaPagada->fecha_vencimiento . ' +1 month')) :
             $contrato->fecha_ini;
-            
         $fechaActual = date('Y-m-d');
         
         // Si no hay cuotas atrasadas, salir
@@ -86,8 +85,11 @@ class CuotaController extends Controller
             $this->stdout("  Contrato #{$contrato->id}: Generando {$mesesAtrasados} cuotas atrasadas...\n");
             
             for ($i = 0; $i < $mesesAtrasados; $i++) {
-                $fechaVencimiento = clone $fechaInicio;
-                $fechaVencimiento->add(new \DateInterval('P' . $i . 'M'));
+                // CALCULAR FECHA DE VENCIMIENTO COMO DÍA 7 DEL MES SIGUIENTE
+                $mesesAdelante = $i + 1;
+                $fechaVencimiento = new \DateTime($fechaInicio->format('Y-m-d'));
+                $fechaVencimiento->modify('first day of +' . $mesesAdelante . ' month');
+                $fechaVencimiento->modify('+6 days'); // Para llegar al día 7
                 
                 // Verificar si ya existe esta cuota
                 $existeCuota = Cuotas::find()
@@ -125,7 +127,7 @@ class CuotaController extends Controller
     private function generarCuotaMesActual($contrato)
     {
         // Obtener el primer día del mes actual
-        $primerDiaMes = date('Y-m-01');
+        $primerDiaMes = date('Y-m-07');
         
         // Verificar si ya existe una cuota para este mes
         $existeCuota = Cuotas::find()
@@ -153,54 +155,7 @@ class CuotaController extends Controller
         
         return false;
     }
-    
-    /**
-     * Genera la cuota inicial para un contrato recién creado.
-     * Uso: `yii cuota/generar-inicial [contrato_id]`
-     * 
-     * @param int $contratoId ID del contrato
-     * @return int Código de salida
-     */
-    public function actionGenerarInicial($contratoId)
-    {
-        $this->stdout("Generando cuota inicial para el contrato #{$contratoId}...\n");
-        
-        $contrato = Contratos::findOne($contratoId);
-        if (!$contrato) {
-            $this->stderr("❌ Contrato #{$contratoId} no encontrado.\n");
-            return ExitCode::UNSPECIFIED_ERROR;
-        }
-        
-        // Verificar si ya existe una cuota inicial
-        $existeCuotaInicial = Cuotas::find()
-            ->where(['contrato_id' => $contratoId])
-            ->exists();
-            
-        if ($existeCuotaInicial) {
-            $this->stdout("ℹ️  El contrato #{$contratoId} ya tiene cuotas generadas.\n");
-            return ExitCode::OK;
-        }
-        
-        // Generar cuota inicial para el mes de inicio del contrato
-        $fechaInicio = new \DateTime($contrato->fecha_ini);
-        $fechaVencimiento = $fechaInicio->format('Y-m-01');
-        
-        $cuota = new Cuotas([
-            'contrato_id' => $contratoId,
-            'fecha_vencimiento' => $fechaVencimiento,
-            'monto_usd' => $contrato->monto,
-            'Estatus' => 'pendiente',
-            'rate_usd_bs' => $this->obtenerTasaCambioActual(),
-        ]);
-        
-        if ($cuota->save()) {
-            $this->stdout("✅ Cuota inicial generada para el contrato #{$contratoId} - Vencimiento: {$fechaVencimiento}\n");
-            return ExitCode::OK;
-        } else {
-            $this->stderr("❌ Error al generar cuota inicial: " . print_r($cuota->errors, true) . "\n");
-            return ExitCode::UNSPECIFIED_ERROR;
-        }
-    }
+
     
     /**
      * Genera cuotas mensuales para todos los contratos activos (para ejecutar el día 1 de cada mes).
@@ -274,7 +229,7 @@ class CuotaController extends Controller
     }
     
     /**
-     * Verifica cuotas vencidas y suspende contratos que no han pagado en los primeros 5 días.
+     * Verifica cuotas vencidas y contratos vencidos por fecha para suspenderlos.
      * Uso: `yii cuota/verificar-vencidas`
      * 
      * @return int Código de salida
@@ -284,36 +239,112 @@ class CuotaController extends Controller
         $this->stdout("Verificando cuotas vencidas y contratos a suspender...\n");
         
         $fechaActual = date('Y-m-d');
-        $fechaLimite = date('Y-m-d', strtotime('-5 days')); // 5 días después del vencimiento
+        $contratosSuspendidos = 0;
         
-        // Buscar cuotas vencidas que no se han pagado en los primeros 5 días
+        // 1. VERIFICAR CONTRATOS VENCIDOS POR FECHA
+        $this->stdout("1. Verificando contratos vencidos por fecha...\n");
+        $contratosVencidos = Contratos::find()
+            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->andWhere(['<', 'fecha_ven', $fechaActual])
+            ->all();
+            
+        if (!empty($contratosVencidos)) {
+            $this->stdout("Se encontraron " . count($contratosVencidos) . " contratos vencidos por fecha.\n");
+            
+            foreach ($contratosVencidos as $contrato) {
+                if ($contrato->estatus !== 'suspendido') {
+                    $contrato->estatus = 'suspendido';
+                    if ($contrato->save()) {
+                        $contratosSuspendidos++;
+                        $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
+                    } else {
+                        $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                    }
+                }
+            }
+        } else {
+            $this->stdout("✅ No hay contratos vencidos por fecha.\n");
+        }
+        
+        // 2. VERIFICAR CONTRATOS POR CUOTAS VENCIDAS (7 días después del vencimiento)
+        $this->stdout("\n2. Verificando contratos por cuotas vencidas...\n");
+        $fechaLimite = date('Y-m-d', strtotime('-7 days')); // 7 días después del vencimiento
+        
         $cuotasVencidas = Cuotas::find()
             ->where(['Estatus' => 'pendiente'])
             ->andWhere(['<', 'fecha_vencimiento', $fechaLimite])
             ->all();
             
-        if (empty($cuotasVencidas)) {
+        if (!empty($cuotasVencidas)) {
+            $this->stdout("Se encontraron " . count($cuotasVencidas) . " cuotas vencidas sin pago.\n");
+            
+            foreach ($cuotasVencidas as $cuota) {
+                $contrato = Contratos::findOne($cuota->contrato_id);
+                if ($contrato && $contrato->estatus !== 'suspendido') {
+                    $contrato->estatus = 'suspendido';
+                    if ($contrato->save()) {
+                        $contratosSuspendidos++;
+                        $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por cuota vencida del {$cuota->fecha_vencimiento}\n");
+                    } else {
+                        $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                    }
+                }
+            }
+        } else {
             $this->stdout("✅ No hay cuotas vencidas que requieran suspensión.\n");
+        }
+        
+        if ($contratosSuspendidos > 0) {
+            $this->stdout("\n✅ Proceso completado. Se suspendieron {$contratosSuspendidos} contratos en total.\n");
+        } else {
+            $this->stdout("\n✅ Proceso completado. No se suspendió ningún contrato.\n");
+        }
+        
+        return ExitCode::OK;
+    }
+    
+    /**
+     * Verifica solo contratos vencidos por fecha para suspenderlos.
+     * Uso: `yii cuota/verificar-contratos-vencidos`
+     * 
+     * @return int Código de salida
+     */
+    public function actionVerificarContratosVencidos()
+    {
+        $this->stdout("Verificando contratos vencidos por fecha...\n");
+        
+        $fechaActual = date('Y-m-d');
+        $contratosSuspendidos = 0;
+        
+        // Buscar contratos vencidos por fecha
+        $contratosVencidos = Contratos::find()
+            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->andWhere(['<', 'fecha_ven', $fechaActual])
+            ->all();
+            
+        if (empty($contratosVencidos)) {
+            $this->stdout("✅ No hay contratos vencidos por fecha.\n");
             return ExitCode::OK;
         }
         
-        $this->stdout("Se encontraron " . count($cuotasVencidas) . " cuotas vencidas sin pago.\n");
-        $contratosSuspendidos = 0;
+        $this->stdout("Se encontraron " . count($contratosVencidos) . " contratos vencidos por fecha.\n");
         
-        foreach ($cuotasVencidas as $cuota) {
-            $contrato = Contratos::findOne($cuota->contrato_id);
-            if ($contrato && $contrato->estatus !== 'suspendido') {
+        foreach ($contratosVencidos as $contrato) {
+            if ($contrato->estatus !== 'suspendido') {
                 $contrato->estatus = 'suspendido';
                 if ($contrato->save()) {
                     $contratosSuspendidos++;
-                    $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por cuota vencida del {$cuota->fecha_vencimiento}\n");
+                    $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
+                    $this->stdout("   - Cliente: " . ($contrato->user ? $contrato->user->nombre : 'N/A') . "\n");
+                    $this->stdout("   - Plan: " . ($contrato->plan ? $contrato->plan->nombre : 'N/A') . "\n");
+                    $this->stdout("   - Monto: {$contrato->monto} USD\n");
                 } else {
                     $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
                 }
             }
         }
         
-        $this->stdout("Proceso completado. Se suspendieron {$contratosSuspendidos} contratos.\n");
+        $this->stdout("Proceso completado. Se suspendieron {$contratosSuspendidos} contratos vencidos por fecha.\n");
         return ExitCode::OK;
     }
     
@@ -340,6 +371,64 @@ class CuotaController extends Controller
         }
         
         $this->stdout("\n✅ Verificación diaria completada.\n");
+        return ExitCode::OK;
+    }
+    
+    /**
+     * Muestra un resumen de contratos próximos a vencer.
+     * Uso: `yii cuota/resumen-proximos-vencer`
+     * 
+     * @return int Código de salida
+     */
+    public function actionResumenProximosVencer()
+    {
+        $this->stdout("=== RESUMEN DE CONTRATOS PRÓXIMOS A VENCER ===\n\n");
+        
+        $fechaActual = date('Y-m-d');
+        $proximaSemana = date('Y-m-d', strtotime('+7 days'));
+        $proximoMes = date('Y-m-d', strtotime('+30 days'));
+        
+        // Contratos que vencen en la próxima semana
+        $contratosProximaSemana = Contratos::find()
+            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->andWhere(['between', 'fecha_ven', $fechaActual, $proximaSemana])
+            ->orderBy(['fecha_ven' => SORT_ASC])
+            ->all();
+            
+        // Contratos que vencen en el próximo mes
+        $contratosProximoMes = Contratos::find()
+            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->andWhere(['between', 'fecha_ven', $proximaSemana, $proximoMes])
+            ->orderBy(['fecha_ven' => SORT_ASC])
+            ->all();
+            
+        if (!empty($contratosProximaSemana)) {
+            $this->stdout("🚨 CONTRATOS QUE VENCEN EN LA PRÓXIMA SEMANA:\n");
+            foreach ($contratosProximaSemana as $contrato) {
+                $this->stdout("  - Contrato #{$contrato->id}: Vence el {$contrato->fecha_ven}\n");
+                $this->stdout("    Cliente: " . ($contrato->user ? $contrato->user->nombre : 'N/A') . "\n");
+                $this->stdout("    Plan: " . ($contrato->plan ? $contrato->plan->nombre : 'N/A') . "\n");
+                $this->stdout("    Monto: {$contrato->monto} USD\n\n");
+            }
+        } else {
+            $this->stdout("✅ No hay contratos que venzan en la próxima semana.\n\n");
+        }
+        
+        if (!empty($contratosProximoMes)) {
+            $this->stdout("⚠️  CONTRATOS QUE VENCEN EN EL PRÓXIMO MES:\n");
+            foreach ($contratosProximoMes as $contrato) {
+                $this->stdout("  - Contrato #{$contrato->id}: Vence el {$contrato->fecha_ven}\n");
+                $this->stdout("    Cliente: " . ($contrato->user ? $contrato->user->nombre : 'N/A') . "\n");
+                $this->stdout("    Plan: " . ($contrato->plan ? $contrato->plan->nombre : 'N/A') . "\n");
+                $this->stdout("    Monto: {$contrato->monto} USD\n\n");
+            }
+        } else {
+            $this->stdout("✅ No hay contratos que venzan en el próximo mes.\n\n");
+        }
+        
+        $totalProximos = count($contratosProximaSemana) + count($contratosProximoMes);
+        $this->stdout("Total de contratos próximos a vencer: {$totalProximos}\n");
+        
         return ExitCode::OK;
     }
     

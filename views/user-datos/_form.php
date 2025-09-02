@@ -630,7 +630,8 @@ $this->registerJs($jsValidation);
                             <?= $form->field($modelContrato, 'fecha_ini')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
-                                'placeholder' => 'Seleccione la fecha de inicio'
+                                'placeholder' => 'Seleccione la fecha de inicio',
+                                'readonly' => !$model->isNewRecord
                             ])->label('Fecha de Inicio') ?>
                         </div>
 
@@ -639,7 +640,8 @@ $this->registerJs($jsValidation);
                             <?= $form->field($modelContrato, 'fecha_ven')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
-                                'placeholder' => 'Seleccione la fecha de vencimiento'
+                                'placeholder' => 'Seleccione la fecha de vencimiento',
+                                'readonly' => !$model->isNewRecord
                             ])->label('Fecha de Vencimiento') ?>
                         </div>
                         <div class="col-md-4 field-with-icon" style="display:none;">
