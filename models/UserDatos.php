@@ -69,6 +69,19 @@ use yii\db\ActiveRecord;
  * @property int|null $cedula_representante_contratante
  * @property string|null $grupo_familiar
  * @property int|null $afiliado_corporativo_id
+ * @property string|null $nombre_representante
+ * @property string|null $apellido_representante
+ * @property string|null $tipo_cedula_representante
+ * @property string|null $nacionalidad_representante
+ * @property string|null $estado_civil_representante
+ * @property string|null $lugar_nacimiento_representante
+ * @property string|null $fecha_nacimiento_representante
+ * @property string|null $sexo_representante
+ * @property string|null $profesion_representante
+ * @property string|null $ocupacion_representante
+ * @property string|null $descripcion_actividad_representante
+ * @property string|null $direccion_representante
+ * @property string|null $telefono_representante
  *
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
@@ -412,5 +425,30 @@ class UserDatos extends ActiveRecord
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
+
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        // Si se seleccionó un corporativo o si el valor ha cambiado
+        if (!empty($this->afiliado_corporativo_id)) {
+            // Eliminar relaciones previas para evitar duplicados
+            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
+
+            // Crear y guardar la nueva relación en la tabla intermedia
+            $corporativoUser = new CorporativoUser();
+            $corporativoUser->corporativo_id = $this->afiliado_corporativo_id;
+            $corporativoUser->user_id = $this->user_login_id;
+            $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+            
+            if (!$corporativoUser->save()) {
+                Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+            }
+
+        } else {
+            // Si el campo está vacío, eliminamos la relación existente
+            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
+        }
+    }
 
 }
