@@ -47,8 +47,8 @@ $this->params['breadcrumbs'][] = $this->title;
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
-                        <strong class="text-primary d-block mb-1">Usuario ID:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode($model->user_id ? $model->user_id : 'N/A') ?></p>
+                        <strong class="text-primary d-block mb-1">Afiliado:</strong>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->userDatos ?  $model->userDatos->nombres . ' ' . $model->userDatos->apellidos . $model->userDatos->tipo_cedula  . ' ' . $model->userDatos->cedula ??  : 'N/A') ?></p>
                     </div>
                 </div>
             </div>
