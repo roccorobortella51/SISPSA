@@ -70,10 +70,10 @@ $this->title = 'Contratos';
                         }
                     ],
                     [
-                        'label' => 'cobertura (BS)',
+                        'label' => 'cobertura (USD)',
                         'value' => function($model){
                             if($model->plan){
-                                return $model->plan->cobertura;
+                                return  Yii::$app->formatter->asDecimal($model->plan->cobertura, 2);
                             }
                             return '';
                         }
