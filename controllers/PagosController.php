@@ -139,10 +139,51 @@ class PagosController extends Controller
                 }
 
                 // Si no hay cuotas seleccionadas sumSelected será 0.0 — el JS establece monto_pagado a 0 en ese caso
-                $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
+                //DE ROMMEL
+                /*$montoPagadoPosted = (float)($model->monto_pagado ?: 0);
                 if (abs($sumSelected - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
                     Yii::$app->session->setFlash('error', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar. Revise la selección o el monto.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $this->request->get('user_id'),
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }*/
+
+                // Obtiene el monto que el usuario ingresó para pagar. Si no hay, es 0.
+                $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
+
+                // Calcula la suma de las cuotas que están disponibles y no pagadas.
+                // Asumo que tienes un método para obtener las cuotas disponibles.
+                // Este es el monto real que el usuario debería pagar si va a cubrir todas las cuotas pendientes.
+                $sumPending = 0;
+                foreach ($cuotas as $cuota) {
+                    if ($cuota->estado !== 'Pagado') { // Asume que 'Pagado' es el estado de una cuota pagada
+                        $sumPending += $cuota->monto;
+                    }
+                }
+
+                // Ahora, valida si el monto ingresado es 0 cuando hay cuotas pendientes
+                if ($montoPagadoPosted == 0 && $sumPending > 0) {
+                    $model->addError('monto_pagado', 'No puede procesar un pago de 0 cuando hay cuotas pendientes.');
+                    Yii::$app->session->setFlash('error', 'Debe ingresar un monto válido para pagar las cuotas pendientes.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $this->request->get('user_id'),
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+
+                // Si el usuario ingresa un monto, valida que coincida con la suma total de cuotas pendientes.
+                // Esto es opcional, pero ayuda a evitar pagos parciales si no los manejas.
+                if ($montoPagadoPosted > 0 && abs($sumPending - $montoPagadoPosted) > 0.01) {
+                    $model->addError('monto_pagado', 'El monto ingresado no coincide con la suma total de las cuotas pendientes.');
+                    Yii::$app->session->setFlash('error', 'El monto ingresado no coincide con el total de las cuotas pendientes.');
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $this->request->get('user_id'),
