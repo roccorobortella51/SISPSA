@@ -398,7 +398,10 @@ class PagosController extends Controller
         // Ejecutar y capturar exit code
         $output = [];
         $exitCode = 0;
+        
+        // Aquí está la corrección: llama a la función exec directamente
         exec($command, $output, $exitCode);
+        
         $outputStr = implode("\n", $output);
 
         // Si es petición AJAX, devolver JSON (mantener compatibilidad)
