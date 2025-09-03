@@ -143,7 +143,7 @@ class PagosController extends Controller
                 $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
                 if (abs($sumSelected - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
-                    Yii::$app->session->setFlash('error', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar. Revise la selección o el monto.');
+                    Yii::$app->session->setFlash('warning', 'El AFILIADO No tiene cuotas pendientes seleccionadas o el monto no coincide.');
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $this->request->get('user_id'),
