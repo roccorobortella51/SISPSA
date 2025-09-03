@@ -222,15 +222,49 @@ $this->title = 'Bienvenido a SISPSA';
 
 <!-- Information/Features Section -->
 <section class="info-section" id="features">
-      <div class="hero-content" align="center">
+
+    <div class="hero-content" align="center">
         <img src="<?= Yii::getAlias('@web/img/sispsa.png') ?>" class="logo-sipsa animate" alt="Logo SISPSA">
         <h1 class="main-title animate" style="transition-delay: 0.1s">¡Bienvenido a SISPSA!</h1>
         <p class="subtitle-paragraph animate" style="transition-delay: 0.2s">Tu viaje en el Sistema Integral de Salud comienza ahora. Explora todas las funcionalidades diseñadas para tu bienestar.</p>
     </div>
+
+
+    <div class="emergency-info-section">
+        <div class="container text-center">
+            <h2 class="emergency-title animate">Emergencia 🚑</h2>
+            <h3 class="emergency-subtitle animate">Sin plazos de espera.</h3>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card emergency-card animate">
+                        <div class="card-content">
+                            <h4>Beneficios Únicos</h4>
+                            <ul class="emergency-benefits-list">
+                                <li><strong>Atención Primaria de Emergencia.</strong></li>
+                                <li><strong>1 Hematología</strong></li>
+                                <li><strong>1 Glicemia</strong></li>
+                                <li><strong>1 Rayos X</strong> a una proyección</li>
+                                <li><strong>Aplicación de un medicamento analgésico</strong> según criterio médico</li>
+                                <li><strong>1 ecograma</strong> según criterio médico</li>
+                                <li><strong>Uso de emergencia</strong></li>
+                                <li><strong>Sala de cura menor</strong></li>
+                                <li><strong>Terapia Respiratoria</strong></li>
+                                <li><strong>No cubre preexistencia.</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="emergency-note animate mt-4">
+                <strong>NOTA:</strong> En caso de que el paciente requiera otro beneficio no estipulado o una cantidad no estipulada en el contrato, sale por cuenta del usuario (paciente). Por favor notificar previamente antes de aplicar cualquier otro beneficio. Que no este en el plan. (el usuario ya está en conocimiento de los beneficios al cual accede, sin embargo, notificar de igual forma), ya que estos deben ser pagados a la clínica directamente, por parte del afiliado, <strong>SISPSA no se hará responsable</strong>, en caso de que esto ocurra.
+            </p>
+        </div>
+    </div>
+    ---
+    
     <div class="section-container">
         <h2 class="info-section-title animate">Explora Nuestras Soluciones</h2>
         <div class="row">
-            <!-- Card 1: Misión -->
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card animate" style="transition-delay: 0.1s">
                     <div class="card-icon">
@@ -242,8 +276,6 @@ $this->title = 'Bienvenido a SISPSA';
                     </div>
                 </div>
             </div>
-
-            <!-- Card 2: Visión -->
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card animate" style="transition-delay: 0.2s">
                     <div class="card-icon">
@@ -255,8 +287,6 @@ $this->title = 'Bienvenido a SISPSA';
                     </div>
                 </div>
             </div>
-
-            <!-- Card 3: Valores -->
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card animate" style="transition-delay: 0.3s">
                     <div class="card-icon">
@@ -268,8 +298,6 @@ $this->title = 'Bienvenido a SISPSA';
                     </div>
                 </div>
             </div>
-
-            <!-- Card 4: Propósito -->
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card animate" style="transition-delay: 0.4s">
                     <div class="card-icon">
@@ -284,7 +312,6 @@ $this->title = 'Bienvenido a SISPSA';
         </div>
     </div>
 </section>
-
 
 
 <script>
