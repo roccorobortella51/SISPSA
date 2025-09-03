@@ -259,7 +259,13 @@ class PagosController extends Controller
     {
         $tasa_bcv = $this->actionTasacambio();
         $model = $this->findModel($id);
-        $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+
+        $t = $ultimaTasa = TasaCambio::find()
+            ->orderBy(['fecha' => SORT_DESC])
+            ->one();
+
+        
+        $model->tasa = $t->tasa_cambio;
 
         $oldImagePath = $model->imagen_prueba; // Guardar la URL de la imagen existente
         $tempFilePath = null; // Inicializar a null
