@@ -84,8 +84,8 @@ $this->title = 'Contratos';
                         }
                     ],*/
                     [
-                         'attribute' => 'cobertura del plan USD',
-                        'format' => ['currency', 'USD'],
+                        'attribute' => 'cobertura del plan USD',
+                        'format' => 'html',
                         'contentOptions' => ['style' => 'text-align: right;'],
                         'value' => function($model){
                             if($model->plan){
@@ -98,7 +98,7 @@ $this->title = 'Contratos';
                     
                     [
                         'attribute' => 'precio USD',
-                        'format' => ['currency', 'USD'],
+                        'format' => 'html',
                         'contentOptions' => ['style' => 'text-align: right;'],
                         'value' => function($model){
                             if($model->plan){
