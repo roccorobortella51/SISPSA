@@ -139,10 +139,11 @@ class PagosController extends Controller
                 }
 
                 // Si no hay cuotas seleccionadas sumSelected será 0.0 — el JS establece monto_pagado a 0 en ese caso
+                //DE ROMMEL
                 $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
                 if (abs($sumSelected - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
-                    Yii::$app->session->setFlash('error', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar. Revise la selección o el monto.');
+                    Yii::$app->session->setFlash('warning', 'El AFILIADO No tiene cuotas pendientes seleccionadas o el monto no coincide.');
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $this->request->get('user_id'),
@@ -151,6 +152,48 @@ class PagosController extends Controller
                         'total' => $total,
                     ]);
                 }
+
+                // Obtiene el monto que el usuario ingresó para pagar. Si no hay, es 0.
+                $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
+
+                // Calcula la suma de las cuotas que están disponibles y no pagadas.
+                // Asumo que tienes un método para obtener las cuotas disponibles.
+                // Este es el monto real que el usuario debería pagar si va a cubrir todas las cuotas pendientes.
+                $sumPending = 0;
+                foreach ($cuotas as $cuota) {
+                    if ($cuota->estado !== 'Pagado') { // Asume que 'Pagado' es el estado de una cuota pagada
+                        $sumPending += $cuota->monto;
+                    }
+                }
+
+                // Ahora, valida si el monto ingresado es 0 cuando hay cuotas pendientes
+                if ($montoPagadoPosted == 0 && $sumPending > 0) {
+                    $model->addError('monto_pagado', 'No puede procesar un pago de 0 cuando hay cuotas pendientes.');
+                    Yii::$app->session->setFlash('error', 'Debe ingresar un monto válido para pagar las cuotas pendientes.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $this->request->get('user_id'),
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+
+
+                //MARCOS
+                // Si el usuario ingresa un monto, valida que coincida con la suma total de cuotas pendientes.
+                // Esto es opcional, pero ayuda a evitar pagos parciales si no los manejas.
+                /*if ($montoPagadoPosted > 0 && abs($sumPending - $montoPagadoPosted) > 0.01) {
+                    $model->addError('monto_pagado', 'El monto ingresado no coincide con la suma total de las cuotas pendientes.');
+                    Yii::$app->session->setFlash('error', 'El monto ingresado no coincide con el total de las cuotas pendientes.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $this->request->get('user_id'),
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }*/
 
                 // Obtenemos la instancia del archivo subido desde el formulario
                 $model->imagen_prueba_file = UploadedFile::getInstance($model, 'imagen_prueba_file');
@@ -381,7 +424,7 @@ class PagosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
-   public function actionEjecutar($user_id = null)
+   /*public function actionEjecutar($user_id = null)
     {
         // Permitir llamada con user_id via GET (la vista create pasa este parámetro)
         $user_id = $user_id ?: Yii::$app->request->get('user_id');
@@ -433,6 +476,74 @@ class PagosController extends Controller
             return $this->redirect($referrer);
         }
 
+        return $this->redirect(['index']);
+    }*/
+
+    public function actionEjecutar($user_id = null)
+    {
+        $user_id = $user_id ?: Yii::$app->request->get('user_id');
+        $yiiPath = Yii::getAlias('@app/yii');
+
+        // Verificar permisos de ejecución (ya lo tienes)
+        if (!is_executable($yiiPath)) {
+            @chmod($yiiPath, 0755);
+        }
+
+        $command = "php " . escapeshellarg($yiiPath) . " cuota/generar 2>&1";
+
+        // Reemplazo de exec() por proc_open()
+        $descriptorspec = [
+            0 => ["pipe", "r"],   // stdin
+            1 => ["pipe", "w"],   // stdout
+            2 => ["pipe", "w"]    // stderr
+        ];
+
+        $process = proc_open($command, $descriptorspec, $pipes);
+
+        $outputStr = '';
+        $exitCode = -1;
+
+        if (is_resource($process)) {
+            // Leer la salida y errores
+            $outputStr = stream_get_contents($pipes[1]);
+            $outputStr .= stream_get_contents($pipes[2]);
+            
+            // Cerrar los pipes
+            fclose($pipes[0]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            // Obtener el código de salida
+            $exitCode = proc_close($process);
+        }
+        
+        // Si la llamada es por AJAX, se devuelve una respuesta en JSON
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'success' => $exitCode === 0,
+                'exitCode' => $exitCode,
+                'output' => $outputStr,
+                'command' => $command
+            ];
+        }
+        
+        // Para peticiones normales, mostrar un flash y redirigir
+        if ($exitCode === 0) {
+            Yii::$app->session->setFlash('success', "Cuotas generadas correctamente.");
+        } else {
+            Yii::$app->session->setFlash('error', "Error generando cuotas (exitCode={$exitCode}).\nSalida: " . substr($outputStr, 0, 1000));
+        }
+        
+        if (!empty($user_id)) {
+            return $this->redirect(['create', 'user_id' => $user_id]);
+        }
+        
+        $referrer = Yii::$app->request->referrer;
+        if ($referrer) {
+            return $this->redirect($referrer);
+        }
+        
         return $this->redirect(['index']);
     }
 

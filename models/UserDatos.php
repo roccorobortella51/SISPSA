@@ -46,6 +46,43 @@ use yii\db\ActiveRecord;
  * @property string|null $estatus_solvente
  * @property int|null $user_login_id
  * @property int|null $user_datos_type_id
+ * @property string|null $nacionalidad
+ * @property string|null $estado_civil
+ * @property string|null $lugar_nacimiento
+ * @property string|null $profesion
+ * @property string|null $ocupacion
+ * @property string|null $actividad_economica
+ * @property string|null $ramo_comercial
+ * @property string|null $descripcion_actividad
+ * @property string|null $ingreso_anual
+ * @property string|null $direccion_residencia
+ * @property string|null $direccion_oficina
+ * @property string|null $telefono_residencia
+ * @property string|null $telefono_oficina
+ * @property string|null $telefono_celular
+ * @property string|null $fecha_nacimiento_contratante
+ * @property string|null $fecha_nacimiento_representante_contratante
+ * @property string|null $fecha_nacimiento_beneficiario
+ * @property bool|null $cobertura_maternidad
+ * @property bool|null $tiene_contratante_diferente
+ * @property int|null $cedula_contratante
+ * @property int|null $cedula_representante_contratante
+ * @property string|null $grupo_familiar
+ * @property int|null $afiliado_corporativo_id
+ * @property string|null $nombre_representante
+ * @property string|null $apellido_representante
+ * @property string|null $tipo_cedula_representante
+ * @property string|null $nacionalidad_representante
+ * @property string|null $estado_civil_representante
+ * @property string|null $lugar_nacimiento_representante
+ * @property string|null $fecha_nacimiento_representante
+ * @property string|null $sexo_representante
+ * @property string|null $profesion_representante
+ * @property string|null $ocupacion_representante
+ * @property string|null $descripcion_actividad_representante
+ * @property string|null $direccion_representante
+ * @property string|null $telefono_representante
+ * @property string|null $direccion_cobro
  *
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
@@ -180,6 +217,45 @@ class UserDatos extends ActiveRecord
                 'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'],
             // *** REGLA DE VALIDACIÓN PERSONALIZADA PARA LA EDAD ***
             //[['fechanac'], 'validateAge'],
+
+            // Validaciones para campos de texto (VARCHAR/TEXT)
+            [['nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
+              'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
+              'direccion_residencia', 'direccion_oficina', 'telefono_residencia', 'telefono_oficina',
+              'telefono_celular', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
+              'deducible_maternidad', 'limite_cobertura_maternidad', 'nombre_beneficiario',
+              'cedula_beneficiario', 'parentesco_beneficiario', 'sexo_beneficiario',
+              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'banco', 'tipo_cuenta',
+              'nombre_declaracion_afiliado', 'cedula_declaracion_afiliado', 'nombre_declaracion_contratante',
+              'cedula_declaracion_contratante', 'tipo_afiliacion', 'nombre_contratante',
+              'apellido_contratante', 'tipo_cedula_contratante', 'sexo_contratante',
+              'nacionalidad_contratante', 'estado_civil_contratante', 'lugar_nacimiento_contratante',
+              'profesion_contratante', 'ocupacion_contratante', 'actividad_economica_contratante',
+              'descripcion_actividad_contratante', 'ingreso_anual_contratante', 'direccion_residencia_contratante',
+              'direccion_oficina_contratante', 'direccion_cobro_contratante', 'telefono_residencia_contratante',
+              'telefono_oficina_contratante', 'telefono_celular_contratante', 'email_contratante',
+              'nombre_representante_contratante', 'apellido_representante_contratante',
+              'tipo_cedula_representante_contratante', 'nacionalidad_representante_contratante',
+              'estado_civil_representante_contratante', 'lugar_nacimiento_representante_contratante',
+              'sexo_representante_contratante', 'profesion_representante_contratante',
+              'ocupacion_representante_contratante', 'descripcion_actividad_representante_contratante',
+              'direccion_representante_contratante', 'telefono_representante_contratante',
+              'nombre_titular_contratante', 'cedula_titular_contratante', 'numero_cuenta_contratante',
+              'banco_contratante', 'tipo_cuenta_contratante', 'direccion_cobro'], 'string', 'max' => 255],
+
+            // Validaciones para campos de fecha
+            [['fecha_nacimiento_contratante',
+              'fecha_nacimiento_representante_contratante',
+              'fecha_nacimiento_beneficiario'], 'date', 'format' => 'yyyy-MM-dd'],
+
+            // Validaciones para campos booleanos
+            [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
+
+            // Validaciones para campos enteros
+            [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
+
+            // Validaciones para campos de texto largo (para JSON)
+            [['grupo_familiar'], 'string'],
         ];
 
     }
@@ -187,15 +263,14 @@ class UserDatos extends ActiveRecord
     /**
      * {@inheritdoc}
      */
-    /*public function attributeLabels()
+    public function attributeLabels()
     {
-        // CAMBIO: Añadimos una etiqueta amigable para 'cedulaFormatted'
-        // Esto hará que el campo en el formulario se muestre con "Cédula de Identidad"
-        // en lugar de "Cedula Formatted".
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
+            'direccion_cobro' => 'Dirección de Cobro',
+        
         ]);
-    }*/
+    }
 
     /**
      * Este método se ejecuta AUTOMÁTICAMENTE después de que un registro del modelo
@@ -347,10 +422,35 @@ class UserDatos extends ActiveRecord
     // Estos métodos de relación no necesitan cambios y se mantienen tal cual.
     public function getClinica() { return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']); }
     public function getPlan() { return $this->hasOne(Planes::class, ['id' => 'plan_id']); }
-    public function getAsesor() { return $this->hasOne(AgenteFuerza::class, ['idusuario' => 'id']); }
+    public function getAsesor() { return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']); }
     public function getContrato() { return $this->hasOne(Contratos::class, ['id' => 'contrato_id']); }
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
+
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        // Si se seleccionó un corporativo o si el valor ha cambiado
+        if (!empty($this->afiliado_corporativo_id)) {
+            // Eliminar relaciones previas para evitar duplicados
+            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
+
+            // Crear y guardar la nueva relación en la tabla intermedia
+            $corporativoUser = new CorporativoUser();
+            $corporativoUser->corporativo_id = $this->afiliado_corporativo_id;
+            $corporativoUser->user_id = $this->user_login_id;
+            $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+            
+            if (!$corporativoUser->save()) {
+                Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+            }
+
+        } else {
+            // Si el campo está vacío, eliminamos la relación existente
+            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
+        }
+    }
 
 }

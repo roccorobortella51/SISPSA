@@ -179,6 +179,30 @@ if ($clinica && $clinica->id !== null) {
                                 'class' => 'form-control text-center',
                             ],
                         ],
+                        [
+                            'label' => 'Asesor',
+                            'format' => 'ntext',
+                            'value' => function ($model) {
+                                
+                                if ($model->asesor && $model->asesor->userDatos) {
+                                    $ud = $model->asesor->userDatos;
+                                    return trim(($ud->nombres ?? '') . ' ' . ($ud->apellidos ?? '')) ?: null;
+                                }
+                                return null;
+                            },
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','GERENTE-COMERCIALIZACION']),
+                        ],
+                        [
+                            'label' => 'Clínica',
+                            'format' => 'ntext',
+                            'value' => function ($model) {
+                                // Muestra el nombre de la clínica a la que pertenece el afiliado
+                                return $model->clinica ? $model->clinica->nombre : null;
+                            },
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','GERENTE-COMERCIALIZACION']),
+                        ],
 
                         [
                             'attribute' => 'estatus_solvente',
@@ -190,6 +214,7 @@ if ($clinica && $clinica->id !== null) {
                             },
                             'filter' => [0 => 'No', 1 => 'Sí'],
                         ],
+                        
                         // Columna de Acciones - Mantenida exactamente como se solicitó
                         [
                             'class' => 'yii\grid\ActionColumn',

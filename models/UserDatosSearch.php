@@ -52,6 +52,15 @@ class UserDatosSearch extends UserDatos
         $rol = UserHelper::getMyRol();
         $query = UserDatos::find();
         $query->joinWith(['userDatosType']);
+        // Eager loading para evitar N+1 y asegurar acceso a asesor (persona) y clínica en el Grid
+        // Importante: alias para user_datos del asesor para no colisionar con la tabla principal
+        $query->joinWith([
+            'asesor.userDatos' => function ($q) {
+                // alias de la tabla user_datos relacionada al asesor
+                $q->from(['ud_asesor' => 'user_datos']);
+            },
+            'clinica'
+        ]);
 
         // Si necesitas filtrar por el afiliado corporativo principal (afiliado_corporativo_id)
         // en el GridView de UserDatos, deberías añadir un joinWith aquí.
@@ -154,7 +163,7 @@ class UserDatosSearch extends UserDatos
             ->andFilterWhere(['ilike', 'tipo_cedula', $this->tipo_cedula])
             ->andFilterWhere(['ilike', 'tipo_sangre', $this->tipo_sangre])
             ->andFilterWhere(['ilike', 'estatus_solvente', $this->estatus_solvente])
-            ->andWhere(['is', 'deleted_at', null]);
+            ->andWhere(['is', 'user_datos.deleted_at', null]);
 
         return $dataProvider;
     }

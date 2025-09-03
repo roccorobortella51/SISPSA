@@ -40,6 +40,22 @@ use app\models\RmCiudad;
  * @property string $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
+ * * @property string|null $nombre_representante
+ * @property string|null $cedula_representante
+ * @property string|null $nacionalidad_representante
+ * @property string|null $estado_civil_representante
+ * @property string|null $lugar_nacimiento_representante
+ * @property string|null $fecha_nacimiento_representante
+ * @property string|null $sexo_representante
+ * @property string|null $profesion_representante
+ * @property string|null $ocupacion_representante
+ * @property string|null $descripcion_actividad_representante
+ * @property string|null $direccion_representante
+ * @property string|null $telefono_representante
+ * @property string|null $actividad_economica
+ * @property string|null $productos_servicios
+ * @property string|null $utilidad_ejercicio_anterior
+ * @property string|null $patrimonio
  *
  * @property CorporativoClinica[] $corporativoClinicas
  * @property RmClinica[] $clinicas
@@ -71,38 +87,30 @@ class Corporativo extends \yii\db\ActiveRecord
             // Campos requeridos
             [['nombre', 'estatus', 'rif', 'telefono', 'email', 'lugar_registro', 'fecha_registro_mercantil', 'tomo_registro', 'folio_registro', 'direccion', 
             'domicilio_fiscal', 'contacto_nombre', 'contacto_cedula', 'contacto_telefono', 'estado', 'municipio', 'parroquia', 'ciudad'], 'required'],
-
-
-            [['direccion', 'domicilio_fiscal'], 'string'],
             
-
+            // Regla SAFE para los nuevos campos que no tienen una validación específica de tipo
+            [['nombre_representante', 'cedula_representante', 'nacionalidad_representante', 'estado_civil_representante', 
+            'lugar_nacimiento_representante', 'sexo_representante', 'profesion_representante', 'ocupacion_representante', 
+            'descripcion_actividad_representante', 'direccion_representante', 'telefono_representante', 
+            'actividad_economica', 'productos_servicios', 'utilidad_ejercicio_anterior', 'patrimonio', 'fecha_nacimiento_representante'], 'safe'],
+            
+            // Reglas de validación para campos existentes
+            [['direccion', 'domicilio_fiscal'], 'string'],
             [['fecha_registro_mercantil', 'created_at', 'updated_at', 'deleted_at', 'ciudad'], 'safe'],
-
             [['nombre', 'email', 'lugar_registro', 'contacto_nombre'], 'string', 'max' => 255],
             [['rif'], 'string', 'max' => 12],
-
-            // validacion del codigo del telefono 
-            [['telefono', 'contacto_telefono'], 'string', 'max' => 12], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
-            [['telefono', 'contacto_telefono'], 'match',
+            [['telefono', 'contacto_telefono', 'telefono_representante'], 'string', 'max' => 12], 
+            [['telefono', 'contacto_telefono', 'telefono_representante'], 'match',
                 'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
                 'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
-        
-            // Validaciones de cedula
             [['contacto_cedula'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
-
-            
             [['estado', 'municipio', 'parroquia', 'contacto_cargo', 'ciudad'], 'string', 'max' => 100],
-
             [['codigo_asesor', 'tomo_registro', 'folio_registro', 'estatus'], 'string', 'max' => 50],
             [['nombre'], 'unique'],
-
-            // Validaciones de correo
             [['email'], 'email'],
             [['email'], 'unique','message' => 'Este correo electrónico ya está registrado.'],
-
             [['rif'], 'unique'],
             [['estatus'], 'default', 'value' => 'Activo'],
-            // Las IDs para las relaciones Many-to-Many son INTEGER
             [['clinicas_ids', 'users_ids'], 'each', 'rule' => ['integer']],
         ];
     }
@@ -139,6 +147,24 @@ class Corporativo extends \yii\db\ActiveRecord
             'deleted_at' => 'Eliminado El',
             'clinicas_ids' => 'Clínicas Asociadas',
             'users_ids' => 'Empleados Asociados',
+            
+            // Nuevas etiquetas para los campos del representante y actividad económica
+            'nombre_representante' => 'Nombre del Representante',
+            'cedula_representante' => 'Cédula del Representante',
+            'nacionalidad_representante' => 'Nacionalidad del Representante',
+            'estado_civil_representante' => 'Estado Civil del Representante',
+            'lugar_nacimiento_representante' => 'Lugar de Nacimiento del Representante',
+            'fecha_nacimiento_representante' => 'Fecha de Nacimiento del Representante',
+            'sexo_representante' => 'Sexo del Representante',
+            'profesion_representante' => 'Profesión del Representante',
+            'ocupacion_representante' => 'Ocupación del Representante',
+            'descripcion_actividad_representante' => 'Descripción de Actividad del Representante',
+            'direccion_representante' => 'Dirección del Representante',
+            'telefono_representante' => 'Teléfono del Representante',
+            'actividad_economica' => 'Actividad Económica',
+            'productos_servicios' => 'Productos y Servicios',
+            'utilidad_ejercicio_anterior' => 'Utilidad del Ejercicio Anterior',
+            'patrimonio' => 'Patrimonio',
         ];
     }
 
@@ -229,25 +255,23 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     // Relaciones para obtener el objeto de la ubicación (RmEstado, RmMunicipio, etc.)
-    // Estas buscarán por el NOMBRE de la columna en el modelo de ubicación,
-    // ya que el modelo Corporativo guarda el ID numérico como una cadena de texto.
     public function getRmEstado()
     {
-        return $this->hasOne(RmEstado::class, ['id' => 'estado']); // Busca por ID, no por nombre
+        return $this->hasOne(RmEstado::class, ['id' => 'estado']); 
     }
 
     public function getRmMunicipio()
     {
-        return $this->hasOne(RmMunicipio::class, ['codigo_muni' => 'municipio']); // Busca por codigo_muni, no por nombre
+        return $this->hasOne(RmMunicipio::class, ['codigo_muni' => 'municipio']);
     }
 
     public function getRmParroquia()
     {
-        return $this->hasOne(RmParroquia::class, ['id' => 'parroquia']); // Busca por ID, no por nombre
+        return $this->hasOne(RmParroquia::class, ['id' => 'parroquia']);
     }
 
     public function getRmCiudad()
     {
-        return $this->hasOne(RmCiudad::class, ['id' => 'ciudad']); // Busca por ID, no por nombre
+        return $this->hasOne(RmCiudad::class, ['id' => 'ciudad']);
     }
 }
