@@ -155,7 +155,7 @@ class PagosController extends Controller
                 // Obtenemos la instancia del archivo subido desde el formulario
                 $model->imagen_prueba_file = UploadedFile::getInstance($model, 'imagen_prueba_file');
 
-                //if ($model->imagen_prueba_file) {
+                if ($model->imagen_prueba_file) {
                     // Generamos un nombre de archivo único para evitar colisiones
                     $fileName = uniqid('pago_') . '.' . $model->imagen_prueba_file->extension;
                     // Definimos la ruta temporal en el directorio @runtime (fuera del acceso web directo por seguridad)
@@ -231,9 +231,9 @@ class PagosController extends Controller
                         Yii::error("Error al guardar el archivo temporal: " . $model->imagen_prueba_file->error, __METHOD__);
                         Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
                     }
-                /*} else {
+                } else {
                     Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o hubo un error en la carga.');
-                }*/
+                }
             }
         } else {
             $model->loadDefaultValues();
