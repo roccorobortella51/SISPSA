@@ -271,6 +271,136 @@ if (!$model->isNewRecord) {
         </div>
     </div>
 
+    <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-chart-line"></i> Datos Financieros y de Actividad
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'actividad_economica')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'productos_servicios')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'utilidad_ejercicio_anterior')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'patrimonio')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-user-tie"></i> Datos del Representante Legal
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'nombre_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'cedula_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ejemplo: 12345678'
+                            ])->label('Cédula de Identidad') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'fecha_nacimiento_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'type' => 'date',
+                                'placeholder' => 'Seleccione la fecha de nacimiento'
+                            ])->label('Fecha de Nacimiento') ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'sexo_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'Masculino' => 'Masculino',
+                                    'Femenino' => 'Femenino',
+                                    'Otro' => 'Otro',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el sexo...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Sexo') ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'nacionalidad_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'estado_civil_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'Soltero' => 'Soltero',
+                                    'Casado' => 'Casado',
+                                    'Divorciado' => 'Divorciado',
+                                    'Viudo' => 'Viudo',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione el estado civil...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Estado Civil') ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'lugar_nacimiento_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $form->field($model, 'profesion_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'ocupacion_representante')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'descripcion_actividad_representante')->widget(Select2::class, [
+                                'data' => [
+                                    'Independiente' => 'Independiente',
+                                    'Dependiente' => 'Dependiente',
+                                    'Societaria' => 'Societaria',
+                                ],
+                                'options' => ['placeholder' => 'Seleccione la descripción de la actividad...'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Descripción de la Actividad') ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'direccion_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ingrese la dirección'
+                            ])->label('Dirección') ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'telefono_representante')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Teléfono'
+                            ])->label('Teléfono') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
     <h3 class="box-title mt-4">Asociación con Clínicas y Empleados</h3>
     <hr>
 

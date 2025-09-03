@@ -132,6 +132,59 @@ function formatUpdatedAt($value) {
         </div>
     </div>
 
+    <!-- Tarjeta de Datos Financieros y de Actividad -->
+    <div class="ms-panel border-green-500">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-chart-line text-green-600"></i> Datos Financieros y de Actividad
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p><strong>Actividad Económica:</strong> <?= Html::encode($model->actividad_economica) ?></p>
+                    <p><strong>Productos y Servicios:</strong> <?= Html::encode($model->productos_servicios) ?></p>
+                </div>
+                <div>
+                    <p><strong>Utilidad Ejercicio Anterior:</strong> <?= Html::encode($model->utilidad_ejercicio_anterior) ?></p>
+                    <p><strong>Patrimonio:</strong> <?= Html::encode($model->patrimonio) ?></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Datos del Representante Legal -->
+    <div class="ms-panel border-blue-500">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-user-tie text-blue-600"></i> Datos del Representante Legal
+            </h3>
+            <div class="info-grid">
+                <div>
+                    <p><strong>Nombre:</strong> <?= Html::encode($model->nombre_representante) ?></p>
+                    <p><strong>Cédula:</strong> <?= Html::encode($model->cedula_representante) ?></p>
+                    <p><strong>Nacionalidad:</strong> <?= Html::encode($model->nacionalidad_representante) ?></p>
+                    <p><strong>Estado Civil:</strong> <?= Html::encode($model->estado_civil_representante) ?></p>
+                </div>
+                <div>
+                    <p><strong>Lugar de Nacimiento:</strong> <?= Html::encode($model->lugar_nacimiento_representante) ?></p>
+                    <p><strong>Fecha de Nacimiento:</strong> <?= Html::encode(Yii::$app->formatter->asDate($model->fecha_nacimiento_representante, 'long')) ?></p>
+                    <p><strong>Sexo:</strong> <?= Html::encode($model->sexo_representante) ?></p>
+                </div>
+            </div>
+            <div class="info-grid border-top">
+                <div>
+                    <p><strong>Profesión:</strong> <?= Html::encode($model->profesion_representante) ?></p>
+                    <p><strong>Ocupación:</strong> <?= Html::encode($model->ocupacion_representante) ?></p>
+                </div>
+                <div>
+                    <p><strong>Descripción de Actividad:</strong> <?= Html::encode($model->descripcion_actividad_representante) ?></p>
+                </div>
+            </div>
+            <p class="border-top"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion_representante)) ?></p>
+            <p><strong>Teléfono:</strong> <?= Html::encode($model->telefono_representante) ?></p>
+        </div>
+    </div>
+
+
     <!-- Secciones de Clínicas y Empleados Asociados -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Tarjeta de Clínicas Asociadas -->
