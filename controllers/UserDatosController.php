@@ -1142,7 +1142,7 @@ class UserDatosController extends Controller
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $dataProvider->query->andFilterWhere(['=', 'asesor_id', $asesor_id]);
+        $dataProvider->query->andFilterWhere(['=', 'user_datos.asesor_id', $asesor_id]);
     
         return $this->render('index', [
             'searchModel' => $searchModel,
