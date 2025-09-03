@@ -2,7 +2,7 @@
 
 return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'pgsql:host=localhost;dbname=digitalw_sispsa2',
+    'dsn' => 'pgsql:host=localhost;dbname=digitalw_sispsamarcos',
     'username' => 'digitalw_sispsaUser',
     //'username' => 'digitalw',
     'password' => 'Exp9800654*',
