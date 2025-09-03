@@ -140,7 +140,7 @@ class PagosController extends Controller
 
                 // Si no hay cuotas seleccionadas sumSelected será 0.0 — el JS establece monto_pagado a 0 en ese caso
                 //DE ROMMEL
-                /*$montoPagadoPosted = (float)($model->monto_pagado ?: 0);
+                $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
                 if (abs($sumSelected - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
                     Yii::$app->session->setFlash('error', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar. Revise la selección o el monto.');
@@ -151,7 +151,7 @@ class PagosController extends Controller
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
                     ]);
-                }*/
+                }
 
                 // Obtiene el monto que el usuario ingresó para pagar. Si no hay, es 0.
                 $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
