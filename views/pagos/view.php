@@ -7,7 +7,7 @@ use yii\helpers\Url;
 /* @var $model app\models\Pagos */
 
 $this->title = 'DETALLE DEL PAGO: ' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'PAGOS', 'url' => ['index', 'user_id' => $model->user_id]];
+$this->params['breadcrumbs'][] = ['label' => 'CONTRATOS', 'url' => ['/contratos/index', 'user_id' => $model->user_id]];
 $this->params['breadcrumbs'][] = $this->title;
 
 ?>
