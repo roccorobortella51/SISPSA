@@ -21,7 +21,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     $ejecutarParams = ['pagos/ejecutar'];
                     $ejecutarParams['user_id'] = $model->user_id;
                 ?>
-                <?= Html::a('Calcular Cuotas', $ejecutarParams, [
+                <?php Html::a('Calcular Cuotas', $ejecutarParams, [
                     'class' => 'btn btn-warning ms-2',
                     'style' => 'float: right;',
                 ]) ?>
