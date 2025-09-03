@@ -381,7 +381,7 @@ class PagosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
-   public function actionEjecutar($user_id = null)
+   /*public function actionEjecutar($user_id = null)
     {
         // Permitir llamada con user_id via GET (la vista create pasa este parámetro)
         $user_id = $user_id ?: Yii::$app->request->get('user_id');
@@ -433,6 +433,74 @@ class PagosController extends Controller
             return $this->redirect($referrer);
         }
 
+        return $this->redirect(['index']);
+    }*/
+
+    public function actionEjecutar($user_id = null)
+    {
+        $user_id = $user_id ?: Yii::$app->request->get('user_id');
+        $yiiPath = Yii::getAlias('@app/yii');
+
+        // Verificar permisos de ejecución (ya lo tienes)
+        if (!is_executable($yiiPath)) {
+            @chmod($yiiPath, 0755);
+        }
+
+        $command = "php " . escapeshellarg($yiiPath) . " cuota/generar 2>&1";
+
+        // Reemplazo de exec() por proc_open()
+        $descriptorspec = [
+            0 => ["pipe", "r"],   // stdin
+            1 => ["pipe", "w"],   // stdout
+            2 => ["pipe", "w"]    // stderr
+        ];
+
+        $process = proc_open($command, $descriptorspec, $pipes);
+
+        $outputStr = '';
+        $exitCode = -1;
+
+        if (is_resource($process)) {
+            // Leer la salida y errores
+            $outputStr = stream_get_contents($pipes[1]);
+            $outputStr .= stream_get_contents($pipes[2]);
+            
+            // Cerrar los pipes
+            fclose($pipes[0]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            // Obtener el código de salida
+            $exitCode = proc_close($process);
+        }
+        
+        // Si la llamada es por AJAX, se devuelve una respuesta en JSON
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'success' => $exitCode === 0,
+                'exitCode' => $exitCode,
+                'output' => $outputStr,
+                'command' => $command
+            ];
+        }
+        
+        // Para peticiones normales, mostrar un flash y redirigir
+        if ($exitCode === 0) {
+            Yii::$app->session->setFlash('success', "Cuotas generadas correctamente.");
+        } else {
+            Yii::$app->session->setFlash('error', "Error generando cuotas (exitCode={$exitCode}).\nSalida: " . substr($outputStr, 0, 1000));
+        }
+        
+        if (!empty($user_id)) {
+            return $this->redirect(['create', 'user_id' => $user_id]);
+        }
+        
+        $referrer = Yii::$app->request->referrer;
+        if ($referrer) {
+            return $this->redirect($referrer);
+        }
+        
         return $this->redirect(['index']);
     }
 
