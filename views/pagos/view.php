@@ -57,13 +57,13 @@ $this->params['breadcrumbs'][] = $this->title;
             <div class="row g-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
-                        <strong class="text-primary d-block mb-1">Monto Pagado:</strong>
+                        <strong class="text-primary d-block mb-1">Monto USD:</strong>
                         <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDecimal($model->monto_pagado, 2)) ?></p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
-                        <strong class="text-primary d-block mb-1">Monto USD:</strong>
+                        <strong class="text-primary d-block mb-1">Monto Pagado:</strong>
                         <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDecimal($model->monto_usd, 2)) ?></p>
                     </div>
                 </div>
@@ -82,35 +82,35 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
 
             <h4 class="mt-5 mb-3 text-info border-bottom pb-2"><i class="fas fa-calendar-alt me-2"></i> Fechas Relevantes</h4>
-            <div class="row g-3">
+           <div class="row g-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Fecha de Pago:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDate($model->fecha_pago, 'php:d-m-Y')) ?></p>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->fecha_pago ? Yii::$app->formatter->asDate($model->fecha_pago, 'php:d-m-Y') : 'Por actualizar') ?></p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Fecha de Registro:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDate($model->fecha_registro, 'php:d-m-Y')) ?></p>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->fecha_registro ? Yii::$app->formatter->asDate($model->fecha_registro, 'php:d-m-Y') : 'Por actualizar') ?></p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Fecha de Conciliación:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDate($model->fecha_conciliacion, 'php:d-m-Y')) ?></p>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->fecha_conciliacion ? Yii::$app->formatter->asDate($model->fecha_conciliacion, 'php:d-m-Y') : 'Por actualizar') ?></p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Creado el:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDate($model->created_at, 'php:d-m-Y H:i')) ?></p>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->created_at ? Yii::$app->formatter->asDate($model->created_at, 'php:d-m-Y H:i') : 'Por actualizar') ?></p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Actualizado el:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode(Yii::$app->formatter->asDate($model->updated_at, 'php:d-m-Y H:i')) ?></p>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->updated_at ? Yii::$app->formatter->asDate($model->updated_at, 'php:d-m-Y H:i') : 'Por actualizar') ?></p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
