@@ -18,7 +18,7 @@ $this->title = 'Contratos';
 
 <div class="view-main-container">
     <div class="ms-panel-header">
-        <h1 class="main-page-title display-4" style="text-align: center;"><?= Html::encode($this->title)." ".$afiliado_datos ?> </h1>
+        <h1 class="main-page-title display-4" style="text-align: center;"><?= Html::encode($this->title).": ".$afiliado_datos ?> </h1>
         <div class="button-group-spacing">
             <?php
                 if($searchModel->estatus == 'Anulado'){
