@@ -19,7 +19,7 @@ $this->title = 'Bienvenido a SISPSA';
     }
     
     body {
-        font-family: 'Open Sans', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         color: #333;
         margin: 0;
         padding: 0;
@@ -73,7 +73,7 @@ $this->title = 'Bienvenido a SISPSA';
         line-height: 1.6;
     }
     
-    .btn-cta {
+    .btn-cta {  
         background-color: var(--accent-color);
         color: white;
         border: none;
@@ -99,31 +99,6 @@ $this->title = 'Bienvenido a SISPSA';
         background-color: white;
     }
     
-    .section-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 15px;
-    }
-    
-    .info-section-title {
-        text-align: center;
-        margin-bottom: 3rem;
-        color: var(--primary-color);
-        position: relative;
-        padding-bottom: 15px;
-    }
-    
-    .info-section-title:after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 80px;
-        height: 3px;
-        background-color: var(--secondary-color);
-    }
-    
     .card {
         background: white;
         border-radius: 10px;
@@ -135,6 +110,40 @@ $this->title = 'Bienvenido a SISPSA';
         height: 100%;
     }
     
+    /* Colorful card backgrounds for the icon sections */
+    .col-md-6.col-lg-3:nth-child(1) .card-icon {
+        background: #13EAB1;
+    }
+    
+    .col-md-6.col-lg-3:nth-child(2) .card-icon {
+        background: #00E3E2;
+    }
+    
+    .col-md-6.col-lg-3:nth-child(3) .card-icon {
+        background: #041E3F;
+    }
+    
+    .col-md-6.col-lg-3:nth-child(4) .card-icon {
+        background: #F3F4F6;
+    }
+    
+    /* Icon colors for each card */
+    .col-md-6.col-lg-3:nth-child(1) .card-icon i {
+        color: #F3F4F6; /* Mission icon: Light Gray */
+    }
+    
+    .col-md-6.col-lg-3:nth-child(2) .card-icon i {
+        color: #041E3F; /* Vision icon: Dark Navy */
+    }
+    
+    .col-md-6.col-lg-3:nth-child(3) .card-icon i {
+        color: #00E3E2; /* Values icon: Cyan */
+    }
+    
+    .col-md-6.col-lg-3:nth-child(4) .card-icon i {
+        color: #13EAB1; /* Goals icon: Teal Green */
+    }
+    
     .card:hover {
         transform: translateY(-10px);
         box-shadow: 0 15px 30px rgba(0,0,0,0.15);
@@ -142,7 +151,6 @@ $this->title = 'Bienvenido a SISPSA';
     
     .card-icon {
         background-color: var(--secondary-color);
-        color: white;
         font-size: 2.5rem;
         padding: 1.5rem 0;
         text-align: center;
@@ -156,6 +164,10 @@ $this->title = 'Bienvenido a SISPSA';
     .card-content h3 {
         color: var(--primary-color);
         margin-bottom: 1.2rem;
+    }
+    
+    .card:nth-child(4) .card-content h3 {
+        color: #43e97b;
     }
     
     /* Animations */
@@ -214,6 +226,31 @@ $this->title = 'Bienvenido a SISPSA';
         .card-content {
             padding: 1.2rem;
         }
+    }
+
+    .section-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+    
+    .info-section-title {
+        text-align: center;
+        margin-bottom: 3rem;
+        color: var(--primary-color);
+        position: relative;
+        padding-bottom: 15px;
+    }
+    
+    .info-section-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 3px;
+        background-color: var(--secondary-color);
     }
 </style>
 

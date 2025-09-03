@@ -9,7 +9,105 @@ if($rol == "Administrador-clinica"){
     $clinica = UserHelper::getMyClinicaName();
 }
 ?>
-<aside class="main-sidebar sidebar-dark-primary elevation-4" style="border-bottom: none; background-color: #009efb !important; color: white !important;">
+
+<style>
+/* Custom submenu styling */
+.nav-sidebar .nav-item .nav-link {
+    color: white !important;
+}
+
+.nav-sidebar .nav-item .nav-link:hover {
+    background-color: #00E3E2 !important;
+    color: #041E3F !important;
+}
+
+.nav-sidebar .nav-item .nav-link.active {
+    background-color: #00E3E2 !important;
+    color: #041E3F !important;
+}
+
+/* All submenu items - normal state */
+.nav-sidebar .nav-treeview .nav-link,
+.nav-sidebar .nav-treeview .nav-item .nav-link,
+.nav-sidebar .has-treeview .nav-treeview .nav-link {
+    background-color: #00E3E2 !important;
+    color: #041E3F !important;
+}
+
+/* Submenu hover state - with maximum specificity */
+.nav-sidebar .nav-treeview .nav-link:hover,
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover,
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover,
+.nav-sidebar .nav-treeview .nav-link:hover:not(.active),
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover:not(.active),
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover:not(.active) {
+    background-color: #13EAB1 !important;
+    color: white !important;
+}
+
+/* Force white text color on hover for all submenu items - maximum specificity */
+.nav-sidebar .nav-treeview .nav-link:hover *,
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover *,
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover *,
+.nav-sidebar .nav-treeview .nav-link:hover span,
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover span,
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover span,
+.nav-sidebar .nav-treeview .nav-link:hover .menu-text,
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover .menu-text,
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover .menu-text {
+    color: white !important;
+}
+
+.nav-sidebar .nav-treeview .nav-link.active,
+.nav-sidebar .nav-treeview .nav-item .nav-link.active,
+.nav-sidebar .has-treeview .nav-treeview .nav-link.active,
+.nav-sidebar .nav-treeview .nav-link.active:hover,
+.nav-sidebar .nav-treeview .nav-item .nav-link.active:hover,
+.nav-sidebar .has-treeview .nav-treeview .nav-link.active:hover {
+    background-color: #13EAB1 !important;
+    color: #041E3F !important;
+}
+
+/* Force dark navy text color on active state for all submenu items */
+.nav-sidebar .nav-treeview .nav-link.active *,
+.nav-sidebar .nav-treeview .nav-item .nav-link.active *,
+.nav-sidebar .has-treeview .nav-treeview .nav-link.active *,
+.nav-sidebar .nav-treeview .nav-link.active span,
+.nav-sidebar .nav-treeview .nav-item .nav-link.active span,
+.nav-sidebar .has-treeview .nav-treeview .nav-link.active span {
+    color: #041E3F !important;
+}
+
+/* Force override for active state only */
+.nav-sidebar .nav-treeview .nav-link.active,
+.nav-sidebar .nav-treeview .nav-item .nav-link.active,
+.nav-sidebar .has-treeview .nav-treeview .nav-link.active {
+    background-color: #13EAB1 !important;
+    color: #041E3F !important;
+}
+
+/* Additional specificity for submenu items */
+.nav-sidebar .nav-treeview .nav-item .nav-link,
+.nav-sidebar .has-treeview .nav-treeview .nav-item .nav-link {
+    background-color: #00E3E2 !important;
+    color: #041E3F !important;
+}
+
+/* Ultimate hover state override - ensure white text */
+.nav-sidebar .nav-treeview .nav-link:hover,
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover,
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover {
+    background-color: #13EAB1 !important;
+    color: white !important;
+}
+
+.nav-sidebar .nav-treeview .nav-link:hover .menu-text,
+.nav-sidebar .nav-treeview .nav-item .nav-link:hover .menu-text,
+.nav-sidebar .has-treeview .nav-treeview .nav-link:hover .menu-text {
+    color: white !important;
+}
+</style>
+<aside class="main-sidebar sidebar-dark-primary elevation-4" style="border-bottom: none; background-color: #041E3F !important; color: white !important;">
     <!-- Brand Logo -->
     <a href="<?= Yii::$app->homeUrl ?>" class="brand-link d-flex justify-content-center" style="padding-top: 0; padding-bottom: 0; border-bottom: none;">
         <img src="<?= Yii::getAlias('@web/img/sispsa-12-62.png')?>" alt="Logo"  style="opacity: 1; margin: 15px auto; max-width: 250px; width: auto; height: auto; object-fit: contain;">
@@ -20,11 +118,11 @@ if($rol == "Administrador-clinica"){
         <!-- Sidebar user panel -->
         <div class="user-panel d-flex flex-column align-items-center">
             <div class="image mb-2">
-                <img src="<?= Yii::getAlias('@web/img/sispsa.png')?>" class="img-circle elevation-2" alt="User Image">
+                <img src="<?= Yii::getAlias('@web/img/Fondo SISPSA.png')?>" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info text-center">
-                <p><b><?= $clinica ?></b></p>
-                <p><b><?= $rol ?></b></p><br>
+                <p><b style="color: white !important;"><?= $clinica ?></b></p>
+                <p><b style="color: white !important;"><?= $rol ?></b></p><br>
                 <b><a href="#" class="d-block" style="color: white !important;"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a></b>
             </div>
         </div>

@@ -4,11 +4,11 @@ use yii\helpers\Html;
 
 ?>
 <!-- Navbar -->
-<nav class="main-header navbar navbar-expand navbar-white navbar-light" style="background-color: #009efb; width:auto">
+<nav class="main-header navbar navbar-expand navbar-white navbar-light" style="background-color: #041E3F; width:auto; color: white !important;">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
         <li class="nav-item">
-            <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars" style="color: white !important;"></i></a>
         </li>
        
     </ul>
