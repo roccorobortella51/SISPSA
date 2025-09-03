@@ -13,10 +13,12 @@ use kartik\grid\ExpandRowColumnAsset;
 $this->title = 'Contratos';
 
 ?>
+    <?php $afiliado =  $model->nombres . ' ' . $model->apellidos ." ". $model->tipo_cedula  . ' ' . $model->cedula; ?>
+
 
 <div class="view-main-container">
     <div class="ms-panel-header">
-        <h1 class="main-page-title display-4" style="text-align: center;"><?= Html::encode($this->title) ?></h1>
+        <h1 class="main-page-title display-4" style="text-align: center;"><?= Html::encode($this->title)." ".$afiliado ?> </h1>
         <div class="button-group-spacing">
             <?php
                 if($searchModel->estatus == 'Anulado'){
@@ -26,6 +28,9 @@ $this->title = 'Contratos';
             <?= Html::a('<i class="fas fa-undo-alt mr-2"></i> Volver', Url::to(['user-datos/update','id' => $afiliado->id]), ['class' => 'btn btn-secondary']); ?>
         </div>
     </div>
+
+
+
 
     <div class="ms-panel">
         <div class="ms-panel-body">
@@ -69,7 +74,7 @@ $this->title = 'Contratos';
                             return '';
                         }
                     ],
-                    [
+                    /*[
                         'label' => 'cobertura (USD)',
                         'value' => function($model){
                             if($model->plan){
@@ -77,6 +82,31 @@ $this->title = 'Contratos';
                             }
                             return '';
                         }
+                    ],*/
+                    [
+                         'attribute' => 'cobertura del plan USD',
+                        'format' => ['currency', 'USD'],
+                        'contentOptions' => ['style' => 'text-align: right;'],
+                        'value' => function($model){
+                            if($model->plan){
+                                return  Yii::$app->formatter->asDecimal($model->plan->cobertura, 2);
+                            }
+                            return '';
+                        },
+                        'filter' => false
+                    ],
+                    
+                    [
+                        'attribute' => 'precio USD',
+                        'format' => ['currency', 'USD'],
+                        'contentOptions' => ['style' => 'text-align: right;'],
+                        'value' => function($model){
+                            if($model->plan){
+                                return  Yii::$app->formatter->asDecimal($model->plan->precio, 2);
+                            }
+                            return '';
+                        },
+                        'filter' => false
                     ],
                     [
                         'class' => 'yii\grid\ActionColumn',
