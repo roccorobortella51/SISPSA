@@ -179,9 +179,11 @@ class PagosController extends Controller
                     ]);
                 }
 
+
+                //MARCOS
                 // Si el usuario ingresa un monto, valida que coincida con la suma total de cuotas pendientes.
                 // Esto es opcional, pero ayuda a evitar pagos parciales si no los manejas.
-                if ($montoPagadoPosted > 0 && abs($sumPending - $montoPagadoPosted) > 0.01) {
+                /*if ($montoPagadoPosted > 0 && abs($sumPending - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'El monto ingresado no coincide con la suma total de las cuotas pendientes.');
                     Yii::$app->session->setFlash('error', 'El monto ingresado no coincide con el total de las cuotas pendientes.');
                     return $this->render('create', [
@@ -191,7 +193,7 @@ class PagosController extends Controller
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
                     ]);
-                }
+                }*/
 
                 // Obtenemos la instancia del archivo subido desde el formulario
                 $model->imagen_prueba_file = UploadedFile::getInstance($model, 'imagen_prueba_file');
