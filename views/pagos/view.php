@@ -21,7 +21,7 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
         <div class="card-body p-4">
             <div class="d-flex justify-content-between mb-4">
-                <?= Html::a('<i class="fas fa-undo me-2"></i> Volver', ['index', 'user_id' => $model->user_id], ['class' => 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm']) ?>
+                <?= Html::a('<i class="fas fa-undo me-2"></i> Volver', ['/contratos/index', 'user_id' => $model->user_id], ['class' => 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm']) ?>
                 <?= Html::a('<i class="fas fa-trash me-2"></i> Borrar', ['delete', 'id' => $model->id], [
                     'class' => 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm',
                     'data' => [
