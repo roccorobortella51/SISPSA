@@ -923,9 +923,10 @@ class UserDatosController extends Controller
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
                         $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $modelCuota->monto_usd = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $modelCuota->monto = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
                         $modelCuota->Estatus = 'pendiente';
-                        $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+                        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
+                        $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
                         $modelCuota->save();
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
@@ -1061,9 +1062,10 @@ class UserDatosController extends Controller
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
                         $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $modelCuota->monto_usd = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $modelCuota->monto = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
                         $modelCuota->Estatus = 'pendiente';
-                        $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+                        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
+                        $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
                         $modelCuota->save();
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
