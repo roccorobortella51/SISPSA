@@ -23,7 +23,8 @@ use app\models\AuthAssignment;
 use app\models\UserDatos;
 use app\models\Corporativo;
 use app\models\AgenteFuerza;
-use yii\httpclient\Client; // Necesario para hacer peticiones HTTP a la API de Supabase
+use yii\httpclient\Client; 
+use yii\helpers\FileHelper;
 
 
 class UserHelper
@@ -449,7 +450,7 @@ class UserHelper
      * @param string $fileKeyInBucket La clave o ruta del archivo deseada dentro del bucket de Supabase (ej. 'mi_imagen.jpg' o 'docs/reporte.pdf').
      * @return string|null La URL pública del archivo si la subida fue exitosa, o null si hubo un error.
      */
-    public static function uploadFileToSupabaseApi(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
+    /*public static function uploadFileToSupabaseApi(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
     {
                 
         $supabaseConfig = Yii::$app->params['supabase'];
@@ -499,6 +500,77 @@ class UserHelper
             Yii::error("Excepción general al subir a Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
             Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
             return null;
+        }
+    }*/
+
+    public static function uploadFileToSupabaseApi(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
+    {
+        // 1. Intentar subir a Supabase
+        $supabaseUrl = null;
+        try {
+            $supabaseConfig = Yii::$app->params['supabase'];
+            $supabaseUrl = $supabaseConfig['url'];
+            $supabaseAnonKey = $supabaseConfig['anon_key'];
+            $bucketName = $supabaseConfig['bucket_name'];
+
+            $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}/{$fileKeyInBucket}";
+            $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/{$fileKeyInBucket}";
+
+            Yii::info("Supabase Upload URL: " . $uploadUrl, __METHOD__);
+
+            $client = new Client();
+            $response = $client->createRequest()
+                ->setMethod('POST')
+                ->setUrl($uploadUrl)
+                ->addHeaders([
+                    'Authorization' => "Bearer {$supabaseAnonKey}",
+                    'Content-Type' => $mimeType,
+                    'x-upsert' => 'true',
+                ])
+                ->setContent(file_get_contents($localFilePath))
+                ->send();
+
+            if ($response->isOk) {
+                Yii::info("Archivo subido exitosamente a Supabase Storage via API.", __METHOD__);
+                return $publicUrl;
+            } else {
+                $errorContent = $response->getContent();
+                Yii::error("Error al subir archivo a Supabase Storage. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
+                Yii::$app->session->setFlash('error', "Error al subir archivo a Supabase Storage: " . ($errorContent ?: "Desconocido"));
+                // El error de Supabase no es crítico, continuar al siguiente paso (guardado local)
+            }
+
+        } catch (\yii\httpclient\Exception $e) {
+            Yii::error("Excepción del cliente HTTP al subir a Supabase: " . $e->getMessage(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Error de conexión al subir archivo: " . $e->getMessage());
+            // El error de conexión no es crítico, continuar al siguiente paso (guardado local)
+        } catch (\Throwable $e) {
+            Yii::error("Excepción general al subir a Supabase: " . $e->getMessage(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
+            // El error general no es crítico, continuar al siguiente paso (guardado local)
+        }
+
+        // 2. Si la subida a Supabase falló, guardar el archivo localmente
+        Yii::info("La subida a Supabase falló. Guardando el archivo localmente.", __METHOD__);
+        $localUploadPath = Yii::getAlias('@webroot/img/payment');
+
+        // Asegurarse de que el directorio existe, si no, crearlo.
+        if (!is_dir($localUploadPath)) {
+            FileHelper::createDirectory($localUploadPath, 0775, true);
+        }
+
+        $localFileName = pathinfo($localFilePath, PATHINFO_BASENAME);
+        $destinationPath = $localUploadPath . '/' . $localFileName;
+
+        if (copy($localFilePath, $destinationPath)) {
+            Yii::info("Archivo guardado localmente en: " . $destinationPath, __METHOD__);
+            // Retornar la ruta local para el acceso web
+            $webPath = Yii::getAlias('@web/img/payment') . '/' . $localFileName;
+            return $webPath;
+        } else {
+            Yii::error("Error al guardar el archivo localmente en: " . $destinationPath, __METHOD__);
+            Yii::$app->session->setFlash('error', "Error al guardar el archivo localmente.");
+            return null; // Si todo falla, retornar null
         }
     }
 

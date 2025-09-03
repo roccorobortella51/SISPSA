@@ -82,7 +82,7 @@ use yii\helpers\Html;
             <td colspan="2" style="font-size: 10px;">Teléfono Oficina: <?= $data['proposed_affiliate_phone_office'] ?? '' ?></td>
         </tr>
         <tr>
-            <td colspan="8" style="font-size: 10px;">Dirección de Cobro: <?= $data['proposed_affiliate_office_address'] ?? '' ?></td>
+            <td colspan="8" style="font-size: 10px;">Dirección de Cobro: <?= $data['proposed_affiliate_billing_address'] ?? '' ?></td>
         </tr>
         <tr>
             <td colspan="3" style="font-size: 10px;">Teléfono Celular: <?= $data['proposed_affiliate_cell_phone'] ?? '' ?></td>
@@ -143,12 +143,13 @@ use yii\helpers\Html;
             <td colspan="2" style="font-size: 10px;">Teléfono Oficina: <?= $data['contracting_party_phone_office'] ?? '' ?></td>
         </tr>
         <tr>
-            <td colspan="8" style="font-size: 10px;">Dirección de Cobro: <?= $data['contracting_party_office_address'] ?? '' ?></td>
+            <td colspan="8" style="font-size: 10px;">Dirección de Cobro: <?= $data['contracting_party_billing_address'] ?? '' ?></td>
         </tr>
         <tr>
             <td colspan="3" style="font-size: 10px;">Teléfono Celular: <?= $data['contracting_party_cell_phone'] ?? '' ?></td>
             <td colspan="5" style="font-size: 10px;">Correo Electrónico: <?= $data['contracting_party_email'] ?? '' ?></td>
         </tr>
+        <?php if ($data['has_corporate_relation'] ?? false): ?>
         <tr>
             <td colspan="8" style="font-size: 10px;"><b>En caso de ser Persona Jurídica, Datos Corporativos:</b></td>
         </tr>
@@ -161,7 +162,7 @@ use yii\helpers\Html;
         </tr>
         <tr>
             <td colspan="8" style="font-size: 10px;">
-                Actividad Económica:
+                Actividad Económica: <?= $data['corporate_economic_activity'] ?? '' ?>
             </td>
         </tr>
         <tr>
@@ -170,7 +171,7 @@ use yii\helpers\Html;
         </tr>
         <tr>
             <td colspan="8" style="font-size: 10px;">
-                Productos y Servicios que ofrece:
+                Productos y Servicios que ofrece: <?= $data['corporate_products_services'] ?? '' ?>
             </td>
         </tr>
         <tr>
@@ -195,17 +196,15 @@ use yii\helpers\Html;
         </tr>
         <tr>
             <td colspan="4" style="font-size: 10px;">
-            Descripción de la Actividad:<br>
-            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Independiente' ? '☑' : '☐' ?></span> Independiente</span>
-            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Dependiente' ? '☑' : '☐' ?></span> Dependiente</span>
-            <span class="checkbox-group"><span class="checkbox"><?= ($data['legal_representative_activity_description'] ?? '') == 'Societaria' ? '☑' : '☐' ?></span> Societaria</span>
+            Descripción de la Actividad: <?= $data['legal_representative_activity_description'] ?? '' ?>
             </td>
             <td colspan="2" style="font-size: 10px;">Dirección: <?= $data['legal_representative_address'] ?? '' ?></td>
             <td colspan="2" style="font-size: 10px;">Teléfono: <?= $data['legal_representative_phone'] ?? '' ?></td>
         </tr>
-        
+        <?php endif; ?>
+
     </table>
-    
+
   <table class="family-table">
     <tr>
         <th colspan="2">PLAN SOLICITADO</th>
@@ -330,34 +329,6 @@ use yii\helpers\Html;
         </td>
     </tr>
 </tbody>
-</table>
-
-
-
-<div class="section-title">DATOS BANCARIOS DEL CONTRATANTE</div>
-<table class="family-table">
-    <tbody>
-        <tr>
-            <td width="25%">Nombre del Titular:</td>
-            <td width="25%">C.I.:</td>
-            <td width="25%">Nro. Cuenta/Tarjeta:</td>
-            <td width="25%">Banco:</td>
-        </tr>
-        <tr>
-            <td class="underline"><?= $data['bank_account_holder_name'] ?? '' ?></td>
-            <td class="underline"><?= $data['bank_account_ci'] ?? '' ?></td>
-            <td class="underline"><?= $data['bank_account_number'] ?? '' ?></td>
-            <td class="underline"><?= $data['bank_name'] ?? '' ?></td>
-        </tr>
-        <tr>
-            <td colspan="4">
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Cuenta Corriente' ? '☑' : '☐' ?></span> Cuenta Corriente</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Cuenta Ahorro' ? '☑' : '☐' ?></span> Cuenta Ahorro</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito Visa' ? '☑' : '☐' ?></span> Tarjeta Crédito Visa</span>
-                <span class="checkbox-group"><span class="checkbox"><?= ($data['bank_account_type'] ?? '') == 'Tarjeta Crédito MasterCard' ? '☑' : '☐' ?></span> Tarjeta Crédito MasterCard</span>
-            </td>
-        </tr>
-    </tbody>
 </table>
 
 <table class="family-table">

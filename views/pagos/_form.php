@@ -318,9 +318,11 @@ $this->registerJs($js);
     <?php if (!$disabled): ?>
     <div class="form-group mt-4 d-flex justify-content-center gap-3"> <!-- Cambiado a justify-content-center y añadido gap-3 -->
         <!-- Botón "Guardar Pago" con el tamaño original deseado -->
-        <?= Html::submitButton('<i class="fas fa-save me-2"></i> Guardar Pago', [
-            'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
-        ]) ?>
+        <?php if (!empty($cuotas)): ?> 
+            <?= Html::submitButton('<i class="fas fa-save me-2"></i> Guardar Pago', [
+                'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
+            ]) ?>
+         <?php endif; ?>
         <!-- Botón "Volver" con el tamaño original deseado -->
         <?= Html::a('<i class="fas fa-undo me-2"></i> Volver', ['contratos/index', 'user_id' => $model->user_id], [
             'class' => 'btn btn-secondary btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7

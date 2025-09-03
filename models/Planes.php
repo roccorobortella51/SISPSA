@@ -152,4 +152,9 @@ class Planes extends \yii\db\ActiveRecord
         return $this->hasMany(PlanesItemsCobertura::class, ['plan_id' => 'id']);
     }
 
+    public function getAfiliado()
+    {
+        return $this->hasMany(UserDatos::class, ['id' => 'user_id']);
+    }
+
 }

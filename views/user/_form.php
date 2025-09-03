@@ -322,7 +322,7 @@ function toggleClinicaByRole() {
         'CONTROL DE CITAS',
         'ATENCIÓN',
         'Administrador-clinica',
-        'Afiliado',
+        'afiliado',
         'Afiliado corporativo'
     ];
     var match = (val && allowed.indexOf(val) !== -1) || (text && allowed.indexOf(text) !== -1);
