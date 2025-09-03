@@ -24,10 +24,17 @@ use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use PhpOffice\PhpSpreadsheet\IOFactory; // Importa la clase principal
 use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
 use DateTime;
+use app\models\Cuotas;
+use app\models\TasaCambio;
 
 
 /**
  * UserDatosController implements the CRUD actions for UserDatos model.
+ * 
+ * LÓGICA DE FECHAS DE CUOTAS:
+ * - La fecha de vencimiento de la primera cuota se calcula como:
+ *   "día 7 del mes siguiente a la fecha de inicio del contrato"
+ * - Ejemplo: Si el contrato inicia el 15/03/2024, la primera cuota vence el 07/04/2024
  */
 class UserDatosController extends Controller
 {
@@ -909,7 +916,15 @@ class UserDatosController extends Controller
                         $modelContrato->user_id = $model->id;
                         $modelContrato->estatus = 'Registrado';
                         $modelContrato->clinica_id = $model->clinica_id;
-                        $modelContrato->save();                     
+                        $modelContrato->monto = Planes::find()->where(['id' => $modelContrato->plan_id])->one()->precio;
+                        $modelContrato->save();      
+                        $modelCuota = new Cuotas();
+                        $modelCuota->contrato_id = $modelContrato->id;
+                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                        $modelCuota->monto_usd = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $modelCuota->Estatus = 'pendiente';
+                        $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+                        $modelCuota->save();
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);
@@ -1033,10 +1048,21 @@ class UserDatosController extends Controller
                     $modelContrato->user_id = $id;
                     $modelContrato->estatus = 'Creado';
                     $modelContrato->clinica_id = $model->clinica_id;
+                    $modelContrato->monto = Planes::find()->where(['id' => $modelContrato->plan_id])->one()->precio;
 
 
                     if($modelContrato->save()){
-
+                        $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
+                        if($cuota){
+                            $cuota->delete();
+                        }
+                        $modelCuota = new Cuotas();
+                        $modelCuota->contrato_id = $modelContrato->id;
+                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                        $modelCuota->monto_usd = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $modelCuota->Estatus = 'pendiente';
+                        $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+                        $modelCuota->save();
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);

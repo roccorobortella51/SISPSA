@@ -12,6 +12,7 @@ use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use app\models\TasaCambio;
 use app\components\UserHelper;
 use app\models\RmClinica;
+use app\models\Cuotas;
 
 
 /**
@@ -66,6 +67,15 @@ class PagosController extends Controller
         ]);
     }
 
+    public function actionTasacambio()
+    {
+        // Ejecuta el action de otro controlador sin redirección
+        $resultado = Yii::$app->runAction('site/tasacambio');
+        
+        // Puedes usar el resultado
+        return $resultado;
+    }
+
     /**
      * Displays a single Pagos model.
      * @param int $id ID
@@ -86,6 +96,7 @@ class PagosController extends Controller
      */
     public function actionCreate($user_id = null)
     {
+        $tasa_bcv = $this->actionTasacambio();
         $model = new Pagos();
         $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
         $model->user_id = $user_id;
@@ -93,10 +104,54 @@ class PagosController extends Controller
         $tempFilePath = null; // Inicializamos la ruta temporal a null
         $folder = 'Pago';
         $model->estatus = 'Por Conciliar';
-
+        $modelCuotas = new Cuotas();
+        $cuotas = Cuotas::find()
+            ->select('cuotas.*') // Seleccionar todas las columnas de cuotas
+            ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
+            ->where(['contratos.user_id' => $user_id,'cuotas.Estatus' => 'pendiente'])
+            ->orderBy(['cuotas.fecha_vencimiento' => SORT_ASC])
+            ->all();
+        $total = 0;
+        foreach ($cuotas as $cuota) {
+            $total += $cuota->monto_usd;
+        }
+        $model->monto_pagado = $total;
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
+                // Obtener cuotas seleccionadas desde POST (si se enviaron)
+                $selectedCuotas = Yii::$app->request->post('selected_cuotas', []);
+
+                // VALIDACIÓN SERVER-SIDE: sumar montos de cuotas seleccionadas y comparar con monto_pagado
+                $sumSelected = 0.0;
+                if (!empty($selectedCuotas)) {
+                    $cuotasForSum = Cuotas::find()->where(['id' => $selectedCuotas])->all();
+                    foreach ($cuotasForSum as $c) {
+                        // usar monto_usd si existe, si no usar monto
+                        $m = null;
+                        if (isset($c->monto_usd)) {
+                            $m = $c->monto_usd;
+                        } elseif (isset($c->monto)) {
+                            $m = $c->monto;
+                        }
+                        $sumSelected += (float)($m ?: 0);
+                    }
+                }
+
+                // Si no hay cuotas seleccionadas sumSelected será 0.0 — el JS establece monto_pagado a 0 en ese caso
+                $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
+                if (abs($sumSelected - $montoPagadoPosted) > 0.01) {
+                    $model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
+                    Yii::$app->session->setFlash('error', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar. Revise la selección o el monto.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $this->request->get('user_id'),
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+
                 // Obtenemos la instancia del archivo subido desde el formulario
                 $model->imagen_prueba_file = UploadedFile::getInstance($model, 'imagen_prueba_file');
 
@@ -133,11 +188,40 @@ class PagosController extends Controller
                         if ($publicUrl) {
                             // Si la subida a Supabase fue exitosa, guardamos la URL pública en el modelo del pago
                             $model->imagen_prueba = $publicUrl;
-                            if ($model->save(false)) { // Guardamos el modelo de pago en la base de datos
-                                Yii::$app->session->setFlash('success', 'Pago y archivo subido con éxito.');
-                                return $this->redirect(['view', 'id' => $model->id]);
-                            } else {
-                                Yii::$app->session->setFlash('error', 'Error al guardar el pago en la base de datos.');
+
+                            // Usar transacción para asegurar consistencia al actualizar pago y cuotas
+                            $transaction = Yii::$app->db->beginTransaction();
+                            try {
+                                if ($model->save(false)) { // Guardamos el modelo de pago en la base de datos
+                                    // Actualizar sólo las cuotas seleccionadas (si el array está vacío, actualizar TODAS las cargadas)
+                                    $cuotasToUpdate = [];
+                                    if (!empty($selectedCuotas)) {
+                                        $cuotasToUpdate = Cuotas::find()->where(['id' => $selectedCuotas])->all();
+                                    } else {
+                                        $cuotasToUpdate = $cuotas; // todas las pendientes cargadas inicialmente
+                                    }
+
+                                    foreach ($cuotasToUpdate as $cuota) {
+                                        if ($cuota->Estatus === 'pendiente') {
+                                            $cuota->Estatus = 'pagado';
+                                            $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
+                                            $cuota->rate_usd_bs = $model->tasa;
+                                            if (!$cuota->save(false)) {
+                                                throw new \Exception('Error al actualizar cuota ID: ' . $cuota->id);
+                                            }
+                                        }
+                                    }
+
+                                    $transaction->commit();
+                                    Yii::$app->session->setFlash('success', 'Pago y archivo subido con éxito. Cuotas actualizadas.');
+                                    return $this->redirect(['view', 'id' => $model->id]);
+                                } else {
+                                    throw new \Exception('Error al guardar el pago en la base de datos.');
+                                }
+                            } catch (\Exception $e) {
+                                $transaction->rollBack();
+                                Yii::error($e->getMessage(), __METHOD__);
+                                Yii::$app->session->setFlash('error', 'Error al guardar el pago o actualizar cuotas: ' . $e->getMessage());
                             }
                         } else {
                             // Si la subida a Supabase falló, el mensaje de error ya se estableció en la función de subida.
@@ -158,6 +242,9 @@ class PagosController extends Controller
         return $this->render('create', [
             'model' => $model,
             'user_id' => $this->request->get('user_id'), // Pasamos user_id si es necesario para la vista
+            'cuotas' => $cuotas,
+            'modelCuotas' => $modelCuotas,
+            'total' => $total,
         ]);
     }
 
@@ -170,8 +257,15 @@ class PagosController extends Controller
      */
      public function actionUpdate($id)
     {
+        $tasa_bcv = $this->actionTasacambio();
         $model = $this->findModel($id);
-        $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+
+        $t = $ultimaTasa = TasaCambio::find()
+            ->orderBy(['fecha' => SORT_DESC])
+            ->one();
+
+        
+        $model->tasa = $t->tasa_cambio;
 
         $oldImagePath = $model->imagen_prueba; // Guardar la URL de la imagen existente
         $tempFilePath = null; // Inicializar a null
@@ -285,6 +379,58 @@ class PagosController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+
+   public function actionEjecutar($user_id = null)
+    {
+        // Permitir llamada con user_id via GET (la vista create pasa este parámetro)
+        $user_id = $user_id ?: Yii::$app->request->get('user_id');
+
+        $yiiPath = Yii::getAlias('@app/yii');
+
+        // Verificar que tenemos permisos de ejecución
+        if (!is_executable($yiiPath)) {
+            @chmod($yiiPath, 0755);
+        }
+
+        $command = "php " . escapeshellarg($yiiPath) . " cuota/generar 2>&1";
+
+        // Ejecutar y capturar exit code
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+        $outputStr = implode("\n", $output);
+
+        // Si es petición AJAX, devolver JSON (mantener compatibilidad)
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'success' => $exitCode === 0,
+                'exitCode' => $exitCode,
+                'output' => $outputStr,
+                'command' => $command
+            ];
+        }
+
+        // Para peticiones normales, mostrar un flash con el resultado y redirigir a create
+        if ($exitCode === 0) {
+            Yii::$app->session->setFlash('success', "Cuotas generadas correctamente.");
+        } else {
+            Yii::$app->session->setFlash('error', "Error generando cuotas (exitCode={$exitCode}).\nSalida: " . substr($outputStr, 0, 1000));
+        }
+
+        // Redirigir de vuelta a la pantalla de creación de pago si se dispone de user_id,
+        // si no, intentar volver al referer o al index de pagos.
+        if (!empty($user_id)) {
+            return $this->redirect(['create', 'user_id' => $user_id]);
+        }
+
+        $referrer = Yii::$app->request->referrer;
+        if ($referrer) {
+            return $this->redirect($referrer);
+        }
+
+        return $this->redirect(['index']);
     }
 
     

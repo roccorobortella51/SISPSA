@@ -1,0 +1,39 @@
+# CONFIGURACIÓN DE CRON PARA CUOTAS AUTOMÁTICAS
+# ================================================
+
+# 1. EDITAR EL CRONTAB DEL USUARIO:
+# crontab -e
+
+# 2. AGREGAR LA SIGUIENTE LÍNEA PARA EJECUCIÓN DIARIA:
+# Se ejecuta diariamente, pero detecta automáticamente si es día 1 del mes
+0 6 * * * /var/www/html/sitios_yii/sipsa/cron-cuotas.sh
+
+# 3. ALTERNATIVAS DE CONFIGURACIÓN:
+
+# Ejecutar diariamente a las 6:00 AM (recomendado)
+0 6 * * * /var/www/html/sitios_yii/sipsa/cron-cuotas.sh
+
+# Ejecutar diariamente a las 8:00 AM
+0 8 * * * /var/www/html/sitios_yii/sipsa/cron-cuotas.sh
+
+# Ejecutar diariamente a las 2:00 AM
+0 2 * * * /var/www/html/sitios_yii/sipsa/cron-cuotas.sh
+
+# 4. COMPORTAMIENTO INTELIGENTE:
+# - DIARIAMENTE: Solo verifica contratos vencidos por fecha
+# - MENSUALMENTE (día 1): Ejecuta flujo completo (generación, verificación, etc.)
+
+# 4. PARA VERIFICAR QUE EL CRON ESTÉ FUNCIONANDO:
+# crontab -l
+
+# 5. PARA VER LOS LOGS DEL SISTEMA:
+# tail -f /var/log/syslog | grep CRON
+
+# 6. PARA VERIFICAR EL ESTADO DE LA ÚLTIMA EJECUCIÓN:
+# cat /var/www/html/sitios_yii/sipsa/runtime/logs/cron-cuotas-mensual-status.txt
+
+# 7. PARA VER LOS LOGS DE EJECUCIÓN:
+# tail -f /var/www/html/sitios_yii/sipsa/runtime/logs/cron-cuotas-mensual.log
+
+# NOTA: Asegúrate de que el usuario tenga permisos de ejecución en el script
+# y que la ruta del proyecto sea correcta.

@@ -37,7 +37,8 @@ class Cuotas extends \yii\db\ActiveRecord
             [['contrato_id', 'fecha_vencimiento', 'monto', 'Estatus', 'fecha_pago', 'rate_usd_bs'], 'default', 'value' => null],
             [['created_at', 'fecha_vencimiento', 'fecha_pago'], 'safe'],
             [['contrato_id', 'monto', 'rate_usd_bs'], 'default', 'value' => null],
-            [['contrato_id', 'monto', 'rate_usd_bs'], 'integer'],
+            [['contrato_id'], 'integer'],
+            [['monto', 'rate_usd_bs'], 'number'],
             [['Estatus'], 'string'],
         ];
     }

@@ -199,10 +199,14 @@ class SiteController extends Controller
     }
 
     public function actionTasacambio($fecha=null){
+        $fecha = Yii::$app->request->post('fecha');
+
         if($fecha == null){
             $fecha = date('Y-m-d');
         }
+
         $tasacambio = Tasacambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
+
         if($tasacambio == null){
             $tasacambio = new Tasacambio();
             $tasacambio->fecha = $fecha;

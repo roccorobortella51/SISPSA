@@ -100,7 +100,7 @@ if ($clinica && $clinica->id !== null) {
                             'attribute' => 'created_at',
                             'hAlign' => 'center',
                             'vAlign' => 'middle',
-                            'label' => 'Fecha Alificación',
+                            'label' => 'Fecha Afiliación',
                             'value' => function ($model, $key, $index, $widget) {
                                 return !empty($model->created_at) ? Yii::$app->formatter->asDate($model->created_at, 'd/M/Y HH:mm:ss') : '';
                             },
@@ -219,7 +219,7 @@ if ($clinica && $clinica->id !== null) {
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}</div>',
+                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
                             'options' => ['style' => 'width:55px; min-width:55px;'],
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -263,7 +263,7 @@ if ($clinica && $clinica->id !== null) {
 
                                     if($model->clinica_id){
                                     return Html::a(
-                                        '<i class="fas fa-address-card ms-text-success"></i>',
+                                        '<i class="fas fa-address-card ms-text-primary"></i>',
                                         Url::to($params), // Asegurar clinica_id condicionalmente
                                         [
                                             'title' => 'Siniestros',
@@ -271,6 +271,17 @@ if ($clinica && $clinica->id !== null) {
                                         ]
                                     );}
                                     }
+                                },
+                                'pagos' => function ($url, $model, $key){ // Pasar $permisos y $clinica
+                                    $params = ['/contratos/index', 'user_id' => $model->id];
+                                    return Html::a(
+                                        '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
+                                        Url::to($params), // Asegurar clinica_id condicionalmente
+                                        [
+                                            'title' => 'Pagos',
+                                            'class' => 'btn-action view'
+                                        ]
+                                    );
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {
