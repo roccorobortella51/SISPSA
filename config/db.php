@@ -2,43 +2,30 @@
 
 return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'pgsql:host=localhost;dbname=digitalw_sispsamarcos',
-    'username' => 'digitalw_sispsaUser',
-    //'username' => 'digitalw',
-    'password' => 'Exp9800654*',
+    'dsn' => 'pgsql:host=aws-0-us-east-1.pooler.supabase.com;dbname=postgres',
+    'username' => 'postgres.rhpkljtjyblihoajhswg',
+    'password' => 'GxNPIOxKXbX2gIjw',
     'charset' => 'utf8',
-
-    // Schema cache options (for production environment)
-    //'enableSchemaCache' => true,
-    //'schemaCacheDuration' => 60,
-    //'schemaCache' => 'cache',
 ];
 
-/*return [
-    'class' => 'yii\db\Connection',
-    'dsn' => 'pgsql:host=localhost;dbname=sispsa',
-    'username' => 'postgres',
-    'password' => 'postgres',
-    'charset' => 'utf8',
-
-    // Schema cache options (for production environment)
-    //'enableSchemaCache' => true,
-    //'schemaCacheDuration' => 60,
-    //'schemaCache' => 'cache',*/
+// Schema cache options (for production environment)
+//'enableSchemaCache' => true,
+//'schemaCacheDuration' => 60,
+//'schemaCache' => 'cache',
 
 /*return [
     'class' => 'yii\db\Connection',
-            'dsn' => 'pgsql:host=aws-0-us-east-1.pooler.supabase.com;port=5432;dbname=postgres',
-            'username' => 'postgres.rhpkljtjyblihoajhswg',
-            'password' => 'TU_CONTRASEÑA_AQUI', // ¡CAMBIA ESTO POR TU CONTRASEÑA REAL!
-            'charset' => 'utf8',
-            'schemaMap' => [
-                'pgsql'=> [
-                    'class'=>'yii\db\pgsql\Schema',
-                    'defaultSchema' => 'public' // O el esquema que estés utilizando
-                ]
-            ]
-];*/
+             'dsn' => 'pgsql:host=aws-0-us-east-1.pooler.supabase.com;port=5432;dbname=postgres',
+             'username' => 'postgres.rhpkljtjyblihoajhswg',
+             'password' => 'TU_CONTRASEÑA_AQUI', // ¡CAMBIA ESTO POR TU CONTRASEÑA REAL!
+             'charset' => 'utf8',
+             'schemaMap' => [
+                 'pgsql'=> [
+                     'class'=>'yii\db\pgsql\Schema',
+                     'defaultSchema' => 'public' // O el esquema que estés utilizando
+                 ]
+             ]
+]*/
 
 /*return [
     'class' => 'yii\db\Connection',
@@ -67,10 +54,3 @@ return [
         ]
     ],
 ];*/
-
-
-
-
-
-
-
