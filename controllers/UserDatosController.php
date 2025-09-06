@@ -713,6 +713,7 @@ class UserDatosController extends Controller
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
+        $dataProvider->query->andFilterWhere(['ilike', 'user_datos.role', 'Afiliado']);
 
         return $this->render('index', [
             'searchModel' => $searchModel,
