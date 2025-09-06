@@ -225,7 +225,7 @@ $this->title = 'Bienvenido a SISPSA';
 
     <div class="hero-content" align="center">
         <img src="<?= Yii::getAlias('@web/img/sispsa.png') ?>" class="logo-sipsa animate" alt="Logo SISPSA">
-        <h1 class="main-title animate" style="transition-delay: 0.1s">¡Bienvenido a SISPSA!</h1>
+        <h1 class="main-title animate" style="transition-delay: 0.1s">¡Test3 Bienvenido a SISPSA!</h1>
         <p class="subtitle-paragraph animate" style="transition-delay: 0.2s">Tu viaje en el Sistema Integral de Salud comienza ahora. Explora todas las funcionalidades diseñadas para tu bienestar.</p>
     </div>
 
