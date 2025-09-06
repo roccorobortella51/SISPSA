@@ -1,6 +1,18 @@
 <?php
-
 return [
+    'class' => 'yii\db\Connection',
+    'dsn' => 'pgsql:host=aws-0-us-east-1.pooler.supabase.com;port=6543;dbname=postgres',
+    'username' => 'postgres.xgranijsjqdlbiphkkxa',
+    'password' => 'CtMDv3kxBjhXnIMy', // Replace with your actual database password
+    'charset' => 'utf8',
+
+    // Schema cache options (for production environment)
+    //'enableSchemaCache' => true,
+    //'schemaCacheDuration' => 60,
+    //'schemaCache' => 'cache',
+];
+
+/*return [
     'class' => 'yii\db\Connection',
     'dsn' => 'pgsql:host=aws-0-us-east-1.pooler.supabase.com;dbname=postgres',
     'username' => 'postgres.rhpkljtjyblihoajhswg',
