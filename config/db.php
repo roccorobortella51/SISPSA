@@ -2,6 +2,13 @@
 
 return [
     'class' => 'yii\db\Connection',
+    'dsn' => 'pgsql:host=aws-0-us-east-1.pooler.supabase.com;dbname=postgres',
+    'username' => 'postgres.rhpkljtjyblihoajhswg',
+    'password' => 'GxNPIOxKXbX2gIjw',
+    'charset' => 'utf8',
+];
+/*return [
+    'class' => 'yii\db\Connection',
     'dsn' => 'pgsql:host=localhost;dbname=digitalw_sispsamarcos',
     'username' => 'digitalw_sispsaUser',
     //'username' => 'digitalw',
