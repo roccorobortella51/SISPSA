@@ -118,7 +118,7 @@ if($rol == "Administrador-clinica"){
         <!-- Sidebar user panel -->
         <div class="user-panel d-flex flex-column align-items-center">
             <div class="image mb-2">
-                <img src="<?= Yii::getAlias('@web/img/Fondo SISPSA.png')?>" class="img-circle elevation-2" alt="User Image">
+                <img src="<?= Yii::getAlias('@web/img/sispsa.png')?>" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info text-center">
                 <p><b style="color: white !important;"><?= $clinica ?></b></p>
