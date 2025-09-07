@@ -84,6 +84,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                     'placeholder' => 'Buscar nombre',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                'contentOptions' => ['style' => 'text-align: center;']
                             ],
 
                             // [
@@ -102,6 +103,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                 'attribute' => 'propietario',
                                 'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
+                                'contentOptions' => ['style' => 'text-align: center;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar propietario',
                                     'class' => 'form-control form-control-lg text-center',
@@ -115,6 +117,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                             [
                                 'attribute' => 'propietarioEmail', // Atributo virtual del AgenteSearch
                                 'label' => 'Correo del Propietario', // Etiqueta para el encabezado
+                                'contentOptions' => ['style' => 'text-align: center;'],
                                 'value' => function ($model) {
                                     // $model aquí es una instancia de Agente.
                                     // Accedemos a su relación 'propietario' y luego a su 'email'.
@@ -125,6 +128,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                             [
                                 'attribute' => 'propietarioCedula', // Atributo virtual del AgenteSearch
                                 'label' => 'Cédula del Propietario', // Etiqueta para el encabezado
+                                'contentOptions' => ['style' => 'text-align: center;'],
                                 'value' => function ($model) {
                                     // $model aquí es una instancia de Agente.
                                     // Accedemos a su relación 'propietario', y luego a los 'userDatos' del propietario.

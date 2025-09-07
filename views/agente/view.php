@@ -13,7 +13,7 @@ $this->params['breadcrumbs'][] = Html::encode($model->nom);
 \yii\web\YiiAsset::register($this);
 
 function formatPercentage($value) {
-    return Yii::$app->formatter->asPercent((float)$value / 100);
+    return Yii::$app->formatter->asPercent((float)$value / 100, 1);
 }
 
 function formatDateTime($value) {
@@ -120,7 +120,7 @@ $datosJs = json_encode($datos);
                 </div>
                 <div class="col-md-4">
                     <div class="info-card-body text-center">
-                        <h4 class="text-muted">Porcentaje Agente</h4>
+                        <h4 class="text-muted">Porcentaje Agencia</h4>
                         <p class="h4 text-info"><?= formatPercentage($model->por_agente) ?></p>
                     </div>
                 </div>

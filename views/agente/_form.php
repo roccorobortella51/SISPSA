@@ -29,7 +29,7 @@ if ($model->isNewRecord) {
             '<i class="fas fa-undo mr-2"></i> Volver',
             ['index'],
             [
-                'class' => 'btn btn-primary btn-lg w-100', // Mantengo btn-lg y w-100
+                'class' => 'btn btn-primary btn-lg w-10', // Mantengo btn-lg y w-100
                 'style' => 'padding: 2rem 3rem; font-size: 1.5rem;', // Estilos en línea para hacerlo más grande y grueso
             ]
         ) ?>
@@ -37,11 +37,11 @@ if ($model->isNewRecord) {
 
     <div class="col">
         <?= Html::a(
-            '<i class="fas fa-users mr-2"></i> FUERZA DE VENTA',
+            '<i class="fas fa-users mr-5" style="font-size:2.5rem; vertical-align:middle;"></i> <span style="font-size:2rem; font-weight:700; color: #fff;letter-spacing:1px;">FUERZA DE VENTA</span>',
             ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
             [
-                'class' => 'btn btn-primary btn-lg w-100', // Mantengo btn-lg y w-100
-                'style' => 'padding: 2rem 3rem; font-size: 1.5rem;', // Estilos en línea para hacerlo más grande y grueso
+                'class' => 'btn btn-primary btn-lg w-100 shadow',
+                'style' => 'padding: 2.5rem 3.5rem; font-size: 2rem; border-radius: 1rem; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.12);',
             ]
         ) ?>
     </div>
@@ -94,66 +94,86 @@ if ($model->isNewRecord) {
 </div>
         </div>
 
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_venta')->label('PORCENTAJE POR VENTA')->textInput([
-                    'class' => 'form-control',
-                    'placeholder' => '% Venta',
-                    'type' => 'number',
-                    'step' => '0.01',
-                    'class' => 'form-control form-control-lg'
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_asesor')->label('PORCENTAJE DE ASESORÍA')->textInput([
-                    'class' => 'form-control',
-                    'placeholder' => '% Asesoría',
-                    'type' => 'number',
-                    'step' => '0.01',
-                    'class' => 'form-control form-control-lg'
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_cobranza')->label('PORCENTAJE POR COBRANZA')->textInput([
-                    'class' => 'form-control',
-                    'placeholder' => '% Cobranza',
-                    'type' => 'number',
-                    'step' => '0.01',
-                    'class' => 'form-control form-control-lg'
-                ]) ?>
+        <!-- Porcentajes Section -->
+        <!--<div class="ms-panel mb-4">
+            <div class="ms-panel-header justify-content-between align-items-center">
+                <h3 class="section-title mr-3" style="background-color:rgb(0, 158 , 251); padding: 1rem; border-radius: .5rem; color: #fff !important;">
+                    <i class="fas fa-percent mr-3" style="color: #fff !important;"></i> 
+                        <span style="color: #fff !important;">Porcentajes de Comisión</span>
+                </h3>
+            </div> -->
+            <div class="row">
+                <div class="col-md-12">
+                     <div class="card mb-3"> <!-- FIXED: Changed card-mb-3 to card mb-3 -->
+                        <div class="card-header bg-primary"> 
+                           <h6 class="mb-0" style="color: white; font-size: 20px;">Porcentajes de Comisiones por (%)</h6>
+                        </div>
+            <div class="ms-panel-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'por_venta')->label('Venta <i class="fas fa-info-circle text-info" data-toggle="tooltip" data-placement="top" title="Comisión por la venta inicial de pólizas de seguro. Se otorga cuando se cierra exitosamente una nueva póliza con el cliente."></i>')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: 15.0',
+                            'type' => 'number',
+                            'step' => '0.1',
+                            'min' => '0',
+                            'max' => '100'
+                        ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'por_asesor')->label('Asesoría <i class="fas fa-info-circle text-info" data-toggle="tooltip" data-placement="top" title="Comisión por brindar asesoramiento y consultoría especializada a los clientes. Incluye recomendaciones de cobertura y análisis de riesgos."></i>')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: 12.5',
+                            'type' => 'number',
+                            'step' => '0.1',
+                            'min' => '0',
+                            'max' => '100'
+                        ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'por_cobranza')->label('Cobranza <i class="fas fa-info-circle text-info" data-toggle="tooltip" data-placement="top" title="Comisión por gestionar y asegurar el cobro oportuno de las primas de las pólizas. Incluye seguimiento de pagos y gestión de morosidad."></i>')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: 8.0',
+                            'type' => 'number',
+                            'step' => '0.1',
+                            'min' => '0',
+                            'max' => '100'
+                        ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'por_post_venta')->label('Post Venta <i class="fas fa-info-circle text-info" data-toggle="tooltip" data-placement="top" title="Comisión por servicios posteriores a la venta como renovaciones, modificaciones de pólizas, atención de reclamos y mantenimiento de la relación con el cliente."></i>')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: 5.0',
+                            'type' => 'number',
+                            'step' => '0.1',
+                            'min' => '0',
+                            'max' => '100'
+                        ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'por_agente')->label('Agencia <i class="fas fa-info-circle text-info" data-toggle="tooltip" data-placement="top" title="Comisión general de la agencia por la gestión administrativa, supervisión del equipo de ventas y mantenimiento de la infraestructura operativa."></i>')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: 10.0',
+                            'type' => 'number',
+                            'step' => '0.1',
+                            'min' => '0',
+                            'max' => '100'
+                        ]) ?>
+                    </div>
+                    <div class="col-md-2">
+                        <?= $form->field($model, 'por_max')->label('Máximo <i class="fas fa-info-circle text-info" data-toggle="tooltip" data-placement="top" title="Porcentaje máximo total de comisiones que puede recibir la agencia. Este límite asegura la sostenibilidad financiera y cumple con regulaciones del sector."></i>')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: 25.0',
+                            'type' => 'number',
+                            'step' => '0.1',
+                            'min' => '0',
+                            'max' => '100'
+                        ]) ?>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_post_venta')->label('PORCENTAJE POST VENTA')->textInput([
-                    'class' => 'form-control',
-                    'placeholder' => '% Post-Venta',
-                    'type' => 'number',
-                    'step' => '0.01',
-                    'class' => 'form-control form-control-lg'
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_agente')->label('PORCENTAJE DE AGENCIA')->textInput([
-                    'class' => 'form-control',
-                    'placeholder' => '% Agente',
-                    'type' => 'number',
-                    'step' => '0.01',
-                    'class' => 'form-control form-control-lg'
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_max')->label('PORCENTAJE MÁXIMO')->textInput([
-                    'class' => 'form-control',
-                    'placeholder' => '% Máximo',
-                    'type' => 'number',
-                    'step' => '0.01',
-                    'class' => 'form-control form-control-lg'
-                ]) ?>
-            </div>
-        </div>
-
+    </div>
         <div class="row mt-4">
             <div class="col-12 d-flex justify-content-start">
                 <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-3']) ?>
@@ -188,6 +208,15 @@ if ($model->isNewRecord) {
 $js = <<<JS
 $('#btn-refrescar-form').on('click', function() {
     $(this).closest('form')[0].reset(); 
+});
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip({
+        html: true,
+        trigger: 'hover focus',
+        delay: { show: 300, hide: 100 }
+    });
 });
 JS;
 $this->registerJs($js);

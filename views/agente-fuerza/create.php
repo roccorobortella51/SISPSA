@@ -14,7 +14,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="col-xl-12 col-md-12">
         
             <div class="ms-panel-header">
-                <h1> CREAR ASESOR VENDEDOR </h1>
+                <h1> CREAR AGENTE / ASESOR</h1>
             </div>
         </div>
 

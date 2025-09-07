@@ -52,7 +52,7 @@ class AgenteFuerza extends ActiveRecord
             [['idusuario', 'agente_id'], 'required'],
 
             // Reglas para unicidad
-            ['idusuario', 'unique', 'message' => 'Este usuario ya tiene una asignación.'],
+            //['idusuario', 'unique', 'message' => 'Este usuario ya tiene una asignación.'],
 
             // Reglas para enteros
             [['idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar', 'asesor_id'], 'integer'],

@@ -59,7 +59,7 @@ if (!$agente->isNewRecord) { ?>
           
                 <div class="col">
                     <?= Html::a(
-                        '<i class="fas fa-plus"></i> CREAR UN MIEMBRO DE FUERZA DE VENTA',
+                        '<i class="fas fa-plus"></i> CREAR UN AGENTE / ASESOR',
                         ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
                         ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
                     ) ?>
@@ -104,13 +104,13 @@ if (!$agente->isNewRecord) { ?>
                         'columns' => [
                              [
                                 'attribute' => 'id', // <--- ¡Debe coincidir con el nombre del atributo virtual!
-                                'label' => 'N° de Vendedor/Asesor',
+                                'label' => 'Agente / Asesor',
                                 'value' => function($model) {
                                     return $model->id;
                                 },
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar N° de Vendedor/Asesor',
+                                    'placeholder' => 'Buscar N° de Agente /Asesor',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
                             ],
@@ -121,7 +121,7 @@ if (!$agente->isNewRecord) { ?>
                            
                             
                             [
-                                'attribute' => 'agenteFuerzaUserNombres', // <--- ¡Debe coincidir con el nombre del atributo virtual!
+                                'attribute' => 'agenteFuerzaUserNombres',
                                 'label' => 'Nombre',
                                 'value' => function($model) {
                                     if ($model->userDatos) {
@@ -133,6 +133,7 @@ if (!$agente->isNewRecord) { ?>
                                     'placeholder' => 'Buscar nombre',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                'contentOptions' => ['style' => 'text-align: center;'],
                             ],
 
                             [
@@ -143,13 +144,13 @@ if (!$agente->isNewRecord) { ?>
                                     }
                                     return 'No disponible';
                                 },
-                                // Asegúrate de que este 'attribute' sea correcto para el SearchModel
                                 'attribute' => 'agenteFuerzaUserCedula',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar cedula de identidad',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                'contentOptions' => ['style' => 'text-align: center;'],
                             ],
                             
                             [
@@ -160,13 +161,13 @@ if (!$agente->isNewRecord) { ?>
                                     }
                                     return 'No disponible';
                                 },
-                                // Asegúrate de que este 'attribute' sea correcto para el SearchModel
                                 'attribute' => 'agenteFuerzaUserEmail',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar correo',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                'contentOptions' => ['style' => 'text-align: center;'],
                             ],
 
                             [
@@ -183,6 +184,7 @@ if (!$agente->isNewRecord) { ?>
                                     'placeholder' => 'Buscar teléfono',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                'contentOptions' => ['style' => 'text-align: center;'],
                             ],
                            // Columna de Acciones (Ver, Editar, Eliminar)
                             [

@@ -291,24 +291,52 @@ var \$roleField = $('#{$roleFieldId}');
 var \$clinicaContainer = $('#clinica_field_container');
 var \$clinicaSelect = $('#clinica_id');
 
-// Función para copiar el valor
-function copyEmailToPersonal() {
-    // Verificamos que los elementos existan antes de intentar usarlos
+// Función para convertir a minúsculas y copiar el valor
+function processAndCopyEmail() {
+    // Convertir a minúsculas
+    var emailValue = \$firstEmailField.val().toLowerCase();
+    \$firstEmailField.val(emailValue);
+    
+    // Copiar a los otros campos
     if (\$firstEmailField.length && \$secondEmailField.length) {
-        \$secondEmailField.val(\$firstEmailField.val());
-        \$tEmailField.val(\$firstEmailField.val());
+        \$secondEmailField.val(emailValue);
+        \$tEmailField.val(emailValue);
     }
 }
 
-// Escuchar el evento 'input' (cada vez que se escribe algo) en el primer campo
+// Escuchar eventos en el primer campo de email
 \$firstEmailField.on('input', function() {
-    copyEmailToPersonal();
+    processAndCopyEmail();
 });
 
-// Opcional: Si el primer campo ya tiene un valor al cargar la página (ej. en edición),
-// cópialo al segundo campo una vez.
+// Escuchar evento de cambio (cuando pierde el foco)
+\$firstEmailField.on('change', function() {
+    processAndCopyEmail();
+});
+
+// Escuchar evento de teclado para convertir en tiempo real
+\$firstEmailField.on('keyup', function(e) {
+    // No procesar teclas de navegación
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete') {
+        var currentValue = \$(this).val();
+        var cursorPosition = this.selectionStart;
+        
+        // Convertir a minúsculas
+        var lowerValue = currentValue.toLowerCase();
+        \$(this).val(lowerValue);
+        
+        // Mantener la posición del cursor
+        this.setSelectionRange(cursorPosition, cursorPosition);
+        
+        // Copiar a los otros campos
+        \$secondEmailField.val(lowerValue);
+        \$tEmailField.val(lowerValue);
+    }
+});
+
+// Opcional: Si el primer campo ya tiene un valor al cargar la página
 if (\$firstEmailField.val() !== '') {
-    copyEmailToPersonal();
+    processAndCopyEmail();
 }
 
 // --- Mostrar/Ocultar campo Clínica según rol seleccionado ---
