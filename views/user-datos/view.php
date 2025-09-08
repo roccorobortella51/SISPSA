@@ -217,9 +217,9 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <h5><strong>Correo Electrónico:</strong> <?= !empty($model->email) ? Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500']) : 'N/A' ?></h5>
                 </div>
                 <div>
-                    <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellidos ?? 'N/A') ?></h5>
+                    <h5><strong>Apellidos:</strong> <?= Html::encode(!empty($model->apellidos) ? $model->apellidos : 'N/A') ?></h5>
                     <h5><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></h5>
-                    <h5><strong>Teléfono:</strong> <?= Html::encode($model->telefono ?? 'N/A') ?></h5>
+                    <h5><strong>Teléfono:</strong> <?= Html::encode(!empty($model->telefono) ? $model->telefono : 'N/A') ?></h5>
                 </div>
             </div>
         </div>
@@ -352,7 +352,7 @@ $currentRoute = Yii::$app->controller->getRoute();
                 <h5><strong>Actividad Económica:</strong> <?= Html::encode($model->actividad_economica ?? 'N/A') ?></h5>
                 <h5><strong>Ramo Comercial:</strong> <?= Html::encode($model->ramo_comercial ?? 'N/A') ?></h5>
                 <h5><strong>Descripción de Actividad:</strong> <?= Html::encode($model->descripcion_actividad ?? 'N/A') ?></h5>
-                <h5><strong>Ingreso Anual:</strong> <?= Yii::$app->formatter->asCurrency($model->ingreso_anual ?? 0, 'USD') ?></h5>
+                <h5><strong>Ingreso Anual:</strong> <?= Html::encode($model->ingreso_anual ?? 'N/A') ?></h5>
             </div>
         </div>
     </div>
@@ -393,11 +393,11 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <h5><strong>Email:</strong> <?= Html::a(Html::encode($model->email_contratante), 'mailto:' . Html::encode($model->email_contratante), ['class' => 'text-blue-500']) ?? 'N/A' ?></h5>
                 </div>
                 <div>
-                    <h5><strong>Sexo:</strong> <?= Html::encode($model->sexo_contratante ?? 'N/A') ?></h5>
-                    <h5><strong>Nacionalidad:</strong> <?= Html::encode($model->nacionalidad_contratante ?? 'N/A') ?></h5>
-                    <h5><strong>Estado Civil:</strong> <?= Html::encode($model->estado_civil_contratante ?? 'N/A') ?></h5>
-                    <h5><strong>Ocupación:</strong> <?= Html::encode($model->ocupacion_contratante ?? 'N/A') ?></h5>
-                    <h5><strong>Teléfono Celular:</strong> <?= Html::encode($model->telefono_celular_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Sexo:</strong> <?= Html::encode(!empty($model->sexo_contratante) ? $model->sexo_contratante : 'N/A') ?></h5>
+                    <h5><strong>Nacionalidad:</strong> <?= Html::encode(!empty($model->nacionalidad_contratante) ? $model->nacionalidad_contratante : 'N/A') ?></h5>
+                    <h5><strong>Estado Civil:</strong> <?= Html::encode(!empty($model->estado_civil_contratante) ? $model->estado_civil_contratante : 'N/A') ?></h5>
+                    <h5><strong>Ocupación:</strong> <?= Html::encode(!empty($model->ocupacion_contratante) ? $model->ocupacion_contratante : 'N/A') ?></h5>
+                    <h5><strong>Teléfono Celular:</strong> <?= Html::encode(!empty($model->telefono_celular_contratante) ? $model->telefono_celular_contratante : 'N/A') ?></h5>
                 </div>
             </div>
         </div>

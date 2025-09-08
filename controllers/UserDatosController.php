@@ -740,15 +740,15 @@ class UserDatosController extends Controller
         }
         if (!empty($municipio) && is_numeric($municipio)) {
             $municipioModel = RmMunicipio::findOne($municipio);
-            $municipio = $municipioModel ? $municipioModel->nombre : $municipio;
+            $municipio = $municipioModel ? $municipioModel->nombre : null;
         }
         if (!empty($parroquia) && is_numeric($parroquia)) {
             $parroquiaModel = RmParroquia::findOne($parroquia);
-            $parroquia = $parroquiaModel ? $parroquiaModel->nombre : $parroquia;
+            $parroquia = $parroquiaModel ? $parroquiaModel->nombre : null;
         }
         if (!empty($ciudad) && is_numeric($ciudad)) {
             $ciudadModel = RmCiudad::findOne($ciudad);
-            $ciudad = $ciudadModel ? $ciudadModel->nombre : $ciudad;
+            $ciudad = $ciudadModel ? $ciudadModel->nombre : null;
         }
         
 
@@ -918,12 +918,14 @@ class UserDatosController extends Controller
                         $modelContrato->user_id = $model->id;
                         $modelContrato->estatus = 'Registrado';
                         $modelContrato->clinica_id = $model->clinica_id;
-                        $modelContrato->monto = Planes::find()->where(['id' => $modelContrato->plan_id])->one()->precio;
+                        $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
+                        $modelContrato->monto = $plan ? $plan->precio : 0;
                         $modelContrato->save();      
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
                         $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $modelCuota->monto = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
+                        $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                         $modelCuota->Estatus = 'pendiente';
                         $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
                         $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
@@ -985,6 +987,8 @@ class UserDatosController extends Controller
         }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+            // Debug: Log que se está procesando la actualización
+            Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
             // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
@@ -1024,7 +1028,6 @@ class UserDatosController extends Controller
             $model->plan_id = $modelContrato->plan_id;
 
                 if($model->user_login_id == "" || $model->user_login_id == null){
-
                     $modelUser = new User();
                     $modelUser->username = $model->email;
                     $pass = 'sispsa'.$model->cedula;
@@ -1034,6 +1037,9 @@ class UserDatosController extends Controller
                     $modelUser->status = 1;
                     $modelUser->save();
                     $model->user_login_id = $modelUser->id;
+                } else {
+                    // Si ya existe un user_login_id, obtener el usuario existente
+                    $modelUser = User::findOne($model->user_login_id);
                 }
 
 
@@ -1046,12 +1052,16 @@ class UserDatosController extends Controller
 
                 $model->updated_at = date('Y-m-d H:i:s');
 
-
+                // Debug: Log antes de intentar guardar
+                Yii::info("Intentando guardar UserDatos con datos: " . json_encode($model->getAttributes()), __METHOD__);
+                
                 if($model->save()){
+                    Yii::info("UserDatos guardado exitosamente", __METHOD__);
                     $modelContrato->user_id = $id;
                     $modelContrato->estatus = 'Creado';
                     $modelContrato->clinica_id = $model->clinica_id;
-                    $modelContrato->monto = Planes::find()->where(['id' => $modelContrato->plan_id])->one()->precio;
+                    $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
+                    $modelContrato->monto = $plan ? $plan->precio : 0;
 
 
                     if($modelContrato->save()){
@@ -1062,43 +1072,47 @@ class UserDatosController extends Controller
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
                         $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $modelCuota->monto = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
+                        $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                         $modelCuota->Estatus = 'pendiente';
                         $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
                         $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
                         $modelCuota->save();
-                        $auth = Yii::$app->authManager;
-                        $roleName = 'afiliado';
-                        $role = $auth->getRole($roleName);
-                        if ($role) {
-                            try {
-                                $auth->revokeAll($modelUser->id);
-                                $auth->assign($role, $modelUser->id);
-                                Yii::$app->cache->flush();
-                                $model->user_login_id = $modelUser->id;
-                                $model->save();
-                                
-                            } catch (\Exception $e) {
-                                Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                        // Solo asignar roles si tenemos un usuario válido
+                        if (isset($modelUser) && $modelUser !== null) {
+                            $auth = Yii::$app->authManager;
+                            $roleName = 'afiliado';
+                            $role = $auth->getRole($roleName);
+                            if ($role) {
+                                try {
+                                    $auth->revokeAll($modelUser->id);
+                                    $auth->assign($role, $modelUser->id);
+                                    Yii::$app->cache->flush();
+                                    $model->user_login_id = $modelUser->id;
+                                    $model->save();
+                                    
+                                } catch (\Exception $e) {
+                                    Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
                             }
-                        } else {
-                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
                         }
 
                         return $this->redirect(['update', 'id' => $model->id]);
                     }else{
-
-                        echo "MODEL CONTRATO NOT SAVED";
-                      print_r($modelContrato->getAttributes());
-                      print_r($modelContrato->getErrors());
-                      exit;
-
+                        // Registrar errores en el log y mostrar mensaje de error al usuario
+                        Yii::error("Error al guardar Contrato: " . json_encode($modelContrato->getErrors()), __METHOD__);
+                        Yii::$app->session->setFlash('error', 'Error al actualizar el contrato: ' . implode(', ', array_map(function($errors) {
+                            return implode(', ', $errors);
+                        }, $modelContrato->getErrors())));
                     }
                 }else{
-                    echo "MODEL NOT SAVED";
-                      print_r($model->getAttributes());
-                      print_r($model->getErrors());
-                      exit;
+                    // Registrar errores en el log y mostrar mensaje de error al usuario
+                    Yii::error("Error al guardar UserDatos: " . json_encode($model->getErrors()), __METHOD__);
+                    Yii::$app->session->setFlash('error', 'Error al actualizar los datos del afiliado: ' . implode(', ', array_map(function($errors) {
+                        return implode(', ', $errors);
+                    }, $model->getErrors())));
                 }
         }
 
