@@ -60,28 +60,81 @@ use yii\db\ActiveRecord;
  * @property string|null $telefono_residencia
  * @property string|null $telefono_oficina
  * @property string|null $telefono_celular
- * @property string|null $fecha_nacimiento_contratante
- * @property string|null $fecha_nacimiento_representante_contratante
- * @property string|null $fecha_nacimiento_beneficiario
+ * @property string|null $razon_social
+ * @property string|null $rif
+ * @property string|null $registro_mercantil
+ * @property string|null $tomo
+ * @property string|null $fecha_registro
+ * @property string|null $actividad_economica_corp
+ * @property string|null $direccion_corporativa
+ * @property string|null $telefono_corporativo
+ * @property string|null $productos_servicios
+ * @property string|null $utilidad
+ * @property string|null $patrimonio
+ * @property string|null $plan_seleccionado
+ * @property string|null $moneda
+ * @property string|null $deducible
+ * @property string|null $limite_cobertura
  * @property bool|null $cobertura_maternidad
- * @property bool|null $tiene_contratante_diferente
- * @property int|null $cedula_contratante
- * @property int|null $cedula_representante_contratante
+ * @property string|null $deducible_maternidad
+ * @property string|null $limite_cobertura_maternidad
  * @property string|null $grupo_familiar
- * @property int|null $afiliado_corporativo_id
- * @property string|null $nombre_representante
- * @property string|null $apellido_representante
- * @property string|null $tipo_cedula_representante
- * @property string|null $nacionalidad_representante
- * @property string|null $estado_civil_representante
- * @property string|null $lugar_nacimiento_representante
- * @property string|null $fecha_nacimiento_representante
- * @property string|null $sexo_representante
- * @property string|null $profesion_representante
- * @property string|null $ocupacion_representante
- * @property string|null $descripcion_actividad_representante
- * @property string|null $direccion_representante
- * @property string|null $telefono_representante
+ * @property string|null $nombre_beneficiario
+ * @property string|null $cedula_beneficiario
+ * @property string|null $parentesco_beneficiario
+ * @property string|null $sexo_beneficiario
+ * @property string|null $fecha_nacimiento_beneficiario
+ * @property string|null $nombre_titular
+ * @property string|null $cedula_titular
+ * @property string|null $numero_cuenta
+ * @property string|null $banco
+ * @property string|null $tipo_cuenta
+ * @property string|null $nombre_declaracion_afiliado
+ * @property string|null $cedula_declaracion_afiliado
+ * @property string|null $nombre_declaracion_contratante
+ * @property string|null $cedula_declaracion_contratante
+ * @property string|null $tipo_afiliacion
+ * @property string|null $nombre_contratante
+ * @property string|null $apellido_contratante
+ * @property string|null $tipo_cedula_contratante
+ * @property int|null $cedula_contratante
+ * @property string|null $fecha_nacimiento_contratante
+ * @property string|null $sexo_contratante
+ * @property string|null $nacionalidad_contratante
+ * @property string|null $estado_civil_contratante
+ * @property string|null $lugar_nacimiento_contratante
+ * @property string|null $profesion_contratante
+ * @property string|null $ocupacion_contratante
+ * @property string|null $actividad_economica_contratante
+ * @property string|null $descripcion_actividad_contratante
+ * @property string|null $ingreso_anual_contratante
+ * @property string|null $direccion_residencia_contratante
+ * @property string|null $direccion_oficina_contratante
+ * @property string|null $direccion_cobro_contratante
+ * @property string|null $telefono_residencia_contratante
+ * @property string|null $telefono_oficina_contratante
+ * @property string|null $telefono_celular_contratante
+ * @property string|null $email_contratante
+ * @property string|null $nombre_representante_contratante
+ * @property string|null $apellido_representante_contratante
+ * @property string|null $tipo_cedula_representante_contratante
+ * @property int|null $cedula_representante_contratante
+ * @property string|null $nacionalidad_representante_contratante
+ * @property string|null $estado_civil_representante_contratante
+ * @property string|null $lugar_nacimiento_representante_contratante
+ * @property string|null $fecha_nacimiento_representante_contratante
+ * @property string|null $sexo_representante_contratante
+ * @property string|null $profesion_representante_contratante
+ * @property string|null $ocupacion_representante_contratante
+ * @property string|null $descripcion_actividad_representante_contratante
+ * @property string|null $direccion_representante_contratante
+ * @property string|null $telefono_representante_contratante
+ * @property string|null $nombre_titular_contratante
+ * @property string|null $cedula_titular_contratante
+ * @property string|null $numero_cuenta_contratante
+ * @property string|null $banco_contratante
+ * @property string|null $tipo_cuenta_contratante
+ * @property bool|null $tiene_contratante_diferente
  * @property string|null $direccion_cobro
  *
  * // ... (Tus @property para las relaciones get...())
@@ -102,6 +155,11 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
+    public $tiene_contratante_diferente;
+    public $cobertura_maternidad;
+    
+    // NOTA: Solo propiedades públicas para campos que NO están en la base de datos
+    // Todos los campos de la tabla están documentados en @property arriba
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -115,7 +173,7 @@ class UserDatos extends ActiveRecord
      */
     public static function tableName()
     {
-        return 'user_datos';
+        return 'public.user_datos';
     }
 
     /**
@@ -196,7 +254,7 @@ class UserDatos extends ActiveRecord
             
             // Validación específica para cédula - debe ser numérica
             [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
-            [['cedula'], 'string', 'max' => 10, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
+            [['cedula'], 'integer', 'max' => 9999999999, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
@@ -250,12 +308,14 @@ class UserDatos extends ActiveRecord
 
             // Validaciones para campos booleanos
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
+            [['cobertura_maternidad', 'tiene_contratante_diferente'], 'default', 'value' => false],
 
             // Validaciones para campos enteros
             [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
 
             // Validaciones para campos de texto largo (para JSON)
             [['grupo_familiar'], 'string'],
+            [['grupo_familiar'], 'safe'],
         ];
 
     }

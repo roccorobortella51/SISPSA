@@ -335,4 +335,110 @@ $currentRoute = Yii::$app->controller->getRoute();
             </div>
         </div>
     </div>
+    <div class="ms-panel border-green">
+    <div class="ms-panel-body">
+        <h5 class="section-title">
+            <i class="fas fa-file-alt text-green-600 mr-3"></i> Información Sociodemográfica y Económica
+        </h5>
+        <div class="info-grid text-left">
+            <div>
+                <h5><strong>Nacionalidad:</strong> <?= Html::encode($model->nacionalidad ?? 'N/A') ?></h5>
+                <h5><strong>Estado Civil:</strong> <?= Html::encode($model->estado_civil ?? 'N/A') ?></h5>
+                <h5><strong>Lugar de Nacimiento:</strong> <?= Html::encode($model->lugar_nacimiento ?? 'N/A') ?></h5>
+                <h5><strong>Profesión:</strong> <?= Html::encode($model->profesion ?? 'N/A') ?></h5>
+                <h5><strong>Ocupación:</strong> <?= Html::encode($model->ocupacion ?? 'N/A') ?></h5>
+            </div>
+            <div>
+                <h5><strong>Actividad Económica:</strong> <?= Html::encode($model->actividad_economica ?? 'N/A') ?></h5>
+                <h5><strong>Ramo Comercial:</strong> <?= Html::encode($model->ramo_comercial ?? 'N/A') ?></h5>
+                <h5><strong>Descripción de Actividad:</strong> <?= Html::encode($model->descripcion_actividad ?? 'N/A') ?></h5>
+                <h5><strong>Ingreso Anual:</strong> <?= Yii::$app->formatter->asCurrency($model->ingreso_anual ?? 0, 'USD') ?></h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php if (!empty($model->telefono_residencia) || !empty($model->telefono_oficina) || !empty($model->direccion_residencia) || !empty($model->direccion_oficina)): ?>
+    <div class="ms-panel border-orange">
+        <div class="ms-panel-body">
+            <h5 class="section-title">
+                <i class="fas fa-building text-orange-600 mr-3"></i> Información de Contacto y Domicilio Adicional
+            </h5>
+            <div class="info-grid text-left">
+                <div>
+                    <h5><strong>Dirección de Residencia:</strong> <?= nl2br(Html::encode($model->direccion_residencia ?? 'N/A')) ?></h5>
+                    <h5><strong>Teléfono de Residencia:</strong> <?= Html::encode($model->telefono_residencia ?? 'N/A') ?></h5>
+                </div>
+                <div>
+                    <h5><strong>Dirección de Oficina:</strong> <?= nl2br(Html::encode($model->direccion_oficina ?? 'N/A')) ?></h5>
+                    <h5><strong>Teléfono de Oficina:</strong> <?= Html::encode($model->telefono_oficina ?? 'N/A') ?></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
+<?php if ($model->tiene_contratante_diferente): ?>
+    <div class="ms-panel border-blue">
+        <div class="ms-panel-body">
+            <h5 class="section-title">
+                <i class="fas fa-user-tie text-blue-600 mr-3"></i> Información del Contratante
+            </h5>
+            <div class="info-grid text-left">
+                <div>
+                    <h5><strong>Nombres:</strong> <?= Html::encode($model->nombre_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellido_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Cédula:</strong> <?= Html::encode(($model->tipo_cedula_contratante ? $model->tipo_cedula_contratante . '-' : '') . ($model->cedula_contratante ?? 'N/A')) ?></h5>
+                    <h5><strong>Fecha de Nacimiento:</strong> <?= Html::encode(Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'd-m-Y') ?? 'N/A') ?></h5>
+                    <h5><strong>Email:</strong> <?= Html::a(Html::encode($model->email_contratante), 'mailto:' . Html::encode($model->email_contratante), ['class' => 'text-blue-500']) ?? 'N/A' ?></h5>
+                </div>
+                <div>
+                    <h5><strong>Sexo:</strong> <?= Html::encode($model->sexo_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Nacionalidad:</strong> <?= Html::encode($model->nacionalidad_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Estado Civil:</strong> <?= Html::encode($model->estado_civil_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Ocupación:</strong> <?= Html::encode($model->ocupacion_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Teléfono Celular:</strong> <?= Html::encode($model->telefono_celular_contratante ?? 'N/A') ?></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
+<div class="ms-panel border-red">
+    <div class="ms-panel-body">
+        <h5 class="section-title">
+            <i class="fas fa-credit-card text-red-600 mr-3"></i> Información Bancaria
+        </h5>
+        <div class="info-grid text-left">
+            <div>
+                <h5><strong>Nombre del Titular:</strong> <?= Html::encode($model->nombre_titular ?? 'N/A') ?></h5>
+                <h5><strong>Cédula del Titular:</strong> <?= Html::encode($model->cedula_titular ?? 'N/A') ?></h5>
+                <h5><strong>Número de Cuenta:</strong> <?= Html::encode($model->numero_cuenta ?? 'N/A') ?></h5>
+            </div>
+            <div>
+                <h5><strong>Banco:</strong> <?= Html::encode($model->banco ?? 'N/A') ?></h5>
+                <h5><strong>Tipo de Cuenta:</strong> <?= Html::encode($model->tipo_cuenta ?? 'N/A') ?></h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ms-panel border-gray">
+    <div class="ms-panel-body">
+        <h5 class="section-title">
+            <i class="fas fa-user-friends text-gray-600 mr-3"></i> Detalles de la Póliza
+        </h5>
+        <div class="info-grid text-left">
+            <div>
+                <h5><strong>¿Cubre Maternidad?:</strong> <?= formatBooleanIcon($model->cobertura_maternidad) ?></h5>
+                <h5><strong>Deducible de Maternidad:</strong> <?= Yii::$app->formatter->asCurrency($model->deducible_maternidad ?? 0, 'USD') ?></h5>
+                <h5><strong>Límite de Cobertura de Maternidad:</strong> <?= Yii::$app->formatter->asCurrency($model->limite_cobertura_maternidad ?? 0, 'USD') ?></h5>
+            </div>
+            <div>
+                <h5><strong>Miembros del Grupo Familiar:</strong></h5>
+                <pre class="p-2 bg-light rounded"><?= Html::encode($model->grupo_familiar ?? 'N/A') ?></pre>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
