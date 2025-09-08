@@ -250,6 +250,9 @@ $this->title = 'Bienvenido a SISPSA';
                                 <li><strong>Sala de cura menor</strong></li>
                                 <li><strong>Terapia Respiratoria</strong></li>
                                 <li><strong>No cubre preexistencia.</strong></li>
+                                <li><strong>Hospitalización por 48Hrs</strong></li>
+                                <li><strong>Cirugías por Apendicitis</strong></li>
+                                <li><strong>Inmovilización por accidentes de miembros superior e interiores. Excluidos accidentes cráneocefalicos</strong></li>
                             </ul>
                         </div>
                     </div>
