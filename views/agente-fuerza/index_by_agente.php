@@ -1,245 +1,290 @@
 <?php
 
 use yii\helpers\Html;
-use kartik\grid\GridView; // Usaremos Kartick GridView para consistencia si lo tienes instalado
+use kartik\grid\GridView;
 use yii\helpers\Url;
-use yii\grid\ActionColumn; // Para la columna de acciones
-use yii\web\JqueryAsset; // Asegúrate de tener este 'use' si tu JS de paneles lo requiere
-use app\models\AgenteFuerza; // Tu modelo AgenteFuerza
-use app\models\Agente; // Tu modelo Agente
+use yii\grid\ActionColumn;
+use app\models\AgenteFuerza;
+use app\models\Agente;
 use app\components\UserHelper;
-
 
 /** @var yii\web\View $this */
 /** @var app\models\search\AgenteFuerzaSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 /** @var int $id_agente */
-/** @var app\models\Agente $agente */ // ¡Este es el objeto Agente que necesitas!
+/** @var app\models\Agente $agente */
 
-$this->title = 'FUERZA DE VENTA'; //PARA AGENTE: ' . $agente->nom;
+$this->title = 'FUERZA DE VENTA: ' . $agente->nom;
 $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['agente/index']];
 $this->params['breadcrumbs'][] = ['label' => $agente->nom, 'url' => ['agente/update', 'id' => $agente->id]];
-$this->params['breadcrumbs'][] = $this->title;
+$this->params['breadcrumbs'][] = 'Fuerza de Venta';
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
-
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 
 ?>
 
-<!-- <div class="row" style="margin:3px !important;">
-    <div class="col-md-12 text-end">
-        <div class="float-right" style="margin-bottom:10px;">
-            ('<i class="fas fa-plus"></i> CREAR MIEMBRO DE FUERZA DE VENTA', ['agente-fuerza/create', 'agente_id' => $id_agente], ['class' => 'btn btn-outline-primary btn-lg'])
-            ('<i class="fas fa-undo"></i> Volver', ['agente/update', 'id' => $agente->id], ['class' => 'btn btn-info btn-lg'])
+<?php if (!$agente->isNewRecord) : ?>
+<div class="col-xl-12 col-md-12 mb-3">
+    <div class="row row-cols-1 row-cols-md-4 g-3">
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-building"></i> AGENCIAS',
+                ['agente/index'],
+                [
+                    'class' => 'btn btn-lg w-100',
+                    'style' => 'background-color: #F3F4F6; border-color: #F3F4F6; color: #000;'
+                ]
+            ) ?>
         </div>
-    </div> -->
-
-    <?php
-
-
-if (!$agente->isNewRecord) { ?>
-    <div class="col-xl-12 col-md-12 mb-3">
-        <div class="row row-cols-1 row-cols-md-4 g-3">
-            <div class="col">
-                <?= Html::a(
-                    '<i class="fas fa-building"></i> AGENCIAS',
-                    ['agente/index'],
-                    ['class' => 'btn btn-secondary btn-lg w-100']
-                ) ?>
-            </div>
-            <?php if($permisos){ ?>
-            <div class="col">
-                <?= Html::a(
-                    '<i class="fas fa-undo"></i> VOLVER PARA AGENCIA PRINCIPAL',
-                    ['agente/update', 'id' => $agente->id],
-                    ['class' => 'btn btn-info btn-lg w-100']
-                ) ?>
-            </div>
-          
-                <div class="col">
-                    <?= Html::a(
-                        '<i class="fas fa-plus"></i> CREAR UN AGENTE / ASESOR',
-                        ['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
-                        ['class' => 'btn btn-outline-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
-                    ) ?>
-                </div>
-
-
-            <div class="col">
-                <?= Html::a(
-                    '<i class="fas fa-plus"></i> CARGA MASIVA(EN CONSTRUCCION)',
-                    '#',//['agente-fuerza/create', 'agente_id' => $agente->id], // Asegúrate que $agente->id esté disponible
-                    ['class' => 'btn btn-primary btn-lg w-100'] // Usa btn-outline-primary para un estilo diferente
-                ) ?>
-            </div>
-            <?php } ?>
+        <?php if($permisos): ?>
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-undo"></i> VOLVER A AGENCIA',
+                ['agente/update', 'id' => $agente->id],
+                [
+                    'class' => 'btn btn-lg w-100',
+                    'style' => 'background-color: #13EAB1; border-color: #13EAB1; color: #000;'
+                ]
+            ) ?>
         </div>
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-plus"></i> CREAR AGENTE/ASESOR',
+                ['agente-fuerza/create', 'agente_id' => $agente->id],
+                [
+                    'class' => 'btn btn-lg w-100',
+                    'style' => 'background-color: #00E3E2; border-color: #00E3E2; color: #000;'
+                ]
+            ) ?>
+        </div>
+        <div class="col">
+            <?= Html::a(
+                '<i class="fas fa-upload"></i> CARGA MASIVA',
+                '#',
+                [
+                    'class' => 'btn btn-lg w-100',
+                    'style' => 'background-color: #041E3F; border-color: #041E3F; color: #fff;',
+                    'title' => 'Funcionalidad en construcción',
+                    'onclick' => 'alert("Funcionalidad en construcción"); return false;'
+                ]
+            ) ?>
+        </div>
+        <?php endif; ?>
     </div>
-<?php } ?>
-    
-    
-    <div class="col-xl-12 col-md-12">
-        <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header">
-                <h1><?= Html::encode($this->title).": ".$agente->nom ?> </h1> </div>
-                <div class="ms-panel-body">
-                    <div class="table-responsive">
-                        <?= GridView::widget([
-                            'dataProvider' => $dataProvider,
-                            'filterModel' => $searchModel,
-                            'layout' => "{items}{pager}", // Puedes mantener o ajustar según necesites {summary}{items}{pager}
-                            'resizableColumns' => false,
-                            'bordered' => false,
-                            'responsiveWrap' => false,
-                            'persistResize' => false,
-                            
-                            'tableOptions' => [
-                            'class' => 'table table-striped table-bordered table-hover '
+</div>
+<?php endif; ?>
+
+<div class="col-xl-12 col-md-12">
+    <div class="ms-panel ms-panel-fh">
+        <div class="ms-panel-header">
+            <h1><?= Html::encode($this->title) ?></h1>
+        </div>
+        <div class="ms-panel-body">
+            <div class="table-responsive">
+                <?= GridView::widget([
+                    'dataProvider' => $dataProvider,
+                    'filterModel' => $searchModel,
+                    'layout' => "{items}{pager}",
+                    'resizableColumns' => false,
+                    'bordered' => false,
+                    'responsiveWrap' => false,
+                    'persistResize' => false,
+                    'tableOptions' => [
+                        'class' => 'table table-striped table-bordered table-hover'
+                    ],
+                    'options' => [
+                        'class' => 'grid-view-container table-responsive',
+                    ],
+                    'columns' => [
+                        [
+                            'attribute' => 'id',
+                            'label' => 'Agente / Asesor',
+                            'value' => function($model) {
+                                return $model->id;
+                            },
+                            'contentOptions' => ['class' => 'text-center p-2'],
+                            'filterInputOptions' => [
+                                'placeholder' => 'Buscar N° de Agente /Asesor',
+                                'class' => 'form-control form-control-lg text-center',
+                            ],
+                            'headerOptions' => ['style' => 'color: white;'],
                         ],
-                        'options' => [
-                            'class' => 'grid-view-container table-responsive',
+                        [
+                            'attribute' => 'agenteFuerzaUserNombres',
+                            'label' => 'Nombre',
+                            'value' => function($model) {
+                                if ($model->userDatos) {
+                                    return $model->userDatos->nombres . ' ' . $model->userDatos->apellidos;
+                                }
+                                return 'N/A';
+                            },
+                            'filterInputOptions' => [
+                                'placeholder' => 'Buscar nombre',
+                                'class' => 'form-control form-control-lg text-center',
+                            ],
+                            'contentOptions' => ['class' => 'text-center'],
+                            'headerOptions' => ['style' => 'color: white;'],
                         ],
-                        
-                        'columns' => [
-                             [
-                                'attribute' => 'id', // <--- ¡Debe coincidir con el nombre del atributo virtual!
-                                'label' => 'Agente / Asesor',
-                                'value' => function($model) {
-                                    return $model->id;
-                                },
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar N° de Agente /Asesor',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
+                        [
+                            'label' => 'Cedula de identidad',
+                            'value' => function($model) {
+                                if ($model->userDatos) {
+                                    return $model->userDatos->cedula;
+                                }
+                                return 'No disponible';
+                            },
+                            'attribute' => 'agenteFuerzaUserCedula',
+                            'headerOptions' => ['style' => 'color: white;'],
+                            'filterInputOptions' => [
+                                'placeholder' => 'Buscar cedula de identidad',
+                                'class' => 'form-control form-control-lg text-center',
                             ],
-                            // ['class' => 'kartik\grid\SerialColumn'], // Usamos SerialColumn de Kartik para consistencia
-                            
-                            // Asegúrate de que estos atributos existan en tu modelo AgenteFuerza
-                            // y sean relevantes para mostrar en la tabla
-                           
-                            
-                            [
-                                'attribute' => 'agenteFuerzaUserNombres',
-                                'label' => 'Nombre',
-                                'value' => function($model) {
-                                    if ($model->userDatos) {
-                                        return $model->userDatos->nombres . ' ' . $model->userDatos->apellidos;
-                                    }
-                                    return 'N/A';
-                                },
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar nombre',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                                'contentOptions' => ['style' => 'text-align: center;'],
+                            'contentOptions' => ['class' => 'text-center'],
+                        ],
+                        [
+                            'label' => 'Correo Electrónico',
+                            'value' => function($model) {
+                                if ($model->userDatos) {
+                                    return $model->userDatos->email;
+                                }
+                                return 'No disponible';
+                            },
+                            'attribute' => 'agenteFuerzaUserEmail',
+                            'headerOptions' => ['style' => 'color: white;'],
+                            'filterInputOptions' => [
+                                'placeholder' => 'Buscar correo',
+                                'class' => 'form-control form-control-lg text-center',
                             ],
-
-                            [
-                                'label' => 'Cedula de identidad',
-                                'value' => function($model) {
-                                    if ($model->userDatos) {
-                                        return $model->userDatos->cedula;
-                                    }
-                                    return 'No disponible';
-                                },
-                                'attribute' => 'agenteFuerzaUserCedula',
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar cedula de identidad',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                                'contentOptions' => ['style' => 'text-align: center;'],
+                            'contentOptions' => ['class' => 'text-center'],
+                        ],
+                        [
+                            'label' => 'Teléfono',
+                            'value' => function($model) {
+                                return $model->userDatos->telefono ?? 'No disponible';
+                            },
+                            'attribute' => 'agenteFuerzaUserTelefono',
+                            'headerOptions' => ['style' => 'color: white;'],
+                            'filterInputOptions' => [
+                                'placeholder' => 'Buscar teléfono',
+                                'class' => 'form-control form-control-lg text-center',
                             ],
-                            
-                            [
-                                'label' => 'Correo Electrónico',
-                                'value' => function($model) {
-                                    if ($model->userDatos) {
-                                        return $model->userDatos->email;
-                                    }
-                                    return 'No disponible';
+                            'contentOptions' => ['class' => 'text-center'],
+                        ],
+                        [
+                            'class' => ActionColumn::class,
+                            'header' => 'ACCIONES',
+                            'template' => '<div class="d-flex justify-content-center gap-3">{view}{update}{afiliados}</div>',
+                            'headerOptions' => ['style' => 'color: white;'],
+                            'contentOptions' => ['class' => 'text-center p-2'],
+                            'buttons' => [
+                                'view' => function ($url, $model, $key) {
+                                    return Html::a(
+                                        '<i class="fa fa-eye"></i>',
+                                        ['agente-fuerza/view', 'id' => $model->id],
+                                        [
+                                            'title' => 'Ver Detalles',
+                                            'class' => 'btn btn-action btn-view',
+                                            'style' => 'box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3); transition: all 0.3s ease; transform: translateY(0);'
+                                        ]
+                                    );
                                 },
-                                'attribute' => 'agenteFuerzaUserEmail',
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar correo',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                                'contentOptions' => ['style' => 'text-align: center;'],
-                            ],
-
-                            [
-                                'label' => 'Teléfono', // Título de la columna
-                                'value' => function($model) {
-                                    // Asumiendo que la columna en user_datos es 'telefono' o 'telf'
-                                    // Ajusta 'telefono' al nombre real de tu columna
-                                    return $model->userDatos->telefono ?? 'No disponible';
-                                },
-                                // Asegúrate de que este 'attribute' sea correcto para el SearchModel
-                                'attribute' => 'agenteFuerzaUserTelefono', // Cambia 'telefono' si el nombre de tu columna es diferente
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'filterInputOptions' => [
-                                    'placeholder' => 'Buscar teléfono',
-                                    'class' => 'form-control form-control-lg text-center',
-                                ],
-                                'contentOptions' => ['style' => 'text-align: center;'],
-                            ],
-                           // Columna de Acciones (Ver, Editar, Eliminar)
-                            [
-                                'class' => ActionColumn::class,
-                                'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{afiliados}</div>',
-                                'options' => ['style' => 'width:80px; min-width:80px;'],
-                                'headerOptions' => ['style' => 'color: white!important;'],
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
-                                'buttons' => [
-                                    'view' => function ($url, $model, $key) { 
+                                'update' => function ($url, $model, $key) use ($permisos) {
+                                    if($permisos) {
                                         return Html::a(
-                                            '<i class="fa fa-eye"></i>', 
-                                            Url::to(['agente-fuerza/view', 'id' => $model->id]), // URL a la acción 'view' de tu controlador AgenteFuerza
-                                            [
-                                                'title' => 'Ver Detalles',
-                                                'class' => 'btn btn-link btn-sm text-info', // Estilo de botón para ver (azul)
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                                            ]
-                                        );
-                                    },
-                                    'update' => function ($url, $model, $key) use ($id_agente, $agente, $permisos) {
-
-                                        if($permisos)
-                                        return Html::a(
-                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                            Url::to(['agente-fuerza/update', 'id' => $model->id]),
+                                            '<i class="fas fa-pencil-alt"></i>',
+                                            ['agente-fuerza/update', 'id' => $model->id],
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn btn-link btn-sm text-success',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
+                                                'class' => 'btn btn-action btn-edit',
+                                                'style' => 'box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3); transition: all 0.3s ease; transform: translateY(0);'
                                             ]
                                         );
-                                    },
-                                    'afiliados' => function ($url, $model, $key) use ($id_agente, $agente, $permisos) {
-
-                                        //if($permisos)
-                                        return Html::a(
-                                            '<i class="fas fa-users ms-text-primary"></i>',
-                                            Url::to(['user-datos/index-by-afiliado', 'asesor_id' => $model->id]),
-                                            [
-                                                'title' => 'Afiliados',
-                                                'class' => 'btn btn-link btn-sm text-success',
-                                                'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
-                                            ]
-                                        );
-                                    },
-                                   
-                                ],
+                                    }
+                                    return '';
+                                },
+                                'afiliados' => function ($url, $model, $key) {
+                                    return Html::a(
+                                        '<i class="fas fa-users"></i>',
+                                        ['user-datos/index-by-afiliado', 'asesor_id' => $model->id],
+                                        [
+                                            'title' => 'Afiliados',
+                                            'class' => 'btn btn-action btn-afiliados',
+                                            'style' => 'box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3); transition: all 0.3s ease; transform: translateY(0);'
+                                        ]
+                                    );
+                                },
                             ],
-                        ], // Fin de columns
-                    ]); ?>
-                </div>
+                        ],
+                    ],
+                ]); ?>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+.btn-action {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.btn-action:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.btn-action:active {
+    transform: translateY(-1px) scale(1.02);
+}
+
+.btn-view {
+    background: linear-gradient(145deg, #17a2b8, #138496);
+    color: white !important;
+}
+
+.btn-edit {
+    background: linear-gradient(145deg, #28a745, #20c997);
+    color: white !important;
+}
+
+.btn-afiliados {
+    background: linear-gradient(145deg, #ffc107, #fd7e14);
+    color: white !important;
+}
+
+.btn-action i {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.btn-action:hover i {
+    transform: scale(1.1);
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Add a subtle glow effect on hover */
+.btn-view:hover {
+    box-shadow: 0 8px 16px rgba(23, 162, 184, 0.4) !important;
+}
+
+.btn-edit:hover {
+    box-shadow: 0 8px 16px rgba(40, 167, 69, 0.4) !important;
+}
+
+.btn-afiliados:hover {
+    box-shadow: 0 8px 16px rgba(255, 193, 7, 0.4) !important;
+}
+</style>

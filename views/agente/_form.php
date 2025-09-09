@@ -13,7 +13,7 @@ $isNewRecord = $isNewRecord ?? true;
 
 if ($model->isNewRecord) {
     $readOnly = false;
-}else{
+} else {
     $readOnly = true;
 }
 ?>
@@ -23,32 +23,42 @@ if ($model->isNewRecord) {
         <?php $form = ActiveForm::begin(); ?>
 
         <?php if (!$model->isNewRecord) { ?>
-<div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
-    <div class="col">
-        <?= Html::a(
-            '<i class="fas fa-undo mr-2"></i> Volver',
-            ['index'],
-            [
-                'class' => 'btn btn-primary btn-lg w-10', // Mantengo btn-lg y w-100
-                'style' => 'padding: 2rem 3rem; font-size: 1.5rem;', // Estilos en línea para hacerlo más grande y grueso
-            ]
-        ) ?>
-    </div>
+            <!-- Section for the "Volver" button -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <?= Html::a(
+                        '<i class="fas fa-undo mr-2"></i> Volver',
+                        ['index'],
+                        [
+                            'class' => 'btn btn-primary btn-lg',
+                            'style' => 'font-size: 1.5rem;',
+                            'title' => 'Volver a la lista de Agencias',
+                        ]
+                    ) ?>
+                </div>
+            </div>
 
-    <div class="col">
-        <?= Html::a(
-            '<i class="fas fa-users mr-5" style="font-size:2.5rem; vertical-align:middle;"></i> <span style="font-size:2rem; font-weight:700; color: #fff;letter-spacing:1px;">FUERZA DE VENTA</span>',
-            ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
-            [
-                'class' => 'btn btn-primary btn-lg w-100 shadow',
-                'style' => 'padding: 2.5rem 3.5rem; font-size: 2rem; border-radius: 1rem; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.12);',
-            ]
-        ) ?>
-    </div>
-</div>
-<?php } ?>
-
-        <br>
+            <!-- Start of the new "Fuerza de Venta" subsection -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary">
+                    <h5 class="mb-0" style="color: white; font-size: 1.75rem; font-weight:600">Fuerza de Venta y Datos de la Agencia</h5>
+                </div>
+                <div class="card-body">
+                    <!-- "Fuerza de Venta" button styled as a tag -->
+                    <div class="row mb-3 d-flex justify-content-end">
+                        <div class="col-auto">
+                            <?= Html::a(
+                                '<i class="fas fa-users mr-2" style="font-size:1.5rem; vertical-align:middle;"></i> <span style="font-size:1.5rem; font-weight:600; color: #fff;letter-spacing:1px;">FUERZA DE VENTA</span>',
+                                ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
+                                [
+                                    'class' => 'btn btn-primary shadow',
+                                    'style' => 'padding: 0.75rem 1.5rem; font-size: 1.25rem; border-radius: 9999px; font-weight: 600; box-shadow: 0 5px 15px rgba(0,0,0,0.2);',
+                                ]
+                            ) ?>
+                        </div>
+                    </div>
+                    <br>
+        <?php } ?>
 
         <div class="row mb-3">
             <div class="col-md-4">
@@ -67,47 +77,37 @@ if ($model->isNewRecord) {
                     'placeholder' => 'Ingrese el código SUDEASEG',
                 ]) ?>
             </div>
-<div class="col-md-4">
-    <?php
-    $agentesList = UserHelper::getAgentesList();
+            <div class="col-md-4">
+                <?php
+                $agentesList = UserHelper::getAgentesList();
 
-    $hasRealAgents = (count($agentesList) > 1) || (count($agentesList) === 1 && !isset($agentesList['0']) && !isset($agentesList['']));
+                $hasRealAgents = (count($agentesList) > 1) || (count($agentesList) === 1 && !isset($agentesList['0']) && !isset($agentesList['']));
 
-    $select2Options = [
-        'data' => $agentesList,
-        'options' => [
-            'placeholder' => 'Seleccione',
-            'class' => 'form-control form-control-lg'
-        ],
-        'pluginOptions' => [
-            'allowClear' => false,
-        ],
-    ];
+                $select2Options = [
+                    'data' => $agentesList,
+                    'options' => [
+                        'placeholder' => 'Seleccione',
+                        'class' => 'form-control form-control-lg'
+                    ],
+                    'pluginOptions' => [
+                        'allowClear' => false,
+                    ],
+                ];
 
-    if (!$hasRealAgents) {
-        $select2Options['options']['placeholder'] = 'No Disponible';
-        $select2Options['options']['disabled'] = true;
-    }
+                if (!$hasRealAgents) {
+                    $select2Options['options']['placeholder'] = 'No Disponible';
+                    $select2Options['options']['disabled'] = true;
+                }
 
-    echo $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->widget(Select2::classname(), $select2Options);
-    ?>
-</div>
+                echo $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO')->widget(Select2::classname(), $select2Options);
+                ?>
+            </div>
         </div>
-
-        <!-- Porcentajes Section -->
-        <!--<div class="ms-panel mb-4">
-            <div class="ms-panel-header justify-content-between align-items-center">
-                <h3 class="section-title mr-3" style="background-color:rgb(0, 158 , 251); padding: 1rem; border-radius: .5rem; color: #fff !important;">
-                    <i class="fas fa-percent mr-3" style="color: #fff !important;"></i> 
-                        <span style="color: #fff !important;">Porcentajes de Comisión</span>
-                </h3>
-            </div> -->
-            <div class="row">
-                <div class="col-md-12">
-                     <div class="card mb-3"> <!-- FIXED: Changed card-mb-3 to card mb-3 -->
-                        <div class="card-header bg-primary"> 
-                           <h6 class="mb-0" style="color: white; font-size: 20px;">Porcentajes de Comisiones por (%)</h6>
-                        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header bg-primary"> 
+                <h6 class="mb-0" style="color: white; font-size: 1.55rem; font-weight:600">Porcentajes (%) de Comisiones por:</h6>
+            </div>
             <div class="ms-panel-body">
                 <div class="row g-3">
                     <div class="col-md-2">
@@ -173,23 +173,29 @@ if ($model->isNewRecord) {
                 </div>
             </div>
         </div>
-    </div>
+
+        <?php if (!$model->isNewRecord) { ?>
+            <!-- End of the new "Fuerza de Venta" subsection -->
+            </div>
+            </div>
+        <?php } ?>
+
         <div class="row mt-4">
             <div class="col-12 d-flex justify-content-start">
                 <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-3']) ?>
-                
+
                 <?= Html::a(
-                        '<i class="fas fa-undo mr-2"></i> Volver', 
-                        '#',
-                        [
-                            'class' => 'btn btn-secondary btn-lg mr-3',
-                            'onclick' => 'window.history.back(); return false;', 
-                            'title' => 'Volver a la página anterior', 
-                        ]
-                    ) ?>
+                    '<i class="fas fa-undo mr-2"></i> Volver',
+                    '#',
+                    [
+                        'class' => 'btn btn-secondary btn-lg mr-3',
+                        'onclick' => 'window.history.back(); return false;',
+                        'title' => 'Volver a la página anterior',
+                    ]
+                ) ?>
 
                 <?php
-                if (isset($isNewRecord) && $isNewRecord) { 
+                if (isset($isNewRecord) && $isNewRecord) {
                     echo Html::button('<i class="fas fa-sync-alt mr-2"></i> Refrescar', [
                         'class' => 'btn btn-info btn-lg',
                         'id' => 'btn-refrescar-form'
@@ -199,7 +205,6 @@ if ($model->isNewRecord) {
             </div>
         </div>
 
-
         <?php ActiveForm::end(); ?>
     </div>
 </div>
@@ -207,7 +212,7 @@ if ($model->isNewRecord) {
 <?php
 $js = <<<JS
 $('#btn-refrescar-form').on('click', function() {
-    $(this).closest('form')[0].reset(); 
+    $(this).closest('form')[0].reset();
 });
 
 // Initialize tooltips
