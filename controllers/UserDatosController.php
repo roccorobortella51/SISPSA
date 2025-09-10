@@ -1056,6 +1056,89 @@ class UserDatosController extends Controller
         if($model->save()){
             Yii::info("UserDatos guardado exitosamente", __METHOD__);
 
+            $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
+                    $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
+
+                    $model->imagenIdentificacionFile = !empty($imagenIdentificacionFiles) ? reset($imagenIdentificacionFiles) : null;
+                    $model->selfieFile = !empty($selfieFiles) ? reset($selfieFiles) : null;
+
+                   
+                    if (!empty($imagenIdentificacionFiles) && $imagenIdentificacionFiles[0]->size > 0) {
+                        $folder = 'documentos';
+                        $fileName = uniqid('imagen_identificacion_') . '.' . $model->imagenIdentificacionFile->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->imagenIdentificacionFile->saveAs($tempFilePath)) {
+                            //Yii::info("Archivo temporal guardado en: " . $tempFilePath, _METHOD_);
+
+                            $fileKeyInBucket = $fileName;
+
+                           // Yii::info("Subiendo archivo a Supabase Storage: " . $fileName, _METHOD_);
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagenIdentificacionFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                //Yii::info("Archivo temporal eliminado: " . $tempFilePath, _METHOD_);
+                            }
+
+                            if ($publicUrl) {
+                                $model->imagen_identificacion = $publicUrl;
+                                if ($model->save(false)) {
+                                    Yii::$app->session->setFlash('success', 'Identificacion subido con éxito.');
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->imagenIdentificacionFile->error, _METHOD_);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+                    if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
+                        $folder = 'FotoPerfil';
+                        $fileName = uniqid('selfie_') . '.' . $model->selfieFile->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->selfieFile->saveAs($tempFilePath)) {
+                            //Yii::info("Archivo temporal guardado en: " . $tempFilePath, _METHOD_);
+
+                            $fileKeyInBucket = $fileName;
+
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->selfieFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                               // Yii::info("Archivo temporal eliminado: " . $tempFilePath, _METHOD_);
+                            }
+
+                            if ($publicUrl) {
+                                $model->selfie = $publicUrl;
+                                if ($model->save(false)) {
+                                    Yii::$app->session->setFlash('success', 'Selfie subido con éxito.');
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->selfieFile->error, _METHOD_);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+
             // --- INTENTAR GUARDAR CONTRATO ---
             $modelContrato->user_id = $id;
             $modelContrato->estatus = 'Creado';
@@ -1098,6 +1181,11 @@ class UserDatosController extends Controller
                         Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
                     }
                 }
+
+
+
+
+                
                 
                 // Redirección exitosa después de todo el proceso
                 Yii::$app->session->setFlash('success', 'El afiliado fue actualizado exitosamente.');
