@@ -118,6 +118,31 @@ class Corporativo extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
+    public function attributes()
+    {
+        return array_merge(parent::attributes(), [
+            'nombre_representante',
+            'cedula_representante',
+            'nacionalidad_representante',
+            'estado_civil_representante',
+            'lugar_nacimiento_representante',
+            'fecha_nacimiento_representante',
+            'sexo_representante',
+            'profesion_representante',
+            'ocupacion_representante',
+            'descripcion_actividad_representante',
+            'direccion_representante',
+            'telefono_representante',
+            'actividad_economica',
+            'productos_servicios',
+            'utilidad_ejercicio_anterior',
+            'patrimonio',
+        ]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function attributeLabels()
     {
         return [
@@ -147,7 +172,7 @@ class Corporativo extends \yii\db\ActiveRecord
             'deleted_at' => 'Eliminado El',
             'clinicas_ids' => 'Clínicas Asociadas',
             'users_ids' => 'Empleados Asociados',
-            
+
             // Nuevas etiquetas para los campos del representante y actividad económica
             'nombre_representante' => 'Nombre del Representante',
             'cedula_representante' => 'Cédula del Representante',

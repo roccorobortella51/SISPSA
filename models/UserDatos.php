@@ -60,28 +60,81 @@ use yii\db\ActiveRecord;
  * @property string|null $telefono_residencia
  * @property string|null $telefono_oficina
  * @property string|null $telefono_celular
- * @property string|null $fecha_nacimiento_contratante
- * @property string|null $fecha_nacimiento_representante_contratante
- * @property string|null $fecha_nacimiento_beneficiario
+ * @property string|null $razon_social
+ * @property string|null $rif
+ * @property string|null $registro_mercantil
+ * @property string|null $tomo
+ * @property string|null $fecha_registro
+ * @property string|null $actividad_economica_corp
+ * @property string|null $direccion_corporativa
+ * @property string|null $telefono_corporativo
+ * @property string|null $productos_servicios
+ * @property string|null $utilidad
+ * @property string|null $patrimonio
+ * @property string|null $plan_seleccionado
+ * @property string|null $moneda
+ * @property string|null $deducible
+ * @property string|null $limite_cobertura
  * @property bool|null $cobertura_maternidad
- * @property bool|null $tiene_contratante_diferente
- * @property int|null $cedula_contratante
- * @property int|null $cedula_representante_contratante
+ * @property string|null $deducible_maternidad
+ * @property string|null $limite_cobertura_maternidad
  * @property string|null $grupo_familiar
- * @property int|null $afiliado_corporativo_id
- * @property string|null $nombre_representante
- * @property string|null $apellido_representante
- * @property string|null $tipo_cedula_representante
- * @property string|null $nacionalidad_representante
- * @property string|null $estado_civil_representante
- * @property string|null $lugar_nacimiento_representante
- * @property string|null $fecha_nacimiento_representante
- * @property string|null $sexo_representante
- * @property string|null $profesion_representante
- * @property string|null $ocupacion_representante
- * @property string|null $descripcion_actividad_representante
- * @property string|null $direccion_representante
- * @property string|null $telefono_representante
+ * @property string|null $nombre_beneficiario
+ * @property string|null $cedula_beneficiario
+ * @property string|null $parentesco_beneficiario
+ * @property string|null $sexo_beneficiario
+ * @property string|null $fecha_nacimiento_beneficiario
+ * @property string|null $nombre_titular
+ * @property string|null $cedula_titular
+ * @property string|null $numero_cuenta
+ * @property int|null $banco_id
+ * @property string|null $tipo_cuenta
+ * @property string|null $nombre_declaracion_afiliado
+ * @property string|null $cedula_declaracion_afiliado
+ * @property string|null $nombre_declaracion_contratante
+ * @property string|null $cedula_declaracion_contratante
+ * @property string|null $tipo_afiliacion
+ * @property string|null $nombre_contratante
+ * @property string|null $apellido_contratante
+ * @property string|null $tipo_cedula_contratante
+ * @property int|null $cedula_contratante
+ * @property string|null $fecha_nacimiento_contratante
+ * @property string|null $sexo_contratante
+ * @property string|null $nacionalidad_contratante
+ * @property string|null $estado_civil_contratante
+ * @property string|null $lugar_nacimiento_contratante
+ * @property string|null $profesion_contratante
+ * @property string|null $ocupacion_contratante
+ * @property string|null $actividad_economica_contratante
+ * @property string|null $descripcion_actividad_contratante
+ * @property string|null $ingreso_anual_contratante
+ * @property string|null $direccion_residencia_contratante
+ * @property string|null $direccion_oficina_contratante
+ * @property string|null $direccion_cobro_contratante
+ * @property string|null $telefono_residencia_contratante
+ * @property string|null $telefono_oficina_contratante
+ * @property string|null $telefono_celular_contratante
+ * @property string|null $email_contratante
+ * @property string|null $nombre_representante_contratante
+ * @property string|null $apellido_representante_contratante
+ * @property string|null $tipo_cedula_representante_contratante
+ * @property int|null $cedula_representante_contratante
+ * @property string|null $nacionalidad_representante_contratante
+ * @property string|null $estado_civil_representante_contratante
+ * @property string|null $lugar_nacimiento_representante_contratante
+ * @property string|null $fecha_nacimiento_representante_contratante
+ * @property string|null $sexo_representante_contratante
+ * @property string|null $profesion_representante_contratante
+ * @property string|null $ocupacion_representante_contratante
+ * @property string|null $descripcion_actividad_representante_contratante
+ * @property string|null $direccion_representante_contratante
+ * @property string|null $telefono_representante_contratante
+ * @property string|null $nombre_titular_contratante
+ * @property string|null $cedula_titular_contratante
+ * @property string|null $numero_cuenta_contratante
+ * @property string|null $banco_contratante
+ * @property string|null $tipo_cuenta_contratante
+ * @property bool|null $tiene_contratante_diferente
  * @property string|null $direccion_cobro
  *
  * // ... (Tus @property para las relaciones get...())
@@ -102,6 +155,11 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
+    public $tiene_contratante_diferente;
+    public $cobertura_maternidad;
+    
+    // NOTA: Solo propiedades públicas para campos que NO están en la base de datos
+    // Todos los campos de la tabla están documentados en @property arriba
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -115,7 +173,7 @@ class UserDatos extends ActiveRecord
      */
     public static function tableName()
     {
-        return 'user_datos';
+        return 'public.user_datos';
     }
 
     /**
@@ -196,7 +254,7 @@ class UserDatos extends ActiveRecord
             
             // Validación específica para cédula - debe ser numérica
             [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
-            [['cedula'], 'string', 'max' => 10, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
+            [['cedula'], 'integer', 'max' => 9999999999, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
             
             // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
@@ -210,6 +268,9 @@ class UserDatos extends ActiveRecord
             //[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
+
+            [['banco_id'], 'integer'],
+[['banco_id'], 'exist', 'skipOnError' => true, 'targetClass' => Banco::class, 'targetAttribute' => ['banco_id' => 'id'], 'message' => 'El banco seleccionado no existe.'],
 
             // *** LA REGLA CLAVE: No puede ser mayor a la fecha actual ***
             [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'], // Valida el formato de fecha
@@ -225,7 +286,7 @@ class UserDatos extends ActiveRecord
               'telefono_celular', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
               'deducible_maternidad', 'limite_cobertura_maternidad', 'nombre_beneficiario',
               'cedula_beneficiario', 'parentesco_beneficiario', 'sexo_beneficiario',
-              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'banco', 'tipo_cuenta',
+              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'tipo_cuenta',
               'nombre_declaracion_afiliado', 'cedula_declaracion_afiliado', 'nombre_declaracion_contratante',
               'cedula_declaracion_contratante', 'tipo_afiliacion', 'nombre_contratante',
               'apellido_contratante', 'tipo_cedula_contratante', 'sexo_contratante',
@@ -250,14 +311,115 @@ class UserDatos extends ActiveRecord
 
             // Validaciones para campos booleanos
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
+            [['cobertura_maternidad', 'tiene_contratante_diferente'], 'default', 'value' => false],
 
             // Validaciones para campos enteros
             [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
 
             // Validaciones para campos de texto largo (para JSON)
             [['grupo_familiar'], 'string'],
+            [['grupo_familiar'], 'safe'],
         ];
 
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function attributes()
+    {
+        return array_merge(parent::attributes(), [
+            'nacionalidad',
+            'estado_civil',
+            'lugar_nacimiento',
+            'profesion',
+            'ocupacion',
+            'actividad_economica',
+            'ramo_comercial',
+            'descripcion_actividad',
+            'ingreso_anual',
+            'direccion_residencia',
+            'direccion_oficina',
+            'telefono_residencia',
+            'telefono_oficina',
+            'telefono_celular',
+            'razon_social',
+            'rif',
+            'registro_mercantil',
+            'tomo',
+            'fecha_registro',
+            'actividad_economica_corp',
+            'direccion_corporativa',
+            'telefono_corporativo',
+            'productos_servicios',
+            'utilidad',
+            'patrimonio',
+            'plan_seleccionado',
+            'moneda',
+            'deducible',
+            'limite_cobertura',
+            'cobertura_maternidad',
+            'deducible_maternidad',
+            'limite_cobertura_maternidad',
+            'grupo_familiar',
+            'nombre_beneficiario',
+            'cedula_beneficiario',
+            'parentesco_beneficiario',
+            'sexo_beneficiario',
+            'fecha_nacimiento_beneficiario',
+            'nombre_titular',
+            'cedula_titular',
+            'numero_cuenta',
+            'banco_id',
+            'tipo_cuenta',
+            'nombre_declaracion_afiliado',
+            'cedula_declaracion_afiliado',
+            'nombre_declaracion_contratante',
+            'cedula_declaracion_contratante',
+            'tipo_afiliacion',
+            'nombre_contratante',
+            'apellido_contratante',
+            'tipo_cedula_contratante',
+            'cedula_contratante',
+            'fecha_nacimiento_contratante',
+            'sexo_contratante',
+            'nacionalidad_contratante',
+            'estado_civil_contratante',
+            'lugar_nacimiento_contratante',
+            'profesion_contratante',
+            'ocupacion_contratante',
+            'actividad_economica_contratante',
+            'descripcion_actividad_contratante',
+            'ingreso_anual_contratante',
+            'direccion_residencia_contratante',
+            'direccion_oficina_contratante',
+            'direccion_cobro_contratante',
+            'telefono_residencia_contratante',
+            'telefono_oficina_contratante',
+            'telefono_celular_contratante',
+            'email_contratante',
+            'nombre_representante_contratante',
+            'apellido_representante_contratante',
+            'tipo_cedula_representante_contratante',
+            'cedula_representante_contratante',
+            'nacionalidad_representante_contratante',
+            'estado_civil_representante_contratante',
+            'lugar_nacimiento_representante_contratante',
+            'fecha_nacimiento_representante_contratante',
+            'sexo_representante_contratante',
+            'profesion_representante_contratante',
+            'ocupacion_representante_contratante',
+            'descripcion_actividad_representante_contratante',
+            'direccion_representante_contratante',
+            'telefono_representante_contratante',
+            'nombre_titular_contratante',
+            'cedula_titular_contratante',
+            'numero_cuenta_contratante',
+            'banco_contratante',
+            'tipo_cuenta_contratante',
+            'tiene_contratante_diferente',
+            'direccion_cobro',
+        ]);
     }
 
     /**
@@ -268,7 +430,7 @@ class UserDatos extends ActiveRecord
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
             'direccion_cobro' => 'Dirección de Cobro',
-        
+
         ]);
     }
 
@@ -427,8 +589,30 @@ class UserDatos extends ActiveRecord
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
+    public function getBanco() {return $this->hasOne(Banco::class, ['id' => 'banco_id']); 
+}
 
-    public function afterSave($insert, $changedAttributes)
+
+    // 1. Relación para llegar a la tabla intermedia
+public function getCorporativoUser()
+{
+    // Esta relación conecta el ID de usuario de la tabla user_datos
+    // con el ID de usuario de la tabla intermedia corporativo_user
+    return $this->hasOne(CorporativoUser::class, ['user_id' => 'user_login_id']);
+}
+
+// 2. Relación para llegar al modelo Corporativo usando la tabla intermedia
+public function getCorporativo()
+{
+    // Usa la relación 'corporativoUser' como puente ('via')
+    // para llegar al modelo 'Corporativo'
+    return $this->hasOne(Corporativo::class, ['id' => 'corporativo_id'])
+        ->via('corporativoUser');
+}
+
+
+
+   /* public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
 
@@ -451,6 +635,6 @@ class UserDatos extends ActiveRecord
             // Si el campo está vacío, eliminamos la relación existente
             CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
         }
-    }
+    }*/
 
 }

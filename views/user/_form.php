@@ -318,7 +318,7 @@ function toggleClinicaByRole() {
     var text = \$roleField.find('option:selected').text();
     var allowed = [
         'COORDINADOR-CLINICA',
-        'ADMISION',
+        'ADMISIÓN',
         'CONTROL DE CITAS',
         'ATENCIÓN',
         'Administrador-clinica',

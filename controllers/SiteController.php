@@ -148,16 +148,17 @@ class SiteController extends Controller
     public function actionCiudad(){
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $out = [];
+        $selected = isset($_POST['depdrop_selected']) ? $_POST['depdrop_selected'] : '';
         if (isset($_POST['depdrop_parents'])) {
         $parents = $_POST['depdrop_parents'];
         if ($parents != null) {
             $est_id = $parents[0];
-            if($est_id == ''){return ['output'=>'', 'selected'=>''];}
-            $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all(); 
-            return ['output'=>$out, 'selected'=>''];
+            if($est_id == ''){return ['output'=>'', 'selected'=>$selected];}
+            $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all();
+            return ['output'=>$out, 'selected'=>$selected];
         }
         }
-        return ['output'=>'', 'selected'=>''];
+        return ['output'=>'', 'selected'=>$selected];
     }
 
 
