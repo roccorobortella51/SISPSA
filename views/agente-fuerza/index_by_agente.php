@@ -124,7 +124,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                 'class' => 'form-control form-control-lg text-center',
                             ],
                             'contentOptions' => ['class' => 'text-center'],
-                            'headerOptions' => ['style' => 'color: white;'],
+                            'headerOptions' => ['style' => 'color: white !important;'],
                         ],
                         [
                             'label' => 'Cedula de identidad',
@@ -141,6 +141,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                 'class' => 'form-control form-control-lg text-center',
                             ],
                             'contentOptions' => ['class' => 'text-center'],
+                            'headerOptions' => ['style' => 'color: white !important;'],
                         ],
                         [
                             'label' => 'Correo Electrónico',
@@ -157,6 +158,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                 'class' => 'form-control form-control-lg text-center',
                             ],
                             'contentOptions' => ['class' => 'text-center'],
+                            'headerOptions' => ['style' => 'color: white !important;'],
                         ],
                         [
                             'label' => 'Teléfono',
@@ -170,6 +172,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                 'class' => 'form-control form-control-lg text-center',
                             ],
                             'contentOptions' => ['class' => 'text-center'],
+                            'headerOptions' => ['style' => 'color: white !important;'],
                         ],
                         [
                             'class' => ActionColumn::class,
@@ -177,6 +180,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                             'template' => '<div class="d-flex justify-content-center gap-3">{view}{update}{afiliados}</div>',
                             'headerOptions' => ['style' => 'color: white;'],
                             'contentOptions' => ['class' => 'text-center p-2'],
+                            'headerOptions' => ['style' => 'color: white !important;'],
                             'buttons' => [
                                 'view' => function ($url, $model, $key) {
                                     return Html::a(
@@ -224,6 +228,22 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 </div>
 
 <style>
+    /* Force all column headers to be white */
+.table thead th {
+    color: white !important;
+    background-color: #007bff !important; /* Optional: add a background color to make white text stand out */
+}
+
+/* Specific targeting for gridview headers */
+.grid-view thead th,
+.table-striped thead th {
+    color: white !important;
+}
+
+/* Ensure the white color is applied to all header cells */
+th {
+    color: white !important;
+}
 .btn-action {
     width: 45px;
     height: 45px;
