@@ -1231,7 +1231,7 @@ public function actionGenerarContratov($id)
             'proposed_affiliate_commercial_branch' => $model->ramo_comercial,
             'proposed_affiliate_activity_description' => $model->descripcion_actividad,
             'proposed_affiliate_annual_income' => $model->ingreso_anual,
-            'proposed_affiliate_residence_address' => $model->direccion_residencia ?: $fullResidenceAddress, // Dirección completa construida
+            'proposed_affiliate_residence_address' => $fullResidenceAddress, // Dirección completa construida
             'proposed_affiliate_phone_residence' => $model->telefono_residencia ?: $model->telefono, // Asume que afterFind ya lo formateó para visualización
             'proposed_affiliate_office_address' => $model->direccion_oficina,
             'proposed_affiliate_phone_office' => $model->telefono_oficina,
@@ -1278,7 +1278,7 @@ public function actionGenerarContratov($id)
                 : ($model->lugar_nacimiento_representante ?? ''),
             'legal_representative_birthdate' => $hasCorporateRelation
                 ? ($corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'yyyy-MM-dd') : '')
-                : ($model->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante, 'yyyy-MM-dd') : ''),
+                : ($model->fecha_nacimiento_representante_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante_contratante, 'yyyy-MM-dd') : ''),
             'legal_representative_sex' => $hasCorporateRelation
                 ? ($corporativo->sexo_representante ?? '')
                 : ($model->sexo_representante ?? ''),
@@ -1321,7 +1321,7 @@ public function actionGenerarContratov($id)
             'bank_account_holder_name' => $model->nombre_titular,
             'bank_account_ci' => $model->cedula_titular,
             'bank_account_number' => $model->numero_cuenta,
-            'bank_name' => $model->banco,
+            'bank_name' => $model->banco ? $model->banco->nombre : '',
             'bank_account_type' => $model->tipo_cuenta,
 
             // Declaración

@@ -366,8 +366,9 @@ $currentRoute = Yii::$app->controller->getRoute();
             </h5>
             <div class="info-grid text-left">
                 <div>
-                    <h5><strong>Dirección de Residencia:</strong> <?= nl2br(Html::encode($model->direccion_residencia ?? 'N/A')) ?></h5>
+                    <h5><strong>Dirección de Cobro:</strong> <?= nl2br(Html::encode($model->direccion_cobro ?? 'N/A')) ?></h5>
                     <h5><strong>Teléfono de Residencia:</strong> <?= Html::encode($model->telefono_residencia ?? 'N/A') ?></h5>
+                    <h5><strong>Teléfono Celular:</strong> <?= Html::encode($model->telefono_celular ?? 'N/A') ?></h5>
                 </div>
                 <div>
                     <h5><strong>Dirección de Oficina:</strong> <?= nl2br(Html::encode($model->direccion_oficina ?? 'N/A')) ?></h5>
@@ -416,7 +417,7 @@ $currentRoute = Yii::$app->controller->getRoute();
                 <h5><strong>Número de Cuenta:</strong> <?= Html::encode($model->numero_cuenta ?? 'N/A') ?></h5>
             </div>
             <div>
-                <h5><strong>Banco:</strong> <?= Html::encode($model->banco ?? 'N/A') ?></h5>
+                <h5><strong>Banco:</strong> <?= Html::encode($model->banco ? $model->banco->nombre : 'N/A') ?></h5>
                 <h5><strong>Tipo de Cuenta:</strong> <?= Html::encode($model->tipo_cuenta ?? 'N/A') ?></h5>
             </div>
         </div>

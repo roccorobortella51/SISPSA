@@ -19,310 +19,6 @@ $currentRoute = Yii::$app->controller->getRoute();
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
-<style>
-/* Estilos generales mejorados */
-.user-datos-form {
-    background-color: #f8f9fa;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.form-control-lg {
-    border-radius: 8px;
-    border: 1px solid #ced4da;
-    padding: 12px 15px;
-    font-size: 16px;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 8px;
-}
-
-/* Mejoras para las pestañas */
-.nav-tabs {
-    border-bottom: 2px solid #dee2e6;
-    margin-bottom: 25px;
-}
-
-.nav-tabs .nav-link {
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: #6c757d;
-    font-weight: 600;
-    padding: 12px 20px;
-    transition: all 0.3s;
-}
-
-.nav-tabs .nav-link:hover {
-    border-color: #adb5bd;
-    color: #495057;
-    background-color: transparent;
-}
-
-.nav-tabs .nav-link.active {
-    background-color: transparent !important;
-    color: #007bff !important;
-    border-color: #007bff #007bff #fff !important;
-    border-bottom: 3px solid #007bff !important;
-}
-
-/* Estilo para campos con iconos */
-.field-with-icon {
-    position: relative;
-}
-
-.field-with-icon .form-control {
-    padding-left: 40px;
-}
-
-.field-with-icon i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    z-index: 5;
-}
-
-/* Botones mejorados */
-.btn {
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-weight: 600;
-    transition: all 0.3s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* En este formulario, evitar flex en botones para compatibilidad con FileInput */
-.user-datos-form .btn {
-    display: inline-block !important;
-}
-
-.btn i {
-    margin-right: 8px;
-}
-
-.btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
-}
-
-.btn-success:hover {
-    background-color: #218838;
-    border-color: #1e7e34;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-    border-color: #545b62;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.btn-info {
-    background-color: #17a2b8;
-    border-color: #17a2b8;
-}
-
-.btn-info:hover {
-    background-color: #138496;
-    border-color: #117a8b;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* Mejoras para los select2 */
-.select2-container--krajee .select2-selection--single {
-    border-radius: 8px;
-    border: 1px solid #ced4da;
-    padding: 8px 15px;
-    height: auto;
-}
-
-/* Mejoras para file inputs */
-.file-input {
-    width: 100% !important;
-}
-
-.file-input .file-preview {
-    width: 100% !important;
-    /* quitar restricción que podía causar solapamientos */
-    max-width: none;
-    margin: 0 auto;
-    box-sizing: border-box;
-    display: block;
-    float: none;
-}
-
-.file-input .file-caption {
-    width: 100% !important;
-    box-sizing: border-box;
-    border-radius: 8px;
-}
-
-/* Hacer que el contenedor de input-group del FileInput envuelva correctamente */
-.file-input .input-group {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-
-/* EXCEPCIÓN: No usar flex en los botones dentro del widget FileInput */
-.file-input .btn,
-.file-input .btn-file {
-    display: inline-block !important;
-    align-items: initial !important;
-    justify-content: initial !important;
-}
-
-/* Asegurar que el input file posicionado encima sea clickeable */
-.file-input .btn-file {
-    position: relative;
-    overflow: hidden;
-    z-index: 10; /* por encima de previews o captions */
-}
-.file-input .btn-file input[type="file"] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    pointer-events: auto;
-}
-
-/* Evitar distorsión en previsualización de imágenes (kartik FileInput) */
-.file-input .kv-file-content img,
-.file-input .file-preview-image {
-    width: auto !important;
-    height: auto !important;
-    max-width: 100%;
-    max-height: 180px;
-    object-fit: contain;
-}
-
-.file-input .file-preview-frame {
-    max-width: 220px;
-}
-
-/* Thumbnails en varias filas sin desbordar */
-.file-input .file-preview-thumbnails {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-/* Evitar que el preview se superponga a los controles */
-.file-input .file-preview,
-.file-input .file-preview-thumbnails,
-.file-input .file-preview-frame {
-    z-index: 1;
-}
-
-/* Evitar que las acciones se salgan de la tarjeta */
-.file-input .file-actions,
-.file-input .file-footer-buttons,
-.file-input .file-preview-status,
-.file-input .fileinput-remove,
-.file-input .fileinput-upload {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-/* Alinear correctamente la barra de botones */
-.file-input .btn-file,
-.file-input .fileinput-remove-button,
-.file-input .fileinput-upload-button {
-    margin-top: 8px;
-}
-
-/* Títulos de sección */
-h1 {
-    color: #2c3e50;
-    font-weight: 700;
-    margin: 30px 0 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #eaecef;
-}
-
-/* Tarjetas para agrupar campos */
-.card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
-
-.card-body {
-    padding: 20px;
-}
-
-.section-title {
-    font-size: 18px;
-    color: #2c3e50;
-    margin-bottom: 20px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-}
-
-.section-title i {
-    margin-right: 10px;
-    color: #007bff;
-}
-
-/* Mejoras responsivas */
-@media (max-width: 768px) {
-    .user-datos-form {
-        padding: 15px;
-    }
-    
-    .btn {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    
-    .d-flex.justify-content-start.gap-3 {
-        flex-direction: column;
-    }
-}
-
-/* Animaciones suaves */
-.form-control, .btn, .nav-link {
-    transition: all 0.3s ease;
-}
-
-/* Focus states mejorados */
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
-}
-
-/* Estilo para campos requeridos */
-.required label:after {
-    content: " *";
-    color: #dc3545;
-}
-</style>
 
 <?php
 $getPlanMontoUrl = Url::to(['/site/planmonto']);
@@ -429,11 +125,11 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-envelope"></i>
+                            
                             <?= $form->field($model, 'email')->textInput(['class' => 'form-control form-control-lg',]) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-phone"></i>
+                            
                             <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
                                 'mask' =>  '99999999999',
                                 'options' => [
@@ -459,11 +155,11 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-signature"></i>
+                            
                             <?= $form->field($model, 'nombres')->textInput(['class' => 'form-control form-control-lg',]) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-signature"></i>
+                            
                             <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg',]) ?>
                         </div>
                     </div>
@@ -492,7 +188,7 @@ $this->registerJs($jsValidation);
 
                         <?php if ($model->isNewRecord) { ?>
                             <div class="col-md-2 field-with-icon">
-                                <i class="fas fa-id-card"></i>
+                               
                                 <?= $form->field($model, 'cedula')->textInput([
                                     'class' => 'form-control form-control-lg',
                                     'placeholder' => 'Ejemplo: 12345678'
@@ -501,7 +197,7 @@ $this->registerJs($jsValidation);
                             </div>
                         <?php } else { ?>
                             <div class="col-md-2 field-with-icon">
-                                <i class="fas fa-id-card"></i>
+                                
                                 <?= $form->field($model, 'cedula')->textInput([
                                     'class' => 'form-control form-control-lg',
                                     'readonly' => true,
@@ -511,7 +207,7 @@ $this->registerJs($jsValidation);
                         <?php } ?>
 
                         <div class="col-md-3 field-with-icon">
-                            <i class="fas fa-birthday-cake"></i>
+                            
                             <?= $form->field($model, 'fechanac')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -562,7 +258,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-globe"></i>
+                            
                             <?= $form->field($model, 'nacionalidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4">
@@ -580,18 +276,18 @@ $this->registerJs($jsValidation);
                             ])->label('Estado Civil') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-map-marker-alt"></i>
+                            
                             <?= $form->field($model, 'lugar_nacimiento')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-briefcase"></i>
+                            
                             <?= $form->field($model, 'profesion')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-user-md"></i>
+                            
                             <?= $form->field($model, 'ocupacion')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -612,7 +308,7 @@ $this->registerJs($jsValidation);
                             ])->label('Actividad Económica') ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-store"></i>
+                           
                             <?= $form->field($model, 'ramo_comercial')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -646,20 +342,81 @@ $this->registerJs($jsValidation);
                             ])->label('Ingreso Anual Bs') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
+                        <div class="col-md-3">
+                            <?= $form->field($model, 'estado')->widget(Select2::classname(), [
+                                'data' => UserHelper::getEstadosList(),
+                                'options' => [
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                    'id' => 'estado_id'
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => false,
+                                ],
+                            ]); ?>
+                        </div>
+                        <div class="col-md-3">
+                            <?= $form->field($model, 'municipio')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options'=>[
+                                    'id'=>'municipio_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                ],
+                                'pluginOptions'=>[
+                                    'depends'=>['estado_id'],
+                                    'url'=>Url::to(['/site/municipio']),
+                                    'initialize' => true,
+                                ]
+                            ]); ?>
+                        </div>
+                        <div class="col-md-3">
+                            <?= $form->field($model, 'parroquia')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options'=>[
+                                    'id'=>'parroquia_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                ],
+                                'pluginOptions'=>[
+                                    'depends'=>['municipio_id'],
+                                    'url'=>Url::to(['/site/parroquia']),
+                                    'initialize' => true,
+                                ]
+                            ]); ?>
+                        </div>
+                        <div class="col-md-3">
+                            <?= $form->field($model, 'ciudad')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options'=>[
+                                    'id'=>'ciudad_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                ],
+                                'pluginOptions'=>[
+                                    'depends'=>['estado_id'],
+                                    'url'=>Url::to(['/site/ciudad']),
+                                    'initialize' => true,
+                                ]
+                            ]);  ?>
+                        </div>
+                    </div>
+
+                    <div class='row'>
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-home"></i>
-                            <?= $form->field($model, 'direccion_residencia')->textInput([
+                            
+                            <?= $form->field($model, 'direccion')->textInput([
                                 'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Ingrese la dirección de residencia'
+                                'placeholder' => 'Ingrese la dirección'
                             ])->label('Dirección de Residencia') ?>
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-building"></i>
+                           
                             <?= $form->field($model, 'direccion_oficina')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de oficina'
@@ -669,7 +426,7 @@ $this->registerJs($jsValidation);
 
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-building"></i>
+                           
                             <?= $form->field($model, 'direccion_cobro')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de cobro'
@@ -679,21 +436,21 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-phone"></i>
+                           
                             <?= $form->field($model, 'telefono_residencia')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono residencia'
                             ])->label('Teléfono Residencia') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-phone-office"></i>
+                           
                             <?= $form->field($model, 'telefono_oficina')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono oficina'
                             ])->label('Teléfono Oficina') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-mobile-alt"></i>
+                            
                             <?= $form->field($model, 'telefono_celular')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono celular'
@@ -703,7 +460,8 @@ $this->registerJs($jsValidation);
                 </div>
             </div>
 
-                        <div class="card mb-4" id="contratante-section" style="display: none;">
+
+            <div class="card mb-4" id="contratante-section" style="display: none;">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-user-tie"></i> Datos del Contratante
@@ -711,11 +469,11 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-signature"></i>
+                            
                             <?= $form->field($model, 'nombre_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-signature"></i>
+                           
                             <?= $form->field($model, 'apellido_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -742,14 +500,14 @@ $this->registerJs($jsValidation);
                             ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-id-card"></i>
+                            
                             <?= $form->field($model, 'cedula_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ejemplo: 12345678'
                             ])->label('Cédula de Identidad') ?>
                         </div>
                         <div class="col-md-3 field-with-icon">
-                            <i class="fas fa-birthday-cake"></i>
+                        
                             <?= $form->field($model, 'fecha_nacimiento_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -773,7 +531,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-globe"></i>
+                    
                             <?= $form->field($model, 'nacionalidad_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4">
@@ -791,18 +549,18 @@ $this->registerJs($jsValidation);
                             ])->label('Estado Civil') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-map-marker-alt"></i>
+                        
                             <?= $form->field($model, 'lugar_nacimiento_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-briefcase"></i>
+                            
                             <?= $form->field($model, 'profesion_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-user-md"></i>
+                        
                             <?= $form->field($model, 'ocupacion_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -856,7 +614,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-home"></i>
+                            
                             <?= $form->field($model, 'direccion_residencia_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de residencia'
@@ -866,7 +624,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-building"></i>
+                            
                             <?= $form->field($model, 'direccion_oficina_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de oficina'
@@ -876,7 +634,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-map-pin"></i>
+                        
                             <?= $form->field($model, 'direccion_cobro_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de cobro'
@@ -886,21 +644,21 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-phone"></i>
+                            
                             <?= $form->field($model, 'telefono_residencia_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono residencia'
                             ])->label('Teléfono Residencia') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-phone-office"></i>
+                            
                             <?= $form->field($model, 'telefono_oficina_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono oficina'
                             ])->label('Teléfono Oficina') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-mobile-alt"></i>
+                            
                             <?= $form->field($model, 'telefono_celular_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono celular'
@@ -910,7 +668,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-envelope"></i>
+                            
                             <?= $form->field($model, 'email_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Correo electrónico',
@@ -949,11 +707,11 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-signature"></i>
+                            
                             <?= $form->field($model, 'nombre_beneficiario')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-id-card"></i>
+                            
                             <?= $form->field($model, 'cedula_beneficiario')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -994,7 +752,7 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-birthday-cake"></i>
+                            
                             <?= $form->field($model, 'fecha_nacimiento_beneficiario')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -1013,23 +771,32 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-user"></i>
+                        
                             <?= $form->field($model, 'nombre_titular')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-id-card"></i>
+                            
                             <?= $form->field($model, 'cedula_titular')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-credit-card"></i>
+                            
                             <?= $form->field($model, 'numero_cuenta')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-university"></i>
-                            <?= $form->field($model, 'banco')->textInput(['class' => 'form-control form-control-lg']) ?>
+                            
+                            <?= $form->field($model, 'banco_id')->widget(Select2::class, [
+                                    'data' => \yii\helpers\ArrayHelper::map(\app\models\Banco::find()->where(['estatus' => 'Activo'])->all(), 'id', 'nombre'),
+                                    'options' => [
+                                        'placeholder' => 'Seleccione un banco...',
+                                        'class' => 'form-control form-control-lg',
+                                    ],
+                                    'pluginOptions' => [
+                                        'allowClear' => true,
+                                    ],
+                                ])->label('Banco') ?>
                         </div>
                     </div>
                     
@@ -1052,83 +819,7 @@ $this->registerJs($jsValidation);
                 </div>
             </div>
             
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-map-marker-alt"></i> Ubicación
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-3">
-                            <?= $form->field($model, 'estado')->widget(Select2::classname(), [
-                                'data' => UserHelper::getEstadosList(),
-                                'options' => [
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                    'id' => 'estado_id'
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => false,
-                                ],
-                            ]); ?>
-                        </div>
-                        <div class="col-md-3">
-                            <?= $form->field($model, 'municipio')->widget(DepDrop::classname(), [
-                                'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'municipio_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                ],
-                                'pluginOptions'=>[
-                                    'depends'=>['estado_id'],
-                                    'url'=>Url::to(['/site/municipio']),
-                                    'initialize' => true,
-                                ]
-                            ]); ?>
-                        </div>
-                        <div class="col-md-3">
-                            <?= $form->field($model, 'parroquia')->widget(DepDrop::classname(), [
-                                'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'parroquia_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                ],
-                                'pluginOptions'=>[
-                                    'depends'=>['municipio_id'],
-                                    'url'=>Url::to(['/site/parroquia']),
-                                ]
-                            ]); ?>
-                        </div>
-                        <div class="col-md-3">
-                            <?= $form->field($model, 'ciudad')->widget(DepDrop::classname(), [
-                                'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'ciudad_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                ],
-                                'pluginOptions'=>[
-                                    'depends'=>['estado_id'],
-                                    'url'=>Url::to(['/site/ciudad']),
-                                    'initialize' => true,
-                                ]
-                            ]);  ?>
-                        </div>
-                    </div>
-                    
-                    <div class='row'>
-                        <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-home"></i>
-                            <?= $form->field($model, 'direccion')->textInput([
-                                'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Ingrese la dirección'
-                            ])->label('Dirección') ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
             
             <div class="card mb-4">
                 <div class="card-body">
@@ -1251,7 +942,7 @@ $this->registerJs($jsValidation);
                             ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-calendar-alt"></i>
+                            
                             <?= $form->field($modelContrato, 'fecha_ini')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -1261,7 +952,7 @@ $this->registerJs($jsValidation);
                         </div>
 
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-calendar-times"></i>
+                            
                             <?= $form->field($modelContrato, 'fecha_ven')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -1270,7 +961,7 @@ $this->registerJs($jsValidation);
                             ])->label('Fecha de Vencimiento') ?>
                         </div>
                         <div class="col-md-4 field-with-icon" style="display:none;">
-                            <i class="fas fa-dollar-sign"></i>
+                            
                             <?= $form->field($modelContrato, 'monto')->textInput([
                                 'class' => 'form-control  form-control-lg', 
                                 'type' => 'number',
@@ -1289,15 +980,15 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                          <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-coins"></i>
+                            
                             <?= $form->field($model, 'moneda')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-percentage"></i>
+                            
                             <?= $form->field($model, 'deducible')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            <i class="fas fa-chart-line"></i>
+                            
                             <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -1310,11 +1001,11 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-percentage"></i>
+                            
                             <?= $form->field($model, 'deducible_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-chart-line"></i>
+                            
                             <?= $form->field($model, 'limite_cobertura_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>

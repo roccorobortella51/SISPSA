@@ -87,7 +87,7 @@ use yii\db\ActiveRecord;
  * @property string|null $nombre_titular
  * @property string|null $cedula_titular
  * @property string|null $numero_cuenta
- * @property string|null $banco
+ * @property int|null $banco_id
  * @property string|null $tipo_cuenta
  * @property string|null $nombre_declaracion_afiliado
  * @property string|null $cedula_declaracion_afiliado
@@ -269,6 +269,9 @@ class UserDatos extends ActiveRecord
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
 
+            [['banco_id'], 'integer'],
+[['banco_id'], 'exist', 'skipOnError' => true, 'targetClass' => Banco::class, 'targetAttribute' => ['banco_id' => 'id'], 'message' => 'El banco seleccionado no existe.'],
+
             // *** LA REGLA CLAVE: No puede ser mayor a la fecha actual ***
             [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'], // Valida el formato de fecha
             [['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date',
@@ -283,7 +286,7 @@ class UserDatos extends ActiveRecord
               'telefono_celular', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
               'deducible_maternidad', 'limite_cobertura_maternidad', 'nombre_beneficiario',
               'cedula_beneficiario', 'parentesco_beneficiario', 'sexo_beneficiario',
-              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'banco', 'tipo_cuenta',
+              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'tipo_cuenta',
               'nombre_declaracion_afiliado', 'cedula_declaracion_afiliado', 'nombre_declaracion_contratante',
               'cedula_declaracion_contratante', 'tipo_afiliacion', 'nombre_contratante',
               'apellido_contratante', 'tipo_cedula_contratante', 'sexo_contratante',
@@ -367,7 +370,7 @@ class UserDatos extends ActiveRecord
             'nombre_titular',
             'cedula_titular',
             'numero_cuenta',
-            'banco',
+            'banco_id',
             'tipo_cuenta',
             'nombre_declaracion_afiliado',
             'cedula_declaracion_afiliado',
@@ -586,8 +589,30 @@ class UserDatos extends ActiveRecord
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
+    public function getBanco() {return $this->hasOne(Banco::class, ['id' => 'banco_id']); 
+}
 
-    public function afterSave($insert, $changedAttributes)
+
+    // 1. Relación para llegar a la tabla intermedia
+public function getCorporativoUser()
+{
+    // Esta relación conecta el ID de usuario de la tabla user_datos
+    // con el ID de usuario de la tabla intermedia corporativo_user
+    return $this->hasOne(CorporativoUser::class, ['user_id' => 'user_login_id']);
+}
+
+// 2. Relación para llegar al modelo Corporativo usando la tabla intermedia
+public function getCorporativo()
+{
+    // Usa la relación 'corporativoUser' como puente ('via')
+    // para llegar al modelo 'Corporativo'
+    return $this->hasOne(Corporativo::class, ['id' => 'corporativo_id'])
+        ->via('corporativoUser');
+}
+
+
+
+   /* public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
 
@@ -610,6 +635,6 @@ class UserDatos extends ActiveRecord
             // Si el campo está vacío, eliminamos la relación existente
             CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
         }
-    }
+    }*/
 
 }
