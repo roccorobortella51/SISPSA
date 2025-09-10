@@ -27,7 +27,6 @@ use app\models\User;
 class Agente extends \yii\db\ActiveRecord
 {
 
-
     /**
      * {@inheritdoc}
      */
