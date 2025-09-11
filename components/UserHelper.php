@@ -546,7 +546,7 @@ class UserHelper
             // El error de conexión no es crítico, continuar al siguiente paso (guardado local)
         } catch (\Throwable $e) {
             Yii::error("Excepción general al subir a Supabase: " . $e->getMessage(), __METHOD__);
-            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
+            //Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
             // El error general no es crítico, continuar al siguiente paso (guardado local)
         }
 
