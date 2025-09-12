@@ -945,7 +945,7 @@ class UserDatosController extends Controller
                                 if ($afiliadoCorporativoId) {
                                     $modelCorporativoUser = new CorporativoUser();
                                     $modelCorporativoUser->corporativo_id = $afiliadoCorporativoId;
-                                    $modelCorporativoUser->user_id = $model->user_login_id;
+                                    $modelCorporativoUser->user_id = $model->id;
                                     $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
                                     $modelCorporativoUser->rol_en_corporativo = 'afiliado';
                                     
@@ -1395,10 +1395,9 @@ public function actionUpdate($id)
             // --- INICIO DEL CÓDIGO CORREGIDO PARA LA RELACIÓN CON EL CORPORATIVO ---
             // Usamos el valor del modelo, ya que pudo haber sido limpiado arriba
             $afiliadoCorporativoId = $model->afiliado_corporativo_id;
-            $userId = $model->user_login_id;
-
+            $userId = $model->id;
+            var_dump($afiliadoCorporativoId)."hola <br>";
             $modelCorporativoUser = CorporativoUser::findOne(['user_id' => $userId]);
-
             if ($afiliadoCorporativoId) {
                 if (!$modelCorporativoUser) {
                     $modelCorporativoUser = new CorporativoUser();
@@ -1411,6 +1410,11 @@ public function actionUpdate($id)
                 if (!$modelCorporativoUser->save()) {
                     Yii::error("Error al guardar o actualizar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
                     Yii::$app->session->setFlash('error', 'Error al actualizar la relación con el corporativo.');
+                    echo "MODEL NOT SAVED";
+                    //print_r($modelCorporativoUser->getAttributes());
+                    //print_r($modelCorporativoUser->getErrors());
+                    exit;
+
                 }
             } else {
                 if ($modelCorporativoUser) {
