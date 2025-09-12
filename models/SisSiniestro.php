@@ -28,6 +28,15 @@ use Yii;
 class SisSiniestro extends \yii\db\ActiveRecord
 {
 
+    /**
+     * @var UploadedFile
+     */
+    public $imagen_recipe;
+    /**
+     * @var UploadedFile
+     */
+    public $imagen_informe;
+
 
     /**
      * {@inheritdoc}
@@ -55,6 +64,8 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['descripcion'], 'string'],
             [['hora', 'hora_atencion'], 'string', 'max' => 10],
             [['idclinica'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['idclinica' => 'id']],
+            [['imagen_recipe', 'imagen_informe'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg'],
+            [['imagen_recipe', 'imagen_informe'], 'safe'],
         ];
     }
 

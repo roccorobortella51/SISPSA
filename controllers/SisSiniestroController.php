@@ -120,7 +120,7 @@ class SisSiniestroController extends Controller
      * @param integer $user_id El ID del usuario
      * @return mixed
      */
-    public function actionCreate($user_id)
+ public function actionCreate($user_id)
     {
         $model = new SisSiniestro();
         $model->iduser = $user_id;
@@ -132,6 +132,23 @@ class SisSiniestroController extends Controller
             $transaction = Yii::$app->db->beginTransaction();
             try {
                 if ($model->save()) {
+                    // CÓDIGO PARA LAS IMÁGENES
+                    // -----------------------------------------------------------
+                    $imagenRecipeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_recipe');
+                    $imagenInformeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_informe');
+                    
+                    if ($imagenRecipeFile) {
+                        $model->imagen_recipe = $this->uploadFileToSupabase($imagenRecipeFile, 'nombre-de-la-carpeta-que-creo-carlos');
+                    }
+                    if ($imagenInformeFile) {
+                        $model->imagen_informe = $this->uploadFileToSupabase($imagenInformeFile, 'nombre-de-la-carpeta-que-creo-carlos');
+                    }
+
+                    if (!$model->save(false)) { // Guardar las URLs de las imágenes
+                        throw new \Exception('Error al guardar las URLs de las imágenes.');
+                    }
+                    // -----------------------------------------------------------
+
                     // Guardar la relación muchos a muchos
                     if (isset($_POST['SisSiniestro']['idbaremo']) && is_array($_POST['SisSiniestro']['idbaremo'])) {
                         if (!$model->saveBaremos($_POST['SisSiniestro']['idbaremo'])) {
@@ -161,7 +178,7 @@ class SisSiniestroController extends Controller
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionUpdate($id)
+   public function actionUpdate($id)
     {
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
@@ -171,7 +188,21 @@ class SisSiniestroController extends Controller
         if ($model->load(Yii::$app->request->post())) {
             $transaction = Yii::$app->db->beginTransaction();
             try {
-                if ($model->save()) {
+                // Obtener los archivos de imagen subidos
+                $imagenRecipeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_recipe');
+                $imagenInformeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_informe');
+
+                // Si se subió un nuevo recibo, procesarlo
+                if ($imagenRecipeFile) {
+                    $model->imagen_recipe = $this->uploadFileToSupabase($imagenRecipeFile, 'nombre-de-la-carpeta-que-creo-carlos');
+                }
+                
+                // Si se subió un nuevo informe, procesarlo
+                if ($imagenInformeFile) {
+                    $model->imagen_informe = $this->uploadFileToSupabase($imagenInformeFile, 'nombre-de-la-carpeta-que-creo-carlos');
+                }
+
+                if ($model->save(false)) { // El false evita la validación para los campos ya guardados
                     // Guardar la relación muchos a muchos
                     $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
                     if (!is_array($baremoIds)) {
@@ -358,4 +389,41 @@ class SisSiniestroController extends Controller
             'por_clinica' => $porClinica,
         ];
 }
+
+/**
+     * Sube un archivo a Supabase Storage y retorna la URL pública.
+     * @param \yii\web\UploadedFile $uploadedFile El objeto de archivo subido.
+     * @param string $folder La carpeta de destino en Supabase.
+     * @return string|null La URL pública del archivo, o null en caso de fallo.
+     */
+    private function uploadFileToSupabase(\yii\web\UploadedFile $uploadedFile, $folder)
+    {
+        $fileName = uniqid('file_') . '.' . $uploadedFile->extension;
+        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+
+        if ($uploadedFile->saveAs($tempFilePath)) {
+            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                $tempFilePath,
+                $uploadedFile->type,
+                $fileName,
+                $folder
+            );
+
+            // Eliminar el archivo temporal
+            if (file_exists($tempFilePath)) {
+                unlink($tempFilePath);
+            }
+
+            if ($publicUrl) {
+                return $publicUrl;
+            } else {
+                Yii::$app->session->setFlash('error', "Fallo la subida a Supabase Storage.");
+            }
+        } else {
+            Yii::$app->session->setFlash('error', "Error al guardar el archivo temporal en el servidor.");
+        }
+
+        return null;
+    }
+
 }
