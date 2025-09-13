@@ -98,12 +98,56 @@ $this->registerJs($jsValidation);
                                 'options' => [
                                     'placeholder' => 'Seleccione.',
                                     'class' => 'form-control form-control-lg',
+                                    'id' => 'corporativo_id'
                                 ],
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
                             ])->label('Afiliado Corporativo') ?>
                         </div>
+
+                         <div class="col-md-6">
+                            <?= $form->field($model, 'clinica_id')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options'=>[
+                                    'id'=>'clinica_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                    'allowClear' => true,
+                                ],
+                                'pluginOptions'=>[
+                                    'depends'=>['user_datos_type_id_field', 'corporativo_id',],
+                                    'url'=>Url::to(['clinicas']),
+                                    'initialize' => true,
+                                    ]
+                                ])->label('Clínica');
+                            ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options' => [
+                                    'id' => 'plan_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control form-control-lg',
+                                    'allowClear' => true,
+                                ],
+                                'pluginOptions' => [
+                                    'depends' => ['clinica_id'],
+                                    'url' => Url::to(['/site/planes']),
+                                    'initialize' => true,
+                                ],
+                                // Aquí es donde agregas el evento de Select2
+                                'pluginEvents' => [
+                                    "change" => "function(e) {
+                                        datosplan($(this).val());
+                                    }",
+                                ]
+                            ])->label('Plan'); ?>
+                        </div>
+
+
+
 
                         <div class="col-md-6">
                             <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
@@ -911,36 +955,7 @@ $this->registerJs($jsValidation);
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
-                            <?= $form->field($model, 'clinica_id')->widget(Select2::classname(), [
-                                'data' => UserHelper::getClinicasList(),
-                                'options' => [
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                    'id' => 'clinica_id'
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ])->label('Clínica'); ?>
-                        </div>
-                        <div class="col-md-6">
-                            <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [
-                                'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'plan_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                    'allowClear' => true,
-                                ],
-                                'pluginOptions'=>[
-                                    'depends'=>['clinica_id'],
-                                    'url'=>Url::to(['/site/planes']),
-                                    'initialize' => true,
-                                    ]
-                                ])->label('Plan');
-                            ?>
-                        </div>
+                       
                         <div class="col-md-4 field-with-icon">
                             
                             <?= $form->field($modelContrato, 'fecha_ini')->textInput([
@@ -989,7 +1004,7 @@ $this->registerJs($jsValidation);
                         </div>
                         <div class="col-md-4 field-with-icon">
                             
-                            <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg']) ?>
+                            <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg', 'readonly' => true]) ?>
                         </div>
                     </div>
                     
@@ -1177,3 +1192,51 @@ $(function(){
 });
 JS);
 ?>
+<script>
+    function datosplan(plan_id) {
+
+        const planIdElement = document.getElementById('plan_id');
+
+        // Verifica si su valor no es una cadena vacía ni nulo
+        if (planIdElement.value !== '' && planIdElement.value !== null) {
+
+                  let csrfToken = $('#csrf-token').val();
+                  var parametros = {
+                    id: plan_id,
+                    "_csrf" : csrfToken,
+                  };
+
+                  $.ajax({
+                    url: "datosdelplan",
+                    type: "post",
+                    dataType: "json",
+                    data: parametros,
+                    success: function (data) {
+                      console.log(data);
+
+
+                    const comision = data.data.comision;
+                    const limite_cobertura = data.data.limite_cobertura;
+                    const moneda = data.data.moneda;
+
+                    console.log(comision);
+                    console.log(limite_cobertura);
+                    console.log(moneda);
+
+                    document.getElementById('userdatos-moneda').value = moneda;
+                    document.getElementById('userdatos-deducible').value = 0;
+                    document.getElementById('userdatos-limite_cobertura').value = limite_cobertura;
+
+                
+                },
+            });
+        }
+    }
+
+    /*$("#plan_id").on("change", function() {
+        var planId = $(this).val();
+        if (planId) { // Asegura que el valor no esté vacío
+            datosplan(planId);
+        }
+    });*/
+</script>
