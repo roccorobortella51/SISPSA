@@ -96,6 +96,7 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'afiliado_corporativo_id')->widget(Select2::class, [
                                 'data' => UserHelper::getCorporativoList(),
                                 'options' => [
+                                    'id' => 'afiliado_corporativo_id',
                                     'placeholder' => 'Seleccione.',
                                     'class' => 'form-control form-control-lg',
                                     'id' => 'corporativo_id'
@@ -1058,6 +1059,11 @@ $this->registerJs($jsValidation);
 </div>
 
 <?php
+
+$urlGetClinicasByCorporativo = \yii\helpers\Url::to(['/user/get-clinicas-by-corporativo']);
+$urlGetAllClinicas = \yii\helpers\Url::to(['/user/get-all-clinicas']);
+
+
 $this->registerJs(<<<'JS'
 // Refuerzo de clic y diagnóstico para FileInput en este formulario
 $(function(){
@@ -1189,6 +1195,76 @@ $(function(){
  $('#user_datos_type_id_field').on('change', function() {
    toggleAfiliadoCorporativo();
  });
+
+ // Lógica para la visualización de las clínicas y el corporativo
+    var urlGetClinicasByCorporativo = '{$urlGetClinicasByCorporativo}';
+    var urlGetAllClinicas = '{$urlGetAllClinicas}';
+
+    // Escuchar el cambio en el campo de "Tipo de Afiliado"
+    $('#user_datos_type_id_field').on('change', function() {
+        var user_datos_type = $(this).val();
+
+        if (user_datos_type == 2) {
+            $('#afiliado_corporativo_container').show();
+            var corporativo_id = $('#afiliado_corporativo_id').val();
+            if (corporativo_id) {
+                loadClinicasByCorporativo(corporativo_id);
+            } else {
+                $('#clinica_id').html('<option value="">Seleccione</option>');
+            }
+        } else {
+            $('#afiliado_corporativo_container').hide();
+            loadAllClinicas();
+        }
+    });
+
+    // Escuchar el cambio en el campo de "Afiliado Corporativo"
+    $('#afiliado_corporativo_id').on('change', function() {
+        var corporativo_id = $(this).val();
+        var user_datos_type = $('#user_datos_type_id_field').val();
+
+        if (user_datos_type == 2 && corporativo_id) {
+            loadClinicasByCorporativo(corporativo_id);
+        } else {
+            loadAllClinicas();
+        }
+    });
+
+    // Funciones de AJAX para las clínicas
+    function loadClinicasByCorporativo(corporativoId) {
+        $.ajax({
+            url: urlGetClinicasByCorporativo,
+            type: 'GET',
+            data: { corporativo_id: corporativoId },
+            success: function(data) {
+                $('#clinica_id').html(data.options);
+                $('#clinica_id').val(null).trigger('change');
+            },
+            error: function(xhr, status, error) {
+                console.error("Error al cargar las clínicas:", error);
+            }
+        });
+    }
+
+    function loadAllClinicas() {
+        $.ajax({
+            url: urlGetAllClinicas,
+            type: 'GET',
+            success: function(data) {
+                $('#clinica_id').html(data.options);
+                $('#clinica_id').val(null).trigger('change');
+            },
+            error: function(xhr, status, error) {
+                console.error("Error al cargar todas las clínicas:", error);
+            }
+        });
+    }
+
+    // Inicializar el estado al cargar la página
+    setTimeout(function() {
+        $('#user_datos_type_id_field').trigger('change');
+    }, 500); // Pequeño retraso de 500ms para asegurar que todos los elementos estén listos
+
 });
 JS);
 ?>

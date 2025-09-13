@@ -156,6 +156,19 @@ class UserHelper
             );        
     }
 
+    public static function getClinicasByIds($ids)
+    {
+        return \yii\helpers\ArrayHelper::map(
+            RmClinica::find()
+                ->select(['id', 'nombre as name'])
+                ->where(['id' => $ids]) // Aquí filtramos por el array de IDs
+                ->asArray()
+                ->all(),
+            'id',
+            'name'
+        );
+    }
+
     public static function getTotalAsesores()
     {
         $totalClinicas = Asesores::find()->count();

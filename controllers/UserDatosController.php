@@ -23,6 +23,7 @@ use app\models\Planes;
 use yii\base\Security;
 use kartik\mpdf\Pdf;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Json;
 use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use PhpOffice\PhpSpreadsheet\IOFactory; // Importa la clase principal
 use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
@@ -1203,13 +1204,13 @@ class UserDatosController extends Controller
         }
     }
 
-    return $this->render('update', [
-        'model' => $model,
-        'modelContrato' => $modelContrato,
-    ]);
-}
-    /**
-     * Deletes an existing UserDatos model.
+        return $this->render('update', [
+            'model' => $model,
+            'modelContrato' => $modelContrato,
+        ]);
+    }
+
+    /* * Deletes an existing UserDatos model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param int $id ID
      * @return \yii\web\Response
@@ -1566,5 +1567,38 @@ public function actionGenerarContratov($id)
                 ];
             } 
     }
+    /**
+     * Returns JSON data for clinicas filtered by type and corporativo.
+     * @return array JSON array of [id => name]
+     */
+    public function actionClinicasJson()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $type = Yii::$app->request->get('type');
+        $corporativo_id = Yii::$app->request->get('corporativo');
+
+        if ($type == 2 && $corporativo_id) {
+            $clinicas = RmClinica::find()
+                ->select(['rm_clinica.id', 'rm_clinica.nombre'])
+                ->innerJoin('corporativo_clinica', 'rm_clinica.id = corporativo_clinica.clinica_id')
+                ->where(['corporativo_clinica.corporativo_id' => $corporativo_id])
+                ->asArray()
+                ->all();
+        } else {
+            $clinicas = RmClinica::find()
+                ->select(['id', 'nombre'])
+                ->asArray()
+                ->all();
+        }
+
+        $data = ArrayHelper::map($clinicas, 'id', 'nombre');
+
+        return Json::encode($data);
+    }
+
+
+
+
     
 }
