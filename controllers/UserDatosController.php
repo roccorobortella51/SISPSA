@@ -943,6 +943,23 @@ class UserDatosController extends Controller
                                 Yii::$app->cache->flush();
                                 $model->user_login_id = $modelUser->id;
                                 $model->save();
+
+                                // Crear relación con corporativo si es tipo 2 y hay ID de corporativo
+                                if ($model->user_datos_type_id == 2 && !empty($model->afiliado_corporativo_id)) {
+                                    // Eliminar relación previa si existe para evitar duplicados
+                                    CorporativoUser::deleteAll(['user_id' => $model->user_login_id]);
+
+                                    $corporativoUser = new CorporativoUser();
+                                    $corporativoUser->corporativo_id = $model->afiliado_corporativo_id;
+                                    $corporativoUser->user_id = $model->user_login_id;
+                                    $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                                    if (!$corporativoUser->save()) {
+                                        Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+                                    }
+                                } elseif (empty($model->afiliado_corporativo_id)) {
+                                    // Si no hay corporativo, eliminar relación existente
+                                    CorporativoUser::deleteAll(['user_id' => $model->user_login_id]);
+                                }
                                 
                             } catch (\Exception $e) {
                                 Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
@@ -1094,6 +1111,23 @@ class UserDatosController extends Controller
                             Yii::$app->cache->flush();
                             $model->user_login_id = $modelUser->id;
                             $model->save();
+
+                            // Crear relación con corporativo si es tipo 2 y hay ID de corporativo
+                            if ($model->user_datos_type_id == 2 && !empty($model->afiliado_corporativo_id)) {
+                                // Eliminar relación previa si existe para evitar duplicados
+                                CorporativoUser::deleteAll(['user_id' => $model->user_login_id]);
+
+                                $corporativoUser = new CorporativoUser();
+                                $corporativoUser->corporativo_id = $model->afiliado_corporativo_id;
+                                $corporativoUser->user_id = $model->user_login_id;
+                                $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                                if (!$corporativoUser->save()) {
+                                    Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+                                }
+                            } elseif (empty($model->afiliado_corporativo_id)) {
+                                // Si no hay corporativo, eliminar relación existente
+                                CorporativoUser::deleteAll(['user_id' => $model->user_login_id]);
+                            }
                         } catch (\Exception $e) {
                             Yii::error("Error al asignar el rol: " . $e->getMessage(), __METHOD__);
                         }
