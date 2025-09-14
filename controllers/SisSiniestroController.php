@@ -2,13 +2,21 @@
 
 namespace app\controllers;
 
-use Yii;
 use app\models\SisSiniestro;
 use app\models\SisSiniestroSearch;
 use app\models\UserDatos;
+use app\models\CorporativoUser;
+use app\models\User;
+use app\models\Contratos;
+use app\models\Planes;
+use app\models\Cuotas;
+use app\models\TasaCambio;
+use app\components\UserHelper;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\web\UploadedFile;
+use Yii;
 
 /**
  * SisSiniestroController implements the CRUD actions for SisSiniestro model.
@@ -120,56 +128,92 @@ class SisSiniestroController extends Controller
      * @param integer $user_id El ID del usuario
      * @return mixed
      */
- public function actionCreate($user_id)
-    {
-        $model = new SisSiniestro();
-        $model->iduser = $user_id;
-        $model->fecha = date('Y-m-d');
-        $model->hora = date('H:i:s');
-        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+public function actionCreate($user_id)
+{
+    $model = new SisSiniestro();
+    $model->iduser = $user_id;
+    $model->fecha = date('Y-m-d');
+    $model->hora = date('H:i:s');
+    $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
 
-        if ($model->load($this->request->post())) {
-            $transaction = Yii::$app->db->beginTransaction();
-            try {
-                if ($model->save()) {
-                    // CÓDIGO PARA LAS IMÁGENES
-                    // -----------------------------------------------------------
-                    $imagenRecipeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_recipe');
-                    $imagenInformeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_informe');
-                    
-                    if ($imagenRecipeFile) {
-                        $model->imagen_recipe = $this->uploadFileToSupabase($imagenRecipeFile, 'nombre-de-la-carpeta-que-creo-carlos');
-                    }
-                    if ($imagenInformeFile) {
-                        $model->imagen_informe = $this->uploadFileToSupabase($imagenInformeFile, 'nombre-de-la-carpeta-que-creo-carlos');
-                    }
+    if ($model->load($this->request->post())) {
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            // Obtener las instancias de los archivos subidos ANTES de guardar el modelo
+            $imagenRecipeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_recipe');
+            $imagenInformeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_informe');
 
-                    if (!$model->save(false)) { // Guardar las URLs de las imágenes
-                        throw new \Exception('Error al guardar las URLs de las imágenes.');
+            // Subir el recibo si existe
+            if ($imagenRecipeFile) {
+                $folder = 'Recipes';
+                $fileName = uniqid('recipe_') . '.' . $imagenRecipeFile->extension;
+                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                if ($imagenRecipeFile->saveAs($tempFilePath)) {
+                    // Usamos la nueva función corregida
+                    $publicUrl = UserHelper::uploadFileToSupabaseSiniestro($tempFilePath, $imagenRecipeFile->type, $fileName, $folder);
+                    if ($publicUrl) {
+                        $model->imagen_recipe = $publicUrl;
+                    } else {
+                        throw new \Exception('Falló la subida del recibo a Supabase Storage.');
                     }
-                    // -----------------------------------------------------------
-
-                    // Guardar la relación muchos a muchos
-                    if (isset($_POST['SisSiniestro']['idbaremo']) && is_array($_POST['SisSiniestro']['idbaremo'])) {
-                        if (!$model->saveBaremos($_POST['SisSiniestro']['idbaremo'])) {
-                            throw new \Exception('Error al guardar los baremos');
-                        }
+                    if (file_exists($tempFilePath)) {
+                        unlink($tempFilePath);
                     }
-                    $transaction->commit();
-                    return $this->redirect(['view', 'id' => $model->id]);
+                } else {
+                    throw new \Exception('Error al guardar el archivo temporal del recibo en el servidor.');
                 }
-            } catch (\Exception $e) {
-                $transaction->rollBack();
-                Yii::$app->session->setFlash('error', $e->getMessage());
             }
-        }
 
-        return $this->render('create', [
-            'model' => $model,
-            'afiliado' => $afiliado,
-            'user_id' => $user_id,
-        ]);
+            // Subir el informe si existe
+            if ($imagenInformeFile) {
+                $folder = 'Informes';
+                $fileName = uniqid('informe_') . '.' . $imagenInformeFile->extension;
+                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                if ($imagenInformeFile->saveAs($tempFilePath)) {
+                    // Usamos la nueva función corregida
+                    $publicUrl = UserHelper::uploadFileToSupabaseSiniestro($tempFilePath, $imagenInformeFile->type, $fileName, $folder);
+                    if ($publicUrl) {
+                        $model->imagen_informe = $publicUrl;
+                    } else {
+                        throw new \Exception('Falló la subida del informe a Supabase Storage.');
+                    }
+                    if (file_exists($tempFilePath)) {
+                        unlink($tempFilePath);
+                    }
+                } else {
+                    throw new \Exception('Error al guardar el archivo temporal del informe en el servidor.');
+                }
+            }
+            
+            // Guardar el modelo, incluyendo las URLs de las imágenes
+            if ($model->save()) { 
+                // Guardar la relación muchos a muchos
+                $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+                if (!is_array($baremoIds)) {
+                    $baremoIds = [];
+                }
+                if (!$model->saveBaremos($baremoIds)) {
+                    throw new \Exception('Error al guardar los baremos');
+                }
+                $transaction->commit();
+                Yii::$app->session->setFlash('success', 'Siniestro creado correctamente.');
+                return $this->redirect(['view', 'id' => $model->id]);
+            } else {
+                throw new \Exception('Error al guardar los datos principales del siniestro.');
+            }
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', $e->getMessage());
+            Yii::error('Error al crear siniestro: ' . $e->getMessage(), __METHOD__);
+        }
     }
+
+    return $this->render('create', [
+        'model' => $model,
+        'afiliado' => $afiliado,
+        'user_id' => $user_id,
+    ]);
+}
 
     /**
      * Updates an existing SisSiniestro model.
@@ -178,62 +222,89 @@ class SisSiniestroController extends Controller
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-   public function actionUpdate($id)
-    {
-        $model = $this->findModel($id);
-        $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
-        // Cargar los baremos de la misma manera que en actionView
-        $baremos = $model->baremos;
+public function actionUpdate($id)
+{
+    $model = $this->findModel($id);
+    $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
+    $baremos = $model->baremos;
 
-        if ($model->load(Yii::$app->request->post())) {
-            $transaction = Yii::$app->db->beginTransaction();
-            try {
-                // Obtener los archivos de imagen subidos
-                $imagenRecipeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_recipe');
-                $imagenInformeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_informe');
+    if ($model->load(Yii::$app->request->post())) {
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $imagenRecipeFile = UploadedFile::getInstance($model, 'imagen_recipe');
+            $imagenInformeFile = UploadedFile::getInstance($model, 'imagen_informe');
 
-                // Si se subió un nuevo recibo, procesarlo
-                if ($imagenRecipeFile) {
-                    $model->imagen_recipe = $this->uploadFileToSupabase($imagenRecipeFile, 'nombre-de-la-carpeta-que-creo-carlos');
+            if ($imagenRecipeFile) {
+                $folder = 'documentos';
+                $fileName = uniqid('recipe_') . '.' . $imagenRecipeFile->extension;
+                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                if ($imagenRecipeFile->saveAs($tempFilePath)) {
+                    // Usamos la función original que validaste
+                    $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $imagenRecipeFile->type, $fileName, $folder);
+                    
+                    if (file_exists($tempFilePath)) {
+                        unlink($tempFilePath);
+                    }
+                    if ($publicUrl) {
+                        $model->imagen_recipe = $publicUrl;
+                    } else {
+                        throw new \Exception('Fallo la subida del recibo a Supabase Storage.');
+                    }
+                } else {
+                    throw new \Exception('Error al guardar el archivo temporal del recibo en el servidor.');
+                }
+            }
+
+            if ($imagenInformeFile) {
+                $folder = 'FotoPerfil';
+                $fileName = uniqid('informe_') . '.' . $imagenInformeFile->extension;
+                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                if ($imagenInformeFile->saveAs($tempFilePath)) {
+                    // Usamos la función original que validaste
+                    $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $imagenInformeFile->type, $fileName, $folder);
+                    if (file_exists($tempFilePath)) {
+                        unlink($tempFilePath);
+                    }
+                    if ($publicUrl) {
+                        $model->imagen_informe = $publicUrl;
+                    } else {
+                        throw new \Exception('Fallo la subida del informe a Supabase Storage.');
+                    }
+                } else {
+                    throw new \Exception('Error al guardar el archivo temporal del informe en el servidor.');
+                }
+            }
+
+            if ($model->save(false)) { 
+                $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+                if (!is_array($baremoIds)) {
+                    $baremoIds = [];
                 }
                 
-                // Si se subió un nuevo informe, procesarlo
-                if ($imagenInformeFile) {
-                    $model->imagen_informe = $this->uploadFileToSupabase($imagenInformeFile, 'nombre-de-la-carpeta-que-creo-carlos');
+                if (!$model->saveBaremos($baremoIds)) {
+                    throw new \Exception('Error al actualizar los baremos');
                 }
-
-                if ($model->save(false)) { // El false evita la validación para los campos ya guardados
-                    // Guardar la relación muchos a muchos
-                    $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
-                    if (!is_array($baremoIds)) {
-                        $baremoIds = [];
-                    }
-                    
-                    if (!$model->saveBaremos($baremoIds)) {
-                        throw new \Exception('Error al actualizar los baremos');
-                    }
-                    
-                    // Forzar recarga de la relación baremos
-                    $model->refresh();
-                    
-                    $transaction->commit();
-                    Yii::$app->session->setFlash('success', 'Siniestro actualizado correctamente.');
-                    return $this->redirect(['view', 'id' => $model->id]);
-                }
-            } catch (\Exception $e) {
-                $transaction->rollBack();
-                Yii::$app->session->setFlash('error', $e->getMessage());
-                Yii::error('Error al actualizar siniestro: ' . $e->getMessage(), __METHOD__);
+                
+                $model->refresh();
+                $transaction->commit();
+                Yii::$app->session->setFlash('success', 'Siniestro actualizado correctamente.');
+                return $this->redirect(['view', 'id' => $model->id]);
+            } else {
+                throw new \Exception('Error al guardar los datos principales del siniestro.');
             }
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', $e->getMessage());
+            Yii::error('Error al actualizar siniestro: ' . $e->getMessage(), __METHOD__);
         }
-
-        return $this->render('update', [
-            'model' => $model,
-            'afiliado' => $afiliado,
-            'baremos' => $baremos
-        ]);
     }
 
+    return $this->render('update', [
+        'model' => $model,
+        'afiliado' => $afiliado,
+        'baremos' => $baremos
+    ]);
+}
     /**
      * Deletes an existing SisSiniestro model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
