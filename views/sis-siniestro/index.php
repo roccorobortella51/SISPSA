@@ -7,6 +7,7 @@ use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
 use app\components\UserHelper;
 
+
 /**
  * @var yii\web\View $this
  * @var app\models\SisSiniestroSearch $searchModel

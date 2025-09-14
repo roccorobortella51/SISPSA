@@ -444,6 +444,91 @@ $this->registerCss($css);
                             ])->label('Descripción del Siniestro') ?>
                         </div>
 
+                         <div class="col-md-12">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <div class="section-title">
+                                        <i class="fas fa-camera"></i> Archivos de la Atencion
+                                    </div>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+
+                                            <?= $form->field($model, 'imagenRecipeFile')->widget(\kartik\file\FileInput::classname(),[
+                                                'options' => [
+                                                    'accept' => 'image/*',
+                                                ],
+                                                'pluginOptions' => [
+                                                    'theme' => 'fa5',
+                                                    'browseClass' => 'btn btn-primary',
+                                                    'removeClass' => 'btn btn-secondary',
+                                                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                                                    'showUpload' => false,
+                                                    'showCancel' => false,
+                                                    'showCaption' => true,
+                                                    'previewFileType' => 'image',
+                                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                                    'maxFileSize' => 5120, // 5MB
+                                                    'dropZoneEnabled' => false,
+                                                    'showClose' => false,
+                                                    'browseLabel' => 'Subir Recibo/Factura',
+                                                    'removeLabel' => 'Quitar',
+                                                    'fileActionSettings' => [
+                                                        'showZoom' => false,
+                                                        'showDrag' => false,
+                                                    ],
+                                                    'previewSettings' => [
+                                                        'image' => ['width' => '150px', 'height' => 'auto'],
+                                                    ],
+                                                    'layoutTemplates' => [
+                                                        'main1' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
+                                                        'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
+                                                    ],
+                                                ],
+                                            ])->label('Recibo/Factura');
+                                            ?>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <?= $form->field($model, 'imagenInformeFile')->widget(\kartik\file\FileInput::classname(),[
+                                                'options' => [
+                                                    'accept' => 'image/*',
+                                                ],
+                                                'pluginOptions' => [
+                                                    'theme' => 'fa5',
+                                                    'browseClass' => 'btn btn-primary',
+                                                    'removeClass' => 'btn btn-secondary',
+                                                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                                                    'previewFileType' => 'image',
+                                                    'showUpload' => false,
+                                                    'showCancel' => false,
+                                                    'showCaption' => true,
+                                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                                    'maxFileSize' => 5120, // 5MB
+                                                    'dropZoneEnabled' => false,
+                                                    'showClose' => false,
+                                                    'browseLabel' => 'Subir Informe Médico',
+                                                    'removeLabel' => 'Quitar',
+                                                    'fileActionSettings' => [
+                                                        'showZoom' => false,
+                                                        'showDrag' => false,
+                                                    ],
+                                                    'previewSettings' => [
+                                                        'image' => ['width' => '150px', 'height' => 'auto'],
+                                                    ],
+                                                    'layoutTemplates' => [
+                                                        'main1' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
+                                                        'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
+                                                    ],
+                                                ],
+                                            ])->label('Informe Médico');
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group text-end mt-4">
                             <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?>
                             <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'user_id' => $afiliado->id], ['class' => 'btn btn-warning btn-lg me-2']); ?>
