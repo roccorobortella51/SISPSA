@@ -139,54 +139,96 @@ public function actionCreate($user_id)
     if ($model->load($this->request->post())) {
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            // Obtener las instancias de los archivos subidos ANTES de guardar el modelo
-            $imagenRecipeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_recipe');
-            $imagenInformeFile = \yii\web\UploadedFile::getInstance($model, 'imagen_informe');
-
-            // Subir el recibo si existe
-            if ($imagenRecipeFile) {
-                $folder = 'Recipes';
-                $fileName = uniqid('recipe_') . '.' . $imagenRecipeFile->extension;
-                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                if ($imagenRecipeFile->saveAs($tempFilePath)) {
-                    // Usamos la nueva función corregida
-                    $publicUrl = UserHelper::uploadFileToSupabaseSiniestro($tempFilePath, $imagenRecipeFile->type, $fileName, $folder);
-                    if ($publicUrl) {
-                        $model->imagen_recipe = $publicUrl;
-                    } else {
-                        throw new \Exception('Falló la subida del recibo a Supabase Storage.');
-                    }
-                    if (file_exists($tempFilePath)) {
-                        unlink($tempFilePath);
-                    }
-                } else {
-                    throw new \Exception('Error al guardar el archivo temporal del recibo en el servidor.');
-                }
-            }
-
-            // Subir el informe si existe
-            if ($imagenInformeFile) {
-                $folder = 'Informes';
-                $fileName = uniqid('informe_') . '.' . $imagenInformeFile->extension;
-                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                if ($imagenInformeFile->saveAs($tempFilePath)) {
-                    // Usamos la nueva función corregida
-                    $publicUrl = UserHelper::uploadFileToSupabaseSiniestro($tempFilePath, $imagenInformeFile->type, $fileName, $folder);
-                    if ($publicUrl) {
-                        $model->imagen_informe = $publicUrl;
-                    } else {
-                        throw new \Exception('Falló la subida del informe a Supabase Storage.');
-                    }
-                    if (file_exists($tempFilePath)) {
-                        unlink($tempFilePath);
-                    }
-                } else {
-                    throw new \Exception('Error al guardar el archivo temporal del informe en el servidor.');
-                }
-            }
             
+
+    
             // Guardar el modelo, incluyendo las URLs de las imágenes
             if ($model->save()) { 
+
+                $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
+                $imagenInformeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenInformeFile]');
+
+                $model->imagenRecipeFile = !empty($imagenRecipeFile) ? reset($imagenRecipeFile) : null;
+                $model->imagenInformeFile = !empty($imagenInformeFile) ? reset($imagenInformeFile) : null;
+
+                // Subir el recibo si existe
+                if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
+                        $folder = 'documentos';
+                        $fileName = uniqid('imagen_recipe') . '.' . $model->imagenRecipeFile->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->imagenRecipeFile->saveAs($tempFilePath)) {
+                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
+
+                            $fileKeyInBucket = $fileName;
+
+                            Yii::info("Subiendo archivo a Supabase Storage: " . $fileName, __METHOD__);
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagenRecipeFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
+                            }
+
+                            if ($publicUrl) {
+                                $model->imagen_recipe = $publicUrl;
+                                if ($model->save(false)) {
+                                    Yii::$app->session->setFlash('success', 'Archivo subido con éxito.');
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->imagenRecipeFile->error, __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+                    if (!empty($imagenInformeFile) && $imagenInformeFile[0]->size > 0) {
+                        $folder = 'documentos';
+                        $fileName = uniqid('selfie_') . '.' . $model->imagenInformeFile->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->imagenInformeFile->saveAs($tempFilePath)) {
+                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
+
+                            $fileKeyInBucket = $fileName;
+
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagenInformeFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
+                            }
+
+                            if ($publicUrl) {
+                                $model->imagen_informe = $publicUrl;
+                                if ($model->save(false)) {
+                                    Yii::$app->session->setFlash('success', 'Archivo subido con éxito.');
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->imagenInformeFile->error, __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+
+
                 // Guardar la relación muchos a muchos
                 $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
                 if (!is_array($baremoIds)) {
@@ -231,51 +273,93 @@ public function actionUpdate($id)
     if ($model->load(Yii::$app->request->post())) {
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            $imagenRecipeFile = UploadedFile::getInstance($model, 'imagen_recipe');
-            $imagenInformeFile = UploadedFile::getInstance($model, 'imagen_informe');
-
-            if ($imagenRecipeFile) {
-                $folder = 'documentos';
-                $fileName = uniqid('recipe_') . '.' . $imagenRecipeFile->extension;
-                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                if ($imagenRecipeFile->saveAs($tempFilePath)) {
-                    // Usamos la función original que validaste
-                    $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $imagenRecipeFile->type, $fileName, $folder);
-                    
-                    if (file_exists($tempFilePath)) {
-                        unlink($tempFilePath);
-                    }
-                    if ($publicUrl) {
-                        $model->imagen_recipe = $publicUrl;
-                    } else {
-                        throw new \Exception('Fallo la subida del recibo a Supabase Storage.');
-                    }
-                } else {
-                    throw new \Exception('Error al guardar el archivo temporal del recibo en el servidor.');
-                }
-            }
-
-            if ($imagenInformeFile) {
-                $folder = 'FotoPerfil';
-                $fileName = uniqid('informe_') . '.' . $imagenInformeFile->extension;
-                $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                if ($imagenInformeFile->saveAs($tempFilePath)) {
-                    // Usamos la función original que validaste
-                    $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $imagenInformeFile->type, $fileName, $folder);
-                    if (file_exists($tempFilePath)) {
-                        unlink($tempFilePath);
-                    }
-                    if ($publicUrl) {
-                        $model->imagen_informe = $publicUrl;
-                    } else {
-                        throw new \Exception('Fallo la subida del informe a Supabase Storage.');
-                    }
-                } else {
-                    throw new \Exception('Error al guardar el archivo temporal del informe en el servidor.');
-                }
-            }
-
+            
             if ($model->save(false)) { 
+
+
+                $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
+                $imagenInformeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenInformeFile]');
+
+                $model->imagenRecipeFile = !empty($imagenRecipeFile) ? reset($imagenRecipeFile) : null;
+                $model->imagenInformeFile = !empty($imagenInformeFile) ? reset($imagenInformeFile) : null;
+
+                // Subir el recibo si existe
+                if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
+                        $folder = 'documentos';
+                        $fileName = uniqid('imagen_recipe') . '.' . $model->imagenRecipeFile->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->imagenRecipeFile->saveAs($tempFilePath)) {
+                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
+
+                            $fileKeyInBucket = $fileName;
+
+                            Yii::info("Subiendo archivo a Supabase Storage: " . $fileName, __METHOD__);
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagenRecipeFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
+                            }
+
+                            if ($publicUrl) {
+                                $model->imagen_recipe = $publicUrl;
+                                if ($model->save(false)) {
+                                    Yii::$app->session->setFlash('success', 'Archivo subido con éxito.');
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->imagenRecipeFile->error, __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+                    if (!empty($imagenInformeFile) && $imagenInformeFile[0]->size > 0) {
+                        $folder = 'documentos';
+                        $fileName = uniqid('selfie_') . '.' . $model->imagenInformeFile->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                        if ($model->imagenInformeFile->saveAs($tempFilePath)) {
+                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
+
+                            $fileKeyInBucket = $fileName;
+
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagenInformeFile->type,
+                                $fileKeyInBucket,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
+                            }
+
+                            if ($publicUrl) {
+                                $model->imagen_informe = $publicUrl;
+                                if ($model->save(false)) {
+                                    Yii::$app->session->setFlash('success', 'Archivo subido con éxito.');
+                                } else {
+                                    Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            }
+                        } else {
+                            Yii::error("Error al guardar el archivo temporal: " . $model->imagenInformeFile->error, __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        }
+
+                    }
+
                 $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
                 if (!is_array($baremoIds)) {
                     $baremoIds = [];

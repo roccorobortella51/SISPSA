@@ -453,7 +453,8 @@ $this->registerCss($css);
                                     
                                     <div class="row mt-3">
                                         <div class="col-md-6">
-                                            <?= $form->field($model, 'imagen_recipe')->widget(\kartik\file\FileInput::classname(),[
+
+                                            <?= $form->field($model, 'imagenRecipeFile')->widget(\kartik\file\FileInput::classname(),[
                                                 'options' => [
                                                     'accept' => 'image/*',
                                                 ],
@@ -489,7 +490,7 @@ $this->registerCss($css);
                                         </div>
                                         
                                         <div class="col-md-6">
-                                            <?= $form->field($model, 'imagen_informe')->widget(\kartik\file\FileInput::classname(),[
+                                            <?= $form->field($model, 'imagenInformeFile')->widget(\kartik\file\FileInput::classname(),[
                                                 'options' => [
                                                     'accept' => 'image/*',
                                                 ],

@@ -28,14 +28,10 @@ use Yii;
 class SisSiniestro extends \yii\db\ActiveRecord
 {
 
-    /**
-     * @var UploadedFile
-     */
-    public $imagen_recipe;
-    /**
-     * @var UploadedFile
-     */
-    public $imagen_informe;
+ public $imagenRecipeFile;
+ public $imagenInformeFile;
+
+
 
 
     /**
@@ -64,8 +60,12 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['descripcion'], 'string'],
             [['hora', 'hora_atencion'], 'string', 'max' => 10],
             [['idclinica'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['idclinica' => 'id']],
-            [['imagen_recipe', 'imagen_informe'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg'],
-            [['imagen_recipe', 'imagen_informe'], 'safe'],
+
+            [['imagen_recipe', 'imagen_informe'], 'string', 'max' => 255],
+
+            [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo  no debe exceder 2MB.'],
+            [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de  no debe exceder 5MB.'],
+
         ];
     }
 
