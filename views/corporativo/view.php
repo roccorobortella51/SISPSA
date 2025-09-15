@@ -211,7 +211,7 @@ function formatUpdatedAt($value) {
             </div>
         </div>
 
-        <!-- Tarjeta de Empleados Asociados -->
+        <!-- Tarjeta de Empleados Asociados 
         <div class="ms-panel border-gray">
             <div class="ms-panel-body">
                 <h3 class="section-title">
@@ -241,6 +241,6 @@ function formatUpdatedAt($value) {
                     <p class="text-gray-500">No hay empleados asociados a este corporativo.</p>
                 <?php endif; ?>
             </div>
-        </div>
+        </div>-->
     </div>
 </div>

@@ -74,7 +74,7 @@ $this->registerJs($jsValidation);
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
-                        <i class="fas fa-info-circle"></i> Información Básica
+                        <i class="fas fa-info-circle"></i> Información Básica y Datos del Contrato
                     </div>
                     
                     <div class="row">
@@ -96,13 +96,55 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'afiliado_corporativo_id')->widget(Select2::class, [
                                 'data' => UserHelper::getCorporativoList(),
                                 'options' => [
+                                    'id' => 'afiliado_corporativo_id',
                                     'placeholder' => 'Seleccione.',
                                     'class' => 'form-control form-control-lg',
+                                    'id' => 'corporativo_id'
                                 ],
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
                             ])->label('Afiliado Corporativo') ?>
+                        </div>
+
+                         <div class="col-md-6">
+                            <?= $form->field($model, 'clinica_id')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options'=>[
+                                    'id'=>'clinica_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control  form-control-lg',
+                                    'allowClear' => true,
+                                ],
+                                'pluginOptions'=>[
+                                    'depends'=>['user_datos_type_id_field', 'corporativo_id',],
+                                    'url'=>Url::to(['clinicas']),
+                                    'initialize' => true,
+                                    ]
+                                ])->label('Clínica');
+                            ?>
+                        </div>
+                        <div class="col-md-6">
+                            <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [
+                                'type' => DepDrop::TYPE_SELECT2,
+                                'options' => [
+                                    'id' => 'plan_id',
+                                    'placeholder' => 'Seleccione',
+                                    'class' => 'form-control form-control-lg',
+                                    'allowClear' => true,
+                                ],
+                                'pluginOptions' => [
+                                    'depends' => ['clinica_id'],
+                                    'url' => Url::to(['/site/planes']),
+                                    'initialize' => true,
+                                ],
+                                // Aquí es donde agregas el evento de Select2
+                                'pluginEvents' => [
+                                    "change" => "function(e) {
+                                        datosplan($(this).val());
+                                    }",
+                                ]
+                            ])->label('Plan'); ?>
                         </div>
 
                         <div class="col-md-6">
@@ -118,12 +160,40 @@ $this->registerJs($jsValidation);
                             ])->label('NOMBRE DEL ASESOR')
                             ?>
                         </div>
-                        <div class="col-md-6">
-                            <?= $form->field($model, 'tiene_contratante_diferente')->checkbox(['class' => 'form-control-lg']) ?>
+                       
+                    </div>
+
+                    <div class="row">
+                       
+                        <div class="col-md-6 field-with-icon">
+                            
+                            <?= $form->field($modelContrato, 'fecha_ini')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'type' => 'date',
+                                'placeholder' => 'Seleccione la fecha de inicio'
+                            ])->label('Fecha de Inicio') ?>
+                        </div>
+
+                        <div class="col-md-6 field-with-icon">
+                            
+                            <?= $form->field($modelContrato, 'fecha_ven')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'type' => 'date',
+                                'placeholder' => 'Seleccione la fecha de vencimiento'
+                            ])->label('Fecha de Vencimiento') ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon" style="display:none;">
+                            
+                            <?= $form->field($modelContrato, 'monto')->textInput([
+                                'class' => 'form-control  form-control-lg', 
+                                'type' => 'number',
+                                'placeholder' => '0.00'
+                            ]) ?>
                         </div>
                     </div>
                     
                     <div class="row">
+
                         <div class="col-md-6 field-with-icon">
                             
                             <?= $form->field($model, 'email')->textInput(['class' => 'form-control form-control-lg',]) ?>
@@ -143,71 +213,96 @@ $this->registerJs($jsValidation);
                                 ]
                             ]) ?>
                         </div>
+
+                         <div class="col-md-6">
+                            <?= $form->field($model, 'tiene_contratante_diferente')->checkbox(['class' => 'form-control-lg']) ?>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="card mb-4">
+
+             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
-                        <i class="fas fa-user"></i> Datos Personales
+                        <i class="fas fa-file-contract"></i> Datos del Plan Solicitado
+                    </div>
+                    
+                    <div class="row">
+                         <div class="col-md-4 field-with-icon">
+                            
+                            <?= $form->field($model, 'moneda')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            
+                            <?= $form->field($model, 'deducible')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-4 field-with-icon">
+                            
+                            <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg', 'readonly' => true]) ?>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <?= $form->field($model, 'cobertura_maternidad')->checkbox(['class' => 'form-control-lg']) ?>
+                        </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
                             
-                            <?= $form->field($model, 'nombres')->textInput(['class' => 'form-control form-control-lg',]) ?>
+                            <?= $form->field($model, 'deducible_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
                             
-                            <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg',]) ?>
+                            <?= $form->field($model, 'limite_cobertura_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-user-plus"></i> Datos del Afiliado
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 field-with-icon">
+                            <?= $form->field($model, 'nombres')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        </div>
+                        <div class="col-md-6 field-with-icon">
+                            <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-1">
                             <?= $form->field($model, 'tipo_cedula')->widget(Select2::class, [
-                                'data' => [
-                                    'V' => 'V',
-                                    'E' => 'E',
-                                    'J' => 'J',
-                                    'P' => 'P',
-                                    'N' => 'N',
-                                    'M' => 'M',
-                                ],
-                                'options' => [
-                                    'placeholder' => 'Tipo',
-                                    'class' => 'form-control form-control-lg', 
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => true, 
-                                ],
-                                ])->label('Tipo')
-                            ?>
+                                'data' => ['V' => 'V', 'E' => 'E', 'J' => 'J', 'P' => 'P', 'N' => 'N', 'M' => 'M'],
+                                'options' => ['placeholder' => 'Tipo', 'class' => 'form-control form-control-lg'],
+                                'pluginOptions' => ['allowClear' => true],
+                            ])->label('Tipo') ?>
                         </div>
 
-                        <?php if ($model->isNewRecord) { ?>
+                        <?php if ($model->isNewRecord) : ?>
                             <div class="col-md-2 field-with-icon">
-                               
                                 <?= $form->field($model, 'cedula')->textInput([
                                     'class' => 'form-control form-control-lg',
                                     'placeholder' => 'Ejemplo: 12345678'
-                                ])->label('Cédula de Identidad')
-                                ?>
+                                ])->label('Cédula de Identidad') ?>
                             </div>
-                        <?php } else { ?>
+                        <?php else : ?>
                             <div class="col-md-2 field-with-icon">
-                                
                                 <?= $form->field($model, 'cedula')->textInput([
                                     'class' => 'form-control form-control-lg',
                                     'readonly' => true,
-                                ])->label('Cédula de Identidad')
-                                ?>
+                                ])->label('Cédula de Identidad') ?>
                             </div>
-                        <?php } ?>
+                        <?php endif; ?>
 
                         <div class="col-md-3 field-with-icon">
-                            
                             <?= $form->field($model, 'fechanac')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -217,77 +312,40 @@ $this->registerJs($jsValidation);
 
                         <div class="col-md-3">
                             <?= $form->field($model, 'sexo')->widget(Select2::class, [
-                                'data' => [
-                                    'Masculino' => 'Masculino',
-                                    'Femenino' => 'Femenino',
-                                    'Otro' => 'Otro',
-                                ],
+                                'data' => ['Masculino' => 'Masculino', 'Femenino' => 'Femenino', 'Otro' => 'Otro'],
                                 'options' => ['placeholder' => 'Seleccione el sexo...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
+                                'pluginOptions' => ['allowClear' => true],
                             ]) ?>
                         </div>
+                        
                         <div class="col-md-3">
                             <?= $form->field($model, 'tipo_sangre')->widget(Select2::class, [
-                                'data' => [
-                                    'A+' => 'A+',
-                                    'A-' => 'A-',
-                                    'B+' => 'B+',
-                                    'B-' => 'B-',
-                                    'AB+' => 'AB+',
-                                    'AB-' => 'AB-',
-                                    'O+' => 'O+',
-                                    'O-' => 'O-',
-                                ],
+                                'data' => ['A+' => 'A+', 'A-' => 'A-', 'B+' => 'B+', 'B-' => 'B-', 'AB+' => 'AB+', 'AB-' => 'AB-', 'O+' => 'O+', 'O-' => 'O-'],
                                 'options' => ['placeholder' => 'Seleccione el tipo de sangre...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
+                                'pluginOptions' => ['allowClear' => true],
                             ]) ?>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-user-plus"></i> Datos Adicionales del Afiliado
-                    </div>
-                    
-                    <div class="row">
+                    </div> <div class="row">
                         <div class="col-md-4 field-with-icon">
-                            
                             <?= $form->field($model, 'nacionalidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4">
                             <?= $form->field($model, 'estado_civil')->widget(Select2::class, [
-                                'data' => [
-                                    'Soltero' => 'Soltero',
-                                    'Casado' => 'Casado',
-                                    'Divorciado' => 'Divorciado',
-                                    'Viudo' => 'Viudo',
-                                ],
+                                'data' => ['Soltero' => 'Soltero', 'Casado' => 'Casado', 'Divorciado' => 'Divorciado', 'Viudo' => 'Viudo'],
                                 'options' => ['placeholder' => 'Seleccione el estado civil...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
+                                'pluginOptions' => ['allowClear' => true],
                             ])->label('Estado Civil') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
                             <?= $form->field($model, 'lugar_nacimiento')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            
                             <?= $form->field($model, 'profesion')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            
                             <?= $form->field($model, 'ocupacion')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -295,20 +353,12 @@ $this->registerJs($jsValidation);
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'actividad_economica')->widget(Select2::class, [
-                                'data' => [
-                                    'Industrial' => 'Industrial',
-                                    'Comercial' => 'Comercial',
-                                    'Profesional' => 'Profesional',
-                                    'Gubernamental' => 'Gubernamental',
-                                ],
+                                'data' => ['Industrial' => 'Industrial', 'Comercial' => 'Comercial', 'Profesional' => 'Profesional', 'Gubernamental' => 'Gubernamental'],
                                 'options' => ['placeholder' => 'Seleccione la actividad económica...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
+                                'pluginOptions' => ['allowClear' => true],
                             ])->label('Actividad Económica') ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                           
                             <?= $form->field($model, 'ramo_comercial')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
@@ -316,29 +366,16 @@ $this->registerJs($jsValidation);
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'descripcion_actividad')->widget(Select2::class, [
-                                'data' => [
-                                    'Independiente' => 'Independiente',
-                                    'Dependiente' => 'Dependiente',
-                                    'Societaria' => 'Societaria',
-                                ],
+                                'data' => ['Independiente' => 'Independiente', 'Dependiente' => 'Dependiente', 'Societaria' => 'Societaria'],
                                 'options' => ['placeholder' => 'Seleccione la descripción de la actividad...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
+                                'pluginOptions' => ['allowClear' => true],
                             ])->label('Descripción de la Actividad') ?>
                         </div>
                         <div class="col-md-6">
                             <?= $form->field($model, 'ingreso_anual')->widget(Select2::class, [
-                                'data' => [
-                                    'De 1 a 5 Salarios mínimos' => 'De 1 a 5 Salarios mínimos',
-                                    'De 6 a 10 Salarios mínimos' => 'De 6 a 10 Salarios mínimos',
-                                    'De 11 a 20 Salarios mínimos' => 'De 11 a 20 Salarios mínimos',
-                                    'De 20 Salarios mínimos en adelante' => 'De 20 Salarios mínimos en adelante',
-                                ],
+                                'data' => ['De 1 a 5 Salarios mínimos' => 'De 1 a 5 Salarios mínimos', 'De 6 a 10 Salarios mínimos' => 'De 6 a 10 Salarios mínimos', 'De 11 a 20 Salarios mínimos' => 'De 11 a 20 Salarios mínimos', 'De 20 Salarios mínimos en adelante' => 'De 20 Salarios mínimos en adelante'],
                                 'options' => ['placeholder' => 'Seleccione el ingreso anual...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
+                                'pluginOptions' => ['allowClear' => true],
                             ])->label('Ingreso Anual Bs') ?>
                         </div>
                     </div>
@@ -349,7 +386,7 @@ $this->registerJs($jsValidation);
                                 'data' => UserHelper::getEstadosList(),
                                 'options' => [
                                     'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
+                                    'class' => 'form-control form-control-lg',
                                     'id' => 'estado_id'
                                 ],
                                 'pluginOptions' => [
@@ -360,14 +397,14 @@ $this->registerJs($jsValidation);
                         <div class="col-md-3">
                             <?= $form->field($model, 'municipio')->widget(DepDrop::classname(), [
                                 'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'municipio_id',
+                                'options' => [
+                                    'id' => 'municipio_id',
                                     'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
+                                    'class' => 'form-control form-control-lg',
                                 ],
-                                'pluginOptions'=>[
-                                    'depends'=>['estado_id'],
-                                    'url'=>Url::to(['/site/municipio']),
+                                'pluginOptions' => [
+                                    'depends' => ['estado_id'],
+                                    'url' => Url::to(['/site/municipio']),
                                     'initialize' => true,
                                 ]
                             ]); ?>
@@ -375,14 +412,14 @@ $this->registerJs($jsValidation);
                         <div class="col-md-3">
                             <?= $form->field($model, 'parroquia')->widget(DepDrop::classname(), [
                                 'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'parroquia_id',
+                                'options' => [
+                                    'id' => 'parroquia_id',
                                     'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
+                                    'class' => 'form-control form-control-lg',
                                 ],
-                                'pluginOptions'=>[
-                                    'depends'=>['municipio_id'],
-                                    'url'=>Url::to(['/site/parroquia']),
+                                'pluginOptions' => [
+                                    'depends' => ['municipio_id'],
+                                    'url' => Url::to(['/site/parroquia']),
                                     'initialize' => true,
                                 ]
                             ]); ?>
@@ -390,23 +427,22 @@ $this->registerJs($jsValidation);
                         <div class="col-md-3">
                             <?= $form->field($model, 'ciudad')->widget(DepDrop::classname(), [
                                 'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'ciudad_id',
+                                'options' => [
+                                    'id' => 'ciudad_id',
                                     'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
+                                    'class' => 'form-control form-control-lg',
                                 ],
-                                'pluginOptions'=>[
-                                    'depends'=>['estado_id'],
-                                    'url'=>Url::to(['/site/ciudad']),
+                                'pluginOptions' => [
+                                    'depends' => ['estado_id'],
+                                    'url' => Url::to(['/site/ciudad']),
                                     'initialize' => true,
                                 ]
-                            ]);  ?>
+                            ]); ?>
                         </div>
                     </div>
 
                     <div class='row'>
                         <div class="col-md-12 field-with-icon">
-                            
                             <?= $form->field($model, 'direccion')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección'
@@ -416,7 +452,6 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                           
                             <?= $form->field($model, 'direccion_oficina')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de oficina'
@@ -426,7 +461,6 @@ $this->registerJs($jsValidation);
 
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                           
                             <?= $form->field($model, 'direccion_cobro')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de cobro'
@@ -436,21 +470,18 @@ $this->registerJs($jsValidation);
                     
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                           
                             <?= $form->field($model, 'telefono_residencia')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono residencia'
                             ])->label('Teléfono Residencia') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                           
                             <?= $form->field($model, 'telefono_oficina')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono oficina'
                             ])->label('Teléfono Oficina') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
                             <?= $form->field($model, 'telefono_celular')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono celular'
@@ -903,115 +934,6 @@ $this->registerJs($jsValidation);
                     </div>
                 </div>
             </div>
-            
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-file-contract"></i> Datos del Contrato
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <?= $form->field($model, 'clinica_id')->widget(Select2::classname(), [
-                                'data' => UserHelper::getClinicasList(),
-                                'options' => [
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                    'id' => 'clinica_id'
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ])->label('Clínica'); ?>
-                        </div>
-                        <div class="col-md-6">
-                            <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [
-                                'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'plan_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                    'allowClear' => true,
-                                ],
-                                'pluginOptions'=>[
-                                    'depends'=>['clinica_id'],
-                                    'url'=>Url::to(['/site/planes']),
-                                    'initialize' => true,
-                                    ]
-                                ])->label('Plan');
-                            ?>
-                        </div>
-                        <div class="col-md-4 field-with-icon">
-                            
-                            <?= $form->field($modelContrato, 'fecha_ini')->textInput([
-                                'class' => 'form-control form-control-lg',
-                                'type' => 'date',
-                                'placeholder' => 'Seleccione la fecha de inicio',
-                                'readonly' => !$model->isNewRecord
-                            ])->label('Fecha de Inicio') ?>
-                        </div>
-
-                        <div class="col-md-4 field-with-icon">
-                            
-                            <?= $form->field($modelContrato, 'fecha_ven')->textInput([
-                                'class' => 'form-control form-control-lg',
-                                'type' => 'date',
-                                'placeholder' => 'Seleccione la fecha de vencimiento',
-                                'readonly' => !$model->isNewRecord
-                            ])->label('Fecha de Vencimiento') ?>
-                        </div>
-                        <div class="col-md-4 field-with-icon" style="display:none;">
-                            
-                            <?= $form->field($modelContrato, 'monto')->textInput([
-                                'class' => 'form-control  form-control-lg', 
-                                'type' => 'number',
-                                'placeholder' => '0.00'
-                            ]) ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-file-contract"></i> Datos del Plan Solicitado
-                    </div>
-                    
-                    <div class="row">
-                         <div class="col-md-4 field-with-icon">
-                            
-                            <?= $form->field($model, 'moneda')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                        <div class="col-md-4 field-with-icon">
-                            
-                            <?= $form->field($model, 'deducible')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                        <div class="col-md-4 field-with-icon">
-                            
-                            <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-12">
-                            <?= $form->field($model, 'cobertura_maternidad')->checkbox(['class' => 'form-control-lg']) ?>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 field-with-icon">
-                            
-                            <?= $form->field($model, 'deducible_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                        <div class="col-md-6 field-with-icon">
-                            
-                            <?= $form->field($model, 'limite_cobertura_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
 
 
             <div class="row mt-4">
@@ -1043,6 +965,11 @@ $this->registerJs($jsValidation);
 </div>
 
 <?php
+
+$urlGetClinicasByCorporativo = \yii\helpers\Url::to(['/user/get-clinicas-by-corporativo']);
+$urlGetAllClinicas = \yii\helpers\Url::to(['/user/get-all-clinicas']);
+
+
 $this->registerJs(<<<'JS'
 // Refuerzo de clic y diagnóstico para FileInput en este formulario
 $(function(){
@@ -1174,6 +1101,61 @@ $(function(){
  $('#user_datos_type_id_field').on('change', function() {
    toggleAfiliadoCorporativo();
  });
+
+ // Lógica para la visualización de las clínicas y el corporativo
+    var urlGetClinicasByCorporativo = '{$urlGetClinicasByCorporativo}';
+    var urlGetAllClinicas = '{$urlGetAllClinicas}';
+
+
+
 });
 JS);
 ?>
+<script>
+    function datosplan(plan_id) {
+
+        const planIdElement = document.getElementById('plan_id');
+
+        // Verifica si su valor no es una cadena vacía ni nulo
+        if (planIdElement.value !== '' && planIdElement.value !== null) {
+
+                  let csrfToken = $('#csrf-token').val();
+                  var parametros = {
+                    id: plan_id,
+                    "_csrf" : csrfToken,
+                  };
+
+                  $.ajax({
+                    url: "datosdelplan",
+                    type: "post",
+                    dataType: "json",
+                    data: parametros,
+                    success: function (data) {
+                      console.log(data);
+
+
+                    const comision = data.data.comision;
+                    const limite_cobertura = data.data.limite_cobertura;
+                    const moneda = data.data.moneda;
+
+                    console.log(comision);
+                    console.log(limite_cobertura);
+                    console.log(moneda);
+
+                    document.getElementById('userdatos-moneda').value = moneda;
+                    document.getElementById('userdatos-deducible').value = 0;
+                    document.getElementById('userdatos-limite_cobertura').value = limite_cobertura;
+
+                
+                },
+            });
+        }
+    }
+
+    /*$("#plan_id").on("change", function() {
+        var planId = $(this).val();
+        if (planId) { // Asegura que el valor no esté vacío
+            datosplan(planId);
+        }
+    });*/
+</script>

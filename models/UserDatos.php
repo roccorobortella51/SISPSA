@@ -612,29 +612,29 @@ public function getCorporativo()
 
 
 
-   /* public function afterSave($insert, $changedAttributes)
-    {
-        parent::afterSave($insert, $changedAttributes);
+   public function afterSave($insert, $changedAttributes)
+   {
+       parent::afterSave($insert, $changedAttributes);
 
-        // Si se seleccionó un corporativo o si el valor ha cambiado
-        if (!empty($this->afiliado_corporativo_id)) {
-            // Eliminar relaciones previas para evitar duplicados
-            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
+       // Si se seleccionó un corporativo o si el valor ha cambiado
+       if (!empty($this->afiliado_corporativo_id)) {
+           // Eliminar relaciones previas para evitar duplicados
+           CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
 
-            // Crear y guardar la nueva relación en la tabla intermedia
-            $corporativoUser = new CorporativoUser();
-            $corporativoUser->corporativo_id = $this->afiliado_corporativo_id;
-            $corporativoUser->user_id = $this->user_login_id;
-            $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-            
-            if (!$corporativoUser->save()) {
-                Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
-            }
+           // Crear y guardar la nueva relación en la tabla intermedia
+           $corporativoUser = new CorporativoUser();
+           $corporativoUser->corporativo_id = $this->afiliado_corporativo_id;
+           $corporativoUser->user_id = $this->user_login_id;
+           $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+           
+           if (!$corporativoUser->save()) {
+               Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+           }
 
-        } else {
-            // Si el campo está vacío, eliminamos la relación existente
-            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
-        }
-    }*/
+       } else {
+           // Si el campo está vacío, eliminamos la relación existente
+           CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
+       }
+   }
 
 }
