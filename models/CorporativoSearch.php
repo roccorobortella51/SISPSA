@@ -41,7 +41,7 @@ class CorporativoSearch extends Corporativo
      */
     public function search($params, $formName = null)
     {
-        $query = Corporativo::find();
+        $query = Corporativo::find()->with(['users', 'clinicas']);
 
         // add conditions that should always apply here
 

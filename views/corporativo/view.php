@@ -32,7 +32,13 @@ function formatUpdatedAt($value) {
                 ['update', 'id' => $model->id],
                 ['class' => 'btn btn-primary']
             ) ?>
-            
+
+            <?= Html::a(
+                '<i class="fas fa-file-contract"></i> Ver Contratos',
+                ['contracts', 'id' => $model->id],
+                ['class' => 'btn btn-info']
+            ) ?>
+
             <?= Html::a(
                 '<i class="fas fa-undo"></i> Volver',
                 Url::to(['index']),

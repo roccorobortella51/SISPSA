@@ -11,6 +11,8 @@ use yii\filters\VerbFilter;
 use yii\helpers\Url;
 use app\models\CorporativoUser;
 use app\models\UserDatos;
+use app\models\ContratosSearch;
+use app\models\Contratos;
 
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
@@ -45,6 +47,9 @@ class CorporativoController extends Controller
         $searchModel = new CorporativoSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
+        // Asegurar que las relaciones se carguen
+        $dataProvider->query->with(['users', 'clinicas']);
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -61,6 +66,40 @@ class CorporativoController extends Controller
     {
         return $this->render('view', [
             'model' => $this->findModel($id),
+        ]);
+    }
+
+    /**
+     * Lists all Contratos models for users related to a specific Corporativo.
+     * @param int $id Corporativo ID
+     * @return string
+     * @throws NotFoundHttpException if the corporativo cannot be found
+     */
+    public function actionContracts($id)
+    {
+        $corporativo = $this->findModel($id);
+
+        // Obtener IDs de usuarios asociados al corporativo
+        $userIds = CorporativoUser::find()
+            ->select('user_id')
+            ->where(['corporativo_id' => $id])
+            ->column();
+
+        $searchModel = new ContratosSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+
+        // Filtrar contratos por usuarios asociados
+        if (!empty($userIds)) {
+            $dataProvider->query->andWhere(['in', 'user_id', $userIds]);
+        } else {
+            // Si no hay usuarios, no mostrar contratos
+            $dataProvider->query->where('0=1');
+        }
+
+        return $this->render('contracts', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'corporativo' => $corporativo,
         ]);
     }
 
