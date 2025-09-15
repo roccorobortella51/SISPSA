@@ -301,7 +301,7 @@ $this->registerCss($css);
                 </div>
                 <div class="plan-info-item">
                     <span class="plan-info-label">Total de Siniestros Registrados:</span>
-                    <span class="plan-info-value"><?= number_format($sumatoriaSiniestros, 2) ?></span>
+                    <span class="plan-info-value"><?= number_format($sumatoriaSiniestros ?? 0, 2) ?></span>
                 </div>
                 <div class="plan-info-item plan-info-total">
                     <span class="plan-info-label">Total Disponible:</span>
