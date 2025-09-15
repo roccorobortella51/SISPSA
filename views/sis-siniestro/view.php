@@ -158,4 +158,47 @@ function formatBooleanIcon($value) {
             </div>
         </div>
     </div>
+
+    <div class="ms-panel">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-images text-blue-600 mr-3"></i> Documentos del Siniestro
+            </h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="info-card-body text-center">
+                        <h5 class="text-muted">Recibo/Factura</h5>
+                        <?php
+                            if ($model->imagen_recipe) {
+                                echo Html::a(
+                                    Html::img($model->imagen_recipe, ['class' => 'img-fluid border rounded', 'style' => 'max-height: 250px;']),
+                                    $model->imagen_recipe,
+                                    ['target' => '_blank', 'title' => 'Ver Recibo/Factura']
+                                );
+                            } else {
+                                echo '<p class="text-muted">No se ha subido ningún recibo.</p>';
+                            }
+                        ?>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-card-body text-center">
+                        <h5 class="text-muted">Informe Médico</h5>
+                        <?php
+                            if ($model->imagen_informe) {
+                                echo Html::a(
+                                    Html::img($model->imagen_informe, ['class' => 'img-fluid border rounded', 'style' => 'max-height: 250px;']),
+                                    $model->imagen_informe,
+                                    ['target' => '_blank', 'title' => 'Ver Informe Médico']
+                                );
+                            } else {
+                                echo '<p class="text-muted">No se ha subido ningún informe.</p>';
+                            }
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>

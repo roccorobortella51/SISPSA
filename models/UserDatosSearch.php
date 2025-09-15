@@ -82,7 +82,7 @@ class UserDatosSearch extends UserDatos
 
         if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
 
-            $query->andFilterWhere(['clinica_id' => UserHelper::getMyClinicaId()]);
+            $query->andFilterWhere(['user_datos.clinica_id' => UserHelper::getMyClinicaId()]);
         }
 
 
