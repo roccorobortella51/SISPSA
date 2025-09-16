@@ -122,7 +122,6 @@ class UserDatosSearch extends UserDatos
             'user_datos.contrato_id' => $this->contrato_id,
             'user_datos.asesor_id' => $this->asesor_id,
             'updated_at' => $this->updated_at,
-            'user_datos.user_datos.cedula' => $this->cedula,
             'user_datos.user_login_id' => $this->user_login_id,
             'user_datos.user_datos_type_id' => $this->user_datos_type_id, 
             'user_datos.afiliado_corporativo_id' => $this->afiliado_corporativo_id,
@@ -163,6 +162,7 @@ class UserDatosSearch extends UserDatos
             ->andFilterWhere(['ilike', 'user_datos.tipo_cedula', $this->tipo_cedula])
             ->andFilterWhere(['ilike', 'user_datos.tipo_sangre', $this->tipo_sangre])
             ->andFilterWhere(['ilike', 'user_datos.estatus_solvente', $this->estatus_solvente])
+            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->estatus_solvente])
             ->andWhere(['is', 'user_datos.deleted_at', null]);
 
         return $dataProvider;
