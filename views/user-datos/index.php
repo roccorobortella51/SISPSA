@@ -252,6 +252,8 @@ if ($clinica && $clinica->id !== null) {
                                                 'class' => 'btn-action view'
                                             ]
                                         );
+                                    }else{
+                                        return "";
                                     }
                                 },
                                 'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
@@ -284,6 +286,8 @@ if ($clinica && $clinica->id !== null) {
                                                     'class' => 'btn-action view'
                                                 ]
                                             );
+                                    }else{
+                                        return "";
                                     }
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
