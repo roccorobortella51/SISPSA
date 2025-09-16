@@ -238,8 +238,8 @@ if ($clinica && $clinica->id !== null) {
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
-                                    if ($permisos == true) {
+                                'update' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
+                                    if ($rol == 'superadmin' || $rol = 'GERENTE-COMERCIALIZACION') {
                                         $params = ['update', 'id' => $model->id];
                                         if ($clinica && $clinica->id !== null) {
                                             $params['clinica_id'] = $clinica->id;
@@ -272,16 +272,19 @@ if ($clinica && $clinica->id !== null) {
                                     );}
                                     }
                                 },
-                                'pagos' => function ($url, $model, $key){ // Pasar $permisos y $clinica
-                                    $params = ['/contratos/index', 'user_id' => $model->id];
-                                    return Html::a(
-                                        '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Pagos',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );
+                                'pagos' => function ($url, $model, $key)use($permisos, $rol){ // Pasar $permisos y $clinica
+
+                                    if ($rol == 'superadmin' || $rol = 'GERENTE-COMERCIALIZACION') {
+                                        $params = ['/contratos/index', 'user_id' => $model->id];
+                                            return Html::a(
+                                                '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
+                                                Url::to($params), // Asegurar clinica_id condicionalmente
+                                                [
+                                                    'title' => 'Pagos',
+                                                    'class' => 'btn-action view'
+                                                ]
+                                            );
+                                    }
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {
