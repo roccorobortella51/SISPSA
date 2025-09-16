@@ -122,7 +122,7 @@ class UserDatosSearch extends UserDatos
             'contrato_id' => $this->contrato_id,
             'asesor_id' => $this->asesor_id,
             'updated_at' => $this->updated_at,
-            'cedula' => $this->cedula,
+            'user_datos.cedula' => $this->cedula,
             'user_login_id' => $this->user_login_id,
             'user_datos_type_id' => $this->user_datos_type_id, 
             'afiliado_corporativo_id' => $this->afiliado_corporativo_id,
