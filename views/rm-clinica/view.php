@@ -130,6 +130,13 @@ function formatUpdatedAt($value) {
                 ) ?>
             </div>
         </div>
+        <div>
+                <?= Html::a(
+                    '<i class="fas fa-users mr-2"></i> Afiliados',
+                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                ) ?>
+            </div>
     <?php } ?>
 
     <!-- Tarjeta de Información General de la Clínica -->
