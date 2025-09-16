@@ -162,7 +162,7 @@ class UserDatosSearch extends UserDatos
             ->andFilterWhere(['ilike', 'user_datos.tipo_cedula', $this->tipo_cedula])
             ->andFilterWhere(['ilike', 'user_datos.tipo_sangre', $this->tipo_sangre])
             ->andFilterWhere(['ilike', 'user_datos.estatus_solvente', $this->estatus_solvente])
-            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->estatus_solvente])
+            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->cedula])
             ->andWhere(['is', 'user_datos.deleted_at', null]);
 
         return $dataProvider;
