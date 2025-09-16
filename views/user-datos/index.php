@@ -238,7 +238,7 @@ if ($clinica && $clinica->id !== null) {
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
+                                'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos y $clinica
                                     if ($rol == 'superadmin' || $rol = 'GERENTE-COMERCIALIZACION') {
                                         $params = ['update', 'id' => $model->id];
                                         if ($clinica && $clinica->id !== null) {
@@ -272,7 +272,7 @@ if ($clinica && $clinica->id !== null) {
                                     );}
                                     }
                                 },
-                                'pagos' => function ($url, $model, $key)use($permisos, $rol){ // Pasar $permisos y $clinica
+                                'pagos' => function ($url, $model, $key)use($rol){ // Pasar $permisos y $clinica
 
                                     if ($rol == 'superadmin' || $rol = 'GERENTE-COMERCIALIZACION') {
                                         $params = ['/contratos/index', 'user_id' => $model->id];
