@@ -1124,9 +1124,6 @@ class UserDatosController extends Controller
                         $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
                         $nuevaRelacion->rol_en_corporativo = 'afiliado';
                         $nuevaRelacion->save();
-                        print_r($nuevaRelacion->getAttributes());
-                        print_r($nuevaRelacion->getErrors());
-                        exit;
                         Yii::info("Nueva relación con corporativo creada para el usuario " . $model->id, __METHOD__);
                     }
                 
