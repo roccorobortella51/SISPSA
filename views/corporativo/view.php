@@ -217,7 +217,7 @@ function formatUpdatedAt($value) {
             </div>
         </div>
 
-        <!-- Tarjeta de Empleados Asociados 
+        <!-- Tarjeta de Empleados Asociados -->
         <div class="ms-panel border-gray">
             <div class="ms-panel-body">
                 <h3 class="section-title">
@@ -230,14 +230,14 @@ function formatUpdatedAt($value) {
                                 <span>
                                     <?php
                                         $nombreCompleto = '';
-                                        if ($user->userDatos) {
-                                            $nombreCompleto = $user->userDatos->nombres . ' ' . $user->userDatos->apellidos;
+                                        if ($user->id) {
+                                            $nombreCompleto = $user->nombres . ' ' . $user->apellidos;
                                         } else {
-                                            $nombreCompleto = $user->username; // Fallback
+                                            $nombreCompleto = $user->user->username; // Fallback
                                         }
                                     ?>
-                                    <?= Html::a(Html::encode($nombreCompleto), ['user/view', 'id' => $user->id], ['class' => 'text-blue-500 font-medium']) ?>
-                                    <small class="text-gray-500 block sm:inline">(Usuario: <?= Html::encode($user->username) ?>)</small>
+                                    <?= Html::a(Html::encode($nombreCompleto), ['user-datos/view', 'id' => $user->id], ['class' => 'text-blue-500 font-medium']) ?>
+                                    <small class="text-gray-500 block sm:inline">(Usuario: <?= Html::encode($user->user->username) ?>)</small>
                                 </span>
                                 <i class="fas fa-arrow-right"></i>
                             </li>
@@ -247,6 +247,6 @@ function formatUpdatedAt($value) {
                     <p class="text-gray-500">No hay empleados asociados a este corporativo.</p>
                 <?php endif; ?>
             </div>
-        </div>-->
+        </div>
     </div>
 </div>
