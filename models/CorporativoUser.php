@@ -41,7 +41,7 @@ class CorporativoUser extends \yii\db\ActiveRecord
             [['rol_en_corporativo'], 'string', 'max' => 50],
             [['corporativo_id', 'user_id'], 'unique', 'targetAttribute' => ['corporativo_id', 'user_id']],
             [['corporativo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Corporativo::class, 'targetAttribute' => ['corporativo_id' => 'id']],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => UserDatos::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -75,7 +75,7 @@ class CorporativoUser extends \yii\db\ActiveRecord
      */
     public function getUser()
     {
-        return $this->hasOne(User::class, ['id' => 'user_id']);
+        return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
     }
 
 }
