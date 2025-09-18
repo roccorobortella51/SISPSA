@@ -272,16 +272,22 @@ if ($clinica && $clinica->id !== null) {
                                     );}
                                     }
                                 },
-                                'pagos' => function ($url, $model, $key){ // Pasar $permisos y $clinica
-                                    $params = ['/contratos/index', 'user_id' => $model->id];
-                                    return Html::a(
-                                        '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Pagos',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );
+                                'pagos' => function ($url, $model, $key) {
+                                    // Si el tipo de afiliado (user_datos_type_id) NO es 2 (Corporativo), muestra el botón.
+                                    // user_datos_type_id = 1 (Individual)
+                                    if ($model->user_datos_type_id != 2) {
+                                        $params = ['/contratos/index', 'user_id' => $model->id];
+                                        return Html::a(
+                                            '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
+                                            Url::to($params),
+                                            [
+                                                'title' => 'Pagos',
+                                                'class' => 'btn-action view'
+                                            ]
+                                        );
+                                    }
+                                    // Si es tipo 2, la función no devuelve nada, por lo que el botón no se renderiza.
+                                    return null; 
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {
