@@ -249,6 +249,7 @@ class PagosController extends Controller
                                             $cuota->Estatus = 'pagado';
                                             $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
                                             $cuota->rate_usd_bs = $model->tasa;
+                                            $cuota->id_pago = $model->id; // Guardar ID del pago para rastreo
                                             if (!$cuota->save(false)) {
                                                 throw new \Exception('Error al actualizar cuota ID: ' . $cuota->id);
                                             }

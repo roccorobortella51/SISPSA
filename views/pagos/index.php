@@ -20,9 +20,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
     <h1><?= Html::encode($this->title) ?></h1>
 
-    <p>
-        <?= Html::a('Nuevo Pagos', ['create','user_id' => $user_id], ['class' => 'btn btn-primary']) ?>
-    </p>
+    
 
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
 
@@ -32,9 +30,10 @@ $this->params['breadcrumbs'][] = $this->title;
         'columns' => [
             ['class' => 'yii\grid\SerialColumn'],
 
-            'id',
-            'created_at',
-            'recibo_id',
+            //'id',
+            //'created_at',
+            //'recibo_id',
+            'numero_referencia_pago:ntext',
             'fecha_pago',
             //'monto_pagado',
             [
@@ -42,10 +41,17 @@ $this->params['breadcrumbs'][] = $this->title;
                 'value' => function ($model) {
                     return $model->monto_pagado . ' USD';
                 },
+                'label' => 'monto pagado Usd'
+            ],
+            [
+                'attribute' => 'monto_usd',
+                'value' => function ($model) {
+                    return $model->monto_usd . ' Bs';
+                },
+                'label' => 'monto pagado Bs'
             ],
             //'metodo_pago:ntext',
-            //'estatus:ntext',
-            //'numero_referencia_pago:ntext',
+            'estatus:ntext',
             //'updated_at',
             //'imagen_prueba:ntext',
             //'user_id',
@@ -55,7 +61,6 @@ $this->params['breadcrumbs'][] = $this->title;
             //'deleted_at',
             //'conciliador_id',
             //'conciliado',
-            //'monto_usd',
             [
                 'class' => ActionColumn::className(),
                 'urlCreator' => function ($action, Pagos $model, $key, $index, $column) {

@@ -15,6 +15,7 @@ use Yii;
  * @property string|null $Estatus
  * @property string|null $fecha_pago
  * @property int|null $rate_usd_bs
+ * @property int|null $id_pago
  */
 class Cuotas extends \yii\db\ActiveRecord
 {
@@ -34,10 +35,10 @@ class Cuotas extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['contrato_id', 'fecha_vencimiento', 'monto', 'Estatus', 'fecha_pago', 'rate_usd_bs'], 'default', 'value' => null],
+            [['contrato_id', 'fecha_vencimiento', 'monto', 'Estatus', 'fecha_pago', 'rate_usd_bs', 'id_pago'], 'default', 'value' => null],
             [['created_at', 'fecha_vencimiento', 'fecha_pago'], 'safe'],
-            [['contrato_id', 'monto', 'rate_usd_bs'], 'default', 'value' => null],
-            [['contrato_id'], 'integer'],
+            [['contrato_id', 'monto', 'rate_usd_bs', 'id_pago'], 'default', 'value' => null],
+            [['contrato_id', 'id_pago'], 'integer'],
             [['monto', 'rate_usd_bs'], 'number'],
             [['Estatus'], 'string'],
         ];
@@ -57,6 +58,7 @@ class Cuotas extends \yii\db\ActiveRecord
             'Estatus' => 'Estatus',
             'fecha_pago' => 'Fecha Pago',
             'rate_usd_bs' => 'Rate Usd Bs',
+            'id_pago' => 'ID Pago',
         ];
     }
 

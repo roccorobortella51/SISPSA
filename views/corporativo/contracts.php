@@ -25,6 +25,11 @@ $this->params['breadcrumbs'][] = 'Contratos';
                 ['view', 'id' => $corporativo->id],
                 ['class' => 'btn btn-secondary']
             ) ?>
+            <?= Html::a(
+                '<i class="fas fa-credit-card"></i> Realizar Pago Corporativo',
+                ['pagos', 'id' => $corporativo->id],
+                ['class' => 'btn btn-primary']
+            ) ?>
         </div>
     </div>
 
