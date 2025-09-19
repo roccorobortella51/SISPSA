@@ -7,6 +7,7 @@ use yii\grid\ActionColumn;
 use kartik\grid\GridView;
 use yii\widgets\DetailView;
 use kartik\grid\ExpandRowColumn;
+use artik\widgets\SwitchInput;
 
 
 /** @var yii\web\View $this */
@@ -49,6 +50,33 @@ $this->params['breadcrumbs'][] = $this->title;
                     return $model->monto_usd . ' Bs';
                 },
                 'label' => 'monto pagado Bs'
+            ],
+            [
+                'attribute' => 'estatus', // o el campo que quieras controlar
+                'format' => 'raw',
+                'value' => function ($model) {
+                    return \kartik\switchinput\SwitchInput::widget([
+                        'name' => 'estatus_' . $model->id,
+                        'value' => $model->estatus, // valor actual
+                        'pluginOptions' => [
+                            'size' => 'large',
+                            'onText' => 'Conciliado',
+                            'offText' => 'Por Conciliar',
+                            'onColor' => 'success',
+                            'offColor' => 'danger',
+                        ],
+                        'pluginEvents' => [
+                            'switchChange.bootstrapSwitch' => "function(event, state) {
+                                // Aquí puedes agregar AJAX para guardar el cambio
+                                $.post('" . Url::to(['pagos/update-status']) . "', {
+                                    id: " . $model->id . ",
+                                    status: state ? 1 : 0
+                                });
+                            }"
+                        ]
+                    ]);
+                },
+                'label' => 'Estado'
             ],
             //'metodo_pago:ntext',
             'estatus:ntext',
