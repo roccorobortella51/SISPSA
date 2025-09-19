@@ -225,7 +225,7 @@ class Corporativo extends \yii\db\ActiveRecord
      */
     public function getUsers()
     {
-        return $this->hasMany(User::class, ['id' => 'user_id'])
+        return $this->hasMany(UserDatos::class, ['id' => 'user_id'])
             ->viaTable('corporativo_user', ['corporativo_id' => 'id']);
     }
 
