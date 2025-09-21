@@ -425,6 +425,37 @@ class PagosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
+    public function actionUpdatestatus()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        $id = \Yii::$app->request->post('id');
+        $status = \Yii::$app->request->post('status');
+        
+        \Yii::info('Datos recibidos - id: ' . $id . ', status: ' . $status);
+        
+        if (empty($id) || $status === null) {
+            return ['success' => false, 'error' => 'Parámetros requeridos: id='.$id.', status='.$status];
+        }
+        
+        $model = Pagos::findOne($id);
+        if (!$model) {
+            return ['success' => false, 'error' => 'Registro no encontrado'];
+        }
+        
+        // Convertir a valor adecuado
+        $model->estatus = ($status == '1') ? 'Conciliado' : 'Por Conciliar';
+        $model->updated_at = date('Y-m-d');
+        $model->fecha_conciliacion = date('Y-m-d');
+        $model->conciliador_id = Yii::$app->user->id;
+        
+        if ($model->save(false)) {
+            return ['success' => true, 'new_status' => $model->estatus];
+        }
+        
+        return ['success' => false, 'error' => 'Error al guardar'];
+    }
+
    /*public function actionEjecutar($user_id = null)
     {
         // Permitir llamada con user_id via GET (la vista create pasa este parámetro)
