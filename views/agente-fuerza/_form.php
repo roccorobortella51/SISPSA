@@ -41,7 +41,7 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 // --- Fin de la corrección de errores ---
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN'); 
 ?>
 
 <div class="agente-fuerza-form">

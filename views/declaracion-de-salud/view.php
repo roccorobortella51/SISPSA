@@ -39,7 +39,7 @@ $preguntas = [
 
 // Intenta cargar el modelo de usuario asociado si existe
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
 ?>
 <div class="declaracion-de-salud-view-custom container mt-4">

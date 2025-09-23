@@ -57,7 +57,7 @@ class UserSearch extends User
         $query->innerJoinWith(['userDatos']);
 
 
-        if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+        if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente"){
             $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
         }

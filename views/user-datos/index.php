@@ -26,7 +26,7 @@ if (!empty($clinica_id_param)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA"); // Lógica de permisos original
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA"); // Lógica de permisos original
 
 // --- BREADCRUMBS CONDICIONALES ---
 if($permisos == true){
@@ -191,7 +191,7 @@ if ($clinica && $clinica->id !== null) {
                                 return null;
                             },
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','GERENTE-COMERCIALIZACION']),
+                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
                         ],
                         [
                             'label' => 'Clínica',
@@ -201,7 +201,7 @@ if ($clinica && $clinica->id !== null) {
                                 return $model->clinica ? $model->clinica->nombre : null;
                             },
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','GERENTE-COMERCIALIZACION']),
+                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
                         ],
 
                         [
@@ -239,7 +239,7 @@ if ($clinica && $clinica->id !== null) {
                                     );
                                 },
                                 'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos y $clinica
-                                    if ($rol == 'superadmin' || $rol = 'GERENTE-COMERCIALIZACION') {
+                                    if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
                                         $params = ['update', 'id' => $model->id];
                                         if ($clinica && $clinica->id !== null) {
                                             $params['clinica_id'] = $clinica->id;
