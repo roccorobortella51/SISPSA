@@ -222,7 +222,7 @@ class UserHelper
             );
         }
 
-        if(self::getMyRol() == "GERENTE-COMERCIALIZACION"){
+        if(self::getMyRol() == "DIRECTOR-COMERCIALIZACIÓN"){
 
             //listar agente y asesor
            return \yii\helpers\ArrayHelper::map(

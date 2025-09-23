@@ -22,7 +22,7 @@ function formatDateTime($value) {
 
 $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
+$permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
 
 // --- DATOS DE EJEMPLO PARA LA GRÁFICA ---
 $gananciasPorMes = [

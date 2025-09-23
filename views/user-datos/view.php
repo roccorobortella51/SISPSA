@@ -27,7 +27,7 @@ if (!empty($clinica_id_from_url)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor');
 
 // --- Título y BREADCRUMBS CONDICIONALES ---
 $titulo = 'PERFIL DEL AFILIADO: '. 

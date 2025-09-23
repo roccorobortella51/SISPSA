@@ -28,9 +28,9 @@ $clinicIds = json_encode(array_column($chartData, 'clinicId')); // <-- ¡NUEVO! 
 $currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Administrador-clinica');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Administrador-clinica');
 
-$permisos2 = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
+$permisos2 = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
 
 ?>
