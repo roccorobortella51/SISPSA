@@ -720,7 +720,63 @@ $this->registerJs($jsValidation);
                     <div class="row">
                         <div class="col-md-12">
                             <div id="grupo-familiar-container">
-                                <!-- Aquí se agregarán dinámicamente los campos para el grupo familiar -->
+                                <?php if (!$model->isNewRecord && $model->grupo_familiar): ?>
+                                    <?php
+                                    $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
+                                    $miembroIndex = 0;
+                                    foreach ($grupoFamiliar as $member):
+                                        $miembroIndex++;
+                                    ?>
+                                        <div class="card mb-3 miembro-familiar" data-index="<?= $miembroIndex ?>">
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <h5>Miembro #<?= $miembroIndex ?> <button type="button" class="btn btn-danger btn-sm float-right eliminar-miembro" data-index="<?= $miembroIndex ?>"><i class="fas fa-trash"></i></button></h5>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6 field-with-icon">
+                                                        <i class="fas fa-signature"></i>
+                                                        <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][<?= $miembroIndex ?>][nombre]" value="<?= htmlspecialchars($member['nombre'] ?? '') ?>" placeholder="Nombre completo">
+                                                    </div>
+                                                    <div class="col-md-6 field-with-icon">
+                                                        <i class="fas fa-id-card"></i>
+                                                        <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][<?= $miembroIndex ?>][cedula]" value="<?= htmlspecialchars($member['cedula'] ?? '') ?>" placeholder="Cédula de identidad">
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-md-6">
+                                                        <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][<?= $miembroIndex ?>][parentesco]">
+                                                            <option value="">Seleccione el parentesco</option>
+                                                            <option value="Padre" <?= ($member['parentesco'] ?? '') == 'Padre' ? 'selected' : '' ?>>Padre</option>
+                                                            <option value="Madre" <?= ($member['parentesco'] ?? '') == 'Madre' ? 'selected' : '' ?>>Madre</option>
+                                                            <option value="Hijo" <?= ($member['parentesco'] ?? '') == 'Hijo' ? 'selected' : '' ?>>Hijo</option>
+                                                            <option value="Hija" <?= ($member['parentesco'] ?? '') == 'Hija' ? 'selected' : '' ?>>Hija</option>
+                                                            <option value="Hermano" <?= ($member['parentesco'] ?? '') == 'Hermano' ? 'selected' : '' ?>>Hermano</option>
+                                                            <option value="Hermana" <?= ($member['parentesco'] ?? '') == 'Hermana' ? 'selected' : '' ?>>Hermana</option>
+                                                            <option value="Cónyuge" <?= ($member['parentesco'] ?? '') == 'Cónyuge' ? 'selected' : '' ?>>Cónyuge</option>
+                                                            <option value="Otro" <?= ($member['parentesco'] ?? '') == 'Otro' ? 'selected' : '' ?>>Otro</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][<?= $miembroIndex ?>][sexo]">
+                                                            <option value="">Seleccione el sexo</option>
+                                                            <option value="Masculino" <?= ($member['sexo'] ?? '') == 'Masculino' ? 'selected' : '' ?>>Masculino</option>
+                                                            <option value="Femenino" <?= ($member['sexo'] ?? '') == 'Femenino' ? 'selected' : '' ?>>Femenino</option>
+                                                            <option value="Otro" <?= ($member['sexo'] ?? '') == 'Otro' ? 'selected' : '' ?>>Otro</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-md-12 field-with-icon">
+                                                        <i class="fas fa-birthday-cake"></i>
+                                                        <input type="date" class="form-control form-control-lg" name="UserDatos[grupo_familiar][<?= $miembroIndex ?>][fecha_nacimiento]" value="<?= htmlspecialchars($member['fecha_nacimiento'] ?? '') ?>" placeholder="Fecha de nacimiento">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </div>
                             <button type="button" id="agregar-miembro" class="btn btn-primary mt-2">
                                 <i class="fas fa-plus"></i> Agregar Miembro
@@ -730,7 +786,7 @@ $this->registerJs($jsValidation);
                 </div>
             </div>
             
-            <div class="card mb-4">
+            <!--<div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-user-tag"></i> Datos del Beneficiario
@@ -792,7 +848,7 @@ $this->registerJs($jsValidation);
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>--->
             
             <div class="card mb-4">
                 <div class="card-body">
@@ -1015,58 +1071,58 @@ $(function(){
  
  // Función para agregar un nuevo miembro al grupo familiar
  function agregarMiembro() {
-   miembroIndex++;
-   var miembroHtml = `
-     <div class="card mb-3 miembro-familiar" data-index="${miembroIndex}">
-       <div class="card-body">
-         <div class="row">
-           <div class="col-md-12">
-             <h5>Miembro #${miembroIndex} <button type="button" class="btn btn-danger btn-sm float-right eliminar-miembro" data-index="${miembroIndex}"><i class="fas fa-trash"></i></button></h5>
-           </div>
-         </div>
-         <div class="row">
-           <div class="col-md-6 field-with-icon">
-             <i class="fas fa-signature"></i>
-             <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][nombre]" placeholder="Nombre completo">
-           </div>
-           <div class="col-md-6 field-with-icon">
-             <i class="fas fa-id-card"></i>
-             <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][cedula]" placeholder="Cédula de identidad">
-           </div>
-         </div>
-         <div class="row mt-2">
-           <div class="col-md-6">
-             <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][parentesco]">
-               <option value="">Seleccione el parentesco</option>
-               <option value="Padre">Padre</option>
-               <option value="Madre">Madre</option>
-               <option value="Hijo">Hijo</option>
-               <option value="Hija">Hija</option>
-               <option value="Hermano">Hermano</option>
-               <option value="Hermana">Hermana</option>
-               <option value="Cónyuge">Cónyuge</option>
-               <option value="Otro">Otro</option>
-             </select>
-           </div>
-           <div class="col-md-6">
-             <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][sexo]">
-               <option value="">Seleccione el sexo</option>
-               <option value="Masculino">Masculino</option>
-               <option value="Femenino">Femenino</option>
-               <option value="Otro">Otro</option>
-             </select>
-           </div>
-         </div>
-         <div class="row mt-2">
-           <div class="col-md-12 field-with-icon">
-             <i class="fas fa-birthday-cake"></i>
-             <input type="date" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${miembroIndex}][fecha_nacimiento]" placeholder="Fecha de nacimiento">
-           </div>
-         </div>
-       </div>
-     </div>
-   `;
-   $('#grupo-familiar-container').append(miembroHtml);
+    var newIndex = Date.now();
+    var miembroHtml = `
+    <div class="card mb-3 miembro-familiar" data-index="${newIndex}">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-12">
+            <h5>Miembro #${newIndex} <button type="button" class="btn btn-danger btn-sm float-right eliminar-miembro" data-index="${newIndex}"><i class="fas fa-trash"></i></button></h5>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 field-with-icon">
+            <i class="fas fa-signature"></i>
+            <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][nombre]" placeholder="Nombre completo">
+          </div>
+          <div class="col-md-6 field-with-icon">
+            <i class="fas fa-id-card"></i>
+            <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][cedula]" placeholder="Cédula de identidad">
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][parentesco]">
+              <option value="">Seleccione el parentesco</option>
+              <option value="Padre">Padre</option>
+              <option value="Madre">Madre</option>
+              <option value="Hijo">Hijo</option>
+              <option value="Hija">Hija</option>
+              <option value="Hermano">Hermano</option>
+              <option value="Hermana">Hermana</option>
+              <option value="Cónyuge">Cónyuge</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][sexo]">
+              <option value="">Seleccione el sexo</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-md-12 field-with-icon">
+            <i class="fas fa-birthday-cake"></i>
+            <input type="date" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][fecha_nacimiento]" placeholder="Fecha de nacimiento">
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  $('#grupo-familiar-container').append(miembroHtml);
  }
  
  // Función para eliminar un miembro del grupo familiar
