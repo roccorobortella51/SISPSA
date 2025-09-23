@@ -129,7 +129,15 @@ function formatUpdatedAt($value) {
                     ['class' => 'nav-btn-base nav-btn-indigo'] /* Usando las nuevas clases de botones de navegación */
                 ) ?>
             </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-users mr-2"></i> Afiliados',
+                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                ) ?>
+            </div>
         </div>
+
     <?php } ?>
 
     <!-- Tarjeta de Información General de la Clínica -->

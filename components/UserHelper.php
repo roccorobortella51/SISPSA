@@ -366,7 +366,7 @@ class UserHelper
         ->leftJoin(AuthAssignment::tableName(), '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
         ->leftJoin(UserDatos::tableName(), '"user"."id" = "user_datos"."user_login_id"')
         ->select([
-            'user.id AS id',
+            'user_datos.id AS id',
             new \yii\db\Expression("CONCAT(user_datos.nombres, ' ', user_datos.apellidos) AS name")
         ])
         // Asegúrate que el rol es 'afiliado' (en minúsculas, como confirmaste)

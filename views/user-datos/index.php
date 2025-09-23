@@ -238,8 +238,8 @@ if ($clinica && $clinica->id !== null) {
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
-                                    if ($permisos == true) {
+                                'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos y $clinica
+                                    if ($rol == 'superadmin' || $rol = 'GERENTE-COMERCIALIZACION') {
                                         $params = ['update', 'id' => $model->id];
                                         if ($clinica && $clinica->id !== null) {
                                             $params['clinica_id'] = $clinica->id;
@@ -252,6 +252,8 @@ if ($clinica && $clinica->id !== null) {
                                                 'class' => 'btn-action view'
                                             ]
                                         );
+                                    }else{
+                                        return "";
                                     }
                                 },
                                 'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
@@ -288,6 +290,7 @@ if ($clinica && $clinica->id !== null) {
                                     }
                                     // Si es tipo 2, la función no devuelve nada, por lo que el botón no se renderiza.
                                     return null; 
+
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {

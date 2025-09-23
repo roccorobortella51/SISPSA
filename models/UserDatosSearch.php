@@ -116,16 +116,15 @@ class UserDatosSearch extends UserDatos
             'id' => $this->id,
             //'created_at' => $this->created_at,
             //'fechanac' => $this->fechanac,
-            'paso' => $this->paso,
-            'clinica_id' => $this->clinica_id,
-            'plan_id' => $this->plan_id,
-            'contrato_id' => $this->contrato_id,
-            'asesor_id' => $this->asesor_id,
+            'user_datos.paso' => $this->paso,
+            'user_datos.clinica_id' => $this->clinica_id,
+            'user_datos.plan_id' => $this->plan_id,
+            'user_datos.contrato_id' => $this->contrato_id,
+            'user_datos.asesor_id' => $this->asesor_id,
             'updated_at' => $this->updated_at,
-            'cedula' => $this->cedula,
-            'user_login_id' => $this->user_login_id,
-            'user_datos_type_id' => $this->user_datos_type_id, 
-            'afiliado_corporativo_id' => $this->afiliado_corporativo_id,
+            'user_datos.user_login_id' => $this->user_login_id,
+            'user_datos.user_datos_type_id' => $this->user_datos_type_id, 
+            'user_datos.afiliado_corporativo_id' => $this->afiliado_corporativo_id,
         ]);
 
         if (isset($this->created_at) && !empty($this->created_at)) {
@@ -140,29 +139,31 @@ class UserDatosSearch extends UserDatos
 
 
         $query->andFilterWhere(['ilike', 'user_id', $this->user_id])
-            ->andFilterWhere(['ilike', 'nombres', $this->nombres])
-            ->andFilterWhere(['ilike', 'sexo', $this->sexo])
-            ->andFilterWhere(['ilike', 'selfie', $this->selfie])
-            ->andFilterWhere(['ilike', 'telefono', $this->telefono])
-            ->andFilterWhere(['ilike', 'estado', $this->estado])
-            ->andFilterWhere(['ilike', 'role', $this->role])
-            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
-            ->andFilterWhere(['ilike', 'imagen_identificacion', $this->imagen_identificacion])
-            ->andFilterWhere(['ilike', 'qr', $this->qr])
-            ->andFilterWhere(['ilike', 'video', $this->video])
-            ->andFilterWhere(['ilike', 'ciudad', $this->ciudad])
-            ->andFilterWhere(['ilike', 'municipio', $this->municipio])
-            ->andFilterWhere(['ilike', 'parroquia', $this->parroquia])
-            ->andFilterWhere(['ilike', 'direccion', $this->direccion])
-            ->andFilterWhere(['ilike', 'codigoValidacion', $this->codigoValidacion])
-            ->andFilterWhere(['ilike', 'apellidos', $this->apellidos])
-            ->andFilterWhere(['ilike', 'email', $this->email])
-            ->andFilterWhere(['ilike', 'ver_cedula', $this->ver_cedula])
-            ->andFilterWhere(['ilike', 'ver_foto', $this->ver_foto])
-            ->andFilterWhere(['ilike', 'session_id', $this->session_id])
-            ->andFilterWhere(['ilike', 'tipo_cedula', $this->tipo_cedula])
-            ->andFilterWhere(['ilike', 'tipo_sangre', $this->tipo_sangre])
-            ->andFilterWhere(['ilike', 'estatus_solvente', $this->estatus_solvente])
+            ->andFilterWhere(['ilike', 'user_datos.nombres', $this->nombres])
+            ->andFilterWhere(['ilike', 'user_datos.sexo', $this->sexo])
+            ->andFilterWhere(['ilike', 'user_datos.selfie', $this->selfie])
+            ->andFilterWhere(['ilike', 'user_datos.telefono', $this->telefono])
+            ->andFilterWhere(['ilike', 'user_datos.estado', $this->estado])
+            ->andFilterWhere(['ilike', 'user_datos.role', $this->role])
+            ->andFilterWhere(['ilike', 'user_datos.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'user_datos.imagen_identificacion', $this->imagen_identificacion])
+            ->andFilterWhere(['ilike', 'user_datos.qr', $this->qr])
+            ->andFilterWhere(['ilike', 'user_datos.video', $this->video])
+            ->andFilterWhere(['ilike', 'user_datos.ciudad', $this->ciudad])
+            ->andFilterWhere(['ilike', 'user_datos.municipio', $this->municipio])
+            ->andFilterWhere(['ilike', 'user_datos.parroquia', $this->parroquia])
+            ->andFilterWhere(['ilike', 'user_datos.direccion', $this->direccion])
+            ->andFilterWhere(['ilike', 'user_datos.codigoValidacion', $this->codigoValidacion])
+            ->andFilterWhere(['ilike', 'user_datos.apellidos', $this->apellidos])
+            ->andFilterWhere(['ilike', 'user_datos.email', $this->email])
+            ->andFilterWhere(['ilike', 'user_datos.ver_cedula', $this->ver_cedula])
+            ->andFilterWhere(['ilike', 'user_datos.ver_foto', $this->ver_foto])
+            ->andFilterWhere(['ilike', 'user_datos.session_id', $this->session_id])
+            ->andFilterWhere(['ilike', 'user_datos.tipo_cedula', $this->tipo_cedula])
+            ->andFilterWhere(['ilike', 'user_datos.tipo_sangre', $this->tipo_sangre])
+            ->andFilterWhere(['ilike', 'user_datos.estatus_solvente', $this->estatus_solvente])
+            // Usando una expresión en lugar de un simple 'ilike'
+            ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedula])
             ->andWhere(['is', 'user_datos.deleted_at', null]);
 
         return $dataProvider;

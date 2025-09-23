@@ -25,13 +25,42 @@ class CuotaController extends Controller
     {
         $this->stdout("Iniciando generación de cuotas...\n");
         
-        // Obtener contratos que necesitan cuotas generadas (incluyendo diferentes estatus válidos)
-        $contratos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado','suspendido']]) // Incluir múltiples estatus válidos
+        // Diagnóstico completo: Distribución de estatus en contratos
+        $estatusCounts = Contratos::find()
+            ->select(['estatus', 'COUNT(*) as total'])
+            ->groupBy(['estatus'])
+            ->asArray()
             ->all();
+        $this->stdout("Distribución de estatus en contratos:\n");
+        foreach ($estatusCounts as $row) {
+            $estatus = $row['estatus'] ?: 'NULL';
+            $total = $row['total'];
+            $this->stdout("  - '{$estatus}': {$total}\n");
+        }
+        $this->stdout("\n");
+        
+        // Contar contratos con estatus válidos (sin filtro de fecha)
+        $totalValidEstatus = Contratos::find()
+            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado','suspendido']])
+            ->count();
+        $this->stdout("Total contratos con estatus válidos ('activo', 'Creado', etc.): {$totalValidEstatus}\n");
+        
+        // Obtener contratos que necesitan cuotas generadas (incluyendo diferentes estatus válidos)
+        $fechaActual = date('Y-m-d');
+        $contratos = Contratos::find()
+            ->where(['or',
+                ['in', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']], // Case-insensitive para estatus válidos
+                ['estatus' => null] // Incluir si estatus es null
+            ]) // Incluir múltiples estatus válidos
+            ->andWhere(['<=', 'fecha_ini', $fechaActual]) // Solo contratos que ya iniciaron
+            ->all();
+            
+        $this->stdout("Encontrados " . count($contratos) . " contratos para procesar (ya filtrados por fecha_ini <= {$fechaActual}).\n");
             
         $cuotasGeneradas = 0;
         $cuotasAtrasadas = 0;
+        
+        $contratosSuspendidos = 0;
         
         foreach ($contratos as $contrato) {
             // Generar cuotas atrasadas primero
@@ -43,9 +72,28 @@ class CuotaController extends Controller
             if ($cuotaGenerada) {
                 $cuotasGeneradas++;
             }
+            
+            // Verificar y suspender si hay cuotas vencidas
+            $cuotasVencidas = Cuotas::find()
+                ->where([
+                    'contrato_id' => $contrato->id,
+                    'Estatus' => 'pendiente'
+                ])
+                ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
+                ->count();
+                
+            if ($cuotasVencidas > 0 && $contrato->estatus !== 'suspendido') {
+                $contrato->estatus = 'suspendido';
+                if ($contrato->save()) {
+                    $contratosSuspendidos++;
+                    $this->stdout("  ⚠️  Contrato #{$contrato->id} suspendido por {$cuotasVencidas} cuotas vencidas.\n");
+                } else {
+                    $this->stderr("  ❌ Error al suspender contrato #{$contrato->id}\n");
+                }
+            }
         }
         
-        $this->stdout("Proceso completado. Se generaron {$cuotasGeneradas} cuotas del mes actual y {$cuotasAtrasadas} cuotas atrasadas.\n");
+        $this->stdout("Proceso completado. Se generaron {$cuotasGeneradas} cuotas del mes actual, {$cuotasAtrasadas} cuotas atrasadas, y se suspendieron {$contratosSuspendidos} contratos con cuotas vencidas.\n");
         return ExitCode::OK;
     }
     
@@ -65,7 +113,7 @@ class CuotaController extends Controller
             ->orderBy(['fecha_vencimiento' => SORT_DESC])
             ->one();
             
-        $fechaInicio = $ultimaCuotaPagada ? 
+        $fechaInicio = $ultimaCuotaPagada ?
             date('Y-m-d', strtotime($ultimaCuotaPagada->fecha_vencimiento . ' +1 month')) :
             $contrato->fecha_ini;
         $fechaActual = date('Y-m-d');
@@ -76,41 +124,53 @@ class CuotaController extends Controller
         }
         
         // Calcular cuántas cuotas están atrasadas
-        $fechaActual = new \DateTime($fechaActual);
-        $fechaInicio = new \DateTime($fechaInicio);
-        $intervalo = $fechaInicio->diff($fechaActual);
+        $fechaActualObj = new \DateTime($fechaActual);
+        $fechaInicioObj = new \DateTime($fechaInicio);
+        $intervalo = $fechaInicioObj->diff($fechaActualObj);
         $mesesAtrasados = ($intervalo->y * 12) + $intervalo->m;
         
         if ($mesesAtrasados > 0) {
-            $this->stdout("  Contrato #{$contrato->id}: Generando {$mesesAtrasados} cuotas atrasadas...\n");
+            $this->stdout("  Contrato #{$contrato->id}: Generando {$mesesAtrasados} cuotas atrasadas desde {$fechaInicio}...\n");
+            
+            // Fecha base para el primer vencimiento: Día 7 del mes de fechaInicio
+            $fechaBase = new \DateTime($fechaInicioObj->format('Y-m-d'));
+            $fechaBase->modify('first day of this month');
+            $fechaBase->modify('+6 days'); // Día 7 del mes de fechaInicio
             
             for ($i = 0; $i < $mesesAtrasados; $i++) {
-                // CALCULAR FECHA DE VENCIMIENTO COMO DÍA 7 DEL MES SIGUIENTE
-                $mesesAdelante = $i + 1;
-                $fechaVencimiento = new \DateTime($fechaInicio->format('Y-m-d'));
-                $fechaVencimiento->modify('first day of +' . $mesesAdelante . ' month');
-                $fechaVencimiento->modify('+6 days'); // Para llegar al día 7
+                // Para i=0: Usar fechaBase (mes inicial)
+                // Para i>0: Avanzar i meses desde fechaBase
+                $fechaVencimiento = clone $fechaBase;
+                if ($i > 0) {
+                    $fechaVencimiento->modify('first day of + ' . $i . ' months');
+                    $fechaVencimiento->modify('+6 days');
+                }
+                
+                $fechaVencStr = $fechaVencimiento->format('Y-m-d');
+                $this->stdout("    Calculando cuota para: {$fechaVencStr}\n");
                 
                 // Verificar si ya existe esta cuota
                 $existeCuota = Cuotas::find()
-                    ->where(['contrato_id' => $contrato->id, 'fecha_vencimiento' => $fechaVencimiento->format('Y-m-d')])
+                    ->where(['contrato_id' => $contrato->id, 'fecha_vencimiento' => $fechaVencStr])
                     ->exists();
                     
                 if (!$existeCuota) {
                     $cuota = new Cuotas([
                         'contrato_id' => $contrato->id,
-                        'fecha_vencimiento' => $fechaVencimiento->format('Y-m-d'),
-                        'monto_usd' => $contrato->monto,
+                        'fecha_vencimiento' => $fechaVencStr,
+                        'monto_usd' => $contrato->monto, // Monto completo para atrasadas
                         'Estatus' => 'pendiente',
                         'rate_usd_bs' => $this->obtenerTasaCambioActual(),
                     ]);
                     
                     if ($cuota->save()) {
                         $cuotasGeneradas++;
-                        $this->stdout("    ✓ Cuota atrasada generada: {$fechaVencimiento->format('Y-m-d')}\n");
+                        $this->stdout("    ✓ Cuota atrasada generada: {$fechaVencStr} ({$contrato->monto} USD)\n");
                     } else {
-                        $this->stderr("    ✗ Error al generar cuota atrasada: " . print_r($cuota->errors, true) . "\n");
+                        $this->stderr("    ✗ Error al generar cuota atrasada para {$fechaVencStr}: " . print_r($cuota->errors, true) . "\n");
                     }
+                } else {
+                    $this->stdout("    ⚠️  Cuota ya existe para: {$fechaVencStr}\n");
                 }
             }
         }
@@ -126,31 +186,79 @@ class CuotaController extends Controller
      */
     private function generarCuotaMesActual($contrato)
     {
-        // Obtener el primer día del mes actual
-        $primerDiaMes = date('Y-m-07');
+        $cuotasExistentes = Cuotas::find()->where(['contrato_id' => $contrato->id])->count();
+        $fechaIni = new \DateTime($contrato->fecha_ini);
+        $diaMesIni = (int) $fechaIni->format('j'); // Día del mes de fecha_ini
+        $mesAnoIni = $fechaIni->format('Y-m'); // Mes de fecha_ini para vencimiento inicial
         
-        // Verificar si ya existe una cuota para este mes
+        // Calcular fecha_vencimiento: Día 7 del mes de fecha_ini (para inicial) o mes actual (no inicial)
+        $fechaVencimiento = new \DateTime($mesAnoIni . '-07');
+        $hoy = new \DateTime();
+        $fechaActualStr = date('Y-m-d');
+        
+        if ($cuotasExistentes > 0) {
+            // Para cuotas no iniciales, usar mes actual
+            $fechaVencimiento = new \DateTime($fechaActualStr);
+            $fechaVencimiento->modify('first day of this month');
+            $fechaVencimiento->modify('+6 days'); // Día 7 del mes actual
+            $this->stdout("  Generando cuota mensual para contrato #{$contrato->id} (no inicial).\n");
+        } else {
+            $this->stdout("  Generando cuota inicial para contrato #{$contrato->id} con fecha_ini {$contrato->fecha_ini}...\n");
+            
+            // Ajustar vencimiento si es pasado (para inicial)
+            if ($fechaVencimiento < $hoy) {
+                $fechaVencimiento = new \DateTime($fechaActualStr);
+                $fechaVencimiento->modify('first day of this month');
+                $fechaVencimiento->modify('+6 days');
+                $this->stdout("    Vencimiento ajustado a mes actual (era pasado).\n");
+            } else {
+                $this->stdout("    Vencimiento en futuro: {$fechaVencimiento->format('Y-m-d')}.\n");
+            }
+        }
+        
+        $fechaVencimientoStr = $fechaVencimiento->format('Y-m-d');
+        
+        // Verificar si ya existe una cuota para la fecha calculada
         $existeCuota = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id, 'fecha_vencimiento' => $primerDiaMes])
+            ->where([
+                'contrato_id' => $contrato->id,
+                'fecha_vencimiento' => $fechaVencimientoStr
+            ])
             ->exists();
             
         if (!$existeCuota) {
+            // Decidir monto: Prorrateo solo para inicial
+            $montoCompleto = $contrato->monto;
+            if ($cuotasExistentes == 0) { // Inicial
+                if ($diaMesIni <= 7) {
+                    $montoCuota = $montoCompleto;
+                    $this->stdout("    Monto completo ({$montoCuota} USD) ya que fecha_ini en primeros 7 días.\n");
+                } else {
+                    $montoCuota = $montoCompleto / 2;
+                    $this->stdout("    Monto prorrateado (mitad: {$montoCuota} USD) ya que fecha_ini después del día 7.\n");
+                }
+            } else {
+                $montoCuota = $montoCompleto;
+            }
+            
             $cuota = new Cuotas([
                 'contrato_id' => $contrato->id,
-                'fecha_vencimiento' => $primerDiaMes,
-                'monto_usd' => $contrato->monto,
+                'fecha_vencimiento' => $fechaVencimientoStr,
+                'monto_usd' => $montoCuota,
                 'Estatus' => 'pendiente',
                 'rate_usd_bs' => $this->obtenerTasaCambioActual(),
             ]);
             
             if ($cuota->save()) {
-                $this->stdout("Cuota del mes actual generada para el contrato #{$contrato->id} - Vencimiento: {$primerDiaMes}\n");
+                $this->stdout("Cuota generada para el contrato #{$contrato->id} - Vencimiento: {$fechaVencimientoStr} - Monto: {$montoCuota} USD\n");
                 return true;
             } else {
-                $this->stderr("Error al generar cuota del mes actual para el contrato #{$contrato->id}: " . 
+                $this->stderr("Error al generar cuota para el contrato #{$contrato->id}: " .
                     print_r($cuota->errors, true) . "\n");
                 return false;
             }
+        } else {
+            $this->stdout("Cuota ya existe para vencimiento {$fechaVencimientoStr} en contrato #{$contrato->id}.\n");
         }
         
         return false;
@@ -174,9 +282,11 @@ class CuotaController extends Controller
             return ExitCode::UNSPECIFIED_ERROR;
         }
         
-        // Obtener contratos activos
+        // Obtener contratos activos que ya iniciaron
+        $fechaActual = date('Y-m-d');
         $contratos = Contratos::find()
             ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->andWhere(['<=', 'fecha_ini', $fechaActual])
             ->all();
             
         $cuotasGeneradas = 0;
@@ -203,9 +313,11 @@ class CuotaController extends Controller
     {
         $this->stdout("Iniciando generación de cuotas atrasadas...\n");
         
-        // Obtener contratos que necesitan cuotas generadas
+        // Obtener contratos que necesitan cuotas generadas y ya iniciaron
+        $fechaActual = date('Y-m-d');
         $contratos = Contratos::find()
             ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->andWhere(['<=', 'fecha_ini', $fechaActual])
             ->all();
             
         $totalCuotasAtrasadas = 0;
