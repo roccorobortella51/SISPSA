@@ -30,6 +30,11 @@ use yii\helpers\Html;
 <br>
 
     <table class="family-table">
+        <tr>
+            <td colspan="2" style="font-size: 10px;">CONTRATO №: <?= $data['contract_number'] ?? '' ?><br></td>
+            <td colspan="2" style="font-size: 10px;">RECIBO №: </td>
+            <td colspan="4" style="font-size: 10px;">TOTAL CUOTAS DE AFILIACIÓN:</td>
+        </tr>
         <thead>
             <tr>
                 <th colspan="8">DATOS DEL PROPUESTO AFILIADO TITULAR</th>
@@ -203,10 +208,7 @@ use yii\helpers\Html;
         </tr>
         <?php endif; ?>
 
-    </table>
-
-  <table class="family-table">
-    <tr>
+        <tr>
         <th colspan="2">PLAN SOLICITADO</th>
         <th colspan="2">Moneda</th>
         <th colspan="2">Deducible</th>
@@ -230,7 +232,12 @@ use yii\helpers\Html;
         <td colspan="2"><?= $data['maternity_deductible'] ?? 'N/A' ?></td>
         <td colspan="2"><?= $data['maternity_coverage_limit'] ?? 'N/A' ?></td>
     </tr>
-</table>
+
+    </table>
+
+    <!--<table class="family-table">
+        
+    </table>-->
 
 
 </div>
@@ -331,26 +338,54 @@ use yii\helpers\Html;
 </tbody>
 </table>
 
-<table class="family-table">
+<table class="family-table" style="border-collapse: collapse; border-spacing: 0;">
     <tbody>
         <tr>
-            <td colspan="4">
+            <td colspan="6" style="padding: 0;">
                 <div class="section-title" style="border-bottom: none;">DECLARACIONES Y AUTORIZACIONES</div>
                 <p>Yo, <span class="underline"><?= $data['declaration_proposed_affiliate_name'] ?? 'N/A' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_proposed_affiliate_ci'] ?? 'N/A' ?></span>en mi carácter de PROPUESTO AFILIADO TITULAR,</p>
                 <p>* Declaro que he leído cuidadosamente y totalmente, una a una, todas las preguntas y respuestas consignadas en esta solicitud de seguro y que ellas son verdaderas, amplias, completas y exactas.</p>
                 <p>* Declaro que el correo electrónico suministrado me pertenece e identifica plenamente, por lo que autorizo expresamente a Sistema Integral de Salud Programado Medicina Prepagada, S.A. para enviarme todos los documentos que forman parte del contrato y cualquier comunicación pertinente por este medio.</p>
+                
+               <?php if (!empty(trim($data['declaration_contracting_party_name']))): ?>
+    <p>Yo, <span class="underline"><?= $data['declaration_contracting_party_name'] ?? 'N/A' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_contracting_party_ci'] ?? 'N/A' ?></span>en mi carácter de CONTRATANTE,</p>
+    <p>* Doy fe de que el dinero utilizado para el pago de las cuotas, provienen de una fuente lícita y su origen no guarda relación alguna con capitales, bienes, haberes, valores, títulos u operaciones, producto de actividades ilícitas o que provenga de los delitos de Delincuencia Organizada u otras conductas tipificadas en la legislación venezolana.</p>
+    <p>* Autorizo a Sistema Integral de Salud Programado Medicina Prepagada, S.A. a debitar de la Cuenta Bancaria / o cargar en la Tarjeta de Crédito, cuyos datos proporciono en esta solicitud, los cobros de cuotas de este servicio de medicina prepagada durante su vigencia a partir de su emisión. Y me comprometo a mantener el monto suficiente para cumplir con la obligación del pago de la cuota correspondiente.</p>
+<?php endif; ?>
 
-                <p>Yo, <span class="underline"><?= $data['declaration_contracting_party_name'] ?? 'N/A' ?></span>, titular de la cédula de identidad N° <span class="underline"><?= $data['declaration_contracting_party_ci'] ?? 'N/A' ?></span>en mi carácter de CONTRATANTE,</p>
-                <p>* Doy fe de que el dinero utilizado para el pago de las cuotas, provienen de una fuente lícita y su origen no guarda relación alguna con capitales, bienes, haberes, valores, títulos u operaciones, producto de actividades ilícitas o que provenga de los delitos de Delincuencia Organizada u otras conductas tipificadas en la legislación venezolana.</p>
-                <p>* Autorizo a Sistema Integral de Salud Programado Medicina Prepagada, S.A. a debitar de la Cuenta Bancaria / o cargar en la Tarjeta de Crédito, cuyos datos proporciono en esta solicitud, los cobros de cuotas de este servicio de medicina prepagada durante su vigencia a partir de su emisión. Y me comprometo a mantener el monto suficiente para cumplir con la obligación del pago de la cuota correspondiente.</p>
             </td>
         </tr>
         <tr>
-            <td colspan="4">
-                
+            <td colspan="6" style="padding: 0;">
                 <img src="<?= Html::encode($firmas) ?>" alt="firmas" style="width: 100%;">
-                <p class="approval">Aprobado por la Superintendencia de la Actividad Aseguradora según Providencia Nº SAA-SUT-34169 de fecha 13/02/2025</p>
+               
             </td>
         </tr>
+        <tr>
+            <td colspan="6" style="background-color: #f0f0f0; padding: 8px; border-bottom: 1px solid #ccc;">
+                <h4 style="margin: 0; font-weight: bold; color: #333;">INTERMEDIARIO DE LA ACTIVIDAD ASEGURADORA</h4>
+            </td>
+        </tr>
+        <tr>
+    <td colspan="2" style="font-weight: bold; padding: 8px;">NOMBRE Y APELLIDO:</td>
+    <td colspan="2" style="font-weight: bold; padding: 8px;">CÓDIGO №:</td>
+    <td colspan="2" style="font-weight: bold; padding: 8px;">C.I. / R.I.F. /Pasaporte:</td>
+</tr>
+<tr>
+    <td colspan="2" style="padding: 8px; border-bottom: 1px solid #000;">
+        <?= $data['intermediary_name'] ?? '' ?>
+    </td>
+    <td colspan="2" style="padding: 8px; border-bottom: 1px solid #000;">
+        <?= $data['intermediary_code'] ?? '' ?>
+    </td>
+    <td colspan="2" style="padding: 8px; border-bottom: 1px solid #000;">
+        <?= $data['intermediary_ci'] ?? '' ?>
+    </td>
+</tr>
+        </tr>
+        <tr>
+            <td colspan="6" style="padding: 8px; text-align: center;">
+                 <p class="approval">Aprobado por la Superintendencia de la Actividad Aseguradora según Providencia Nº SAA-SUT-34169 de fecha 13/02/2025</p>
+            </td>
     </tbody>
 </table>
