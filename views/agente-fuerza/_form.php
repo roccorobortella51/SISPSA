@@ -41,135 +41,138 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 // --- Fin de la corrección de errores ---
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN'); 
 ?>
 
-   
 <div class="agente-fuerza-form">
     <div class="ms-panel-body">
         <?php $form = ActiveForm::begin(['id' => 'agente-fuerza-form']); // ¡ID esencial para JavaScript! ?>
 
-         
-
-     <?php if (!$model->isNewRecord) { ?>
-
-    <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
-    <div class="col">
-            <?= Html::a(
-                '<i class="fas fa-undo"></i> Volver',
-                // CAMBIO AQUÍ: La ruta ahora apunta a 'index-by-agente' y pasa el 'agente_id'
-                ['index-by-agente', 'agente_id' => $agente->id],
-                ['class' => 'btn btn-primary btn-lg w-100']
-            ) ?>
-        </div>
-
-        <div class="col">
-            <?= Html::a(
-                '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR', // Icono para afiliados
-                ['user-datos/index-by-afiliado', 'asesor_id' => $model->id],
-                ['class' => 'btn btn-success btn-lg w-100'] // Estilo de botón
-            ) ?>
-        </div>
-    </div>
-    <br> <?php } ?>
-
-        <div class="row">
-        <div class="col-md-6" style="display:none;">
-                <?= $form->field($model, 'agente_id')->textInput([
-                    'readonly' => true, // Este campo siempre es de solo lectura
-                    'class' => 'form-control form-control-lg',
-                    'value' => $agente->id, // Usar null coalescing para seguridad
-                    'placeholder' => 'Nombre de la Agencia Asociada',
-                ])
-                ?>
-            </div>
-            <div class="col-md-6">
-                <?= $form->field($model, 'nombre_agente')->textInput([
-                    'readonly' => true, // Este campo siempre es de solo lectura
-                    'class' => 'form-control form-control-lg',
-                    'value' => $agente->nom ?? 'N/A', // Usar null coalescing para seguridad
-                    'placeholder' => 'Nombre de la Agencia Asociada',
-                ])->label('AGENCIA ASOCIADA')
-                ?>
-            </div>
-            <div class="col-md-6">
-                <?= $form->field($model, 'registro_corredor_actividad_aseguradora')->textInput([
-                    'class' => 'form-control form-control-lg',
-                    //'value' => $agente->nom ?? 'N/A', // Usar null coalescing para seguridad
-                    'placeholder' => 'Registro corredor aseguradoras ',
-                ])->label('REGISTRO CORREDOR ACTIVIDAD ASEGURADORA')
-                ?>
-            </div>
-            <div class="col-md-6">
-                <?= $form->field($model, 'idusuario')->widget(Select2::classname(), [
-                        'data' => UserHelper::getAsesor(),
-                        'options' => [
-                            'placeholder' => 'Seleccione el asesor', // Placeholder adaptado
-                            'class' => 'form-control form-control-lg',
-                        ],
-                        'pluginOptions' => [
-                            'allowClear' => false,
-                        ],
-                ])->label('NOMBRE DEL ASESOR') // Etiqueta adaptada
-                ?> 
-            </div>
-        </div>
-
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_venta')->label('PORCENTAJE POR VENTA')->textInput([
-                    'class' => 'form-control form-control-lg', // Aseguramos 'form-control-lg'
-                    'placeholder' => '% Venta',
-                    'type' => 'number',
-                    'step' => '0.01',
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_asesor')->label('PORCENTAJE DE ASESORÍA')->textInput([
-                    'class' => 'form-control form-control-lg', // Aseguramos 'form-control-lg'
-                    'placeholder' => '% Asesoría',
-                    'type' => 'number',
-                    'step' => '0.01',
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_cobranza')->label('PORCENTAJE POR COBRANZA')->textInput([
-                    'class' => 'form-control form-control-lg', // Aseguramos 'form-control-lg'
-                    'placeholder' => '% Cobranza',
-                    'type' => 'number',
-                    'step' => '0.01',
-                ]) ?>
-            </div>
-        </div>
-
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_post_venta')->label('PORCENTAJE POST VENTA')->textInput([
-                    'class' => 'form-control form-control-lg', // Aseguramos 'form-control-lg'
-                    'placeholder' => '% Post-Venta',
-                    'type' => 'number',
-                    'step' => '0.01',
-                ]) ?>
-            </div>
-            <div class="col-md-4">
-                <?= $form->field($model, 'por_registrar')->label('PORCENTAJE POR REGISTRO')->textInput([ // Campo 'por_registrar' aquí
-                    'class' => 'form-control form-control-lg', 
-                    'placeholder' => '% Registro',
-                    'type' => 'number',
-                    'step' => '0.01',
-                ]) ?>
-            </div>
-            <div class="col-md-4">
+        <?php if (!$model->isNewRecord) { ?>
+            <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
+                <div class="col">
+                    <?= Html::a(
+                        '<i class="fas fa-undo"></i> Volver',
+                        ['index-by-agente', 'agente_id' => $agente->id],
+                        ['class' => 'btn btn-primary btn-lg w-100']
+                    ) ?>
                 </div>
+
+                <div class="col">
+                    <?= Html::a(
+                        '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR/ASESOR',
+                        ['user-datos/index-by-afiliado', 'asesor_id' => $model->id],
+                        ['class' => 'btn btn-success btn-lg w-100']
+                    ) ?>
+                </div>
+            </div>
+            <br> 
+        <?php } ?>
+        
+        <!-- Sección de Información General -->
+        <div class="card mb-3">
+            <div class="card-header bg-info text-center">
+                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">INFORMACIÓN GENERAL</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6" style="display:none;">
+                        <?= $form->field($model, 'agente_id')->textInput([
+                            'readonly' => true,
+                            'class' => 'form-control form-control-lg',
+                            'value' => $agente->id,
+                            'placeholder' => 'Nombre de la Agencia Asociada',
+                        ]) ?>
+                    </div>
+                    <div class="col-md-6">
+                        <?= $form->field($model, 'nombre_agente')->textInput([
+                            'readonly' => true,
+                            'class' => 'form-control form-control-lg',
+                            'value' => $agente->nom ?? 'N/A',
+                            'placeholder' => 'Nombre de la Agencia Asociada',
+                        ])->label('AGENCIA ASOCIADA') ?>
+                    </div>
+                    <div class="col-md-6">
+                        <?= $form->field($model, 'idusuario')->widget(Select2::classname(), [
+                                'data' => UserHelper::getAsesor(),
+                                'options' => [
+                                    'placeholder' => 'Seleccione el asesor',
+                                    'class' => 'form-control form-control-lg',
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => false,
+                                ],
+                        ])->label('NOMBRE DEL AGENTE/ASESOR') ?> 
+                    </div>
+                    <div class="col-md-12">
+                        <?= $form->field($model, 'registro_corredor_actividad_aseguradora')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Registro corredor aseguradoras',
+                        ])->label('REGISTRO SUDEASEG') ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Porcentajes -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-center"> 
+                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PORCENTAJES (%)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <?= $form->field($model, 'por_venta')->label('PORCENTAJE POR VENTA')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => '% Venta',
+                            'type' => 'number',
+                            'step' => '0.01',
+                        ]) ?>
+                    </div>
+                    <div class="col-md-3">
+                        <?= $form->field($model, 'por_asesor')->label('PORCENTAJE DE ASESORÍA')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => '% Asesoría',
+                            'type' => 'number',
+                            'step' => '0.01',
+                        ]) ?>
+                    </div>
+                    <div class="col-md-3">
+                        <?= $form->field($model, 'por_cobranza')->label('PORCENTAJE POR COBRANZA')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => '% Cobranza',
+                            'type' => 'number',
+                            'step' => '0.01',
+                        ]) ?>
+                    </div>
+                    <div class="col-md-3">
+                        <?= $form->field($model, 'por_post_venta')->label('PORCENTAJE POST VENTA')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => '% Post-Venta',
+                            'type' => 'number',
+                            'step' => '0.01',
+                        ]) ?>
+                    </div>
+                    <div class="col-md-3">
+                        <?= $form->field($model, 'por_registrar')->label('PORCENTAJE POR REGISTRO')->textInput([
+                            'class' => 'form-control form-control-lg', 
+                            'placeholder' => '% Registro',
+                            'type' => 'number',
+                            'step' => '0.01',
+                        ]) ?>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header bg-primary"> 
-                        <h6 class="mb-0" style="color: white; font-size: 20px;">Permisos de Venta y Asesoría</h6>
-                    </div>
-                    <div class="card-body">
+        <!-- Sección de Permisos -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-center"> 
+                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL AGENTE/ASESOR</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
                         <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -180,9 +183,8 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                             ],
                             'options' => ['id' => Html::getInputId($model, 'puede_vender')],
                         ])->label('Puede Vender'); ?>
-
-                        <hr> 
-
+                    </div>
+                    <div class="col-md-4">
                         <?= $form->field($model, 'puede_asesorar')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -194,14 +196,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                             'options' => ['id' => Html::getInputId($model, 'puede_asesorar')],
                         ])->label('Puede Asesorar'); ?>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header bg-primary"> 
-                        <h6 class="mb-0" style="color: white; font-size: 20px;">Permisos de Gestión y Cobranza</h6>
-                    </div>
-                    <div class="card-body">
+                    <div class="col-md-4">
                         <?= $form->field($model, 'puede_cobrar')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -212,9 +207,8 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                             ],
                             'options' => ['id' => Html::getInputId($model, 'puede_cobrar')],
                         ])->label('Puede Cobrar'); ?>
-
-                        <hr> 
-
+                    </div>
+                    <div class="col-md-4">
                         <?= $form->field($model, 'puede_post_venta')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -225,9 +219,8 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                             ],
                             'options' => ['id' => Html::getInputId($model, 'puede_post_venta')],
                         ])->label('Puede Post Venta'); ?>
-
-                        <hr> 
-
+                    </div>
+                    <div class="col-md-4">
                         <?= $form->field($model, 'puede_registrar')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -242,22 +235,23 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                 </div>
             </div>
         </div>
+        
+        <!-- Sección de Botones de Acción -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group text-end mt-4" style="margin-right:10px;">
+                    <?php if($permisos){ echo Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']); } ?>
+                    
+                    <?php if (isset($agente) && $agente !== null): ?>
+                        <?= Html::a('VOLVER', ['agente-fuerza/index-by-agente', 'agente_id' => $agente->id], ['class' => 'btn btn-info btn-lg ms-2']); ?>
+                    <?php endif; ?>
 
-        <div class="col-md-12">
-            <div class="form-group text-end mt-4" style="margin-right:10px;">
-                <?php if($permisos){ echo Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']); } ?>
-                
-               
-
-                <?php if (isset($agente) && $agente !== null): ?>
-                    <?= Html::a('CANCELAR', ['agente-fuerza/index-by-agente', 'agente_id' => $agente->id], ['class' => 'btn btn-warning btn-lg ms-2']); ?>
-                <?php endif; ?>
-
-                <?php if ($model->isNewRecord) { ?>
-                    <button type="button" class="btn btn-default  btn-lg ms-2" id="btn-limpiar-formulario">
-                        <i class="fas fa-eraser"></i> LIMPIAR FORMULARIO
-                    </button>
-                <?php } ?>
+                    <?php if ($model->isNewRecord) { ?>
+                        <button type="button" class="btn btn-secondary  btn-lg ms-2" id="btn-limpiar-formulario">
+                            <i class="fas fa-eraser"></i> LIMPIAR FORMULARIO
+                        </button>
+                    <?php } ?>
+                </div>
             </div>
         </div>
         <?php ActiveForm::end(); ?>
@@ -275,8 +269,6 @@ $script = <<<JS
         // necesitas forzar el cambio. El ID por defecto de un Select2 de Yii con ActiveForm es
         // 'nombremodelo-nombreatributo' -> '#agentefuerza-idusuario'
         $('#agentefuerza-idusuario').val('').trigger('change');
-        
-       
     });
 JS;
 $this->registerJs($script, View::POS_END);

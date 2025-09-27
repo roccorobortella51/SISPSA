@@ -21,7 +21,7 @@ $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION'); 
+$permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN'); 
 
 ?>
 <div class="row" style="margin:3px !important;">
@@ -80,6 +80,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                 'format' => 'ntext',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'options' => ['style' => 'width: 250px;'],
+                                'contentOptions' => ['class' => 'text-center'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar nombre',
                                     'class' => 'form-control form-control-lg text-center',
@@ -102,19 +103,21 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                 'attribute' => 'propietario',
                                 'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
+                                'contentOptions' => ['class' => 'text-center'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar propietario',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
                                 // Opcional: para manejar el caso de que no haya propietario y no mostrar error, puedes usar 'value':
                                 'value' => function($model) {
-                                    return $model->propietario ? $model->propietario->nombres : 'No asignado';
+                                    return $model->propietario ? $model->propietario->nombres . ' ' . $model->propietario->apellidos : 'No asignado';
                                 }
                             ],
                             
                             [
                                 'attribute' => 'propietarioEmail', // Atributo virtual del AgenteSearch
                                 'label' => 'Correo del Propietario', // Etiqueta para el encabezado
+                                'contentOptions' => ['class' => 'text-center'],
                                 'value' => function ($model) {
                                     // $model aquí es una instancia de Agente.
                                     // Accedemos a su relación 'propietario' y luego a su 'email'.
@@ -125,6 +128,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                             [
                                 'attribute' => 'propietarioCedula', // Atributo virtual del AgenteSearch
                                 'label' => 'Cédula del Propietario', // Etiqueta para el encabezado
+                                'contentOptions' => ['class' => 'text-center'],
                                 'value' => function ($model) {
                                     // $model aquí es una instancia de Agente.
                                     // Accedemos a su relación 'propietario', y luego a los 'userDatos' del propietario.
@@ -137,6 +141,7 @@ $permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
                                 'attribute' => 'agenteFuerzaCount', 
                                 'label' => 'Fuerza de Venta', 
                                 'headerOptions' => ['style' => 'color: white!important;'],
+                                'contentOptions' => ['class' => 'text-center'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar fuerza', 
                                     'class' => 'form-control form-control-lg text-center',

@@ -22,7 +22,7 @@ function formatDateTime($value) {
 
 $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol =='GERENTE-COMERCIALIZACION');
+$permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
 
 // --- DATOS DE EJEMPLO PARA LA GRÁFICA ---
 $gananciasPorMes = [
@@ -47,7 +47,16 @@ $datosJs = json_encode($datos);
 <div class="main-container agente-view"> 
    
     <div class="header-section"> 
-        <h1><?= Html::encode($this->title) ?></h1>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <h1><?= Html::encode($this->title) ?></h1>
+            <?= Html::a(
+                '<i class="fas fa-users mr-2"></i> AGENTES/FUERZA DE ESTA AGENCIA',
+                ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
+                [
+                    'class' => 'btn btn-primary',
+                ]
+            ) ?>
+        </div>
        
         <div class="header-buttons-group">
             <?php 

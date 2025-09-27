@@ -32,7 +32,13 @@ function formatUpdatedAt($value) {
                 ['update', 'id' => $model->id],
                 ['class' => 'btn btn-primary']
             ) ?>
-            
+
+            <?= Html::a(
+                '<i class="fas fa-file-contract"></i> Ver Contratos',
+                ['contracts', 'id' => $model->id],
+                ['class' => 'btn btn-info']
+            ) ?>
+
             <?= Html::a(
                 '<i class="fas fa-undo"></i> Volver',
                 Url::to(['index']),
@@ -224,14 +230,14 @@ function formatUpdatedAt($value) {
                                 <span>
                                     <?php
                                         $nombreCompleto = '';
-                                        if ($user->userDatos) {
-                                            $nombreCompleto = $user->userDatos->nombres . ' ' . $user->userDatos->apellidos;
+                                        if ($user->id) {
+                                            $nombreCompleto = $user->nombres . ' ' . $user->apellidos;
                                         } else {
-                                            $nombreCompleto = $user->username; // Fallback
+                                            $nombreCompleto = $user->user->username; // Fallback
                                         }
                                     ?>
-                                    <?= Html::a(Html::encode($nombreCompleto), ['user/view', 'id' => $user->id], ['class' => 'text-blue-500 font-medium']) ?>
-                                    <small class="text-gray-500 block sm:inline">(Usuario: <?= Html::encode($user->username) ?>)</small>
+                                    <?= Html::a(Html::encode($nombreCompleto), ['user-datos/view', 'id' => $user->id], ['class' => 'text-blue-500 font-medium']) ?>
+                                    <small class="text-gray-500 block sm:inline">(Usuario: <?= Html::encode($user->user->username) ?>)</small>
                                 </span>
                                 <i class="fas fa-arrow-right"></i>
                             </li>

@@ -84,7 +84,7 @@ class PagosSearch extends Pagos
         return $dataProvider;
     }
 
-    public function searchClinica($params, $formName = null, $id)
+    public function searchClinica($params, $formName = null, $id = null)
     {
         $query = Pagos::find()
         ->joinWith('userDatos')

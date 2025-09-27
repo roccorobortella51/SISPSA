@@ -20,9 +20,9 @@ $ciudadesList = $ciudadesList ?? [];
 $listaEstatus = $listaEstatus ?? [];
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Administrador-clinica');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Administrador-clinica');
 
-$permisos2 = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "COORDINADOR-CLINICA");
+$permisos2 = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "COORDINADOR-CLINICA");
 
 $permisos = false;
 
@@ -129,7 +129,15 @@ function formatUpdatedAt($value) {
                     ['class' => 'nav-btn-base nav-btn-indigo'] /* Usando las nuevas clases de botones de navegación */
                 ) ?>
             </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-users mr-2"></i> Afiliados',
+                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                ) ?>
+            </div>
         </div>
+
     <?php } ?>
 
     <!-- Tarjeta de Información General de la Clínica -->

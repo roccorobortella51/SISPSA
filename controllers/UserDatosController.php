@@ -18,16 +18,19 @@ use app\models\RmCiudad;
 use app\models\RmEstado;
 use app\models\Contratos;
 use app\models\RmClinica;
+use app\models\CorporativoClinica;
 use app\models\Planes;
 use yii\base\Security;
 use kartik\mpdf\Pdf;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Json;
 use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use PhpOffice\PhpSpreadsheet\IOFactory; // Importa la clase principal
 use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
 use DateTime;
 use app\models\Cuotas;
 use app\models\TasaCambio;
+use app\models\AgenteFuerza;
 
 
 /**
@@ -712,7 +715,8 @@ class UserDatosController extends Controller
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
+        $dataProvider->query->andFilterWhere(['=', 'user_datos.clinica_id', $clinica_id]);
+        $dataProvider->query->andFilterWhere(['ilike', 'user_datos.role', 'Afiliado']);
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -740,15 +744,15 @@ class UserDatosController extends Controller
         }
         if (!empty($municipio) && is_numeric($municipio)) {
             $municipioModel = RmMunicipio::findOne($municipio);
-            $municipio = $municipioModel ? $municipioModel->nombre : $municipio;
+            $municipio = $municipioModel ? $municipioModel->nombre : null;
         }
         if (!empty($parroquia) && is_numeric($parroquia)) {
             $parroquiaModel = RmParroquia::findOne($parroquia);
-            $parroquia = $parroquiaModel ? $parroquiaModel->nombre : $parroquia;
+            $parroquia = $parroquiaModel ? $parroquiaModel->nombre : null;
         }
         if (!empty($ciudad) && is_numeric($ciudad)) {
             $ciudadModel = RmCiudad::findOne($ciudad);
-            $ciudad = $ciudadModel ? $ciudadModel->nombre : $ciudad;
+            $ciudad = $ciudadModel ? $ciudadModel->nombre : null;
         }
         
 
@@ -821,6 +825,9 @@ class UserDatosController extends Controller
 
             $model->plan_id = $modelContrato->plan_id;
 
+            if ($model->user_datos_type_id == 1) {
+                $model->afiliado_corporativo_id = null;
+            }
 
                 if($model->save()){
                     $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
@@ -918,12 +925,14 @@ class UserDatosController extends Controller
                         $modelContrato->user_id = $model->id;
                         $modelContrato->estatus = 'Registrado';
                         $modelContrato->clinica_id = $model->clinica_id;
-                        $modelContrato->monto = Planes::find()->where(['id' => $modelContrato->plan_id])->one()->precio;
+                        $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
+                        $modelContrato->monto = $plan ? $plan->precio : 0;
                         $modelContrato->save();      
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
                         $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $modelCuota->monto = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
+                        $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
+                        $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                         $modelCuota->Estatus = 'pendiente';
                         $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
                         $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
@@ -938,6 +947,23 @@ class UserDatosController extends Controller
                                 Yii::$app->cache->flush();
                                 $model->user_login_id = $modelUser->id;
                                 $model->save();
+
+                                // Crear relación con corporativo si es tipo 2 y hay ID de corporativo
+                                if ($model->user_datos_type_id == 2 && !empty($model->afiliado_corporativo_id)) {
+                                    // Eliminar relación previa si existe para evitar duplicados
+                                    CorporativoUser::deleteAll(['user_id' => $model->id]);
+
+                                    $corporativoUser = new CorporativoUser();
+                                    $corporativoUser->corporativo_id = $model->afiliado_corporativo_id;
+                                    $corporativoUser->user_id = $model->id;
+                                    $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                                    if (!$corporativoUser->save()) {
+                                        Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+                                    }
+                                } elseif (empty($model->afiliado_corporativo_id)) {
+                                    // Si no hay corporativo, eliminar relación existente
+                                    CorporativoUser::deleteAll(['user_id' => $model->id]);
+                                }
                                 
                             } catch (\Exception $e) {
                                 Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
@@ -976,28 +1002,28 @@ class UserDatosController extends Controller
      * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionUpdate($id)
-    {   
+    {  
         $model = $this->findModel($id);
         $modelContrato = Contratos::find()->where(['user_id' => $id])->one();
         if ($modelContrato === null) {
             $modelContrato = new Contratos();
-            // Puedes asignar otros valores por defecto si es necesario para un nuevo contrato
         }
 
+        // Almacenamos el estado anterior antes de cargar los datos del formulario
+        $tipoUsuarioAnterior = $model->user_datos_type_id;
+        $corporativoIdAnterior = $model->afiliado_corporativo_id;
+
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-            // Procesar grupo familiar
+            Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
+        
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
                 $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
             } else {
                 $model->grupo_familiar = null;
             }
-            
-            // Procesar datos del contratante si es diferente
-            if ($model->tiene_contratante_diferente) {
-                // Los datos del contratante ya se cargan automáticamente con load()
-            } else {
-                // Si no hay contratante diferente, limpiar los campos del contratante
+        
+            if (!$model->tiene_contratante_diferente) {
                 $model->nombre_contratante = null;
                 $model->apellido_contratante = null;
                 $model->tipo_cedula_contratante = null;
@@ -1023,50 +1049,179 @@ class UserDatosController extends Controller
 
             $model->plan_id = $modelContrato->plan_id;
 
-                if($model->user_login_id == "" || $model->user_login_id == null){
+            if($model->user_login_id == "" || $model->user_login_id == null){
+                $modelUser = new User();
+                $modelUser->username = $model->email;
+                $pass = 'sispsa'.$model->cedula;
+                $modelUser->password_hash = User::setPassword($pass);
+                $modelUser->auth_key = User::generateAuthKey();
+                $modelUser->email = $model->email;
+                $modelUser->status = 1;
+                $modelUser->save();
+                $model->user_login_id = $modelUser->id;
+            } else {
+                $modelUser = User::findOne($model->user_login_id);
+            }
 
-                    $modelUser = new User();
-                    $modelUser->username = $model->email;
-                    $pass = 'sispsa'.$model->cedula;
-                    $modelUser->password_hash = User::setPassword($pass);
-                    $modelUser->auth_key = User::generateAuthKey();
-                    $modelUser->email = $model->email;
-                    $modelUser->status = 1;
-                    $modelUser->save();
-                    $model->user_login_id = $modelUser->id;
+            if($model->estatus_solvente == "" || $model->estatus_solvente == null){
+                $model->estatus_solvente = "No";
+            }
+
+            $model->role = 'afiliado';
+            $model->estatus = 'Registrado';
+            $model->updated_at = date('Y-m-d H:i:s');
+        
+            // La lógica de limpieza anterior es ahora manejada por el nuevo bloque
+            // if ($model->user_datos_type_id == 1) {
+            //     $model->afiliado_corporativo_id = null;
+            // }
+
+            // --- INICIO DE LA NUEVA LÓGICA DE RELACIONES CON CORPORATIVO ---
+            $tipoUsuarioActual = (int)($this->request->post('UserDatos')['user_datos_type_id'] ?? 0);
+            $corporativoIdSeleccionado = (int)($this->request->post('UserDatos')['afiliado_corporativo_id'] ?? null);
+
+            // Caso 1: Si el usuario cambia de "Corporativo" (2) a "Simple" (1)
+            if ($tipoUsuarioAnterior == 2 && $tipoUsuarioActual == 1) {
+                // Eliminar la relación en la tabla intermedia si existía
+                if ($corporativoIdAnterior) {
+                    $relacion = CorporativoUser::findOne([
+                        'corporativo_id' => $corporativoIdAnterior,
+                        'user_id' => $model->id
+                    ]);
+                    if ($relacion) {
+                        $relacion->delete();
+                        Yii::info("Relación con corporativo eliminada para el usuario " . $model->id, __METHOD__);
+                    }
                 }
-
-
-                if($model->estatus_solvente == "" || $model->estatus_solvente == null){
-                    $model->estatus_solvente = "No";
+                // Asegurar que el campo afiliado_corporativo_id esté vacío en el modelo
+                $model->afiliado_corporativo_id = null;
+            }
+            // Caso 2: Si el usuario se mantiene o cambia a "Corporativo" (2)
+            else if ($tipoUsuarioActual == 2) {
+                // Si el corporativo ha cambiado, borramos la relación anterior
+                if ($corporativoIdAnterior && $corporativoIdAnterior !== $corporativoIdSeleccionado) {
+                    $relacionAnterior = CorporativoUser::findOne([
+                        'corporativo_id' => $corporativoIdAnterior,
+                        'user_id' => $model->id
+                    ]);
+                    if ($relacionAnterior) {
+                        $relacionAnterior->delete();
+                        Yii::info("Relación anterior con corporativo eliminada para el usuario " . $model->id, __METHOD__);
+                    }
                 }
+            
+                // Si se seleccionó un nuevo corporativo, creamos o actualizamos la relación
+                if ($corporativoIdSeleccionado) {
+                    $relacionExistente = CorporativoUser::findOne([
+                        'corporativo_id' => $corporativoIdSeleccionado,
+                        'user_id' => $model->id
+                    ]);
+                
+                    if (!$relacionExistente) {
+                        echo "Creando nueva relación con corporativo...\n";
+                        $nuevaRelacion = new CorporativoUser();
+                        $nuevaRelacion->corporativo_id = $corporativoIdSeleccionado;
+                        $nuevaRelacion->user_id = $model->id;
+                        $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
+                        $nuevaRelacion->rol_en_corporativo = 'afiliado';
+                        $nuevaRelacion->save();
+                        Yii::info("Nueva relación con corporativo creada para el usuario " . $model->id, __METHOD__);
+                    }
+                
+                    // Actualizar el campo en el modelo UserDatos
+                    $model->afiliado_corporativo_id = $corporativoIdSeleccionado;
+                }
+            } else {
+                // Este caso maneja si el usuario se mantiene como "simple" o no tenía un corporativo.
+                // Aseguramos que el campo afiliado_corporativo_id no tenga un valor
+                $model->afiliado_corporativo_id = null;
+            }
+            // --- FIN DE LA NUEVA LÓGICA DE RELACIONES CON CORPORATIVO ---
+        
+            if($model->save()){
+                Yii::info("UserDatos guardado exitosamente", __METHOD__);
 
-                $model->role = 'afiliado';
-                $model->estatus = 'Registrado';
+                $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
+                $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
 
-                $model->updated_at = date('Y-m-d H:i:s');
+                $model->imagenIdentificacionFile = !empty($imagenIdentificacionFiles) ? reset($imagenIdentificacionFiles) : null;
+                $model->selfieFile = !empty($selfieFiles) ? reset($selfieFiles) : null;
 
-
-                if($model->save()){
-                    $modelContrato->user_id = $id;
-                    $modelContrato->estatus = 'Creado';
-                    $modelContrato->clinica_id = $model->clinica_id;
-                    $modelContrato->monto = Planes::find()->where(['id' => $modelContrato->plan_id])->one()->precio;
-
-
-                    if($modelContrato->save()){
-                        $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
-                        if($cuota){
-                            $cuota->delete();
+                if (!empty($imagenIdentificacionFiles) && $imagenIdentificacionFiles[0]->size > 0) {
+                    $folder = 'documentos';
+                    $fileName = uniqid('imagen_identificacion_') . '.' . $model->imagenIdentificacionFile->extension;
+                    $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                    if ($model->imagenIdentificacionFile->saveAs($tempFilePath)) {
+                        $fileKeyInBucket = $fileName;
+                        $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $model->imagenIdentificacionFile->type, $fileKeyInBucket, $folder);
+                        if (file_exists($tempFilePath)) {
+                            unlink($tempFilePath);
                         }
-                        $modelCuota = new Cuotas();
-                        $modelCuota->contrato_id = $modelContrato->id;
-                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $modelCuota->monto = Contratos::find()->where(['id' => $modelContrato->id])->one()->monto;
-                        $modelCuota->Estatus = 'pendiente';
-                        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
-                        $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
-                        $modelCuota->save();
+                        if ($publicUrl) {
+                            $model->imagen_identificacion = $publicUrl;
+                            if ($model->save(false)) {
+                                Yii::$app->session->setFlash('success', 'Identificacion subido con éxito.');
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
+                            }
+                        } else {
+                            Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                        }
+                    } else {
+                        Yii::error("Error al guardar el archivo temporal: " . $model->imagenIdentificacionFile->error, __METHOD__);
+                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                    }
+                }
+                if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
+                    $folder = 'FotoPerfil';
+                    $fileName = uniqid('selfie_') . '.' . $model->selfieFile->extension;
+                    $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+                    if ($model->selfieFile->saveAs($tempFilePath)) {
+                        $fileKeyInBucket = $fileName;
+                        $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $model->selfieFile->type, $fileKeyInBucket, $folder);
+                        if (file_exists($tempFilePath)) {
+                            unlink($tempFilePath);
+                        }
+                        if ($publicUrl) {
+                            $model->selfie = $publicUrl;
+                            if ($model->save(false)) {
+                                Yii::$app->session->setFlash('success', 'Selfie subido con éxito.');
+                            } else {
+                                Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
+                            }
+                        } else {
+                            Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                        }
+                    } else {
+                        Yii::error("Error al guardar el archivo temporal: " . $model->selfieFile->error, __METHOD__);
+                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                    }
+                }
+
+                // Se elimina el bloque de código anterior que manejaba la relación, ya que la nueva lógica lo reemplaza.
+            
+                $modelContrato->user_id = $id;
+                $modelContrato->estatus = 'Creado';
+                $modelContrato->clinica_id = $model->clinica_id;
+                $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
+                $modelContrato->monto = $plan ? $plan->precio : 0;
+
+                if($modelContrato->save()){
+                    $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
+                    if($cuota){
+                        $cuota->delete();
+                    }
+                    $modelCuota = new Cuotas();
+                    $modelCuota->contrato_id = $modelContrato->id;
+                    $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                    $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
+                    $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
+                    $modelCuota->Estatus = 'pendiente';
+                    $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
+                    $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1;
+                    $modelCuota->save();
+                
+                    if (isset($modelUser) && $modelUser !== null) {
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);
@@ -1077,29 +1232,28 @@ class UserDatosController extends Controller
                                 Yii::$app->cache->flush();
                                 $model->user_login_id = $modelUser->id;
                                 $model->save();
-                                
                             } catch (\Exception $e) {
-                                Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                                Yii::error("Error al asignar el rol: " . $e->getMessage(), __METHOD__);
                             }
                         } else {
                             Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
                         }
-
-                        return $this->redirect(['update', 'id' => $model->id]);
-                    }else{
-
-                        echo "MODEL CONTRATO NOT SAVED";
-                      print_r($modelContrato->getAttributes());
-                      print_r($modelContrato->getErrors());
-                      exit;
-
                     }
-                }else{
-                    echo "MODEL NOT SAVED";
-                      print_r($model->getAttributes());
-                      print_r($model->getErrors());
-                      exit;
+                
+                    Yii::$app->session->setFlash('success', 'El afiliado fue actualizado exitosamente.');
+                    return $this->redirect(['view', 'id' => $model->id]);
+                } else {
+                    Yii::error("Error al guardar Contrato: " . json_encode($modelContrato->getErrors()), __METHOD__);
+                    Yii::$app->session->setFlash('error', 'Error al actualizar el contrato: ' . implode(', ', array_map(function($errors) {
+                        return implode(', ', $errors);
+                    }, $modelContrato->getErrors())));
                 }
+            } else {
+                Yii::error("Error al guardar UserDatos: " . json_encode($model->getErrors()), __METHOD__);
+                Yii::$app->session->setFlash('error', 'Error al actualizar los datos del afiliado: ' . implode(', ', array_map(function($errors) {
+                    return implode(', ', $errors);
+                }, $model->getErrors())));
+            }
         }
 
         return $this->render('update', [
@@ -1108,8 +1262,7 @@ class UserDatosController extends Controller
         ]);
     }
 
-    /**
-     * Deletes an existing UserDatos model.
+    /* * Deletes an existing UserDatos model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param int $id ID
      * @return \yii\web\Response
@@ -1152,231 +1305,309 @@ class UserDatosController extends Controller
 
 
 public function actionGenerarContratov($id)
-    {
-        $model = $this->findModel($id);
+{
+    $model = $this->findModel($id);
 
-        // Inicializar variables para datos del corporativo
-        $corporativo = null;
-        $hasCorporateRelation = false;
+    // Inicializar variables para datos del corporativo
+    $corporativo = null;
+    $hasCorporateRelation = false;
 
-        // Verificar si el afiliado tiene relación con un corporativo
-        if (!empty($model->afiliado_corporativo_id)) {
-            // Buscar la relación corporativo-user
-            $corporativoUser = CorporativoUser::find()
-                ->where(['corporativo_id' => $model->afiliado_corporativo_id, 'user_id' => $model->user_login_id])
-                ->one();
+    // Verificar si el afiliado tiene relación con un corporativo
+    if (!empty($model->afiliado_corporativo_id)) {
+        // Buscar la relación corporativo-user
+        $corporativoUser = CorporativoUser::find()
+            ->where(['corporativo_id' => $model->afiliado_corporativo_id, 'user_id' => $model->user_login_id])
+            ->one();
 
-            if ($corporativoUser) {
-                // Obtener los datos del corporativo
-                $corporativo = $corporativoUser->corporativo;
-                $hasCorporateRelation = true;
-            }
+        if ($corporativoUser) {
+            // Obtener los datos del corporativo
+            $corporativo = $corporativoUser->corporativo;
+            $hasCorporateRelation = true;
+
         }
-
-        // Obtener los IDs de ubicación del modelo
-        $estadoId = (int) $model->estado;
-        $municipioId = (int) $model->municipio;
-        $parroquiaId = (int) $model->parroquia;
-        $ciudadId = (int) $model->ciudad;
-
-        // Buscar los nombres correspondientes a los IDs
-        // Usamos findOne()->nombre para obtener el nombre directamente de la base de datos
-        // Si el ID es 0 o nulo, o no se encuentra, se asigna una cadena vacía
-        $estadoNombre = RmEstado::findOne($estadoId)->nombre ?? '';
-        $municipioNombre = RmMunicipio::findOne($municipioId)->nombre ?? '';
-        $parroquiaNombre = RmParroquia::findOne($parroquiaId)->nombre ?? '';
-        $ciudadNombre = RmCiudad::findOne($ciudadId)->nombre ?? '';
-
-        // Elimina el var_dump y die() que usaste para depurar
-        // var_dump ($estadoNombre); die();
-
-        // Construir la dirección de residencia completa
-        $residenceAddressParts = [];
-        if (!empty($model->direccion)) $residenceAddressParts[] = $model->direccion;
-        if (!empty($parroquiaNombre)) $residenceAddressParts[] = $parroquiaNombre;
-        if (!empty($municipioNombre)) $residenceAddressParts[] = $municipioNombre;
-        if (!empty($ciudadNombre)) $residenceAddressParts[] = $ciudadNombre;
-        if (!empty($estadoNombre)) $residenceAddressParts[] = $estadoNombre;
-        $fullResidenceAddress = implode(', ', array_filter($residenceAddressParts));
-
-
-        // Preparar los datos para el PDF
-        $data = [
-            // Datos del Afiliado Propuesto
-            'affiliation_type' => $model->userDatosType ? $model->userDatosType->nombre : '', // Asume relación userDatosType y campo nombre_tipo
-            'proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
-            'proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula, // Usa tipo_cedula y cedula directamente
-            'proposed_affiliate_nationality' => $model->nacionalidad,
-            'proposed_affiliate_marital_status' => $model->estado_civil,
-            'proposed_affiliate_birthplace' => $model->lugar_nacimiento,
-            'proposed_affiliate_birthdate' => Yii::$app->formatter->asDate($model->fechanac, 'yyyy-MM-dd'), // Formato YYYY-MM-DD
-            'proposed_affiliate_sex' => $model->sexo,
-            'proposed_affiliate_profession' => $model->profesion,
-            'proposed_affiliate_occupation' => $model->ocupacion,
-            'proposed_affiliate_economic_activity' => $model->actividad_economica,
-            'proposed_affiliate_commercial_branch' => $model->ramo_comercial,
-            'proposed_affiliate_activity_description' => $model->descripcion_actividad,
-            'proposed_affiliate_annual_income' => $model->ingreso_anual,
-            'proposed_affiliate_residence_address' => $model->direccion_residencia ?: $fullResidenceAddress, // Dirección completa construida
-            'proposed_affiliate_phone_residence' => $model->telefono_residencia ?: $model->telefono, // Asume que afterFind ya lo formateó para visualización
-            'proposed_affiliate_office_address' => $model->direccion_oficina,
-            'proposed_affiliate_phone_office' => $model->telefono_oficina,
-            'proposed_affiliate_billing_address' => $model->direccion_cobro ?: ($model->direccion_residencia ?: $fullResidenceAddress), // Usa direccion_cobro si existe, sino la de residencia
-            'proposed_affiliate_cell_phone' => $model->telefono_celular ?: $model->telefono, // Se asume igual que el teléfono de residencia
-            'proposed_affiliate_email' => $model->email,
-
-            // Datos de la Parte Contratante (se dejan vacíos si no hay campos en UserDatos)
-            'contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
-            'contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''), // Usa tipo_cedula y cedula directamente
-            'contracting_party_nationality' => $model->nacionalidad_contratante,
-            'contracting_party_marital_status' => $model->estado_civil_contratante,
-            'contracting_party_birthplace' => $model->lugar_nacimiento_contratante,
-            'contracting_party_birthdate' => $model->fecha_nacimiento_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'yyyy-MM-dd') : '', // Formato YYYY-MM-DD
-            'contracting_party_sex' => $model->sexo_contratante,
-            'contracting_party_profession' => $model->profesion_contratante,
-            'contracting_party_occupation' => $model->ocupacion_contratante,
-            'contracting_party_economic_activity' => $model->actividad_economica_contratante,
-            'contracting_party_activity_description' => $model->descripcion_actividad_contratante,
-            'contracting_party_annual_income' => $model->ingreso_anual_contratante,
-            'contracting_party_residence_address' => $model->direccion_residencia_contratante,
-            'contracting_party_phone_residence' => $model->telefono_residencia_contratante,
-            'contracting_party_office_address' => $model->direccion_oficina_contratante,
-            'contracting_party_phone_office' => $model->telefono_oficina_contratante,
-            'contracting_party_cell_phone' => $model->telefono_celular_contratante,
-            'contracting_party_email' => $model->email_contratante,
-            'contracting_party_billing_address' => $model->direccion_cobro_contratante ?: ($model->direccion_residencia_contratante ?: ''),
-
-            // Representante Legal (del contratante si no hay corporativo, del corporativo si existe)
-            'legal_representative_name' => $hasCorporateRelation
-                ? ($corporativo->nombre_representante ?? '')
-                : (($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? '')),
-            'legal_representative_ci' => $hasCorporateRelation
-                ? ($corporativo->cedula_representante ?? '')
-                : (($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? '')),
-            'legal_representative_nationality' => $hasCorporateRelation
-                ? ($corporativo->nacionalidad_representante ?? '')
-                : ($model->nacionalidad_representante ?? ''),
-            'legal_representative_marital_status' => $hasCorporateRelation
-                ? ($corporativo->estado_civil_representante ?? '')
-                : ($model->estado_civil_representante ?? ''),
-            'legal_representative_birthplace' => $hasCorporateRelation
-                ? ($corporativo->lugar_nacimiento_representante ?? '')
-                : ($model->lugar_nacimiento_representante ?? ''),
-            'legal_representative_birthdate' => $hasCorporateRelation
-                ? ($corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'yyyy-MM-dd') : '')
-                : ($model->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante, 'yyyy-MM-dd') : ''),
-            'legal_representative_sex' => $hasCorporateRelation
-                ? ($corporativo->sexo_representante ?? '')
-                : ($model->sexo_representante ?? ''),
-            'legal_representative_profession' => $hasCorporateRelation
-                ? ($corporativo->profesion_representante ?? '')
-                : ($model->profesion_representante ?? ''),
-            'legal_representative_occupation' => $hasCorporateRelation
-                ? ($corporativo->ocupacion_representante ?? '')
-                : ($model->ocupacion_representante ?? ''),
-            'legal_representative_activity_description' => $hasCorporateRelation
-                ? ($corporativo->descripcion_actividad_representante ?? '')
-                : ($model->descripcion_actividad_representante ?? ''),
-            'legal_representative_address' => $hasCorporateRelation
-                ? ($corporativo->direccion_representante ?? '')
-                : ($model->direccion_representante ?? ''),
-            'legal_representative_phone' => $hasCorporateRelation
-                ? ($corporativo->telefono_representante ?? '')
-                : ($model->telefono_representante ?? ''),
-
-            // Datos del Plan (se usan del modelo Plan relacionado)
-            'plan_selected' => $model->plan ? $model->plan->nombre : '', // Asume 'nombre_plan' en el modelo Planes
-            'plan_currency' => $model->moneda,
-            'plan_deductible' => $model->deducible,
-            'plan_coverage_limit' => $model->limite_cobertura,
-            'maternity_coverage' => $model->cobertura_maternidad,
-            'maternity_deductible' => $model->deducible_maternidad,
-            'maternity_coverage_limit' => $model->limite_cobertura_maternidad,
-
-            // Grupo Familiar (se deja array vacío si no hay tabla o relación específica)
-            'family_group' => $model->grupo_familiar ? json_decode($model->grupo_familiar, true) : [],
-
-            // Beneficiario (se dejan vacíos si no hay campos en UserDatos)
-            'beneficiary_name' => $model->nombre_beneficiario,
-            'beneficiary_ci' => $model->cedula_beneficiario,
-            'beneficiary_relationship' => $model->parentesco_beneficiario,
-            'beneficiary_sex' => $model->sexo_beneficiario,
-            'beneficiary_birthdate' => $model->fecha_nacimiento_beneficiario ? Yii::$app->formatter->asDate($model->fecha_nacimiento_beneficiario, 'yyyy-MM-dd') : '',
-
-            // Cuenta Bancaria (se dejan vacíos si no hay campos en UserDatos)
-            'bank_account_holder_name' => $model->nombre_titular,
-            'bank_account_ci' => $model->cedula_titular,
-            'bank_account_number' => $model->numero_cuenta,
-            'bank_name' => $model->banco,
-            'bank_account_type' => $model->tipo_cuenta,
-
-            // Declaración
-            'declaration_proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
-            'declaration_proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
-            'declaration_contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
-            'declaration_contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
-            'declaration_place' => $ciudadNombre, // Usa el nombre de la ciudad resuelto
-            'declaration_date' => date('d/m/Y'), // Fecha actual en formato DD/MM/YYYY
-
-            // Datos del Corporativo (solo si tiene relación)
-            'has_corporate_relation' => $hasCorporateRelation,
-            'corporate_name' => $corporativo ? $corporativo->nombre : '',
-            'corporate_rif' => $corporativo ? $corporativo->rif : '',
-            'corporate_mercantile_register' => $corporativo ? $corporativo->tomo_registro . ' ' . $corporativo->folio_registro : '',
-            'corporate_registration_date' => $corporativo && $corporativo->fecha_registro_mercantil ? Yii::$app->formatter->asDate($corporativo->fecha_registro_mercantil, 'dd/MM/yyyy') : '',
-            'corporate_address' => $corporativo ? $corporativo->direccion : '',
-            'corporate_phone' => $corporativo ? $corporativo->telefono : '',
-            'corporate_email' => $corporativo ? $corporativo->email : '',
-            'corporate_economic_activity' => $corporativo ? $corporativo->actividad_economica : '',
-            'corporate_products_services' => $corporativo ? $corporativo->productos_servicios : '',
-            'corporate_profit' => $corporativo ? $corporativo->utilidad_ejercicio_anterior : '',
-            'corporate_equity' => $corporativo ? $corporativo->patrimonio : '',
-
-            // Datos del Representante Legal del Corporativo
-            'corporate_legal_representative_name' => $corporativo ? $corporativo->nombre_representante : '',
-            'corporate_legal_representative_ci' => $corporativo ? $corporativo->cedula_representante : '',
-            'corporate_legal_representative_nationality' => $corporativo ? $corporativo->nacionalidad_representante : '',
-            'corporate_legal_representative_marital_status' => $corporativo ? $corporativo->estado_civil_representante : '',
-            'corporate_legal_representative_birthplace' => $corporativo ? $corporativo->lugar_nacimiento_representante : '',
-            'corporate_legal_representative_birthdate' => $corporativo && $corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'dd/MM/yyyy') : '',
-            'corporate_legal_representative_sex' => $corporativo ? $corporativo->sexo_representante : '',
-            'corporate_legal_representative_profession' => $corporativo ? $corporativo->profesion_representante : '',
-            'corporate_legal_representative_occupation' => $corporativo ? $corporativo->ocupacion_representante : '',
-            'corporate_legal_representative_activity_description' => $corporativo ? $corporativo->descripcion_actividad_representante : '',
-            'corporate_legal_representative_address' => $corporativo ? $corporativo->direccion_representante : '',
-            'corporate_legal_representative_phone' => $corporativo ? $corporativo->telefono_representante : '',
-        ];
-
-        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
-        $firmas = Yii::getAlias('@webroot/img/firmas.png');
-
-        // Render the HTML content for the PDF
-        $content = $this->renderPartial('_contrato_pdf', [
-            'data' => $data,
-            'logo' => $logo,
-            'firmas' => $firmas
-        ]);
-
-        $url_css = Yii::getAlias('@webroot') . '/css/affiliation-pdf.css';
-
-        $pdf = new Pdf([
-            'mode' => Pdf::MODE_UTF8,
-            'format' => Pdf::FORMAT_LETTER,
-            'orientation' => Pdf::ORIENT_PORTRAIT,
-            'destination' => Pdf::DEST_BROWSER,
-            'content' => $content,
-            'cssFile' => $url_css, // Pasa la ruta absoluta aquí
-            'options' => [
-                'title' => 'Solicitud de Afiliación SISPSA',
-            ],
-            'methods' => [
-                'SetHeader' => false,
-                'SetFooter' => ['{PAGENO}'],
-            ]
-        ]);
-
-        return $pdf->render();
     }
+
+    // Obtener los IDs de ubicación del modelo
+    $estadoId = (int) $model->estado;
+    $municipioId = (int) $model->municipio;
+    $parroquiaId = (int) $model->parroquia;
+    $ciudadId = (int) $model->ciudad;
+
+    // Buscar los nombres correspondientes a los IDs
+    $estadoNombre = RmEstado::findOne($estadoId)->nombre ?? '';
+    $municipioNombre = RmMunicipio::findOne($municipioId)->nombre ?? '';
+    $parroquiaNombre = RmParroquia::findOne($parroquiaId)->nombre ?? '';
+    $ciudadNombre = RmCiudad::findOne($ciudadId)->nombre ?? '';
+
+    // Construir la dirección de residencia completa
+    $residenceAddressParts = [];
+    if (!empty($model->direccion)) $residenceAddressParts[] = $model->direccion;
+    if (!empty($parroquiaNombre)) $residenceAddressParts[] = $parroquiaNombre;
+    if (!empty($municipioNombre)) $residenceAddressParts[] = $municipioNombre;
+    if (!empty($ciudadNombre)) $residenceAddressParts[] = $ciudadNombre;
+    if (!empty($estadoNombre)) $residenceAddressParts[] = $estadoNombre;
+    $fullResidenceAddress = implode(', ', array_filter($residenceAddressParts));
+
+    // Process family group to map Spanish keys to English
+    $family_group = [];
+    if ($model->grupo_familiar) {
+        $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
+        foreach ($grupoFamiliar as $member) {
+            $family_group[] = [
+                'name' => $member['nombre'] ?? '',
+                'ci' => $member['cedula'] ?? '',
+                'relationship' => $member['parentesco'] ?? '',
+                'sex' => $member['sexo'] ?? '',
+                'birthdate' => $member['fecha_nacimiento'] ?? '',
+            ];
+        }
+    }
+    
+    // Process family group to map Spanish keys to English
+    $family_group = [];
+    if ($model->grupo_familiar) {
+        $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
+        foreach ($grupoFamiliar as $member) {
+            $family_group[] = [
+                'name' => $member['nombre'] ?? '',
+                'ci' => $member['cedula'] ?? '',
+                'relationship' => $member['parentesco'] ?? '',
+                'sex' => $member['sexo'] ?? '',
+                'birthdate' => $member['fecha_nacimiento'] ?? '',
+            ];
+        }
+    }
+    
+    // 💡 CÓDIGO PARA OBTENER LOS DATOS DEL ASESOR 💡
+    // -------------------------------------------------------------------------------------------------
+
+        $agenteFuerza = null;
+        $asesorUserDatos = null;
+        $agente = null; 
+
+     
+        if (!empty($model->asesor_id)) {
+            $agenteFuerza = AgenteFuerza::findOne($model->asesor_id);
+            
+            // Si encontramos el registro de AgenteFuerza, usamos su relación para obtener
+            // los datos del usuario (UserDatos) y del agente (Agente).
+            if ($agenteFuerza) {
+                $asesorUserDatos = $agenteFuerza->userDatos;
+                $agente = $agenteFuerza->agente;
+            }
+}
+    // -------------------------------------------------------------------------------------------------
+
+    // 💡 CÓDIGO PARA GENERAR EL NÚMERO DE CONTRATO 💡
+        $contractNumber = '';
+        if ($model->user_datos_type_id == 1) {
+            // Si es tipo simple (1), usa el prefijo 'CI'
+            $contractNumber = 'CI-' . $model->contrato_id;
+        } elseif ($model->user_datos_type_id == 2) {
+            // Si es tipo corporativo (2), usa el prefijo 'CO'
+            $contractNumber = 'CO-' . $model->contrato_id;
+        }
+            
+    // Preparar los datos para el PDF
+    $data = [
+        // Datos del Afiliado Propuesto
+        'contract_number' => $contractNumber,
+        'affiliation_type' => $model->userDatosType ? $model->userDatosType->nombre : '',
+        'proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
+        'proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
+        'proposed_affiliate_nationality' => $model->nacionalidad,
+        'proposed_affiliate_marital_status' => $model->estado_civil,
+        'proposed_affiliate_birthplace' => $model->lugar_nacimiento,
+        'proposed_affiliate_birthdate' => Yii::$app->formatter->asDate($model->fechanac, 'yyyy-MM-dd'),
+        'proposed_affiliate_sex' => $model->sexo,
+        'proposed_affiliate_profession' => $model->profesion,
+        'proposed_affiliate_occupation' => $model->ocupacion,
+        'proposed_affiliate_economic_activity' => $model->actividad_economica,
+        'proposed_affiliate_commercial_branch' => $model->ramo_comercial,
+        'proposed_affiliate_activity_description' => $model->descripcion_actividad,
+        'proposed_affiliate_annual_income' => $model->ingreso_anual,
+        'proposed_affiliate_residence_address' => $fullResidenceAddress,
+        'proposed_affiliate_phone_residence' => $model->telefono_residencia ?: $model->telefono,
+        'proposed_affiliate_office_address' => $model->direccion_oficina,
+        'proposed_affiliate_phone_office' => $model->telefono_oficina,
+        'proposed_affiliate_billing_address' => $model->direccion_cobro ?: ($model->direccion_residencia ?: $fullResidenceAddress),
+        'proposed_affiliate_cell_phone' => $model->telefono_celular ?: $model->telefono,
+        'proposed_affiliate_email' => $model->email,
+        
+        // DATOS DEL ASESOR
+        // -------------------------------------------------------------------------------------------------
+        'intermediary_name' => $asesorUserDatos ? $asesorUserDatos->nombres . ' ' . $asesorUserDatos->apellidos : '',
+        'intermediary_code' => $agente ? $agente->sudeaseg : '',
+        'intermediary_ci' => $asesorUserDatos ? $asesorUserDatos->tipo_cedula . '-' . $asesorUserDatos->cedula : '',
+        // -------------------------------------------------------------------------------------------------
+
+        // Datos de la Parte Contratante (se dejan vacíos si no hay campos en UserDatos)
+        'contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
+        'contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
+        'contracting_party_nationality' => $model->nacionalidad_contratante,
+        'contracting_party_marital_status' => $model->estado_civil_contratante,
+        'contracting_party_birthplace' => $model->lugar_nacimiento_contratante,
+        'contracting_party_birthdate' => $model->fecha_nacimiento_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'yyyy-MM-dd') : '',
+        'contracting_party_sex' => $model->sexo_contratante,
+        'contracting_party_profession' => $model->profesion_contratante,
+        'contracting_party_occupation' => $model->ocupacion_contratante,
+        'contracting_party_economic_activity' => $model->actividad_economica_contratante,
+        'contracting_party_activity_description' => $model->descripcion_actividad_contratante,
+        'contracting_party_annual_income' => $model->ingreso_anual_contratante,
+        'contracting_party_residence_address' => $model->direccion_residencia_contratante,
+        'contracting_party_phone_residence' => $model->telefono_residencia_contratante,
+        'contracting_party_office_address' => $model->direccion_oficina_contratante,
+        'contracting_party_phone_office' => $model->telefono_oficina_contratante,
+        'contracting_party_cell_phone' => $model->telefono_celular_contratante,
+        'contracting_party_email' => $model->email_contratante,
+        'contracting_party_billing_address' => $model->direccion_cobro_contratante ?: ($model->direccion_residencia_contratante ?: ''),
+
+        // Representante Legal (del contratante si no hay corporativo, del corporativo si existe)
+        'legal_representative_name' => $hasCorporateRelation
+            ? ($corporativo->nombre_representante ?? '')
+            : (($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? '')),
+        'legal_representative_ci' => $hasCorporateRelation
+            ? ($corporativo->cedula_representante ?? '')
+            : (($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? '')),
+        'legal_representative_nationality' => $hasCorporateRelation
+            ? ($corporativo->nacionalidad_representante ?? '')
+            : ($model->nacionalidad_representante ?? ''),
+        'legal_representative_marital_status' => $hasCorporateRelation
+            ? ($corporativo->estado_civil_representante ?? '')
+            : ($model->estado_civil_representante ?? ''),
+        'legal_representative_birthplace' => $hasCorporateRelation
+            ? ($corporativo->lugar_nacimiento_representante ?? '')
+            : ($model->lugar_nacimiento_representante ?? ''),
+        'legal_representative_birthdate' => $hasCorporateRelation
+            ? ($corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'yyyy-MM-dd') : '')
+            : ($model->fecha_nacimiento_representante_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante_contratante, 'yyyy-MM-dd') : ''),
+        'legal_representative_sex' => $hasCorporateRelation
+            ? ($corporativo->sexo_representante ?? '')
+            : ($model->sexo_representante ?? ''),
+        'legal_representative_profession' => $hasCorporateRelation
+            ? ($corporativo->profesion_representante ?? '')
+            : ($model->profesion_representante ?? ''),
+        'legal_representative_occupation' => $hasCorporateRelation
+            ? ($corporativo->ocupacion_representante ?? '')
+            : ($model->ocupacion_representante ?? ''),
+        'legal_representative_activity_description' => $hasCorporateRelation
+            ? ($corporativo->descripcion_actividad_representante ?? '')
+            : ($model->descripcion_actividad_representante ?? ''),
+        'legal_representative_address' => $hasCorporateRelation
+            ? ($corporativo->direccion_representante ?? '')
+            : ($model->direccion_representante ?? ''),
+        'legal_representative_phone' => $hasCorporateRelation
+            ? ($corporativo->telefono_representante ?? '')
+            : ($model->telefono_representante ?? ''),
+
+        // Datos del Plan (se usan del modelo Plan relacionado)
+        'plan_selected' => $model->plan ? $model->plan->nombre : '',
+        'plan_currency' => $model->moneda,
+        'plan_deductible' => $model->deducible,
+        'plan_coverage_limit' => $model->limite_cobertura,
+        'maternity_coverage' => $model->cobertura_maternidad,
+        'maternity_deductible' => $model->deducible_maternidad,
+        'maternity_coverage_limit' => $model->limite_cobertura_maternidad,
+
+        // Grupo Familiar (se deja array vacío si no hay tabla o relación específica)
+        'family_group' => (function() use ($model) {
+            if (!$model->grupo_familiar) return [];
+            $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
+            $family_group = [];
+            foreach ($grupoFamiliar as $member) {
+                $family_group[] = [
+                    'name' => $member['nombre'] ?? '',
+                    'ci' => $member['cedula'] ?? '',
+                    'relationship' => $member['parentesco'] ?? '',
+                    'sex' => $member['sexo'] ?? '',
+                    'birthdate' => $member['fecha_nacimiento'] ?? '',
+                ];
+            }
+            return $family_group;
+        })(),
+
+        // Beneficiario (se dejan vacíos si no hay campos en UserDatos)
+        'beneficiary_name' => $model->nombre_beneficiario,
+        'beneficiary_ci' => $model->cedula_beneficiario,
+        'beneficiary_relationship' => $model->parentesco_beneficiario,
+        'beneficiary_sex' => $model->sexo_beneficiario,
+        'beneficiary_birthdate' => $model->fecha_nacimiento_beneficiario ? Yii::$app->formatter->asDate($model->fecha_nacimiento_beneficiario, 'yyyy-MM-dd') : '',
+
+        // Cuenta Bancaria (se dejan vacíos si no hay campos en UserDatos)
+        'bank_account_holder_name' => $model->nombre_titular,
+        'bank_account_ci' => $model->cedula_titular,
+        'bank_account_number' => $model->numero_cuenta,
+        'bank_name' => $model->banco ? $model->banco->nombre : '',
+        'bank_account_type' => $model->tipo_cuenta,
+
+        // Declaración
+        'declaration_proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
+        'declaration_proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
+        'declaration_contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
+        'declaration_contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
+        'declaration_place' => $ciudadNombre,
+        'declaration_date' => date('d/m/Y'),
+
+        // Datos del Corporativo (solo si tiene relación)
+        'has_corporate_relation' => $hasCorporateRelation,
+        'corporate_name' => $corporativo ? $corporativo->nombre : '',
+        'corporate_rif' => $corporativo ? $corporativo->rif : '',
+        'corporate_mercantile_register' => $corporativo ? $corporativo->tomo_registro . ' ' . $corporativo->folio_registro : '',
+        'corporate_registration_date' => $corporativo && $corporativo->fecha_registro_mercantil ? Yii::$app->formatter->asDate($corporativo->fecha_registro_mercantil, 'dd/MM/yyyy') : '',
+        'corporate_address' => $corporativo ? $corporativo->direccion : '',
+        'corporate_phone' => $corporativo ? $corporativo->telefono : '',
+        'corporate_email' => $corporativo ? $corporativo->email : '',
+        'corporate_economic_activity' => $corporativo ? $corporativo->actividad_economica : '',
+        'corporate_products_services' => $corporativo ? $corporativo->productos_servicios : '',
+        'corporate_profit' => $corporativo ? $corporativo->utilidad_ejercicio_anterior : '',
+        'corporate_equity' => $corporativo ? $corporativo->patrimonio : '',
+
+        // Datos del Representante Legal del Corporativo
+        'corporate_legal_representative_name' => $corporativo ? $corporativo->nombre_representante : '',
+        'corporate_legal_representative_ci' => $corporativo ? $corporativo->cedula_representante : '',
+        'corporate_legal_representative_nationality' => $corporativo ? $corporativo->nacionalidad_representante : '',
+        'corporate_legal_representative_marital_status' => $corporativo ? $corporativo->estado_civil_representante : '',
+        'corporate_legal_representative_birthplace' => $corporativo ? $corporativo->lugar_nacimiento_representante : '',
+        'corporate_legal_representative_birthdate' => $corporativo && $corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'dd/MM/yyyy') : '',
+        'corporate_legal_representative_sex' => $corporativo ? $corporativo->sexo_representante : '',
+        'corporate_legal_representative_profession' => $corporativo ? $corporativo->profesion_representante : '',
+        'corporate_legal_representative_occupation' => $corporativo ? $corporativo->ocupacion_representante : '',
+        'corporate_legal_representative_activity_description' => $corporativo ? $corporativo->descripcion_actividad_representante : '',
+        'corporate_legal_representative_address' => $corporativo ? $corporativo->direccion_representante : '',
+        'corporate_legal_representative_phone' => $corporativo ? $corporativo->telefono_representante : '',
+    ];
+
+    $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+    $firmas = Yii::getAlias('@webroot/img/firmas.png');
+
+    // Render the HTML content for the PDF
+    $content = $this->renderPartial('_contrato_pdf', [
+        'data' => $data,
+        'logo' => $logo,
+        'firmas' => $firmas
+    ]);
+
+    $url_css = Yii::getAlias('@webroot') . '/css/affiliation-pdf.css';
+
+    $pdf = new Pdf([
+        'mode' => Pdf::MODE_UTF8,
+        'format' => Pdf::FORMAT_LETTER,
+        'orientation' => Pdf::ORIENT_PORTRAIT,
+        'destination' => Pdf::DEST_BROWSER,
+        'content' => $content,
+        'cssFile' => $url_css,
+        'options' => [
+            'title' => 'Solicitud de Afiliación SISPSA',
+        ],
+        'methods' => [
+            'SetHeader' => false,
+            'SetFooter' => ['{PAGENO}'],
+        ]
+    ]);
+
+   
+    return $pdf->render();
+}
 
 
 
@@ -1400,5 +1631,104 @@ public function actionGenerarContratov($id)
         }
         return $out;
     }
+
+    public function actionClinicas(){
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null) {
+                $tipo = $parents[0];
+                $corporativo = $parents[1];
+
+                $clinica = [];
+
+                if ($tipo == 1) {
+                    // Para tipo 1, los datos ya son del modelo RmClinica
+                    $clinica = RmClinica::find()->select(['id', 'nombre'])->all();
+                }
+
+                if ($tipo == 2) {
+                    $clinica = CorporativoClinica::find()
+                        ->joinWith('clinica') // Usa el nombre de tu relación
+                        ->where(['corporativo_id' => $corporativo])
+                        ->all();
+                }
+
+                // Cambiar la forma de acceder a los datos dentro del foreach
+                foreach ($clinica as $cli) {
+                    if ($tipo == 1) {
+                        $out[] = [
+                            'id' => $cli->id,
+                            'name' => $cli->nombre,
+                        ];
+                    } elseif ($tipo == 2) {
+                        // Acceder a la clínica a través del nombre de la relación 'clinica'
+                        $out[] = [
+                            'id' => $cli->clinica->id,
+                            'name' => $cli->clinica->nombre,
+                        ];
+                    }
+                }
+                return ['output' => $out, 'selected' => ''];
+            }
+        }
+        return ['output' => '', 'selected' => ''];
+    }
+
+    public function actionDatosdelplan(){
+
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            $datos = Yii::$app->getRequest()->post();
+
+            $plan_id = $datos['id'];
+
+            $plan = Planes::find()->where(['id' => $plan_id])->one();
+   
+                return [
+                    'data' => [
+                        'comision' => $plan->comision,
+                        'precio' => $plan->precio,
+                        'moneda' => "USD",
+                        'deducible' => 0,
+                        'limite_cobertura' => $plan->cobertura
+                    ]
+                ];
+            } 
+    }
+    /**
+     * Returns JSON data for clinicas filtered by type and corporativo.
+     * @return array JSON array of [id => name]
+     */
+    public function actionClinicasJson()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $type = Yii::$app->request->get('type');
+        $corporativo_id = Yii::$app->request->get('corporativo');
+
+        if ($type == 2 && $corporativo_id) {
+            $clinicas = RmClinica::find()
+                ->select(['rm_clinica.id', 'rm_clinica.nombre'])
+                ->innerJoin('corporativo_clinica', 'rm_clinica.id = corporativo_clinica.clinica_id')
+                ->where(['corporativo_clinica.corporativo_id' => $corporativo_id])
+                ->asArray()
+                ->all();
+        } else {
+            $clinicas = RmClinica::find()
+                ->select(['id', 'nombre'])
+                ->asArray()
+                ->all();
+        }
+
+        $data = ArrayHelper::map($clinicas, 'id', 'nombre');
+
+        return Json::encode($data);
+    }
+
+
+
+
     
 }

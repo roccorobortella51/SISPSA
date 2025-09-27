@@ -20,7 +20,7 @@ $ciudadesList = $ciudadesList ?? [];
 $listaEstatus = $listaEstatus ?? [];
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Administrador-clinica');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Administrador-clinica');
 
 $permisos = false;
 

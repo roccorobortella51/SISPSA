@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use app\models\Corporativo;
 
 /**
  * This is the model class for table "corporativo_clinica".
@@ -71,7 +72,7 @@ class CorporativoClinica extends \yii\db\ActiveRecord
      */
     public function getCorporativo()
     {
-        return $this->hasOne(Corporativos::class, ['id' => 'corporativo_id']);
+        return $this->hasOne(Corporativo::class, ['id' => 'corporativo_id']);
     }
 
 }
