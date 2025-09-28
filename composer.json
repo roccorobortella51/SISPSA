@@ -30,8 +30,7 @@
         "kartik-v/yii2-tabs-x": "^1.2.0",
         "kartik-v/yii2-detail-view": "dev-master",
         "yiisoft/yii2-httpclient": "^2.0",
-        "phpoffice/phpspreadsheet": "^4.5"
-
+        "phpoffice/phpspreadsheet": "^1.26.0"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",
