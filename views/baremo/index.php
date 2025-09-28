@@ -36,10 +36,9 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
 
 ?>
 
-<div class="main-container"> <!-- Contenedor principal de la vista -->
+<div class="main-container">
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
-    <!-- Encabezado y Botones de Acción Principal -->
     <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
@@ -48,16 +47,41 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                 '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
                 ['/rm-clinica/view', 'id' => $clinica->id], 
                 [
-                    'class' => 'btn-base btn-gray', 
+                    'class' => 'btn-base btn-gray btn-fixed-width', 
                     'title' => 'Volver a los detalles de la clínica',
                 ]
             ) ?>
+            
+            <div class="import-container ms-2 d-inline-block">
+                <?php $form = ActiveForm::begin([
+                    'action' => ['import-excel', 'clinica_id' => $clinica->id],
+                    'options' => ['enctype' => 'multipart/form-data', 'class' => 'import-form'],
+                    'id' => 'importForm'
+                ]); ?>
+                
+                <div class="file-input-wrapper">
+                    <?= Html::fileInput('excelFile', null, [
+                        'accept' => '.xlsx,.xls', 
+                        'class' => 'form-control', 
+                        'id' => 'excelFile',
+                        'required' => true,
+                        'style' => 'display: none;'
+                    ]) ?>
+                    
+                    <button type="button" class="btn-base btn-success btn-fixed-width" id="importExcelBtn">
+                        <i class="fas fa-file-excel mr-2"></i> Importar desde Excel
+                    </button>
+                    
+                    <div id="fileFeedback" class="file-feedback"></div>
+                </div>
+                
+                <?php ActiveForm::end(); ?>
+            </div>
         </div>
     </div>
 
     <?php if ($permisos) : ?>
-        <!-- Panel para Agregar Baremos -->
-        <div class="ms-panel ms-panel-fh border-blue"> <!-- Usando ms-panel y borde azul -->
+        <div class="ms-panel ms-panel-fh border-blue">
             <div class="ms-panel-header">
                 <h3 class="section-title">
                     <i class="fas fa-plus-circle mr-3 text-blue-600"></i> Agregar Nuevo Baremo a la Clínica
@@ -113,7 +137,6 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
         </div>
     <?php endif; ?>
 
-    <!-- Panel para la Gestión de Baremos (GridView) -->
     <div class="ms-panel ms-panel-fh border-indigo"> 
         <div class="ms-panel-header">
             <h3 class="section-title">
@@ -128,10 +151,7 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                     'filterModel' => $searchModel,
                     'layout' => "{items}{pager}",
                     'tableOptions' => [
-                        'class' => 'table table-striped table-bordered table-hover '
-                    ],
-                    'options' => [
-                        'class' => 'grid-view-container table-responsive',
+                        'class' => 'table table-striped table-bordered table-hover'
                     ],
                     'columns' => [
                         [
@@ -185,8 +205,7 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                             'format' => 'raw',
                             'headerOptions' => ['class' => 'text-left header-link'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
-                            'value' => function ($model)use($permisos) {
-
+                            'value' => function ($model) use ($permisos) {
                                 if($permisos){
                                     $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
                                     
@@ -208,10 +227,9 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                                         ],
                                         'labelOptions' => ['style' => 'font-size: 12px;'],
                                     ]);
-                                }else{
-
+                                } else {
                                     return '<span class="status-badge ' . ($model->estatus == 'Activo' ? 'active' : 'inactive') . '">' .
-                                         ($model->estatus == 'Activo' ? 'Activo' : 'Inactivo') . '</span>';
+                                            ($model->estatus == 'Activo' ? 'Activo' : 'Inactivo') . '</span>';
                                 }
                             },
                             'filterType' => GridView::FILTER_SELECT2,
@@ -221,16 +239,15 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                             ],
                             'filterInputOptions' => ['placeholder' => 'Estatus'],
                         ],
-                        // Columna de Acciones - Restaurada al maquetado y diseño original
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>', // Template original
-                            'options' => ['style' => 'width:55px; min-width:55px;'], // Ancho original
+                            'template' => '<div class="d-flex justify-content-center gap-0>{view}{update}{delete}</div>',
+                            'options' => ['style' => 'width:55px; min-width:55px;'],
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'], // Padding original
+                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'buttons' => [
-                                'view' => function ($url, $model, $key) use ($clinica) { // Asegúrate de pasar $clinica aquí
+                                'view' => function ($url, $model, $key) use ($clinica) {
                                     return Html::a(
                                         '<i class="fa fa-eye"></i>',
                                         Url::to(['view', 'id' => $model->id, 'clinica_id' => $clinica->id]), 
@@ -243,11 +260,11 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                                 'update' => function ($url, $model, $key) use ($permisos) {
                                     if ($permisos) {
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt"></i>', // Icono sin ms-text-primary
+                                            '<i class="fas fa-pencil-alt"></i>',
                                             Url::to(['update', 'id' => $model->id]),
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn-action edit' // Clase de sipsa.css para el botón de editar
+                                                'class' => 'btn-action edit'
                                             ]
                                         );
                                     }
@@ -255,22 +272,256 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                                 'delete' => function ($url, $model, $key) use ($permisos) {
                                     if ($permisos) {
                                         return Html::a(
-                                            '<i class="far fa-trash-alt"></i>', // Icono sin ms-text-danger
+                                            '<i class="far fa-trash-alt"></i>',
                                             Url::to(['delete', 'id' => $model->id]),
                                             [
                                                 'title' => 'Eliminar',
                                                 'data-confirm' => '¿Estás seguro de que quieres eliminar este baremo?',
                                                 'data-method' => 'post',
-                                                'class' => 'btn-action delete' // Clase de sipsa.css para el botón de eliminar
+                                                'class' => 'btn-action delete'
                                             ]
                                         );
                                     }
                                 },
                             ],
                         ],
-                    ], // Fin de columns
+                    ],
                 ]); ?>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const importBtn = document.getElementById('importExcelBtn');
+    const fileInput = document.getElementById('excelFile');
+    const fileFeedback = document.getElementById('fileFeedback');
+    const importForm = document.getElementById('importForm');
+
+    // When import button is clicked, trigger the hidden file input
+    importBtn.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            const file = this.files[0];
+            
+            // Validate file type
+            const validTypes = ['.xlsx', '.xls'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validTypes.includes(fileExtension)) {
+                fileFeedback.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Formato no válido. Use archivos .xlsx o .xls</span>';
+                return;
+            }
+            
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                fileFeedback.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>El archivo es demasiado grande. Máximo 10MB</span>';
+                return;
+            }
+            
+            // Show file info and confirmation
+            fileFeedback.innerHTML = `
+                <div class="file-info mt-2 p-2 border rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-file-excel text-success me-2"></i>
+                            <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="cancelFile">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-success" id="confirmImport">
+                                <i class="fas fa-upload me-1"></i> Importar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-1 small text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Formato esperado: Área | Nombre Servicio | Descripción | Costo | Precio
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners for the new buttons
+            document.getElementById('cancelFile').addEventListener('click', function() {
+                fileInput.value = '';
+                fileFeedback.innerHTML = '';
+            });
+
+            document.getElementById('confirmImport').addEventListener('click', function() {
+                // Show loading state
+                const confirmBtn = document.getElementById('confirmImport');
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Importando...';
+                
+                // Submit the form
+                importForm.submit();
+            });
+            
+        } else {
+            fileFeedback.innerHTML = '';
+        }
+    });
+
+    // Drag and drop functionality
+    const fileInputWrapper = document.querySelector('.file-input-wrapper');
+    
+    if (fileInputWrapper) {
+        fileInputWrapper.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileInputWrapper.style.backgroundColor = '#f8f9fa';
+            fileInputWrapper.style.borderColor = '#4f46e5';
+        });
+        
+        fileInputWrapper.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            fileInputWrapper.style.backgroundColor = '';
+            fileInputWrapper.style.borderColor = '';
+        });
+        
+        fileInputWrapper.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileInputWrapper.style.backgroundColor = '';
+            fileInputWrapper.style.borderColor = '';
+            
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+});
+</script>
+
+<style>
+/* Fixed width for both header buttons */
+.btn-fixed-width {
+    min-width: 220px;
+    width: 220px;
+    text-align: center;
+    padding: 10px 15px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    color: white;
+}
+
+/* Specific button styles */
+.btn-gray {
+    background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%) !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
+}
+
+/* Hover effects */
+.btn-gray:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Import container adjustments */
+.import-container {
+    position: relative;
+    display: inline-block;
+}
+
+.file-input-wrapper {
+    display: inline-block;
+    position: relative;
+}
+
+.file-feedback {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    margin-top: 5px;
+}
+
+.file-info {
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e1e5e9;
+    border-radius: 4px;
+}
+
+.file-input-wrapper {
+    border: 2px dashed transparent;
+    border-radius: 6px;
+    padding: 5px;
+    transition: all 0.3s ease;
+}
+
+.file-input-wrapper.dragover {
+    border-color: #4f46e5;
+    background-color: #f8fafc;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.status-badge.active {
+    background-color: #d1fae5;
+    color: #065f46;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.status-badge.inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+/* Header buttons group layout */
+.header-buttons-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .header-buttons-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-fixed-width {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .import-container {
+        display: block;
+        margin-left: 0 !important;
+        margin-top: 10px;
+    }
+}
+</style>
