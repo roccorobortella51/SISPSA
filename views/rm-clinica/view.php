@@ -85,60 +85,71 @@ function formatUpdatedAt($value) {
         </div>
     </div>
 
-    <?php if($permisos) {?>
-        <!-- Sección de Botones de Navegación Específicos de Clínica -->
-        <div class="nav-buttons-grid"> 
-            <div>
-                <?= Html::a(
-                    '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
-                    ['baremo/index', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-blue'] /* Usando las nuevas clases de botones de navegación */
-                ) ?>
-            </div>
-            <div>
-                <?= Html::a(
-                    '<i class="fas fa-clipboard-list mr-2"></i> Planes',
-                    ['planes/index', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-indigo'] 
-                ) ?>
-            </div>
-            <div>
-                <?= Html::a(
-                    '<i class="fas fa-users mr-2"></i> Afiliados',
-                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-teal'] 
-                ) ?>
-            </div>
-            <div>
-                <?= Html::a(
-                    '<i class="fas fa-tasks mr-2"></i> Check List',
-                    ['check-list-clinicas/index', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-cyan'] /* Usando las nuevas clases de botones de navegación */
-                ) ?>
-            </div>
+<?php if($permisos) {?>
+    <div class="nav-buttons-grid"> 
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
+                ['baremo/index', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base btn-blue'] 
+            ) ?>
         </div>
-    <?php } ?>
-
-    <?php if($permisos2) {?>
-        <!-- Sección de Botones de Navegación Específicos de Clínica -->
-        <div class="nav-buttons-grid"> 
-            <div align="center">
-                <?= Html::a(
-                    '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
-                    ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-indigo'] /* Usando las nuevas clases de botones de navegación */
-                ) ?>
-            </div>
-            <div>
-                <?= Html::a(
-                    '<i class="fas fa-users mr-2"></i> Afiliados',
-                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-teal'] 
-                ) ?>
-            </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-clipboard-list mr-2"></i> Planes',
+                ['planes/index', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-indigo'] 
+            ) ?>
         </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-users mr-2"></i> Afiliados',
+                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-teal'] 
+            ) ?>
+        </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-tasks mr-2"></i> Check List',
+                ['check-list-clinicas/index', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-cyan']
+            ) ?>
+        </div>
+        <div align="center"> 
+            <?= Html::a(
+                '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-indigo'] // Clase original que sí se ve bien
+            ) ?>
+        </div>
+    </div>
+<?php } ?>
 
-    <?php } ?>
+<?php 
+// Esta es la condición que evita la duplicación y funciona para roles operativos:
+// ($permisos2 es true) Y (el rol NO es superadmin)
+if($permisos2 && $rol !== 'superadmin') {
+?>
+    <div class="nav-buttons-grid"> 
+        <div align="center">
+            <?= Html::a(
+                '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-indigo text-white-hover']
+            ) ?>
+        </div>
+        <div>
+            <?= Html::a(
+                '<i class="fas fa-users mr-2"></i> Afiliados',
+                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                ['class' => 'nav-btn-base nav-btn-teal'] 
+            ) ?>
+        </div>
+    </div>
+
+<?php } ?>
+
+    
 
     <!-- Tarjeta de Información General de la Clínica -->
     <div class="info-card info-card-border-blue"> <!-- Usando las clases 'info-card' y 'info-card-border-blue' definidas en el fragmento CSS -->
