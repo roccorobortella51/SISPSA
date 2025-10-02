@@ -98,7 +98,13 @@ class PagosController extends Controller
     {
         $tasa_bcv = $this->actionTasacambio();
         $model = new Pagos();
-        $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+        //$model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+        $tasa_completa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+
+        // Usa number_format() para obtener una cadena de texto con 2 decimales
+        // Los parámetros son: (número, decimales, separador_decimal, separador_miles)
+        $model->tasa = number_format($tasa_completa, 2, '.', ''); 
+
         $model->user_id = $user_id;
         $fileName = null;
         $tempFilePath = null; // Inicializamos la ruta temporal a null
