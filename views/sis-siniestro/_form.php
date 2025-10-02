@@ -456,7 +456,7 @@ $this->registerCss($css);
 
                                             <?= $form->field($model, 'imagenRecipeFile')->widget(\kartik\file\FileInput::classname(),[
                                                 'options' => [
-                                                    'accept' => 'image/*',
+                                                    'accept' => 'image/*, application/pdf',
                                                 ],
                                                 'pluginOptions' => [
                                                     'theme' => 'fa5',
@@ -467,7 +467,7 @@ $this->registerCss($css);
                                                     'showCancel' => false,
                                                     'showCaption' => true,
                                                     'previewFileType' => 'image',
-                                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                                    'allowedFileExtensions' => ['jpg','jpeg','png','pdf'], 
                                                     'maxFileSize' => 5120, // 5MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,
@@ -485,14 +485,14 @@ $this->registerCss($css);
                                                         'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
                                                     ],
                                                 ],
-                                            ])->label('Recibo/Factura');
+                                            ])->label('Recipe');
                                             ?>
                                         </div>
                                         
                                         <div class="col-md-6">
                                             <?= $form->field($model, 'imagenInformeFile')->widget(\kartik\file\FileInput::classname(),[
                                                 'options' => [
-                                                    'accept' => 'image/*',
+                                                    'accept' => 'image/*, application/pdf',
                                                 ],
                                                 'pluginOptions' => [
                                                     'theme' => 'fa5',
@@ -503,7 +503,7 @@ $this->registerCss($css);
                                                     'showUpload' => false,
                                                     'showCancel' => false,
                                                     'showCaption' => true,
-                                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                                    'allowedFileExtensions' => ['jpg','jpeg','png','pdf'], 
                                                     'maxFileSize' => 5120, // 5MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,

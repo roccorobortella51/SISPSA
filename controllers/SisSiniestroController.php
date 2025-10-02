@@ -389,6 +389,47 @@ public function actionUpdate($id)
         'baremos' => $baremos
     ]);
 }
+
+/**
+ * Obtiene el tamaño de un archivo en una URL.
+ * @param string $url La URL del archivo.
+ * @return string El tamaño del archivo formateado.
+ */
+public function getFileSize($url)
+{
+    // Usa cURL para obtener el tamaño del archivo de la cabecera Content-Length
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+    curl_setopt($ch, CURLOPT_HEADER, TRUE);
+    curl_setopt($ch, CURLOPT_NOBODY, TRUE);
+    $data = curl_exec($ch);
+    $size = 0;
+    if ($data) {
+        $matches = [];
+        preg_match('/Content-Length: (\d+)/', $data, $matches);
+        if (isset($matches[1])) {
+            $size = (int)$matches[1];
+        }
+    }
+    curl_close($ch);
+    
+    // Si no se pudo obtener el tamaño con cURL, intenta con el sistema de archivos local
+    if ($size === 0 && strpos($url, Yii::getAlias('@web')) !== false) {
+        $path = Yii::getAlias('@webroot') . str_replace(Yii::getAlias('@web'), '', $url);
+        if (file_exists($path)) {
+            $size = filesize($path);
+        }
+    }
+
+    // Formatear el tamaño en KB o MB
+    if ($size < 1024) {
+        return $size . ' B';
+    } elseif ($size < 1048576) {
+        return round($size / 1024, 2) . ' KB';
+    } else {
+        return round($size / 1048576, 2) . ' MB';
+    }
+}
     /**
      * Deletes an existing SisSiniestro model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
