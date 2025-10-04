@@ -98,7 +98,13 @@ class PagosController extends Controller
     {
         $tasa_bcv = $this->actionTasacambio();
         $model = new Pagos();
-        $model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+        //$model->tasa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+        $tasa_completa = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio;
+
+        // Usa number_format() para obtener una cadena de texto con 2 decimales
+        // Los parámetros son: (número, decimales, separador_decimal, separador_miles)
+        $model->tasa = number_format($tasa_completa, 2, '.', ''); 
+
         $model->user_id = $user_id;
         $fileName = null;
         $tempFilePath = null; // Inicializamos la ruta temporal a null
@@ -136,13 +142,13 @@ class PagosController extends Controller
                         }
                         $sumSelected += (float)($m ?: 0);
                     }
-                }
+                }   
 
                 // Si no hay cuotas seleccionadas sumSelected será 0.0 — el JS establece monto_pagado a 0 en ese caso
                 //DE ROMMEL
                 $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
                 if (abs($sumSelected - $montoPagadoPosted) > 0.01) {
-                    $model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
+                    /*$model->addError('monto_pagado', 'La suma de las cuotas seleccionadas no coincide con el Monto a Pagar.');
                     Yii::$app->session->setFlash('warning', 'El AFILIADO No tiene cuotas pendientes seleccionadas o el monto no coincide.');
                     return $this->render('create', [
                         'model' => $model,
@@ -150,7 +156,8 @@ class PagosController extends Controller
                         'cuotas' => $cuotas,
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
-                    ]);
+                    ]);*/
+                    $model->observacion = 'El pago tiene una diferencia entre el monto pagado y la suma de las cuotas seleccionadas igual a: '.number_format($montoPagadoPosted - $sumSelected, 2, '.', '');
                 }
 
                 // Obtiene el monto que el usuario ingresó para pagar. Si no hay, es 0.
@@ -241,20 +248,23 @@ class PagosController extends Controller
                                     if (!empty($selectedCuotas)) {
                                         $cuotasToUpdate = Cuotas::find()->where(['id' => $selectedCuotas])->all();
                                     } else {
-                                        $cuotasToUpdate = $cuotas; // todas las pendientes cargadas inicialmente
+                                        $cuotasToUpdate = null; // todas las pendientes cargadas inicialmente
                                     }
-
-                                    foreach ($cuotasToUpdate as $cuota) {
-                                        if ($cuota->Estatus === 'pendiente') {
-                                            $cuota->Estatus = 'pagado';
-                                            $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
-                                            $cuota->rate_usd_bs = $model->tasa;
-                                            $cuota->id_pago = $model->id; // Guardar ID del pago para rastreo
-                                            if (!$cuota->save(false)) {
-                                                throw new \Exception('Error al actualizar cuota ID: ' . $cuota->id);
+                                    if ($cuotasToUpdate != null) {
+                                        // Si no hay cuotas seleccionadas, actualizar todas las pendientes cargadas inicialmente
+                                        foreach ($cuotasToUpdate as $cuota) {
+                                            if ($cuota->Estatus === 'pendiente') {
+                                                $cuota->Estatus = 'pagado';
+                                                $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
+                                                $cuota->rate_usd_bs = $model->tasa;
+                                                $cuota->id_pago = $model->id; // Guardar ID del pago para rastreo
+                                                if (!$cuota->save(false)) {
+                                                    throw new \Exception('Error al actualizar cuota ID: ' . $cuota->id);
+                                                }
                                             }
                                         }
                                     }
+                                    
 
                                     $transaction->commit();
                                     Yii::$app->session->setFlash('success', 'Pago y archivo subido con éxito. Cuotas actualizadas.');

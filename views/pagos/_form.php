@@ -30,7 +30,8 @@ $js = <<<JS
                     data: { fecha: fechaSeleccionada },
                     success: function(response) {
                         if (response) {
-                            $('#pagos-tasa').val(response);
+                            tasa = parseFloat(response)
+                            $('#pagos-tasa').val(tasa.toFixed(2));
                             updateMontoUsd();
                         } else {
                             $('#pagos-tasa').val('');
@@ -56,7 +57,7 @@ $js = <<<JS
             } else {
                 monto_usd_calculated = monto_pagado * tasa;
             }
-            $('#pagos-monto_usd').val(monto_usd_calculated.toFixed(2)); // Formatear a 2 decimales
+            $('#pagos-monto_usd').val(monto_usd_calculated.toFixed(4)); // Formatear a 4 decimales
             console.log(tasa)
         }
 
