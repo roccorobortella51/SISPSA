@@ -25,6 +25,7 @@ use Yii;
  * @property int|null $conciliador_id
  * @property int|null $conciliado
  * @property float|null $monto_usd
+ * @property string|null $observacion
  *
  * @property Recibos $recibo
  */
@@ -52,7 +53,7 @@ class Pagos extends \yii\db\ActiveRecord
             [['recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
             [['recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
             [['monto_pagado', 'monto_usd'], 'number'],
-            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'imagen_prueba', 'nombre_conciliador'], 'string'],
+            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'imagen_prueba', 'nombre_conciliador','observacion'], 'string'],
             [['imagen_prueba_file'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg','maxSize' => 1024 * 1024 * 5, 'tooBig' => 'El archivo no debe exceder los 5MB.'],
             [['recibo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Recibos::class, 'targetAttribute' => ['recibo_id' => 'id']],
         ];
