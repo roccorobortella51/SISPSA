@@ -16,6 +16,7 @@ $config = [
     ],
     'modules' => $modules,
     'components' => [
+        
          'assetManager' => [
             'bundles' => [
                 'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
