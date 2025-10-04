@@ -24,19 +24,19 @@ return [
     //'enableSchemaCache' => true,
     //'schemaCacheDuration' => 60,
     //'schemaCache' => 'cache',
-];
+];*/
 
-/*return [
+return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'pgsql:host=localhost;dbname=sispsa',
+    'dsn' => 'pgsql:host=localhost;dbname=postgres',
     'username' => 'postgres',
-    'password' => 'postgres',
+    'password' => '123456',
     'charset' => 'utf8',
-
+];
     // Schema cache options (for production environment)
     //'enableSchemaCache' => true,
     //'schemaCacheDuration' => 60,
-    //'schemaCache' => 'cache',*/
+    //'schemaCache' => 'cache',
 
 /*return [
     'class' => 'yii\db\Connection',
@@ -50,7 +50,7 @@ return [
                     'defaultSchema' => 'public' // O el esquema que estés utilizando
                 ]
             ]
-];*/
+];
 
 return [
     'class' => 'yii\db\Connection',
@@ -64,9 +64,9 @@ return [
     'attributes' => [
         PDO::ATTR_PERSISTENT => true // Opcional: Para conexiones persistentes (útil en algunos entornos)
     ],
-];*/
+];
 
-/*return [
+return [
     'class' => 'yii\db\Connection',
     'dsn' => 'pgsql:host=aws-0-us-east-2.pooler.supabase.com;port=6543;dbname=postgres', // Reemplaza xxxxxxxxxxxxx con el valor de tu host
     'username' => 'postgres.mzatwtlqduhcphhnvwvk', // Reemplaza si tu usuario es diferente

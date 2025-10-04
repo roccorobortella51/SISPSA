@@ -8,10 +8,15 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use app\models\RmClinica;
-use Yii;
 use app\models\Baremo;
 use app\models\PlanesItemsCobertura;
+use yii\web\UploadedFile; 
+use yii\web\Response; 
 use yii\helpers\ArrayHelper;
+use PhpOffice\PhpSpreadsheet\IOFactory; 
+use yii\db\Expression; 
+use yii\db\Transaction;
+use Yii;
 /**
  * PlanesController implements the CRUD actions for Planes model.
  */
@@ -29,6 +34,7 @@ class PlanesController extends Controller
                     'class' => VerbFilter::className(),
                     'actions' => [
                         'delete' => ['POST'],
+                        'import' => ['POST'], // Ensure import only accepts POST
                     ],
                 ],
             ]
@@ -68,21 +74,18 @@ class PlanesController extends Controller
         ]);
     }
 
-    /**
-     * Displays a single Planes model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
         $model = $this->findModel($id);
         $itemsCobertura = $model->planesItemsCoberturas;
         
-        // Obtener baremos faltantes
+        // Get used baremo IDs
+        $usedBaremoIds = ArrayHelper::getColumn($itemsCobertura, 'baremo_id');
+        
+        // Get missing baremos
         $baremosFaltantes = Baremo::find()
             ->where(['clinica_id' => $model->clinica_id])
-            ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsCobertura, 'baremo_id')])
+            ->andWhere(['not in', 'id', $usedBaremoIds])
             ->all();
         
         return $this->render('view', [
@@ -97,36 +100,17 @@ class PlanesController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-    /*public function actionCreate()
-    {
-        $model = new Planes();
-
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
-        }
-
-        return $this->render('create', [
-            'model' => $model,
-        ]);
-    }*/
-
-    // En tu controlador PlanesController.php
-
     public function actionCreate()
     {
         $model = new Planes();
         $itemsModels = [];
 
-        // Obtener baremos de la clínica si viene el parámetro
+        // Get baremos for the clinic if the parameter is present
         if (Yii::$app->request->get('clinica_id')) {
             $baremos = Baremo::find()->where(['clinica_id' => Yii::$app->request->get('clinica_id')])->andWhere(['estatus' => 'Activo'])->all();
             $clinica = RmClinica::find()->where(['id' => Yii::$app->request->get('clinica_id')])->one();
             
-            // Crear modelos para cada baremo
+            // Create models for each baremo
             foreach ($baremos as $baremo) {
                 $item = new PlanesItemsCobertura();
                 $item->baremo_id = $baremo->id;
@@ -139,29 +123,28 @@ class PlanesController extends Controller
 
                 $model->clinica_id = $clinica->id;
             
-                // Guardar el plan principal
+                // Save the main plan
                 if ($model->save()) {
-                    // Procesar items de cobertura
+                    // Process coverage items
                     $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
                     
                     foreach ($itemsData as $itemData) {
 
-                        // Crear una nueva instancia del modelo en cada iteración
+                        // Create a new instance of the model in each iteration
                         $item = new PlanesItemsCobertura();
 
-                        // Asignar los atributos del modelo directamente
-                        $item->porcentaje_cobertura = ""; // Puedes dejarlo vacío o asignar un valor por defecto
+                        // Assign model attributes directly
+                        $item->porcentaje_cobertura = ""; 
                         $item->cantidad_limite = $itemData['cantidad_limite'];
                         $item->plazo_espera = $itemData['plazo_espera'];
-                        $item->plan_id = $model->id; // Asignar el ID del modelo principal
+                        $item->plan_id = $model->id; 
                         $item->nombre_servicio = $itemData['nombre_servicio'];
                         $item->baremo_id = $itemData['baremo_id'];
 
                         if (!$item->save()) {
-                            // En lugar de una excepción genérica, puedes ser más específico
                             echo "MODEL NOT SAVED";
                             print_r($item->getAttributes());
-                            print_r($item->getErrors()); // Esto te mostrará por qué falla la validación
+                            print_r($item->getErrors()); 
                             exit;
                         }
                     }
@@ -192,7 +175,6 @@ class PlanesController extends Controller
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    // En PlanesController.php
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
@@ -200,18 +182,18 @@ class PlanesController extends Controller
         $clinica = RmClinica::find()->where(['id' => $model->clinica_id])->one();
 
         
-        // Obtener baremos faltantes
+        // Get missing baremos
         $baremosFaltantes = Baremo::find()
             ->where(['clinica_id' => $model->clinica_id])
             ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsModels, 'baremo_id')])
             ->all();
         
-        // Crear modelos para baremos faltantes
+        // Create models for missing baremos
         foreach ($baremosFaltantes as $baremo) {
             $item = new PlanesItemsCobertura([
                 'baremo_id' => $baremo->id,
                 'nombre_servicio' => $baremo->nombre_servicio,
-                'porcentaje_cobertura' => 80, // Valor por defecto
+                'porcentaje_cobertura' => 80, // Default value
             ]);
             $itemsModels[] = $item;
         }
@@ -220,41 +202,40 @@ class PlanesController extends Controller
             $transaction = Yii::$app->db->beginTransaction();
             try {
                 if ($model->save()) {
-                    // Eliminar coberturas existentes primero
+                    // Delete existing coverage first
                     PlanesItemsCobertura::deleteAll(['plan_id' => $model->id]);
                     
-                    // Guardar las coberturas
+                    // Save the new coverage items
                     $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
                     
                     foreach ($itemsData as $itemData) {
 
-                        // Crear una nueva instancia del modelo en cada iteración
+                        // Create a new instance of the model in each iteration
                         $item = new PlanesItemsCobertura();
 
-                        // Asignar los atributos del modelo directamente
-                        $item->porcentaje_cobertura = ""; // Puedes dejarlo vacío o asignar un valor por defecto
+                        // Assign model attributes directly
+                        $item->porcentaje_cobertura = ""; 
                         $item->cantidad_limite = $itemData['cantidad_limite'];
                         $item->plazo_espera = $itemData['plazo_espera'];
-                        $item->plan_id = $model->id; // Asignar el ID del modelo principal
+                        $item->plan_id = $model->id; 
                         $item->nombre_servicio = $itemData['nombre_servicio'];
                         $item->baremo_id = $itemData['baremo_id'];
 
                         if (!$item->save()) {
-                            // En lugar de una excepción genérica, puedes ser más específico
                             echo "MODEL NOT SAVED";
                             print_r($item->getAttributes());
-                            print_r($item->getErrors()); // Esto te mostrará por qué falla la validación
+                            print_r($item->getErrors()); 
                             exit;
                         }
                     }
                     
                     $transaction->commit();
-                    Yii::$app->session->setFlash('success', 'Plan actualizado correctamente');
+                    Yii::$app->session->setFlash('success', 'Plan updated successfully');
                     return $this->redirect(['view', 'id' => $model->id]);
                 }
             } catch (\Exception $e) {
                 $transaction->rollBack();
-                Yii::$app->session->setFlash('error', 'Error al actualizar: ' . $e->getMessage());
+                Yii::$app->session->setFlash('error', 'Update error: ' . $e->getMessage());
             }
         }
 
@@ -274,9 +255,29 @@ class PlanesController extends Controller
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        $model = $this->findModel($id);
+        $clinica_id = $model->clinica_id;
+        
+        // Start transaction to ensure data consistency
+        $transaction = Yii::$app->db->beginTransaction();
+        
+        try {
+            // First, delete all related services in planes_items_cobertura
+            PlanesItemsCobertura::deleteAll(['plan_id' => $id]);
+            
+            // Then delete the plan
+            $model->delete();
+            
+            $transaction->commit();
+            
+            Yii::$app->session->setFlash('success', 'Plan deleted successfully.');
+            
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', 'Error deleting plan: ' . $e->getMessage());
+        }
+        
+        return $this->redirect(['index', 'clinica_id' => $clinica_id]);
     }
 
     /**
@@ -311,82 +312,321 @@ class PlanesController extends Controller
         }
     }
 
-    // En PlanesController.php
-
 /**
- * Agrega una nueva cobertura (servicio de baremo) a un plan existente
- * 
- * @param int $plan_id ID del plan al que se agregará la cobertura
- * @param int $baremo_id ID del baremo (servicio) a agregar
+ * Adds a new coverage (baremo service) to an existing plan
+ * * @param int $plan_id ID of the plan to add coverage to
+ * @param int $baremo_id ID of the baremo (service) to add
  * @return \yii\web\Response
- * @throws NotFoundHttpException Si el plan o baremo no existen
+ * @throws NotFoundHttpException If the plan or baremo do not exist
  */
    public function actionAddCobertura($plan_id, $baremo_id)
 {
-    // Buscar el plan y verificar existencia
+    // Find the plan and check for existence
     $plan = $this->findModel($plan_id);
     $baremo = Baremo::findOne($baremo_id);
     
     if (!$baremo) {
-        Yii::$app->session->setFlash('error', 'El servicio solicitado no existe en el sistema.');
+        Yii::$app->session->setFlash('error', 'The requested service does not exist in the system.');
         return $this->redirect(['view', 'id' => $plan_id]);
     }
     
-    // Verificar que el baremo pertenezca a la misma clínica que el plan
+    // Check if the baremo belongs to the same clinic as the plan
     if ($baremo->clinica_id != $plan->clinica_id) {
-        Yii::$app->session->setFlash('warning', 'El servicio no pertenece a la clínica asociada a este plan.');
+        Yii::$app->session->setFlash('warning', 'The service does not belong to the clinic associated with this plan.');
         return $this->redirect(['view', 'id' => $plan_id]);
     }
     
-    // Verificar que no exista ya esta cobertura en el plan
+    // Check if this coverage already exists in the plan
     $existente = PlanesItemsCobertura::find()
         ->where(['plan_id' => $plan_id, 'baremo_id' => $baremo_id])
         ->one();
         
     if ($existente) {
-        Yii::$app->session->setFlash('info', 'Este servicio ya está incluido en el plan.');
+        Yii::$app->session->setFlash('info', 'This service is already included in the plan.');
         return $this->redirect(['view', 'id' => $plan_id]);
     }
     
-    // Crear el nuevo item de cobertura
+    // Create the new coverage item
     $model = new PlanesItemsCobertura([
         'plan_id' => $plan_id,
         'baremo_id' => $baremo_id,
-        'nombre_servicio' => $baremo->nombre_servicio, // Corregido: era $baremo-snombre_servicio
-        'porcentaje_cobertura' => 80, // Valor por defecto (corregido typo "porcentaje")
-        'cantidad_limite' => 1, // Valor por defecto (corregido typo "cantidad_linite")
+        'nombre_servicio' => $baremo->nombre_servicio, 
+        'porcentaje_cobertura' => 80, // Default value
+        'cantidad_limite' => 1, // Default value
     ]);
     
-    // Redirigir directamente o mostrar formulario para completar datos
+    // Redirect directly or show form to complete data
     if (Yii::$app->request->isPost) {
-        // Si viene por POST (formulario de creación)
-        if ($model->load(Yii::$app->request->post())) { // Corregido: Yli::$app a Yii::$app
+        // If it comes via POST (creation form)
+        if ($model->load(Yii::$app->request->post())) { 
             if ($model->save()) {
-                Yii::$app->session->setFlash('success', // Corregido: Yli::$app a Yii::$app
-                    "El servicio <strong>{$baremo->nombre_servicio}</strong> se agregó al plan correctamente.");
+                Yii::$app->session->setFlash('success', 
+                    "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan successfully.");
                 return $this->redirect(['view', 'id' => $plan_id]);
             } else {
-                Yii::$app->session->setFlash('error', // Corregido: Yli::$app a Yii::$app
-                    'Error al guardar la cobertura: ' . implode(', ', $model->firstErrors)); // Corregido comillas y concatenación
+                Yii::$app->session->setFlash('error', 
+                    'Error saving coverage: ' . implode(', ', $model->firstErrors)); 
             }
         }
     } else {
-        // Si viene por GET (enlace simple)
+        // If it comes via GET (simple link)
         if ($model->save()) {
             Yii::$app->session->setFlash('success',
-                "El servicio <strong>{$baremo->nombre_servicio}</strong> se agregó al plan con valores por defecto.");
+                "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan with default values.");
         } else {
             Yii::$app->session->setFlash('error',
-                'Error al agregar el servicio al plan: ' . implode(', ', $model->firstErrors));
+                'Error adding service to the plan: ' . implode(', ', $model->firstErrors));
         }
         return $this->redirect(['view', 'id' => $plan_id]);
     }
     
-    // Mostrar formulario para completar datos si es necesario
+    // Show form to complete data if needed
     return $this->render('add-cobertura', [
         'model' => $model,
         'plan' => $plan,
         'baremo' => $baremo,
     ]);
 }
+
+
+/**
+ * Imports plans from an Excel file.
+ * @return array JSON response
+ */
+public function actionImport()
+{
+    // Set response format to JSON
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    // Get clinica_id from POST
+    $clinica_id = Yii::$app->request->post('clinica_id');
+    
+    if (empty($clinica_id)) {
+        return ['success' => false, 'message' => 'Clinic ID not specified'];
+    }
+    
+    // Get the uploaded file
+    $file = UploadedFile::getInstanceByName('excelFile'); 
+    
+    if (!$file) {
+        return ['success' => false, 'message' => 'No file selected'];
+    }
+
+    try {
+        // 1. Load the Excel file
+        $spreadsheet = IOFactory::load($file->tempName);
+        
+        // 2. Get the Plans sheet
+        $plansWorksheet = $spreadsheet->getSheetByName('Plans');
+        
+        if (!$plansWorksheet) {
+            return ['success' => false, 'message' => 'The "Plans" sheet was not found in the file'];
+        }
+        
+        $plansRows = $plansWorksheet->toArray();
+        
+        if (empty($plansRows) || count($plansRows) < 2) {
+            return ['success' => false, 'message' => 'The "Plans" sheet is empty or only contains a header.'];
+        }
+        
+        // 3. Get the Services sheet
+        $servicesWorksheet = $spreadsheet->getSheetByName('Services');
+        
+        if (!$servicesWorksheet) {
+            return ['success' => false, 'message' => 'The "Services" sheet was not found in the file'];
+        }
+        
+        $servicesRows = $servicesWorksheet->toArray();
+        
+        if (empty($servicesRows) || count($servicesRows) < 2) {
+            return ['success' => false, 'message' => 'The "Services" sheet is empty or only contains a header.'];
+        }
+
+        // 4. Map Headers for Plans sheet
+        $plansHeader = array_map('trim', $plansRows[0]);
+        $expectedPlansHeaders = ['Nombre Plan', 'Descripción', 'Precio', 'Estatus', 'Edad Límite', 'Edad Mínima', 'Comisión', 'Cobertura'];
+        
+        $plansMap = [];
+        foreach ($expectedPlansHeaders as $expected) {
+            $index = array_search($expected, $plansHeader);
+            if ($index === false) {
+                return ['success' => false, 'message' => 'Required column not found in Plans sheet: "' . $expected . '"'];
+            }
+            $plansMap[$expected] = $index;
+        }
+
+        // 5. Map Headers for Services sheet
+        $servicesHeader = array_map('trim', $servicesRows[0]);
+        
+        $expectedServicesHeaders = [
+            'Nombre Plan',           // Plan name
+            'Nombre del Servicio',   // Service name (maps to baremo.nombre_servicio)
+            'Descripción',           // Service category/description (maps to baremo.descripcion)
+            'Lapso',                 // Waiting period (plazo_espera)
+            'Cantidad',              // Quantity limit (cantidad_limite)
+        ];
+        
+        $servicesMap = [];
+        foreach ($expectedServicesHeaders as $expected) {
+            $index = array_search($expected, $servicesHeader);
+            if ($index === false) {
+                return ['success' => false, 'message' => 'Required column not found in Services sheet: "' . $expected . '"'];
+            }
+            $servicesMap[$expected] = $index;
+        }
+
+        $importedCount = 0;
+        $servicesImportedCount = 0;
+        $errors = [];
+        $warnings = [];
+        
+        // Start transaction
+        $transaction = Yii::$app->db->beginTransaction();
+        
+        try {
+            // 6. First, import all plans and store them in an array for reference
+            $importedPlans = []; // [plan_name => plan_id]
+            
+            for ($i = 1; $i < count($plansRows); $i++) {
+                $row = $plansRows[$i];
+                $rowNumber = $i + 1;
+                
+                // Skip empty rows
+                $nombrePlan = trim($row[$plansMap['Nombre Plan']] ?? '');
+                if (empty($nombrePlan)) {
+                    continue;
+                }
+                
+                // Create and save plan
+                $plan = new Planes();
+                
+                // Mapping and casting data types
+                $plan->nombre = $nombrePlan;
+                $plan->descripcion = trim($row[$plansMap['Descripción']] ?? '');
+                $plan->precio = floatval($row[$plansMap['Precio']] ?? 0);
+                $plan->estatus = trim($row[$plansMap['Estatus']] ?? 'Activo');
+                $plan->edad_limite = intval($row[$plansMap['Edad Límite']] ?? 99);
+                $plan->edad_minima = intval($row[$plansMap['Edad Mínima']] ?? 0);
+                $plan->comision = floatval($row[$plansMap['Comisión']] ?? 0);
+                $plan->cobertura = trim($row[$plansMap['Cobertura']] ?? ''); 
+                $plan->clinica_id = $clinica_id;
+
+                if (!$plan->save()) {
+                    $errorMessages = implode(', ', ArrayHelper::getColumn($plan->getErrors(), 0, false));
+                    $errors[] = "Row $rowNumber (Plan: {$plan->nombre}): " . $errorMessages;
+                    continue;
+                }
+                
+                // Store plan reference for services association
+                $importedPlans[$plan->nombre] = $plan->id;
+                $importedCount++;
+            }
+            
+            // 7. Now import services for each plan from Services sheet
+            for ($i = 1; $i < count($servicesRows); $i++) {
+                $row = $servicesRows[$i];
+                $rowNumber = $i + 1;
+                
+                // Extract and assign variables, using the CORRECTED mapping.
+                $planName = trim($row[$servicesMap['Nombre Plan']] ?? '');
+                $lapso = trim($row[$servicesMap['Lapso']] ?? '0');
+                $cantidad = trim($row[$servicesMap['Cantidad']] ?? '1');
+
+                // MAPPING CORRECTION:
+                // Column 'Nombre del Servicio' (Excel) -> baremo.nombre_servicio
+                $serviceName = trim($row[$servicesMap['Nombre del Servicio']] ?? ''); 
+                
+                // Column 'Descripción' (Excel) -> baremo.descripcion (Category/Description)
+                $serviceCategory = trim($row[$servicesMap['Descripción']] ?? ''); 
+                
+                if (empty($planName) || empty($serviceName)) {
+                    continue;
+                }
+                
+                // Find the plan ID
+                if (!isset($importedPlans[$planName])) {
+                    $warn = "Row $rowNumber: Plan '$planName' not found. This service was skipped.";
+                    $warnings[] = $warn;
+                    Yii::warning($warn, 'import');
+                    continue;
+                }
+                
+                $planId = $importedPlans[$planName];
+                
+                // 💡 CORRECTED Baremo Search using TRIM() and string-based condition
+                $baremo = Baremo::find()
+                    ->where(['clinica_id' => $clinica_id])
+                    // Fix: Use string condition to compare TRIMMED column with bound parameter
+                    ->andWhere('TRIM([[nombre_servicio]]) = :serviceName', [':serviceName' => $serviceName])
+                    ->andWhere('TRIM([[descripcion]]) = :serviceCategory', [':serviceCategory' => $serviceCategory])
+                    ->one();
+                
+                // Keep the warning logic if no EXACT match is found.
+                if (!$baremo) {
+                    $warn = "Row $rowNumber: Service '$serviceName' (Category: '$serviceCategory') not found in baremo with an EXACT match.";
+                    $warnings[] = $warn;
+                    Yii::warning($warn, 'import');
+                    continue;
+                }
+                
+                // Delete any existing service for this plan+baremo combination
+                PlanesItemsCobertura::deleteAll(['plan_id' => $planId, 'baremo_id' => $baremo->id]);
+                
+                // Create new service association using data from Excel
+                $item = new PlanesItemsCobertura();
+                
+                $item->plan_id = $planId;
+                $item->baremo_id = $baremo->id;
+                $item->nombre_servicio = $baremo->nombre_servicio;
+                $item->plazo_espera = $lapso;
+                $item->cantidad_limite = $cantidad;
+                $item->porcentaje_cobertura = '100'; // Default value
+
+                if (!$item->save()) {
+                    $errorMessages = implode(', ', ArrayHelper::getColumn($item->getErrors(), 0, false));
+                    $errors[] = "Row $rowNumber: Error associating service '$serviceName' to plan '$planName': " . $errorMessages;
+                    Yii::error("❌ Save error: " . $errorMessages, 'import');
+                    continue;
+                }
+                
+                $servicesImportedCount++;
+            }
+            
+            // 8. Handle results
+            if (!empty($errors)) {
+                $transaction->rollBack();
+                $message = "Errors found. Importation reverted: " . implode('; ', array_slice($errors, 0, 5));
+                return ['success' => false, 'message' => $message];
+            }
+            
+            $transaction->commit();
+            
+            $successMessage = "✅ Importation completed. Plans: {$importedCount}, Services: {$servicesImportedCount}";
+            
+            if (!empty($warnings)) {
+                $successMessage .= " | Warnings: " . count($warnings) . " services skipped due to lack of exact match in Baremo.";
+                Yii::warning("Import warnings count: " . count($warnings), 'import');
+            }
+            
+            return [
+                'success' => true,
+                'imported' => $importedCount,
+                'services_imported' => $servicesImportedCount,
+                'warnings_count' => count($warnings),
+                'message' => $successMessage
+            ];
+            
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::error("❌ Transaction error: " . $e->getMessage(), 'import');
+            return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+        }
+        
+    } catch (\Exception $e) {
+        Yii::error("❌ File load error: " . $e->getMessage(), 'import');
+        return ['success' => false, 'message' => 'File read error: ' . $e->getMessage()];
+    }
+}
+
+// REMOVE the old insertPlanServices method completely since we're now reading from Excel
 }
