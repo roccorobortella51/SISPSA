@@ -27,11 +27,11 @@ $customCss = '
     transition: all 0.3s ease !important;
 }
 
-/* ===== PROFESSIONAL HOVER EFFECTS FOR ALL MENU ITEMS - NOW RED! ===== */
+/* ===== PROFESSIONAL HOVER EFFECTS FOR ALL MENU ITEMS - ORIGINALS RESTORED ===== */
 
 /* Level 1: Main menu items (Agencia, Dashboard, etc.) */
 .nav-sidebar > .nav-item > .nav-link:hover {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; /* CHANGED TO RED */
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important; /* RESTORED: Dark Gray/Slate */
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -39,7 +39,7 @@ $customCss = '
 
 /* Level 2: First-level sub-menu items */
 .nav-sidebar .nav-treeview .nav-link:hover {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; /* CHANGED TO RED */
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important; /* RESTORED: Green */
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -47,7 +47,7 @@ $customCss = '
 
 /* Level 3: Second-level sub-menu items (Indicadores de Ventas children) */
 .nav-sidebar .nav-treeview .nav-treeview .nav-link:hover {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; /* CHANGED TO RED */
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; /* RESTORED: Blue */
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
