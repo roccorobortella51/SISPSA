@@ -27,11 +27,11 @@ $customCss = '
     transition: all 0.3s ease !important;
 }
 
-/* ===== PROFESSIONAL HOVER EFFECTS FOR ALL MENU ITEMS ===== */
+/* ===== PROFESSIONAL HOVER EFFECTS FOR ALL MENU ITEMS - NOW RED! ===== */
 
 /* Level 1: Main menu items (Agencia, Dashboard, etc.) */
 .nav-sidebar > .nav-item > .nav-link:hover {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; /* CHANGED TO RED */
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -39,7 +39,7 @@ $customCss = '
 
 /* Level 2: First-level sub-menu items */
 .nav-sidebar .nav-treeview .nav-link:hover {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; /* CHANGED TO RED */
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -47,13 +47,13 @@ $customCss = '
 
 /* Level 3: Second-level sub-menu items (Indicadores de Ventas children) */
 .nav-sidebar .nav-treeview .nav-treeview .nav-link:hover {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; /* CHANGED TO RED */
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ===== HOVER EFFECTS FOR ICONS ===== */
+/* ===== HOVER EFFECTS FOR ICONS - NO CHANGE ===== */
 
 /* Main menu icons */
 .nav-sidebar > .nav-item > .nav-link:hover > .nav-icon {
@@ -73,7 +73,7 @@ $customCss = '
     transform: scale(1.1) !important;
 }
 
-/* ===== HOVER EFFECTS FOR TEXT ===== */
+/* ===== HOVER EFFECTS FOR TEXT - NO CHANGE ===== */
 
 .nav-sidebar .nav-link:hover > .menu-text {
     color: #f7fafc !important;
@@ -81,7 +81,7 @@ $customCss = '
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* ===== ACTIVE STATE STYLING FOR ALL LEVELS ===== */
+/* ===== ACTIVE STATE STYLING FOR ALL LEVELS - NO CHANGE ===== */
 
 .nav-sidebar .nav-link.active {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
@@ -109,7 +109,7 @@ $customCss = '
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* ===== PULSE ANIMATION FOR ACTIVE ITEMS ===== */
+/* ===== PULSE ANIMATION FOR ACTIVE ITEMS - NO CHANGE ===== */
 
 .nav-sidebar .nav-link.active::before {
     content: "";
@@ -147,17 +147,17 @@ $customCss = '
     }
 }
 
-/* ===== REMOVED: RIPPLED EFFECT FOR ALL MENU ITEMS ===== */
+/* ===== REMOVED: RIPPLED EFFECT FOR ALL MENU ITEMS - NO CHANGE ===== */
 /* This section intentionally left blank to remove the arrow/ripple effect */
 
-/* ===== FOCUS STATES FOR ACCESSIBILITY ===== */
+/* ===== FOCUS STATES FOR ACCESSIBILITY - NO CHANGE ===== */
 
 .nav-sidebar .nav-link:focus {
     outline: none;
     box-shadow: 0 0 0 2px #63b3ed, 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ===== MENU STRUCTURE FIXES ===== */
+/* ===== MENU STRUCTURE FIXES - NO CHANGE ===== */
 
 /* Ensure menus stay open and show sub-items */
 .nav-sidebar > .nav-item.menu-open > .nav-treeview {
@@ -241,11 +241,9 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
     <link rel="apple-touch-icon" href=<?= $logo_pestana?> />
     <meta name="msapplication-TileImage" content=<?= $logo_pestana?> />
 
-    <!-- Manual Bootstrap 4 CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
     <?php $this->head() ?>
@@ -288,7 +286,6 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 
 <?php $this->beginBody() ?>
 
-<!-- Spinner global -->
 <div id="global-page-spinner" role="status" aria-live="polite">
     <?= Spinner::widget([
         'id' => 'main-spinner',
@@ -311,21 +308,10 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 </div>
 
 <div class="wrapper">
-    <!-- Navbar -->
     <?= $this->render('navbar', ['assetDir' => $assetDir]) ?>
-    <!-- /.navbar -->
-
-    <!-- Main Sidebar Container -->
     <?= $this->render('sidebar', ['assetDir' => $assetDir]) ?>
-    <!-- Content Wrapper. Contains page content -->
     <?= $this->render('content', ['content' => $content, 'assetDir' => $assetDir]) ?>
-    <!-- /.content-wrapper -->
-
-    <!-- Control Sidebar -->
     <?= $this->render('control-sidebar') ?>
-    <!-- /.control-sidebar -->
-
-    <!-- Main Footer -->
     <?= $this->render('footer') ?>
 </div>
 
