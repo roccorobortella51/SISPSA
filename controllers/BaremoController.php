@@ -31,6 +31,7 @@ class BaremoController extends Controller
                     'class' => VerbFilter::className(),
                     'actions' => [
                         'delete' => ['POST'],
+                        'delete-all' => ['POST'],
                     ],
                 ],
             ]
@@ -117,6 +118,53 @@ class BaremoController extends Controller
         $this->findModel($id)->delete();
 
         return $this->redirect(['index']);
+    }
+
+    /**
+     * Deletes ALL Baremo models for a specific clinic.
+     * @param int $clinica_id
+     * @return \yii\web\Response
+     */
+    public function actionDeleteAll($clinica_id)
+    {
+        // Verify the clinic exists
+        $clinica = RmClinica::findOne($clinica_id);
+        if (!$clinica) {
+            Yii::$app->session->setFlash('error', 'Clínica no encontrada.');
+            return $this->redirect(['index']);
+        }
+
+        // Only proceed if it's a POST request
+        if (!Yii::$app->request->isPost) {
+            Yii::$app->session->setFlash('error', 'Método no permitido.');
+            return $this->redirect(['index', 'clinica_id' => $clinica_id]);
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            // Count how many baremos will be deleted
+            $count = Baremo::find()->where(['clinica_id' => $clinica_id])->count();
+            
+            if ($count === 0) {
+                Yii::$app->session->setFlash('info', "No hay baremos para eliminar en la clínica {$clinica->nombre}.");
+                $transaction->rollBack();
+                return $this->redirect(['index', 'clinica_id' => $clinica_id]);
+            }
+            
+            // Delete all baremos for this clinic
+            $deleted = Baremo::deleteAll(['clinica_id' => $clinica_id]);
+            
+            $transaction->commit();
+            
+            Yii::$app->session->setFlash('success', "✅ Se eliminaron {$deleted} baremos de la clínica {$clinica->nombre}.");
+            
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', '❌ Error al eliminar los baremos: ' . $e->getMessage());
+            Yii::error('Error deleting all baremos for clinic ' . $clinica_id . ': ' . $e->getMessage(), __METHOD__);
+        }
+        
+        return $this->redirect(['index', 'clinica_id' => $clinica_id]);
     }
 
     /**
