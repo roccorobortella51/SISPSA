@@ -160,45 +160,163 @@ function formatBooleanIcon($value) {
     </div>
 
     <div class="ms-panel">
-        <div class="ms-panel-body">
-            <h3 class="section-title">
-                <i class="fas fa-images text-blue-600 mr-3"></i> Documentos del Siniestro
-            </h3>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="info-card-body text-center">
-                        <h5 class="text-muted">Recibo/Factura</h5>
-                        <?php
-                            if ($model->imagen_recipe) {
+    <div class="ms-panel-body">
+        <h3 class="section-title">
+            <i class="fas fa-images text-blue-600 mr-3"></i> Documentos del Siniestro
+        </h3>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="info-card-body text-center">
+                    <h5 class="text-muted">Recipe</h5>
+                    <?php
+                        if ($model->imagen_recipe) {
+                            $extension = strtolower(pathinfo($model->imagen_recipe, PATHINFO_EXTENSION));
+                            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif']);
+                            $isPdf = $extension === 'pdf';
+                            
+                            if ($isImage) {
+                                // Mostrar vista previa de imágenes
+                                // Añadir timestamp para evitar caché
+                                $timestamp = time();
+                                $imageUrl = $model->imagen_recipe . '?v=' . $timestamp;
                                 echo Html::a(
-                                    Html::img($model->imagen_recipe, ['class' => 'img-fluid border rounded', 'style' => 'max-height: 250px;']),
-                                    $model->imagen_recipe,
-                                    ['target' => '_blank', 'title' => 'Ver Recibo/Factura']
+                                    Html::img($imageUrl, [
+                                        'class' => 'img-fluid border rounded', 
+                                        'style' => 'max-height: 250px; max-width: 100%;',
+                                        'loading' => 'lazy' // Carga perezosa para imágenes
+                                    ]),
+                                    $model->imagen_recipe . '?v=' . $timestamp,
+                                    [
+                                        'target' => '_blank', 
+                                        'title' => 'Ver Recibo/Factura', 
+                                        'class' => 'd-block mb-2',
+                                        'data-pjax' => '0'
+                                    ]
                                 );
-                            } else {
-                                echo '<p class="text-muted">No se ha subido ningún recibo.</p>';
+                            } elseif ($isPdf) {
+                                // Mostrar vista previa de PDF usando PDF.js
+                                $timestamp = time();
+                                $pdfUrl = $model->imagen_recipe . '?v=' . $timestamp . '#toolbar=0&view=FitH';
+                                echo '<div class="pdf-preview-container mb-2">';
+                                echo Html::a(
+                                    '<i class="fas fa-file-pdf fa-5x text-danger d-block mb-2"></i>',
+                                    $model->imagen_recipe . '?v=' . $timestamp,
+                                    [
+                                        'target' => '_blank', 
+                                        'title' => 'Ver PDF', 
+                                        'class' => 'd-block',
+                                        'data-pjax' => '0'
+                                    ]
+                                );
+                                echo '<div class="text-muted small">Tamaño del archivo: ' . $this->context->getFileSize($model->imagen_recipe) . '</div>';
+                                echo '</div>';
                             }
-                        ?>
-                    </div>
+                            
+                            // Botón de descarga con URL sin parámetro de caché
+                            echo Html::a(
+                                '<i class="fas fa-download me-1"></i> Descargar Archivo',
+                                $model->imagen_recipe . '?download=true',
+                                [
+                                    'class' => 'btn btn-sm btn-primary mt-2', 
+                                    'target' => '_blank', 
+                                    'download' => 'recibo_' . $model->id . '.' . $extension,
+                                    'data-pjax' => '0'
+                                ]
+                            );
+                            
+                            // Botón para abrir en nueva pestaña
+                            echo ' ';
+                            echo Html::a(
+                                '<i class="fas fa-external-link-alt me-1"></i> Abrir',
+                                $model->imagen_recipe . '?v=' . time(),
+                                [
+                                    'class' => 'btn btn-sm btn-outline-secondary mt-2', 
+                                    'target' => '_blank',
+                                    'data-pjax' => '0'
+                                ]
+                            );
+                        } else {
+                            echo '<p class="text-muted">No se ha subido ningún recibo.</p>';
+                        }
+                    ?>
                 </div>
-                <div class="col-md-6">
-                    <div class="info-card-body text-center">
-                        <h5 class="text-muted">Informe Médico</h5>
-                        <?php
-                            if ($model->imagen_informe) {
+            </div>
+            <div class="col-md-6">
+                <div class="info-card-body text-center">
+                    <h5 class="text-muted">Informe Médico</h5>
+                    <?php
+                        if ($model->imagen_informe) {
+                            $extension = strtolower(pathinfo($model->imagen_informe, PATHINFO_EXTENSION));
+                            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif']);
+                            $isPdf = $extension === 'pdf';
+                            $timestamp = time();
+                            
+                            if ($isImage) {
+                                // Mostrar vista previa de imágenes
+                                $imageUrl = $model->imagen_informe . '?v=' . $timestamp;
                                 echo Html::a(
-                                    Html::img($model->imagen_informe, ['class' => 'img-fluid border rounded', 'style' => 'max-height: 250px;']),
-                                    $model->imagen_informe,
-                                    ['target' => '_blank', 'title' => 'Ver Informe Médico']
+                                    Html::img($imageUrl, [
+                                        'class' => 'img-fluid border rounded', 
+                                        'style' => 'max-height: 250px; max-width: 100%;',
+                                        'loading' => 'lazy' // Carga perezosa para imágenes
+                                    ]),
+                                    $model->imagen_informe . '?v=' . $timestamp,
+                                    [
+                                        'target' => '_blank', 
+                                        'title' => 'Ver Informe Médico', 
+                                        'class' => 'd-block mb-2',
+                                        'data-pjax' => '0'
+                                    ]
                                 );
-                            } else {
-                                echo '<p class="text-muted">No se ha subido ningún informe.</p>';
+                            } elseif ($isPdf) {
+                                // Mostrar vista previa de PDF usando PDF.js
+                                $pdfUrl = $model->imagen_informe . '?v=' . $timestamp . '#toolbar=0&view=FitH';
+                                echo '<div class="pdf-preview-container mb-2">';
+                                echo Html::a(
+                                    '<i class="fas fa-file-pdf fa-5x text-danger d-block mb-2"></i>',
+                                    $model->imagen_informe . '?v=' . $timestamp,
+                                    [
+                                        'target' => '_blank', 
+                                        'title' => 'Ver PDF', 
+                                        'class' => 'd-block',
+                                        'data-pjax' => '0'
+                                    ]
+                                );
+                                echo '<div class="text-muted small">Tamaño del archivo: ' . $this->context->getFileSize($model->imagen_informe) . '</div>';
+                                echo '</div>';
                             }
-                        ?>
-                    </div>
+                            
+                            // Botón de descarga
+                            echo Html::a(
+                                '<i class="fas fa-download me-1"></i> Descargar Archivo',
+                                $model->imagen_informe . '?download=true',
+                                [
+                                    'class' => 'btn btn-sm btn-primary mt-2', 
+                                    'target' => '_blank', 
+                                    'download' => 'informe_medico_' . $model->id . '.' . $extension,
+                                    'data-pjax' => '0'
+                                ]
+                            );
+                            
+                            // Botón para abrir en nueva pestaña
+                            echo ' ';
+                            echo Html::a(
+                                '<i class="fas fa-external-link-alt me-1"></i> Abrir',
+                                $model->imagen_informe . '?v=' . $timestamp,
+                                [
+                                    'class' => 'btn btn-sm btn-outline-secondary mt-2', 
+                                    'target' => '_blank',
+                                    'data-pjax' => '0'
+                                ]
+                            );
+                        } else {
+                            echo '<p class="text-muted">No se ha subido ningún informe.</p>';
+                        }
+                    ?>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
 </div>
