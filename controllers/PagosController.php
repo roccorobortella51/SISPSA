@@ -462,7 +462,7 @@ class PagosController extends Controller
         
         if ($model->save(false)) {
             $user = UserDatos::findOne(['id' => $model->user_id]);
-            $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'SI' : 'No';
+            $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'Si' : 'No';
             $user->save(false);
             return ['success' => true, 'new_status' => $model->estatus];
         }
