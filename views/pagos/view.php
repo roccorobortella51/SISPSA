@@ -51,6 +51,12 @@ $this->params['breadcrumbs'][] = $this->title;
                         <p class="mb-0 fs-5"><?= $model->userDatos->nombres . ' ' . $model->userDatos->apellidos ." ". $model->userDatos->tipo_cedula  . ' ' . $model->userDatos->cedula ?> </p>
                     </div>
                 </div>
+                <div class="col-lg-4 col-md-6 col-sm-12">
+                    <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
+                        <strong class="text-primary d-block mb-1">Solvente:</strong>
+                        <p class="mb-0 fs-5"><?= $model->userDatos->estatus_solvente?> </p>
+                    </div>
+                </div>
             </div>
 
             <h4 class="mt-5 mb-3 text-info border-bottom pb-2"><i class="fas fa-dollar-sign me-2"></i> Detalles de Pago</h4>

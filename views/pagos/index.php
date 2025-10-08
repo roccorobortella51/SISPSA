@@ -23,7 +23,20 @@ $this->params['breadcrumbs'][] = $this->title;
         'filterModel' => $searchModel,
         'columns' => [
             ['class' => 'yii\grid\SerialColumn'],
-
+            //'id',
+            [
+                'attribute' => 'user_id',
+                'value' => function ($model) {
+                    return $model->userDatos ? $model->userDatos->nombres . ' ' . $model->userDatos->apellidos : 'N/A';
+                },
+                'label' => 'Usuario'
+            ],
+            [
+                'label' => 'Solvente',
+                'value' => function ($model) {
+                    return $model->userDatos ? $model->userDatos->estatus_solvente : 'N/A';
+                }
+            ],
             'numero_referencia_pago:ntext',
             'fecha_pago',
             
@@ -63,6 +76,9 @@ $this->params['breadcrumbs'][] = $this->title;
                         ],
                         'pluginEvents' => [
                             'switchChange.bootstrapSwitch' => "function(event, state) {
+                                var currentRow = $(event.target).closest('tr');
+                                var solventeCell = currentRow.find('td').eq(2); // Tercera columna (índice 2) es Solvente
+
                                 $.ajax({
                                     url: '" . Url::to(['/pagos/updatestatus']) . "',
                                     type: 'POST',
@@ -72,7 +88,11 @@ $this->params['breadcrumbs'][] = $this->title;
                                         _csrf: '" . Yii::$app->request->getCsrfToken() . "'
                                     },
                                     success: function(response) {
-                                        if (!response.success) {
+                                        if (response.success) {
+                                            // Actualizar la columna de solvente en tiempo real
+                                            var newSolventeStatus = state ? 'SI' : 'No';
+                                            solventeCell.text(newSolventeStatus);
+                                        } else {
                                             // Revertir el cambio si falla
                                             $(event.target).bootstrapSwitch('state', !state, true);
                                             alert('Error: ' + response.error);
@@ -87,7 +107,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         ]
                     ]);
                 },
-                'label' => 'Estado'
+                'label' => 'Conciliacion'
             ],
             
             //'metodo_pago:ntext',
