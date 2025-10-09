@@ -9,6 +9,7 @@ use yii\widgets\ActiveForm;
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
 use kartik\select2\Select2;
+use yii\bootstrap4\Modal;
 
 /**
  * @var yii\web\View $this
@@ -43,6 +44,8 @@ $this->params['breadcrumbs'][] = 'PLANES';
 
 $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre); 
 
+// Get the correct URL for the import action - USING PlanesController (with "es")
+$importUrl = Url::to(['planes/import']);
 
 ?>
 
@@ -57,7 +60,17 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                 <?= Html::a(
                     '<i class="fas fa-plus mr-2"></i> AGREGAR PLAN', 
                     ['create', 'clinica_id' => $clinica->id], 
-                    ['class' => 'btn-base btn-blue'] 
+                    ['class' => 'btn btn-primary'] 
+                ) ?>
+                <!-- Add Import Button -->
+                <?= Html::button(
+                    '<i class="fas fa-upload mr-2"></i> IMPORTAR PLANES', 
+                    [
+                        'class' => 'btn btn-success',
+                        'id' => 'import-plans-btn',
+                        'data-toggle' => 'modal',
+                        'data-target' => '#importModal'
+                    ] 
                 ) ?>
             <?php endif; ?>
             <?php if ($clinica->id !== null) : ?>
@@ -65,7 +78,7 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                     '<i class="fas fa-undo mr-2"></i> Volver', 
                     ['/rm-clinica/view', 'id' => $clinica->id], 
                     [
-                        'class' => 'btn-base btn-gray', 
+                        'class' => 'btn btn-secondary', 
                         'title' => 'Volver a los detalles de la clínica',
                     ]
                 ) ?>
@@ -73,9 +86,65 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
         </div>
     </div>
 
-    <?php if ($permisos && isset($model)) : ?>
-   
-    <?php endif; ?>
+    <!-- Modal for Import -->
+    <?php Modal::begin([
+        'id' => 'importModal',
+        'title' => '<h4 class="modal-title">Importar Planes desde Excel</h4>',
+        'options' => ['tabindex' => false],
+        'size' => Modal::SIZE_LARGE,
+    ]); ?>
+    
+    <?php $form = ActiveForm::begin([
+        'id' => 'import-form',
+        'action' => ['planes/import'], // CORRECTED: Using 'planes' instead of 'plan'
+        'options' => ['enctype' => 'multipart/form-data'],
+    ]); ?>
+    
+    <!-- In the modal-body section, update the instructions: -->
+<div class="modal-body">
+    <div class="alert alert-info">
+        <strong><i class="fas fa-info-circle"></i> Instrucciones:</strong><br>
+        - El archivo Excel debe tener dos hojas: <strong>"Plans"</strong> y <strong>"Services"</strong><br>
+        - Hoja <strong>"Plans"</strong>: columnas requeridas: <strong>Nombre Plan, Descripción, Precio, Estatus, Edad Límite, Edad Mínima, Comisión, Cobertura</strong><br>
+        - Hoja <strong>"Services"</strong>: nuevo formato con áreas, servicios y coberturas por plan (Bronce, Plata, Oro, Esmeralda)<br>
+        - Asegúrese de que el formato de datos sea correcto<br>
+        - El archivo debe estar en formato .xlsx o .xls
+    </div>
+    
+    <div class="form-group">
+        <label for="excel-file" class="font-weight-bold">Seleccionar archivo Excel</label>
+        <?= Html::fileInput('excelFile', null, [
+            'class' => 'form-control-file',
+            'accept' => '.xlsx,.xls',
+            'required' => true,
+            'id' => 'excel-file'
+        ]) ?>
+        <small class="form-text text-muted">Formatos soportados: .xlsx, .xls (Tamaño máximo: 10MB)</small>
+    </div>
+    
+    <div class="form-group">
+        <?= Html::hiddenInput('clinica_id', $clinica->id) ?>
+    </div>
+    
+    <div class="import-progress" style="display: none;">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div class="text-center mt-2">
+            <span class="progress-text">Procesando archivo...</span>
+        </div>
+    </div>
+</div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <?= Html::submitButton('<i class="fas fa-upload mr-2"></i> Importar Planes', [
+            'class' => 'btn btn-success',
+            'id' => 'submit-import'
+        ]) ?>
+    </div>
+    <?php ActiveForm::end(); ?>
+    
+    <?php Modal::end(); ?>
 
     <div class="ms-panel ms-panel-fh border-indigo"> 
         <div class="ms-panel-header">
@@ -89,24 +158,14 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                     'id' => 'planes-grid', 
                     'dataProvider' => $dataProvider,
                     'filterModel' => $searchModel,
-                    'layout' => "{items}{pager}",
+                    'layout' => "{items}\n{pager}",
                     'tableOptions' => [
-                        'class' => 'table table-striped table-bordered table-hover '
+                        'class' => 'table table-striped table-bordered table-hover'
                     ],
                     'options' => [
                         'class' => 'grid-view-container table-responsive',
                     ],
                     'columns' => [
-                        // ID (si lo necesitas, lo he comentado para seguir tu ejemplo)
-                        // [
-                        //     'attribute' => 'id',
-                        //     'options' => ['style' => 'width: 50px;'],
-                        //     'headerOptions' => ['style' => 'color: white!important;'],
-                        //     'filterInputOptions' => [
-                        //         'placeholder' => 'Búsqueda',
-                        //         'class' => 'form-control text-center',
-                        //     ],
-                        // ],
                         // Columna para el nombre del plan
                         [
                             'attribute' => 'nombre',
@@ -153,7 +212,7 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                             'attribute' => 'edad_minima', 
                             'contentOptions' => ['class' => 'text-center'],
                             'label' => Yii::t('app', 'Edades'),
-                            'value' => function ($model) { // Se quitó $key, $index, $widget si no se usan
+                            'value' => function ($model) {
                                 return $model->edad_minima . "-" . $model->edad_limite . " años";
                             },
                             'headerOptions' => ['class' => 'text-left header-link'],
@@ -172,7 +231,7 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                                     'name' => 'status_'.$model->id,
                                     'value' => $isActive,
                                     'pluginEvents' => [
-                                        'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}" // Asegúrate de tener esta función JS
+                                        'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
                                     ],
                                     'pluginOptions' => [
                                         'onText' => 'Activo',
@@ -194,7 +253,7 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                             ],
                             'filterInputOptions' => ['placeholder' => 'Estatus'],
                         ],
-                        // Columna de Acciones - Mantenida exactamente como se solicitó
+                        // Columna de Acciones
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
@@ -203,45 +262,186 @@ $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'buttons' => [
-                               'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
+                               'view' => function ($url, $model, $key) use ($clinica) {
                                     return Html::a(
                                         '<i class="fa fa-eye"></i>',
-                                        Url::to(['view', 'id' => $model->id, 'clinica_id' => $clinica->id]), // Asegurar clinica_id
+                                        Url::to(['view', 'id' => $model->id, 'clinica_id' => $clinica->id]),
                                         [
                                             'title' => 'Detalles de Plán',
-                                            'class' => 'btn-action view'
+                                            'class' => 'btn btn-sm btn-info'
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
+                                'update' => function ($url, $model, $key) use ($permisos, $clinica) {
                                     if($permisos == true){
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                            Url::to(['update', 'id' => $model->id, 'clinica_id' => $clinica->id]), // Asegurar clinica_id
+                                            '<i class="fas fa-pencil-alt"></i>',
+                                            Url::to(['update', 'id' => $model->id, 'clinica_id' => $clinica->id]),
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn btn-sm btn-warning'
                                             ]
                                         );
                                     }
                                 },
-                                /*'delete' => function ($url, $model, $key) {
-                                    return Html::a(
-                                        '<i class="far fa-trash-alt ms-text-danger"></i>',
-                                        Url::to(['delete', 'id' => $model->id]),
-                                        [
-                                            'title' => 'Eliminar',
-                                            'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                            'data-method' => 'post',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );
-                                },*/
                             ],
                         ],
-                    ], // Fin de columns
+                    ],
                 ]); ?>
             </div>
         </div>
     </div>
 </div>
+
+<?php
+$js = <<<JS
+// Handle import form submission
+$('#import-form').on('beforeSubmit', function(e) {
+    e.preventDefault();
+    
+    var formData = new FormData(this);
+    var submitBtn = $('#submit-import');
+    var progressContainer = $('.import-progress');
+    
+    // Show loading state and progress
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importando...');
+    progressContainer.show();
+    
+    // Update progress bar
+    var progressBar = $('.progress-bar');
+    progressBar.css('width', '30%').text('30%');
+    $('.progress-text').text('Leyendo archivo Excel...');
+    
+    // Use the form's action URL directly
+    var importUrl = $('#import-form').attr('action');
+    
+    $.ajax({
+        url: importUrl,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        xhr: function() {
+            var xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    var percentComplete = evt.loaded / evt.total * 100;
+                    progressBar.css('width', percentComplete + '%').text(Math.round(percentComplete) + '%');
+                }
+            }, false);
+            return xhr;
+        },
+        success: function(response) {
+            progressBar.css('width', '100%').text('100%');
+            $('.progress-text').text('Procesamiento completado');
+            
+            setTimeout(function() {
+                if (response.success) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Importación Exitosa!',
+                            text: 'Se importaron ' + response.imported + ' planes correctamente.',
+                            confirmButtonText: 'Aceptar'
+                        }).then((result) => {
+                            $('#importModal').modal('hide');
+                            location.reload();
+                        });
+                    } else {
+                        alert('¡Importación exitosa! Se importaron ' + response.imported + ' planes.');
+                        $('#importModal').modal('hide');
+                        location.reload();
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error en Importación',
+                            text: response.message,
+                            confirmButtonText: 'Aceptar'
+                        });
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                }
+            }, 500);
+        },
+        error: function(xhr, status, error) {
+            var errorMessage = 'Error en la importación: ' + error;
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage,
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                alert(errorMessage);
+            }
+        },
+        complete: function() {
+            setTimeout(function() {
+                submitBtn.prop('disabled', false).html('<i class="fas fa-upload mr-2"></i> Importar Planes');
+                progressContainer.hide();
+                progressBar.css('width', '0%').text('');
+            }, 1000);
+        }
+    });
+    
+    return false;
+});
+
+// Reset form when modal is closed
+$('#importModal').on('hidden.bs.modal', function () {
+    $('#import-form')[0].reset();
+    $('.import-progress').hide();
+    $('.progress-bar').css('width', '0%').text('');
+    $('#submit-import').prop('disabled', false).html('<i class="fas fa-upload mr-2"></i> Importar Planes');
+});
+
+// File input change event to validate file type
+$('#excel-file').on('change', function() {
+    var file = this.files[0];
+    if (file) {
+        var fileName = file.name;
+        var fileExtension = fileName.split('.').pop().toLowerCase();
+        var validExtensions = ['xlsx', 'xls'];
+        
+        if (!validExtensions.includes(fileExtension)) {
+            alert('Error: Por favor seleccione un archivo Excel válido (.xlsx o .xls)');
+            $(this).val('');
+            return false;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Error: El archivo es demasiado grande. El tamaño máximo permitido es 10MB.');
+            $(this).val('');
+            return false;
+        }
+    }
+});
+
+// Function to update plan status
+function updatestatus(planId) {
+    var isActive = $('#status-switch-' + planId).is(':checked');
+    var status = isActive ? 'Activo' : 'Inactivo';
+    
+    $.post('/planes/update-status', {
+        id: planId,
+        status: status,
+        _csrf: $('#csrf-token').val()
+    }, function(response) {
+        if (!response.success) {
+            $('#status-switch-' + planId).bootstrapSwitch('toggleState');
+            alert('Error al actualizar el estado: ' + response.message);
+        }
+    });
+}
+JS;
+
+$this->registerJs($js);
+?>

@@ -309,29 +309,26 @@ public function actionImportExcel($clinica_id)
                         continue;
                     }
 
-                    // ⚡️ CORRECTED COLUMN MAPPING FOR YOUR EXCEL FILE ⚡️
-                    $excelAreaName = strtoupper(trim($row[0] ?? ''));
+                    // ⚡️ COLUMN MAPPING ⚡️
+                    $excelAreaName = strtoupper(trim($row[0] ?? '')); // Area from Column A
                     $area_id = $areaIdLookup[$excelAreaName] ?? null;
-                    $serviceName = trim($row[2] ?? '');
-                    $category = trim($row[1] ?? '');
-                    $description = !empty($category) ? "{$category} - {$serviceName}" : $serviceName;
-                    $costo = $cleanNumber($row[3] ?? 0);
-                    $precio = $cleanNumber($row[4] ?? 0);
+                    $serviceName = trim($row[1] ?? ''); // Service Name from Column B
+                    $description = trim($row[2] ?? ''); // Description (Category) from Column C
+                    $costo = $cleanNumber($row[3] ?? 0); // Costo from Column D
+                    $precio = $cleanNumber($row[4] ?? 0); // Precio from Column E
 
-                    // --- DUPLICATE CHECK: Check if identical record already exists ---
+                    // --- DUPLICATE CHECK: Check if record with the same service name and description already exists for this clinic ---
                     $existingBaremo = Baremo::find()
                         ->where([
                             'clinica_id' => $clinica_id,
-                            'area_id' => $area_id,
                             'nombre_servicio' => $serviceName,
-                            'costo' => $costo,
-                            'precio' => $precio
+                            'descripcion' => $description, // Now only checking Name and Description for uniqueness
                         ])
                         ->one();
 
                     if ($existingBaremo) {
                         $skippedCount++;
-                        $errors[] = "Fila {$rowNumber}: Ya existe un baremo idéntico ('{$serviceName}'). Skipped.";
+                        $errors[] = "Fila {$rowNumber}: Ya existe un baremo idéntico ('{$serviceName}' - '{$description}'). Skipped.";
                         continue; // Skip this row - duplicate found
                     }
 
@@ -353,8 +350,9 @@ public function actionImportExcel($clinica_id)
                         $baremo->addError('nombre_servicio', "El nombre del servicio está vacío.");
                     }
                     
-                    if ($baremo->precio <= 0) {
-                        $baremo->addError('precio', "El precio debe ser mayor a cero.");
+                    // Allow zero price for records with N/A
+                    if ($baremo->precio < 0) {
+                        $baremo->addError('precio', "El precio no puede ser negativo.");
                     }
                     
                     if ($baremo->costo < 0) {
