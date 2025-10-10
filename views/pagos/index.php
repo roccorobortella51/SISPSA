@@ -75,7 +75,7 @@ $estatusList = [
                     // Accedemos a la cédula a través de la relación userDatos
                     return $model->userDatos ? $model->userDatos->cedula : 'N/A';
                 },
-                'label' => 'Cédula/DNI',
+                'label' => 'Cédula',
                 'filterOptions' => ['style' => 'width: 10%'], 
             ],
 
