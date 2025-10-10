@@ -101,13 +101,20 @@ class PagosSearch extends Pagos
             'pagos.user_id' => $this->user_id,
             'pagos.monto_pagado' => $this->monto_pagado,
             'pagos.monto_usd' => $this->monto_usd,
-            'pagos.fecha_pago' => $this->fecha_pago,
+            // 'pagos.fecha_pago' => $this->fecha_pago, // <-- ELIMINADO de aquí para aplicar un filtro parcial (ILIKE)
             'pagos.created_at' => $this->created_at,
         ]);
 
         // FIX DEFINITIVO PARA EL ERROR 'Ambiguous column: estatus'
         if (!empty($this->estatus)) {
             $query->andWhere(['ilike', 'pagos.estatus', $this->estatus]);
+        }
+        
+        // CORRECCIÓN CLAVE: FILTRO POR FECHA DE PAGO
+        // Se elimina del bloque andFilterWhere de arriba y se usa ILIKE en su lugar.
+        // Esto permite la búsqueda parcial (ej. '10/09') al convertir el campo de fecha a texto.
+        if (!empty($this->fecha_pago)) {
+             $query->andWhere(['ilike', 'CAST(pagos.fecha_pago AS TEXT)', $this->fecha_pago]);
         }
 
         // Filtros string restantes (que no causan conflicto)

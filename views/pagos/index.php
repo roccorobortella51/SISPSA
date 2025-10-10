@@ -96,10 +96,19 @@ $estatusList = [
             
             'numero_referencia_pago:ntext',
             
-            // Fecha de Pago (Permite búsqueda por texto)
+            // Columna de Fecha de Pago
             [
                 'attribute' => 'fecha_pago',
                 'format' => 'date', 
+                'filterInputOptions' => [
+                    'placeholder' => 'Ej: 10, 2024, 15/09', // <-- Placeholder informativo
+                    'class' => 'form-control',
+                ],
+                /* NOTA: El filtro ya es flexible. El usuario puede buscar por:
+                   - Mes: '10' (Para pagos de Octubre)
+                   - Año: '2024'
+                   - Día y Mes: '15/09' 
+                   Esto es posible gracias al CAST(columna AS TEXT) en PagosSearch.php. */
             ],
             
             // Monto Pagado USD
@@ -187,10 +196,10 @@ $estatusList = [
                 ],
             ],
             
-            // Columna de Acciones (CORREGIDO: Eliminamos hAlign/vAlign, mantenemos ancho 120px)
+            
             [
-                'class' => ActionColumn::class, // Usar ::class es la práctica moderna
-                // Establecemos un ancho mayor para la columna (120px) y centrado CSS
+                'class' => ActionColumn::class, 
+                
                 'headerOptions' => ['style' => 'width: 120px; text-align: center;'], 
                 'contentOptions' => ['style' => 'width: 120px; min-width: 120px; text-align: center;'], 
                 'urlCreator' => function ($action, Pagos $model, $key, $index, $column) {
