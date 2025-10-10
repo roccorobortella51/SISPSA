@@ -69,6 +69,16 @@ $estatusList = [
                 // 'group' => true, // COMENTADO para mostrar todas las filas individualmente.
             ],
 
+            [
+                'attribute' => 'cedulaUsuario', // Usamos el nuevo atributo virtual
+                'value' => function ($model) {
+                    // Accedemos a la cédula a través de la relación userDatos
+                    return $model->userDatos ? $model->userDatos->cedula : 'N/A';
+                },
+                'label' => 'Cédula/DNI',
+                'filterOptions' => ['style' => 'width: 10%'], 
+            ],
+
             // Columna Solvente (Muestra estatus de usuario relacionado)
             [
                 'label' => 'Solvente',
