@@ -13,6 +13,7 @@ use app\models\TasaCambio;
 use app\components\UserHelper;
 use app\models\RmClinica;
 use app\models\Cuotas;
+use app\models\UserDatos;
 
 
 /**
@@ -460,13 +461,45 @@ class PagosController extends Controller
         $model->conciliador_id = Yii::$app->user->id;
         
         if ($model->save(false)) {
+            $user = UserDatos::findOne(['id' => $model->user_id]);
+            $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'Si' : 'No';
+            $user->save(false);
             return ['success' => true, 'new_status' => $model->estatus];
         }
         
         return ['success' => false, 'error' => 'Error al guardar'];
     }
 
-   /*public function actionEjecutar($user_id = null)
+    public function actionUpdatesolvente()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $user_id = \Yii::$app->request->post('user_id');
+        $status = \Yii::$app->request->post('status');
+
+        \Yii::info('Datos recibidos para solvente - user_id: ' . $user_id . ', status: ' . $status);
+
+        if (empty($user_id) || $status === null) {
+            return ['success' => false, 'error' => 'Parámetros requeridos: user_id='.$user_id.', status='.$status];
+        }
+
+        $userDatos = UserDatos::findOne(['user_login_id' => $user_id]);
+        if (!$userDatos) {
+            return ['success' => false, 'error' => 'Usuario no encontrado'];
+        }
+
+        // Convertir a valor adecuado
+        $userDatos->estatus_solvente = ($status == '1') ? 'SI' : 'No';
+        $userDatos->updated_at = date('Y-m-d');
+
+        if ($userDatos->save(false)) {
+            return ['success' => true, 'new_status' => $userDatos->estatus_solvente];
+        }
+
+        return ['success' => false, 'error' => 'Error al guardar'];
+    }
+
+    /*public function actionEjecutar($user_id = null)
     {
         // Permitir llamada con user_id via GET (la vista create pasa este parámetro)
         $user_id = $user_id ?: Yii::$app->request->get('user_id');
