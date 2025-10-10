@@ -116,8 +116,10 @@ class PagosSearch extends Pagos
         // FILTRO POR NOMBRE DE USUARIO (atributo virtual)
         $query->andFilterWhere(['ilike', "CAST(public.user_datos.nombres AS TEXT) || ' ' || CAST(public.user_datos.apellidos AS TEXT)", $this->nombreUsuario]);
         
-        // NUEVO FILTRO POR CÉDULA
-        $query->andFilterWhere(['ilike', 'public.user_datos.cedula', $this->cedulaUsuario]);
+        // CORRECCIÓN CLAVE: Usamos CAST() para convertir el INTEGER (cédula) a TEXT para que ILIKE funcione.
+        if (!empty($this->cedulaUsuario)) {
+            $query->andWhere(['ilike', 'CAST(public.user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
+        }
 
 
         return $dataProvider;
