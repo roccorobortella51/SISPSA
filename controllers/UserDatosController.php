@@ -25,12 +25,13 @@ use kartik\mpdf\Pdf;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
 use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
-use PhpOffice\PhpSpreadsheet\IOFactory; // Importa la clase principal
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
 use DateTime;
 use app\models\Cuotas;
 use app\models\TasaCambio;
 use app\models\AgenteFuerza;
+
 
 
 /**
@@ -470,220 +471,236 @@ class UserDatosController extends Controller
         });
     }
 
-    public function actionMasivo()
-    {
-        $modelContrato = new Contratos();
-        $model = new UserDatos();
+public function actionMasivo()
+{
+    $modelContrato = new Contratos();
+    $model = new UserDatos();
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-            // Obtener el archivo subido
-            $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
+    if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+        // Obtener el archivo subido
+        $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
 
-            if (empty($masivoFiles) || !$masivoFiles[0]->tempName) {
-                // Si no se subió ningún archivo o el archivo está vacío
-                Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o el archivo está corrupto.');
-                return $this->render('masivo', [
-                    'model' => $model,
-                    'modelContrato' => $modelContrato,
-                ]);
-            }
-
-            $uploadedFile = $masivoFiles[0];
-            $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $uploadedFile->baseName . '.' . $uploadedFile->extension);
-
-            if (!$uploadedFile->saveAs($filePath)) {
-                Yii::$app->session->setFlash('error', 'Error al guardar el archivo subido.');
-                return $this->render('masivo', [
-                    'model' => $model,
-                    'modelContrato' => $modelContrato,
-                ]);
-            }
-            $clinica_id = $model->clinica_id;
-            $plan_id = $modelContrato->plan_id;
-            $monto = $model->plan->precio;
-            $fecha_ini = $modelContrato->fecha_ini;
-            $fecha_ven = $modelContrato->fecha_ven;
-            $fechaCreacion = date('Y-m-d H:i:s');   
-            try {
-                // Leer archivo .xlsx
-                $spreadsheet = IOFactory::load($filePath);
-                $sheet = $spreadsheet->getActiveSheet();
-
-                // Establecer el rango de columnas a leer (de A a L)
-                // Usamos getHighestRow() para encontrar la última fila con datos
-                $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
-                $range = 'A1:L' . $highestRow; // Rango de A1 hasta la columna L de la última fila con datos
-
-                // Obtener los datos del rango especificado
-                $sheetData = $sheet->rangeToArray(
-                    $range,     // El rango de celdas a leer
-                    null,       // No aplicar pre-casteo de valores
-                    true,       // Formatear celdas (por ejemplo, fechas)
-                    true,       // Incluir celdas nulas (vacías en el rango)
-                    true        // Incluir las columnas como claves si TRUE (A, B, C...)
-                );
-
-                // Filtrar filas vacías (todas las columnas de A a N están vacías)
-                $filteredData = [];
-                foreach ($sheetData as $row) {
-                    // Revisa si TODAS las celdas en el rango A-N de la fila están vacías
-                    $isEmptyRow = true;
-                    foreach ($row as $cellValue) {
-                        // Si encuentra cualquier valor no nulo o no una cadena vacía, la fila no está vacía
-                        if ($cellValue !== null && $cellValue !== '') {
-                            $isEmptyRow = false;
-                            break;
-                        }
-                    }
-                    if (!$isEmptyRow) {
-                        $filteredData[] = $row;
-                    }
-                }
-
-                // Si la primera fila es un encabezado, la dejamos fuera del array principal de datos
-                // y la manejamos por separado si es necesario.
-                // Aquí, asumimos que la primera fila podría ser el encabezado y ya fue incluida
-                // en $filteredData si tenía datos. Si quieres ignorar el encabezado, puedes:
-                if (!empty($filteredData)) {
-                    $headers = array_shift($filteredData); // Si la primera fila es el encabezado
-                }
-
-                // Validar los datos antes de procesarlos
-                $validationErrors = $this->validateExcelData($filteredData);
-                $duplicateErrors = $this->validateDuplicates($filteredData);
-                
-                $allErrors = array_merge($validationErrors, $duplicateErrors);
-                
-                if (!empty($allErrors)) {
-                    // Si hay errores de validación, mostrar el reporte HTML y no procesar
-                    $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
-                    
-                    // Guardar el reporte en la sesión para mostrarlo en la vista
-                    Yii::$app->session->setFlash('error', $validationReport);
-                    
-                    // Eliminar el archivo subido
-                    if (file_exists($filePath)) {
-                        unlink($filePath);
-                    }
-                    
-                    return $this->render('masivo', [
-                        'model' => $model,
-                        'modelContrato' => $modelContrato,
-                    ]);
-                }
-
-                // Si no hay errores de validación, proceder con el procesamiento
-                // Aquí $filteredData contendrá solo las filas de la A a la N que tienen datos
-                foreach ($filteredData as $row) {
-                    $contrato = new Contratos();
-                    $contrato->clinica_id = $clinica_id;
-                    $contrato->plan_id = $plan_id;
-                    $contrato->monto = $monto;
-                    $contrato->fecha_ini = $fecha_ini;
-                    $contrato->fecha_ven = $fecha_ven;
-                    $contrato->created_at = $fechaCreacion;
-                    $contrato->estatus = 'Creado';
-                    $guardadoContrato = $contrato->save();
-                    if ($guardadoContrato) {
-                        Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
-                    } else {
-                        Yii::$app->session->setFlash('error', 'Error al guardar el contrato.');
-                        print_r($contrato->getErrors());
-                        exit;
-                    }
-                    $model = new UserDatos();
-                    $model->role = 'afiliado';
-                    $model->estatus = 'Creado';
-                    $model->user_datos_type_id = 1;
-                    $model->email = $row['A'];
-                    $model->telefono = $row['B'];
-                    $model->nombres = $row['C'];
-                    $model->apellidos = $row['D'];
-                    $model->tipo_cedula = $row['E'];
-                    $model->cedula = $row['F'];
-                    $fechaNacimiento = DateTime::createFromFormat('d/m/Y', $row['G']);
-                    $model->fechanac = $fechaNacimiento->format('Y-m-d');
-                    $model->sexo = $row['H'];
-                    $model->tipo_sangre = $row['I'];
-                    $explodeEstado = explode(' - ', $row['J']);
-                    $model->estado = $explodeEstado[0];
-                    $model->municipio = $explodeEstado[1];
-                    $model->parroquia = $explodeEstado[2];
-                    $explodeCiudad = explode(' - ', $row['K']);
-                    $model->ciudad = $explodeCiudad[1];
-                    $model->direccion = $row['L'];
-                    $model->contrato_id = $contrato->id;
-                    $model->clinica_id = $clinica_id;
-                    $model->plan_id = $plan_id;
-                    $model->created_at = $fechaCreacion;
-                    $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
-                    $guardo = $model->save();
-                    if ($guardo) {
-                        $contrato->user_id = $model->id;
-                        $contrato->save(false);
-                        Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
-                        $pass = 'sispsa'.$model->cedula;
-                        $modelUser = new User();
-                        $modelUser->username = $model->email;
-                        $modelUser->password_hash = User::setPassword($pass);
-                        $modelUser->auth_key = User::generateAuthKey();
-                        $modelUser->email = $model->email;
-                        $modelUser->status = 1;
-                        $guardadoUser = $modelUser->save();
-                        if ($guardadoUser) {
-                            Yii::$app->session->setFlash('success', 'Usuario guardado correctamente.');
-                            $auth = Yii::$app->authManager;
-                            $roleName = 'afiliado';
-                            $role = $auth->getRole($roleName);
-                            if ($role) {
-                                try {
-                                    $auth->revokeAll($modelUser->id);
-                                    $auth->assign($role, $modelUser->id);
-                                    Yii::$app->cache->flush();
-                                    $model->user_login_id = $modelUser->id;
-                                    $model->save();
-                                    
-                                } catch (\Exception $e) {
-                                    Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
-                                }
-                            } else {
-                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
-                                print_r($modelUser->getErrors());
-                                exit;
-                            }
-                        } else {
-                            Yii::$app->session->setFlash('error', 'Error al guardar el usuario.');
-                            print_r($modelUser->getErrors());
-                            exit;
-                        }
-                    } else {
-                        Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
-                        print_r($model->getErrors());
-                        exit;
-                    }
-                }
-                Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
-                return $this->redirect(['index']);
-
-            } catch (Exception $e) {
-                Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
-                Yii::$app->session->setFlash('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
-                // Asegúrate de eliminar el archivo subido si hubo un error al leerlo
-                if (file_exists($filePath)) {
-                    unlink($filePath);
-                }
-            } catch (\Exception $e) { // Captura otras excepciones generales
-                Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
-                Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
-                if (file_exists($filePath)) {
-                    unlink($filePath);
-                }
-            }
-
+        if (empty($masivoFiles) || !$masivoFiles[0]->tempName) {
+            // Si no se subió ningún archivo o el archivo está vacío
+            Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o el archivo está corrupto.');
             return $this->render('masivo', [
                 'model' => $model,
                 'modelContrato' => $modelContrato,
             ]);
+        }
+
+        $uploadedFile = $masivoFiles[0];
+        $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $uploadedFile->baseName . '.' . $uploadedFile->extension);
+
+        if (!$uploadedFile->saveAs($filePath)) {
+            Yii::$app->session->setFlash('error', 'Error al guardar el archivo subido.');
+            return $this->render('masivo', [
+                'model' => $model,
+                'modelContrato' => $modelContrato,
+            ]);
+        }
+        
+        $clinica_id = $model->clinica_id;
+        $plan_id = $modelContrato->plan_id;
+        
+        // ******* CORRECCIÓN CLAVE DE RELACIÓN *******
+        // Asignar el plan_id al modelo UserDatos *antes* de intentar usar la relación.
+        $model->plan_id = $plan_id; 
+        
+        // --- Validar la relación 'plan' antes de acceder a la propiedad 'precio' ---
+        if ($model->plan === null) {
+            // Mensaje de error mejorado para mostrar el ID que falló
+            Yii::$app->session->setFlash('error', 'Error de datos: No se pudo cargar el precio porque el Plan ID ('.$plan_id.') asociado al modelo principal no existe. Verifique que el ID del Plan seleccionado sea válido en la tabla "planes".');
+            // Eliminar el archivo subido
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            return $this->render('masivo', [
+                'model' => $model,
+                'modelContrato' => $modelContrato,
+            ]);
+        }
+        
+        $monto = $model->plan->precio; // Ahora es seguro acceder a 'precio'
+        // --- FIN DE LA CORRECCIÓN DE RELACIÓN ---
+        
+        $fecha_ini = $modelContrato->fecha_ini;
+        $fecha_ven = $modelContrato->fecha_ven;
+        $fechaCreacion = date('Y-m-d H:i:s');   
+        try {
+            // Leer archivo .xlsx
+            // *** ESTA LÍNEA NECESITA EL 'use PhpOffice\PhpSpreadsheet\IOFactory;' ***
+            $spreadsheet = IOFactory::load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Establecer el rango de columnas a leer (de A a L)
+            // Usamos getHighestRow() para encontrar la última fila con datos
+            $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
+            $range = 'A1:L' . $highestRow; // Rango de A1 hasta la columna L de la última fila con datos
+
+            // Obtener los datos del rango especificado
+            $sheetData = $sheet->rangeToArray(
+                $range,     // El rango de celdas a leer
+                null,       // No aplicar pre-casteo de valores
+                true,       // Formatear celdas (por ejemplo, fechas)
+                true,       // Incluir celdas nulas (vacías en el rango)
+                true        // Incluir las columnas como claves si TRUE (A, B, C...)
+            );
+
+            // Filtrar filas vacías (todas las columnas de A a N están vacías)
+            $filteredData = [];
+            foreach ($sheetData as $row) {
+                // Revisa si TODAS las celdas en el rango A-N de la fila están vacías
+                $isEmptyRow = true;
+                foreach ($row as $cellValue) {
+                    // Si encuentra cualquier valor no nulo o no una cadena vacía, la fila no está vacía
+                    if ($cellValue !== null && $cellValue !== '') {
+                        $isEmptyRow = false;
+                        break;
+                    }
+                }
+                if (!$isEmptyRow) {
+                    $filteredData[] = $row;
+                }
+            }
+
+            // Si la primera fila es un encabezado, la dejamos fuera del array principal de datos
+            if (!empty($filteredData)) {
+                $headers = array_shift($filteredData); // Si la primera fila es el encabezado
+            }
+
+            // Validar los datos antes de procesarlos
+            $validationErrors = $this->validateExcelData($filteredData);
+            $duplicateErrors = $this->validateDuplicates($filteredData);
+            
+            $allErrors = array_merge($validationErrors, $duplicateErrors);
+            
+            if (!empty($allErrors)) {
+                // Si hay errores de validación, mostrar el reporte HTML y no procesar
+                $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
+                
+                // Guardar el reporte en la sesión para mostrarlo en la vista
+                Yii::$app->session->setFlash('error', $validationReport);
+                
+                // Eliminar el archivo subido
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                
+                return $this->render('masivo', [
+                    'model' => $model,
+                    'modelContrato' => $modelContrato,
+                ]);
+            }
+
+            // Si no hay errores de validación, proceder con el procesamiento
+            foreach ($filteredData as $row) {
+                $contrato = new Contratos();
+                $contrato->clinica_id = $clinica_id;
+                $contrato->plan_id = $plan_id;
+                $contrato->monto = $monto;
+                $contrato->fecha_ini = $fecha_ini;
+                $contrato->fecha_ven = $fecha_ven;
+                $contrato->created_at = $fechaCreacion;
+                $contrato->estatus = 'Creado';
+                $guardadoContrato = $contrato->save();
+                if ($guardadoContrato) {
+                    Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
+                } else {
+                    Yii::$app->session->setFlash('error', 'Error al guardar el contrato.');
+                    print_r($contrato->getErrors());
+                    exit;
+                }
+                
+                // IMPORTANTE: Reiniciar el modelo de afiliado para cada fila
+                $model = new UserDatos(); 
+                
+                $model->role = 'afiliado';
+                $model->estatus = 'Creado';
+                $model->user_datos_type_id = 1;
+                $model->email = $row['A'];
+                $model->telefono = $row['B'];
+                $model->nombres = $row['C'];
+                $model->apellidos = $row['D'];
+                $model->tipo_cedula = $row['E'];
+                $model->cedula = $row['F'];
+                $fechaNacimiento = DateTime::createFromFormat('d/m/Y', $row['G']);
+                $model->fechanac = $fechaNacimiento->format('Y-m-d');
+                $model->sexo = $row['H'];
+                $model->tipo_sangre = $row['I'];
+                $explodeEstado = explode(' - ', $row['J']);
+                $model->estado = $explodeEstado[0];
+                $model->municipio = $explodeEstado[1];
+                $model->parroquia = $explodeEstado[2];
+                $explodeCiudad = explode(' - ', $row['K']);
+                $model->ciudad = $explodeCiudad[1];
+                $model->direccion = $row['L'];
+                $model->contrato_id = $contrato->id;
+                $model->clinica_id = $clinica_id;
+                $model->plan_id = $plan_id; // Se asigna el plan_id global a cada nuevo UserDatos
+                $model->created_at = $fechaCreacion;
+                $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
+                $guardo = $model->save();
+                if ($guardo) {
+                    $contrato->user_id = $model->id;
+                    $contrato->save(false);
+                    Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
+                    $pass = 'sispsa'.$model->cedula;
+                    $modelUser = new User();
+                    $modelUser->username = $model->email;
+                    $modelUser->password_hash = User::setPassword($pass);
+                    $modelUser->auth_key = User::generateAuthKey();
+                    $modelUser->email = $model->email;
+                    $modelUser->status = 1;
+                    $guardadoUser = $modelUser->save();
+                    if ($guardadoUser) {
+                        Yii::$app->session->setFlash('success', 'Usuario guardado correctamente.');
+                        $auth = Yii::$app->authManager;
+                        $roleName = 'afiliado';
+                        $role = $auth->getRole($roleName);
+                        if ($role) {
+                            try {
+                                $auth->revokeAll($modelUser->id);
+                                $auth->assign($role, $modelUser->id);
+                                Yii::$app->cache->flush();
+                                $model->user_login_id = $modelUser->id;
+                                $model->save();
+                                
+                            } catch (\Exception $e) {
+                                Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                            }
+                        } else {
+                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                            print_r($modelUser->getErrors());
+                            exit;
+                        }
+                    } else {
+                        Yii::$app->session->setFlash('error', 'Error al guardar el usuario.');
+                        print_r($modelUser->getErrors());
+                        exit;
+                    }
+                } else {
+                    Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
+                    print_r($model->getErrors());
+                    exit;
+                }
+            }
+            Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
+            return $this->redirect(['index']);
+
+        } catch (Exception $e) {
+            Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
+            Yii::$app->session->setFlash('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
+            // Asegúrate de eliminar el archivo subido si hubo un error al leerlo
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        } catch (\Exception $e) { // Captura otras excepciones generales
+            Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
+            Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
         }
 
         return $this->render('masivo', [
@@ -691,6 +708,13 @@ class UserDatosController extends Controller
             'modelContrato' => $modelContrato,
         ]);
     }
+
+    return $this->render('masivo', [
+        'model' => $model,
+        'modelContrato' => $modelContrato,
+    ]);
+}
+
 
     /**
      * Lists all UserDatos models.
