@@ -65,7 +65,7 @@ $estatusList = [
                 'value' => function ($model) {
                     return $model->userDatos ? $model->userDatos->nombres . ' ' . $model->userDatos->apellidos : 'N/A';
                 },
-                'label' => 'Usuario',
+                'label' => 'Afiliado',
                 // 'group' => true, // COMENTADO para mostrar todas las filas individualmente.
             ],
 
