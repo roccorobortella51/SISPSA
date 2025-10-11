@@ -588,10 +588,12 @@ public function actionImport()
             return ['success' => false, 'message' => 'The "Services" sheet is empty or does not have enough rows.'];
         }
 
-        // 4. Map Headers for Plans sheet
-        $plansHeader = array_map('trim', $plansRows[0]);
+        // 4. Map Headers for Plans sheet - FIXED: Handle null values
+        $plansHeader = array_map(function($value) {
+            return $value === null ? '' : trim($value);
+        }, $plansRows[0]);
         $expectedPlansHeaders = ['Nombre Plan', 'Descripción', 'Precio', 'Estatus', 'Edad Límite', 'Edad Mínima', 'Comisión', 'Cobertura'];
-        
+
         $plansMap = [];
         foreach ($expectedPlansHeaders as $expected) {
             $index = array_search($expected, $plansHeader);
@@ -601,9 +603,13 @@ public function actionImport()
             $plansMap[$expected] = $index;
         }
 
-        // 5. Map Headers for Services sheet - FIXED MAPPING
-        $servicesHeaderRow1 = array_map('trim', $servicesRows[0]); // First header row (Area, Nombre del Servicio, etc.)
-        $servicesHeaderRow2 = array_map('trim', $servicesRows[1]); // Second header row (Limite, plazo, etc.)
+        // 5. Map Headers for Services sheet - FIXED MAPPING with null handling
+        $servicesHeaderRow1 = array_map(function($value) {
+            return $value === null ? '' : trim($value);
+        }, $servicesRows[0]); // First header row (Area, Nombre del Servicio, etc.)
+        $servicesHeaderRow2 = array_map(function($value) {
+            return $value === null ? '' : trim($value);
+        }, $servicesRows[1]); // Second header row (Limite, plazo, etc.)
         
         // Map the main headers from first row
         $servicesMap = [
@@ -659,8 +665,9 @@ public function actionImport()
                 $row = $plansRows[$i];
                 $rowNumber = $i + 1;
                 
-                // Skip empty rows
-                $nombrePlan = trim($row[$plansMap['Nombre Plan']] ?? '');
+                // Skip empty rows with null handling
+                $nombrePlan = $row[$plansMap['Nombre Plan']] ?? '';
+                $nombrePlan = $nombrePlan === null ? '' : trim($nombrePlan);
                 if (empty($nombrePlan)) {
                     continue;
                 }
@@ -675,15 +682,18 @@ public function actionImport()
                     $plan = new Planes();
                 }
                 
-                // Mapping and casting data types
+                // Mapping and casting data types with null handling
                 $plan->nombre = $nombrePlan;
-                $plan->descripcion = trim($row[$plansMap['Descripción']] ?? '');
+                $plan->descripcion = $row[$plansMap['Descripción']] ?? '';
+                $plan->descripcion = $plan->descripcion === null ? '' : trim($plan->descripcion);
                 $plan->precio = floatval($row[$plansMap['Precio']] ?? 0);
-                $plan->estatus = trim($row[$plansMap['Estatus']] ?? 'Activo');
+                $plan->estatus = $row[$plansMap['Estatus']] ?? 'Activo';
+                $plan->estatus = $plan->estatus === null ? 'Activo' : trim($plan->estatus);
                 $plan->edad_limite = intval($row[$plansMap['Edad Límite']] ?? 99);
                 $plan->edad_minima = intval($row[$plansMap['Edad Mínima']] ?? 0);
                 $plan->comision = floatval($row[$plansMap['Comisión']] ?? 0);
-                $plan->cobertura = trim($row[$plansMap['Cobertura']] ?? ''); 
+                $plan->cobertura = $row[$plansMap['Cobertura']] ?? '';
+                $plan->cobertura = $plan->cobertura === null ? '' : trim($plan->cobertura);
                 $plan->clinica_id = $clinica_id;
 
                 if (!$plan->save()) {
@@ -702,10 +712,13 @@ public function actionImport()
                 $row = $servicesRows[$i];
                 $rowNumber = $i + 1;
                 
-                // Extract service information
-                $area = trim($row[$servicesMap['Area']] ?? '');
-                $serviceName = trim($row[$servicesMap['Nombre del Servicio']] ?? '');
-                $description = trim($row[$servicesMap['Descripción']] ?? '');
+                // Extract service information with null handling
+                $area = $row[$servicesMap['Area']] ?? '';
+                $area = $area === null ? '' : trim($area);
+                $serviceName = $row[$servicesMap['Nombre del Servicio']] ?? '';
+                $serviceName = $serviceName === null ? '' : trim($serviceName);
+                $description = $row[$servicesMap['Descripción']] ?? '';
+                $description = $description === null ? '' : trim($description);
                 
                 // Skip if service name is empty
                 if (empty($serviceName)) {
@@ -727,12 +740,14 @@ public function actionImport()
                     
                     $planId = $importedPlans[$planName];
                     
-                    // Get limit and plazo values for this plan type using fixed column indices
+                    // Get limit and plazo values for this plan type using fixed column indices with null handling
                     $limitIndex = $planTypes[$planType]['Limite'];
                     $plazoIndex = $planTypes[$planType]['plazo'];
                     
-                    $limitValue = isset($row[$limitIndex]) ? trim($row[$limitIndex]) : '';
-                    $plazoValue = isset($row[$plazoIndex]) ? trim($row[$plazoIndex]) : '';
+                    $limitValue = isset($row[$limitIndex]) ? $row[$limitIndex] : '';
+                    $limitValue = $limitValue === null ? '' : trim($limitValue);
+                    $plazoValue = isset($row[$plazoIndex]) ? $row[$plazoIndex] : '';
+                    $plazoValue = $plazoValue === null ? '' : trim($plazoValue);
                     
                     // NEW CONDITION: Skip if BOTH Límite and Plazo are 'N/A'
                     if ($limitValue === 'N/A' && $plazoValue === 'N/A') {
@@ -763,9 +778,11 @@ if (!$baremo && $this->isServiceRequired($serviceName)) {
     $baremo->nombre_servicio = $serviceName;
     $baremo->descripcion = $description;
     
-    // Process cost and price values (remove $ and commas)
-    $costoValue = isset($row[$servicesMap['Costo']]) ? trim($row[$servicesMap['Costo']]) : '0';
-    $precioValue = isset($row[$servicesMap['Precio']]) ? trim($row[$servicesMap['Precio']]) : '0';
+    // Process cost and price values (remove $ and commas) with null handling
+    $costoValue = isset($row[$servicesMap['Costo']]) ? $row[$servicesMap['Costo']] : '0';
+    $costoValue = $costoValue === null ? '0' : trim($costoValue);
+    $precioValue = isset($row[$servicesMap['Precio']]) ? $row[$servicesMap['Precio']] : '0';
+    $precioValue = $precioValue === null ? '0' : trim($precioValue);
     
     $baremo->costo = $this->parseCurrency($costoValue);
     $baremo->precio = $this->parseCurrency($precioValue);
@@ -952,7 +969,7 @@ private function processPlazoValue($plazoValue)
 }
 
 /**
- * Parse currency values (remove $ and commas)
+ * Parse currency values (remove $ and commas) Test
  */
 private function parseCurrency($value)
 {
