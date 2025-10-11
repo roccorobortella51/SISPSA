@@ -39,26 +39,23 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
 <div class="main-container">
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
-    <div class="header-section"> 
+    <div class="header-section d-flex align-items-center justify-content-between"> 
         <h1><?= Html::encode($this->title) ?></h1>
-        <div class="header-buttons-group">
-            
+        <div class="header-buttons-group d-flex align-items-center flex-grow-1">
             <?= Html::a(
-                '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
-                ['/rm-clinica/view', 'id' => $clinica->id], 
+                '<i class="fas fa-download mr-2"></i> Descargar Plantilla', 
+                ['download-template', 'clinica_id' => $clinica->id], 
                 [
-                    'class' => 'btn-base btn-gray btn-fixed-width', 
-                    'title' => 'Volver a los detalles de la clínica',
+                    'class' => 'btn-base btn-info btn-fixed-width me-2', 
+                    'title' => 'Descargar plantilla Excel para Baremo',
                 ]
             ) ?>
-            
             <div class="import-container ms-2 d-inline-block">
                 <?php $form = ActiveForm::begin([
                     'action' => ['import-excel', 'clinica_id' => $clinica->id],
                     'options' => ['enctype' => 'multipart/form-data', 'class' => 'import-form'],
                     'id' => 'importForm'
                 ]); ?>
-                
                 <div class="file-input-wrapper">
                     <?= Html::fileInput('excelFile', null, [
                         'accept' => '.xlsx,.xls', 
@@ -67,16 +64,23 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                         'required' => true,
                         'style' => 'display: none;'
                     ]) ?>
-                    
                     <button type="button" class="btn-base btn-success btn-fixed-width" id="importExcelBtn">
                         <i class="fas fa-file-excel mr-2"></i> Importar desde Excel
                     </button>
-                    
                     <div id="fileFeedback" class="file-feedback"></div>
                 </div>
-                
                 <?php ActiveForm::end(); ?>
             </div>
+            <div class="flex-grow-1"></div>
+            <?= Html::a(
+                '<span class="text-white"><i class="fas fa-undo mr-2"></i>Volver a Clínica</span>', 
+                ['/rm-clinica/view', 'id' => $clinica->id], 
+                [
+                    'class' => 'btn-base btn-gray btn-fixed-width ms-5',
+                    'title' => 'Volver a los detalles de la clínica',
+                    'style' => 'margin-left:40px;'
+                ]
+            ) ?>
         </div>
     </div>
 

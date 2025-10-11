@@ -160,11 +160,11 @@ if (!function_exists('formatDateTime')) {
                         <table class="table table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>Servicio (Baremos)</th>
-                                    <th class="text-center">Límite</th>
-                                    <th class="text-center">Espera</th>
+                                    <th><span class="text-white">Servicio (Baremos)</span></th>
+                                    <th class="text-center"><span class="text-white">Espera</span></th>
+                                    <th class="text-center"><span class="text-white">Límite</span></th>
                                     <?php if ($canManage) : ?>
-                                        <th class="text-center">Acciones</th> 
+                                        <th class="text-center"><span class="text-white">Acciones</span></th> 
                                     <?php endif; ?>
                                 </tr>
                             </thead>
@@ -180,22 +180,22 @@ if (!function_exists('formatDateTime')) {
                                     <?php foreach ($itemsCobertura as $item): ?>
                                         <tr>
                                             <td>
-                                                <strong><?= Html::encode($item->baremo->nombre_servicio) ?></strong>
-                                            </td>
-                                            <td class="text-center">
-                                                   <?= $item->cantidad_limite ?: 'N/A' ?>
+                                                <strong><?= Html::encode($item->baremo->descripcion) ?></strong>
                                             </td>
                                             <td class="text-center">
                                                    <?= $item->plazo_espera ?: 'N/A' ?>
                                             </td>
+                                            <td class="text-center">
+                                                   <?= $item->cantidad_limite ?: 'N/A' ?>
+                                            </td>
                                             <?php if ($canManage) : ?>
                                                 <td class="text-center">
-                                                    <?php Html::a(
+                                                    <?= Html::a(
                                                         '<i class="far fa-trash-alt"></i>', 
-                                                        ['remove-cobertura', 'id' => $item->id, 'plan_id' => $model->id, 'clinica_id' => $clinica->id], // Pasa plan_id y clinica_id
+                                                        ['remove-cobertura', 'id' => $item->id, 'plan_id' => $model->id, 'clinica_id' => $clinica->id],
                                                         [
                                                             'title' => 'Eliminar cobertura',
-                                                            'class' => 'btn-action delete', // Clase de sipsa.css
+                                                            'class' => 'btn-action delete',
                                                             'data' => [
                                                                 'confirm' => '¿Estás seguro de que quieres eliminar esta cobertura del plan?',
                                                                 'method' => 'post',
