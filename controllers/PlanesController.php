@@ -969,7 +969,7 @@ private function processPlazoValue($plazoValue)
 }
 
 /**
- * Parse currency values (remove $ and commas)
+ * Parse currency values (remove $ and commas)test
  */
 private function parseCurrency($value)
 {
