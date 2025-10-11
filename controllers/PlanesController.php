@@ -19,6 +19,9 @@ use yii\db\Transaction;
 use Yii;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 /**
  * PlanesController implements the CRUD actions for Planes model.
@@ -76,6 +79,142 @@ class PlanesController extends Controller
             'clinica' => $clinica,
             'model' => $model
         ]);
+    }
+
+    /**
+     * Genera y descarga la plantilla de Excel para la carga masiva de Planes.
+     * El archivo tiene dos hojas: "PLANS" y "SERVICES".
+     * @param string $clinica_id
+     * @return yii\web\Response
+     */
+    public function actionDownloadTemplate($clinica_id)
+    {
+        // 1. Crear un nuevo objeto Spreadsheet
+        $spreadsheet = new Spreadsheet();
+
+        // ------------------------------------
+        // HOJA 1: PLANS (Detalles de los Planes)
+        // ------------------------------------
+        $sheetPlans = $spreadsheet->getActiveSheet();
+        $sheetPlans->setTitle('PLANS');
+
+        $headersPlans = [
+            'A1' => 'Nombre Plan',
+            'B1' => 'Descripción',
+            'C1' => 'Precio',
+            'D1' => 'Estatus',
+            'E1' => 'Edad Límite',
+            'F1' => 'Edad Mínima',
+            'G1' => 'Comisión',
+            'H1' => 'Cobertura',
+        ];
+
+        $exampleDataPlans = [
+            'A2' => 'Bronce Individual',
+            'B2' => 'Plan Básico para Individuales',
+            'C2' => 16.00,
+            'D2' => 'Activo', // Valores válidos: 'Activo', 'Inactivo'
+            'E2' => 59,
+            'F2' => 0,
+            'G2' => 15,
+            'H2' => 10000,
+        ];
+
+        // Aplicar encabezados y datos
+        foreach ($headersPlans as $cell => $value) {
+            $sheetPlans->setCellValue($cell, $value);
+        }
+        foreach ($exampleDataPlans as $cell => $value) {
+            $sheetPlans->setCellValue($cell, $value);
+        }
+
+        // Formato para PLANS
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF3498DB']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ];
+        $sheetPlans->getStyle('A1:H1')->applyFromArray($headerStyle);
+        $sheetPlans->getStyle('C:C')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_00);
+        $sheetPlans->getStyle('G:G')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_00);
+
+        // Autoajustar columnas A a H
+        foreach (range('A', 'H') as $column) {
+            $sheetPlans->getColumnDimension($column)->setAutoSize(true);
+        }
+
+
+        // ------------------------------------
+        // HOJA 2: SERVICES (Ítems de Cobertura)
+        // ------------------------------------
+        $sheetServices = $spreadsheet->createSheet();
+        $sheetServices->setTitle('SERVICES');
+
+        // Encabezados de 2 filas
+        $sheetServices->setCellValue('A1', 'Área');
+        $sheetServices->setCellValue('B1', 'Nombre del Servicio');
+        $sheetServices->setCellValue('C1', 'Descripción');
+        $sheetServices->setCellValue('D1', 'Costo');
+        $sheetServices->setCellValue('E1', 'Precio');
+
+        // Bloque de Planes (Ejemplo con 2 planes)
+        // Se utilizan dos columnas por plan: Límite y Plazo (meses)
+        $sheetServices->setCellValue('F1', 'Nombre Plan 1 (Ejemplo: Bronce Individual)');
+        $sheetServices->mergeCells('F1:G1');
+        $sheetServices->setCellValue('H1', 'Nombre Plan 2 (Ejemplo: Plata Individual)');
+        $sheetServices->mergeCells('H1:I1');
+
+        $sheetServices->setCellValue('F2', 'Límite');
+        $sheetServices->setCellValue('G2', 'Plazo (meses)');
+        $sheetServices->setCellValue('H2', 'Límite');
+        $sheetServices->setCellValue('I2', 'Plazo (meses)');
+
+        // Datos de Ejemplo de Servicios
+        $exampleServices = [
+            // Área, Servicio, Descripción, Costo, Precio, Límite P1, Plazo P1, Límite P2, Plazo P2
+            ['CIRUGÍA', 'Cirugías de Electivas', 'Hemorroidectomía', '1507.88', '1794.93', 'N/A', 'N/A', 'S/L', 12],
+            ['CONSULTAS', 'Consultas Especializadas', 'Medicina Interna', '20', '25', 'S/L', 0, 'S/L', 0],
+            ['LABORATORIO', 'Exámenes de Laboratorio', 'Hematología Completa', '2.50', '3.50', 2, 0, 4, 0], // Límite de 2 o 4 veces/año
+            ['ODONTOLOGÍA', 'Tratamiento odontológico', 'Tartrectomía (Limpieza Dental)', '35', '50', 1, 4, 2, 4], // Límite de 1 o 2 veces cada 4 meses
+        ];
+
+        $row = 3;
+        foreach ($exampleServices as $data) {
+            $sheetServices->fromArray($data, null, 'A' . $row++);
+        }
+
+        // Formato para SERVICES
+        $sheetServices->getStyle('A1:I2')->applyFromArray($headerStyle);
+        $sheetServices->getStyle('A1:E2')->getFill()->getStartColor()->setARGB('FF1ABC9C'); // Color verde para Baremo
+        $sheetServices->getStyle('F1:I1')->getFill()->getStartColor()->setARGB('FF9B59B6'); // Color morado para Planes
+
+        // Alineación central para las celdas de Límite/Plazo
+        $sheetServices->getStyle('F:I')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Autoajustar columnas A a I
+        foreach (range('A', 'I') as $column) {
+            $sheetServices->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // 2. Guardar, Transmitir y Limpiar
+        $writer = new Xlsx($spreadsheet);
+        // Crear archivo temporal con nombre único
+        $tempFile = Yii::getAlias('@runtime/plantilla_planes_' . time() . '.xlsx');
+        $writer->save($tempFile);
+
+        $fileName = 'plantilla_planes_y_coberturas.xlsx';
+
+        // Transmitir el archivo y configurar la limpieza
+        return Yii::$app->response->sendFile($tempFile, $fileName, [
+            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'inline' => false // Forzar la descarga
+        ])
+            ->on(\yii\web\Response::EVENT_AFTER_SEND, function ($event) use ($tempFile) {
+                // Eliminar el archivo temporal después de enviarlo
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            });
     }
 
     /**

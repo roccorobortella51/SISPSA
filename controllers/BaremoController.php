@@ -13,6 +13,8 @@ use yii\web\UploadedFile;
 use yii\web\BadRequestHttpException; 
 use PhpOffice\PhpSpreadsheet\IOFactory; 
 use Yii;
+use PhpOffice\PhpSpreadsheet\Spreadsheet; 
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx; 
 
 /**
  * BaremoController implements the CRUD actions for Baremo model.
@@ -85,6 +87,84 @@ class BaremoController extends Controller
             'model' => $this->findModel($id),
         ]);
     }
+
+/**
+ * Genera y descarga la plantilla de Excel para la carga masiva de baremos.
+ * * @param string $clinica_id El ID de la clínica (se pasa como parámetro de ruta).
+ * @return yii\web\Response
+ */
+public function actionDownloadTemplate($clinica_id)
+{
+    // Crear un nuevo objeto Spreadsheet
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Baremo Template');
+
+    // 1. Definir los encabezados (Área, Nombre del Servicio, Descripción, Costo, Precio)
+    $headers = [
+        'A1' => 'Área',
+        'B1' => 'Nombre del Servicio',
+        'C1' => 'Descripción',
+        'D1' => 'Costo',
+        'E1' => 'Precio',
+    ];
+
+    // 2. Agregar datos de ejemplo (tomado de Baremo.xlsx - Individual.csv)
+    $exampleData = [
+        'A2' => 'CIRUGÍA',
+        'B2' => 'Cirugías de Electivas',
+        'C2' => 'Hemorroidectomía',
+        'D2' => '1507.88', // Usar formato de texto para mantener la precisión
+        'E2' => '1794.93', // Usar formato de texto para mantener la precisión
+    ];
+    
+    // Aplicar encabezados
+    foreach ($headers as $cell => $value) {
+        $sheet->setCellValue($cell, $value);
+    }
+    
+    // Aplicar datos de ejemplo
+    foreach ($exampleData as $cell => $value) {
+        $sheet->setCellValue($cell, $value);
+    }
+
+    // 3. Aplicar formato y auto-ajuste (hasta la columna E)
+    $headerStyle = [
+        'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']], // Fuente blanca
+        'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF3498DB']], // Fondo azul
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+    ];
+    // Rango A1:E1
+    $sheet->getStyle('A1:E1')->applyFromArray($headerStyle); 
+
+    // Autoajustar columnas A a E
+    foreach (range('A', 'E') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+    
+    // Forzar formato de texto en Costo y Precio para evitar pérdida de decimales o notación científica
+    $sheet->getStyle('D:E')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
+    // 4. Guardar, Transmitir y Limpiar
+    $writer = new Xlsx($spreadsheet);
+    // Crear archivo temporal con nombre único
+    $tempFile = Yii::getAlias('@runtime/plantilla_baremo_' . time() . '.xlsx'); 
+    $writer->save($tempFile);
+
+    $fileName = 'plantilla_baremo.xlsx';
+
+    // Transmitir el archivo y configurar la limpieza
+    return Yii::$app->response->sendFile($tempFile, $fileName, [
+        'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'inline' => false // Forzar la descarga
+    ])
+    ->on(\yii\web\Response::EVENT_AFTER_SEND, function($event) use ($tempFile) { 
+        // Eliminar el archivo temporal después de enviarlo
+        if (file_exists($tempFile)) { 
+            unlink($tempFile); 
+        } 
+    });
+}
 
     /**
      * Updates an existing Baremo model.

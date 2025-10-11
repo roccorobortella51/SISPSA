@@ -53,35 +53,46 @@ $importUrl = Url::to(['planes/import']);
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
     <!-- Encabezado y Botones de Acción Principal -->
-    <div class="header-section"> 
+    <div class="header-section d-flex align-items-center justify-content-between"> 
         <h1><?= Html::encode($this->title) ?></h1>
-        <div class="header-buttons-group">
+        <div class="header-buttons-group d-flex align-items-center flex-grow-1">
             <?php if ($permisos) : ?>
                 <?= Html::a(
                     '<i class="fas fa-plus mr-2"></i> AGREGAR PLAN', 
                     ['create', 'clinica_id' => $clinica->id], 
-                    ['class' => 'btn btn-primary'] 
+                    ['class' => 'btn btn-primary btn-sm me-2'] 
+                ) ?>
+                <?= Html::a(
+                '<i class="fas fa-download mr-2"></i> Descargar Plantilla',
+                ['download-template', 'clinica_id' => $clinica->id],
+                [
+                    'class' => 'btn btn-info btn-sm me-2',
+                    'title' => 'Descargar plantilla Excel para Carga Masiva de Planes y Coberturas',
+                ]
                 ) ?>
                 <!-- Add Import Button -->
                 <?= Html::button(
                     '<i class="fas fa-upload mr-2"></i> IMPORTAR PLANES', 
                     [
-                        'class' => 'btn btn-success',
+                        'class' => 'btn btn-success me-2',
                         'id' => 'import-plans-btn',
                         'data-toggle' => 'modal',
                         'data-target' => '#importModal'
                     ] 
                 ) ?>
             <?php endif; ?>
+            <div class="flex-grow-1"></div>
             <?php if ($clinica->id !== null) : ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver', 
                     ['/rm-clinica/view', 'id' => $clinica->id], 
                     [
-                        'class' => 'btn btn-secondary', 
+                        'class' => 'btn btn-secondary btn-sm ms-5', // ms-5 adds noticeable left margin
                         'title' => 'Volver a los detalles de la clínica',
+                        'style' => 'margin-left:40px;'
                     ]
                 ) ?>
+                
             <?php endif; ?>
         </div>
     </div>
@@ -148,7 +159,7 @@ $importUrl = Url::to(['planes/import']);
 
     <div class="ms-panel ms-panel-fh border-indigo"> 
         <div class="ms-panel-header">
-            <h3 class="section-title">
+            <h3 class="section-title text-start" style="text-align:left;">
                 <i class="fas fa-list-alt mr-3 text-indigo-600"></i> Listado de Planes de <?= Html::encode($clinica->nombre) ?>
             </h3>
         </div>
@@ -169,6 +180,7 @@ $importUrl = Url::to(['planes/import']);
                         // Columna para el nombre del plan
                         [
                             'attribute' => 'nombre',
+                            'label' => 'Nombre del Plan',
                             'format' => 'ntext',
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'filterInputOptions' => [
@@ -203,8 +215,12 @@ $importUrl = Url::to(['planes/import']);
                         // Comisión
                         [
                             'attribute' => 'comision',
-                            'format' => ['currency', 'USD'],
-                            'contentOptions' => ['style' => 'text-align: right;'],
+                            // Divide the attribute value by 100 before applying the format
+                            'value' => function ($model) {
+                                return $model->comision / 100; 
+                            },
+                            'format' => ['percent',2],
+                            'contentOptions' => ['style' => 'text-align: center;'],
                             'filter' => false
                         ],
                         // Edades
@@ -257,29 +273,31 @@ $importUrl = Url::to(['planes/import']);
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
-                            'options' => ['style' => 'width:55px; min-width:55px;'],
+                            'template' => '<div class="d-flex justify-content-center gap-3">{view}{update}</div>',
+                            'options' => ['style' => 'width:90px; min-width:90px;'], // Adjusted width for smaller buttons
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                            'contentOptions' => ['style' => 'text-align: center; padding: 8px !important;'], // Reduced padding
                             'buttons' => [
-                               'view' => function ($url, $model, $key) use ($clinica) {
+                                'view' => function ($url, $model, $key) use ($clinica) {
                                     return Html::a(
-                                        '<i class="fa fa-eye"></i>',
+                                        '<i class="fa fa-eye"></i>', // Removed "Detalles" text
                                         Url::to(['view', 'id' => $model->id, 'clinica_id' => $clinica->id]),
                                         [
-                                            'title' => 'Detalles de Plán',
-                                            'class' => 'btn btn-sm btn-info'
+                                            'title' => 'Detalles del Plan',
+                                            'class' => 'btn btn-xs btn-info px-2 py-0 me-2', // Changed to btn-xs, reduced padding
+                                            'style' => 'font-weight:500; font-size:10px; margin-right: 8px !important; min-height: 24px; line-height: 1;' // Smaller font and dimensions
                                         ]
                                     );
                                 },
                                 'update' => function ($url, $model, $key) use ($permisos, $clinica) {
                                     if($permisos == true){
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt"></i>',
+                                            '<i class="fas fa-pencil-alt"></i>', // Removed "Editar" text
                                             Url::to(['update', 'id' => $model->id, 'clinica_id' => $clinica->id]),
                                             [
                                                 'title' => 'Editar',
-                                                'class' => 'btn btn-sm btn-warning'
+                                                'class' => 'btn btn-xs btn-warning px-2 py-0 ms-2', // Changed to btn-xs, reduced padding
+                                                'style' => 'font-weight:500; font-size:10px; margin-left: 8px !important; min-height: 24px; line-height: 1;' // Smaller font and dimensions
                                             ]
                                         );
                                     }
@@ -444,4 +462,89 @@ function updatestatus(planId) {
 JS;
 
 $this->registerJs($js);
+?>
+
+<?php
+// Add CSS to ensure buttons stay small
+$css = <<<CSS
+/* Make buttons twice smaller and ensure they stay small */
+.btn-xs {
+    padding: 0.15rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+    border-radius: 0.2rem !important;
+    min-width: 30px !important;
+    min-height: 24px !important;
+    height: 24px !important;
+}
+
+/* Ensure consistent spacing between action buttons */
+.d-flex.justify-content-center.gap-3 {
+    gap: 1rem !important;
+}
+
+/* Force margin between buttons */
+.btn-info.me-2,
+.btn-info[style*="margin-right"] {
+    margin-right: 12px !important;
+}
+
+.btn-warning.ms-2,
+.btn-warning[style*="margin-left"] {
+    margin-left: 12px !important;
+}
+
+/* Specific targeting for action column buttons */
+.table .btn-xs {
+    margin: 0 2px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Ensure icons are properly sized in small buttons */
+.btn-xs i {
+    font-size: 10px !important;
+    margin-right: 0 !important;
+    line-height: 1 !important;
+}
+
+/* Override any conflicting Bootstrap styles */
+.ms-panel .btn-xs {
+    margin: 1px 2px !important;
+}
+
+/* Prevent button text from affecting size */
+.btn-xs span {
+    line-height: 1 !important;
+    font-size: 0.7rem !important;
+}
+
+/* Ensure the action column container doesn't compress buttons */
+.d-flex.justify-content-center {
+    min-width: 80px !important;
+}
+
+/* Force small button dimensions */
+#planes-grid .btn-xs {
+    width: 30px !important;
+    height: 24px !important;
+    padding: 0.1rem 0.3rem !important;
+}
+
+/* Additional protection against responsive resizing */
+@media (max-width: 768px) {
+    .btn-xs {
+        min-width: 28px !important;
+        min-height: 22px !important;
+        padding: 0.1rem 0.2rem !important;
+    }
+    
+    .btn-xs i {
+        font-size: 9px !important;
+    }
+}
+CSS;
+
+$this->registerCss($css);
 ?>
