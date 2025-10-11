@@ -11,15 +11,20 @@ use app\models\Pagos;
  */
 class PagosSearch extends Pagos
 {
+    // Atributos virtuales para la búsqueda por relación
+    public $nombreUsuario;
+    public $cedulaUsuario; // NUEVO: Atributo para la cédula
+
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['id', 'recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
-            [['created_at', 'fecha_pago', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at'], 'safe'],
-            [['monto_pagado', 'monto_usd'], 'number'],
+            [['id', 'user_id'], 'integer'],
+            // Aseguramos que 'cedulaUsuario' sea 'safe' para el filtro
+            [['numero_referencia_pago', 'fecha_pago', 'estatus', 'created_at', 'nombreUsuario', 'cedulaUsuario'], 'safe'],
+            [['monto_pagado', 'monto_usd'], 'number'], 
         ];
     }
 
@@ -36,93 +41,84 @@ class PagosSearch extends Pagos
      * Creates data provider instance with search query applied
      *
      * @param array $params
-     * @param string|null $formName Form name to be used into `->load()` method.
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params)
     {
         $query = Pagos::find();
 
+        // IMPORTANTE: Para buscar por nombre y cédula, hacemos un LEFT JOIN con la tabla de datos de usuario.
+        $query->joinWith(['userDatos']); 
+
         // add conditions that should always apply here
-
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => 20, // Forzamos un tamaño de página mayor al default de 1
+            ],
+            'sort' => [
+                'defaultOrder' => ['created_at' => SORT_DESC],
+                'attributes' => [
+                    'id',
+                    'user_id',
+                    'numero_referencia_pago',
+                    'fecha_pago',
+                    'monto_pagado',
+                    'monto_usd',
+                    'created_at',
+                    // FIX AMBIGUITY: Definir 'estatus' explícitamente con el prefijo de tabla
+                    'estatus' => [
+                        'asc' => ['pagos.estatus' => SORT_ASC],
+                        'desc' => ['pagos.estatus' => SORT_DESC],
+                        'label' => 'Estatus',
+                    ],
+                    // El atributo virtual 'nombreUsuario' se mantiene
+                    'nombreUsuario' => [
+                        'asc' => ['public.user_datos.nombres' => SORT_ASC, 'public.user_datos.apellidos' => SORT_ASC],
+                        'desc' => ['public.user_datos.nombres' => SORT_DESC, 'public.user_datos.apellidos' => SORT_DESC],
+                        'label' => 'Usuario',
+                    ],
+                    // NUEVO: Atributo virtual para la cédula
+                    'cedulaUsuario' => [
+                        'asc' => ['public.user_datos.cedula' => SORT_ASC],
+                        'desc' => ['public.user_datos.cedula' => SORT_DESC],
+                        'label' => 'Cédula',
+                    ],
+                ],
+            ],
         ]);
 
-        $this->load($params, $formName);
+        $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
-        // grid filtering conditions
+        // grid filtering conditions (usando siempre 'pagos.columna' cuando sea necesario)
         $query->andFilterWhere([
-            'id' => $this->id,
-            'created_at' => $this->created_at,
-            'recibo_id' => $this->recibo_id,
-            'fecha_pago' => $this->fecha_pago,
-            'monto_pagado' => $this->monto_pagado,
-            'updated_at' => $this->updated_at,
-            'user_id' => $this->user_id,
-            'fecha_conciliacion' => $this->fecha_conciliacion,
-            'fecha_registro' => $this->fecha_registro,
-            'deleted_at' => $this->deleted_at,
-            'conciliador_id' => $this->conciliador_id,
-            'conciliado' => $this->conciliado,
-            'monto_usd' => $this->monto_usd,
+            'pagos.id' => $this->id,
+            'pagos.user_id' => $this->user_id,
+            'pagos.monto_pagado' => $this->monto_pagado,
+            'pagos.monto_usd' => $this->monto_usd,
+            'pagos.fecha_pago' => $this->fecha_pago,
+            'pagos.created_at' => $this->created_at,
         ]);
 
-        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
-            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
-            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
-            ->andFilterWhere(['ilike', 'imagen_prueba', $this->imagen_prueba])
-            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador]);
-
-        return $dataProvider;
-    }
-
-    public function searchClinica($params, $formName = null, $id = null)
-    {
-        $query = Pagos::find()
-        ->joinWith('userDatos')
-        ->where(['clinica_id' => $id])
-        ->orderBy(['created_at' => SORT_DESC]);
-
-        $dataProvider = new ActiveDataProvider([
-            'query' => $query,
-        ]);
-
-        if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
+        // FIX DEFINITIVO PARA EL ERROR 'Ambiguous column: estatus'
+        if (!empty($this->estatus)) {
+            $query->andWhere(['ilike', 'pagos.estatus', $this->estatus]);
         }
 
-        // grid filtering conditions
-        $query->andFilterWhere([
-            'id' => $this->id,
-            'created_at' => $this->created_at,
-            'recibo_id' => $this->recibo_id,
-            'fecha_pago' => $this->fecha_pago,
-            'monto_pagado' => $this->monto_pagado,
-            'updated_at' => $this->updated_at,
-            'user_id' => $this->user_id,
-            'fecha_conciliacion' => $this->fecha_conciliacion,
-            'fecha_registro' => $this->fecha_registro,
-            'deleted_at' => $this->deleted_at,
-            'conciliador_id' => $this->conciliador_id,
-            'conciliado' => $this->conciliado,
-            'monto_usd' => $this->monto_usd,
-        ]);
+        // Filtros string restantes (que no causan conflicto)
+        $query->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago]);
 
-        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
-            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
-            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
-            ->andFilterWhere(['ilike', 'imagen_prueba', $this->imagen_prueba])
-            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador]);
+        // FILTRO POR NOMBRE DE USUARIO (atributo virtual)
+        $query->andFilterWhere(['ilike', "CAST(public.user_datos.nombres AS TEXT) || ' ' || CAST(public.user_datos.apellidos AS TEXT)", $this->nombreUsuario]);
+        
+        // NUEVO FILTRO POR CÉDULA
+        $query->andFilterWhere(['ilike', 'public.user_datos.cedula', $this->cedulaUsuario]);
+
 
         return $dataProvider;
     }

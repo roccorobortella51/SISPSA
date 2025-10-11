@@ -178,7 +178,7 @@ class UserDatosController extends Controller
             // Validar dirección (columna N)
             if (empty($row['L'])) {
                 $rowErrors[] = 'Dirección es obligatoria';
-            } elseif (strlen($row['L']) < 10) {
+            } elseif (strlen($row['L']) < 1) {
                 $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
             }
 
