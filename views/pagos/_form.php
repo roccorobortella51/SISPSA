@@ -212,7 +212,7 @@ $this->registerJs($js);
                                     <div style="font-size: 1rem !important;">Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?></div>
                                 </label>
                             </div>
-                            <span class="badge bg-primary rounded-pill" style="font-size: 1.2rem !important;">$<?= number_format($cuota->monto_usd, 2) ?></span>
+                            <span class="badge bg-primary rounded-pill" style="font-size: 1.2rem !important;">$<?= $cuota->monto_usd ?></span>
                         </li>
                     <?php endforeach; ?>
                     <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">

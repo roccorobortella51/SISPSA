@@ -140,7 +140,25 @@ public function actionCreate($user_id)
         $transaction = Yii::$app->db->beginTransaction();
         try {
             
-
+            // VALIDAR BAREMOS ANTES DE GUARDAR
+            $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+            if (!is_array($baremoIds)) {
+                $baremoIds = [];
+            }
+            
+            $validacion = SisSiniestro::validarBaremosConPlan($baremoIds, $user_id);
+            
+            if (!$validacion['valid']) {
+                $transaction->rollBack();
+                foreach ($validacion['errors'] as $error) {
+                    Yii::$app->session->setFlash('error', $error);
+                }
+                return $this->render('create', [
+                    'model' => $model,
+                    'afiliado' => $afiliado,
+                    'user_id' => $user_id,
+                ]);
+            }
     
             // Guardar el modelo, incluyendo las URLs de las imágenes
             if ($model->save()) { 
@@ -273,6 +291,26 @@ public function actionUpdate($id)
     if ($model->load(Yii::$app->request->post())) {
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            
+            // VALIDAR BAREMOS ANTES DE ACTUALIZAR
+            $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+            if (!is_array($baremoIds)) {
+                $baremoIds = [];
+            }
+            
+            $validacion = SisSiniestro::validarBaremosConPlan($baremoIds, $model->iduser);
+            
+            if (!$validacion['valid']) {
+                $transaction->rollBack();
+                foreach ($validacion['errors'] as $error) {
+                    Yii::$app->session->setFlash('error', $error);
+                }
+                return $this->render('update', [
+                    'model' => $model,
+                    'afiliado' => $afiliado,
+                    'baremos' => $baremos
+                ]);
+            }
             
             if ($model->save(false)) { 
 

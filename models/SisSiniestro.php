@@ -209,4 +209,172 @@ class SisSiniestro extends \yii\db\ActiveRecord
         
         return true;
     }
+    
+    /**
+     * Valida los baremos seleccionados contra las restricciones del plan
+     * @param array $baremoIds Array de IDs de baremos a validar
+     * @param int $userId ID del usuario/afiliado
+     * @return array ['valid' => bool, 'errors' => array]
+     */
+    public static function validarBaremosConPlan($baremoIds, $userId)
+    {
+        $errors = [];
+        
+        if (empty($baremoIds) || !is_array($baremoIds)) {
+            return ['valid' => true, 'errors' => []];
+        }
+        
+        // Obtener datos del afiliado
+        $afiliado = UserDatos::findOne($userId);
+        if (!$afiliado || !$afiliado->plan_id) {
+            $errors[] = 'No se pudo obtener la información del plan del afiliado.';
+            return ['valid' => false, 'errors' => $errors];
+        }
+        
+        // Obtener el contrato del afiliado para la fecha de inicio
+        $contrato = Contratos::find()
+            ->where(['user_id' => $userId])
+            ->andWhere(['estatus' => 'Activo'])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->one();
+        
+        if (!$contrato) {
+            $errors[] = 'No se encontró un contrato activo para el afiliado.';
+            return ['valid' => false, 'errors' => $errors];
+        }
+        
+        $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
+        $fechaActual = new \DateTime();
+        
+        // Validar cada baremo
+        foreach ($baremoIds as $baremoId) {
+            if (empty($baremoId)) continue;
+            
+            // Obtener la configuración del baremo en el plan
+            $planItemCobertura = PlanesItemsCobertura::find()
+                ->where(['plan_id' => $afiliado->plan_id, 'baremo_id' => $baremoId])
+                ->one();
+            
+            if (!$planItemCobertura) {
+                $baremo = Baremo::findOne($baremoId);
+                $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
+                $errors[] = "El baremo '$nombreBaremo' no está configurado en el plan del afiliado.";
+                continue;
+            }
+            
+            $baremo = Baremo::findOne($baremoId);
+            $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
+            
+            // VALIDACIÓN: Cantidad límite de uso (ANUAL) y Plazo de Espera después del límite
+            if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
+                // Calcular el período anual actual desde la fecha de afiliación
+                $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
+                
+                // Calcular las fechas de inicio y fin del año de vigencia actual
+                $inicioAnioVigencia = clone $fechaInicioContrato;
+                $inicioAnioVigencia->modify("+{$anioActual} years");
+                
+                $finAnioVigencia = clone $inicioAnioVigencia;
+                $finAnioVigencia->modify("+1 year -1 day");
+                
+                // Contar cuántas veces se ha usado este baremo en el año de vigencia actual
+                $siniestrosUsados = SisSiniestroBaremo::find()
+                    ->joinWith('siniestro')
+                    ->where(['sis_siniestro_baremo.baremo_id' => $baremoId])
+                    ->andWhere(['sis_siniestro.iduser' => $userId])
+                    ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
+                    ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnioVigencia->format('Y-m-d')])
+                    ->andWhere(['<=', 'sis_siniestro.fecha', $finAnioVigencia->format('Y-m-d')])
+                    ->orderBy(['sis_siniestro.fecha' => SORT_DESC])
+                    ->all();
+                
+                $vecesUsado = count($siniestrosUsados);
+                
+                // Si alcanzó el límite, verificar el plazo de espera
+                if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
+                    // Si hay plazo de espera configurado
+                    if (!empty($planItemCobertura->plazo_espera)) {
+                        $plazoEspera = self::parsePlazoEspera($planItemCobertura->plazo_espera);
+                        
+                        if ($plazoEspera > 0 && !empty($siniestrosUsados)) {
+                            // Obtener la fecha del último uso
+                            $ultimoSiniestro = $siniestrosUsados[0]->siniestro;
+                            $fechaUltimoUso = new \DateTime($ultimoSiniestro->fecha);
+                            
+                            // Calcular cuándo se puede volver a usar
+                            $fechaHabilitacion = clone $fechaUltimoUso;
+                            $fechaHabilitacion->modify("+{$plazoEspera} months");
+                            
+                            // Si aún no ha pasado el plazo de espera
+                            if ($fechaActual < $fechaHabilitacion) {
+                                $diasRestantes = $fechaActual->diff($fechaHabilitacion)->days;
+                                $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite de uso "
+                                          . "({$planItemCobertura->cantidad_limite} veces en el año actual). "
+                                          . "Último uso: " . $fechaUltimoUso->format('d/m/Y') . ". "
+                                          . "Debe esperar {$planItemCobertura->plazo_espera} desde el último uso. "
+                                          . "Podrá utilizarlo nuevamente a partir del " . $fechaHabilitacion->format('d/m/Y') 
+                                          . " (faltan $diasRestantes días).";
+                            }
+                            // Si ya pasó el plazo, se puede usar de nuevo (no hay error)
+                        } else {
+                            // Tiene límite pero no tiene plazo de espera
+                            // Solo se resetea con el año de vigencia
+                            $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite anual de uso "
+                                      . "({$planItemCobertura->cantidad_limite} veces). "
+                                      . "Ya se ha utilizado $vecesUsado veces en el período "
+                                      . $inicioAnioVigencia->format('d/m/Y') . " - " . $finAnioVigencia->format('d/m/Y') . ". "
+                                      . "Se renovará el " . $finAnioVigencia->modify('+1 day')->format('d/m/Y') . ".";
+                        }
+                    } else {
+                        // Tiene límite pero no tiene plazo de espera
+                        // Solo se resetea con el año de vigencia
+                        $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite anual de uso "
+                                  . "({$planItemCobertura->cantidad_limite} veces). "
+                                  . "Ya se ha utilizado $vecesUsado veces en el período "
+                                  . $inicioAnioVigencia->format('d/m/Y') . " - " . $finAnioVigencia->format('d/m/Y') . ". "
+                                  . "Se renovará el " . $finAnioVigencia->modify('+1 day')->format('d/m/Y') . ".";
+                    }
+                }
+                // Si no ha alcanzado el límite, puede usar libremente
+            }
+        }
+        
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors
+        ];
+    }
+    
+    /**
+     * Parsea el plazo de espera en formato texto a número de meses
+     * @param string $plazoEspera Ej: "4 meses", "1 mes", "6 months"
+     * @return int Número de meses
+     */
+    private static function parsePlazoEspera($plazoEspera)
+    {
+        if (empty($plazoEspera)) {
+            return 0;
+        }
+        
+        // Extraer el número del texto
+        preg_match('/\d+/', $plazoEspera, $matches);
+        
+        if (!empty($matches)) {
+            return (int)$matches[0];
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Calcula en qué año de vigencia se encuentra el afiliado
+     * @param \DateTime $fechaInicio Fecha de inicio del contrato
+     * @param \DateTime $fechaActual Fecha actual
+     * @return int Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     */
+    private static function calcularAnioVigencia($fechaInicio, $fechaActual)
+    {
+        $diferencia = $fechaInicio->diff($fechaActual);
+        return $diferencia->y; // Retorna el número de años completos
+    }
 }
