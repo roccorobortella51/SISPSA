@@ -14,6 +14,8 @@ use app\components\UserHelper;
 use app\models\RmClinica;
 use app\models\Cuotas;
 use app\models\UserDatos;
+use app\models\Contratos;
+
 
 
 /**
@@ -464,6 +466,11 @@ class PagosController extends Controller
             $user = UserDatos::findOne(['id' => $model->user_id]);
             $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'Si' : 'No';
             $user->save(false);
+            if($user->estatus_solvente == 'Si') {
+                $contrato = Contratos::find()->where(['user_id' => $model->user_id])->one();
+                $contrato->estatus = 'Activo';
+                $contrato->save(false);
+            }
             return ['success' => true, 'new_status' => $model->estatus];
         }
         
