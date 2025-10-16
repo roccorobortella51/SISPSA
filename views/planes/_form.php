@@ -1,4 +1,3 @@
-
 <?php
 
 use yii\helpers\Html;
@@ -81,10 +80,10 @@ use kartik\select2\Select2;
                     <table class="table table-bordered table-hover">
                         <thead class="thead-light">
                             <tr>
-                                <th>Servicio (Baremos)</th>
+                                <th><span class="text-white">Servicio (Baremos)</span></th>
                                 <!--<th width="15%">% Cobertura</th> -->
-                                <th width="50%">Límite</th>
-                                <th width="50%">Plazo Espera Mes</th>
+                                <th width="50%"><span class="text-white">Plazo Espera Mes</span></th>
+                                <th width="50%"><span class="text-white">Límite</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,21 +96,14 @@ use kartik\select2\Select2;
                                         <b>Descripcion:</b> <?= $item->baremo->descripcion ?><br>
                                         <b>Area:</b> <?= $item->baremo->area->nombre ?>
                                     </td>
-                                    <?php /*
-                                    <td>
-                                        <?= $form->field($item, "[$index]porcentaje_cobertura")
-                                            ->textInput(['type' => 'number', 'min' => 0, 'max' => 100])
-                                            ->label(false) ?>
-                                    </td>
-                                    */?>
-                                    <td>
-                                        <?= $form->field($item, "[$index]cantidad_limite")
-                                            ->textInput(['type' => 'number', 'min' => 0])
-                                            ->label(false) ?>
-                                    </td>
                                     <td>
                                         <?= $form->field($item, "[$index]plazo_espera")
                                             ->textInput(['type' => 'number', 'min' => 0, 'max' => 100])
+                                            ->label(false) ?>
+                                    </td>
+                                    <td>
+                                        <?= $form->field($item, "[$index]cantidad_limite")
+                                            ->textInput(['type' => 'number', 'min' => 0])
                                             ->label(false) ?>
                                     </td>
                                 </tr>
