@@ -83,7 +83,7 @@ class PlanesController extends Controller
 
     /**
      * Genera y descarga la plantilla de Excel para la carga masiva de Planes.
-     * El archivo tiene dos hojas: "PLANS" y "SERVICES".
+     * El archivo tiene hojas dinámicas basadas en los nombres de los planes.
      * @param string $clinica_id
      * @return yii\web\Response
      */
@@ -96,7 +96,7 @@ class PlanesController extends Controller
         // HOJA 1: PLANS (Detalles de los Planes)
         // ------------------------------------
         $sheetPlans = $spreadsheet->getActiveSheet();
-        $sheetPlans->setTitle('PLANS');
+        $sheetPlans->setTitle('Plans');
 
         $headersPlans = [
             'A1' => 'Nombre Plan',
@@ -109,23 +109,40 @@ class PlanesController extends Controller
             'H1' => 'Cobertura',
         ];
 
+        // Example plans - user can modify these as needed
         $exampleDataPlans = [
-            'A2' => 'Bronce Individual',
-            'B2' => 'Plan Básico para Individuales',
-            'C2' => 16.00,
-            'D2' => 'Activo', // Valores válidos: 'Activo', 'Inactivo'
-            'E2' => 59,
-            'F2' => 0,
-            'G2' => 15,
-            'H2' => 10000,
+            [
+                'A2' => 'Bronce',
+                'B2' => 'Plan Básico para Individuales',
+                'C2' => 16.00,
+                'D2' => 'Activo',
+                'E2' => 59,
+                'F2' => 0,
+                'G2' => 15,
+                'H2' => 10000,
+            ],
+            [
+                'A3' => 'Plata',
+                'B3' => 'Plan Intermedio para Individuales', 
+                'C3' => 25.00,
+                'D3' => 'Activo',
+                'E3' => 59,
+                'F3' => 0,
+                'G3' => 15,
+                'H3' => 15000,
+            ]
         ];
 
-        // Aplicar encabezados y datos
+        // Aplicar encabezados
         foreach ($headersPlans as $cell => $value) {
             $sheetPlans->setCellValue($cell, $value);
         }
-        foreach ($exampleDataPlans as $cell => $value) {
-            $sheetPlans->setCellValue($cell, $value);
+        
+        // Aplicar datos de ejemplo
+        foreach ($exampleDataPlans as $rowData) {
+            foreach ($rowData as $cell => $value) {
+                $sheetPlans->setCellValue($cell, $value);
+            }
         }
 
         // Formato para PLANS
@@ -143,57 +160,50 @@ class PlanesController extends Controller
             $sheetPlans->getColumnDimension($column)->setAutoSize(true);
         }
 
-
         // ------------------------------------
-        // HOJA 2: SERVICES (Ítems de Cobertura)
+        // HOJAS DE SERVICIOS DINÁMICAS (basadas en los nombres de planes)
         // ------------------------------------
-        $sheetServices = $spreadsheet->createSheet();
-        $sheetServices->setTitle('SERVICES');
-
-        // Encabezados de 2 filas
-        $sheetServices->setCellValue('A1', 'Área');
-        $sheetServices->setCellValue('B1', 'Nombre del Servicio');
-        $sheetServices->setCellValue('C1', 'Descripción');
-        $sheetServices->setCellValue('D1', 'Costo');
-        $sheetServices->setCellValue('E1', 'Precio');
-
-        // Bloque de Planes (Ejemplo con 2 planes)
-        // Se utilizan dos columnas por plan: Límite y Plazo (meses)
-        $sheetServices->setCellValue('F1', 'Nombre Plan 1 (Ejemplo: Bronce Individual)');
-        $sheetServices->mergeCells('F1:G1');
-        $sheetServices->setCellValue('H1', 'Nombre Plan 2 (Ejemplo: Plata Individual)');
-        $sheetServices->mergeCells('H1:I1');
-
-        $sheetServices->setCellValue('F2', 'Límite');
-        $sheetServices->setCellValue('G2', 'Plazo (meses)');
-        $sheetServices->setCellValue('H2', 'Límite');
-        $sheetServices->setCellValue('I2', 'Plazo (meses)');
-
-        // Datos de Ejemplo de Servicios
-        $exampleServices = [
-            // Área, Servicio, Descripción, Costo, Precio, Límite P1, Plazo P1, Límite P2, Plazo P2
-            ['CIRUGÍA', 'Cirugías de Electivas', 'Hemorroidectomía', '1507.88', '1794.93', 'N/A', 'N/A', 'S/L', 12],
-            ['CONSULTAS', 'Consultas Especializadas', 'Medicina Interna', '20', '25', 'S/L', 0, 'S/L', 0],
-            ['LABORATORIO', 'Exámenes de Laboratorio', 'Hematología Completa', '2.50', '3.50', 2, 0, 4, 0], // Límite de 2 o 4 veces/año
-            ['ODONTOLOGÍA', 'Tratamiento odontológico', 'Tartrectomía (Limpieza Dental)', '35', '50', 1, 4, 2, 4], // Límite de 1 o 2 veces cada 4 meses
+        $serviceHeaders = [
+            'A1' => 'Área',
+            'B1' => 'Nombre del Servicio',
+            'C1' => 'Descripción',
+            'D1' => 'Límite',
+            'E1' => 'Plazo'
         ];
 
-        $row = 3;
-        foreach ($exampleServices as $data) {
-            $sheetServices->fromArray($data, null, 'A' . $row++);
-        }
+        $exampleServices = [
+            ['CIRUGÍA', 'Cirugías de Electivas', 'Hemorroidectomía', 'S/L', 12],
+            ['CONSULTAS', 'Consultas Especializadas', 'Medicina Interna', 2, 4],
+            ['CONSULTAS', 'Consultas Básicas', 'Pediatría', 'N/A', 'N/A'],
+            ['LABORATORIO', 'Exámenes de Laboratorio', 'Hematología Completa', 1, 2],
+        ];
 
-        // Formato para SERVICES
-        $sheetServices->getStyle('A1:I2')->applyFromArray($headerStyle);
-        $sheetServices->getStyle('A1:E2')->getFill()->getStartColor()->setARGB('FF1ABC9C'); // Color verde para Baremo
-        $sheetServices->getStyle('F1:I1')->getFill()->getStartColor()->setARGB('FF9B59B6'); // Color morado para Planes
-
-        // Alineación central para las celdas de Límite/Plazo
-        $sheetServices->getStyle('F:I')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        // Autoajustar columnas A a I
-        foreach (range('A', 'I') as $column) {
-            $sheetServices->getColumnDimension($column)->setAutoSize(true);
+        // Create service sheets for each example plan
+        foreach ($exampleDataPlans as $planData) {
+            $planName = $planData['A2'] ?? ''; // Get plan name from column A
+            if (!empty($planName)) {
+                $sheet = $spreadsheet->createSheet();
+                $sheet->setTitle($planName); // Use plan name as sheet name
+                
+                // Aplicar encabezados
+                foreach ($serviceHeaders as $cell => $value) {
+                    $sheet->setCellValue($cell, $value);
+                }
+                
+                // Aplicar datos de ejemplo
+                $row = 2;
+                foreach ($exampleServices as $data) {
+                    $sheet->fromArray($data, null, 'A' . $row++);
+                }
+                
+                // Formato
+                $sheet->getStyle('A1:E1')->applyFromArray($headerStyle);
+                
+                // Autoajustar columnas
+                foreach (range('A', 'E') as $column) {
+                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
+            }
         }
 
         // 2. Guardar, Transmitir y Limpiar
@@ -463,522 +473,696 @@ class PlanesController extends Controller
         }
     }
 
-/**
- * Adds a new coverage (baremo service) to an existing plan
- * * @param int $plan_id ID of the plan to add coverage to
- * @param int $baremo_id ID of the baremo (service) to add
- * @return \yii\web\Response
- * @throws NotFoundHttpException If the plan or baremo do not exist
- */
+    /**
+     * Adds a new coverage (baremo service) to an existing plan
+     * * @param int $plan_id ID of the plan to add coverage to
+     * @param int $baremo_id ID of the baremo (service) to add
+     * @return \yii\web\Response
+     * @throws NotFoundHttpException If the plan or baremo do not exist
+     */
     public function actionAddCobertura($plan_id, $baremo_id)
-{
-    // Find the plan and check for existence
-    $plan = $this->findModel($plan_id);
-    $baremo = Baremo::findOne($baremo_id);
-    
-    if (!$baremo) {
-        Yii::$app->session->setFlash('error', 'The requested service does not exist in the system.');
-        return $this->redirect(['view', 'id' => $plan_id]);
-    }
-    
-    // Check if the baremo belongs to the same clinic as the plan
-    if ($baremo->clinica_id != $plan->clinica_id) {
-        Yii::$app->session->setFlash('warning', 'The service does not belong to the clinic associated with this plan.');
-        return $this->redirect(['view', 'id' => $plan_id]);
-    }
-    
-    // Check if this coverage already exists in the plan
-    $existente = PlanesItemsCobertura::find()
-        ->where(['plan_id' => $plan_id, 'baremo_id' => $baremo_id])
-        ->one();
+    {
+        // Find the plan and check for existence
+        $plan = $this->findModel($plan_id);
+        $baremo = Baremo::findOne($baremo_id);
         
-    if ($existente) {
-        Yii::$app->session->setFlash('info', 'This service is already included in the plan.');
-        return $this->redirect(['view', 'id' => $plan_id]);
-    }
-    
-    // Create the new coverage item
-    $model = new PlanesItemsCobertura([
-        'plan_id' => $plan_id,
-        'baremo_id' => $baremo_id,
-        'nombre_servicio' => $baremo->nombre_servicio, 
-        'porcentaje_cobertura' => 80, // Default value
-        'cantidad_limite' => 1, // Default value
-    ]);
-    
-    // Redirect directly or show form to complete data
-    if (Yii::$app->request->isPost) {
-        // If it comes via POST (creation form)
-        if ($model->load(Yii::$app->request->post())) { 
-            if ($model->save()) {
-                Yii::$app->session->setFlash('success', 
-                    "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan successfully.");
-                return $this->redirect(['view', 'id' => $plan_id]);
-            } else {
-                Yii::$app->session->setFlash('error', 
-                    'Error saving coverage: ' . implode(', ', $model->firstErrors)); 
-            }
+        if (!$baremo) {
+            Yii::$app->session->setFlash('error', 'The requested service does not exist in the system.');
+            return $this->redirect(['view', 'id' => $plan_id]);
         }
-    } else {
-        // If it comes via GET (simple link)
-        if ($model->save()) {
-            Yii::$app->session->setFlash('success',
-                "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan with default values.");
+        
+        // Check if the baremo belongs to the same clinic as the plan
+        if ($baremo->clinica_id != $plan->clinica_id) {
+            Yii::$app->session->setFlash('warning', 'The service does not belong to the clinic associated with this plan.');
+            return $this->redirect(['view', 'id' => $plan_id]);
+        }
+        
+        // Check if this coverage already exists in the plan
+        $existente = PlanesItemsCobertura::find()
+            ->where(['plan_id' => $plan_id, 'baremo_id' => $baremo_id])
+            ->one();
+            
+        if ($existente) {
+            Yii::$app->session->setFlash('info', 'This service is already included in the plan.');
+            return $this->redirect(['view', 'id' => $plan_id]);
+        }
+        
+        // Create the new coverage item
+        $model = new PlanesItemsCobertura([
+            'plan_id' => $plan_id,
+            'baremo_id' => $baremo_id,
+            'nombre_servicio' => $baremo->nombre_servicio, 
+            'porcentaje_cobertura' => 80, // Default value
+            'cantidad_limite' => 1, // Default value
+        ]);
+        
+        // Redirect directly or show form to complete data
+        if (Yii::$app->request->isPost) {
+            // If it comes via POST (creation form)
+            if ($model->load(Yii::$app->request->post())) { 
+                if ($model->save()) {
+                    Yii::$app->session->setFlash('success', 
+                        "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan successfully.");
+                    return $this->redirect(['view', 'id' => $plan_id]);
+                } else {
+                    Yii::$app->session->setFlash('error', 
+                        'Error saving coverage: ' . implode(', ', $model->firstErrors)); 
+                }
+            }
         } else {
-            Yii::$app->session->setFlash('error',
-                'Error adding service to the plan: ' . implode(', ', $model->firstErrors));
-        }
-        return $this->redirect(['view', 'id' => $plan_id]);
-    }
-    
-    // Show form to complete data if needed
-    return $this->render('add-cobertura', [
-        'model' => $model,
-        'plan' => $plan,
-        'baremo' => $baremo,
-    ]);
-}
-
-public function actionImport()
-{
-    // Set response format to JSON
-    Yii::$app->response->format = Response::FORMAT_JSON;
-    
-    // Get clinica_id from POST
-    $clinica_id = Yii::$app->request->post('clinica_id');
-    
-    if (empty($clinica_id)) {
-        return ['success' => false, 'message' => 'Clinic ID not specified'];
-    }
-    
-    // Get the uploaded file
-    $file = UploadedFile::getInstanceByName('excelFile'); 
-    
-    if (!$file) {
-        return ['success' => false, 'message' => 'No file selected'];
-    }
-
-    try {
-        // 1. Load the Excel file
-        $spreadsheet = IOFactory::load($file->tempName);
-        
-        // 2. Get the Plans sheet
-        $plansWorksheet = $spreadsheet->getSheetByName('Plans');
-        
-        if (!$plansWorksheet) {
-            return ['success' => false, 'message' => 'The "Plans" sheet was not found in the file'];
-        }
-        
-        $plansRows = $plansWorksheet->toArray();
-        
-        if (empty($plansRows) || count($plansRows) < 2) {
-            return ['success' => false, 'message' => 'The "Plans" sheet is empty or only contains a header.'];
-        }
-        
-        // 3. Get the Services sheet
-        $servicesWorksheet = $spreadsheet->getSheetByName('Services');
-        
-        if (!$servicesWorksheet) {
-            return ['success' => false, 'message' => 'The "Services" sheet was not found in the file'];
-        }
-        
-        $servicesRows = $servicesWorksheet->toArray();
-        
-        if (empty($servicesRows) || count($servicesRows) < 3) {
-            return ['success' => false, 'message' => 'The "Services" sheet is empty or does not have enough rows.'];
-        }
-
-        // 4. Map Headers for Plans sheet - FIXED: Handle null values
-        $plansHeader = array_map(function($value) {
-            return $value === null ? '' : trim($value);
-        }, $plansRows[0]);
-        $expectedPlansHeaders = ['Nombre Plan', 'Descripción', 'Precio', 'Estatus', 'Edad Límite', 'Edad Mínima', 'Comisión', 'Cobertura'];
-
-        $plansMap = [];
-        foreach ($expectedPlansHeaders as $expected) {
-            $index = array_search($expected, $plansHeader);
-            if ($index === false) {
-                return ['success' => false, 'message' => 'Required column not found in Plans sheet: "' . $expected . '"'];
+            // If it comes via GET (simple link)
+            if ($model->save()) {
+                Yii::$app->session->setFlash('success',
+                    "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan with default values.");
+            } else {
+                Yii::$app->session->setFlash('error',
+                    'Error adding service to the plan: ' . implode(', ', $model->firstErrors));
             }
-            $plansMap[$expected] = $index;
+            return $this->redirect(['view', 'id' => $plan_id]);
+        }
+        
+        // Show form to complete data if needed
+        return $this->render('add-cobertura', [
+            'model' => $model,
+            'plan' => $plan,
+            'baremo' => $baremo,
+        ]);
+    }
+
+    /**
+     * NEW: Initiates the import process and returns a task ID for progress tracking
+     */
+    public function actionImport()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $clinica_id = Yii::$app->request->post('clinica_id');
+        if (empty($clinica_id)) {
+            return ['success' => false, 'message' => 'Clinic ID not specified'];
         }
 
-        // 5. Map Headers for Services sheet - FIXED MAPPING with null handling
-        $servicesHeaderRow1 = array_map(function($value) {
-            return $value === null ? '' : trim($value);
-        }, $servicesRows[0]); // First header row (Area, Nombre del Servicio, etc.)
-        $servicesHeaderRow2 = array_map(function($value) {
-            return $value === null ? '' : trim($value);
-        }, $servicesRows[1]); // Second header row (Limite, plazo, etc.)
+        $file = UploadedFile::getInstanceByName('excelFile');
+        if (!$file) {
+            return ['success' => false, 'message' => 'No file selected'];
+        }
+
+        // 1. Generate a unique task ID for this import process
+        $taskId = 'import_' . uniqid();
+        $cache = Yii::$app->cache;
+
+        // 2. Save the file to a temporary location
+        $tempPath = Yii::getAlias('@runtime/temp_uploads/');
+        if (!is_dir($tempPath)) {
+            mkdir($tempPath, 0777, true);
+        }
+        $filePath = $tempPath . $taskId . '.' . $file->extension;
         
-        // Map the main headers from first row
-        $servicesMap = [
-            'Area' => array_search('Area', $servicesHeaderRow1),
-            'Nombre del Servicio' => array_search('Nombre del Servicio', $servicesHeaderRow1),
-            'Descripción' => array_search('Descripción', $servicesHeaderRow1),
-            'Costo' => array_search('Costo', $servicesHeaderRow1),
-            'Precio' => array_search('Precio', $servicesHeaderRow1),
-        ];
-        
-        // FIXED: Manually map the plan types based on column positions
-        $planTypes = [
-            'Bronce Individual' => [
-                'Limite' => 5,  // Column F (index 5)
-                'plazo' => 6    // Column G (index 6)
-            ],
-            'Plata Individual' => [
-                'Limite' => 7,  // Column H (index 7)
-                'plazo' => 8    // Column I (index 8)
-            ],
-            'Oro Individual' => [
-                'Limite' => 9,  // Column J (index 9)
-                'plazo' => 10   // Column K (index 10)
-            ],
-            'Esmeralda Plus Individual' => [
-                'Limite' => 11, // Column L (index 11)
-                'plazo' => 12   // Column M (index 12)
+        // 3. Set initial status in cache - IMMEDIATE FEEDBACK
+        $cache->set($taskId, [
+            'progress' => 5,
+            'message' => 'Uploading file...',
+            'finished' => false,
+            'result' => null,
+            'details' => [
+                'plans_processed' => 0,
+                'plans_total' => 0,
+                'services_processed' => 0,
+                'services_total' => 0,
+                'current_plan' => '',
+                'current_sheet' => ''
             ]
-        ];
+        ], 3600); // Cache for 1 hour
 
-        // Validate that we have the required plan types
-        $requiredPlanTypes = ['Bronce Individual', 'Plata Individual', 'Oro Individual', 'Esmeralda Plus Individual'];
-        foreach ($requiredPlanTypes as $planType) {
-            if (!isset($planTypes[$planType]) || !isset($planTypes[$planType]['Limite']) || !isset($planTypes[$planType]['plazo'])) {
-                return ['success' => false, 'message' => 'Required plan type not found or incomplete in Services sheet: "' . $planType . '"'];
-            }
+        // Save file and update progress immediately
+        if ($file->saveAs($filePath)) {
+            $cache->set($taskId, [
+                'progress' => 10,
+                'message' => 'File uploaded. Starting import process...',
+                'finished' => false,
+                'result' => null,
+                'details' => [
+                    'plans_processed' => 0,
+                    'plans_total' => 0,
+                    'services_processed' => 0,
+                    'services_total' => 0,
+                    'current_plan' => '',
+                    'current_sheet' => ''
+                ]
+            ], 3600);
+        } else {
+            return ['success' => false, 'message' => 'Failed to save uploaded file'];
         }
 
-        $importedCount = 0;
-        $servicesImportedCount = 0;
-        $servicesSkippedCount = 0;
-        $errors = [];
-        $warnings = [];
-        
-        // Start transaction
-        $transaction = Yii::$app->db->beginTransaction();
-        
+        // 4. Start background processing immediately
+        $this->startBackgroundImport($taskId, $filePath, $clinica_id);
+
+        return $this->asJson(['success' => true, 'taskId' => $taskId]);
+    }
+
+    /**
+     * NEW: Starts the background import process
+     */
+    private function startBackgroundImport($taskId, $filePath, $clinica_id)
+    {
+        // Close the session to allow other requests
+        if (Yii::$app->session->isActive) {
+            Yii::$app->session->close();
+        }
+
+        // Start background processing
+        register_shutdown_function([$this, 'processImportBackground'], $taskId, $filePath, $clinica_id);
+    }
+
+    /**
+     * NEW: Process import in background - this runs after the response is sent
+     */
+    public function processImportBackground($taskId, $filePath, $clinica_id)
+    {
         try {
-            // 6. First, import all plans and store them in an array for reference
-            $importedPlans = []; // [plan_name => plan_id]
+            // Set reasonable limits for large imports
+            set_time_limit(300); // 5 minutes
+            ini_set('max_execution_time', 300);
+            ini_set('memory_limit', '512M');
+
+            Yii::info("=== STARTING DYNAMIC IMPORT (Task: $taskId) ===", 'import');
             
-            for ($i = 1; $i < count($plansRows); $i++) {
-                $row = $plansRows[$i];
-                $rowNumber = $i + 1;
-                
-                // Skip empty rows with null handling
-                $nombrePlan = $row[$plansMap['Nombre Plan']] ?? '';
-                $nombrePlan = $nombrePlan === null ? '' : trim($nombrePlan);
-                if (empty($nombrePlan)) {
-                    continue;
-                }
-                
-                // Check if plan already exists by name and clinic ID
-                $plan = Planes::find()
-                    ->where(['clinica_id' => $clinica_id, 'nombre' => $nombrePlan])
-                    ->one();
-
-                // If plan doesn't exist, create a new instance
-                if ($plan === null) {
-                    $plan = new Planes();
-                }
-                
-                // Mapping and casting data types with null handling
-                $plan->nombre = $nombrePlan;
-                $plan->descripcion = $row[$plansMap['Descripción']] ?? '';
-                $plan->descripcion = $plan->descripcion === null ? '' : trim($plan->descripcion);
-                $plan->precio = floatval($row[$plansMap['Precio']] ?? 0);
-                $plan->estatus = $row[$plansMap['Estatus']] ?? 'Activo';
-                $plan->estatus = $plan->estatus === null ? 'Activo' : trim($plan->estatus);
-                $plan->edad_limite = intval($row[$plansMap['Edad Límite']] ?? 99);
-                $plan->edad_minima = intval($row[$plansMap['Edad Mínima']] ?? 0);
-                $plan->comision = floatval($row[$plansMap['Comisión']] ?? 0);
-                $plan->cobertura = $row[$plansMap['Cobertura']] ?? '';
-                $plan->cobertura = $plan->cobertura === null ? '' : trim($plan->cobertura);
-                $plan->clinica_id = $clinica_id;
-
-                if (!$plan->save()) {
-                    $errorMessages = implode(', ', ArrayHelper::getColumn($plan->getErrors(), 0, false));
-                    $errors[] = "Row $rowNumber (Plan: {$plan->nombre}): " . $errorMessages;
-                    continue;
-                }
-                
-                // Store plan reference for services association
-                $importedPlans[$plan->nombre] = $plan->id;
-                $importedCount++;
+            $this->updateProgress($taskId, 15, 'Loading spreadsheet...', [
+                'current_sheet' => 'Loading file...'
+            ]);
+            
+            // Small delay to ensure client gets the initial progress
+            sleep(1);
+            
+            $spreadsheet = IOFactory::load($filePath);
+            
+            // Get all sheets
+            $plansWorksheet = $spreadsheet->getSheetByName('Plans');
+            if (!$plansWorksheet) {
+                throw new \Exception('Sheet "Plans" not found');
             }
             
-            // 7. Now import services for each plan from Services sheet
-            for ($i = 2; $i < count($servicesRows); $i++) { // Start from row 3 (index 2)
-                $row = $servicesRows[$i];
-                $rowNumber = $i + 1;
-                
-                // Extract service information with null handling
-                $area = $row[$servicesMap['Area']] ?? '';
-                $area = $area === null ? '' : trim($area);
-                $serviceName = $row[$servicesMap['Nombre del Servicio']] ?? '';
-                $serviceName = $serviceName === null ? '' : trim($serviceName);
-                $description = $row[$servicesMap['Descripción']] ?? '';
-                $description = $description === null ? '' : trim($description);
-                
-                // Skip if service name is empty
-                if (empty($serviceName)) {
-                    continue;
+            $plansRows = $plansWorksheet->toArray();
+            if (count($plansRows) < 2) {
+                throw new \Exception('Plans sheet is empty');
+            }
+
+            $this->updateProgress($taskId, 20, 'Processing plans...', [
+                'current_sheet' => 'Plans'
+            ]);
+            
+            // Process plans first and collect their names for service sheet processing
+            $importedPlans = [];
+            $planNamesForServices = [];
+            
+            // Map headers for plans sheet
+            $headerMap = [
+                'nombre' => 0, // A - Nombre Plan
+                'descripcion' => 1, // B - Descripción
+                'precio' => 2, // C - Precio
+                'estatus' => 3, // D - Estatus
+                'edad_limite' => 4, // E - Edad Límite
+                'edad_minima' => 5, // F - Edad Mínima
+                'comision' => 6, // G - Comisión
+                'cobertura' => 7, // H - Cobertura
+            ];
+            
+            // Calculate total plans for progress tracking
+            $totalPlans = count($plansRows) - 1;
+            $this->updateProgress($taskId, 20, "Processing $totalPlans plans...", [
+                'plans_total' => $totalPlans,
+                'plans_processed' => 0
+            ]);
+            
+            // Use transaction for plans
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                // Process each plan row
+                for ($i = 1; $i < count($plansRows); $i++) {
+                    $row = $plansRows[$i];
+                    $rowNumber = $i + 1;
+                    
+                    $nombrePlan = trim($row[$headerMap['nombre']] ?? '');
+                    if (empty($nombrePlan)) {
+                        Yii::info("Skipping empty plan name at row $rowNumber", 'import');
+                        continue;
+                    }
+                    
+                    // Update progress after each plan - MORE FREQUENT UPDATES
+                    $progress = 20 + round((($i / $totalPlans) * 25)); // Plans processing is ~25% of the work
+                    $this->updateProgress($taskId, $progress, "Processing plan: " . $nombrePlan, [
+                        'plans_processed' => $i,
+                        'current_plan' => $nombrePlan
+                    ]);
+                    
+                    Yii::info("Processing plan: $nombrePlan", 'import');
+                    
+                    // Find or create plan
+                    $plan = Planes::find()
+                        ->where(['clinica_id' => $clinica_id, 'nombre' => $nombrePlan])
+                        ->one();
+
+                    if (!$plan) {
+                        $plan = new Planes();
+                        Yii::info("Creating new plan: $nombrePlan", 'import');
+                    } else {
+                        Yii::info("Updating existing plan: $nombrePlan", 'import');
+                    }
+
+                    // Set plan attributes
+                    $plan->nombre = $nombrePlan;
+                    $plan->descripcion = trim($row[$headerMap['descripcion']] ?? '');
+                    $plan->precio = floatval($row[$headerMap['precio']] ?? 0);
+                    $plan->estatus = trim($row[$headerMap['estatus']] ?? 'Activo');
+                    $plan->edad_limite = intval($row[$headerMap['edad_limite']] ?? 99);
+                    $plan->edad_minima = intval($row[$headerMap['edad_minima']] ?? 0);
+                    $plan->comision = floatval($row[$headerMap['comision']] ?? 0);
+                    $plan->cobertura = trim($row[$headerMap['cobertura']] ?? '');
+                    $plan->clinica_id = $clinica_id;
+
+                    if ($plan->save()) {
+                        $importedPlans[$plan->nombre] = $plan->id;
+                        $planNamesForServices[] = $plan->nombre;
+                        Yii::info("✅ Saved plan: {$plan->nombre} (ID: {$plan->id})", 'import');
+                    } else {
+                        $errors = implode(', ', $plan->getFirstErrors());
+                        Yii::error("❌ Failed to save plan {$plan->nombre}: $errors", 'import');
+                        throw new \Exception("Error saving plan {$plan->nombre}: $errors");
+                    }
+                    
+                    // Small delay to show progress more smoothly
+                    if ($i % 2 === 0) {
+                        usleep(100000); // 0.1 second delay every 2 plans
+                    }
                 }
                 
-                // Process each plan type for this service
-                foreach ($requiredPlanTypes as $planType) {
-                    $planName = $planType;
-                    
-                    // Check if plan was imported
-                    if (!isset($importedPlans[$planName])) {
-                        $warn = "Row $rowNumber: Plan '$planName' not found. Service '$serviceName' skipped for this plan.";
-                        $warnings[] = $warn;
-                        Yii::warning($warn, 'import');
-                        $servicesSkippedCount++;
-                        continue;
-                    }
-                    
-                    $planId = $importedPlans[$planName];
-                    
-                    // Get limit and plazo values for this plan type using fixed column indices with null handling
-                    $limitIndex = $planTypes[$planType]['Limite'];
-                    $plazoIndex = $planTypes[$planType]['plazo'];
-                    
-                    $limitValue = isset($row[$limitIndex]) ? $row[$limitIndex] : '';
-                    $limitValue = $limitValue === null ? '' : trim($limitValue);
-                    $plazoValue = isset($row[$plazoIndex]) ? $row[$plazoIndex] : '';
-                    $plazoValue = $plazoValue === null ? '' : trim($plazoValue);
-                    
-                    // NEW CONDITION: Skip if BOTH Límite and Plazo are 'N/A'
-                    if ($limitValue === 'N/A' && $plazoValue === 'N/A') {
-                        Yii::info("⏭️ Skipping service '$serviceName' for plan '$planName' - both Límite and Plazo are 'N/A'", 'import');
-                        $servicesSkippedCount++;
-                        continue;
-                    }
-                    
-                    Yii::info("=== PROCESSING SERVICE ===", 'import');
-                    Yii::info("Service: '$serviceName'", 'import');
-                    Yii::info("Plan: $planType", 'import');
-                    Yii::info("Limit: '$limitValue', Plazo: '$plazoValue'", 'import');
-                    
-                    // Find existing baremo - use more flexible matching
-$baremo = Baremo::find()
-    ->where(['clinica_id' => $clinica_id])
-    ->andWhere(['estatus' => 'Activo'])
-    ->andWhere([
-        'nombre_servicio' => $serviceName,
-        'descripcion' => $description
-    ])
-    ->one();
+                $transaction->commit();
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                throw $e;
+            }
 
-// Only create new baremo if NO existing one found AND it's really necessary
-if (!$baremo && $this->isServiceRequired($serviceName)) {
-    $baremo = new Baremo();
-    $baremo->clinica_id = $clinica_id;
-    $baremo->nombre_servicio = $serviceName;
-    $baremo->descripcion = $description;
-    
-    // Process cost and price values (remove $ and commas) with null handling
-    $costoValue = isset($row[$servicesMap['Costo']]) ? $row[$servicesMap['Costo']] : '0';
-    $costoValue = $costoValue === null ? '0' : trim($costoValue);
-    $precioValue = isset($row[$servicesMap['Precio']]) ? $row[$servicesMap['Precio']] : '0';
-    $precioValue = $precioValue === null ? '0' : trim($precioValue);
-    
-    $baremo->costo = $this->parseCurrency($costoValue);
-    $baremo->precio = $this->parseCurrency($precioValue);
-    $baremo->estatus = 'Activo';
-    
-    if (!$baremo->save()) {
-        $warn = "Row $rowNumber: Could not create baremo for service '$serviceName'. Error: " . implode(', ', $baremo->getFirstErrors());
-        $warnings[] = $warn;
-        Yii::warning($warn, 'import');
-        $servicesSkippedCount++;
-        continue;
+            $this->updateProgress($taskId, 45, 'Starting service processing...', [
+                'plans_processed' => $totalPlans,
+                'services_total' => 0,
+                'services_processed' => 0
+            ]);
+
+            // Process services for each plan that was imported
+            $servicesResult = [
+                'imported' => 0,
+                'skipped' => 0,
+                'warnings' => []
+            ];
+
+            $totalPlansToProcessServices = count($planNamesForServices);
+            $planCounter = 0;
+
+            // Calculate total services for progress tracking
+            $totalServices = 0;
+            foreach ($planNamesForServices as $planName) {
+                $sheetName = $planName;
+                $worksheet = $spreadsheet->getSheetByName($sheetName);
+                if ($worksheet) {
+                    $servicesRows = $worksheet->toArray();
+                    $totalServices += max(0, count($servicesRows) - 1); // Subtract header row
+                }
+            }
+
+            $this->updateProgress($taskId, 45, "Processing $totalServices services...", [
+                'services_total' => $totalServices,
+                'services_processed' => 0
+            ]);
+
+            $servicesProcessedSoFar = 0;
+
+            foreach ($planNamesForServices as $planName) {
+                // Use the exact plan name as the sheet name
+                $sheetName = $planName;
+                $planCounter++;
+
+                Yii::info("Looking for service sheet: '$sheetName' for plan: '$planName'", 'import');
+
+                // Get the worksheet
+                $worksheet = $spreadsheet->getSheetByName($sheetName);
+                
+                if (!$worksheet) {
+                    $servicesResult['warnings'][] = "Worksheet '$sheetName' for plan '$planName' not found in Excel file";
+                    Yii::warning("Worksheet '$sheetName' for plan '$planName' not found", 'import');
+                    continue;
+                }
+
+                Yii::info("Processing services for plan: $planName from sheet: $sheetName", 'import');
+                
+                // Get worksheet data
+                $servicesRows = $worksheet->toArray();
+                $servicesInThisSheet = max(0, count($servicesRows) - 1);
+                
+                $planServicesResult = $this->processPlanServicesWithProgress(
+                    $servicesRows,
+                    $importedPlans[$planName],
+                    $clinica_id,
+                    $planName,
+                    $sheetName,
+                    $taskId,
+                    $servicesProcessedSoFar,
+                    $totalServices,
+                    $servicesResult
+                );
+                
+                $servicesProcessedSoFar += $servicesInThisSheet;
+                $servicesResult['imported'] += $planServicesResult['imported'];
+                $servicesResult['skipped'] += $planServicesResult['skipped'];
+                $servicesResult['warnings'] = array_merge($servicesResult['warnings'], $planServicesResult['warnings']);
+                
+                $this->cleanupMemory();
+                Yii::info("Completed $planName from $sheetName: " . json_encode($planServicesResult), 'import');
+            }
+            
+            // Build success message
+            $message = "¡Importación completada!<br>";
+            $message .= "Planes importados: " . count($importedPlans) . "<br>";
+            $message .= "Servicios en cobertura: {$servicesResult['imported']}<br>";
+            $message .= "Servicios omitidos: {$servicesResult['skipped']}";
+            
+            if (!empty($servicesResult['warnings'])) {
+                $message .= "<br>Advertencias: " . count($servicesResult['warnings']);
+            }
+
+            $finalResult = [
+                'success' => true,
+                'message' => $message,
+                'debug_info' => [
+                    'imported_plans' => array_keys($importedPlans),
+                    'services_result' => $servicesResult
+                ]
+            ];
+            
+            // Final progress update
+            $this->updateProgress($taskId, 100, 'Import completed successfully!', true, $finalResult);
+
+        } catch (\Exception $e) {
+            Yii::error("❌ Import error (Task: $taskId): " . $e->getMessage(), 'import');
+            Yii::error("Stack trace: " . $e->getTraceAsString(), 'import');
+            $finalResult = [
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage(),
+                'detailed_error' => $e->getTraceAsString()
+            ];
+            $this->updateProgress($taskId, 100, 'An error occurred during import.', true, $finalResult);
+        } finally {
+            // Clean up the temporary file
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        }
     }
-    
-    Yii::info("✅ Created new baremo: $serviceName", 'import');
-} elseif (!$baremo) {
-    // Skip if no baremo found and not required
-    $warn = "Row $rowNumber: No existing baremo found for service '$serviceName' and service not required. Skipped.";
-    $warnings[] = $warn;
-    Yii::warning($warn, 'import');
-    $servicesSkippedCount++;
-    continue;
-}
+
+    /**
+     * NEW: Checks the status of an ongoing import task
+     */
+    public function actionImportStatus($taskId)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $status = Yii::$app->cache->get($taskId);
+
+        if ($status === false) {
+            return ['progress' => 100, 'message' => 'Task not found or expired.', 'finished' => true, 'result' => ['success' => false, 'message' => 'Task ID not found.']];
+        }
+
+        return $status;
+    }
+
+    /**
+     * NEW: Helper function to update the progress in the cache
+     */
+    private function updateProgress($taskId, $progress, $message, $finished = false, $result = null, $details = [])
+    {
+        $currentStatus = Yii::$app->cache->get($taskId) ?: [];
+        
+        $data = [
+            'progress' => min(100, intval($progress)),
+            'message' => $message,
+            'finished' => $finished,
+            'result' => $result,
+            'details' => array_merge($currentStatus['details'] ?? [], $details)
+        ];
+        Yii::$app->cache->set($taskId, $data, 3600); // Cache for 1 hour
+        
+        // Log progress for debugging
+        Yii::info("Progress Update (Task: $taskId): $progress% - $message", 'import');
+    }
+
+    /**
+     * NEW: Process services for a specific plan with progress tracking
+     */
+    private function processPlanServicesWithProgress($servicesRows, $planId, $clinicaId, $planName, $sheetName, $taskId, $servicesProcessedSoFar, $totalServices, &$servicesResult)
+    {
+        $planServicesResult = [
+            'imported' => 0,
+            'skipped' => 0,
+            'warnings' => []
+        ];
+
+        if (count($servicesRows) < 2) {
+            $planServicesResult['warnings'][] = "Services sheet for '$planName' has insufficient data";
+            return $planServicesResult;
+        }
+
+        $totalRows = count($servicesRows);
+        
+        // Pre-load existing baremos for this clinic to reduce database queries
+        $existingBaremos = Baremo::find()
+            ->where(['clinica_id' => $clinicaId])
+            ->indexBy(function($baremo) {
+                return $baremo->nombre_servicio . '|' . $baremo->descripcion;
+            })
+            ->all();
+        
+        // Pre-load existing plan services to reduce database queries
+        $existingPlanServices = PlanesItemsCobertura::find()
+            ->where(['plan_id' => $planId])
+            ->indexBy('baremo_id')
+            ->all();
+
+        // Start from row 2 (index 1) - skip header row
+        for ($j = 1; $j < $totalRows; $j++) {
+            $row = $servicesRows[$j];
+            $rowNumber = $j + 1;
+
+            // Update progress for each service - MORE FREQUENT UPDATES
+            $currentServiceCount = $servicesProcessedSoFar + $j;
+            if ($totalServices > 0) {
+                $progress = 45 + round(($currentServiceCount / $totalServices) * 50); // Services processing is ~50% of the work
+            } else {
+                $progress = 95; // If no services, jump to near completion
+            }
+
+            // Update progress every 3 rows or at important milestones
+            if ($j % 3 === 0 || $j === 1 || $j === $totalRows - 1) {
+                $this->updateProgress($taskId, $progress, "Processing services for: $planName", [
+                    'services_processed' => $currentServiceCount,
+                    'current_plan' => $planName,
+                    'current_sheet' => $sheetName
+                ]);
+                
+                // Small delay to show progress more smoothly
+                usleep(50000); // 0.05 second delay
+            }
+
+            $area = trim($row[0] ?? ''); // Column A - Área
+            $serviceName = trim($row[1] ?? ''); // Column B - Nombre del Servicio
+            $description = trim($row[2] ?? ''); // Column C - Descripción
+            $limitValue = trim($row[3] ?? ''); // Column D - Límite
+            $plazoValue = trim($row[4] ?? ''); // Column E - Plazo
+            
+            // Skip empty service names
+            if (empty($serviceName)) {
+                $planServicesResult['skipped']++;
+                continue;
+            }
+
+            // Skip if both are N/A
+            if ($limitValue === 'N/A' && $plazoValue === 'N/A') {
+                $planServicesResult['skipped']++;
+                continue;
+            }
+
+            try {
+                // Find or create baremo using pre-loaded data
+                $baremoKey = $serviceName . '|' . $description;
+                $baremo = $existingBaremos[$baremoKey] ?? null;
+
+                if (!$baremo) {
+                    $baremo = new Baremo();
+                    $baremo->clinica_id = $clinicaId;
+                    $baremo->nombre_servicio = $serviceName;
+                    $baremo->descripcion = $description;
+                    $baremo->costo = 0;
+                    $baremo->precio = 0;
+                    $baremo->estatus = 'Activo';
                     
-                    // Delete any existing service for this plan+baremo combination
-                    PlanesItemsCobertura::deleteAll(['plan_id' => $planId, 'baremo_id' => $baremo->id]);
+                    if (!$baremo->save()) {
+                        $errors = implode(', ', $baremo->getFirstErrors());
+                        $planServicesResult['warnings'][] = "Failed to create baremo for '$serviceName': $errors";
+                        $planServicesResult['skipped']++;
+                        continue;
+                    }
                     
-                    // Create new service association
+                    // Add to cache for future use in this batch
+                    $existingBaremos[$baremoKey] = $baremo;
+                }
+
+                // Check if this service-plan combination already exists
+                $existingItem = $existingPlanServices[$baremo->id] ?? null;
+                    
+                if ($existingItem) {
+                    // Update existing instead of creating new
+                    $item = $existingItem;
+                } else {
+                    // Create new service coverage
                     $item = new PlanesItemsCobertura();
-                    
                     $item->plan_id = $planId;
                     $item->baremo_id = $baremo->id;
                     $item->nombre_servicio = $baremo->nombre_servicio;
-                    
-                    // Process values with the NEW conditions
-                    $item->plazo_espera = $this->processPlazoValue($plazoValue);
-                    $item->cantidad_limite = $this->processLimitValue($limitValue);
-                    $item->porcentaje_cobertura = 100;
+                }
+                
+                $item->plazo_espera = $this->processPlazoValue($plazoValue);
+                $item->cantidad_limite = $this->processLimitValue($limitValue);
+                $item->porcentaje_cobertura = 100;
 
-                    if (!$item->save()) {
-                        $errorMessages = implode(', ', ArrayHelper::getColumn($item->getErrors(), 0, false));
-                        $errors[] = "Row $rowNumber: Error associating service '$serviceName' to plan '$planName': " . $errorMessages;
-                        Yii::error("❌ Save error: " . $errorMessages, 'import');
-                        $servicesSkippedCount++;
-                        continue;
+                if ($item->save()) {
+                    $planServicesResult['imported']++;
+                    
+                    // Add to cache if it's a new item
+                    if (!$existingItem) {
+                        $existingPlanServices[$baremo->id] = $item;
                     }
                     
-                    $servicesImportedCount++;
-                    Yii::info("✅ Successfully imported service '$serviceName' for plan '$planName'", 'import');
+                } else {
+                    $errors = implode(', ', $item->getFirstErrors());
+                    $planServicesResult['warnings'][] = "Failed to add '$serviceName' to '$planName': $errors";
+                    $planServicesResult['skipped']++;
                 }
+                
+            } catch (\Exception $e) {
+                $errorMsg = "Error processing row $rowNumber for '$serviceName': " . $e->getMessage();
+                $planServicesResult['warnings'][] = $errorMsg;
+                $planServicesResult['skipped']++;
+                Yii::error("❌ $errorMsg", 'import');
+                continue;
             }
             
-            // 8. Handle results
-            if (!empty($errors)) {
-                $transaction->rollBack();
-                $message = "Errors found. Importation reverted: " . implode('; ', array_slice($errors, 0, 5));
-                return ['success' => false, 'message' => $message];
+            // Memory management every 10 rows
+            if ($rowNumber % 10 === 0) {
+                $this->cleanupMemory();
             }
-            
-            $transaction->commit();
-            
-            // Build success message with all counts
-            $successMessage = "¡Importación Exitosa!<br>";
-            $successMessage .= "Se importaron {$importedCount} planes correctamente.<br>";
-            $successMessage .= "Se importaron {$servicesImportedCount} servicios en planes_items_cobertura correctamente.<br>";
-            $successMessage .= "Se omitieron {$servicesSkippedCount} combinaciones servicio-plan.";
-            
-            if (!empty($warnings)) {
-                $successMessage .= "<br>Advertencias: " . count($warnings) . " servicios tuvieron problemas durante la importación.";
-                Yii::warning("Import warnings count: " . count($warnings), 'import');
-            }
-            
-            return [
-                'success' => true,
-                'imported' => $importedCount,
-                'services_imported' => $servicesImportedCount,
-                'services_skipped' => $servicesSkippedCount,
-                'warnings_count' => count($warnings),
-                'message' => $successMessage
-            ];
-            
-        } catch (\Exception $e) {
-            $transaction->rollBack();
-            Yii::error("❌ Transaction error: " . $e->getMessage(), 'import');
-            return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+        }
+
+        Yii::info("✅ Completed processing services for plan '$planName': " . json_encode($planServicesResult), 'import');
+        return $planServicesResult;
+    }
+
+    /**
+     * Force memory cleanup and garbage collection
+     */
+    private function cleanupMemory()
+    {
+        if (function_exists('gc_mem_caches')) {
+            gc_mem_caches();
+        }
+        if (function_exists('gc_collect_cycles')) {
+            gc_collect_cycles();
         }
         
-    } catch (\Exception $e) {
-        Yii::error("❌ File load error: " . $e->getMessage(), 'import');
-        return ['success' => false, 'message' => 'File read error: ' . $e->getMessage()];
+        // Clear some global arrays if they exist
+        if (isset($GLOBALS['_SESSION'])) {
+            unset($GLOBALS['_SESSION']['temp_data']);
+        }
     }
-}
 
-/**
- * Determine if a service should be created if not found
- * You can customize this logic based on your business rules
- */
-private function isServiceRequired($serviceName)
-{
-    // List of services that should always be created
-    $requiredServices = [
-        // Add critical service names here that must exist
-    ];
-    
-    // Or create all services by default (current behavior)
-    return true;
-    
-    // Or be more restrictive:
-    // return in_array($serviceName, $requiredServices);
-}
+    /**
+     * Process limit value from the new format
+     */
+    private function processLimitValue($limitValue)
+    {
+        $limitValue = trim($limitValue);
+        
+        if ($limitValue === 'N/A') {
+            return 0; // 'N/A' for Límite → Límite = 0
+        }
+        
+        if ($limitValue === 'S/L') {
+            return 99; // 'S/L' → Límite = 99
+        }
+        
+        if (strpos($limitValue, '1 x Emerg') !== false) {
+            return 99; // '1 x Emerg' → Límite = 99
+        }
+        
+        if ($limitValue === 'Criterio Med.') {
+            return 99; // 'Criterio Med.' → Límite = 99
+        }
+        
+        if ($limitValue === 'Plan Opcional') {
+            return 0; // 'Plan Opcional' → Límite = 0
+        }
+        
+        if ($limitValue === '') {
+            return 0; // Empty → Límite = 0
+        }
+        
+        if (is_numeric($limitValue)) {
+            return intval($limitValue);
+        }
+        
+        return 1; // Default value for unknown text
+    }
 
-/**
- * Process limit value from the new format - UPDATED WITH NEW CONDITIONS
- */
-private function processLimitValue($limitValue)
-{
-    $limitValue = trim($limitValue);
-    
-    // NEW CONDITIONS:
-    if ($limitValue === 'N/A') {
-        return 0; // 'N/A' for Límite → Límite = 0
+    /**
+     * Process plazo value from the new format
+     */
+    private function processPlazoValue($plazoValue)
+    {
+        $plazoValue = trim($plazoValue);
+        
+        if ($plazoValue === 'Sin P/E') {
+            return '0'; // 'Sin P/E' → Plazo = 0
+        }
+        
+        if ($plazoValue === 'N/A') {
+            return '99'; // 'N/A' for Plazo → Plazo = 99
+        }
+        
+        if ($plazoValue === 'Criterio Med.') {
+            return '0'; // Medical criteria = no waiting period
+        }
+        
+        if ($plazoValue === 'Plan Opcional') {
+            return '0'; // Optional plan = no waiting period
+        }
+        
+        if (empty($plazoValue)) {
+            return '0'; // Default value for empty
+        }
+        
+        if (is_numeric($plazoValue)) {
+            return (string)intval($plazoValue);
+        }
+        
+        return $plazoValue; // Keep original text value
     }
-    
-    if ($limitValue === 'S/L') {
-        return 99; // 'S/L' → Límite = 99
-    }
-    
-    if (strpos($limitValue, '1 x Emerg') !== false) {
-        return 99; // '1 x Emerg' → Límite = 99
-    }
-    
-    if ($limitValue === 'Criterio Med.') {
-        return 99; // 'Criterio Med.' → Límite = 99
-    }
-    
-    if ($limitValue === 'Plan Opcional') {
-        return 0; // 'Plan Opcional' → Límite = 0
-    }
-    
-    // New processLimitValue (AFTER the last fix)
-    if ($limitValue === '') {
-        return null; // 💡 Signal to the main import loop to SKIP
-}
-    
-    if (is_numeric($limitValue)) {
-        return intval($limitValue);
-    }
-    
-    return 1; // Default value for unknown text
-}
 
-/**
- * Process plazo value from the new format - UPDATED WITH NEW CONDITIONS
- */
-private function processPlazoValue($plazoValue)
-{
-    $plazoValue = trim($plazoValue);
-    
-    // NEW CONDITIONS:
-    if ($plazoValue === 'Sin P/E') {
-        return '0'; // 'Sin P/E' → Plazo = 0
+    /**
+     * Parse currency values (remove $ and commas)
+     */
+    private function parseCurrency($value)
+    {
+        if (empty($value)) {
+            return 0;
+        }
+        
+        // Remove currency symbols and commas
+        $cleaned = preg_replace('/[^\d.]/', '', $value);
+        return floatval($cleaned);
     }
-    
-    if ($plazoValue === 'N/A') {
-        return '99'; // 'N/A' for Plazo → Plazo = 99
-    }
-    
-    if ($plazoValue === 'Criterio Med.') {
-        return '0'; // Medical criteria = no waiting period
-    }
-    
-    if ($plazoValue === 'Plan Opcional') {
-        return '0'; // Optional plan = no waiting period
-    }
-    
-    if (empty($plazoValue)) {
-        return '0'; // Default value for empty
-    }
-    
-    if (is_numeric($plazoValue)) {
-        return (string)intval($plazoValue);
-    }
-    
-    return $plazoValue; // Keep original text value
-}
-
-/**
- * Parse currency values (remove $ and commas) Test
- */
-private function parseCurrency($value)
-{
-    if (empty($value)) {
-        return 0;
-    }
-    
-    // Remove currency symbols and commas
-    $cleaned = preg_replace('/[^\d.]/', '', $value);
-    return floatval($cleaned);
-}
 }

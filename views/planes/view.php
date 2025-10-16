@@ -32,7 +32,7 @@ if (!empty($clinica_id)) {
     $clinica = (object)['id' => null, 'nombre' => 'Clínica Desconocida'];
 }
 
-$this->title = 'DETALLES DEL PLÁN: ' . Html::encode($model->nombre);
+$this->title = 'DETALLES DEL PLAN: ' . Html::encode($model->nombre);
 
 // Lógica de permisos
 $rol = UserHelper::getMyRol();
