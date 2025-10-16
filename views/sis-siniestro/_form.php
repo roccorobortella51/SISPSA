@@ -233,6 +233,17 @@ $css = <<<CSS
     margin-top: 10px;
 }
 
+/* Estilos para mensajes de restricciones */
+.hint-block {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.hint-block i {
+    margin-right: 5px;
+}
+
 @media (max-width: 768px) {
     .sis-siniestro-form {
         padding: 15px;
@@ -313,19 +324,82 @@ $this->registerCss($css);
                 <div class="col-md-12">
                     <?php
                     // Consulta corregida para listar los baremos de ese plan y clínica
-                    $baremosDisponibles = \yii\helpers\ArrayHelper::map(
-                        \app\models\PlanesItemsCobertura::find()
-                            ->joinWith('baremo')
-                            ->joinWith('plan')
-                            ->joinWith('baremo.area')
-                            ->where(['planes.clinica_id' => $afiliado->clinica_id])
-                            ->andWhere(['baremo.estatus' => 'Activo'])
-                            ->andWhere(['planes.id' => $afiliado->plan_id])
-                            ->select(["CONCAT('AREA: ', area.nombre, ' - SERVICIO: ', baremo.nombre_servicio, '- DESCRIPCIÓN: ', baremo.descripcion) AS nombre_servicio", "baremo.id as id"])
-                            ->all(),
-                        'id',
-                        "nombre_servicio"
-                    );
+                    $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
+                        ->joinWith('baremo')
+                        ->joinWith('plan')
+                        ->joinWith('baremo.area')
+                        ->where(['planes.clinica_id' => $afiliado->clinica_id])
+                        ->andWhere(['baremo.estatus' => 'Activo'])
+                        ->andWhere(['planes.id' => $afiliado->plan_id])
+                        ->all();
+                    
+                    // Crear array de baremos con información adicional
+                    $baremosDisponibles = [];
+                    $baremosInfo = [];
+                    
+                    foreach ($planesItemsCobertura as $item) {
+                        if ($item->baremo) {
+                            $restricciones = [];
+                            
+                            // Agregar información de plazo de espera
+                            if (!empty($item->plazo_espera)) {
+                                $restricciones[] = "Plazo: {$item->plazo_espera}";
+                            }
+                            
+                            // Agregar información de límite de uso (ANUAL)
+                            if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
+                                // Obtener el contrato para calcular el año de vigencia
+                                $contrato = \app\models\Contratos::find()
+                                    ->where(['user_id' => $afiliado->id])
+                                    ->andWhere(['estatus' => 'Activo'])
+                                    ->orderBy(['created_at' => SORT_DESC])
+                                    ->one();
+                                
+                                if ($contrato) {
+                                    $fechaInicio = new \DateTime($contrato->fecha_ini);
+                                    $fechaActual = new \DateTime();
+                                    
+                                    // Calcular año de vigencia
+                                    $anioVigencia = $fechaInicio->diff($fechaActual)->y;
+                                    
+                                    // Calcular fechas del período anual actual
+                                    $inicioAnio = clone $fechaInicio;
+                                    $inicioAnio->modify("+{$anioVigencia} years");
+                                    
+                                    $finAnio = clone $inicioAnio;
+                                    $finAnio->modify("+1 year -1 day");
+                                    
+                                    // Contar cuántas veces se ha usado en el año actual
+                                    $vecesUsado = \app\models\SisSiniestroBaremo::find()
+                                        ->joinWith('siniestro')
+                                        ->where(['sis_siniestro_baremo.baremo_id' => $item->baremo_id])
+                                        ->andWhere(['sis_siniestro.iduser' => $afiliado->id])
+                                        ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
+                                        ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnio->format('Y-m-d')])
+                                        ->andWhere(['<=', 'sis_siniestro.fecha', $finAnio->format('Y-m-d')])
+                                        ->count();
+                                    
+                                    $restricciones[] = "Límite anual: {$vecesUsado}/{$item->cantidad_limite} usos";
+                                } else {
+                                    $restricciones[] = "Límite anual: {$item->cantidad_limite} usos";
+                                }
+                            }
+                            
+                            $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
+                            $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+                            
+                            if (!empty($restricciones)) {
+                                $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
+                            }
+                            
+                            $baremosDisponibles[$item->baremo_id] = $nombreCompleto;
+                            $baremosInfo[$item->baremo_id] = [
+                                'plazo_espera' => $item->plazo_espera,
+                                'cantidad_limite' => $item->cantidad_limite,
+                                'veces_usado' => $vecesUsado ?? 0
+                            ];
+                        }
+                    }
 
                     // Obtener baremos seleccionados
                     $selectedBaremos = [];
@@ -364,7 +438,7 @@ $this->registerCss($css);
                                 'tags' => false,
                                 'tokenSeparators' => [',', ' '],
                             ],
-                        ])->label('Baremos') ?>
+                        ])->label('Baremos')->hint('<i class="fas fa-info-circle"></i> Los baremos muestran sus restricciones: <strong>Plazo de espera</strong> y <strong>Límite de uso</strong>. El sistema validará automáticamente si puede usar cada baremo.') ?>
                     </div>
                     
                     <!-- Contenedor para mostrar el cálculo en tiempo real -->
