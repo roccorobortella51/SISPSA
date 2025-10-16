@@ -323,7 +323,7 @@ $this->registerCss($css);
             <div class="row">
                 <div class="col-md-12">
                     <?php
-                    // Consulta corregida para listar los baremos de ese plan y clínica
+                    // Consulta para listar los baremos de ese plan y clínica
                     $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
                         ->joinWith('baremo')
                         ->joinWith('plan')
@@ -343,7 +343,7 @@ $this->registerCss($css);
                             
                             // Agregar información de plazo de espera
                             if (!empty($item->plazo_espera)) {
-                                $restricciones[] = "Plazo: {$item->plazo_espera}";
+                                $restricciones[] = "Plazo: {$item->plazo_espera} meses";
                             }
                             
                             // Agregar información de límite de uso (ANUAL)
@@ -386,7 +386,8 @@ $this->registerCss($css);
                             }
                             
                             $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
-                            $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+                            $descripcion = $item->baremo->descripcion ? "  {$item->baremo->descripcion}" : '';
+                            $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio} - DESCRIPCIÓN: {$descripcion}";
                             
                             if (!empty($restricciones)) {
                                 $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
