@@ -292,25 +292,8 @@ public function actionUpdate($id)
         $transaction = Yii::$app->db->beginTransaction();
         try {
             
-            // VALIDAR BAREMOS ANTES DE ACTUALIZAR
-            $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
-            if (!is_array($baremoIds)) {
-                $baremoIds = [];
-            }
-            
-            $validacion = SisSiniestro::validarBaremosConPlan($baremoIds, $model->iduser);
-            
-            if (!$validacion['valid']) {
-                $transaction->rollBack();
-                foreach ($validacion['errors'] as $error) {
-                    Yii::$app->session->setFlash('error', $error);
-                }
-                return $this->render('update', [
-                    'model' => $model,
-                    'afiliado' => $afiliado,
-                    'baremos' => $baremos
-                ]);
-            }
+            // NO VALIDAR BAREMOS EN UPDATE - Solo se valida en CREATE
+            // La validación de límites solo aplica al crear nuevos siniestros
             
             if ($model->save(false)) { 
 
