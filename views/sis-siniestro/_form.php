@@ -387,6 +387,12 @@ $this->registerCss($css);
                             
                             $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
                             $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+                            // ----------------------------------------------------------------------
+                            // NUEVA SECCIÓN: Agregar la descripción si existe
+                            if (!empty($item->baremo->descripcion)) {
+                                $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
+                            }
+                            // ----------------------------------------------------------------------
                             
                             if (!empty($restricciones)) {
                                 $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
