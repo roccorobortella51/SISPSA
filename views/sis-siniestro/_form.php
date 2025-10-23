@@ -277,7 +277,6 @@ $css = <<<CSS
 #baremos-tabla-container .cost-col {
     font-weight: 700;
     text-align: right;
-    color: #007bff;
     width: 120px;
 }
 
@@ -377,12 +376,12 @@ $this->registerCss($css);
                     foreach ($planesItemsCobertura as $item) {
                         if ($item->baremo) {
                             $restricciones = [];
-                            $costoBaremo = $item->baremo->costo ?? 0; // ✅ CORRECCIÓN CLAVE: Usar 'costo'
+                            $costoBaremo = $item->baremo->costo ?? 0; 
 
-                            // Agregar información de plazo de espera
+                        /*    // Agregar información de plazo de espera
                             if (!empty($item->plazo_espera)) {
                                 $restricciones[] = "Plazo: {$item->plazo_espera} meses";
-                            }
+                            }*/
                             
                             // Agregar información de límite de uso (ANUAL)
                             if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
@@ -418,9 +417,15 @@ $this->registerCss($css);
                                         ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnio->format('Y-m-d')])
                                         ->andWhere(['<=', 'sis_siniestro.fecha', $finAnio->format('Y-m-d')])
                                         ->count();
+                                        
+                                    // LÓGICA DE FILTRADO INTEGRADA: Si el límite ya se alcanzó o se superó, saltar este baremo
+                                    if ($vecesUsado >= $item->cantidad_limite) {
+                                        continue; 
+                                    }
                                     
                                     $restricciones[] = "Límite anual: {$vecesUsado}/{$item->cantidad_limite} usos";
                                 } else {
+                                    // Si no hay contrato, solo mostramos el límite (no podemos calcular el uso)
                                     $restricciones[] = "Límite anual: {$item->cantidad_limite} usos";
                                 }
                             }
@@ -506,6 +511,8 @@ $this->registerCss($css);
                     <div class="costo-total-container" id="costo-total-container" style="display: none;">
                         <div class="costo-total-label">Total calculado:</div>
                         <div class="costo-total-value" id="costo-total-value">$0.00</div>
+                        <!-- Elemento para mostrar advertencia de límite de cobertura -->
+                        <div id="cobertura-warning" class="mt-2 p-2 rounded-3 text-danger" style="display: none; background-color: #ffe0b2; border: 1px solid #ff9800;"></div>
                     </div>
                 </div>
                 
@@ -714,6 +721,8 @@ function calcularTotalYTabla() {
         $('#costo-total-container').hide();
         $('#baremos-tabla-container').hide();
         $('#costo-total-input').val('0.00');
+        // También ocultar la advertencia
+        $('#cobertura-warning').hide().empty(); 
         return;
     }
 
@@ -731,6 +740,7 @@ function calcularTotalYTabla() {
                 restricciones.push('Plazo: ' + item.plazo_espera + ' meses');
             }
             if (item.cantidad_limite > 0) {
+                // Notar que la lógica de filtrado ocurre en PHP. Esto solo muestra el estado.
                 restricciones.push('Límite: ' + item.veces_usado + '/' + item.cantidad_limite + ' usos');
             }
             var restriccionesHtml = restricciones.join('<br>');
@@ -753,11 +763,17 @@ function calcularTotalYTabla() {
     $('#costo-total-input').val(total.toFixed(2));
     $('#costo-total-container').show();
     
-    // 4. Verificar límite disponible
+    // 4. Verificar límite disponible (REEMPLAZO DE ALERT)
     var totalDisponible = $totalDisponible; // PHP variable
+    var warningContainer = $('#cobertura-warning');
+    
+    warningContainer.hide().empty(); // Resetear advertencia
+    
     if (total > totalDisponible) {
-        console.warn('Advertencia: El costo total (' + total.toFixed(2) + ') supera el total disponible (' + totalDisponible.toFixed(2) + ') del afiliado.');
-        alert('¡Advertencia! El costo total (' + total.toFixed(2) + ') supera el total disponible (' + totalDisponible.toFixed(2) + ') del afiliado.');
+        var warningMessage = '¡Advertencia! El costo total ($' + total.toFixed(2) + ') supera el total disponible ($' + totalDisponible.toFixed(2) + ') del afiliado. La suma no será cubierta en su totalidad.';
+        console.warn(warningMessage);
+        // Mostrar el mensaje de advertencia en el contenedor
+        warningContainer.html('<i class="fas fa-exclamation-triangle me-2"></i>' + warningMessage).show();
     }
 }
 
@@ -774,4 +790,5 @@ $(document).ready(function() {
 });
 JS;
 
-$this->registerJs($js);
+$this->registerJs($js, View::POS_READY);
+?>
