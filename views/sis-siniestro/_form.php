@@ -3,7 +3,6 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
-use kartik\date\DatePicker;
 use yii\web\View;
 
 /* @var $this yii\web\View */
@@ -23,7 +22,7 @@ $sumatoriaSiniestros = \app\models\SisSiniestro::find()
 
 $totalDisponible = $precioPlan - $sumatoriaSiniestros;
 
-// CSS personalizado
+// CSS personalizado (Mantengo el CSS intacto)
 $css = <<<CSS
 /*.sis-siniestro-form {
     background-color: #f8f9fa;
@@ -244,6 +243,43 @@ $css = <<<CSS
     margin-right: 5px;
 }
 
+/* Estilos de la tabla de baremos */
+#baremos-tabla-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+#baremos-tabla-container table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 5px; /* Espacio entre filas */
+}
+
+#baremos-tabla-container th, #baremos-tabla-container td {
+    padding: 10px;
+    text-align: left;
+}
+
+#baremos-tabla-container th {
+    background-color: #f1f1f1;
+    font-weight: 600;
+}
+
+#baremos-tabla-container tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#baremos-tabla-container tr {
+    border-bottom: 1px solid #eee;
+    border-radius: 6px;
+}
+
+#baremos-tabla-container .cost-col {
+    font-weight: 700;
+    text-align: right;
+    width: 120px;
+}
+
 @media (max-width: 768px) {
     .sis-siniestro-form {
         padding: 15px;
@@ -299,7 +335,6 @@ $this->registerCss($css);
             </h3>
         </div>
         <div class="ms-panel-body">
-            <!-- Información del plan y total disponible -->
             <div class="plan-info-container">
                 <div class="plan-info-title">Información del Plan y Límites</div>
                 <div class="plan-info-item">
@@ -323,7 +358,7 @@ $this->registerCss($css);
             <div class="row">
                 <div class="col-md-12">
                     <?php
-                    // Consulta corregida para listar los baremos de ese plan y clínica
+                    // Consulta para listar los baremos de ese plan y clínica
                     $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
                         ->joinWith('baremo')
                         ->joinWith('plan')
@@ -336,15 +371,17 @@ $this->registerCss($css);
                     // Crear array de baremos con información adicional
                     $baremosDisponibles = [];
                     $baremosInfo = [];
+                    $vecesUsado = 0; // Inicializar fuera del bucle
                     
                     foreach ($planesItemsCobertura as $item) {
                         if ($item->baremo) {
                             $restricciones = [];
-                            
-                            // Agregar información de plazo de espera
+                            $costoBaremo = $item->baremo->costo ?? 0; 
+
+                        /*    // Agregar información de plazo de espera
                             if (!empty($item->plazo_espera)) {
-                                $restricciones[] = "Plazo: {$item->plazo_espera}";
-                            }
+                                $restricciones[] = "Plazo: {$item->plazo_espera} meses";
+                            }*/
                             
                             // Agregar información de límite de uso (ANUAL)
                             if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
@@ -354,6 +391,8 @@ $this->registerCss($css);
                                     ->andWhere(['estatus' => 'Activo'])
                                     ->orderBy(['created_at' => SORT_DESC])
                                     ->one();
+                                
+                                $vecesUsado = 0; // Resetear para cada baremo
                                 
                                 if ($contrato) {
                                     $fechaInicio = new \DateTime($contrato->fecha_ini);
@@ -378,15 +417,22 @@ $this->registerCss($css);
                                         ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnio->format('Y-m-d')])
                                         ->andWhere(['<=', 'sis_siniestro.fecha', $finAnio->format('Y-m-d')])
                                         ->count();
+                                        
+                                    // LÓGICA DE FILTRADO INTEGRADA: Si el límite ya se alcanzó o se superó, saltar este baremo
+                                    if ($vecesUsado >= $item->cantidad_limite) {
+                                        continue; 
+                                    }
                                     
                                     $restricciones[] = "Límite anual: {$vecesUsado}/{$item->cantidad_limite} usos";
                                 } else {
+                                    // Si no hay contrato, solo mostramos el límite (no podemos calcular el uso)
                                     $restricciones[] = "Límite anual: {$item->cantidad_limite} usos";
                                 }
                             }
                             
                             $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
-                            $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+                            $descripcion = $item->baremo->descripcion ? "  {$item->baremo->descripcion}" : '';
+                            $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio} - DESCRIPCIÓN: {$descripcion}";
                             
                             if (!empty($restricciones)) {
                                 $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
@@ -394,9 +440,12 @@ $this->registerCss($css);
                             
                             $baremosDisponibles[$item->baremo_id] = $nombreCompleto;
                             $baremosInfo[$item->baremo_id] = [
+                                'nombre' => $item->baremo->nombre_servicio,
+                                'area' => $area,
                                 'plazo_espera' => $item->plazo_espera,
                                 'cantidad_limite' => $item->cantidad_limite,
-                                'veces_usado' => $vecesUsado ?? 0
+                                'veces_usado' => $vecesUsado,
+                                'costo' => $costoBaremo, // El costo para ser usado en JS
                             ];
                         }
                     }
@@ -438,13 +487,32 @@ $this->registerCss($css);
                                 'tags' => false,
                                 'tokenSeparators' => [',', ' '],
                             ],
-                        ])->label('Baremos')->hint('<i class="fas fa-info-circle"></i> Los baremos muestran sus restricciones: <strong>Plazo de espera</strong> y <strong>Límite de uso</strong>. El sistema validará automáticamente si puede usar cada baremo.') ?>
+                        ])->label('Baremos')->hint('Los baremos muestran sus restricciones: <strong>Plazo de espera</strong> y <strong>Límite de uso</strong>. El sistema validará automáticamente si puede usar cada baremo.') ?>
+                    </div>
+
+                    <div id="baremos-tabla-container" style="display: none;">
+                        <h4 class="section-title mb-3">
+                            <i class="fas fa-list-alt text-blue-600"></i> Resumen de Servicios
+                        </h4>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Servicio</th>
+                                    <th>Área</th>
+                                    <th class="text-center">Restricciones</th>
+                                    <th class="cost-col">Costo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="baremos-tabla-body">
+                                </tbody>
+                        </table>
                     </div>
                     
-                    <!-- Contenedor para mostrar el cálculo en tiempo real -->
                     <div class="costo-total-container" id="costo-total-container" style="display: none;">
                         <div class="costo-total-label">Total calculado:</div>
                         <div class="costo-total-value" id="costo-total-value">$0.00</div>
+                        <!-- Elemento para mostrar advertencia de límite de cobertura -->
+                        <div id="cobertura-warning" class="mt-2 p-2 rounded-3 text-danger" style="display: none; background-color: #ffe0b2; border: 1px solid #ff9800;"></div>
                     </div>
                 </div>
                 
@@ -453,8 +521,8 @@ $this->registerCss($css);
                         'class' => 'form-control form-control-lg',
                         'placeholder' => '0.00',
                         'autocomplete' => 'off',
-                        'id' => 'costo-total-input', // Agregamos un ID para el campo
-                        'readonly' => true, // Lo hacemos de solo lectura ya que se calculará automáticamente
+                        'id' => 'costo-total-input',
+                        'readonly' => true,
                     ])->label('Total') ?>
                 </div>
                 
@@ -634,63 +702,93 @@ $this->registerCss($css);
 </div>
 
 <?php
-// JavaScript para calcular la suma de los baremos seleccionados
+// Codificar la información de los baremos para usarla en JavaScript
+$baremosInfoJson = json_encode($baremosInfo);
+
+// JavaScript para calcular la suma de los baremos seleccionados y generar la tabla
 $js = <<<JS
-// Función para calcular el total
-function calcularTotal() {
+// Información de los baremos, incluyendo el costo
+var baremosInfo = $baremosInfoJson; 
+
+// Función para calcular el total y renderizar la tabla
+function calcularTotalYTabla() {
     var baremosSeleccionados = $('#baremos-select').val();
+    var total = 0.00;
+    var tablaHtml = '';
     
+    // 1. Ocultar contenedores si no hay selección
     if (!baremosSeleccionados || baremosSeleccionados.length === 0) {
         $('#costo-total-container').hide();
+        $('#baremos-tabla-container').hide();
         $('#costo-total-input').val('0.00');
+        // También ocultar la advertencia
+        $('#cobertura-warning').hide().empty(); 
         return;
     }
-    
-    // Mostrar cargando
-    $('#costo-total-value').html('Calculando...');
-    $('#costo-total-container').show();
-    
-    // Hacer la petición AJAX al servidor
-    $.ajax({
-        url: 'calcular-total', // Necesitarás crear esta acción en tu controlador
-        type: 'POST',
-        data: {
-            baremos: baremosSeleccionados
-        },
-        success: function(response) {
-            if (response.success) {
-                var total = parseFloat(response.total);
-                $('#costo-total-value').html('$' + total.toFixed(2));
-                $('#costo-total-input').val(total.toFixed(2));
-                
-                // Verificar si el total supera el disponible
-                var totalDisponible = $totalDisponible; // PHP variable
-                if (total > totalDisponible) {
-                    alert('¡Advertencia! El costo total (' + total.toFixed(2) + ') supera el total disponible (' + totalDisponible.toFixed(2) + ') del afiliado.');
-                }
-            } else {
-                console.error('Error al calcular el total:', response.error);
-                $('#costo-total-container').hide();
+
+    // 2. Procesar y construir la tabla
+    baremosSeleccionados.forEach(function(baremoId) {
+        var item = baremosInfo[baremoId];
+        
+        if (item && item.costo) {
+            var costo = parseFloat(item.costo);
+            total += costo;
+            
+            // Construir la cadena de restricciones
+            var restricciones = [];
+            if (item.plazo_espera) {
+                restricciones.push('Plazo: ' + item.plazo_espera + ' meses');
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error en la petición AJAX:', error);
-            $('#costo-total-container').hide();
+            if (item.cantidad_limite > 0) {
+                // Notar que la lógica de filtrado ocurre en PHP. Esto solo muestra el estado.
+                restricciones.push('Límite: ' + item.veces_usado + '/' + item.cantidad_limite + ' usos');
+            }
+            var restriccionesHtml = restricciones.join('<br>');
+            
+            // Construir la fila de la tabla
+            tablaHtml += '<tr>';
+            tablaHtml += '<td>' + item.nombre + '</td>';
+            tablaHtml += '<td>' + item.area + '</td>';
+            tablaHtml += '<td class="text-center">' + (restriccionesHtml || 'Ninguna') + '</td>';
+            tablaHtml += '<td class="cost-col">$' + costo.toFixed(2) + '</td>';
+            tablaHtml += '</tr>';
         }
     });
+
+    // 3. Renderizar la tabla y el total
+    $('#baremos-tabla-body').html(tablaHtml);
+    $('#baremos-tabla-container').show();
+    
+    $('#costo-total-value').html('$' + total.toFixed(2));
+    $('#costo-total-input').val(total.toFixed(2));
+    $('#costo-total-container').show();
+    
+    // 4. Verificar límite disponible (REEMPLAZO DE ALERT)
+    var totalDisponible = $totalDisponible; // PHP variable
+    var warningContainer = $('#cobertura-warning');
+    
+    warningContainer.hide().empty(); // Resetear advertencia
+    
+    if (total > totalDisponible) {
+        var warningMessage = '¡Advertencia! El costo total ($' + total.toFixed(2) + ') supera el total disponible ($' + totalDisponible.toFixed(2) + ') del afiliado. La suma no será cubierta en su totalidad.';
+        console.warn(warningMessage);
+        // Mostrar el mensaje de advertencia en el contenedor
+        warningContainer.html('<i class="fas fa-exclamation-triangle me-2"></i>' + warningMessage).show();
+    }
 }
 
-// Calcular el total cuando cambia la selección de baremos
+// Evento de cambio para la selección de baremos
 $('#baremos-select').on('change', function() {
-    calcularTotal();
+    calcularTotalYTabla();
 });
 
-// Calcular el total al cargar la página si hay baremos seleccionados
+// Calcular y mostrar al cargar la página si hay baremos seleccionados
 $(document).ready(function() {
     if ($('#baremos-select').val() && $('#baremos-select').val().length > 0) {
-        calcularTotal();
+        calcularTotalYTabla();
     }
 });
 JS;
 
-$this->registerJs($js);
+$this->registerJs($js, View::POS_READY);
+?>
