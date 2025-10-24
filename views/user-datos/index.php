@@ -45,27 +45,41 @@ if ($clinica && $clinica->id !== null) {
 
 ?>
 
-<div class="main-container"> <!-- Contenedor principal de la vista -->
-    <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
+<div class="main-container"> 
+
+<input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
-    <!-- Encabezado y Botones de Acción Principal -->
-    <div class="header-section"> 
+    
+
+<div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
+            
+            <!-- Botón de Exportación Rápida con ESTILO ÍNDIGO MÁS FUERTE -->
+            <?= Html::button(
+                '<i class="fas fa-file-excel mr-2"></i> EXPORTAR A CSV (Rápido)', 
+                [
+                    'id' => 'export-csv-btn', 
+                    // CLASES DE COLOR ACTUALIZADAS A ÍNDIGO SÓLIDO Y OSCURO
+                    'class' => 'btn-base btn-blue'
+                ]
+            ) ?>
+
             <?php if ($permisos) : ?>
                 <?= Html::a(
                     '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS', 
                     ['masivo'], 
-                    ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
+                    ['class' => 'btn-base btn-blue'] 
                 ) ?> 
                 <?= Html::a(
                     '<i class="fas fa-plus mr-2"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
                     ['create'], 
-                    ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
+                    ['class' => 'btn-base btn-blue'] 
                 ) ?> 
             <?php endif; ?>
-            <!-- Botón "Volver a Clínica" condicional -->
-            <?php if ($clinica && $clinica->id !== null) : ?>
+            
+
+<?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
                     ['/rm-clinica/view', 'id' => $clinica->id], 
@@ -78,9 +92,11 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 
-    <!-- Panel para la Gestión de Afiliados (GridView) -->
-    <div class="ms-panel ms-panel-fh border-indigo"> <!-- Usando ms-panel y borde indigo -->
-        <div class="ms-panel-header">
+    
+
+<div class="ms-panel ms-panel-fh border-indigo"> 
+
+<div class="ms-panel-header">
             <h3 class="section-title">
                 <i class="fas fa-users mr-3 text-indigo-600"></i> Listado de Afiliados
             </h3>
@@ -94,6 +110,8 @@ if ($clinica && $clinica->id !== null) {
                     'responsiveWrap' => false,
                     'persistResize' => false,
                     'filterModel' => $searchModel,
+                    // *** Importante: Asignamos un ID a la tabla HTML para que JS la pueda referenciar ***
+                    'tableOptions' => ['id' => 'affiliate-table', 'class' => 'min-w-full divide-y divide-gray-200'], 
                     'columns' => [
                         ['class' => 'yii\grid\SerialColumn'],
                         [
@@ -207,22 +225,25 @@ if ($clinica && $clinica->id !== null) {
                         [
                             'attribute' => 'estatus_solvente',
                             'format' => 'Html',
-                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                            'label' => 'Estatus Solvente',
                             'value' => function($model) {
                                  $isTrue = $model->estatus_solvente;
                                  return $isTrue == "Si" ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
                             },
-                            'filter' => [0 => 'No', 1 => 'Sí'],
+                            'filter' => ['' => 'Todos','Si' => 'Sí', 'No' => 'No'], 
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'contentOptions' => ['class' => 'text-center'],
+                            
                         ],
                         
-                        // Columna de Acciones - Mantenida exactamente como se solicitó
+                        // Columna de Acciones - CLASE 'exclude-csv' AGREGADA AQUÍ
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
                             'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
                             'options' => ['style' => 'width:55px; min-width:55px;'],
-                            'headerOptions' => ['style' => 'color: white!important;'],
-                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                            'headerOptions' => ['style' => 'color: white!important;', 'class' => 'exclude-csv'], 
+                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;', 'class' => 'exclude-csv'],
                             'buttons' => [
                                 'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
                                     $params = ['view', 'id' => $model->id];
@@ -318,3 +339,11 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 </div>
+
+<?php 
+
+// Código JavaScript de exportación a CSV (pre-minificado y ultra-estable para inyección PHP)
+$js_code_stable = "function exportTableToCSV(tableID, filename) {const table = document.getElementById(tableID);if (!table) {console.error('Error: Tabla con ID ' + tableID + ' no encontrada.');return;}let csv = [];const rows = table.querySelectorAll('tr');for (let i = 0; i < rows.length; i++) {const row = rows[i];const cols = row.querySelectorAll('th:not(.exclude-csv), td:not(.exclude-csv)');let rowData = [];for (let j = 0; j < cols.length; j++) {let data = cols[j].innerText.trim();data = data.replace(new RegExp('\"', 'g'), '\"\"');if (data.includes(';') || data.includes('\"')) {data = '\"' + data + '\"';}rowData.push(data);}csv.push(rowData.join(';'));}const csvFile = csv.join('\\n');const BOM = '\\uFEFF';const blob = new Blob([BOM + csvFile], {type: 'text/csv;charset=utf-8;'});const link = document.createElement(\"a\");if (link.download !== undefined) {const url = URL.createObjectURL(blob);link.setAttribute(\"href\", url);link.setAttribute(\"download\", filename);link.style.visibility = 'hidden';document.body.appendChild(link);link.click();document.body.removeChild(link);}} $(document).ready(function() { $('#export-csv-btn').on('click', function() { exportTableToCSV('affiliate-table', 'Reporte_Afiliados.csv'); }); });";
+
+$this->registerJs($js_code_stable, \yii\web\View::POS_END);
+?>

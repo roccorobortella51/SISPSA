@@ -371,40 +371,52 @@ $this->registerCss($css);
                     // Crear array de baremos con información adicional
                     $baremosDisponibles = [];
                     $baremosInfo = [];
-                    $vecesUsado = 0; // Inicializar fuera del bucle
                     
+                    // --- OBTENER CONTRATO ACTIVO DEL AFILIADO (Necesario para ambas validaciones) ---
+                    $contrato = \app\models\Contratos::find()
+                        ->where(['user_id' => $afiliado->id])
+                        ->andWhere(['estatus' => 'Activo'])
+                        ->orderBy(['created_at' => SORT_DESC])
+                        ->one();
+
+                    $fechaActual = new \DateTime();
+
                     foreach ($planesItemsCobertura as $item) {
                         if ($item->baremo) {
                             $restricciones = [];
                             $costoBaremo = $item->baremo->costo ?? 0; 
+                            $vecesUsado = 0; // Inicializar uso para este baremo
 
-                        /*    // Agregar información de plazo de espera
-                            if (!empty($item->plazo_espera)) {
-                                $restricciones[] = "Plazo: {$item->plazo_espera} meses";
-                            }*/
-                            
-                            // Agregar información de límite de uso (ANUAL)
-                            if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
-                                // Obtener el contrato para calcular el año de vigencia
-                                $contrato = \app\models\Contratos::find()
-                                    ->where(['user_id' => $afiliado->id])
-                                    ->andWhere(['estatus' => 'Activo'])
-                                    ->orderBy(['created_at' => SORT_DESC])
-                                    ->one();
-                                
-                                $vecesUsado = 0; // Resetear para cada baremo
-                                
-                                if ($contrato) {
-                                    $fechaInicio = new \DateTime($contrato->fecha_ini);
-                                    $fechaActual = new \DateTime();
+                            if ($contrato) {
+                                $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+
+                                // --- 1. LÓGICA DE PLAZO DE ESPERA ---
+                                if (!empty($item->plazo_espera) && $item->plazo_espera > 0) {
+                                    $fechaPlazoFin = clone $fechaContratoIni;
+                                    // Sumar los meses del plazo de espera
+                                    $fechaPlazoFin->modify("+{$item->plazo_espera} months"); 
                                     
-                                    // Calcular año de vigencia
-                                    $anioVigencia = $fechaInicio->diff($fechaActual)->y;
+                                    // Si la fecha actual es ANTES de que termine el plazo, se EXCLUYE (continue).
+                                    if ($fechaActual < $fechaPlazoFin) {
+                                        $diasRestantes = $fechaActual->diff($fechaPlazoFin)->days;
+                                        $restricciones[] = "Plazo pendiente: {$item->plazo_espera} meses (Faltan {$diasRestantes} días)";
+                                        continue; 
+                                    } else {
+                                        // Si el plazo ya se cumplió, solo se informa.
+                                        $restricciones[] = "Plazo cumplido: {$item->plazo_espera} meses";
+                                    }
+                                }
+                                
+                                // --- 2. LÓGICA DE LÍMITE DE USO (Anual) ---
+                                if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
+                                    // Calcular año de vigencia (período anual desde el inicio del contrato)
+                                    $anioVigencia = $fechaContratoIni->diff($fechaActual)->y;
                                     
-                                    // Calcular fechas del período anual actual
-                                    $inicioAnio = clone $fechaInicio;
+                                    // Definir el inicio del período anual actual
+                                    $inicioAnio = clone $fechaContratoIni;
                                     $inicioAnio->modify("+{$anioVigencia} years");
                                     
+                                    // Definir el fin del período anual actual
                                     $finAnio = clone $inicioAnio;
                                     $finAnio->modify("+1 year -1 day");
                                     
@@ -418,18 +430,20 @@ $this->registerCss($css);
                                         ->andWhere(['<=', 'sis_siniestro.fecha', $finAnio->format('Y-m-d')])
                                         ->count();
                                         
-                                    // LÓGICA DE FILTRADO INTEGRADA: Si el límite ya se alcanzó o se superó, saltar este baremo
+                                    // Si el límite ya se alcanzó o se superó, EXCLUIR este baremo.
                                     if ($vecesUsado >= $item->cantidad_limite) {
+                                        $restricciones[] = "Límite anual alcanzado: {$vecesUsado}/{$item->cantidad_limite} usos";
                                         continue; 
                                     }
                                     
                                     $restricciones[] = "Límite anual: {$vecesUsado}/{$item->cantidad_limite} usos";
-                                } else {
-                                    // Si no hay contrato, solo mostramos el límite (no podemos calcular el uso)
-                                    $restricciones[] = "Límite anual: {$item->cantidad_limite} usos";
                                 }
+                            } else {
+                                // Si no hay contrato, se muestra advertencia pero se permite el uso por defecto.
+                                $restricciones[] = "Advertencia: Contrato activo no encontrado. No se validaron Plazo/Límites.";
                             }
                             
+                            // Si el código llega aquí, el baremo está DISPONIBLE
                             $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
                             $descripcion = $item->baremo->descripcion ? "  {$item->baremo->descripcion}" : '';
                             $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio} - DESCRIPCIÓN: {$descripcion}";
@@ -450,7 +464,7 @@ $this->registerCss($css);
                         }
                     }
 
-                    // Obtener baremos seleccionados
+                    // Obtener baremos seleccionados (código sin cambios)
                     $selectedBaremos = [];
                     if (method_exists($model, 'getBaremos')) {
                         $baremosRelacion = $model->getBaremos()->all();
@@ -736,11 +750,13 @@ function calcularTotalYTabla() {
             
             // Construir la cadena de restricciones
             var restricciones = [];
+            // Si el baremo fue excluido por plazo o límite, no estará en baremosInfo, 
+            // pero el siguiente código es para mostrar la info de los seleccionados que sí están disponibles.
             if (item.plazo_espera) {
+                // NOTA: La lógica PHP ya determinó que el plazo fue cumplido si aparece aquí.
                 restricciones.push('Plazo: ' + item.plazo_espera + ' meses');
             }
             if (item.cantidad_limite > 0) {
-                // Notar que la lógica de filtrado ocurre en PHP. Esto solo muestra el estado.
                 restricciones.push('Límite: ' + item.veces_usado + '/' + item.cantidad_limite + ' usos');
             }
             var restriccionesHtml = restricciones.join('<br>');
@@ -749,7 +765,8 @@ function calcularTotalYTabla() {
             tablaHtml += '<tr>';
             tablaHtml += '<td>' + item.nombre + '</td>';
             tablaHtml += '<td>' + item.area + '</td>';
-            tablaHtml += '<td class="text-center">' + (restriccionesHtml || 'Ninguna') + '</td>';
+            // Se muestra el estado de las restricciones para referencia
+            tablaHtml += '<td class="text-center">' + (restriccionesHtml || 'Ninguna') + '</td>'; 
             tablaHtml += '<td class="cost-col">$' + costo.toFixed(2) + '</td>';
             tablaHtml += '</tr>';
         }
