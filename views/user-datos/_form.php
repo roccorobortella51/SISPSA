@@ -286,21 +286,13 @@ $this->registerJs($jsValidation);
                             ])->label('Tipo') ?>
                         </div>
 
-                        <?php if ($model->isNewRecord) : ?>
-                            <div class="col-md-2 field-with-icon">
-                                <?= $form->field($model, 'cedula')->textInput([
-                                    'class' => 'form-control form-control-lg',
-                                    'placeholder' => 'Ejemplo: 12345678'
-                                ])->label('Cédula de Identidad') ?>
-                            </div>
-                        <?php else : ?>
-                            <div class="col-md-2 field-with-icon">
-                                <?= $form->field($model, 'cedula')->textInput([
-                                    'class' => 'form-control form-control-lg',
-                                    'readonly' => true,
-                                ])->label('Cédula de Identidad') ?>
-                            </div>
-                        <?php endif; ?>
+                        <div class="col-md-2 field-with-icon">
+                            <?= $form->field($model, 'cedula')->textInput([
+                                'class' => 'form-control form-control-lg',
+                                'placeholder' => 'Ejemplo: 12345678',
+                                'readonly' => !$model->isNewRecord, // Only readonly when editing existing record
+                            ])->label('Cédula de Identidad') ?>
+                        </div>
 
                         <div class="col-md-3 field-with-icon">
                             <?= $form->field($model, 'fechanac')->textInput([
@@ -1215,3 +1207,32 @@ JS);
         }
     });*/
 </script>
+<style>
+/* * FOCUSED REINFORCED STYLES FOR WHITE TEXT ON KARTIK FILEINPUT BROWSE BUTTONS ONLY.
+ * Targets the 'Seleccionar' button (btn-primary) text/icon color to white.
+ */
+
+/* Force the main button text/icon color to white (Primary/Browse button) */
+.file-input .btn.btn-primary,
+.file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
+.file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
+.file-input .btn.btn-primary span,
+.file-input .btn.btn-primary i,
+.file-input .btn.btn-primary svg {
+    color: #fff !important;
+    fill: #fff !important; /* Ensures SVG icons are also white */
+}
+
+/* Ensure the file name/caption text is also white, as it's often next to the button */
+.file-caption-name {
+    color: #fff !important;
+}
+
+/* Remove text shadow interference */
+.file-input .btn.btn-primary {
+    text-shadow: none !important; 
+}
+
+/* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 
+   so it will retain its theme's default color. */
+</style>
