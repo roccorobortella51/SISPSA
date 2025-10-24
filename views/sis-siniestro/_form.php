@@ -284,6 +284,30 @@ $css = <<<CSS
     color: #6c757d;
     z-index: 5;
 }
+
+/* Force the main button text/icon color to white (Primary/Browse button) */
+.file-input .btn.btn-primary,
+.file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
+.file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
+.file-input .btn.btn-primary span,
+.file-input .btn.btn-primary i,
+.file-input .btn.btn-primary svg {
+    color: #fff !important;
+    fill: #fff !important; /* Ensures SVG icons are also white */
+}
+
+/* Ensure the file name/caption text is also white, as it's often next to the button */
+.file-caption-name {
+    color: #fff !important;
+}
+
+/* Remove text shadow interference */
+.file-input .btn.btn-primary {
+    text-shadow: none !important; 
+}
+
+/* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 
+   so it will retain its theme's default color. */
 CSS;
 
 $this->registerCss($css);
@@ -533,7 +557,6 @@ $this->registerCss($css);
                                     
                                     <div class="row mt-3">
                                         <div class="col-md-6">
-
                                             <?= $form->field($model, 'imagenRecipeFile')->widget(\kartik\file\FileInput::classname(),[
                                                 'options' => [
                                                     'accept' => 'image/*, application/pdf',
@@ -551,7 +574,7 @@ $this->registerCss($css);
                                                     'maxFileSize' => 5120, // 5MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,
-                                                    'browseLabel' => 'Subir Recibo/Factura',
+                                                    'browseLabel' => 'Subir Recipe',
                                                     'removeLabel' => 'Quitar',
                                                     'fileActionSettings' => [
                                                         'showZoom' => false,
