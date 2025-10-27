@@ -136,5 +136,42 @@ class Contratos extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Pagos::class, ['user_id' => 'user_id']);
     }
-
+    
+    public function getDiasRestantesEspera()
+    {
+        if ($this->estatus !== 'Esperar' || empty($this->fecha_reactivacion)) {
+            return null;
+        }
+        
+        $fechaReactivacion = new \DateTime($this->fecha_reactivacion);
+        $fechaActual = new \DateTime();
+        
+        if ($fechaReactivacion < $fechaActual) {
+            return 0; // Should be activated already
+        }
+        
+        $diferencia = $fechaActual->diff($fechaReactivacion);
+        return $diferencia->days;
+    }
+    
+    /**
+     * Gets the formatted tooltip text for waiting status
+     * @return string|null Tooltip text or null if not applicable
+     */
+    public function getTooltipEspera()
+    {
+        $diasRestantes = $this->getDiasRestantesEspera();
+        
+        if ($diasRestantes === null) {
+            return null;
+        }
+        
+        if ($diasRestantes === 0) {
+            return "El contrato será activado hoy";
+        } elseif ($diasRestantes === 1) {
+            return "Falta 1 día para la activación automática";
+        } else {
+            return "Faltan {$diasRestantes} días para la activación automática";
+        }
+    }
 }
