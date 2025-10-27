@@ -382,7 +382,7 @@ $this->registerCss($css);
             <div class="row">
 
 
-           <div class="row mb-4 d-none" id="tipo-registro-control">
+        <div class="row mb-4 d-none" id="tipo-registro-control">
     <div class="col-md-12">
         <!-- Inicio: Control de Tipo de Registro con estilo de Tarjeta -->
         <div class="card shadow-sm border-2 border-primary-subtle rounded-3">
@@ -488,11 +488,9 @@ $this->registerCss($css);
                                 $finAnio = clone $inicioAnio;
                                 $finAnio->modify("+1 year -1 day");
                                 
-                                // Contar cuántas veces se ha usado en el año actual (solo Siniestros, no Citas)
+                                // Contar cuántas veces se ha usado en el año actual (incluye Siniestros y Citas NO eliminadas)
                                 $vecesUsado = \app\models\SisSiniestroBaremo::find()
-                                    ->joinWith(['siniestro' => function($query) {
-                                        $query->andWhere(['sis_siniestro.es_cita' => 0]); 
-                                    }])
+                                    ->joinWith('siniestro') 
                                     ->where(['sis_siniestro_baremo.baremo_id' => $item->baremo_id])
                                     ->andWhere(['sis_siniestro.iduser' => $afiliado->id])
                                     ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
@@ -669,13 +667,16 @@ $this->registerJs(<<<JS
             
             let shouldInclude = false; // Bandera para la nueva lógica
 
+            // La restricción de LÍMITE (veces_usado >= cantidad_limite) se aplica en PHP
+            // y esos baremos NO están en baremosTotales/baremosInfo.
+
             if (isCitaMode) {
-                // MODO CITA: Solo incluir si TIENE un plazo pendiente (is_restricted_by_plazo = true)
+                // MODO CITA: Incluir baremos que estén restringidos por plazo
                 if (info.is_restricted_by_plazo) {
                     shouldInclude = true;
                 }
             } else {
-                // MODO SINIESTRO: Solo incluir si NO TIENE un plazo pendiente (is_restricted_by_plazo = false)
+                // MODO SINIESTRO: Incluir baremos que NO estén restringidos por plazo
                 if (!info.is_restricted_by_plazo) {
                     shouldInclude = true;
                 }
@@ -731,7 +732,7 @@ $this->registerJs(<<<JS
     // debe estar implementada aparte, reaccionando al evento 'change' del baremosSelect.
 JS
 , \yii\web\View::POS_END); 
-?>    
+?>
 
 
 
