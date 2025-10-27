@@ -240,7 +240,7 @@ if ($clinica && $clinica->id !== null) {
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
+                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{cita}{pagos}</div>',
                             'options' => ['style' => 'width:55px; min-width:55px;'],
                             'headerOptions' => ['style' => 'color: white!important;', 'class' => 'exclude-csv'], 
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;', 'class' => 'exclude-csv'],
@@ -277,22 +277,41 @@ if ($clinica && $clinica->id !== null) {
                                         return "";
                                     }
                                 },
-                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
+                                // Botón Siniestros (Modo Siniestro)
+                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { 
                                     if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id];
-                                    if ($clinica && $clinica->id !== null) {
-                                        $params['clinica_id'] = $clinica->id;
-                                    }
+                                        // Manda al index con modo=siniestro (o 0)
+                                        $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro']; // <-- CAMBIO CLAVE
+                                        if ($clinica && $clinica->id !== null) {
+                                            $params['clinica_id'] = $clinica->id;
+                                        }
 
-                                    if($model->clinica_id){
-                                    return Html::a(
-                                        '<i class="fas fa-address-card ms-text-primary"></i>',
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Siniestros',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );}
+                                        if ($model->clinica_id) {
+                                            return Html::a(
+                                                '<i class="fas fa-address-card ms-text-primary"></i>',
+                                                Url::to($params),
+                                                ['title' => 'Ver Siniestros (Servicios sin plazo)', 'class' => 'btn-action view']
+                                            );
+                                        }
+                                    }
+                                },
+
+                                // Nuevo Botón Citas (Modo Cita)
+                                'cita' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
+                                    if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
+                                        // Manda al index con modo=cita (o 1)
+                                        $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita']; // <-- CAMBIO CLAVE
+                                        if ($clinica && $clinica->id !== null) {
+                                            $params['clinica_id'] = $clinica->id;
+                                        }
+
+                                        if ($model->clinica_id) {
+                                            return Html::a(
+                                                '<i class="fas fa-calendar-alt text-success"></i>', // Icono para cita
+                                                Url::to($params),
+                                                ['title' => 'Gestionar Citas (Servicios con plazo)', 'class' => 'btn-action view']
+                                            );
+                                        }
                                     }
                                 },
                                 'pagos' => function ($url, $model, $key) {
