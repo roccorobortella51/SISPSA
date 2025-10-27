@@ -466,10 +466,22 @@ class PagosController extends Controller
             $user = UserDatos::findOne(['id' => $model->user_id]);
             $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'Si' : 'No';
             $user->save(false);
-            if($user->estatus_solvente == 'Si') {
+            
+            if($model->estatus == 'Conciliado') {
                 $contrato = Contratos::find()->where(['user_id' => $model->user_id])->one();
-                $contrato->estatus = 'Activo';
-                $contrato->save(false);
+                if ($contrato) {
+                    // Check if contract was previously suspended
+                    if ($contrato->estatus == 'suspendido') {
+                        // Apply 7-day penalty - set to "Esperar" (Waiting)
+                        $contrato->estatus = 'Esperar';
+                        $contrato->fecha_reactivacion = date('Y-m-d', strtotime('+7 days'));
+                        Yii::$app->session->setFlash('info', 'El contrato ha sido puesto en espera por 7 días debido a previa suspensión.');
+                    } else {
+                        // If not previously suspended, activate immediately
+                        $contrato->estatus = 'Activo';
+                    }
+                    $contrato->save(false);
+                }
             }
             return ['success' => true, 'new_status' => $model->estatus];
         }
