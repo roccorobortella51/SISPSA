@@ -416,7 +416,7 @@ $js_code_stable = "function exportTableToCSV(tableID, filename) {const table = d
 
 $this->registerJs($js_code_stable, \yii\web\View::POS_END);
 ?>
-=======
+<style>
 /* Improved tooltip styling */
 .custom-tooltip .tooltip-inner {
     background-color: #2d3748;
@@ -558,4 +558,3 @@ JS;
 
 $this->registerJs($js);
 ?>
->>>>>>> 305c5cdc0d65303c4840167fdd6e4a61e1431b52
