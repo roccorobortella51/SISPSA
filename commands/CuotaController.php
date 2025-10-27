@@ -475,7 +475,10 @@ class CuotaController extends Controller
         $this->stdout("1. Verificando cuotas vencidas...\n");
         $this->runAction('verificar-vencidas');
         
-        $this->stdout("\n2. Generando cuotas mensuales (si es día 1)...\n");
+        $this->stdout("\n2. Verificando contratos en espera...\n");
+        $this->runAction('verificar-espera');
+        
+        $this->stdout("\n3. Generando cuotas mensuales (si es día 1)...\n");
         if (date('j') === '1') {
             $this->runAction('generar-mensual');
         } else {
@@ -979,5 +982,116 @@ class CuotaController extends Controller
         }
         
         return 1; // Valor por defecto si no hay tasa de cambio registrada
+    }
+
+    public function actionVerificarEspera()
+    {
+        $this->stdout("Verificando contratos en espera...\n");
+        
+        $fechaActual = date('Y-m-d');
+        $contratosEnEspera = Contratos::find()
+            ->where(['estatus' => 'Esperar'])
+            ->andWhere(['<=', 'fecha_reactivacion', $fechaActual])
+            ->all();
+            
+        $contratosActivados = 0;
+        
+        foreach ($contratosEnEspera as $contrato) {
+            $contrato->estatus = 'Activo';
+            $contrato->fecha_reactivacion = null;
+            
+            if ($contrato->save()) {
+                $contratosActivados++;
+                $this->stdout("✅ Contrato #{$contrato->id} activado después del período de espera.\n");
+            } else {
+                $this->stderr("❌ Error al activar contrato #{$contrato->id}\n");
+            }
+        }
+        
+        if ($contratosActivados > 0) {
+            $this->stdout("Proceso completado. Se activaron {$contratosActivados} contratos después del período de espera.\n");
+        } else {
+            $this->stdout("No hay contratos que hayan completado el período de espera.\n");
+        }
+        
+        return ExitCode::OK;
+    }
+
+    public function actionCheckColumn()
+    {
+        $this->stdout("Checking if fecha_reactivacion column exists...\n");
+        
+        try {
+            $tableSchema = Yii::$app->db->getTableSchema('contratos');
+            if ($tableSchema) {
+                $this->stdout("Table 'contratos' exists.\n");
+                
+                $columns = $tableSchema->getColumnNames();
+                $this->stdout("Columns in contratos table:\n");
+                foreach ($columns as $column) {
+                    $this->stdout(" - {$column}\n");
+                }
+                
+                if (in_array('fecha_reactivacion', $columns)) {
+                    $this->stdout("✅ fecha_reactivacion column EXISTS!\n");
+                    
+                    // Show some sample data
+                    $this->stdout("\nSample contracts with fecha_reactivacion:\n");
+                    $sampleContracts = Contratos::find()
+                        ->where(['IS NOT', 'fecha_reactivacion', null])
+                        ->limit(3)
+                        ->all();
+                        
+                    if (!empty($sampleContracts)) {
+                        foreach ($sampleContracts as $contract) {
+                            $this->stdout(" - Contract #{$contract->id}: {$contract->fecha_reactivacion}\n");
+                        }
+                    } else {
+                        $this->stdout(" - No contracts have fecha_reactivacion set yet.\n");
+                    }
+                } else {
+                    $this->stdout("❌ fecha_reactivacion column NOT FOUND!\n");
+                }
+            } else {
+                $this->stdout("❌ Table 'contratos' not found!\n");
+            }
+        } catch (\Exception $e) {
+            $this->stderr("Error: " . $e->getMessage() . "\n");
+        }
+        
+        return ExitCode::OK;
+    }
+
+    public function actionAddColumn()
+    {
+        $this->stdout("Adding fecha_reactivacion column to contratos table...\n");
+        
+        try {
+            // Execute the SQL directly
+            $sql = "ALTER TABLE contratos ADD COLUMN fecha_reactivacion DATE NULL";
+            $result = Yii::$app->db->createCommand($sql)->execute();
+            
+            $this->stdout("✅ SQL executed successfully!\n");
+            $this->stdout("Column 'fecha_reactivacion' should now be added to contratos table.\n");
+            
+            // Verify the column was added
+            $this->stdout("\nVerifying column addition...\n");
+            $tableSchema = Yii::$app->db->getTableSchema('contratos');
+            if ($tableSchema && in_array('fecha_reactivacion', $tableSchema->getColumnNames())) {
+                $this->stdout("✅ SUCCESS: fecha_reactivacion column confirmed in contratos table!\n");
+            } else {
+                $this->stderr("❌ Column still not found after addition attempt.\n");
+            }
+            
+        } catch (\Exception $e) {
+            $this->stderr("❌ Error adding column: " . $e->getMessage() . "\n");
+            
+            // If column already exists error, that's actually good
+            if (strpos($e->getMessage(), 'already exists') !== false) {
+                $this->stdout("ℹ️  Column already exists - this is actually good news!\n");
+            }
+        }
+        
+        return ExitCode::OK;
     }
 }
