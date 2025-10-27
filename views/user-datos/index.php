@@ -407,7 +407,6 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 </div>
-<<<<<<< HEAD
 
 <?php 
 
