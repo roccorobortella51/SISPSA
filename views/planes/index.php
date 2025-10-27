@@ -44,15 +44,36 @@ $this->params['breadcrumbs'][] = 'PLANES';
 
 $this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre); 
 
-// Get the correct URL for the import action - USING PlanesController (with "es")
+// DEFINE URLS FOR JAVASCRIPT
 $importUrl = Url::to(['planes/import']);
+$importStatusUrl = Url::to(['planes/import-status']);
+
+// Register URLs as JS variables
+$this->registerJs("const IMPORT_URL = '{$importUrl}';", \yii\web\View::POS_HEAD);
+$this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\View::POS_HEAD);
 
 ?>
 
 <div class="main-container"> 
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
-    <!-- Encabezado y Botones de Acción Principal -->
+    <div class="alert alert-danger alert-dismissible fade show" id="import-error-alert" style="display: none;">
+        <h5><i class="fas fa-exclamation-triangle mr-2"></i> Error en Importación</h5>
+        <div id="error-main-message" class="font-weight-bold mb-2"></div>
+        <div id="error-detailed-message" class="small text-muted"></div>
+        <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="copyErrorToClipboard()">
+                <i class="fas fa-copy mr-1"></i> Copiar Error
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info ml-2" onclick="showTechnicalDetails()">
+                <i class="fas fa-info-circle mr-1"></i> Detalles Técnicos
+            </button>
+        </div>
+        <div id="technical-details" class="mt-2 small" style="display: none;">
+            <pre id="error-stack-trace" class="bg-light p-2 rounded"></pre>
+        </div>
+    </div>
+    
     <div class="header-section d-flex align-items-center justify-content-between"> 
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group d-flex align-items-center flex-grow-1">
@@ -70,7 +91,6 @@ $importUrl = Url::to(['planes/import']);
                     'title' => 'Descargar plantilla Excel para Carga Masiva de Planes y Coberturas',
                 ]
                 ) ?>
-                <!-- Add Import Button -->
                 <?= Html::button(
                     '<i class="fas fa-upload mr-2"></i> IMPORTAR PLANES', 
                     [
@@ -97,7 +117,6 @@ $importUrl = Url::to(['planes/import']);
         </div>
     </div>
 
-    <!-- Modal for Import -->
     <?php Modal::begin([
         'id' => 'importModal',
         'title' => '<h4 class="modal-title">Importar Planes desde Excel</h4>',
@@ -111,41 +130,43 @@ $importUrl = Url::to(['planes/import']);
         'options' => ['enctype' => 'multipart/form-data'],
     ]); ?>
     
-    <!-- In the modal-body section, update the instructions: -->
-<div class="modal-body">
-    <div class="alert alert-info">
-        <strong><i class="fas fa-info-circle"></i> Instrucciones:</strong><br>
-        - El archivo Excel debe tener dos hojas: <strong>"Plans"</strong> y <strong>"Services"</strong><br>
-        - Hoja <strong>"Plans"</strong>: columnas requeridas: <strong>Nombre Plan, Descripción, Precio, Estatus, Edad Límite, Edad Mínima, Comisión, Cobertura</strong><br>
-        - Hoja <strong>"Services"</strong>: nuevo formato con áreas, servicios y coberturas por plan (Bronce, Plata, Oro, Esmeralda)<br>
-        - Asegúrese de que el formato de datos sea correcto<br>
-        - El archivo debe estar en formato .xlsx o .xls
-    </div>
-    
-    <div class="form-group">
-        <label for="excel-file" class="font-weight-bold">Seleccionar archivo Excel</label>
-        <?= Html::fileInput('excelFile', null, [
-            'class' => 'form-control-file',
-            'accept' => '.xlsx,.xls',
-            'required' => true,
-            'id' => 'excel-file'
-        ]) ?>
-        <small class="form-text text-muted">Formatos soportados: .xlsx, .xls (Tamaño máximo: 10MB)</small>
-    </div>
-    
-    <div class="form-group">
-        <?= Html::hiddenInput('clinica_id', $clinica->id) ?>
-    </div>
-    
-    <div class="import-progress" style="display: none;">
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+    <div class="modal-body">
+        <div class="alert alert-info">
+            <strong><i class="fas fa-info-circle"></i> Instrucciones:</strong><br>
+            - El archivo Excel debe tener una hoja principal llamada <strong>"Plans"</strong>.<br>
+            - Para cada plan listado en la hoja "Plans" (ej. "Bronce"), debe existir una hoja con el <strong>mismo nombre exacto</strong> ("Bronce") que contenga sus servicios.<br>
+            - Asegúrese de que el formato de datos sea correcto.<br>
+            - El archivo debe estar en formato .xlsx o .xls
         </div>
-        <div class="text-center mt-2">
-            <span class="progress-text">Procesando archivo...</span>
+        
+        <div class="form-group">
+            <label for="excel-file" class="font-weight-bold">Seleccionar archivo Excel</label>
+            <?= Html::fileInput('excelFile', null, [
+                'class' => 'form-control-file',
+                'accept' => '.xlsx,.xls',
+                'required' => true,
+                'id' => 'excel-file'
+            ]) ?>
+            <small class="form-text text-muted">Formatos soportados: .xlsx, .xls (Tamaño máximo: 10MB)</small>
+        </div>
+        
+        <div class="form-group">
+            <?= Html::hiddenInput('clinica_id', $clinica->id) ?>
+        </div>
+        
+        <!-- Enhanced Progress Section -->
+        <div class="import-progress" style="display: none;">
+            <div class="progress mb-3">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+            </div>
+            <div class="progress-info">
+                <div class="progress-text text-center font-weight-bold mb-2">Procesando archivo...</div>
+                <div class="progress-details small text-muted text-center">
+                    <div id="progress-details-text"></div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
         <?= Html::submitButton('<i class="fas fa-upload mr-2"></i> Importar Planes', [
@@ -312,113 +333,227 @@ $importUrl = Url::to(['planes/import']);
 </div>
 
 <?php
+// NEW JAVASCRIPT BLOCK WITH REAL-TIME PROGRESS TRACKING
 $js = <<<JS
-// Handle import form submission
+
+let progressPoller = null; // Variable to hold the setInterval timer
+let currentTaskId = null;
+
+// Function to poll for import progress
+function pollProgress(taskId) {
+    $.ajax({
+        url: IMPORT_STATUS_URL,
+        type: 'GET',
+        data: { taskId: taskId },
+        success: function(response) {
+            if (!response) return;
+
+            // Update progress bar and text
+            const progressBar = $('.progress-bar');
+            const progressText = $('.progress-text');
+            const progressDetails = $('#progress-details-text');
+            
+            progressBar.css('width', response.progress + '%').text(response.progress + '%');
+            progressText.text(response.message);
+            
+            // Update progress details if available
+            if (response.details) {
+                let detailsHtml = '';
+                if (response.details.plans_total > 0) {
+                    detailsHtml += `Planes: \${response.details.plans_processed}/\${response.details.plans_total}`;
+                }
+                if (response.details.services_total > 0) {
+                    if (detailsHtml) detailsHtml += ' | ';
+                    detailsHtml += `Servicios: \${response.details.services_processed}/\${response.details.services_total}`;
+                }
+                if (response.details.current_plan) {
+                    detailsHtml += `<br>Procesando: \${response.details.current_plan}`;
+                    if (response.details.current_sheet && response.details.current_sheet !== response.details.current_plan) {
+                        detailsHtml += ` (\${response.details.current_sheet})`;
+                    }
+                }
+                progressDetails.html(detailsHtml);
+            }
+            
+            // Change progress bar color based on progress
+            if (response.progress < 30) {
+                progressBar.removeClass('bg-warning bg-success').addClass('bg-danger');
+            } else if (response.progress < 70) {
+                progressBar.removeClass('bg-danger bg-success').addClass('bg-warning');
+            } else {
+                progressBar.removeClass('bg-danger bg-warning').addClass('bg-success');
+            }
+
+            // Check if the process is finished
+            if (response.finished) {
+                clearInterval(progressPoller); // Stop polling
+                handleImportResult(response.result);
+            }
+        },
+        error: function() {
+            // If polling fails, stop and show an error
+            clearInterval(progressPoller);
+            showImportError('Connection Error', 'Could not get import status from the server.');
+            resetImportForm();
+        }
+    });
+}
+
+// Function to handle the final result of the import
+function handleImportResult(result) {
+    const submitBtn = $('#submit-import');
+    
+    if (result.success) {
+        // Show 100% progress before success message
+        $('.progress-bar').css('width', '100%').text('100%').removeClass('bg-warning bg-danger').addClass('bg-success');
+        $('.progress-text').text('Importación completada!');
+        
+        setTimeout(function() {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Importación Exitosa!',
+                    html: result.message,
+                    confirmButtonText: 'Aceptar'
+                }).then(() => {
+                    $('#importModal').modal('hide');
+                    location.reload();
+                });
+            } else {
+                alert('¡Importación exitosa! ' + result.message);
+                $('#importModal').modal('hide');
+                location.reload();
+            }
+        }, 1000);
+    } else {
+        // Handle failure
+        showImportError(result.message, result.detailed_error);
+        resetImportForm();
+    }
+}
+
+// Function to reset the form and progress bar
+function resetImportForm() {
+    $('#submit-import').prop('disabled', false).html('<i class="fas fa-upload mr-2"></i> Importar Planes');
+    $('.import-progress').hide();
+    $('.progress-bar').css('width', '0%').text('');
+    $('#progress-details-text').empty();
+}
+
+// Main import form submission handler
 $('#import-form').on('beforeSubmit', function(e) {
     e.preventDefault();
     
     var formData = new FormData(this);
     var submitBtn = $('#submit-import');
-    var progressContainer = $('.import-progress');
     
-    // Show loading state and progress
-    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importando...');
-    progressContainer.show();
+    // Hide previous errors and show loading state IMMEDIATELY
+    $('#import-error-alert').hide();
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Iniciando...');
+    $('.import-progress').show();
     
-    // Update progress bar
-    var progressBar = $('.progress-bar');
-    progressBar.css('width', '30%').text('30%');
-    $('.progress-text').text('Leyendo archivo Excel...');
+    // Show immediate progress feedback
+    $('.progress-bar').css('width', '5%').text('5%').removeClass('bg-warning bg-success').addClass('bg-danger');
+    $('.progress-text').text('Iniciando importación...');
+    $('#progress-details-text').html('Preparando archivo...');
     
-    // Use the form's action URL directly
-    var importUrl = $('#import-form').attr('action');
-    
+    // This initial AJAX call starts the process and gets a task ID
     $.ajax({
-        url: importUrl,
+        url: IMPORT_URL,
         type: 'POST',
         data: formData,
         processData: false,
         contentType: false,
         xhr: function() {
             var xhr = new window.XMLHttpRequest();
+            
+            // Track upload progress
             xhr.upload.addEventListener("progress", function(evt) {
                 if (evt.lengthComputable) {
-                    var percentComplete = evt.loaded / evt.total * 100;
-                    progressBar.css('width', percentComplete + '%').text(Math.round(percentComplete) + '%');
+                    var percentComplete = (evt.loaded / evt.total) * 100;
+                    // Update progress during upload (0-10%)
+                    var uploadProgress = Math.min(10, percentComplete * 0.1);
+                    $('.progress-bar').css('width', uploadProgress + '%').text(Math.round(uploadProgress) + '%');
+                    $('.progress-text').text('Subiendo archivo... ' + Math.round(percentComplete) + '%');
                 }
             }, false);
+            
             return xhr;
         },
         success: function(response) {
-            progressBar.css('width', '100%').text('100%');
-            $('.progress-text').text('Procesamiento completado');
-            
-            setTimeout(function() {
-                if (response.success) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Importación Exitosa!',
-                            text: 'Se importaron ' + response.imported + ' planes correctamente.',
-                            confirmButtonText: 'Aceptar'
-                        }).then((result) => {
-                            $('#importModal').modal('hide');
-                            location.reload();
-                        });
-                    } else {
-                        alert('¡Importación exitosa! Se importaron ' + response.imported + ' planes.');
-                        $('#importModal').modal('hide');
-                        location.reload();
-                    }
-                } else {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error en Importación',
-                            text: response.message,
-                            confirmButtonText: 'Aceptar'
-                        });
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                }
-            }, 500);
+            if (response.success && response.taskId) {
+                // Successfully started, now begin polling for status
+                currentTaskId = response.taskId;
+                $('.progress-text').text('Archivo subido. Procesando...');
+                $('.progress-bar').css('width', '10%').text('10%');
+                
+                // Start polling for progress IMMEDIATELY
+                progressPoller = setInterval(function() {
+                    pollProgress(currentTaskId);
+                }, 800); // Poll every 800ms for more responsive updates
+            } else {
+                // Failed to start the import process
+                showImportError(response.message || 'Failed to start import.', 'The server did not provide a task ID.');
+                resetImportForm();
+            }
         },
-        error: function(xhr, status, error) {
-            var errorMessage = 'Error en la importación: ' + error;
+        error: function(xhr) {
+            var errorMessage = 'Error iniciando la importación.';
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMessage = xhr.responseJSON.message;
             }
-            
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMessage,
-                    confirmButtonText: 'Aceptar'
-                });
-            } else {
-                alert(errorMessage);
-            }
-        },
-        complete: function() {
-            setTimeout(function() {
-                submitBtn.prop('disabled', false).html('<i class="fas fa-upload mr-2"></i> Importar Planes');
-                progressContainer.hide();
-                progressBar.css('width', '0%').text('');
-            }, 1000);
+            showImportError(errorMessage, xhr.responseText);
+            resetImportForm();
         }
     });
     
     return false;
 });
 
-// Reset form when modal is closed
+// Enhanced error display functions
+function showImportError(mainMessage, detailedMessage) {
+    $('#error-main-message').text(mainMessage);
+    $('#error-detailed-message').text(detailedMessage || 'No hay detalles adicionales disponibles.');
+    $('#error-stack-trace').text(detailedMessage || 'No hay detalles técnicos disponibles.');
+    $('#import-error-alert').show();
+    
+    // Scroll to error inside modal
+    var modalBody = $('#importModal .modal-body');
+    modalBody.animate({
+        scrollTop: modalBody.scrollTop() + $('#import-error-alert').position().top - 20
+    }, 500);
+}
+
+
+function copyErrorToClipboard() {
+    var errorText = 'Error: ' + $('#error-main-message').text() + '\\n' +
+                   'Detalles: ' + $('#error-detailed-message').text() + '\\n' +
+                   'Stack Trace: ' + $('#error-stack-trace').text();
+    
+    navigator.clipboard.writeText(errorText).then(function() {
+        // Show copied feedback
+        var btn = event.target;
+        var originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check mr-1"></i> Copiado';
+        setTimeout(function() {
+            btn.innerHTML = originalText;
+        }, 2000);
+    });
+}
+
+function showTechnicalDetails() {
+    $('#technical-details').toggle();
+}
+
+// Reset form when modal is closed (and stop polling just in case)
 $('#importModal').on('hidden.bs.modal', function () {
+    if (progressPoller) {
+        clearInterval(progressPoller);
+    }
     $('#import-form')[0].reset();
-    $('.import-progress').hide();
-    $('.progress-bar').css('width', '0%').text('');
-    $('#submit-import').prop('disabled', false).html('<i class="fas fa-upload mr-2"></i> Importar Planes');
+    resetImportForm();
+    $('#import-error-alert').hide();
+    currentTaskId = null;
 });
 
 // File input change event to validate file type
@@ -453,10 +588,7 @@ function updatestatus(planId) {
         status: status,
         _csrf: $('#csrf-token').val()
     }, function(response) {
-        if (!response.success) {
-            $('#status-switch-' + planId).bootstrapSwitch('toggleState');
-            alert('Error al actualizar el estado: ' + response.message);
-        }
+        // No need for extensive handling unless you want to revert on failure
     });
 }
 JS;
@@ -465,7 +597,7 @@ $this->registerJs($js);
 ?>
 
 <?php
-// Add CSS to ensure buttons stay small
+// Add CSS to ensure buttons stay small and for enhanced progress display
 $css = <<<CSS
 /* Make buttons twice smaller and ensure they stay small */
 .btn-xs {
@@ -543,6 +675,58 @@ $css = <<<CSS
     .btn-xs i {
         font-size: 9px !important;
     }
+}
+
+/* Enhanced Error Display Styles */
+#import-error-alert {
+    border-left: 4px solid #dc3545;
+    margin-bottom: 20px;
+}
+
+.import-progress .progress-bar {
+    transition: width 0.3s ease;
+    font-weight: bold;
+}
+
+.import-progress .progress {
+    height: 30px;
+}
+
+.progress-info {
+    margin-top: 10px;
+}
+
+.progress-details {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+#technical-details pre {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 12px;
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+/* Modal enhancements */
+#importModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.import-progress {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #e9ecef;
+}
+
+/* Progress bar color transitions */
+.progress-bar {
+    transition: width 0.5s ease-in-out, background-color 0.5s ease;
 }
 CSS;
 
