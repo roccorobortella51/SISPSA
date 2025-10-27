@@ -23,6 +23,7 @@ class UserDatosSearch extends UserDatos
     public function rules()
     {
         return [
+            // CORRECCIÓN 1: estatus_solvente debe estar en 'safe' ya que es TEXTO
             [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
             [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'safe'],
             [['paso'], 'number'],
@@ -62,26 +63,11 @@ class UserDatosSearch extends UserDatos
             'clinica'
         ]);
 
-        // Si necesitas filtrar por el afiliado corporativo principal (afiliado_corporativo_id)
-        // en el GridView de UserDatos, deberías añadir un joinWith aquí.
-        // Esto depende de cómo esté modelada esa relación en la base de datos.
-        // Si 'afiliado_corporativo_id' es una columna en user_datos que apunta a otro user_datos,
-        // necesitarías una relación en UserDatos.php para ello.
-        // Por ejemplo:
-        /*
-        $query->joinWith([
-            'afiliadoCorporativo' => function ($q) {
-                // Si la relación se llama getAfiliadoCorporativo() en UserDatos
-            }
-        ]);
-        */
-
         if($rol == "Asesor"){
             $query->where(['asesor_id' => UserHelper::getAgenteFuerzaId()]);
         }
 
         if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
-
             $query->andFilterWhere(['user_datos.clinica_id' => UserHelper::getMyClinicaId()]);
         }
 
@@ -111,7 +97,7 @@ class UserDatosSearch extends UserDatos
             return $dataProvider;
         }
 
-        // grid filtering conditions
+        // grid filtering conditions (FILTROS DE COINCIDENCIA EXACTA)
         $query->andFilterWhere([
             'id' => $this->id,
             //'created_at' => $this->created_at,
@@ -161,6 +147,8 @@ class UserDatosSearch extends UserDatos
             ->andFilterWhere(['ilike', 'user_datos.session_id', $this->session_id])
             ->andFilterWhere(['ilike', 'user_datos.tipo_cedula', $this->tipo_cedula])
             ->andFilterWhere(['ilike', 'user_datos.tipo_sangre', $this->tipo_sangre])
+            // CORRECCIÓN 2: Usamos 'ilike' (búsqueda parcial de texto) para estatus_solvente
+            // Esto buscará la cadena de texto exacta ('Si' o 'No') que envíe el filtro de la vista.
             ->andFilterWhere(['ilike', 'user_datos.estatus_solvente', $this->estatus_solvente])
             // Usando una expresión en lugar de un simple 'ilike'
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedula])
