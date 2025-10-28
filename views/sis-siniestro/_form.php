@@ -4,6 +4,7 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
 use yii\web\View;
+use yii\helpers\ArrayHelper;
 
 /* @var $this yii\web\View */
 /* @var $model app\models\SisSiniestro */
@@ -21,6 +22,15 @@ $sumatoriaSiniestros = \app\models\SisSiniestro::find()
     ->sum('costo_total');
 
 $totalDisponible = $precioPlan - $sumatoriaSiniestros;
+ 
+//OBTENER el parámetro 'es_cita' directamente del Request, con un valor por defecto de 0.
+$esCita = (int)Yii::$app->request->get('es_cita', 0);
+
+// Definir los modos y términos
+$esCitaMode = ($esCita === 1);
+$terminoPrincipal = $esCitaMode ? 'Cita' : 'Siniestro';
+$tituloSeccion = 'Datos de ' . $terminoPrincipal;
+
 
 // CSS personalizado (Mantengo el CSS intacto)
 $css = <<<CSS
@@ -354,10 +364,10 @@ $this->registerCss($css);
 
     <div class="ms-panel">
         <div class="ms-panel-header">
-            <h3 class="section-title">
-                <i class="fas fa-file-alt text-blue-600"></i> Datos del Siniestro
-            </h3>
-        </div>
+    <h3 class="section-title" id="titulo-datos-registro">
+        <i class="fas fa-file-alt text-blue-600"></i> <?= $tituloSeccion ?>
+    </h3>
+</div>
         <div class="ms-panel-body">
             <div class="plan-info-container">
                 <div class="plan-info-title">Información del Plan y Límites</div>
@@ -421,223 +431,260 @@ $this->registerCss($css);
     </div>
 </div>
 
-            <div class="col-md-12">
-                <?php
-                // Consulta para listar los baremos de ese plan y clínica
-                $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
-                    ->joinWith('baremo')
-                    ->joinWith('plan')
-                    ->joinWith('baremo.area')
-                    ->where(['planes.clinica_id' => $afiliado->clinica_id])
-                    ->andWhere(['baremo.estatus' => 'Activo'])
-                    ->andWhere(['planes.id' => $afiliado->plan_id])
-                    ->all();
-                
-                // Crear arrays para las dos categorías y la info de JS
-                $baremosDisponibles = [];       // Pasan todas las restricciones de Siniestro
-                $baremosPendientesPlazo = [];   // Pasan Límite, pero NO pasan Plazo (Solo para Cita)
-                $baremosInfo = [];              // Información auxiliar para JavaScript
-                
-                // --- OBTENER CONTRATO ACTIVO DEL AFILIADO (Necesario para ambas validaciones) ---
-                $contrato = \app\models\Contratos::find()
-                    ->where(['user_id' => $afiliado->id])
-                    ->andWhere(['estatus' => 'Activo'])
-                    ->orderBy(['created_at' => SORT_DESC])
-                    ->one();
 
-                $fechaActual = new \DateTime();
+<!-------------------------------------- contenido de los baremos  --------------------------------------------->
 
-                foreach ($planesItemsCobertura as $item) {
-                    if ($item->baremo) {
-                        $restricciones = [];
-                        $costoBaremo = $item->baremo->costo ?? 0; 
-                        $vecesUsado = 0; // Inicializar uso para este baremo
-                        $isRestrictedByPlazo = false; // Bandera para saber si el Plazo está pendiente
+    <div class="col-md-12">
+    
+    <div id="plazo-error-message" class="alert alert-danger" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
+    </div>
 
-                        if ($contrato) {
-                            $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+<?php
+    // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
-                            // --- 1. LÓGICA DE PLAZO DE ESPERA ---
-                            if (!empty($item->plazo_espera) && $item->plazo_espera > 0) {
-                                $fechaPlazoFin = clone $fechaContratoIni;
-                                // Sumar los meses del plazo de espera
-                                $fechaPlazoFin->modify("+{$item->plazo_espera} months"); 
-                                
-                                // Si la fecha actual es ANTES de que termine el plazo
-                                if ($fechaActual < $fechaPlazoFin) {
-                                    $isRestrictedByPlazo = true; // Se marca la restricción
-                                    $diasRestantes = $fechaActual->diff($fechaPlazoFin)->days;
-                                    $restricciones[] = "Plazo pendiente: {$item->plazo_espera} meses (Faltan {$diasRestantes} días)";
-                                    // *** IMPORTANTE: Ya NO hay 'continue' aquí. Se clasifica al final. ***
-                                } else {
-                                    // Si el plazo ya se cumplió, solo se informa.
-                                    $restricciones[] = "Plazo cumplido: {$item->plazo_espera} meses";
-                                }
-                            }
-                            
-                            // --- 2. LÓGICA DE LÍMITE DE USO (Anual) ---
-                            if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
-                                // Calcular año de vigencia (período anual desde el inicio del contrato)
-                                $anioVigencia = $fechaContratoIni->diff($fechaActual)->y;
-                                
-                                // Definir el inicio del período anual actual
-                                $inicioAnio = clone $fechaContratoIni;
-                                $inicioAnio->modify("+{$anioVigencia} years");
-                                
-                                // Definir el fin del período anual actual
-                                $finAnio = clone $inicioAnio;
-                                $finAnio->modify("+1 year -1 day");
-                                
-                                // Contar cuántas veces se ha usado en el año actual (incluye Siniestros y Citas NO eliminadas)
-                                $vecesUsado = \app\models\SisSiniestroBaremo::find()
-                                    ->joinWith('siniestro') 
-                                    ->where(['sis_siniestro_baremo.baremo_id' => $item->baremo_id])
-                                    ->andWhere(['sis_siniestro.iduser' => $afiliado->id])
-                                    ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
-                                    ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnio->format('Y-m-d')])
-                                    ->andWhere(['<=', 'sis_siniestro.fecha', $finAnio->format('Y-m-d')])
-                                    ->count();
-                                    
-                                // Si el límite ya se alcanzó o se superó, EXCLUIR este baremo (HARD STOP).
-                                if ($vecesUsado >= $item->cantidad_limite) {
-                                    $restricciones[] = "Límite anual alcanzado: {$vecesUsado}/{$item->cantidad_limite} usos";
-                                    continue; // Excluye de ambas listas.
-                                }
-                                
-                                $restricciones[] = "Límite anual: {$vecesUsado}/{$item->cantidad_limite} usos";
-                            }
-                        } else {
-                            // Si no hay contrato, se muestra advertencia.
-                            $restricciones[] = "Advertencia: Contrato activo no encontrado. No se validaron Plazo/Límites.";
-                        }
+    // Consulta para listar los baremos de ese plan y clínica
+    $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
+        ->joinWith('baremo')
+        ->joinWith('plan')
+        ->joinWith('baremo.area')
+        ->where(['planes.clinica_id' => $afiliado->clinica_id])
+        ->andWhere(['baremo.estatus' => 'Activo'])
+        ->andWhere(['planes.id' => $afiliado->plan_id])
+        ->all();
+    
+    // Crear arrays para las TRES categorías y la info de JS
+    $baremosSinPlazo = [];          // NO tiene plazo definido (SOLO para Siniestro)
+    $baremosConPlazoCumplido = [];  // Tiene plazo, pero ya se cumplió (SOLO para Cita)
+    $baremosPendientesPlazo = [];   // Tiene plazo, y está pendiente (SOLO para Cita)
+    $baremosInfo = [];              // Información auxiliar para JavaScript
+    $baremosRestringidosIDs = [];   // <--- NUEVO: IDs de baremos con Plazo PENDIENTE
+    
+    // --- OBTENER CONTRATO ACTIVO DEL AFILIADO (Necesario para ambas validaciones) ---
+    $contrato = \app\models\Contratos::find()
+        ->where(['user_id' => $afiliado->id])
+        ->andWhere(['estatus' => 'Activo'])
+        ->orderBy(['created_at' => SORT_DESC])
+        ->one();
+
+    $fechaActual = new \DateTime();
+
+    foreach ($planesItemsCobertura as $item) {
+        if ($item->baremo) {
+            $restricciones = [];
+            $costoBaremo = $item->baremo->costo ?? 0; 
+            $vecesUsado = 0; 
+            $isRestrictedByPlazo = false; 
+            $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0); 
+
+            if ($contrato) {
+                $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+
+                // --- 1. LÓGICA DE PLAZO DE ESPERA PROGRESIVA (CÁLCULO POR MESES) ---
+                if ($hasPlazoEver) {
+                    $diff = $fechaContratoIni->diff($fechaActual);
+                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                    $plazoRequerido = (int)$item->plazo_espera;
+
+                    if ($mesesTranscurridos < $plazoRequerido) {
+                        $isRestrictedByPlazo = true; // Plazo PENDIENTE
                         
-                        // Si el código llega aquí, el baremo está DISPONIBLE o PENDIENTE (Límite no alcanzado)
-                        $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
-                        $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+                        // --- AÑADIR ID A LA LISTA DE BLOQUEO CRÍTICA ---
+                        $baremosRestringidosIDs[] = (string)$item->baremo_id; 
+                        // ----------------------------------------------
                         
-                        // Agregar la descripción si existe
-                        if (!empty($item->baremo->descripcion)) {
-                            $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
-                        }
-                        
-                        // Añadir las restricciones al nombre
-                        if (!empty($restricciones)) {
-                            $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
-                        }
-                        
-                        // Clasificación final en la lista correcta
-                        if ($isRestrictedByPlazo) {
-                            // Añadir etiqueta para el usuario y Select2
-                            $baremosPendientesPlazo[$item->baremo_id] = "[CITA] " . $nombreCompleto;
-                        } else {
-                            $baremosDisponibles[$item->baremo_id] = $nombreCompleto;
-                        }
-
-                        // Llenar información para JS
-                        $baremosInfo[$item->baremo_id] = [
-                            'nombre' => $item->baremo->nombre_servicio,
-                            'area' => $area,
-                            'plazo_espera' => $item->plazo_espera,
-                            'cantidad_limite' => $item->cantidad_limite,
-                            'veces_usado' => $vecesUsado,
-                            'costo' => $costoBaremo, 
-                            'is_restricted_by_plazo' => $isRestrictedByPlazo, // NUEVO: Flag para JS
-                        ];
-                    }
-                }
-                
-                // NUEVO: Combina ambas listas para el Select2
-                $baremosTotales = $baremosDisponibles + $baremosPendientesPlazo;
-
-                // Obtener baremos seleccionados (código sin cambios)
-                $selectedBaremos = [];
-                if (method_exists($model, 'getBaremos')) {
-                    $baremosRelacion = $model->getBaremos()->all();
-                    
-                    if (empty($baremosRelacion) && !$model->isNewRecord) {
-                        $baremosDirectos = (new \yii\db\Query())
-                            ->select(['baremo_id'])
-                            ->from('sis_siniestro_baremo')
-                            ->where(['siniestro_id' => $model->id])
-                            ->column();
-                        
-                        if (!empty($baremosDirectos)) {
-                            $selectedBaremos = $baremosDirectos;
-                        }
+                        $mesesFaltantes = $plazoRequerido - $mesesTranscurridos;
+                        $fechaPlazoFin = clone $fechaContratoIni;
+                        $fechaPlazoFin->modify("+{$plazoRequerido} months"); 
+                        $diasRestantes = $fechaActual->diff($fechaPlazoFin)->days;
+                        $restricciones[] = "Plazo pendiente: {$plazoRequerido} meses (Faltan {$mesesFaltantes} meses / {$diasRestantes} días)";
                     } else {
-                        $selectedBaremos = \yii\helpers\ArrayHelper::getColumn($baremosRelacion, 'id');
+                        $restricciones[] = "Plazo cumplido: {$plazoRequerido} meses (Transcurridos: {$mesesTranscurridos})";
                     }
                 }
-                ?>
                 
-                <div class="field-with-icon">
-                    <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [
-                        'data' => $baremosTotales, // Usa la lista combinada
-                        'options' => [
-                            'multiple' => true,
-                            'value' => $selectedBaremos,
-                            'placeholder' => 'Seleccione uno o más Baremos',
-                            'class' => 'form-control form-lg',
-                            'id' => 'baremos-select' // ID para JS
-                        ],
-                        'pluginOptions' => [
-                            'allowClear' => true,
-                            'closeOnSelect' => true,
-                            'tags' => false,
-                            'tokenSeparators' => [',', ' '],
-                        ],
-                    ])->label('Baremos')->hint('Seleccione el baremo') ?>
-                </div>
+                // --- 2. LÓGICA DE LÍMITE DE USO (Anual) ---
+                if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
+                    $anioVigencia = $fechaContratoIni->diff($fechaActual)->y;
+                    $inicioAnio = clone $fechaContratoIni;
+                    $inicioAnio->modify("+{$anioVigencia} years");
+                    $finAnio = clone $inicioAnio;
+                    $finAnio->modify("+1 year -1 day");
+                    
+                    $vecesUsado = \app\models\SisSiniestroBaremo::find()
+                        ->joinWith('siniestro') 
+                        ->where(['sis_siniestro_baremo.baremo_id' => $item->baremo_id])
+                        ->andWhere(['sis_siniestro.iduser' => $afiliado->id])
+                        ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
+                        ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnio->format('Y-m-d')])
+                        ->andWhere(['<=', 'sis_siniestro.fecha', $finAnio->format('Y-m-d')])
+                        ->count();
+                        
+                    if ($vecesUsado >= $item->cantidad_limite) {
+                        $restricciones[] = "Límite anual alcanzado: {$vecesUsado}/{$item->cantidad_limite} usos";
+                        continue; 
+                    }
+                    $restricciones[] = "Límite anual: {$vecesUsado}/{$item->cantidad_limite} usos";
+                }
+            } else {
+                $restricciones[] = "Advertencia: Contrato activo no encontrado. No se validaron Plazo/Límites.";
+            }
+            
+            $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
+            $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+            
+            if (!empty($item->baremo->descripcion)) {
+                $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
+            }
+            
+            if (!empty($restricciones)) {
+                $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
+            }
+            
+            // =========================================================================
+            // CLASIFICACIÓN FINAL ESTRICTA
+            // =========================================================================
+            if (!$hasPlazoEver) {
+                $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
+            } elseif ($isRestrictedByPlazo) {
+                $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
+            } else {
+                $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
+            }
+            // =========================================================================
 
-                <div id="baremos-tabla-container" style="display: none;">
-                    <h4 class="section-title mb-3">
-                        <i class="fas fa-list-alt text-blue-600"></i> Resumen de Servicios
-                    </h4>
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Servicio</th>
-                                <th>Área</th>
-                                <th class="text-center">Restricciones</th>
-                                <th class="cost-col">Costo</th>
-                            </tr>
-                        </thead>
-                        <tbody id="baremos-tabla-body">
-                            </tbody>
-                    </table>
-                </div>
-                
-                <div class="costo-total-container" id="costo-total-container" style="display: none;">
-                    <div class="costo-total-label">Total calculado:</div>
-                    <div class="costo-total-value" id="costo-total-value">$0.00</div>
-                    <!-- Elemento para mostrar advertencia de límite de cobertura -->
-                    <div id="cobertura-warning" class="mt-2 p-2 rounded-3 text-danger" style="display: none; background-color: #ffe0b2; border: 1px solid #ff9800;"></div>
-                    <!-- Mensaje de advertencia para Citas (NUEVO) -->
-                    <div id="cita-warning" class="mt-2 p-2 rounded-3 text-warning" style="display: none; background-color: #fff3cd; border: 1px solid #ffc107;">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Este registro es una **Cita**. Los baremos con Plazo Pendiente solo se reservarán.
-                    </div>
-                </div>
-            </div>
+            $baremosInfo[$item->baremo_id] = [
+                'nombre' => $item->baremo->nombre_servicio,
+                'area' => $area,
+                'plazo_espera' => $item->plazo_espera,
+                'cantidad_limite' => $item->cantidad_limite,
+                'veces_usado' => $vecesUsado,
+                'costo' => $costoBaremo, 
+                'is_restricted_by_plazo' => $isRestrictedByPlazo,
+                'has_plazo_ever' => $hasPlazoEver, 
+            ];
+        }
+    }
+    
+    // IMPORTANTE: Combina las TRES listas.
+    $baremosTotales = $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
+
+    // Obtener baremos seleccionados (código sin cambios)
+    $selectedBaremos = [];
+    if (method_exists($model, 'getBaremos')) {
+        $baremosRelacion = $model->getBaremos()->all();
+        
+        if (empty($baremosRelacion) && !$model->isNewRecord) {
+            $baremosDirectos = (new \yii\db\Query())
+                ->select(['baremo_id'])
+                ->from('sis_siniestro_baremo')
+                ->where(['siniestro_id' => $model->id])
+                ->column();
+            
+            if (!empty($baremosDirectos)) {
+                $selectedBaremos = $baremosDirectos;
+            }
+        } else {
+            $selectedBaremos = ArrayHelper::getColumn($baremosRelacion, 'id');
+        }
+    }
+    ?>
+    
+    <div class="field-with-icon">
+        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
+            'data' => $baremosTotales, 
+            'options' => [
+                'multiple' => true,
+                'value' => $selectedBaremos,
+                'placeholder' => 'Seleccione uno o más Baremos',
+                'class' => 'form-control form-lg',
+                'id' => 'baremos-select' 
+            ],
+            'pluginOptions' => [
+                'allowClear' => true,
+                'closeOnSelect' => true,
+                'tags' => false,
+                'tokenSeparators' => [',', ' '],
+            ],
+        ])->label('Baremos')->hint('Seleccione el baremo') ?>
+    </div>
+
+    <div id="baremos-tabla-container" style="display: none;">
+        <h4 class="section-title mb-3">
+            <i class="fas fa-list-alt text-blue-600"></i> Resumen de Servicios
+        </h4>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Servicio</th>
+                    <th>Área</th>
+                    <th class="text-center">Restricciones</th>
+                    <th class="cost-col">Costo</th>
+                </tr>
+            </thead>
+            <tbody id="baremos-tabla-body">
+                </tbody>
+        </table>
+    </div>
+    
+    <div class="costo-total-container" id="costo-total-container" style="display: none;">
+        <div class="costo-total-label">Total calculado:</div>
+        <div class="costo-total-value" id="costo-total-value">$0.00</div>
+        <div id="cobertura-warning" class="mt-2 p-2 rounded-3 text-danger" style="display: none; background-color: #ffe0b2; border: 1px solid #ff9800;"></div>
+        <div id="cita-warning" class="mt-2 p-2 rounded-3 text-warning" style="display: none; background-color: #fff3cd; border: 1px solid #ffc107;">
+            <i class="fas fa-exclamation-triangle me-1"></i> Este registro es una **Cita**. Los baremos con Plazo Pendiente solo se reservarán.
+        </div>
+    </div>
+</div>
 
 <?php 
 // -----------------------------------------------------------------------------------------------------
-// CÓDIGO JAVASCRIPT para la interacción Siniestro/Cita
+// CÓDIGO JAVASCRIPT con BLOQUEO DE GUARDADO (Modificado para usar el mensaje)
 // -----------------------------------------------------------------------------------------------------
 $baremosTotalesJson = json_encode($baremosTotales);
 $baremosInfoJson = json_encode($baremosInfo);
+$baremosRestringidosJson = json_encode($baremosRestringidosIDs); 
 
-// Se registra el script al final de la vista para asegurar que el DOM esté cargado
+// Se registra el script al final de la vista
 $this->registerJs(<<<JS
     // Información de baremos y lista total de opciones
-    const baremosTotales = $baremosTotalesJson;
-    const baremosInfo = $baremosInfoJson;
+    const baremosTotales = {$baremosTotalesJson};
+    const baremosInfo = {$baremosInfoJson};
+    const baremosRestringidosIDs = {$baremosRestringidosJson}; // IDs con plazo pendiente
+    
     const esCitaHidden = $('#es-cita-hidden');
     const esCitaSwitch = $('#es-cita-switch');
     const tipoRegistroLabel = $('#tipo-registro-label');
     const citaWarning = $('#cita-warning');
     const baremosSelect = $('#baremos-select');
+    const form = baremosSelect.closest('form');
     
-    // Función para manejar el estado del formulario (Siniestro/Cita)
+    // 🌟 INSERCIÓN 2: Referencia al div del mensaje de error
+    const plazoErrorMessage = $('#plazo-error-message'); 
+    
+    // --- LÓGICA DE BLOQUEO CRÍTICA (REEMPLAZO) ---
+    function validateAndBlockSave() {
+        const isCitaMode = esCitaSwitch.is(':checked'); 
+        plazoErrorMessage.hide(); // Ocultar por defecto antes de validar
+
+        if (!isCitaMode) {
+            return true;
+        }
+
+        const selectedValues = baremosSelect.val() || [];
+        const hasRestricted = selectedValues.some(id => baremosRestringidosIDs.includes(id));
+
+        if (hasRestricted) {
+            // ** BLOQUEA EL GUARDADO y MUESTRA el mensaje **
+            plazoErrorMessage.show();
+            return false; 
+        } else {
+            return true;
+        }
+    }
+    // ----------------------------------
+
+    // Función para manejar el estado del formulario (Siniestro/Cita) (SIN CAMBIOS)
     function updateTipoRegistro() {
         const isCitaMode = esCitaSwitch.is(':checked');
         
@@ -652,88 +699,96 @@ $this->registerJs(<<<JS
         }
         
         filterBaremosForTipoRegistro(isCitaMode);
+        // 🌟 MODIFICACIÓN 1: Asegurar que se valide al cambiar el modo
+        // Nota: Si tienes una función updateBaremosTablaAndCosto() debes llamarla aquí.
+        validateAndBlockSave(); 
     }
     
-    // Función para filtrar dinámicamente las opciones del Select2
+    // Función para filtrar dinámicamente las opciones del Select2 (SIN CAMBIOS)
     function filterBaremosForTipoRegistro(isCitaMode) {
         const selectedValues = baremosSelect.val() || [];
         const newValidValues = [];
         
-        // 1. Limpiar el select2 y rellenar solo con opciones válidas
         baremosSelect.find('option').remove();
         
         for (const baremoId in baremosTotales) {
             const info = baremosInfo[baremoId];
             
-            let shouldInclude = false; // Bandera para la nueva lógica
-
-            // La restricción de LÍMITE (veces_usado >= cantidad_limite) se aplica en PHP
-            // y esos baremos NO están en baremosTotales/baremosInfo.
+            let shouldInclude = false; 
 
             if (isCitaMode) {
-                // MODO CITA: Incluir baremos que estén restringidos por plazo
-                if (info.is_restricted_by_plazo) {
+                if (info.has_plazo_ever === true) {
                     shouldInclude = true;
                 }
             } else {
-                // MODO SINIESTRO: Incluir baremos que NO estén restringidos por plazo
-                if (!info.is_restricted_by_plazo) {
+                if (info.has_plazo_ever === false) {
                     shouldInclude = true;
                 }
             }
 
             if (shouldInclude) {
-                // Si pasa la restricción, se agrega la opción
                 const text = baremosTotales[baremoId];
-                const option = new Option(text, baremoId, false, selectedValues.includes(baremoId));
+                const option = new Option(text, baremoId, false, selectedValues.includes(baremoId)); 
                 baremosSelect.append(option);
             }
             
-            // Reconstruir la lista de valores válidos
-            if (baremosSelect.find('option[value="' + baremoId + '"]').length > 0 && selectedValues.includes(baremoId)) {
+            if (shouldInclude && selectedValues.includes(baremoId)) {
                  newValidValues.push(baremoId);
             }
         }
         
-        // 2. Re-inicializar Select2 (necesario para actualizar las opciones visibles)
-        // Usamos destroy/select2 para garantizar que el set de opciones se refresque correctamente.
         baremosSelect.select2('destroy');
         baremosSelect.select2({
-            data: baremosTotales, 
             multiple: true,
             placeholder: 'Seleccione uno o más Baremos',
             allowClear: true,
             closeOnSelect: true,
             tags: false,
             tokenSeparators: [',', ' '],
-            // Template para resaltar los baremos de Cita en el desplegable
             templateResult: function (data) {
-                const isPlazoPendiente = data.text.includes('[CITA]');
-                if (isPlazoPendiente) {
+                const isPlazoBaremo = data.text.includes('[CITA'); 
+                if (isPlazoBaremo) {
                     return $('<span><i class="fas fa-clock text-warning me-2"></i>' + data.text + '</span>');
                 }
                 return data.text;
             }
         });
         
-        // 3. Aplicar los valores que SÍ son válidos para el modo actual
+        // El 'change' debe disparar el listener de validación
         baremosSelect.val(newValidValues).trigger('change');
     }
     
     // 4. Listeners y Ejecución Inicial
     esCitaSwitch.on('change', updateTipoRegistro);
     
+    // 🌟 MODIFICACIÓN 2: Listener para la validación al cambiar la selección
+    baremosSelect.on('change', function() {
+        // Si tenías una función de tabla, DEBE ir aquí, ANTES de validateAndBlockSave().
+        // updateBaremosTablaAndCosto(); // <-- Si esta función existe, déjala aquí.
+        validateAndBlockSave(); 
+    });
+    
+    // ** LISTENER CLAVE: Bloquea el guardado en el submit del formulario (REEMPLAZO) **
+    form.on('beforeSubmit', function(e) {
+        if (!validateAndBlockSave()) {
+            e.preventDefault();
+            baremosSelect.select2('close'); 
+            // 🌟 MODIFICACIÓN 3: Desplazar la vista hacia el mensaje de error
+            $('html, body').animate({
+                scrollTop: plazoErrorMessage.offset().top - 100
+            }, 500);
+            return false; 
+        }
+        return true;
+    });
+
     $(document).ready(function() {
         // Inicializar el estado y el Select2 al cargar
         updateTipoRegistro(); 
     });
-    
-    // NOTA: La lógica de la tabla (baremos-tabla-container) y el costo total (costo-total-container)
-    // debe estar implementada aparte, reaccionando al evento 'change' del baremosSelect.
 JS
 , \yii\web\View::POS_END); 
-?>
-
+?>  
 
 
                 
@@ -761,14 +816,14 @@ JS
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
                                 'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha del Siniestro') ?>
+                            ])->label('Fecha de '. $terminoPrincipal) ?>
                         </div>
                         
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'hora')->textInput([
                                 'type' => 'time', 
                                 'class' => 'form-control form-control-lg'
-                            ])->label('Hora del Siniestro') ?>
+                            ])->label('Hora de '. $terminoPrincipal) ?>
                         </div>
                         
                         <div class="col-md-12">
@@ -803,8 +858,8 @@ JS
                             <?= $form->field($model, 'descripcion')->textarea([
                                 'rows' => 3, 
                                 'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Describa los detalles del siniestro...'
-                            ])->label('Descripción del Siniestro') ?>
+                                'placeholder' => 'Describa los detalles...'
+                            ])->label('Descripción de '. $terminoPrincipal) ?>
                         </div>
 
                          <div class="col-md-12">
@@ -847,7 +902,7 @@ JS
                                                         'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
                                                     ],
                                                 ],
-                                            ])->label('Recipe');
+                                            ])->label('Récipe');
                                             ?>
                                         </div>
                                         

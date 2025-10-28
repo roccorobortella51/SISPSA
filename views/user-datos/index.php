@@ -57,7 +57,7 @@ if ($clinica && $clinica->id !== null) {
             
             <!-- Botón de Exportación Rápida con ESTILO ÍNDIGO MÁS FUERTE -->
             <?= Html::button(
-                '<i class="fas fa-file-excel mr-2"></i> EXPORTAR A CSV (Rápido)', 
+                '<i class="fas fa-file-excel mr-2"></i> EXPORTAR A EXCEL (CSV)', 
                 [
                     'id' => 'export-csv-btn', 
                     // CLASES DE COLOR ACTUALIZADAS A ÍNDIGO SÓLIDO Y OSCURO
@@ -407,7 +407,6 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 </div>
-<<<<<<< HEAD
 
 <?php 
 
@@ -416,8 +415,9 @@ $js_code_stable = "function exportTableToCSV(tableID, filename) {const table = d
 
 $this->registerJs($js_code_stable, \yii\web\View::POS_END);
 ?>
-=======
-/* Improved tooltip styling */
+
+<style>
+Improved tooltip styling 
 .custom-tooltip .tooltip-inner {
     background-color: #2d3748;
     color: #fff;
@@ -558,4 +558,4 @@ JS;
 
 $this->registerJs($js);
 ?>
->>>>>>> 305c5cdc0d65303c4840167fdd6e4a61e1431b52
+
