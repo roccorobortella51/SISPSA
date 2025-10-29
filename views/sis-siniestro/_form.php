@@ -870,7 +870,7 @@ JS
                                                     'showCaption' => true,
                                                     'previewFileType' => 'image',
                                                     'allowedFileExtensions' => ['jpg','jpeg','png','pdf'], 
-                                                    'maxFileSize' => 5120, // 5MB
+                                                    'maxFileSize' => 10240, // 10MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,
                                                     'browseLabel' => 'Subir Recipe',
@@ -906,7 +906,7 @@ JS
                                                     'showCancel' => false,
                                                     'showCaption' => true,
                                                     'allowedFileExtensions' => ['jpg','jpeg','png','pdf'], 
-                                                    'maxFileSize' => 5120, // 5MB
+                                                    'maxFileSize' => 10240, // 10MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,
                                                     'browseLabel' => 'Subir Informe Médico',
