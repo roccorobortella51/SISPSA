@@ -251,7 +251,7 @@ $this->registerJs($js);
                     'showUpload' => false,
                     'showCancel' => false,
                     'previewFileType' => 'image',
-                    'maxFileSize' => 2800,
+                    'maxFileSize' => 5600,
                     'msgSizeTooLarge' => 'El archivo "{name}" ({size} KB) excede el tamaño máximo permitido de {maxSize} KB. Por favor, suba una imagen más pequeña.',
                     'initialPreview' => $initialPreview,
                     'initialPreviewAsData' => true,
