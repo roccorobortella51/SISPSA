@@ -225,6 +225,32 @@ $currentRoute = Yii::$app->controller->getRoute();
         </div>
     </div>
 
+    <?php if ($model->tiene_contratante_diferente): ?>
+    <div class="ms-panel border-blue">
+        <div class="ms-panel-body">
+            <h5 class="section-title">
+                <i class="fas fa-user-tie text-blue-600 mr-3"></i> Información del Contratante
+            </h5>
+            <div class="info-grid text-left">
+                <div>
+                    <h5><strong>Nombres:</strong> <?= Html::encode($model->nombre_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellido_contratante ?? 'N/A') ?></h5>
+                    <h5><strong>Cédula:</strong> <?= Html::encode(($model->tipo_cedula_contratante ? $model->tipo_cedula_contratante . '-' : '') . ($model->cedula_contratante ?? 'N/A')) ?></h5>
+                    <h5><strong>Fecha de Nacimiento:</strong> <?= Html::encode(Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'd-m-Y') ?? 'N/A') ?></h5>
+                    <h5><strong>Email:</strong> <?= Html::a(Html::encode($model->email_contratante), 'mailto:' . Html::encode($model->email_contratante), ['class' => 'text-blue-500']) ?? 'N/A' ?></h5>
+                </div>
+                <div>
+                    <h5><strong>Sexo:</strong> <?= Html::encode(!empty($model->sexo_contratante) ? $model->sexo_contratante : 'N/A') ?></h5>
+                    <h5><strong>Nacionalidad:</strong> <?= Html::encode(!empty($model->nacionalidad_contratante) ? $model->nacionalidad_contratante : 'N/A') ?></h5>
+                    <h5><strong>Estado Civil:</strong> <?= Html::encode(!empty($model->estado_civil_contratante) ? $model->estado_civil_contratante : 'N/A') ?></h5>
+                    <h5><strong>Ocupación:</strong> <?= Html::encode(!empty($model->ocupacion_contratante) ? $model->ocupacion_contratante : 'N/A') ?></h5>
+                    <h5><strong>Teléfono Celular:</strong> <?= Html::encode(!empty($model->telefono_celular_contratante) ? $model->telefono_celular_contratante : 'N/A') ?></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
     <div class="ms-panel border-purple">
         <div class="ms-panel-body">
             <h5 class="section-title text-center">
@@ -379,31 +405,7 @@ $currentRoute = Yii::$app->controller->getRoute();
     </div>
 <?php endif; ?>
 
-<?php if ($model->tiene_contratante_diferente): ?>
-    <div class="ms-panel border-blue">
-        <div class="ms-panel-body">
-            <h5 class="section-title">
-                <i class="fas fa-user-tie text-blue-600 mr-3"></i> Información del Contratante
-            </h5>
-            <div class="info-grid text-left">
-                <div>
-                    <h5><strong>Nombres:</strong> <?= Html::encode($model->nombre_contratante ?? 'N/A') ?></h5>
-                    <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellido_contratante ?? 'N/A') ?></h5>
-                    <h5><strong>Cédula:</strong> <?= Html::encode(($model->tipo_cedula_contratante ? $model->tipo_cedula_contratante . '-' : '') . ($model->cedula_contratante ?? 'N/A')) ?></h5>
-                    <h5><strong>Fecha de Nacimiento:</strong> <?= Html::encode(Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'd-m-Y') ?? 'N/A') ?></h5>
-                    <h5><strong>Email:</strong> <?= Html::a(Html::encode($model->email_contratante), 'mailto:' . Html::encode($model->email_contratante), ['class' => 'text-blue-500']) ?? 'N/A' ?></h5>
-                </div>
-                <div>
-                    <h5><strong>Sexo:</strong> <?= Html::encode(!empty($model->sexo_contratante) ? $model->sexo_contratante : 'N/A') ?></h5>
-                    <h5><strong>Nacionalidad:</strong> <?= Html::encode(!empty($model->nacionalidad_contratante) ? $model->nacionalidad_contratante : 'N/A') ?></h5>
-                    <h5><strong>Estado Civil:</strong> <?= Html::encode(!empty($model->estado_civil_contratante) ? $model->estado_civil_contratante : 'N/A') ?></h5>
-                    <h5><strong>Ocupación:</strong> <?= Html::encode(!empty($model->ocupacion_contratante) ? $model->ocupacion_contratante : 'N/A') ?></h5>
-                    <h5><strong>Teléfono Celular:</strong> <?= Html::encode(!empty($model->telefono_celular_contratante) ? $model->telefono_celular_contratante : 'N/A') ?></h5>
-                </div>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
+
 
 <div class="ms-panel border-red">
     <div class="ms-panel-body">

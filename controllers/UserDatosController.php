@@ -814,7 +814,7 @@ public function actionMasivo()
         //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-            
+            $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
             // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {

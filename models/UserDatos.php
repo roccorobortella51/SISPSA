@@ -155,7 +155,7 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
-    public $tiene_contratante_diferente;
+    //public $tiene_contratante_diferente;
     public $cobertura_maternidad;
     
     // NOTA: Solo propiedades públicas para campos que NO están en la base de datos
