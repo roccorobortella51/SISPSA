@@ -813,6 +813,8 @@ public function actionMasivo()
 
         //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+
+            
             // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
@@ -1029,7 +1031,7 @@ public function actionMasivo()
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionUpdate($id)
+function actionUpdate($id)
     {  
         $model = $this->findModel($id);
         $modelContrato = Contratos::find()->where(['user_id' => $id])->one();
@@ -1043,6 +1045,10 @@ public function actionMasivo()
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
             Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
+
+            $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
+                        
+            // Procesar grupo familiar
         
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {

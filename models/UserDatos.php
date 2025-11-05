@@ -183,7 +183,7 @@ class UserDatos extends ActiveRecord
     {
         return [
             // 1. Campos obligatorios - CÉDULA AHORA ES OBLIGATORIA
-            [['nombres', 'apellidos', 'fechanac', 'sexo', 'cedula', // ← Cédula agregada aquí
+            [['nombres', 'apellidos', 'fechanac', 'sexo',
               'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
 
             // 2. Valores por defecto (se mantienen igual)
@@ -299,6 +299,15 @@ class UserDatos extends ActiveRecord
             // 16. Validaciones para campos de texto largo (para JSON)
             [['grupo_familiar'], 'string'],
             [['grupo_familiar'], 'safe'],
+
+            [['tipo_cedula', 'cedula'], 'required', 'when' => function ($model) {
+            // Solo es requerido si 'tiene_contratante_diferente' es falso/no está marcado.
+            // Si el valor del checkbox es 1 (marcado), 'when' evalúa a falso y omite la regla.
+            return !$model->tiene_contratante_diferente;
+            }, 'whenClient' => "function (attribute, value) {
+                // Lógica del lado del cliente (JS)
+                return !$('#userdatos-tiene_contratante_diferente').is(':checked');
+            }"],
         ];
 
     }
@@ -515,5 +524,22 @@ class UserDatos extends ActiveRecord
         // para llegar al modelo 'Corporativo'
         return $this->hasOne(Corporativo::class, ['id' => 'corporativo_id'])
             ->via('corporativoUser');
+    }
+
+    public function beforeValidate()
+    {
+        if (!parent::beforeValidate()) {
+            return false;
+        }
+
+        // Solución de emergencia: Convertir el valor a booleano estricto.
+        // Esto es necesario para PostgreSQL cuando el campo es 'boolean'.
+        if ($this->hasAttribute('tiene_contratante_diferente')) {
+            // Si el valor es el entero 1 o 0 (que es lo que envían el controlador/form), 
+            // lo convertimos a TRUE o FALSE antes de la validación final.
+            $this->tiene_contratante_diferente = (bool)$this->tiene_contratante_diferente;
+        }
+        
+        return true;
     }
 }

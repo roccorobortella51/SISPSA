@@ -36,7 +36,36 @@ $this->registerJs($js);
 
 <?php
 $jsValidation = <<<JS
-// [El código de validación permanece igual]
+$(document).ready(function() {
+    // 1. Obtener los IDs de los elementos
+    var \$checkbox = $('#userdatos-tiene_contratante_diferente');
+    var \$tipoCedulaField = $('.field-userdatos-tipo_cedula');
+    var \$cedulaField = $('.field-userdatos-cedula');
+    var \$contratanteSection = $('#contratante-section'); // Añadido para controlar la sección
+
+    // Función para manejar el estado de los campos del afiliado y la sección
+    function toggleAfiliadoRequiredAndSection() {
+        if (\$checkbox.is(':checked')) {
+            // Checkbox marcado (el contratante es diferente): Hacemos los campos opcionales
+            \$tipoCedulaField.removeClass('required');
+            \$cedulaField.removeClass('required');
+            \$contratanteSection.show(); // Muestra la sección del contratante
+        } else {
+            // Checkbox desmarcado (el afiliado es el contratante): Hacemos los campos requeridos
+            \$tipoCedulaField.addClass('required');
+            \$cedulaField.addClass('required');
+            \$contratanteSection.hide(); // Oculta la sección del contratante
+        }
+    }
+
+    // 2. Ejecutar la función al cargar la página (para el estado inicial)
+    toggleAfiliadoRequiredAndSection();
+
+    // 3. Ejecutar la función cada vez que el checkbox cambie
+    \$checkbox.on('change', function() {
+        toggleAfiliadoRequiredAndSection();
+    });
+});
 JS;
 $this->registerJs($jsValidation);
 ?>
@@ -214,8 +243,13 @@ $this->registerJs($jsValidation);
                             ]) ?>
                         </div>
 
-                         <div class="col-md-6">
-                            <?= $form->field($model, 'tiene_contratante_diferente')->checkbox(['class' => 'form-control-lg']) ?>
+                        <div class="col-md-6">
+                            <?= $form->field($model, 'tiene_contratante_diferente')->checkbox([
+                                'class' => 'form-control-lg',
+                                'uncheck' => 0, // Fuerza 0 si no se marca
+                                'value' => 1,   // Fuerza 1 si se marca (necesario si la columna es BOOLEAN)
+                                'checked' => (bool)$model->tiene_contratante_diferente, // Asegura que se lea el estado inicial
+                            ]) ?>
                         </div>
                     </div>
                 </div>
@@ -290,7 +324,7 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'cedula')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ejemplo: 12345678',
-                                'readonly' => !$model->isNewRecord, // Only readonly when editing existing record
+                                //'readonly' => !$model->isNewRecord, // Only readonly when editing existing record
                             ])->label('Cédula de Identidad') ?>
                         </div>
 
