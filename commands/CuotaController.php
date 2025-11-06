@@ -6,7 +6,7 @@ use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
 use app\models\Cuotas;
-use app\models\Contratos; // Modelo correcto
+use app\models\Contratos;
 use app\models\TasaCambio;
 use yii\helpers\Console;
 
@@ -49,10 +49,10 @@ class CuotaController extends Controller
         $fechaActual = date('Y-m-d');
         $contratos = Contratos::find()
             ->where(['or',
-                ['in', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']], // Case-insensitive para estatus válidos
-                ['estatus' => null] // Incluir si estatus es null
-            ]) // Incluir múltiples estatus válidos
-            ->andWhere(['<=', 'fecha_ini', $fechaActual]) // Solo contratos que ya iniciaron
+                ['in', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']],
+                ['estatus' => null]
+            ])
+            ->andWhere(['<=', 'fecha_ini', $fechaActual])
             ->all();
             
         $this->stdout("Encontrados " . count($contratos) . " contratos para procesar (ya filtrados por fecha_ini <= {$fechaActual}).\n");
@@ -158,7 +158,7 @@ class CuotaController extends Controller
                     $cuota = new Cuotas([
                         'contrato_id' => $contrato->id,
                         'fecha_vencimiento' => $fechaVencStr,
-                        'monto_usd' => $contrato->monto, // Monto completo para atrasadas
+                        'monto_usd' => $contrato->monto,
                         'Estatus' => 'pendiente',
                         'rate_usd_bs' => $this->obtenerTasaCambioActual(),
                     ]);
@@ -471,14 +471,23 @@ class CuotaController extends Controller
         $this->stdout("=== VERIFICACIÓN DIARIA DE CUOTAS ===\n");
         $this->stdout("Fecha: " . date('Y-m-d H:i:s') . "\n\n");
         
-        // 1. Verificar cuotas vencidas y suspender contratos
-        $this->stdout("1. Verificando cuotas vencidas...\n");
+        // 1. Check for contracts to suspend (after 5th day without payment)
+        $this->stdout("1. Verificando contratos sin pago después del día 5...\n");
+        $suspendedCount = $this->suspenderContratosSinPago();
+        if ($suspendedCount > 0) {
+            $this->stdout("✅ Se suspendieron {$suspendedCount} contratos por falta de pago.\n");
+        } else {
+            $this->stdout("✅ No hay contratos para suspender por falta de pago.\n");
+        }
+        
+        // 2. Verificar cuotas vencidas y suspender contratos
+        $this->stdout("\n2. Verificando cuotas vencidas...\n");
         $this->runAction('verificar-vencidas');
         
-        $this->stdout("\n2. Verificando contratos en espera...\n");
+        $this->stdout("\n3. Verificando contratos en espera...\n");
         $this->runAction('verificar-espera');
         
-        $this->stdout("\n3. Generando cuotas mensuales (si es día 1)...\n");
+        $this->stdout("\n4. Generando cuotas mensuales (si es día 1)...\n");
         if (date('j') === '1') {
             $this->runAction('generar-mensual');
         } else {
@@ -984,6 +993,12 @@ class CuotaController extends Controller
         return 1; // Valor por defecto si no hay tasa de cambio registrada
     }
 
+    /**
+     * Verifica contratos en espera para activarlos.
+     * Uso: `yii cuota/verificar-espera`
+     * 
+     * @return int Código de salida
+     */
     public function actionVerificarEspera()
     {
         $this->stdout("Verificando contratos en espera...\n");
@@ -1017,6 +1032,12 @@ class CuotaController extends Controller
         return ExitCode::OK;
     }
 
+    /**
+     * Verifica si la columna fecha_reactivacion existe.
+     * Uso: `yii cuota/check-column`
+     * 
+     * @return int Código de salida
+     */
     public function actionCheckColumn()
     {
         $this->stdout("Checking if fecha_reactivacion column exists...\n");
@@ -1062,6 +1083,12 @@ class CuotaController extends Controller
         return ExitCode::OK;
     }
 
+    /**
+     * Agrega la columna fecha_reactivacion a la tabla contratos.
+     * Uso: `yii cuota/add-column`
+     * 
+     * @return int Código de salida
+     */
     public function actionAddColumn()
     {
         $this->stdout("Adding fecha_reactivacion column to contratos table...\n");
@@ -1094,4 +1121,53 @@ class CuotaController extends Controller
         
         return ExitCode::OK;
     }
+    // Add this method to CuotaController.php
+private function suspenderContratosSinPago()
+{
+    $currentDay = date('j');
+    $currentMonth = date('Y-m');
+    
+    // Only run after the 5th day of the month
+    if ($currentDay <= 5) {
+        return 0;
+    }
+    
+    $firstDayOfMonth = date('Y-m-01');
+    $fifthDayOfMonth = date('Y-m-05');
+    
+    $contratosSuspendidos = 0;
+    
+    // Find active contracts that should have paid by now
+    $contratos = Contratos::find()
+        ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado', 'Activo']])
+        ->all();
+        
+    foreach ($contratos as $contrato) {
+        // Check if there are unpaid cuotas for current month that were due by the 5th
+        $tieneCuotasPendientes = Cuotas::find()
+            ->where(['contrato_id' => $contrato->id])
+            ->andWhere(['Estatus' => 'pendiente'])
+            ->andWhere(['<=', 'fecha_vencimiento', $fifthDayOfMonth])
+            ->andWhere(['>=', 'fecha_vencimiento', $firstDayOfMonth])
+            ->exists();
+            
+        // Check if payment was made this month (before suspension)
+        $pagoEsteMes = Pagos::find()
+            ->where(['user_id' => $contrato->user_id])
+            ->andWhere(['estatus' => 'Conciliado'])
+            ->andWhere(['>=', 'fecha_pago', $firstDayOfMonth])
+            ->exists();
+            
+        if ($tieneCuotasPendientes && !$pagoEsteMes) {
+            // Suspend contract for non-payment after 5th day
+            $contrato->estatus = 'suspendido';
+            if ($contrato->save(false)) {
+                $contratosSuspendidos++;
+                $this->stdout("⚠️  Contrato #{$contrato->id} suspendido - sin pago después del día 5.\n");
+            }
+        }
+    }
+    
+    return $contratosSuspendidos;
+}
 }

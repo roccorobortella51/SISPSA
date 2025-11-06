@@ -954,7 +954,12 @@ public function actionMasivo()
                         $modelContrato->save();      
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
-                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                        
+                        // FIX: Give 30-day grace period for first payment instead of using contract start date
+                        $fechaVencimiento = new \DateTime($modelContrato->fecha_ini);
+                        $fechaVencimiento->modify('+30 days');
+                        $modelCuota->fecha_vencimiento = $fechaVencimiento->format('Y-m-d');
+                        
                         $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
                         $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                         $modelCuota->Estatus = 'pendiente';
@@ -1241,7 +1246,12 @@ public function actionMasivo()
                     }
                     $modelCuota = new Cuotas();
                     $modelCuota->contrato_id = $modelContrato->id;
-                    $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                    
+                    // FIX: Give 30-day grace period for first payment instead of using contract start date
+                    $fechaVencimiento = new \DateTime($modelContrato->fecha_ini);
+                    $fechaVencimiento->modify('+30 days');
+                    $modelCuota->fecha_vencimiento = $fechaVencimiento->format('Y-m-d');
+                    
                     $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
                     $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                     $modelCuota->Estatus = 'pendiente';

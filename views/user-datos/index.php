@@ -64,6 +64,7 @@ if ($clinica && $clinica->id !== null) {
                     ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
                 ) ?> 
             <?php endif; ?>
+
             <!-- Botón "Volver a Clínica" condicional -->
             <?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
@@ -220,14 +221,14 @@ if ($clinica && $clinica->id !== null) {
                                 $statusClass = '';
                                 $tooltipText = '';
                                 $customStyle = '';
-                                $displayText = ''; // New variable for display text
+                                $displayText = '';
 
+                                // ORIGINAL LOGIC (no temporary override)
                                 if ($lower === 'suspendido') {
                                     $statusClass = 'badge bg-danger';
                                     $tooltipText = 'Contrato suspendido por falta de pago';
                                     $displayText = 'Suspendido';
                                 } elseif ($lower === 'creado') {
-                                    // AQUA color for "Creado"
                                     $statusClass = 'badge';
                                     $customStyle = 'background-color: #00FFFF; color: #000;';
                                     $tooltipText = 'Contrato recién creado';
@@ -243,7 +244,7 @@ if ($clinica && $clinica->id !== null) {
                                 } elseif ($lower === 'esperar') {
                                     $statusClass = 'badge bg-warning';
                                     $tooltipText = is_callable([$contract, 'getTooltipEspera']) ? $contract->getTooltipEspera() : 'En período de penalidad';
-                                    $displayText = 'Esperar Penalidad'; // Changed from 'Esperar' to 'Esperar Penalidad'
+                                    $displayText = 'Esperar Penalidad';
                                 } else {
                                     $statusClass = 'badge bg-warning text-dark';
                                     $tooltipText = 'Estado: ' . ucfirst($status);
@@ -368,6 +369,8 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 </div>
+
+<style>
 /* Improved tooltip styling */
 .custom-tooltip .tooltip-inner {
     background-color: #2d3748;
