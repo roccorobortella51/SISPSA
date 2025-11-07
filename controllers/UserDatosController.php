@@ -1749,6 +1749,63 @@ public function actionGenerarContratov($id)
                 ];
             } 
     }
+    
+    /**
+ * Temporary action to activate contracts in "Esperar Penalidad" status
+ */
+public function actionActivatePenaltyContracts()
+    {
+        // Verificar que sea superadmin
+        $rol = \app\components\UserHelper::getMyRol();
+        if ($rol !== 'superadmin') {
+            \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'success' => false,
+                'message' => 'No tiene permisos para ejecutar esta acción'
+            ];
+        }
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        try {
+            // Find all contracts in "Esperar Penalidad" status
+            $contratosEspera = Contratos::find()
+                ->where(['estatus' => 'Esperar'])
+                ->orWhere(['estatus' => 'Esperar Penalidad'])
+                ->all();
+                
+            $activatedCount = 0;
+            
+            foreach ($contratosEspera as $contrato) {
+                // Activate contract immediately
+                $contrato->estatus = 'Activo';
+                $contrato->fecha_reactivacion = null;
+                
+                if ($contrato->save(false)) {
+                    $activatedCount++;
+                    
+                    // Also update user solvent status
+                    $user = UserDatos::findOne($contrato->user_id);
+                    if ($user) {
+                        $user->estatus_solvente = 'Si';
+                        $user->save(false);
+                    }
+                }
+            }
+            
+            return [
+                'success' => true,
+                'message' => "Se activaron {$activatedCount} contratos que estaban en Esperar Penalidad",
+                'activated_count' => $activatedCount
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ];
+        }
+    }
+
     /**
      * Returns JSON data for clinicas filtered by type and corporativo.
      * @return array JSON array of [id => name]

@@ -27,11 +27,13 @@ if (!empty($clinica_id_param)) {
 
 $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA"); // Lógica de permisos original
+$esAdminSistema = ($rol == 'superadmin'); // Solo el superadmin puede activar penalidades
 
 // --- BREADCRUMBS CONDICIONALES ---
 if($permisos == true){
-$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']]; // Siempre se muestra la raíz de clínicas
+    $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']]; // Siempre se muestra la raíz de clínicas
 }
+
 if ($clinica && $clinica->id !== null) {
     // Si estamos en el contexto de una clínica, añadirla a las migas de pan
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
@@ -63,6 +65,18 @@ if ($clinica && $clinica->id !== null) {
                     ['create'], 
                     ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
                 ) ?> 
+                
+                <!-- BOTÓN TEMPORAL PARA ACTIVAR PENALIDADES - SOLO SUPERADMIN -->
+                <?php if ($esAdminSistema) : ?>
+                    <?= Html::button(
+                        '<i class="fas fa-play-circle mr-2"></i> ACTIVAR CONTRATOS EN PENALIDAD', 
+                        [
+                            'class' => 'btn-base btn-warning',
+                            'id' => 'activate-penalty-btn',
+                            'title' => 'Activar todos los contratos en estado "Esperar Penalidad"'
+                        ]
+                    ) ?> 
+                <?php endif; ?>
             <?php endif; ?>
 
             <!-- Botón "Volver a Clínica" condicional -->
@@ -289,8 +303,8 @@ if ($clinica && $clinica->id !== null) {
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos y $clinica
-                                    if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
+                                'update' => function ($url, $model, $key) use ($clinica, $rol) { // Pasar $permisos y $clinica
+                                    if ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN') {
                                         $params = ['update', 'id' => $model->id];
                                         if ($clinica && $clinica->id !== null) {
                                             $params['clinica_id'] = $clinica->id;
@@ -303,26 +317,27 @@ if ($clinica && $clinica->id !== null) {
                                                 'class' => 'btn-action view'
                                             ]
                                         );
-                                    }else{
+                                    } else {
                                         return "";
                                     }
                                 },
                                 'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
                                     if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id];
-                                    if ($clinica && $clinica->id !== null) {
-                                        $params['clinica_id'] = $clinica->id;
-                                    }
+                                        $params = ['/sis-siniestro/index', 'user_id' => $model->id];
+                                        if ($clinica && $clinica->id !== null) {
+                                            $params['clinica_id'] = $clinica->id;
+                                        }
 
-                                    if($model->clinica_id){
-                                    return Html::a(
-                                        '<i class="fas fa-address-card ms-text-primary"></i>',
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Siniestros',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );}
+                                        if($model->clinica_id){
+                                            return Html::a(
+                                                '<i class="fas fa-address-card ms-text-primary"></i>',
+                                                Url::to($params), // Asegurar clinica_id condicionalmente
+                                                [
+                                                    'title' => 'Siniestros',
+                                                    'class' => 'btn-action view'
+                                                ]
+                                            );
+                                        }
                                     }
                                 },
                                 'pagos' => function ($url, $model, $key) {
@@ -450,6 +465,36 @@ if ($clinica && $clinica->id !== null) {
 .tooltip.fade {
     transition: opacity 0.15s ease-in-out;
 }
+
+/* Estilo para el botón de activación temporal */
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    border: 1px solid #b45309 !important;
+    color: white !important;
+    font-weight: 600;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #d97706, #b45309) !important;
+    transform: translateY(-1px);
+}
+
+.btn-warning:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Contador de penalidades */
+#activate-penalty-btn::after {
+    content: "";
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
 </style>
 
 <?php
@@ -512,3 +557,64 @@ JS;
 
 $this->registerJs($js);
 ?>
+
+<!-- Script para el botón de activación temporal -->
+<script>
+$(document).ready(function() {
+    // Botón para activar contratos en penalidad
+    $('#activate-penalty-btn').on('click', function() {
+        var $btn = $(this);
+        var originalText = $btn.html();
+        
+        // Mostrar confirmación
+        if (!confirm('¿Está seguro de activar TODOS los contratos en estado "Esperar Penalidad"?\n\nEsta acción es temporal mientras se ajustan los procedimientos internos de SISPSA.')) {
+            return;
+        }
+        
+        // Cambiar estado del botón
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+        
+        // Hacer la petición AJAX
+        $.ajax({
+            url: '<?= Url::to(['user-datos/activate-penalty-contracts']) ?>',
+            type: 'POST',
+            data: {
+                '_csrf': '<?= Yii::$app->request->csrfToken ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Mostrar mensaje de éxito
+                    alert('✅ ' + response.message);
+                    
+                    // Recargar la página para ver los cambios
+                    location.reload();
+                } else {
+                    alert('❌ ' + response.message);
+                    $btn.prop('disabled', false).html(originalText);
+                }
+            },
+            error: function() {
+                alert('❌ Error de conexión. Intente nuevamente.');
+                $btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+    
+    // Mostrar contador de contratos en penalidad
+    function updatePenaltyCount() {
+        var penaltyCount = $('.badge.bg-warning.contract-status-tooltip:contains("Esperar Penalidad")').length;
+        
+        if (penaltyCount > 0) {
+            $('#activate-penalty-btn').html(
+                '<i class="fas fa-play-circle mr-2"></i> ACTIVAR CONTRATOS EN PENALIDAD (' + penaltyCount + ')'
+            );
+        }
+    }
+    
+    // Actualizar contador al cargar y después de PJAX
+    updatePenaltyCount();
+    $(document).on('pjax:success', function() {
+        setTimeout(updatePenaltyCount, 100);
+    });
+});
+</script>
