@@ -13,7 +13,8 @@ $this->params['breadcrumbs'][] = Html::encode($model->nom);
 \yii\web\YiiAsset::register($this);
 
 function formatPercentage($value) {
-    return Yii::$app->formatter->asPercent((float)$value / 100);
+    // show percentages with 2 decimals (e.g. 12.34%)
+    return Yii::$app->formatter->asPercent((float)$value / 100, 2);
 }
 
 function formatDateTime($value) {
@@ -105,31 +106,31 @@ $datosJs = json_encode($datos);
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="info-card-body text-center">
-                        <h4 class="text-muted">Porcentaje Venta</h4>
+                        <h4 class="text-muted">Venta</h4>
                         <p class="h4 text-info"><?= formatPercentage($model->por_venta) ?></p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="info-card-body text-center">
-                        <h4 class="text-muted">Porcentaje Asesoría</h4>
+                        <h4 class="text-muted">Asesoría</h4>
                         <p class="h4 text-info"><?= formatPercentage($model->por_asesor) ?></p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="info-card-body text-center">
-                        <h4 class="text-muted">Porcentaje Cobranza</h4>
+                        <h4 class="text-muted">Cobranza</h4>
                         <p class="h4 text-info"><?= formatPercentage($model->por_cobranza) ?></p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="info-card-body text-center">
-                        <h4 class="text-muted">Porcentaje Post Venta</h4>
+                        <h4 class="text-muted">Post Venta</h4>
                         <p class="h4 text-info"><?= formatPercentage($model->por_post_venta) ?></p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="info-card-body text-center">
-                        <h4 class="text-muted">Porcentaje Agente</h4>
+                        <h4 class="text-muted">Agente</h4>
                         <p class="h4 text-info"><?= formatPercentage($model->por_agente) ?></p>
                     </div>
                 </div>
