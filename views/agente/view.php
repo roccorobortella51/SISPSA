@@ -51,10 +51,11 @@ $datosJs = json_encode($datos);
         <div class="d-flex justify-content-between align-items-center w-100">
             <h1><?= Html::encode($this->title) ?></h1>
             <?= Html::a(
-                '<i class="fas fa-users mr-2"></i> AGENTES/FUERZA DE ESTA AGENCIA',
+                '<i class="fas fa-users mr-2"></i> FUERZA DE VENTAS',
                 ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
                 [
-                    'class' => 'btn btn-primary',
+                    'class' => 'btn btn-primary btn-lg',
+                    'style' => 'font-size: 1.3rem; font-weight: 700;'
                 ]
             ) ?>
         </div>
