@@ -44,6 +44,35 @@ $mesesJs = json_encode($meses);
 $datosJs = json_encode($datos);
 
 ?>
+<style>
+/* Make text in "Información General de la Agencia" as large as the percentage numbers (h4) */
+.agente-view .info-general .text-lg-18 {
+    font-size: 1.5rem; /* matches .h4 size used for percentages */
+    line-height: 1.1;
+}
+.agente-view .info-general .text-lg-18 strong {
+    font-size: 1.5rem;
+}
+
+/* New: make only the field values match the title/percentage size */
+.agente-view .info-general .field-value {
+    font-size: 1.5rem;
+    line-height: 1.1;
+    font-weight: 400;
+    margin-left: 6px;
+    color: #2c3e50;
+    display: inline-block;
+}
+
+/* Also enlarge Fechas de Gestión values to match percentages */
+.agente-view .ms-panel .info-card-body p.h5,
+.agente-view .ms-panel .info-card-body .field-value-date {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #212529;
+    margin: 0;
+}
+</style>
 
 <div class="main-container agente-view"> 
    
@@ -80,23 +109,38 @@ $datosJs = json_encode($datos);
         </div>
     </div>
 
-    <div class="ms-panel">
-    <div class="ms-panel-body">
-        <h2 class="section-title">
-            <i class="fas fa-building text-blue-600 mr-3"></i> Información General de la Agencia
-        </h2>
-        <div class="row">
-            <div class="col-md-6">
-                <p class="text-gray-700 mb-2 text-lg-18"><strong>Nombre del Propietario:</strong> <?= Html::encode(($model->propietario->nombres ?? 'N/A') . ' ' . ($model->propietario->apellidos ?? '')) ?></p>
-                <p class="text-gray-700 mb-2 text-lg-18"><strong>RIF:</strong> <?= Html::encode($ownerContactInfo['rif']) ?></p>
-            </div>
-            <div class="col-md-6">
-                <p class="text-gray-700 mb-2 text-lg-18"><strong>Email:</strong> <?= Html::a(Html::encode($ownerContactInfo['email']), 'mailto:' . Html::encode($ownerContactInfo['email']), ['class' => 'text-primary']) ?></p>
-                <p class="text-gray-700 mb-2 text-lg-18"><strong>Teléfono:</strong> <?= Html::encode($ownerContactInfo['telefono']) ?></p>
-            </div>
+    <div class="ms-panel info-general">
+<div class="ms-panel-body">
+    <h3 class="section-title">
+        <i class="fas fa-building text-blue-600 mr-3"></i> Información General de la Agencia
+    </h3>
+    <div class="row">
+        <div class="col-md-6">
+            <p class="text-gray-700 mb-2 text-lg-18">
+                <strong>Nombre del Propietario:</strong>
+                <span class="field-value"><?= Html::encode(($model->propietario->nombres ?? 'N/A') . ' ' . ($model->propietario->apellidos ?? '')) ?></span>
+            </p>
+            <p class="text-gray-700 mb-2 text-lg-18">
+                <strong>RIF:</strong>
+                <span class="field-value"><?= Html::encode($ownerContactInfo['rif']) ?></span>
+            </p>
         </div>
-        <p class="text-gray-700 mt-4 pt-4 border-top text-lg-18"><strong>Dirección:</strong> <?= nl2br(Html::encode($ownerContactInfo['direccion'])) ?></p>
+        <div class="col-md-6">
+            <p class="text-gray-700 mb-2 text-lg-18">
+                <strong>Email:</strong>
+                <span class="field-value"><?= Html::a(Html::encode($ownerContactInfo['email']), 'mailto:' . Html::encode($ownerContactInfo['email']), ['class' => 'text-primary']) ?></span>
+            </p>
+            <p class="text-gray-700 mb-2 text-lg-18">
+                <strong>Teléfono:</strong>
+                <span class="field-value"><?= Html::encode($ownerContactInfo['telefono']) ?></span>
+            </p>
+        </div>
     </div>
+    <p class="text-gray-700 mt-4 pt-4 border-top text-lg-18">
+        <strong>Dirección:</strong>
+        <span class="field-value"><?= nl2br(Html::encode($ownerContactInfo['direccion'])) ?></span>
+    </p>
+</div>
 </div>
 
     <div class="ms-panel">
@@ -165,13 +209,13 @@ $datosJs = json_encode($datos);
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
                         <h4 class="text-muted">Fecha de Creación</h4>
-                        <p class="h5 text-dark"><?= formatDateTime($model->created_at) ?></p>
+                        <p class="h5 text-dark"><span class="field-value-date"><?= formatDateTime($model->created_at) ?></span></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
                         <h4 class="text-muted">Última Actualización</h4>
-                        <p class="h5 text-dark"><?= formatDateTime($model->updated_at) ?></p>
+                        <p class="h5 text-dark"><span class="field-value-date"><?= formatDateTime($model->updated_at) ?></span></p>
                     </div>
                 </div>
             </div>
