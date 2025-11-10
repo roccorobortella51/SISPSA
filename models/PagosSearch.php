@@ -11,9 +11,9 @@ use app\models\Pagos;
  */
 class PagosSearch extends Pagos
 {
-    // Atributos virtuales para la búsqueda por relación
     public $nombreUsuario;
-    public $cedulaUsuario; // NUEVO: Atributo para la cédula
+    public $cedulaUsuario;
+    public $observacion;
 
     /**
      * {@inheritdoc}
@@ -21,10 +21,9 @@ class PagosSearch extends Pagos
     public function rules()
     {
         return [
-            [['id', 'user_id'], 'integer'],
-            // Aseguramos que 'cedulaUsuario' sea 'safe' para el filtro
-            [['numero_referencia_pago', 'fecha_pago', 'estatus', 'created_at', 'nombreUsuario', 'cedulaUsuario'], 'safe'],
-            [['monto_pagado', 'monto_usd'], 'number'], 
+            [['id', 'recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
+            [['fecha_pago', 'monto_pagado', 'monto_usd'], 'number'],
+            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'nombreUsuario', 'cedulaUsuario', 'observacion'], 'safe'],
         ];
     }
 
@@ -33,7 +32,6 @@ class PagosSearch extends Pagos
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -46,46 +44,36 @@ class PagosSearch extends Pagos
      */
     public function search($params)
     {
-        $query = Pagos::find();
+        $query = Pagos::find()->joinWith(['userDatos']);
 
-        // IMPORTANTE: Para buscar por nombre y cédula, hacemos un LEFT JOIN con la tabla de datos de usuario.
-        $query->joinWith(['userDatos']); 
-
-        // add conditions that should always apply here
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'pagination' => [
-                'pageSize' => 20, // Forzamos un tamaño de página mayor al default de 1
-            ],
             'sort' => [
-                'defaultOrder' => ['created_at' => SORT_DESC],
+                'defaultOrder' => ['id' => SORT_DESC], // ✅ Cambiado a 'id'
                 'attributes' => [
                     'id',
-                    'user_id',
-                    'numero_referencia_pago',
+                    'created_at',
                     'fecha_pago',
                     'monto_pagado',
                     'monto_usd',
-                    'created_at',
-                    // FIX AMBIGUITY: Definir 'estatus' explícitamente con el prefijo de tabla
-                    'estatus' => [
-                        'asc' => ['pagos.estatus' => SORT_ASC],
-                        'desc' => ['pagos.estatus' => SORT_DESC],
-                        'label' => 'Estatus',
-                    ],
-                    // El atributo virtual 'nombreUsuario' se mantiene
+                    'estatus',
+                    'numero_referencia_pago',
+                    'observacion',
+                    'metodo_pago',
+                    'fecha_conciliacion',
+                    'nombre_conciliador',
                     'nombreUsuario' => [
-                        'asc' => ['public.user_datos.nombres' => SORT_ASC, 'public.user_datos.apellidos' => SORT_ASC],
-                        'desc' => ['public.user_datos.nombres' => SORT_DESC, 'public.user_datos.apellidos' => SORT_DESC],
-                        'label' => 'Usuario',
+                        'asc' => ['user_datos.nombres' => SORT_ASC, 'user_datos.apellidos' => SORT_ASC],
+                        'desc' => ['user_datos.nombres' => SORT_DESC, 'user_datos.apellidos' => SORT_DESC],
                     ],
-                    // NUEVO: Atributo virtual para la cédula
                     'cedulaUsuario' => [
-                        'asc' => ['public.user_datos.cedula' => SORT_ASC],
-                        'desc' => ['public.user_datos.cedula' => SORT_DESC],
-                        'label' => 'Cédula',
+                        'asc' => ['user_datos.cedula' => SORT_ASC],
+                        'desc' => ['user_datos.cedula' => SORT_DESC],
                     ],
                 ],
+            ],
+            'pagination' => [
+                'pageSize' => 20,
             ],
         ]);
 
@@ -95,41 +83,186 @@ class PagosSearch extends Pagos
             return $dataProvider;
         }
 
-        // grid filtering conditions (usando siempre 'pagos.columna' cuando sea necesario)
+        // grid filtering conditions
         $query->andFilterWhere([
             'pagos.id' => $this->id,
-            'pagos.user_id' => $this->user_id,
-            'pagos.monto_pagado' => $this->monto_pagado,
-            'pagos.monto_usd' => $this->monto_usd,
-            'pagos.created_at' => $this->created_at,
+            'recibo_id' => $this->recibo_id,
+            'fecha_pago' => $this->fecha_pago,
+            'monto_pagado' => $this->monto_pagado,
+            'user_id' => $this->user_id,
+            'conciliador_id' => $this->conciliador_id,
+            'conciliado' => $this->conciliado,
+            'monto_usd' => $this->monto_usd,
         ]);
 
-        // FIX DEFINITIVO PARA EL ERROR 'Ambiguous column: estatus'
-        if (!empty($this->estatus)) {
-            $query->andWhere(['ilike', 'pagos.estatus', $this->estatus]);
-        }
-        
-        // ** CORRECCIÓN CLAVE: FILTRO POR FECHA DE PAGO (USA TO_CHAR) **
-        // Esto permite la búsqueda parcial (ej. '03/10') al convertir el campo de fecha a un texto formateado.
-        if (!empty($this->fecha_pago)) {
-             $query->andWhere(['ilike', 
-                new \yii\db\Expression("TO_CHAR(pagos.fecha_pago, 'DD/MM/YYYY')"), 
-                $this->fecha_pago
-            ]);
-        }
-
-        // Filtros string restantes (que no causan conflicto)
-        $query->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago]);
-
-        // FILTRO POR NOMBRE DE USUARIO (atributo virtual)
-        $query->andFilterWhere(['ilike', "CAST(public.user_datos.nombres AS TEXT) || ' ' || CAST(public.user_datos.apellidos AS TEXT)", $this->nombreUsuario]);
-        
-        // CORRECCIÓN CLAVE: Usamos CAST() para convertir el INTEGER (cédula) a TEXT para que ILIKE funcione.
-        if (!empty($this->cedulaUsuario)) {
-            $query->andWhere(['ilike', 'CAST(public.user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
-        }
-
+        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
+            ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
+            ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
+            ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
+            ->andFilterWhere(['ilike', 'pagos.observacion', $this->observacion])
+            ->andFilterWhere(['or',
+                ['ilike', 'user_datos.nombres', $this->nombreUsuario],
+                ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
+            ])
+            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->cedulaUsuario]);
 
         return $dataProvider;
+    }
+
+    /**
+     * Creates data provider instance with search query applied for specific clinica
+     *
+     * @param array $params
+     * @param string|null $formName
+     * @param int|null $clinica_id
+     *
+     * @return ActiveDataProvider
+     */
+    public function searchClinica($params, $formName = null, $clinica_id = null)
+    {
+        $query = Pagos::find()
+            ->joinWith(['userDatos.contratos' => function($q) use ($clinica_id) {
+                $q->andWhere(['contratos.clinica_id' => $clinica_id]);
+            }]);
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'sort' => [
+                'defaultOrder' => ['pagos.id' => SORT_DESC], // ✅ Cambiado a 'pagos.id'
+                'attributes' => [
+                    'id',
+                    'created_at',
+                    'fecha_pago',
+                    'monto_pagado',
+                    'monto_usd',
+                    'estatus',
+                    'numero_referencia_pago',
+                    'observacion',
+                    'nombreUsuario' => [
+                        'asc' => ['user_datos.nombres' => SORT_ASC, 'user_datos.apellidos' => SORT_ASC],
+                        'desc' => ['user_datos.nombres' => SORT_DESC, 'user_datos.apellidos' => SORT_DESC],
+                    ],
+                    'cedulaUsuario' => [
+                        'asc' => ['user_datos.cedula' => SORT_ASC],
+                        'desc' => ['user_datos.cedula' => SORT_DESC],
+                    ],
+                ],
+            ],
+            'pagination' => [
+                'pageSize' => 20,
+            ],
+        ]);
+
+        $this->load($params, $formName);
+
+        if (!$this->validate()) {
+            return $dataProvider;
+        }
+
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'pagos.id' => $this->id,
+            'recibo_id' => $this->recibo_id,
+            'fecha_pago' => $this->fecha_pago,
+            'monto_pagado' => $this->monto_pagado,
+            'user_id' => $this->user_id,
+            'conciliador_id' => $this->conciliador_id,
+            'conciliado' => $this->conciliado,
+            'monto_usd' => $this->monto_usd,
+        ]);
+
+        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
+            ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
+            ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
+            ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
+            ->andFilterWhere(['ilike', 'pagos.observacion', $this->observacion])
+            ->andFilterWhere(['or',
+                ['ilike', 'user_datos.nombres', $this->nombreUsuario],
+                ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
+            ])
+            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->cedulaUsuario]);
+
+        return $dataProvider;
+    }
+
+    /**
+     * Creates data provider instance with search query applied for specific user
+     *
+     * @param array $params
+     * @param int $user_id
+     *
+     * @return ActiveDataProvider
+     */
+    public function searchByUser($params, $user_id)
+    {
+        $query = Pagos::find()
+            ->where(['user_id' => $user_id])
+            ->joinWith(['userDatos']);
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'sort' => [
+                'defaultOrder' => ['id' => SORT_DESC], // ✅ Cambiado a 'id'
+                'attributes' => [
+                    'id',
+                    'created_at',
+                    'fecha_pago',
+                    'monto_pagado',
+                    'monto_usd',
+                    'estatus',
+                    'numero_referencia_pago',
+                    'observacion',
+                    'metodo_pago',
+                    'fecha_conciliacion',
+                    'nombre_conciliador',
+                ],
+            ],
+            'pagination' => [
+                'pageSize' => 20,
+            ],
+        ]);
+
+        $this->load($params);
+
+        if (!$this->validate()) {
+            return $dataProvider;
+        }
+
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'id' => $this->id,
+            'recibo_id' => $this->recibo_id,
+            'fecha_pago' => $this->fecha_pago,
+            'monto_pagado' => $this->monto_pagado,
+            'conciliador_id' => $this->conciliador_id,
+            'conciliado' => $this->conciliado,
+            'monto_usd' => $this->monto_usd,
+        ]);
+
+        $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
+            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
+            ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
+            ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
+            ->andFilterWhere(['ilike', 'observacion', $this->observacion]);
+
+        return $dataProvider;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function attributes()
+    {
+        return array_merge(parent::attributes(), [
+            'nombreUsuario',
+            'cedulaUsuario',
+            'observacion'
+        ]);
     }
 }

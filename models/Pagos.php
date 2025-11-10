@@ -26,13 +26,18 @@ use Yii;
  * @property int|null $conciliado
  * @property float|null $monto_usd
  * @property string|null $observacion
+ * @property float|null $tasa
  *
  * @property Recibos $recibo
+ * @property UserDatos $userDatos
+ * @property Cuotas[] $cuotas
+ * @property Contratos[] $contratos
  */
 class Pagos extends \yii\db\ActiveRecord
 {
     public $imagen_prueba_file; // atributo para el archivo subido
     public $tasa;
+    
     /**
      * {@inheritdoc}
      */
@@ -48,13 +53,13 @@ class Pagos extends \yii\db\ActiveRecord
     {
         return [
             [['recibo_id', 'fecha_pago', 'monto_pagado', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'user_id', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
-            [['monto_usd'], 'default', 'value' => 0],
+            [['monto_usd', 'tasa'], 'default', 'value' => 0],
             [['created_at', 'fecha_pago', 'updated_at', 'fecha_conciliacion', 'fecha_registro', 'deleted_at'], 'safe'],
             [['recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
             [['recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
-            [['monto_pagado', 'monto_usd'], 'number'],
-            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'imagen_prueba', 'nombre_conciliador','observacion'], 'string'],
-            [['imagen_prueba_file'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg','maxSize' => 1024 * 1024 * 5, 'tooBig' => 'El archivo no debe exceder los 5MB.'],
+            [['monto_pagado', 'monto_usd', 'tasa'], 'number'],
+            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'imagen_prueba', 'nombre_conciliador', 'observacion'], 'string'],
+            [['imagen_prueba_file'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'El archivo no debe exceder los 5MB.'],
             [['recibo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Recibos::class, 'targetAttribute' => ['recibo_id' => 'id']],
         ];
     }
@@ -83,6 +88,9 @@ class Pagos extends \yii\db\ActiveRecord
             'conciliador_id' => 'Conciliador ID',
             'conciliado' => 'Conciliado',
             'monto_usd' => 'Monto Usd',
+            'observacion' => 'Observación',
+            'tasa' => 'Tasa de Cambio',
+            'imagen_prueba_file' => 'Comprobante de Pago',
         ];
     }
 
@@ -96,6 +104,41 @@ class Pagos extends \yii\db\ActiveRecord
         return $this->hasOne(Recibos::class, ['id' => 'recibo_id']);
     }
 
+    /**
+     * Gets query for [[UserDatos]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUserDatos()
+    {
+        return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
+    }
+
+    /**
+     * Gets query for [[Cuotas]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getCuotas()
+    {
+        return $this->hasMany(Cuotas::class, ['id_pago' => 'id']);
+    }
+
+    /**
+     * Gets query for [[Contratos]] a través de UserDatos.
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getContratos()
+    {
+        return $this->hasMany(Contratos::class, ['user_id' => 'user_id']);
+    }
+
+    /**
+     * Obtiene la URL de la imagen de prueba
+     *
+     * @return string|null
+     */
     public function getImagenPruebaUrl()
     {
         if ($this->imagen_prueba) {
@@ -104,8 +147,95 @@ class Pagos extends \yii\db\ActiveRecord
         return null;
     }
 
-    public function getUserDatos()
+    /**
+     * Calcula el monto en USD basado en la tasa
+     *
+     * @return float
+     */
+    public function calcularMontoUsd()
     {
-        return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
+        if ($this->monto_pagado && $this->tasa && $this->tasa > 0) {
+            return $this->monto_pagado / $this->tasa;
+        }
+        return $this->monto_pagado;
+    }
+
+    /**
+     * Calcula el monto en Bs basado en la tasa
+     *
+     * @return float
+     */
+    public function calcularMontoBs()
+    {
+        if ($this->monto_pagado && $this->tasa) {
+            return $this->monto_pagado * $this->tasa;
+        }
+        return $this->monto_pagado;
+    }
+
+    /**
+     * Before save event
+     */
+    public function beforeSave($insert)
+    {
+        if (parent::beforeSave($insert)) {
+            // Calcular monto_usd automáticamente si no está establecido
+            if (empty($this->monto_usd) && $this->monto_pagado && $this->tasa) {
+                $this->monto_usd = $this->calcularMontoUsd();
+            }
+            
+            // Establecer fecha de registro si es nuevo
+            if ($insert) {
+                $this->fecha_registro = date('Y-m-d H:i:s');
+            }
+            
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Obtiene el nombre completo del usuario
+     *
+     * @return string
+     */
+    public function getNombreUsuario()
+    {
+        return $this->userDatos ? $this->userDatos->nombres . ' ' . $this->userDatos->apellidos : 'N/A';
+    }
+
+    /**
+     * Obtiene la cédula del usuario
+     *
+     * @return string
+     */
+    public function getCedulaUsuario()
+    {
+        return $this->userDatos ? $this->userDatos->cedula : 'N/A';
+    }
+
+    /**
+     * Verifica si el pago está conciliado
+     *
+     * @return bool
+     */
+    public function getEstaConciliado()
+    {
+        return $this->estatus === 'Conciliado';
+    }
+
+    /**
+     * Obtiene el estado del pago en formato legible
+     *
+     * @return string
+     */
+    public function getEstadoLegible()
+    {
+        $estados = [
+            'Conciliado' => 'Conciliado',
+            'Por Conciliar' => 'Por Conciliar',
+        ];
+        
+        return $estados[$this->estatus] ?? $this->estatus;
     }
 }
