@@ -3,8 +3,6 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
-use yii\grid\ActionColumn;
-use kartik\widgets\SwitchInput;
 use app\components\UserHelper;
 
 
@@ -14,15 +12,24 @@ use app\components\UserHelper;
  * @var yii\data\ActiveDataProvider $dataProvider
  * @var app\models\UserDatos $afiliado
  * @var int $user_id
+ * @var string $modo 'siniestro' o 'cita' <-- ASUMIMOS QUE ESTO SE PASA DESDE EL CONTROLADOR
  */
 
-$this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
-$this->title = 'Atención ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
+// ----------------------------------------------------------------------
+// 1. LÓGICA DE MODO Y BOTONES
+// ----------------------------------------------------------------------
 $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "COORDINADOR-CLINICA");
 
-                                   
+// Definir variables basadas en el modo
+$esCita = ($modo === 'cita') ? 1 : 0;
+$tituloModo = ($modo === 'cita') ? 'Citas' : 'Siniestros';
+$textoBoton = ($modo === 'cita') ? 'Crear Nueva Cita' : 'Crear Nuevo Siniestro';
 
+$this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
+// Título ahora refleja el modo
+$this->title = $tituloModo . ' para ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
+// ----------------------------------------------------------------------
 ?>
 
 <div class="row" style="margin:3px !important;">
@@ -34,9 +41,17 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
         <div class="ms-panel ms-panel-fh">
         <div class="ms-panel-header d-flex justify-content-between align-items-center">
             <h1><?= $this->title ?></h1>
-            <div class="d-flex gap-3"> <!-- Contenedor flex para los botones con espacio -->
-
-                <?php if($permisos){ echo  Html::a('<i class="fas fa-plus"></i> CREAR NUEVA ATENCIÓN', ['create', 'user_id' => $user_id], ['class' => 'btn btn-outline-primary btn-lg']); } ?>
+            <div class="d-flex gap-3"> <?php 
+                // BOTÓN DE CREACIÓN DINÁMICO
+                if($permisos){ 
+                    echo Html::a(
+                        '<i class="fas fa-plus"></i> ' . $textoBoton, 
+                        // Enlace a actionCreate, pasando user_id y el valor binario es_cita (0 o 1)
+                        ['create', 'user_id' => $user_id, 'es_cita' => $esCita], 
+                        ['class' => 'btn btn-outline-primary btn-lg']
+                    ); 
+                } 
+                ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver',
                     ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id],
@@ -72,14 +87,11 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
                                 'label' => 'Clínica',
                             ],
                             [
-
                             'attribute' => 'fecha',
                                 'format' => 'Html',
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
-
                                     return Yii::$app->formatter->asDate($model->fecha);
-                                     
                                 },
                             ],
                             [
@@ -87,12 +99,20 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
                                 'format' => 'Html',
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
-
                                     return Yii::$app->formatter->asTime($model->hora);
-                                     
                                 },
                             ],
-
+                            // Columna para mostrar si es Cita o Siniestro (Opcional, pero útil)
+                            [
+                                'label' => 'Tipo',
+                                'attribute' => 'es_cita',
+                                'format' => 'Html',
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'value' => function($model) {
+                                    return $model->es_cita == 1 ? '<span class="status-badge active bg-success">Cita</span>' : '<span class="status-badge inactive bg-primary">Siniestro</span>';
+                                },
+                                'filter' => [0 => 'Siniestro', 1 => 'Cita'],
+                            ],
                             [
                                 'attribute' => 'baremos',
                                 'format' => 'raw',
@@ -123,14 +143,11 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
                                 'label' => 'Baremos',
                             ],
                             [
-
                             'attribute' => 'fecha_atencion',
                                 'format' => 'Html',
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
-
                                     return Yii::$app->formatter->asDate($model->fecha_atencion);
-                                     
                                 },
                             ],
                             [
@@ -138,9 +155,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
                                 'format' => 'Html',
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'value' => function($model) {
-
                                     return Yii::$app->formatter->asTime($model->hora_atencion);
-                                     
                                 },
                             ],
 
@@ -172,9 +187,10 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) {
+                                        // Aseguramos que user_id se pase para mantener la navegación contextual.
                                         return Html::a(
                                             '<i class="fa fa-eye"></i>',
-                                            Url::to(['view', 'id' => $model->id, 'user_id' => $model->iduser]), // Asegura que user_id se pase para la navegación
+                                            Url::to(['view', 'id' => $model->id, 'user_id' => $model->iduser]), 
                                             [
                                                 'title' => 'Detalle de la atención',
                                                 'class' => 'btn-action view'
@@ -182,30 +198,18 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
                                         );
                                     },
                                     'update' => function ($url, $model, $key)use($permisos) {
-
                                         if($permisos){
+                                        // Aseguramos que user_id se pase para mantener la navegación contextual.
                                         return Html::a(
-                                            '<i class="fas fa-pencil-alt"></i>', // Icono sin ms-text-primary, ya que btn-action maneja el color
-                                            Url::to(['update', 'id' => $model->id, 'user_id' => $model->iduser]), // Asegura que user_id se pase para la navegación
+                                            '<i class="fas fa-pencil-alt"></i>',
+                                            Url::to(['update', 'id' => $model->id, 'user_id' => $model->iduser]), 
                                             [
                                                 'title' => 'Editar',
                                                 'class' => 'btn-action edit'
                                             ]
                                         );}
                                     },
-                                    // El botón de eliminar está comentado en tu código original, lo mantengo así.
-                                    /*'delete' => function ($url, $model, $key) {
-                                        return Html::a(
-                                            '<i class="far fa-trash-alt"></i>',
-                                            Url::to(['delete', 'id' => $model->id]),
-                                            [
-                                                'title' => 'Eliminar',
-                                                'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                                'data-method' => 'post',
-                                                'class' => 'btn-action delete'
-                                            ]
-                                        );
-                                    },*/
+                                    // ... (Botón de delete comentado) ...
                                 ],
                             ],
                         ],
