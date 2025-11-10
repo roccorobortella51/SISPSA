@@ -17,7 +17,6 @@ use app\models\UserDatos;
 use app\models\Contratos;
 
 
-
 /**
  * PagosController implements the CRUD actions for Pagos model.
  */
@@ -441,7 +440,7 @@ class PagosController extends Controller
     public function actionUpdatestatus()
     {
         \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        
+    
         $id = \Yii::$app->request->post('id');
         $status = \Yii::$app->request->post('status');
         
@@ -470,15 +469,19 @@ class PagosController extends Controller
             if($model->estatus == 'Conciliado') {
                 $contrato = Contratos::find()->where(['user_id' => $model->user_id])->one();
                 if ($contrato) {
-                    // Check if contract was previously suspended
-                    if ($contrato->estatus == 'suspendido') {
-                        // Apply 7-day penalty - set to "Esperar" (Waiting)
+                    // Check if contract was previously suspended (apply penalty only for previously suspended contracts)
+                    $wasSuspended = ($contrato->estatus === 'suspendido' || $contrato->estatus === 'Suspendido');
+                    
+                    if ($wasSuspended) {
+                        // Apply 7-day penalty for previously suspended contracts
                         $contrato->estatus = 'Esperar';
                         $contrato->fecha_reactivacion = date('Y-m-d', strtotime('+7 days'));
-                        Yii::$app->session->setFlash('info', 'El contrato ha sido puesto en espera por 7 días debido a previa suspensión.');
+                        Yii::$app->session->setFlash('info', 'El contrato ha sido puesto en espera por 7 días debido a previa suspensión por falta de pago.');
                     } else {
-                        // If not previously suspended, activate immediately
+                        // For contracts that were never suspended, activate immediately
                         $contrato->estatus = 'Activo';
+                        $contrato->fecha_reactivacion = null;
+                        Yii::$app->session->setFlash('success', 'Contrato activado inmediatamente.');
                     }
                     $contrato->save(false);
                 }
@@ -573,6 +576,34 @@ class PagosController extends Controller
         return $this->redirect(['index']);
     }*/
 
+    public function actionActivateSuspended()
+    {
+        $currentDate = new \DateTime();
+        $decemberFirst = new \DateTime('2024-12-01');
+        
+        if ($currentDate >= $decemberFirst) {
+            Yii::$app->session->setFlash('warning', 'La regla temporal ya ha expirado. No se pueden activar contratos suspendidos automáticamente.');
+            return $this->redirect(['index']);
+        }
+        
+        $suspendedContracts = Contratos::find()
+            ->where(['estatus' => 'suspendido'])
+            ->orWhere(['estatus' => 'Suspendido'])
+            ->all();
+        
+        $updatedCount = 0;
+        foreach ($suspendedContracts as $contract) {
+            $contract->estatus = 'Activo';
+            $contract->fecha_reactivacion = null;
+            if ($contract->save(false)) {
+                $updatedCount++;
+            }
+        }
+        
+        Yii::$app->session->setFlash('success', "Se activaron {$updatedCount} contratos que estaban suspendidos.");
+        return $this->redirect(['index']);
+    }
+    
     public function actionEjecutar($user_id = null)
     {
         $user_id = $user_id ?: Yii::$app->request->get('user_id');

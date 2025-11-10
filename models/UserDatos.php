@@ -197,7 +197,7 @@ class UserDatos extends ActiveRecord
             // 3. Validación de tipos de datos y longitud
             [['telefono'], 'string', 'max' => 15], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
             [['telefono'], 'match',
-                'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
+                'pattern' => '/^(0416|0422|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
                 'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
 
             [['nombres', 'apellidos', 'direccion', 'codigoValidacion', 'telefono', 'email', 'estatus'], 'string', 'max' => 255],

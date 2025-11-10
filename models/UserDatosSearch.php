@@ -64,7 +64,7 @@ class UserDatosSearch extends UserDatos
         ]);
 
         if($rol == "Asesor"){
-            $query->where(['asesor_id' => UserHelper::getAgenteFuerzaId()]);
+        $query->where(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
         }
 
         if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
