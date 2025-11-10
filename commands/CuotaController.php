@@ -6,7 +6,7 @@ use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
 use app\models\Cuotas;
-use app\models\Contratos;
+use app\models\Contratos; // Modelo correcto
 use app\models\TasaCambio;
 use yii\helpers\Console;
 
@@ -49,10 +49,10 @@ class CuotaController extends Controller
         $fechaActual = date('Y-m-d');
         $contratos = Contratos::find()
             ->where(['or',
-                ['in', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']],
-                ['estatus' => null]
-            ])
-            ->andWhere(['<=', 'fecha_ini', $fechaActual])
+                ['in', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']], // Case-insensitive para estatus válidos
+                ['estatus' => null] // Incluir si estatus es null
+            ]) // Incluir múltiples estatus válidos
+            ->andWhere(['<=', 'fecha_ini', $fechaActual]) // Solo contratos que ya iniciaron
             ->all();
             
         $this->stdout("Encontrados " . count($contratos) . " contratos para procesar (ya filtrados por fecha_ini <= {$fechaActual}).\n");
@@ -77,7 +77,7 @@ class CuotaController extends Controller
             $cuotasVencidas = Cuotas::find()
                 ->where([
                     'contrato_id' => $contrato->id,
-                    'Estatus' => 'pendiente'
+                    'estatus' => 'pendiente'
                 ])
                 ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
                 ->count();
@@ -109,7 +109,7 @@ class CuotaController extends Controller
         
         // Obtener la última cuota pagada o la fecha de inicio del contrato
         $ultimaCuotaPagada = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id, 'Estatus' => 'pagado'])
+            ->where(['contrato_id' => $contrato->id, 'estatus' => 'pagado'])
             ->orderBy(['fecha_vencimiento' => SORT_DESC])
             ->one();
             
@@ -158,8 +158,8 @@ class CuotaController extends Controller
                     $cuota = new Cuotas([
                         'contrato_id' => $contrato->id,
                         'fecha_vencimiento' => $fechaVencStr,
-                        'monto_usd' => $contrato->monto,
-                        'Estatus' => 'pendiente',
+                        'monto_usd' => $contrato->monto, // Monto completo para atrasadas
+                        'estatus' => 'pendiente',
                         'rate_usd_bs' => $this->obtenerTasaCambioActual(),
                     ]);
                     
@@ -245,7 +245,7 @@ class CuotaController extends Controller
                 'contrato_id' => $contrato->id,
                 'fecha_vencimiento' => $fechaVencimientoStr,
                 'monto_usd' => $montoCuota,
-                'Estatus' => 'pendiente',
+                'estatus' => 'pendiente',
                 'rate_usd_bs' => $this->obtenerTasaCambioActual(),
             ]);
             
@@ -383,7 +383,7 @@ class CuotaController extends Controller
         $fechaLimite = date('Y-m-d', strtotime('-7 days')); // 7 días después del vencimiento
         
         $cuotasVencidas = Cuotas::find()
-            ->where(['Estatus' => 'pendiente'])
+            ->where(['estatus' => 'pendiente'])
             ->andWhere(['<', 'fecha_vencimiento', $fechaLimite])
             ->all();
             
@@ -471,23 +471,11 @@ class CuotaController extends Controller
         $this->stdout("=== VERIFICACIÓN DIARIA DE CUOTAS ===\n");
         $this->stdout("Fecha: " . date('Y-m-d H:i:s') . "\n\n");
         
-        // 1. Check for contracts to suspend (after 5th day without payment)
-        $this->stdout("1. Verificando contratos sin pago después del día 5...\n");
-        $suspendedCount = $this->suspenderContratosSinPago();
-        if ($suspendedCount > 0) {
-            $this->stdout("✅ Se suspendieron {$suspendedCount} contratos por falta de pago.\n");
-        } else {
-            $this->stdout("✅ No hay contratos para suspender por falta de pago.\n");
-        }
-        
-        // 2. Verificar cuotas vencidas y suspender contratos
-        $this->stdout("\n2. Verificando cuotas vencidas...\n");
+        // 1. Verificar cuotas vencidas y suspender contratos
+        $this->stdout("1. Verificando cuotas vencidas...\n");
         $this->runAction('verificar-vencidas');
         
-        $this->stdout("\n3. Verificando contratos en espera...\n");
-        $this->runAction('verificar-espera');
-        
-        $this->stdout("\n4. Generando cuotas mensuales (si es día 1)...\n");
+        $this->stdout("\n2. Generando cuotas mensuales (si es día 1)...\n");
         if (date('j') === '1') {
             $this->runAction('generar-mensual');
         } else {
@@ -658,7 +646,7 @@ class CuotaController extends Controller
     {
         // Obtener la última cuota pagada o la fecha de inicio del contrato
         $ultimaCuotaPagada = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id, 'Estatus' => 'pagado'])
+            ->where(['contrato_id' => $contrato->id, 'estatus' => 'pagado'])
             ->orderBy(['fecha_vencimiento' => SORT_DESC])
             ->one();
             
@@ -741,7 +729,7 @@ class CuotaController extends Controller
         $proximaSemana = date('Y-m-d', strtotime('+7 days'));
         
         $cuotas = Cuotas::find()
-            ->where(['Estatus' => 'pendiente'])
+            ->where(['estatus' => 'pendiente'])
             ->andWhere(['between', 'fecha_vencimiento', $hoy, $proximaSemana])
             ->all();
             
@@ -992,182 +980,4 @@ class CuotaController extends Controller
         
         return 1; // Valor por defecto si no hay tasa de cambio registrada
     }
-
-    /**
-     * Verifica contratos en espera para activarlos.
-     * Uso: `yii cuota/verificar-espera`
-     * 
-     * @return int Código de salida
-     */
-    public function actionVerificarEspera()
-    {
-        $this->stdout("Verificando contratos en espera...\n");
-        
-        $fechaActual = date('Y-m-d');
-        $contratosEnEspera = Contratos::find()
-            ->where(['estatus' => 'Esperar'])
-            ->andWhere(['<=', 'fecha_reactivacion', $fechaActual])
-            ->all();
-            
-        $contratosActivados = 0;
-        
-        foreach ($contratosEnEspera as $contrato) {
-            $contrato->estatus = 'Activo';
-            $contrato->fecha_reactivacion = null;
-            
-            if ($contrato->save()) {
-                $contratosActivados++;
-                $this->stdout("✅ Contrato #{$contrato->id} activado después del período de espera.\n");
-            } else {
-                $this->stderr("❌ Error al activar contrato #{$contrato->id}\n");
-            }
-        }
-        
-        if ($contratosActivados > 0) {
-            $this->stdout("Proceso completado. Se activaron {$contratosActivados} contratos después del período de espera.\n");
-        } else {
-            $this->stdout("No hay contratos que hayan completado el período de espera.\n");
-        }
-        
-        return ExitCode::OK;
-    }
-
-    /**
-     * Verifica si la columna fecha_reactivacion existe.
-     * Uso: `yii cuota/check-column`
-     * 
-     * @return int Código de salida
-     */
-    public function actionCheckColumn()
-    {
-        $this->stdout("Checking if fecha_reactivacion column exists...\n");
-        
-        try {
-            $tableSchema = Yii::$app->db->getTableSchema('contratos');
-            if ($tableSchema) {
-                $this->stdout("Table 'contratos' exists.\n");
-                
-                $columns = $tableSchema->getColumnNames();
-                $this->stdout("Columns in contratos table:\n");
-                foreach ($columns as $column) {
-                    $this->stdout(" - {$column}\n");
-                }
-                
-                if (in_array('fecha_reactivacion', $columns)) {
-                    $this->stdout("✅ fecha_reactivacion column EXISTS!\n");
-                    
-                    // Show some sample data
-                    $this->stdout("\nSample contracts with fecha_reactivacion:\n");
-                    $sampleContracts = Contratos::find()
-                        ->where(['IS NOT', 'fecha_reactivacion', null])
-                        ->limit(3)
-                        ->all();
-                        
-                    if (!empty($sampleContracts)) {
-                        foreach ($sampleContracts as $contract) {
-                            $this->stdout(" - Contract #{$contract->id}: {$contract->fecha_reactivacion}\n");
-                        }
-                    } else {
-                        $this->stdout(" - No contracts have fecha_reactivacion set yet.\n");
-                    }
-                } else {
-                    $this->stdout("❌ fecha_reactivacion column NOT FOUND!\n");
-                }
-            } else {
-                $this->stdout("❌ Table 'contratos' not found!\n");
-            }
-        } catch (\Exception $e) {
-            $this->stderr("Error: " . $e->getMessage() . "\n");
-        }
-        
-        return ExitCode::OK;
-    }
-
-    /**
-     * Agrega la columna fecha_reactivacion a la tabla contratos.
-     * Uso: `yii cuota/add-column`
-     * 
-     * @return int Código de salida
-     */
-    public function actionAddColumn()
-    {
-        $this->stdout("Adding fecha_reactivacion column to contratos table...\n");
-        
-        try {
-            // Execute the SQL directly
-            $sql = "ALTER TABLE contratos ADD COLUMN fecha_reactivacion DATE NULL";
-            $result = Yii::$app->db->createCommand($sql)->execute();
-            
-            $this->stdout("✅ SQL executed successfully!\n");
-            $this->stdout("Column 'fecha_reactivacion' should now be added to contratos table.\n");
-            
-            // Verify the column was added
-            $this->stdout("\nVerifying column addition...\n");
-            $tableSchema = Yii::$app->db->getTableSchema('contratos');
-            if ($tableSchema && in_array('fecha_reactivacion', $tableSchema->getColumnNames())) {
-                $this->stdout("✅ SUCCESS: fecha_reactivacion column confirmed in contratos table!\n");
-            } else {
-                $this->stderr("❌ Column still not found after addition attempt.\n");
-            }
-            
-        } catch (\Exception $e) {
-            $this->stderr("❌ Error adding column: " . $e->getMessage() . "\n");
-            
-            // If column already exists error, that's actually good
-            if (strpos($e->getMessage(), 'already exists') !== false) {
-                $this->stdout("ℹ️  Column already exists - this is actually good news!\n");
-            }
-        }
-        
-        return ExitCode::OK;
-    }
-    // Add this method to CuotaController.php
-private function suspenderContratosSinPago()
-{
-    $currentDay = date('j');
-    $currentMonth = date('Y-m');
-    
-    // Only run after the 5th day of the month
-    if ($currentDay <= 5) {
-        return 0;
-    }
-    
-    $firstDayOfMonth = date('Y-m-01');
-    $fifthDayOfMonth = date('Y-m-05');
-    
-    $contratosSuspendidos = 0;
-    
-    // Find active contracts that should have paid by now
-    $contratos = Contratos::find()
-        ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado', 'Activo']])
-        ->all();
-        
-    foreach ($contratos as $contrato) {
-        // Check if there are unpaid cuotas for current month that were due by the 5th
-        $tieneCuotasPendientes = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id])
-            ->andWhere(['Estatus' => 'pendiente'])
-            ->andWhere(['<=', 'fecha_vencimiento', $fifthDayOfMonth])
-            ->andWhere(['>=', 'fecha_vencimiento', $firstDayOfMonth])
-            ->exists();
-            
-        // Check if payment was made this month (before suspension)
-        $pagoEsteMes = Pagos::find()
-            ->where(['user_id' => $contrato->user_id])
-            ->andWhere(['estatus' => 'Conciliado'])
-            ->andWhere(['>=', 'fecha_pago', $firstDayOfMonth])
-            ->exists();
-            
-        if ($tieneCuotasPendientes && !$pagoEsteMes) {
-            // Suspend contract for non-payment after 5th day
-            $contrato->estatus = 'suspendido';
-            if ($contrato->save(false)) {
-                $contratosSuspendidos++;
-                $this->stdout("⚠️  Contrato #{$contrato->id} suspendido - sin pago después del día 5.\n");
-            }
-        }
-    }
-    
-    return $contratosSuspendidos;
-}
 }

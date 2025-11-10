@@ -4,6 +4,9 @@ use yii\helpers\Html;
 
 /** @var yii\web\View $this */
 /** @var app\models\Pagos $model */
+/** @var array $cuotas */
+/** @var float $total */
+/** @var int $user_id */
 
 $this->title = 'Crear Nuevo Pago'; // Título más descriptivo
 $this->params['breadcrumbs'][] = ['label' => 'Pagos', 'url' => ['contratos/index', 'user_id' => $model->user_id]];
@@ -21,17 +24,16 @@ $this->params['breadcrumbs'][] = $this->title;
                     $ejecutarParams = ['pagos/ejecutar'];
                     $ejecutarParams['user_id'] = $model->user_id;
                 ?>
-                <?php Html::a('Calcular Cuotas', $ejecutarParams, [
+                <?= Html::a('Calcular Cuotas', $ejecutarParams, [ // Fixed: added echo =
                     'class' => 'btn btn-warning ms-2',
                     'style' => 'float: right;',
                 ]) ?>
             </span>
-
         </div>
         <div class="card-body p-4">
-            <!-- El botón "Volver" y "Guardar Pago" ahora se gestionan dentro del _form.php -->
             <?= $this->render('_form', [
                 'model' => $model,
+                'user_id' => $user_id, // ADD THIS LINE
                 'cuotas' => $cuotas,
                 'modelCuotas' => $modelCuotas,
                 'total' => $total,

@@ -27,7 +27,6 @@ use Yii;
  * @property string|null $anulado_motivo
  * @property int|null $user_id
  * @property string|null $PDF
- * @property string|null $fecha_reactivacion // ⭐ ADDED FIELD ⭐
  *
  * @property RmClinica $clinica
  * @property Planes $plan
@@ -52,8 +51,8 @@ class Contratos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['plan_id', 'ente_id', 'clinica_id', 'fecha_ini', 'fecha_ven', 'monto', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_por', 'anulado_fecha', 'anulado_motivo', 'user_id', 'PDF', 'fecha_reactivacion'], 'default', 'value' => null], // ⭐ ADDED 'fecha_reactivacion'
-            [['created_at', 'fecha_ini', 'fecha_ven', 'updated_at', 'deleted_at', 'anulado_fecha', 'fecha_reactivacion'], 'safe'], // ⭐ ADDED 'fecha_reactivacion'
+            [['plan_id', 'ente_id', 'clinica_id', 'fecha_ini', 'fecha_ven', 'monto', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_por', 'anulado_fecha', 'anulado_motivo', 'user_id', 'PDF'], 'default', 'value' => null],
+            [['created_at', 'fecha_ini', 'fecha_ven', 'updated_at', 'deleted_at', 'anulado_fecha'], 'safe'],
             [['plan_id', 'ente_id', 'clinica_id', 'anulado_por', 'user_id'], 'default', 'value' => null],
             [['plan_id', 'ente_id', 'clinica_id', 'anulado_por', 'user_id'], 'integer'],
             [['monto'], 'number'],
@@ -90,7 +89,6 @@ class Contratos extends \yii\db\ActiveRecord
             'anulado_motivo' => 'Anulado Motivo',
             'user_id' => 'User ID',
             'PDF' => 'Pdf',
-            'fecha_reactivacion' => 'Fecha Reactivación', // ⭐ ADDED LABEL
         ];
     }
 
@@ -138,48 +136,5 @@ class Contratos extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Pagos::class, ['user_id' => 'user_id']);
     }
-    
-    public function getDiasRestantesEspera()
-    {
-        if ($this->estatus !== 'Esperar' || empty($this->fecha_reactivacion)) {
-            return null;
-        }
-        
-        $fechaReactivacion = new \DateTime($this->fecha_reactivacion);
-        $fechaActual = new \DateTime();
-        
-        if ($fechaReactivacion < $fechaActual) {
-            return 0; // Should be activated already
-        }
-        
-        $diferencia = $fechaActual->diff($fechaReactivacion);
-        return $diferencia->days;
-    }
-    
-    /**
-     * Gets the formatted tooltip text for waiting status
-     * @return string|null Tooltip text or null if not applicable
-     */
-    public function getTooltipEspera()
-    {
-        $diasRestantes = $this->getDiasRestantesEspera();
-        
-        if ($diasRestantes === null) {
-            return null;
-        }
-        
-        if ($diasRestantes === 0) {
-            return "El contrato será activado hoy";
-        } elseif ($diasRestantes === 1) {
-            return "Falta 1 día para la activación automática";
-        } else {
-            return "Faltan {$diasRestantes} días para la activación automática";
-        }
-    }
 
-    /**
-     * Verifica si el contrato debe estar activo por la regla temporal
-     * @return bool
-     */
-    
 }
