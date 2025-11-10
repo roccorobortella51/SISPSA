@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\web\UploadedFile;
 
 /**
  * This is the model class for table "sis_siniestro".
@@ -11,27 +12,31 @@ use Yii;
  * @property int $idclinica
  * @property string $fecha
  * @property string $hora
- * @property int $idbaremo
+ * @property string $idbaremo
  * @property int $atendido
  * @property string|null $fecha_atencion
  * @property string|null $hora_atencion
  * @property int $iduser
  * @property string|null $descripcion
+ * @property int $es_cita (0=Siniestro, 1=Cita)
+ * @property float|null $costo_total
+ * @property string|null $imagen_recipe
+ * @property string|null $imagen_informe
  * @property string $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
  *
- * @property Baremo $idbaremo0
- * @property RmClinica $idclinica0
+ * @property RmClinica $clinica
+ * @property UserDatos $afiliado
+ * @property Baremo[] $baremos
+ * @property SisSiniestroBaremo[] $sisSiniestroBaremos
  * @property SisConsulta[] $sisConsultas
  */
 class SisSiniestro extends \yii\db\ActiveRecord
 {
 
- public $imagenRecipeFile;
- public $imagenInformeFile;
-
-
+    public $imagenRecipeFile;
+    public $imagenInformeFile;
 
 
     /**
@@ -49,12 +54,12 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         return [
             [['fecha_atencion', 'hora_atencion', 'descripcion', 'updated_at', 'deleted_at'], 'default', 'value' => null],
-            [['atendido'], 'default', 'value' => 0],
-            [['idclinica', 'fecha', 'hora', 'idbaremo', 'iduser', 'descripcion'], 'required'],
+            [['atendido', 'es_cita'], 'default', 'value' => 0],
+            [['idclinica', 'fecha', 'hora', 'iduser', 'descripcion'], 'required'],
             [['costo_total'], 'number'],
-            [['idclinica', 'atendido', 'iduser'], 'default', 'value' => null],
+            [['idclinica', 'atendido', 'iduser', 'es_cita'], 'default', 'value' => null],
             [['idbaremo'], 'default', 'value' => ''],
-            [['idclinica', 'atendido', 'iduser'], 'integer'],
+            [['idclinica', 'atendido', 'iduser', 'es_cita'], 'integer'],
             [['idbaremo'], 'safe'], // Aceptamos cualquier valor y lo manejamos en beforeValidate
             [['fecha', 'fecha_atencion', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
             [['descripcion'], 'string'],
@@ -63,8 +68,8 @@ class SisSiniestro extends \yii\db\ActiveRecord
 
             [['imagen_recipe', 'imagen_informe'], 'string', 'max' => 255],
 
-           [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo no debe exceder 2MB.'],
-[['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de no debe exceder 5MB.'],
+           [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'El archivo no debe exceder 10MB.'],
+           [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'La imagen no debe exceder 10MB.'],
 
         ];
     }
@@ -96,18 +101,22 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'idclinica' => 'Idclinica',
+            'idclinica' => 'Clínica',
             'fecha' => 'Fecha',
             'hora' => 'Hora',
-            'idbaremo' => 'Baremo',
+            'idbaremo' => 'Baremo(s)',
             'atendido' => 'Atendido',
-            'fecha_atencion' => 'Fecha Atencion',
-            'hora_atencion' => 'Hora Atencion',
-            'iduser' => 'Iduser',
-            'descripcion' => 'Descripcion',
-            'created_at' => 'Created At',
-            'updated_at' => 'Updated At',
-            'deleted_at' => 'Deleted At',
+            'fecha_atencion' => 'Fecha Atención',
+            'hora_atencion' => 'Hora Atención',
+            'iduser' => 'ID Usuario',
+            'descripcion' => 'Descripción',
+            'es_cita' => 'Es Cita',
+            'costo_total' => 'Costo Total',
+            'imagen_recipe' => 'URL Receta Médica',
+            'imagen_informe' => 'URL Informe Médico',
+            'created_at' => 'Creado El',
+            'updated_at' => 'Actualizado El',
+            'deleted_at' => 'Eliminado El',
         ];
     }
 
@@ -214,9 +223,10 @@ class SisSiniestro extends \yii\db\ActiveRecord
      * Valida los baremos seleccionados contra las restricciones del plan
      * @param array $baremoIds Array de IDs de baremos a validar
      * @param int $userId ID del usuario/afiliado
+     * @param int $esCita 0=Siniestro, 1=Cita (Permite omitir ciertas validaciones)
      * @return array ['valid' => bool, 'errors' => array]
      */
-    public static function validarBaremosConPlan($baremoIds, $userId)
+    public static function validarBaremosConPlan($baremoIds, $userId, $esCita = 0)
     {
         $errors = [];
         
@@ -239,6 +249,8 @@ class SisSiniestro extends \yii\db\ActiveRecord
             ->one();
         
         if (!$contrato) {
+            // Nota: Podrías relajar esta validación si una Cita puede hacerse sin contrato activo, 
+            // pero por ahora, la mantenemos como crítica.
             $errors[] = 'No se encontró un contrato activo para el afiliado.';
             return ['valid' => false, 'errors' => $errors];
         }
@@ -265,6 +277,19 @@ class SisSiniestro extends \yii\db\ActiveRecord
             $baremo = Baremo::findOne($baremoId);
             $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
             
+            // ----------------------------------------------------------------------------------
+            // APLICACIÓN DEL MODO CITA (NUEVO)
+            // Si el registro es una Cita (es_cita = 1), omitimos todas las validaciones de 
+            // Plazo y Límite de uso. El propósito de la cita es reservar el servicio.
+            // ----------------------------------------------------------------------------------
+            if ($esCita == 1) {
+                continue; 
+            }
+            
+            // ----------------------------------------------------------------------------------
+            // LÓGICA DE VALIDACIÓN EXISTENTE (SOLO PARA SINIESTRO: es_cita = 0)
+            // ----------------------------------------------------------------------------------
+
             // VALIDACIÓN: Cantidad límite de uso (ANUAL) y Plazo de Espera después del límite
             if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
                 // Calcular el período anual actual desde la fecha de afiliación
@@ -278,8 +303,11 @@ class SisSiniestro extends \yii\db\ActiveRecord
                 $finAnioVigencia->modify("+1 year -1 day");
                 
                 // Contar cuántas veces se ha usado este baremo en el año de vigencia actual
+                // Solo contamos SisSiniestro que NO son citas (es_cita = 0)
                 $siniestrosUsados = SisSiniestroBaremo::find()
-                    ->joinWith('siniestro')
+                    ->joinWith(['siniestro' => function($query) {
+                        $query->andWhere(['sis_siniestro.es_cita' => 0]); // <-- Filtro añadido
+                    }])
                     ->where(['sis_siniestro_baremo.baremo_id' => $baremoId])
                     ->andWhere(['sis_siniestro.iduser' => $userId])
                     ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
@@ -318,20 +346,16 @@ class SisSiniestro extends \yii\db\ActiveRecord
                             // Si ya pasó el plazo, se puede usar de nuevo (no hay error)
                         } else {
                             // Tiene límite pero no tiene plazo de espera
-                            // Solo se resetea con el año de vigencia
                             $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite anual de uso "
                                       . "({$planItemCobertura->cantidad_limite} veces). "
-                                      . "Ya se ha utilizado $vecesUsado veces en el período "
-                                      . $inicioAnioVigencia->format('d/m/Y') . " - " . $finAnioVigencia->format('d/m/Y') . ". "
+                                      . "Ya se ha utilizado $vecesUsado veces en el período. "
                                       . "Se renovará el " . $finAnioVigencia->modify('+1 day')->format('d/m/Y') . ".";
                         }
                     } else {
                         // Tiene límite pero no tiene plazo de espera
-                        // Solo se resetea con el año de vigencia
                         $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite anual de uso "
                                   . "({$planItemCobertura->cantidad_limite} veces). "
-                                  . "Ya se ha utilizado $vecesUsado veces en el período "
-                                  . $inicioAnioVigencia->format('d/m/Y') . " - " . $finAnioVigencia->format('d/m/Y') . ". "
+                                  . "Ya se ha utilizado $vecesUsado veces en el período. "
                                   . "Se renovará el " . $finAnioVigencia->modify('+1 day')->format('d/m/Y') . ".";
                     }
                 }
