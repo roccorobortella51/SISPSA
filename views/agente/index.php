@@ -99,16 +99,20 @@ $permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
 
                             // Propietario (asumimos 'idusuariopropietario'. Si necesitas el nombre real,
                             // tu modelo 'Agente' necesitará una relación o un campo 'value' aquí)
+                            // Columna Propietario (Actualizada para filtro de nombre completo)
+
+                            // Columna Propietario (Corregida para el filtro de texto)
                             [
-                                'attribute' => 'propietario',
+                                'attribute' => 'propietarioNombreCompleto', // 👈 Usamos el atributo virtual para el filtro
                                 'label' => 'Propietario',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['class' => 'text-center'],
+                                // ⚠️ SE ELIMINA LA LÍNEA 'filter' => $searchModel->propietarioNombreCompleto,
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar propietario',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                                // Opcional: para manejar el caso de que no haya propietario y no mostrar error, puedes usar 'value':
+                                // El 'value' sigue usando la relación para mostrar el nombre concatenado
                                 'value' => function($model) {
                                     return $model->propietario ? $model->propietario->nombres . ' ' . $model->propietario->apellidos : 'No asignado';
                                 }
