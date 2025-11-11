@@ -43,43 +43,32 @@ if ($clinica && $clinica->id !== null) {
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
 
+// Define admin roles for clinic search filter
+$isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
+
 ?>
 
-<div class="main-container"> 
-
-<input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
+<div class="main-container"> <!-- Contenedor principal de la vista -->
+    <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
-    
-
-<div class="header-section"> 
+    <!-- Encabezado y Botones de Acción Principal -->
+    <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
-            
-            <!-- Botón de Exportación Rápida con ESTILO ÍNDIGO MÁS FUERTE -->
-            <?= Html::button(
-                '<i class="fas fa-file-excel mr-2"></i> EXPORTAR A EXCEL (CSV)', 
-                [
-                    'id' => 'export-csv-btn', 
-                    // CLASES DE COLOR ACTUALIZADAS A ÍNDIGO SÓLIDO Y OSCURO
-                    'class' => 'btn-base btn-blue'
-                ]
-            ) ?>
-
             <?php if ($permisos) : ?>
                 <?= Html::a(
                     '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS', 
                     ['masivo'], 
-                    ['class' => 'btn-base btn-blue'] 
+                    ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
                 ) ?> 
                 <?= Html::a(
                     '<i class="fas fa-plus mr-2"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
                     ['create'], 
-                    ['class' => 'btn-base btn-blue'] 
+                    ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
                 ) ?> 
             <?php endif; ?>
-            
-
-<?php if ($clinica && $clinica->id !== null) : ?>
+            <!-- Botón "Volver a Clínica" condicional -->
+            <?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
                     ['/rm-clinica/view', 'id' => $clinica->id], 
@@ -92,11 +81,9 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 
-    
-
-<div class="ms-panel ms-panel-fh border-indigo"> 
-
-<div class="ms-panel-header">
+    <!-- Panel para la Gestión de Afiliados (GridView) -->
+    <div class="ms-panel ms-panel-fh border-indigo"> <!-- Usando ms-panel y borde indigo -->
+        <div class="ms-panel-header">
             <h3 class="section-title">
                 <i class="fas fa-users mr-3 text-indigo-600"></i> Listado de Afiliados
             </h3>
@@ -110,8 +97,6 @@ if ($clinica && $clinica->id !== null) {
                     'responsiveWrap' => false,
                     'persistResize' => false,
                     'filterModel' => $searchModel,
-                    // *** Importante: Asignamos un ID a la tabla HTML para que JS la pueda referenciar ***
-                    'tableOptions' => ['id' => 'affiliate-table', 'class' => 'min-w-full divide-y divide-gray-200'], 
                     'columns' => [
                         ['class' => 'yii\grid\SerialColumn'],
                         [
@@ -156,6 +141,30 @@ if ($clinica && $clinica->id !== null) {
                                 ],
                             ]),
                             'contentOptions' => ['style' => 'width: 150px;'],
+                        ],
+                        // Clínica search filter - ONLY for admin roles
+                        [
+                            'attribute' => 'clinica_id',
+                            'label' => 'Clínica',
+                            'value' => function ($model) {
+                                return $model->clinica ? $model->clinica->nombre : 'No asignada';
+                            },
+                            'filter' => $isAdmin ? Select2::widget([
+                                'model' => $searchModel,
+                                'attribute' => 'clinica_id',
+                                'data' => \yii\helpers\ArrayHelper::map(
+                                    \app\models\RmClinica::find()->orderBy('nombre')->all(), 
+                                    'id', 
+                                    'nombre'
+                                ),
+                                'options' => ['placeholder' => 'Seleccionar clínica'],
+                                'pluginOptions' => [
+                                    'allowClear' => true
+                                ],
+                            ]) : null,
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'contentOptions' => ['class' => 'text-center'],
+                            'visible' => $isAdmin, // Only show for admin roles
                         ],
                         [
                             'label' => 'Nombre Completo', 
@@ -209,90 +218,31 @@ if ($clinica && $clinica->id !== null) {
                                 return null;
                             },
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
+                            'visible' => $isAdmin, // Only show for admin roles
                         ],
-                        [
-                            'label' => 'Clínica',
-                            'format' => 'ntext',
-                            'value' => function ($model) {
-                                // Muestra el nombre de la clínica a la que pertenece el afiliado
-                                return $model->clinica ? $model->clinica->nombre : null;
-                            },
-                            'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
-                        ],
+                        // REMOVED: Duplicate "Clínica" column that was next to "Asesor"
+                        // This column was showing the clinic name again without filter
 
                         [
-
-                            'attribute' => 'contract_status',
-                            'label' => 'Estado Contrato',
-                            'format' => 'raw',
+                            'attribute' => 'estatus_solvente',
+                            'format' => 'Html',
+                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'value' => function($model) {
-                                $contract = \app\models\Contratos::find()->where(['user_id' => $model->id])->orderBy(['id' => SORT_DESC])->one();
-                                if (!$contract) {
-                                    return Html::tag('span', 'Sin contrato', ['class' => 'badge bg-secondary']);
-                                }
-
-                                $status = trim((string)($contract->estatus ?? $contract->estado ?? $contract->status ?? 'Desconocido'));
-                                $lower = mb_strtolower($status);
-
-                                $statusClass = '';
-                                $tooltipText = '';
-                                $customStyle = '';
-                                $displayText = ''; // New variable for display text
-
-                                if ($lower === 'suspendido') {
-                                    $statusClass = 'badge bg-danger';
-                                    $tooltipText = 'Contrato suspendido por falta de pago';
-                                    $displayText = 'Suspendido';
-                                } elseif ($lower === 'creado') {
-                                    // AQUA color for "Creado"
-                                    $statusClass = 'badge';
-                                    $customStyle = 'background-color: #00FFFF; color: #000;';
-                                    $tooltipText = 'Contrato recién creado';
-                                    $displayText = 'Creado';
-                                } elseif (in_array($lower, ['activo','vigente','active','pagado'])) {
-                                    $statusClass = 'badge bg-success';
-                                    $tooltipText = 'Contrato activo y en buen estado';
-                                    $displayText = 'Activo';
-                                } elseif (in_array($lower, ['vencido','expirado','expired'])) {
-                                    $statusClass = 'badge bg-danger';
-                                    $tooltipText = 'Contrato vencido';
-                                    $displayText = 'Vencido';
-                                } elseif ($lower === 'esperar') {
-                                    $statusClass = 'badge bg-warning';
-                                    $tooltipText = is_callable([$contract, 'getTooltipEspera']) ? $contract->getTooltipEspera() : 'En período de penalidad';
-                                    $displayText = 'Esperar Penalidad'; // Changed from 'Esperar' to 'Esperar Penalidad'
-                                } else {
-                                    $statusClass = 'badge bg-warning text-dark';
-                                    $tooltipText = 'Estado: ' . ucfirst($status);
-                                    $displayText = ucfirst($status);
-                                }
-
-                                $htmlOptions = [
-                                    'class' => trim($statusClass . ' contract-status-tooltip'),
-                                    'title' => $tooltipText,
-                                    'data-bs-toggle' => 'tooltip',
-                                    'data-bs-placement' => 'bottom',
-                                    'style' => 'cursor: help;' . ($customStyle ? ' ' . $customStyle : '')
-                                ];
-
-                                return Html::tag('span', Html::encode($displayText), $htmlOptions);
+                                 $isTrue = $model->estatus_solvente;
+                                 return $isTrue == "Si" ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
                             },
-
-                            'contentOptions' => ['class' => 'text-center', 'style' => 'vertical-align: middle;'],
-                            'headerOptions' => ['style' => 'background-color: #337ab7; color: white; font-size: 12px; font-weight: bold; text-align: center;'],
-                            'header' => Html::tag('span', 'ESTATUS', ['style' => 'color:#fff;'])
+                            /** 'filter' => [0 => 'No', 1 => 'Sí'],**/
+                            'filter' => ['Si' => 'Sí', 'No' => 'No']
                         ],
                         
-                        // Columna de Acciones - CLASE 'exclude-csv' AGREGADA AQUÍ
+                        // Columna de Acciones - Mantenida exactamente como se solicitó
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{cita}{pagos}</div>',
+                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
                             'options' => ['style' => 'width:55px; min-width:55px;'],
-                            'headerOptions' => ['style' => 'color: white!important;', 'class' => 'exclude-csv'], 
-                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;', 'class' => 'exclude-csv'],
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'buttons' => [
                                 'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
                                     $params = ['view', 'id' => $model->id];
@@ -326,41 +276,22 @@ if ($clinica && $clinica->id !== null) {
                                         return "";
                                     }
                                 },
-                                // Botón Siniestros (Modo Siniestro)
-                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { 
+                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
                                     if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                        // Manda al index con modo=siniestro (o 0)
-                                        $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro']; // <-- CAMBIO CLAVE
-                                        if ($clinica && $clinica->id !== null) {
-                                            $params['clinica_id'] = $clinica->id;
-                                        }
-
-                                        if ($model->clinica_id) {
-                                            return Html::a(
-                                                '<i class="fas fa-address-card ms-text-primary"></i>',
-                                                Url::to($params),
-                                                ['title' => 'Ver Siniestros (Servicios sin plazo)', 'class' => 'btn-action view']
-                                            );
-                                        }
+                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id];
+                                    if ($clinica && $clinica->id !== null) {
+                                        $params['clinica_id'] = $clinica->id;
                                     }
-                                },
 
-                                // Nuevo Botón Citas (Modo Cita)
-                                'cita' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
-                                    if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                        // Manda al index con modo=cita (o 1)
-                                        $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita']; // <-- CAMBIO CLAVE
-                                        if ($clinica && $clinica->id !== null) {
-                                            $params['clinica_id'] = $clinica->id;
-                                        }
-
-                                        if ($model->clinica_id) {
-                                            return Html::a(
-                                                '<i class="fas fa-calendar-alt text-success"></i>', // Icono para cita
-                                                Url::to($params),
-                                                ['title' => 'Gestionar Citas (Servicios con plazo)', 'class' => 'btn-action view']
-                                            );
-                                        }
+                                    if($model->clinica_id){
+                                    return Html::a(
+                                        '<i class="fas fa-address-card ms-text-primary"></i>',
+                                        Url::to($params), // Asegurar clinica_id condicionalmente
+                                        [
+                                            'title' => 'Siniestros',
+                                            'class' => 'btn-action view'
+                                        ]
+                                    );}
                                     }
                                 },
                                 'pagos' => function ($url, $model, $key) {
@@ -407,155 +338,3 @@ if ($clinica && $clinica->id !== null) {
         </div>
     </div>
 </div>
-
-<?php 
-
-// Código JavaScript de exportación a CSV (pre-minificado y ultra-estable para inyección PHP)
-$js_code_stable = "function exportTableToCSV(tableID, filename) {const table = document.getElementById(tableID);if (!table) {console.error('Error: Tabla con ID ' + tableID + ' no encontrada.');return;}let csv = [];const rows = table.querySelectorAll('tr');for (let i = 0; i < rows.length; i++) {const row = rows[i];const cols = row.querySelectorAll('th:not(.exclude-csv), td:not(.exclude-csv)');let rowData = [];for (let j = 0; j < cols.length; j++) {let data = cols[j].innerText.trim();data = data.replace(new RegExp('\"', 'g'), '\"\"');if (data.includes(';') || data.includes('\"')) {data = '\"' + data + '\"';}rowData.push(data);}csv.push(rowData.join(';'));}const csvFile = csv.join('\\n');const BOM = '\\uFEFF';const blob = new Blob([BOM + csvFile], {type: 'text/csv;charset=utf-8;'});const link = document.createElement(\"a\");if (link.download !== undefined) {const url = URL.createObjectURL(blob);link.setAttribute(\"href\", url);link.setAttribute(\"download\", filename);link.style.visibility = 'hidden';document.body.appendChild(link);link.click();document.body.removeChild(link);}} $(document).ready(function() { $('#export-csv-btn').on('click', function() { exportTableToCSV('affiliate-table', 'Reporte_Afiliados.csv'); }); });";
-
-$this->registerJs($js_code_stable, \yii\web\View::POS_END);
-?>
-
-<style>
-Improved tooltip styling 
-.custom-tooltip .tooltip-inner {
-    background-color: #2d3748;
-    color: #fff;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    max-width: 280px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: 1px solid #4a5568;
-    line-height: 1.4;
-    z-index: 9999; /* Ensure it's above everything */
-}
-
-/* Arrow styling for all directions */
-.custom-tooltip.bs-tooltip-top .tooltip-arrow::before {
-    border-top-color: #2d3748;
-    bottom: 1px;
-}
-
-.custom-tooltip.bs-tooltip-bottom .tooltip-arrow::before {
-    border-bottom-color: #2d3748;
-    top: 1px;
-}
-
-.custom-tooltip.bs-tooltip-start .tooltip-arrow::before {
-    border-left-color: #2d3748;
-    right: 1px;
-}
-
-.custom-tooltip.bs-tooltip-end .tooltip-arrow::before {
-    border-right-color: #2d3748;
-    left: 1px;
-}
-
-/* Ensure tooltip has highest z-index */
-.tooltip {
-    z-index: 99999 !important;
-}
-
-/* Contract status badge styling */
-.contract-status-tooltip {
-    cursor: help;
-    border-bottom: 1px dotted #666;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.contract-status-tooltip:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-/* Specific styling for waiting status */
-.badge.bg-warning.contract-status-tooltip {
-    border: 1px solid #eab308;
-    background: linear-gradient(135deg, #fef08a, #facc15) !important;
-    color: #854d0e !important;
-    font-weight: 600;
-}
-
-/* Specific styling for "Creado" status with aqua color */
-.badge[style*="background-color: #00FFFF"] {
-    border: 1px solid #00b7eb !important;
-    background: linear-gradient(135deg, #00FFFF, #00b7eb) !important;
-    color: #006d84 !important;
-    font-weight: 600;
-}
-
-/* Ensure tooltips appear above all other content */
-.tooltip.show {
-    opacity: 1 !important;
-}
-
-/* Add a small animation for tooltip appearance */
-.tooltip.fade {
-    transition: opacity 0.15s ease-in-out;
-}
-</style>
-
-<?php
-// JavaScript for tooltip initialization with custom template
-$js = <<<JS
-// Improved tooltip initialization with better positioning
-function initContractTooltips() {
-    $('.contract-status-tooltip').tooltip({
-        placement: 'bottom', // Show below to avoid cursor
-        trigger: 'hover',
-        delay: { "show": 100, "hide": 100 }, // Small delay to prevent flickering
-        container: 'body',
-        boundary: 'viewport',
-        template: '<div class="tooltip custom-tooltip" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
-        offset: [0, 10] // 10px gap from element
-    });
-    
-    // Custom positioning logic for better visibility
-    $(document).on('show.bs.tooltip', function (e) {
-        var \$tooltip = $(e.target);
-        var tooltipId = \$tooltip.attr('aria-describedby');
-        var \$tooltipElement = $('#' + tooltipId);
-        
-        // Ensure the tooltip has our custom class
-        if (!\$tooltipElement.hasClass('custom-tooltip')) {
-            \$tooltipElement.addClass('custom-tooltip');
-        }
-        
-        // Additional positioning to ensure it's visible
-        setTimeout(function() {
-            if (\$tooltipElement.is(':visible')) {
-                var tooltipRect = \$tooltipElement[0].getBoundingClientRect();
-                var viewportHeight = window.innerHeight;
-                
-                // If tooltip is near bottom of viewport, adjust position
-                if (tooltipRect.bottom > viewportHeight - 10) {
-                    \$tooltipElement.css({
-                        'top': (parseInt(\$tooltipElement.css('top')) - 20) + 'px'
-                    });
-                }
-            }
-        }, 50);
-    });
-}
-
-$(document).ready(function() {
-    initContractTooltips();
-});
-
-// Re-initialize after PJAX (for GridView filters, pagination, sorting)
-$(document).on('pjax:success', function() {
-    setTimeout(initContractTooltips, 100);
-});
-
-// Also re-initialize when the window is resized
-$(window).on('resize', function() {
-    setTimeout(initContractTooltips, 50);
-});
-JS;
-
-$this->registerJs($js);
-?>
-
