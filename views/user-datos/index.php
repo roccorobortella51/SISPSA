@@ -235,11 +235,11 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'filter' => ['Si' => 'Sí', 'No' => 'No']
                         ],
                         
-                        // Columna de Acciones - Mantenida exactamente como se solicitó
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
+                            // Añadimos {cita} al template
+                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{cita}{pagos}</div>',
                             'options' => ['style' => 'width:55px; min-width:55px;'],
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -276,19 +276,39 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                         return "";
                                     }
                                 },
+                                // BOTÓN DE SINIESTRO 
                                 'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
                                     if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id];
+                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro'];
                                     if ($clinica && $clinica->id !== null) {
                                         $params['clinica_id'] = $clinica->id;
                                     }
 
                                     if($model->clinica_id){
                                     return Html::a(
-                                        '<i class="fas fa-address-card ms-text-primary"></i>',
+                                        '<i class="fas fa-hand-holding-medical ms-text-primary" style="color: #d9534f !important;"></i>', // Icono y color para Siniestros
                                         Url::to($params), // Asegurar clinica_id condicionalmente
                                         [
-                                            'title' => 'Siniestros',
+                                            'title' => 'Ver Siniestros',
+                                            'class' => 'btn-action view'
+                                        ]
+                                    );}
+                                    }
+                                },
+                                // BOTÓN DE CITA 
+                                'cita' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
+                                    if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
+                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita'];
+                                    if ($clinica && $clinica->id !== null) {
+                                        $params['clinica_id'] = $clinica->id;
+                                    }
+
+                                    if($model->clinica_id){
+                                    return Html::a(
+                                        '<i class="fas fa-calendar-check ms-text-primary" style="color: #5cb85c !important;"></i>', // Icono y color para Citas
+                                        Url::to($params), // Asegurar clinica_id condicionalmente
+                                        [
+                                            'title' => 'Ver Citas',
                                             'class' => 'btn-action view'
                                         ]
                                     );}
