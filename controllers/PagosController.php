@@ -152,7 +152,61 @@ class PagosController extends Controller
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
-                // ... rest of your POST handling code
+                
+                // --- ADDED POST HANDLING LOGIC: START ---
+                $uploadedFileInstance = UploadedFile::getInstance($model, 'imagen_prueba_file');
+                
+                if ($uploadedFileInstance) {
+                    $fileName = uniqid('pago_') . '.' . $uploadedFileInstance->extension;
+                    $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+
+                    if ($uploadedFileInstance->saveAs($tempFilePath)) {
+                        $fileKeyInBucket = $fileName;
+                        $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                            $tempFilePath,
+                            $uploadedFileInstance->type,
+                            $fileKeyInBucket,
+                            $folder
+                        );
+
+                        if (file_exists($tempFilePath)) {
+                            unlink($tempFilePath);
+                        }
+
+                        if ($publicUrl) {
+                            $model->imagen_prueba = $publicUrl;
+                        } else {
+                            Yii::$app->session->setFlash('error', 'Fallo la subida de la imagen a Supabase Storage.');
+                        }
+                    } else {
+                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal.');
+                    }
+                }
+                
+                if ($model->save()) {
+                    // 1. Mark selected cuotas as paid and link to the payment ID
+                    $selectedCuotaIds = Yii::$app->request->post('selected_cuotas');
+                    if (!empty($selectedCuotaIds) && is_array($selectedCuotaIds)) {
+                        Cuotas::updateAll(
+                            ['id_pago' => $model->id, 'estatus' => 'pagada'],
+                            ['id' => $selectedCuotaIds]
+                        );
+                    }
+                    
+                    Yii::$app->session->setFlash('success', 'Pago registrado con éxito.');
+                    return $this->redirect(['view', 'id' => $model->id]);
+                } else {
+                    Yii::$app->session->setFlash('error', 'Error al guardar el pago en la base de datos.');
+                    // If save fails, re-render the form with error messages
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $user_id,
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+                // --- ADDED POST HANDLING LOGIC: END ---
             }
         } else {
             $model->loadDefaultValues();

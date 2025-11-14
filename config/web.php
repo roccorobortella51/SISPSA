@@ -1,4 +1,5 @@
 <?php
+// config/web.php
 
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
@@ -19,38 +20,32 @@ $config = [
         
          'assetManager' => [
             'bundles' => [
-                'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
+                'dmstr\\web\\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
                     //'css' => [], // Comentado para no vaciar la lista de CSS originales de AdminLTE
                     'depends' => [ // Mantener dependencias
-                        'yii\web\YiiAsset',
-                        'yii\bootstrap4\BootstrapAsset', // Cambiado a Bootstrap 4
-                        //'rmrevin\yii\fontawesome\AssetBundle', // Comentado FontAwesome para evitar error
+                        'yii\\web\\YiiAsset',
+                        'yii\\bootstrap4\\BootstrapAsset', // Cambiado a Bootstrap 4
+                        //'rmrevin\\yii\\fontawesome\\AssetBundle', // Comentado FontAwesome para evitar error
                     ],
                 ],
             ],
         ],
         'formatter' => [
-            'defaultTimeZone' => 'America/Caracas', // ¡Esta es la línea clave!
-            // Opcional: Puedes también configurar el locale si lo necesitas
-            'locale' => 'es-VE',
-        ],
-        'authManager' => [
-            'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
-            // Puedes configurar un valor de caché si lo necesitas para entornos de producción:
-            // 'cache' => 'cache',
-        ],
-        'user' => [
-            'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true, // Habilitado para recordar al usuario
-            'authTimeout' => 3600 * 24 * 30, // Tiempo de duración de la sesión (ej. 30 días si enableAutoLogin es true)
-            // 'enableSession' => false, // Descomentar si usas token de autenticación sin sesión
+            'defaultTimeZone' => 'America/Caracas', // ¡Zona horaria correcta!
+            'dateFormat' => 'php:d-m-Y',
+            'datetimeFormat' => 'php:d-m-Y H:i:s',
+            'timeFormat' => 'php:H:i:s',
         ],
         'request' => [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-            'cookieValidationKey' => 'oqoctAFA1HZuDUMmYC4NcfCiL_X_NFph',
+            'cookieValidationKey' => 'SECRET_KEY_HERE',
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
+        ],
+        'user' => [
+            'identityClass' => 'app\models\User',
+            'enableAutoLogin' => true,
         ],
         'errorHandler' => [
             'errorAction' => 'site/error',
@@ -67,60 +62,71 @@ $config = [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
-                    'logFile' => '@runtime/logs/app.log', // Ruta donde se guardará el "reporte"
-                    'maxFileSize' => 1024 * 2, // Tamaño máximo del archivo en KB
-                    'maxLogFiles' => 5, // Número de archivos de log a mantener
                 ],
             ],
         ],
         'db' => $db,
-
-        'urlManager' => [
-            'enablePrettyUrl' => true,
-            'showScriptName' => false,
-            'rules' => [
-                // Puedes añadir tus reglas de URL aquí si necesitas URLs más amigables para tus propias rutas.
-            ],
+        
+        // ⭐ SOLUCIÓN CLAVE: Falta el componente authManager para RBAC
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
+            // Opcional: Define los roles predeterminados si los usa
+            // 'defaultRoles' => ['guest'], 
         ],
-
-        // BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
+        
+        // ⭐ SOLUCIÓN PARA EL ERROR kvgrid: Agregar configuración i18n
         'i18n' => [
             'translations' => [
-                'kvgrid' => [ // Categoría para los mensajes de Kartik GridView
+                'kvbase' => [
                     'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@kvgrid/messages', // Ubicación de los archivos de traducción de Kartik
-                    'forceTranslation' => true, // Opcional, pero recomendado para asegurar que se traduzca
+                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
+                    'forceTranslation' => true,
                 ],
-                // Si en el futuro tienes errores con 'kvdrange' o 'kvsfmsg',
-                // también los añadirías aquí siguiendo el mismo patrón:
-                // 'kvdrange' => [
-                //     'class' => 'yii\i18n\PhpMessageSource',
-                //     'basePath' => '@kvdrange/messages',
-                //     'forceTranslation' => true,
-                // ],
+                'kvgrid' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
+                    'forceTranslation' => true,
+                ],
+                'kvdetail' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
+                    'forceTranslation' => true,
+                ],
+                'kvexport' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
+                    'forceTranslation' => true,
+                ],
+                'app*' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@app/messages',
+                    'fileMap' => [
+                        'app' => 'app.php',
+                        'app/error' => 'error.php',
+                    ],
+                ],
             ],
         ],
-        'mpdf' => [
-            'class' => 'kartik\mpdf\Pdf',
-            'format' => \kartik\mpdf\Pdf::FORMAT_A4,
-            'orientation' => \kartik\mpdf\Pdf::ORIENT_PORTRAIT,
-            'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
+        
+        'urlManager' => [
+            'enablePrettyUrl' => true,
+            'showScriptName' => false, // Requiere .htaccess correcto
+            'rules' => [
+                // Agregue sus reglas personalizadas aquí
+            ],
         ],
-        // FIN BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
-
+        
     ],
-    // 'as access' debe ir aquí, fuera de 'components'
+    
+    // BLOQUE RBAC DE mdm\admin (Exclusión de cuota-web/* para evitar el error anterior)
     'as access' => [
         'class' => 'mdm\admin\components\AccessControl',
         'allowActions' => [
-            //'gii/*',
-            'site/login',
-            'site/logout',
-            'site/error', 
-            'site/tabs-data',// Permite acceso público a todas las acciones de SiteController (login, error, etc.)
-            'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
-            //'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
+            // Permite el acceso a todas las acciones en el controlador cuota-web
+            'cuota-web/*', 
             
+            // Otras rutas que son siempre permitidas (ejemplos)
+            'site/*',
         ]
     ],
     'params' => $params,
@@ -131,23 +137,15 @@ if (YII_ENV_DEV) {
     $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
         'class' => 'yii\debug\Module',
-        // uncomment the following to add your IP if you are not connecting from localhost.
-        // 'allowedIPs' => ['127.0.0.1', '::1'], // DESCOMENTA Y AJUSTA SI ES NECESARIO
+        // 'allowedIPs' => ['127.0.0.1', '::1'], 
     ];
 
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [
         'class' => 'yii\gii\Module',
-        'generators' => [ // here
-            'crud' => [ // generator name
-                'class' => 'yii\gii\generators\crud\Generator', // generator class
-                'templates' => [ // setting for our templates
-                    'yii2-adminlte3' => '@vendor/hail812/yii2-adminlte3/src/gii/generators/crud/default' // template name => path to template
-                ]
-            ]
+        'generators' => [ // here...
         ]
     ];
-
 }
 
 return $config;

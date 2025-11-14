@@ -19,7 +19,7 @@ use app\components\UserHelper;
 // 1. LÓGICA DE MODO Y BOTONES
 // ----------------------------------------------------------------------
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "COORDINADOR-CLINICA");
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "Administrador-clinica");
 
 // Definir variables basadas en el modo
 $esCita = ($modo === 'cita') ? 1 : 0;
