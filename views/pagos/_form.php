@@ -170,7 +170,8 @@ $this->registerJs($js);
         <div class="col-md-6">
             <?= $form->field($model, 'metodo_pago')->widget(Select2::classname(), [
                 'data' => [
-                    'Pago Movil' => 'Pago Movil',
+                    'Pago Móvil' => 'Pago Movil',
+                    'Punto de Venta' => 'Punto de Venta',
                     'Transferencia Bancaria' => 'Transferencia Bancaria',
                     'Zelle' => 'Zelle'
                 ],

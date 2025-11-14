@@ -52,6 +52,10 @@ class Pagos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            // --- ADDED: MANDATORY FIELDS ---
+            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd',], 'required'],
+            // ---------------------------------
+            
             [['recibo_id', 'fecha_pago', 'monto_pagado', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'user_id', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
             [['monto_usd', 'tasa'], 'default', 'value' => 0],
             [['created_at', 'fecha_pago', 'updated_at', 'fecha_conciliacion', 'fecha_registro', 'deleted_at'], 'safe'],

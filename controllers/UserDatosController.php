@@ -954,15 +954,10 @@ public function actionMasivo()
                         $modelContrato->save();      
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
-                        
-                        // FIX: Give 30-day grace period for first payment instead of using contract start date
-                        $fechaVencimiento = new \DateTime($modelContrato->fecha_ini);
-                        $fechaVencimiento->modify('+30 days');
-                        $modelCuota->fecha_vencimiento = $fechaVencimiento->format('Y-m-d');
-                        
+                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
                         $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
                         $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
-                        $modelCuota->Estatus = 'pendiente';
+                        $modelCuota->estatus = 'pendiente';
                         $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
                         $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
                         $modelCuota->save();
@@ -1232,59 +1227,63 @@ public function actionMasivo()
                 }
 
                 // Se elimina el bloque de código anterior que manejaba la relación, ya que la nueva lógica lo reemplaza.
-            
-                $modelContrato->user_id = $id;
-                $modelContrato->estatus = 'Creado';
-                $modelContrato->clinica_id = $model->clinica_id;
-                $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
-                $modelContrato->monto = $plan ? $plan->precio : 0;
 
-                if($modelContrato->save()){
-                    $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
-                    if($cuota){
-                        $cuota->delete();
+                if($modelContrato->plan_id != null || $modelContrato->plan_id != ""){
+            
+                    $modelContrato->user_id = $id;
+                    $modelContrato->estatus = 'Creado';
+                    $modelContrato->clinica_id = $model->clinica_id;
+                    $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
+                    if($plan){
+                        $modelContrato->monto = $plan ? $plan->precio : 0;
+                    }else{
+                        $plan->precio = 0;
+
                     }
-                    $modelCuota = new Cuotas();
-                    $modelCuota->contrato_id = $modelContrato->id;
-                    
-                    // FIX: Give 30-day grace period for first payment instead of using contract start date
-                    $fechaVencimiento = new \DateTime($modelContrato->fecha_ini);
-                    $fechaVencimiento->modify('+30 days');
-                    $modelCuota->fecha_vencimiento = $fechaVencimiento->format('Y-m-d');
-                    
-                    $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
-                    $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
-                    $modelCuota->Estatus = 'pendiente';
-                    $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
-                    $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1;
-                    $modelCuota->save();
-                
-                    if (isset($modelUser) && $modelUser !== null) {
-                        $auth = Yii::$app->authManager;
-                        $roleName = 'afiliado';
-                        $role = $auth->getRole($roleName);
-                        if ($role) {
-                            try {
-                                $auth->revokeAll($modelUser->id);
-                                $auth->assign($role, $modelUser->id);
-                                Yii::$app->cache->flush();
-                                $model->user_login_id = $modelUser->id;
-                                $model->save();
-                            } catch (\Exception $e) {
-                                Yii::error("Error al asignar el rol: " . $e->getMessage(), __METHOD__);
-                            }
-                        } else {
-                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+
+
+                    if($modelContrato->save()){
+                        $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
+                        if($cuota){
+                            $cuota->delete();
                         }
+                        $modelCuota = new Cuotas();
+                        $modelCuota->contrato_id = $modelContrato->id;
+                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                        $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
+                        $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
+                        $modelCuota->estatus = 'pendiente';
+                        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
+                        $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1;
+                        $modelCuota->save();
+                    
+                        if (isset($modelUser) && $modelUser !== null) {
+                            $auth = Yii::$app->authManager;
+                            $roleName = 'afiliado';
+                            $role = $auth->getRole($roleName);
+                            if ($role) {
+                                try {
+                                    $auth->revokeAll($modelUser->id);
+                                    $auth->assign($role, $modelUser->id);
+                                    Yii::$app->cache->flush();
+                                    $model->user_login_id = $modelUser->id;
+                                    $model->save();
+                                } catch (\Exception $e) {
+                                    Yii::error("Error al asignar el rol: " . $e->getMessage(), __METHOD__);
+                                }
+                            } else {
+                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                            }
+                        }
+                    
+                        Yii::$app->session->setFlash('success', 'El afiliado fue actualizado exitosamente.');
+                        return $this->redirect(['view', 'id' => $model->id]);
+                    } else {
+                        Yii::error("Error al guardar Contrato: " . json_encode($modelContrato->getErrors()), __METHOD__);
+                        Yii::$app->session->setFlash('error', 'Error al actualizar el contrato: ' . implode(', ', array_map(function($errors) {
+                            return implode(', ', $errors);
+                        }, $modelContrato->getErrors())));
                     }
-                
-                    Yii::$app->session->setFlash('success', 'El afiliado fue actualizado exitosamente.');
-                    return $this->redirect(['view', 'id' => $model->id]);
-                } else {
-                    Yii::error("Error al guardar Contrato: " . json_encode($modelContrato->getErrors()), __METHOD__);
-                    Yii::$app->session->setFlash('error', 'Error al actualizar el contrato: ' . implode(', ', array_map(function($errors) {
-                        return implode(', ', $errors);
-                    }, $modelContrato->getErrors())));
                 }
             } else {
                 Yii::error("Error al guardar UserDatos: " . json_encode($model->getErrors()), __METHOD__);
@@ -1749,63 +1748,6 @@ public function actionGenerarContratov($id)
                 ];
             } 
     }
-    
-    /**
- * Temporary action to activate contracts in "Esperar Penalidad" status
- */
-public function actionActivatePenaltyContracts()
-    {
-        // Verificar que sea superadmin
-        $rol = \app\components\UserHelper::getMyRol();
-        if ($rol !== 'superadmin') {
-            \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-            return [
-                'success' => false,
-                'message' => 'No tiene permisos para ejecutar esta acción'
-            ];
-        }
-        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        
-        try {
-            // Find all contracts in "Esperar Penalidad" status
-            $contratosEspera = Contratos::find()
-                ->where(['estatus' => 'Esperar'])
-                ->orWhere(['estatus' => 'Esperar Penalidad'])
-                ->all();
-                
-            $activatedCount = 0;
-            
-            foreach ($contratosEspera as $contrato) {
-                // Activate contract immediately
-                $contrato->estatus = 'Activo';
-                $contrato->fecha_reactivacion = null;
-                
-                if ($contrato->save(false)) {
-                    $activatedCount++;
-                    
-                    // Also update user solvent status
-                    $user = UserDatos::findOne($contrato->user_id);
-                    if ($user) {
-                        $user->estatus_solvente = 'Si';
-                        $user->save(false);
-                    }
-                }
-            }
-            
-            return [
-                'success' => true,
-                'message' => "Se activaron {$activatedCount} contratos que estaban en Esperar Penalidad",
-                'activated_count' => $activatedCount
-            ];
-            
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ];
-        }
-    }
-
     /**
      * Returns JSON data for clinicas filtered by type and corporativo.
      * @return array JSON array of [id => name]

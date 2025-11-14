@@ -16,6 +16,8 @@ class UserDatosSearch extends UserDatos
 
     public $user_datos_type_id; 
     public $afiliado_corporativo_id;
+    // ADDED: Property to handle the search term for the clinic's name
+    public $clinica_nombre;
 
     /**
      * {@inheritdoc}
@@ -25,7 +27,8 @@ class UserDatosSearch extends UserDatos
         return [
             // CORRECCIÓN 1: estatus_solvente debe estar en 'safe' ya que es TEXTO
             [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
-            [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente'], 'safe'],
+            // ADDED: 'clinica_nombre' added to the 'safe' array for validation
+            [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'clinica_nombre'], 'safe'],
             [['paso'], 'number'],
         ];
     }
@@ -150,6 +153,8 @@ class UserDatosSearch extends UserDatos
             // CORRECCIÓN 2: Usamos 'ilike' (búsqueda parcial de texto) para estatus_solvente
             // Esto buscará la cadena de texto exacta ('Si' o 'No') que envíe el filtro de la vista.
             ->andFilterWhere(['ilike', 'user_datos.estatus_solvente', $this->estatus_solvente])
+            // ADDED: Search filter for clinic name
+            ->andFilterWhere(['ilike', 'rm_clinica.nombre', $this->clinica_nombre])
             // Usando una expresión en lugar de un simple 'ilike'
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedula])
             ->andWhere(['is', 'user_datos.deleted_at', null]);

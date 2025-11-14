@@ -6,7 +6,7 @@ use yii\helpers\Url;
 use yii\grid\ActionColumn;
 use kartik\grid\GridView;
 use kartik\switchinput\SwitchInput;
-use yii\helpers\ArrayHelper; // Necesario para DropdownList en el filtro
+use yii\helpers\ArrayHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\PagosSearch $searchModel */
@@ -15,10 +15,21 @@ use yii\helpers\ArrayHelper; // Necesario para DropdownList en el filtro
 $this->title = 'PAGOS';
 $this->params['breadcrumbs'][] = $this->title;
 
-// Lista de estados para el filtro de la columna 'estatus'
+// List of statuses for the 'estatus' filter
 $estatusList = [
     'Conciliado' => 'Conciliado',
-    'Por Conciliar' => 'Por Conciliar', // Asumiendo que 'Por Conciliar' se mapea a 'Pendiente' o similar en la DB
+    'Por Conciliar' => 'Por Conciliar',
+];
+
+// List of payment methods for the filter
+$metodoPagoList = [
+    'Efectivo' => 'Efectivo',
+    'Pago Móvil' => 'Pago Móvil',
+    'Paypal' => 'Paypal',
+    'Punto de Venta' => 'Punto de Venta',
+    'Transferencia' => 'Transferencia',
+    'Zelle' => 'Zelle',
+    
 ];
 ?>
 <div class="pagos-index">
@@ -27,8 +38,10 @@ $estatusList = [
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
         
-        // --- CONFIGURACIÓN DE KARTIK GRIDVIEW ---
-        'pjax' => true, // Habilitar Pjax para recargas rápidas
+        // AÑADIR ESTA LÍNEA para el resumen en español
+        'summary' => '<span style="font-size: 1.7em; color: white;">Mostrando {begin}-{end} de {totalCount} elementos</span>',
+        // --- KARTIK GRIDVIEW CONFIGURATION ---
+        'pjax' => true, 
         'striped' => true,
         'condensed' => true,
         'responsive' => true,
@@ -36,16 +49,15 @@ $estatusList = [
         'panel' => [
             'type' => GridView::TYPE_PRIMARY,
             'heading' => '<i class="fas fa-money-check-alt"></i> ' . $this->title,
-            'before' => false, // No mostrar nada antes de la grilla
-            'after' => false, // No mostrar nada después de la grilla
+            'before' => false, 
+            'after' => false, 
         ],
         
-        // Barra de herramientas: Añadir botón de creación y exportación
         'toolbar' => [
             [
                 'content' =>
                     Html::a('Crear Pagos', ['create'], ['class' => 'btn btn-success']) .
-                    Html::a('<i class="fas fa-redo"></i>', ['index'], [
+                    Html::a('<i class="fas fas-redo"></i>', ['index'], [
                         'class' => 'btn btn-outline-secondary',
                         'title' => Yii::t('kvgrid', 'Reset Grid'),
                         'data-pjax' => 0, 
@@ -54,36 +66,40 @@ $estatusList = [
             '{export}',
             '{toggleData}',
         ],
-        // --- FIN CONFIGURACIÓN DE KARTIK GRIDVIEW ---
+        // --- END KARTIK GRIDVIEW CONFIGURATION ---
 
         'columns' => [
-            ['class' => 'yii\grid\SerialColumn'],
+            // SerialColumn (#) - CONTENT CENTERED
+            [
+                'class' => 'yii\grid\SerialColumn',
+                'contentOptions' => ['style' => 'text-align: center;'],
+            ],
             
-            // Columna de Usuario (Permite búsqueda por nombre en PagosSearch)
+            // User Column (Afiliado)
             [
                 'attribute' => 'nombreUsuario', 
                 'value' => function ($model) {
                     return $model->userDatos ? $model->userDatos->nombres . ' ' . $model->userDatos->apellidos : 'N/A';
                 },
-                'label' => 'Afiliado',
-                // 'group' => true, // COMENTADO para mostrar todas las filas individualmente.
+                'label' => 'AFILIADO', 
             ],
 
+            // Cedula Column 
             [
-                'attribute' => 'cedulaUsuario', // Usamos el nuevo atributo virtual
+                'attribute' => 'cedulaUsuario', 
                 'value' => function ($model) {
-                    // Accedemos a la cédula a través de la relación userDatos
                     return $model->userDatos ? $model->userDatos->cedula : 'N/A';
                 },
-                'label' => 'Cédula',
+                'label' => 'CÉDULA', 
+                'headerOptions' => ['style' => 'width: 10%; text-align: center;'],
+                'contentOptions' => ['style' => 'width: 10%; text-align: center;'], 
                 'filterOptions' => ['style' => 'width: 10%'], 
             ],
 
-            // Columna Solvente (Muestra estatus de usuario relacionado)
+            // Solvente Column - CONTENT CENTERED
             [
-                'label' => 'Solvente',
+                'label' => 'SOLVENTE', 
                 'value' => function ($model) {
-                    // Usar badge para mejor visualización
                     $isSolvente = $model->userDatos ? $model->userDatos->estatus_solvente : 'No';
                     if ($isSolvente == 'SI') {
                         return '<span class="badge badge-success">SI</span>';
@@ -91,52 +107,93 @@ $estatusList = [
                     return '<span class="badge badge-danger">No</span>';
                 },
                 'format' => 'raw',
+                'contentOptions' => ['style' => 'text-align: center;'],
                 'filter' => ['SI' => 'SI', 'No' => 'No'],
             ],
             
-            'numero_referencia_pago:ntext',
+            // Payment Method Column - CONTENT CENTERED
+            [
+                'attribute' => 'metodo_pago', 
+                'header' => 'MÉTODO<br>PAGO', 
+                'format' => 'raw', 
+                'headerOptions' => ['style' => 'width: 60px;'], 
+                'contentOptions' => ['style' => 'width: 60px; text-align: center;'],
+                'filter' => $metodoPagoList,
+                'filterType' => GridView::FILTER_SELECT2,
+                'filterWidgetOptions' => [
+                    'options' => ['placeholder' => 'MÉTODO'], 
+                    'pluginOptions' => [
+                        'allowClear' => true
+                    ],
+                ],
+            ],
+            
+            // Payment Reference Column - CONTENT CENTERED
+            [
+                'attribute' => 'numero_referencia_pago',
+                'header' => 'REFERENCIA<br>PAGO', 
+                'format' => 'raw', 
+                'filter' => true, 
+                'headerOptions' => [
+                    'style' => 'width: 100px; text-align: center;',
+                ],
+                'contentOptions' => ['style' => 'text-align: center; white-space: normal;'],
+            ],
             
             // Columna de Fecha de Pago
             [
                 'attribute' => 'fecha_pago',
                 'format' => 'date', 
+                'hAlign' => GridView::ALIGN_CENTER, // Centra el valor
+                'contentOptions' => ['style' => 'white-space: nowrap;'], // Fuerza a que no haya salto de línea
                 'filterInputOptions' => [
                     'placeholder' => 'Ej: 10, 2024, 15/09', // <-- Placeholder informativo
                     'class' => 'form-control',
                 ],
                 /* NOTA: El filtro ya es flexible. El usuario puede buscar por:
-                   - Mes: '10' (Para pagos de Octubre)
-                   - Año: '2024'
-                   - Día y Mes: '15/09' 
-                   Esto es posible gracias al CAST(columna AS TEXT) en PagosSearch.php. */
+                - Mes: '10' (Para pagos de Octubre)
+                - Año: '2024'
+                - Día y Mes: '15/09' 
+                Esto es posible gracias al CAST(columna AS TEXT) en PagosSearch.php. */
             ],
             
-            // Monto Pagado USD
+            // Monto Pagado USD Column (Right aligned)
             [
                 'attribute' => 'monto_pagado',
                 'value' => function ($model) {
                     return $model->monto_pagado . ' USD';
                 },
-                'label' => 'Monto Pagado USD',
+                'header' => 'MONTO<br>PAGADO USD', 
+                'format' => 'raw', 
                 'hAlign' => GridView::ALIGN_RIGHT,
+                'headerOptions' => [
+                    'style' => 'width: 80px; text-align: right;',
+                ],
+                'contentOptions' => ['style' => 'white-space: nowrap;'],
             ],
             
-            // Monto Pagado Bs (Permite búsqueda por texto)
+            // Monto Pagado Bs Column (Right aligned, single line)
             [
                 'attribute' => 'monto_usd',
                 'value' => function ($model) {
                     return $model->monto_usd . ' Bs';
                 },
-                'label' => 'Monto Pagado Bs',
+                'header' => 'MONTO<br>PAGADO BS', 
+                'format' => 'raw', 
                 'hAlign' => GridView::ALIGN_RIGHT,
+                'headerOptions' => [
+                    'style' => 'width: 80px; text-align: right;',
+                ],
+                'contentOptions' => [
+                    'style' => 'white-space: nowrap; font-weight: bold;',
+                ],
             ],
             
-            // Columna de Conciliación con SwitchInput y Filtro Dropdown
+            // Conciliation Status Column - CONTENT CENTERED
             [
                 'attribute' => 'estatus',
                 'format' => 'raw',
                 'value' => function ($model) {
-                    // Convertir el valor de texto a booleano
                     $isActive = ($model->estatus == 'Conciliado' || $model->estatus == '1' || $model->estatus == 'Activo');
                     
                     return SwitchInput::widget([
@@ -149,12 +206,10 @@ $estatusList = [
                             'onColor' => 'success',
                             'offColor' => 'danger',
                         ],
-                        // Se mantiene la lógica AJAX del usuario
                         'pluginEvents' => [
                             'switchChange.bootstrapSwitch' => "function(event, state) {
                                 var currentRow = $(event.target).closest('tr');
-                                // Buscar el valor actual de Solvente (Índice 2, después de Serial y Usuario)
-                                var solventeCell = currentRow.find('td').eq(2); 
+                                var solventeCell = currentRow.find('td').eq(3); 
 
                                 $.ajax({
                                     url: '" . Url::to(['/pagos/updatestatus']) . "',
@@ -166,11 +221,9 @@ $estatusList = [
                                     },
                                     success: function(response) {
                                         if (response.success) {
-                                            // Actualizar la columna de solvente en tiempo real
                                             var newSolventeStatus = state ? '<span class=\"badge badge-success\">SI</span>' : '<span class=\"badge badge-danger\">No</span>';
                                             solventeCell.html(newSolventeStatus);
                                         } else {
-                                            // Revertir el cambio si falla
                                             $(event.target).bootstrapSwitch('state', !state, true);
                                             alert('Error: ' + response.error);
                                         }
@@ -184,8 +237,8 @@ $estatusList = [
                         ]
                     ]);
                 },
-                'label' => 'Conciliacion',
-                // Añadir filtro de dropdown
+                'label' => 'CONCILIACION', 
+                'contentOptions' => ['style' => 'text-align: center;'], // CONTENT CENTERED
                 'filter' => $estatusList,
                 'filterType' => GridView::FILTER_SELECT2,
                 'filterWidgetOptions' => [
@@ -199,7 +252,10 @@ $estatusList = [
             
             [
                 'class' => ActionColumn::class, 
-                
+                'header' => 'ACCIONES', 
+                // --- KEY CHANGE: Add a custom template with spacing ---
+                'template' => '{view}&nbsp;&nbsp;{update}&nbsp;&nbsp;&nbsp;&nbsp;{delete}',
+                // -----------------------------------------------------
                 'headerOptions' => ['style' => 'width: 120px; text-align: center;'], 
                 'contentOptions' => ['style' => 'width: 120px; min-width: 120px; text-align: center;'], 
                 'urlCreator' => function ($action, Pagos $model, $key, $index, $column) {
