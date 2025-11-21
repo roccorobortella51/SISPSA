@@ -51,7 +51,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
             
             <div class="col">
                 <?= Html::a(
-                    '<i class="fas fa-plus"></i> <span style="font-weight: bold; color:white;">CREAR AGENTE/ASESOR</span>',
+                    '<i class="fas fa-plus"></i> <span style="font-weight: bold; color:white;">ASIGNAR AGENTE</span>',
                     ['agente-fuerza/create', 'agente_id' => $agente->id],
                     // Se ha ajustado el padding y el font-size para que los botones sean un poco más pequeños.
                     ['class' => 'btn btn-success w-100', 'style' => 'padding: 1rem 2rem !important; font-size: 1.25rem !important;']
@@ -60,7 +60,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
             <div class="col">
                 <?= Html::a(
-                    '<i class="fas fa-upload"></i> <span style="font-weight: bold;">CARGA MASIVA</span>',
+                    '<i class="fas fa-upload"></i> <span style="font-weight: bold; color:white;">CARGA MASIVA</span>',
                     '#',
                     // Se ha ajustado el padding y el font-size para que los botones sean un poco más pequeños.
                     ['class' => 'btn btn-primary w-100 disabled', 'style' => 'padding: 1rem 2rem !important; font-size: 1.25rem !important;']
@@ -95,14 +95,14 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         'columns' => [
                             [
                                 'attribute' => 'id',
-                                'label' => 'N° de Agente/Asesor',
+                                'label' => 'N° de Agente',
                                 'contentOptions' => ['class' => 'text-center'],
                                 'value' => function($model) {
                                     return $model->id;
                                 },
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar N° de Agente/Asesor',
+                                    'placeholder' => 'Buscar N° de Agente',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
                             ],

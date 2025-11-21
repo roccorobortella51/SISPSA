@@ -3,8 +3,8 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
-use kartik\date\DatePicker;
 use yii\web\View;
+use yii\helpers\ArrayHelper;
 
 /* @var $this yii\web\View */
 /* @var $model app\models\SisSiniestro */
@@ -22,8 +22,25 @@ $sumatoriaSiniestros = \app\models\SisSiniestro::find()
     ->sum('costo_total');
 
 $totalDisponible = $precioPlan - $sumatoriaSiniestros;
+ 
+//OBTENER el parámetro 'es_cita' directamente del Request, con un valor por defecto de 0.
+$esCita = (int)Yii::$app->request->get('es_cita', 0);
 
-// CSS personalizado
+// Definir los modos y términos
+$esCitaMode = ($esCita === 1);
+$terminoPrincipal = $esCitaMode ? 'Cita' : 'Siniestro';
+$tituloSeccion = 'Datos de ' . $terminoPrincipal;
+
+// Obtener el contrato activo del afiliado
+$contrato = \app\models\Contratos::find()
+    ->where(['user_id' => $afiliado->id])
+    ->andWhere(['estatus' => 'Activo'])
+    ->orderBy(['created_at' => SORT_DESC])
+    ->one();
+
+
+
+// CSS personalizado (Mantengo el CSS intacto)
 $css = <<<CSS
 /*.sis-siniestro-form {
     background-color: #f8f9fa;
@@ -233,6 +250,54 @@ $css = <<<CSS
     margin-top: 10px;
 }
 
+/* Estilos para mensajes de restricciones */
+.hint-block {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.hint-block i {
+    margin-right: 5px;
+}
+
+/* Estilos de la tabla de baremos */
+#baremos-tabla-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+#baremos-tabla-container table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 5px; /* Espacio entre filas */
+}
+
+#baremos-tabla-container th, #baremos-tabla-container td {
+    padding: 10px;
+    text-align: left;
+}
+
+#baremos-tabla-container th {
+    background-color: #f1f1f1;
+    font-weight: 600;
+}
+
+#baremos-tabla-container tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#baremos-tabla-container tr {
+    border-bottom: 1px solid #eee;
+    border-radius: 6px;
+}
+
+#baremos-tabla-container .cost-col {
+    font-weight: 700;
+    text-align: right;
+    width: 120px;
+}
+
 @media (max-width: 768px) {
     .sis-siniestro-form {
         padding: 15px;
@@ -273,6 +338,30 @@ $css = <<<CSS
     color: #6c757d;
     z-index: 5;
 }
+
+/* Force the main button text/icon color to white (Primary/Browse button) */
+.file-input .btn.btn-primary,
+.file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
+.file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
+.file-input .btn.btn-primary span,
+.file-input .btn.btn-primary i,
+.file-input .btn.btn-primary svg {
+    color: #fff !important;
+    fill: #fff !important; /* Ensures SVG icons are also white */
+}
+
+/* Ensure the file name/caption text is also white, as it's often next to the button */
+.file-caption-name {
+    color: #fff !important;
+}
+
+/* Remove text shadow interference */
+.file-input .btn.btn-primary {
+    text-shadow: none !important; 
+}
+
+/* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 
+   so it will retain its theme's default color. */
 CSS;
 
 $this->registerCss($css);
@@ -283,12 +372,11 @@ $this->registerCss($css);
 
     <div class="ms-panel">
         <div class="ms-panel-header">
-            <h3 class="section-title">
-                <i class="fas fa-file-alt text-blue-600"></i> Datos del Siniestro
-            </h3>
-        </div>
+    <h3 class="section-title" id="titulo-datos-registro">
+        <i class="fas fa-file-alt text-blue-600"></i> <?= $tituloSeccion ?>
+    </h3>
+</div>
         <div class="ms-panel-body">
-            <!-- Información del plan y total disponible -->
             <div class="plan-info-container">
                 <div class="plan-info-title">Información del Plan y Límites</div>
                 <div class="plan-info-item">
@@ -307,80 +395,395 @@ $this->registerCss($css);
                     <span class="plan-info-label">Total Disponible:</span>
                     <span class="plan-info-value"><?= number_format($totalDisponible, 2) ?></span>
                 </div>
-            </div>
+        </div>
             
             <div class="row">
-                <div class="col-md-12">
-                    <?php
-                    // Consulta corregida para listar los baremos de ese plan y clínica
-                    $baremosDisponibles = \yii\helpers\ArrayHelper::map(
-                        \app\models\PlanesItemsCobertura::find()
-                            ->joinWith('baremo')
-                            ->joinWith('plan')
-                            ->joinWith('baremo.area')
-                            ->where(['planes.clinica_id' => $afiliado->clinica_id])
-                            ->andWhere(['baremo.estatus' => 'Activo'])
-                            ->andWhere(['planes.id' => $afiliado->plan_id])
-                            ->select(["CONCAT('AREA: ', area.nombre, ' - SERVICIO: ', baremo.nombre_servicio, '- DESCRIPCIÓN: ', baremo.descripcion) AS nombre_servicio", "baremo.id as id"])
-                            ->all(),
-                        'id',
-                        "nombre_servicio"
-                    );
 
-                    // Obtener baremos seleccionados
-                    $selectedBaremos = [];
-                    if (method_exists($model, 'getBaremos')) {
-                        $baremosRelacion = $model->getBaremos()->all();
+
+        <div class="row mb-4 d-none" id="tipo-registro-control">
+    <div class="col-md-12">
+        <!-- Inicio: Control de Tipo de Registro con estilo de Tarjeta -->
+        <div class="card shadow-sm border-2 border-primary-subtle rounded-3">
+            <div class="card-body py-3 px-4">
+                <div class="form-group mb-0">
+                    <!-- Título más destacado -->
+                    <label class="fw-bold mb-2 text-primary" for="es-cita-switch">
+                        <i class="fas fa-clipboard-list me-1"></i> Tipo de Registro
+                    </label>
+                    
+                    <div class="d-flex align-items-center justify-content-between">
                         
-                        if (empty($baremosRelacion) && !$model->isNewRecord) {
-                            $baremosDirectos = (new \yii\db\Query())
-                                ->select(['baremo_id'])
-                                ->from('sis_siniestro_baremo')
-                                ->where(['siniestro_id' => $model->id])
-                                ->column();
+                        <!-- Etiqueta Dinámica: Más grande y con estilo de píldora -->
+                        <span class="badge fs-6 p-2 rounded-pill shadow-sm" id="tipo-registro-label" style="min-width: 120px; text-align: center;"></span>
+                        
+                        <!-- Switch de control (Eliminamos el span wrapper y ajustamos el div para usar Bootstrap estándar) -->
+                        <div class="form-check form-switch ms-auto">
+                            <!-- Campo oculto que guarda el valor real de 0 o 1 -->
+                            <?= Html::activeHiddenInput($model, 'es_cita', ['id' => 'es-cita-hidden']) ?>
                             
-                            if (!empty($baremosDirectos)) {
-                                $selectedBaremos = $baremosDirectos;
-                            }
-                        } else {
-                            $selectedBaremos = \yii\helpers\ArrayHelper::getColumn($baremosRelacion, 'id');
+                            <input class="form-check-input" type="checkbox" id="es-cita-switch" 
+                                <?= $model->es_cita == 1 ? 'checked' : '' ?>
+                                title="Activar para Cita (reserva de servicio con plazo pendiente)">
+                            <label class="form-check-label fw-semibold" for="es-cita-switch">Es Cita</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Información contextual -->
+                    <small class="form-text text-muted mt-2 d-block">
+                        <strong>Siniestro:</strong> Uso inmediato. <strong>Cita:</strong> Reserva (permite Plazo Pendiente).
+                    </small>
+                </div>
+            </div>
+        </div>
+        <!-- Fin: Control de Tipo de Registro con estilo de Tarjeta -->
+    </div>
+</div>
+
+
+<!-------------------------------------- contenido de los baremos  --------------------------------------------->
+
+<div class="col-md-12"> <!-- UNICA COLUMNA: Envuelve toda la sección de baremos para evitar que rompa el layout -->
+
+<?php
+// Inicializar las variables para evitar errores si el contrato no está activo
+$baremosTotales = [];
+$baremosInfo = [];
+$baremosRestringidosIDs = [];
+?>
+
+
+<?php if ($contrato && $contrato->estatus === 'Activo'): ?>
+    
+    <div id="plazo-error-message" class="alert alert-danger" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
+    </div>
+
+    <?php
+        // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
+
+        // Consulta para listar los baremos de ese plan y clínica
+        $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
+            ->joinWith('baremo')
+            ->joinWith('plan')
+            ->joinWith('baremo.area')
+            ->where(['planes.clinica_id' => $afiliado->clinica_id])
+            ->andWhere(['baremo.estatus' => 'Activo'])
+            ->andWhere(['planes.id' => $afiliado->plan_id])
+            ->all();
+        
+        // Crear arrays para las TRES categorías y la info de JS
+        $baremosSinPlazo = [];          // NO tiene plazo definido (SOLO para Siniestro)
+        $baremosConPlazoCumplido = [];  // Tiene plazo, pero ya se cumplió (SOLO para Cita)
+        $baremosPendientesPlazo = [];   // Tiene plazo, y está pendiente (SOLO para Cita)
+        $baremosInfo = [];              // Información auxiliar para JavaScript
+        $baremosRestringidosIDs = [];   // <--- NUEVO: IDs de baremos con Plazo PENDIENTE
+        
+        $fechaActual = new \DateTime();
+
+        foreach ($planesItemsCobertura as $item) {
+            if ($item->baremo) {
+                $restricciones = [];
+                $isRestrictedByPlazo = false;
+                $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
+
+                if ($contrato) {
+                    $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+
+                    // --- LÓGICA DE PLAZO DE ESPERA ---
+                    if ($hasPlazoEver) {
+                        $diff = $fechaContratoIni->diff($fechaActual);
+                        $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                        $plazoRequerido = (int)$item->plazo_espera;
+
+                        if ($mesesTranscurridos < $plazoRequerido) {
+                            $isRestrictedByPlazo = true; // Plazo PENDIENTE
                         }
                     }
-                    ?>
-                    
-                    <div class="field-with-icon">
-                        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [
-                            'data' => $baremosDisponibles,
-                            'options' => [
-                                'multiple' => true,
-                                'value' => $selectedBaremos,
-                                'placeholder' => 'Seleccione uno o más Baremos',
-                                'class' => 'form-control form-control-lg',
-                                'id' => 'baremos-select' // Agregamos un ID para facilitar la selección con JS
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => true,
-                                'closeOnSelect' => true,
-                                'tags' => false,
-                                'tokenSeparators' => [',', ' '],
-                            ],
-                        ])->label('Baremos') ?>
-                    </div>
-                    
-                    <!-- Contenedor para mostrar el cálculo en tiempo real -->
-                    <div class="costo-total-container" id="costo-total-container" style="display: none;">
-                        <div class="costo-total-label">Total calculado:</div>
-                        <div class="costo-total-value" id="costo-total-value">$0.00</div>
-                    </div>
-                </div>
+                }
+
+                // Si es cita y el plazo no está cumplido, excluye el baremo
+                if ($esCitaMode && $isRestrictedByPlazo) {
+                    continue; // Salta este baremo
+                }
+
+                // Definir la cantidad de veces usado
+                $vecesUsado = \app\models\SisSiniestroBaremo::find()
+                    ->where(['baremo_id' => $item->baremo_id, 'siniestro_id' => $model->id])
+                    ->count();
+
+                // Definir el costo del baremo
+                $costoBaremo = $item->baremo->costo ?? 0; // Usa el campo 'costo' del baremo, o 0 si no está definido
+
+                // Clasificación de baremos
+                $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
+                $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+
+                if (!empty($item->baremo->descripcion)) {
+                    $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
+                }
+
+                if (!empty($restricciones)) {
+                    $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
+                }
+
+                if (!$hasPlazoEver) {
+                    $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
+                } elseif ($isRestrictedByPlazo) {
+                    $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
+                } else {
+                    $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
+                }
+
+                $baremosInfo[$item->baremo_id] = [
+                    'nombre' => $item->baremo->nombre_servicio,
+                    'area' => $area,
+                    'plazo_espera' => $item->plazo_espera,
+                    'cantidad_limite' => $item->cantidad_limite,
+                    'veces_usado' => $vecesUsado,
+                    'costo' => $costoBaremo,
+                    'is_restricted_by_plazo' => $isRestrictedByPlazo,
+                    'has_plazo_ever' => $hasPlazoEver,
+                ];
+            }
+        }
+        
+        // IMPORTANTE: Combina las TRES listas.
+        $baremosTotales = $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
+
+        // Obtener baremos seleccionados (código sin cambios)
+        $selectedBaremos = [];
+        if (method_exists($model, 'getBaremos')) {
+            $baremosRelacion = $model->getBaremos()->all();
+            
+            if (empty($baremosRelacion) && !$model->isNewRecord) {
+                $baremosDirectos = (new \yii\db\Query())
+                    ->select(['baremo_id'])
+                    ->from('sis_siniestro_baremo')
+                    ->where(['siniestro_id' => $model->id])
+                    ->column();
+                
+                if (!empty($baremosDirectos)) {
+                    $selectedBaremos = $baremosDirectos;
+                }
+            } else {
+                $selectedBaremos = ArrayHelper::getColumn($baremosRelacion, 'id');
+            }
+        }
+    ?>
+    
+    <div class="field-with-icon">
+        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
+            'data' => $baremosTotales, 
+            'options' => [
+                'multiple' => true,
+                'value' => $selectedBaremos,
+                'placeholder' => 'Seleccione uno o más Baremos',
+                'class' => 'form-control form-lg',
+                'id' => 'baremos-select' 
+            ],
+            'pluginOptions' => [
+                'allowClear' => true,
+                'closeOnSelect' => true,
+                'tags' => false,
+                'tokenSeparators' => [',', ' '],
+            ],
+        ])->label('Baremos')->hint('Seleccione el baremo') ?>
+    </div>
+<?php else: ?>
+    <!-- Mostrar mensaje si el contrato no está activo -->
+    <div id="contrato-error-message" class="alert alert-warning" style="margin-top: 20px;">
+        <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** El contrato del afiliado no está activado. Por favor, active el contrato para continuar.
+    </div>
+<?php endif; ?>
+
+    <div id="baremos-tabla-container" style="display: none;">
+        <h4 class="section-title mb-3">
+            <i class="fas fa-list-alt text-blue-600"></i> Resumen de Servicios
+        </h4>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Servicio</th>
+                    <th>Área</th>
+                    <th class="text-center">Restricciones</th>
+                    <th class="cost-col">Costo</th>
+                </tr>
+            </thead>
+            <tbody id="baremos-tabla-body">
+                </tbody>
+        </table>
+    </div>
+    
+    <div class="costo-total-container" id="costo-total-container" style="display: none;">
+        <div class="costo-total-label">Total calculado:</div>
+        <div class="costo-total-value" id="costo-total-value">$0.00</div>
+        <div id="cobertura-warning" class="mt-2 p-2 rounded-3 text-danger" style="display: none; background-color: #ffe0b2; border: 1px solid #ff9800;"></div>
+        <div id="cita-warning" class="mt-2 p-2 rounded-3 text-warning" style="display: none; background-color: #fff3cd; border: 1px solid #ffc107;">
+            <i class="fas fa-exclamation-triangle me-1"></i> Este registro es una **Cita**. Los baremos con Plazo Pendiente no estaran disponibles.
+        </div>
+    </div>
+</div> <!-- FIN de la columna col-md-12 que envuelve todo el contenido de baremos -->
+
+<?php 
+// -----------------------------------------------------------------------------------------------------
+// CÓDIGO JAVASCRIPT con BLOQUEO DE GUARDADO (Modificado para usar el mensaje)
+// -----------------------------------------------------------------------------------------------------
+$baremosTotalesJson = json_encode($baremosTotales);
+$baremosInfoJson = json_encode($baremosInfo);
+$baremosRestringidosJson = json_encode($baremosRestringidosIDs); 
+
+// Se registra el script al final de la vista
+$this->registerJs(<<<JS
+    // Información de baremos y lista total de opciones
+    const baremosTotales = {$baremosTotalesJson};
+    const baremosInfo = {$baremosInfoJson};
+    const baremosRestringidosIDs = {$baremosRestringidosJson}; // IDs con plazo pendiente
+    
+    const esCitaHidden = $('#es-cita-hidden');
+    const esCitaSwitch = $('#es-cita-switch');
+    const tipoRegistroLabel = $('#tipo-registro-label');
+    const citaWarning = $('#cita-warning');
+    const baremosSelect = $('#baremos-select');
+    const form = baremosSelect.closest('form');
+    
+    // Referencia al div del mensaje de error
+    const plazoErrorMessage = $('#plazo-error-message'); 
+    
+    // --- LÓGICA DE BLOQUEO CRÍTICA (REEMPLAZO) ---
+    function validateAndBlockSave() {
+        const isCitaMode = esCitaSwitch.is(':checked'); 
+        plazoErrorMessage.hide(); // Ocultar por defecto antes de validar
+
+        if (!isCitaMode) {
+            return true;
+        }
+
+        const selectedValues = baremosSelect.val() || [];
+        const hasRestricted = selectedValues.some(id => baremosRestringidosIDs.includes(id));
+
+        if (hasRestricted) {
+            // ** BLOQUEA EL GUARDADO y MUESTRA el mensaje **
+            plazoErrorMessage.show();
+            return false; 
+        } else {
+            return true;
+        }
+    }
+    // ----------------------------------
+
+    // Función para manejar el estado del formulario (Siniestro/Cita) (SIN CAMBIOS)
+    function updateTipoRegistro() {
+        const isCitaMode = esCitaSwitch.is(':checked');
+        
+        if (isCitaMode) {
+            esCitaHidden.val(1);
+            tipoRegistroLabel.removeClass('bg-danger').addClass('bg-warning').text('CITA (Reserva)');
+            citaWarning.show();
+        } else {
+            esCitaHidden.val(0);
+            tipoRegistroLabel.removeClass('bg-warning').addClass('bg-danger').text('SINIESTRO (Uso Inmediato)');
+            citaWarning.hide();
+        }
+        
+        filterBaremosForTipoRegistro(isCitaMode);
+        // valida al cambiar el modo
+        
+        validateAndBlockSave(); 
+    }
+    
+    // Función para filtrar dinámicamente las opciones del Select2 (SIN CAMBIOS)
+    function filterBaremosForTipoRegistro(isCitaMode) {
+        const selectedValues = baremosSelect.val() || [];
+        const newValidValues = [];
+        
+        baremosSelect.find('option').remove();
+        
+        for (const baremoId in baremosTotales) {
+            const info = baremosInfo[baremoId];
+            
+            let shouldInclude = false; 
+
+            if (isCitaMode) {
+                if (info.has_plazo_ever === true) {
+                    shouldInclude = true;
+                }
+            } else {
+                if (info.has_plazo_ever === false) {
+                    shouldInclude = true;
+                }
+            }
+
+            if (shouldInclude) {
+                const text = baremosTotales[baremoId];
+                const option = new Option(text, baremoId, false, selectedValues.includes(baremoId)); 
+                baremosSelect.append(option);
+            }
+            
+            if (shouldInclude && selectedValues.includes(baremoId)) {
+                 newValidValues.push(baremoId);
+            }
+        }
+        
+        baremosSelect.select2('destroy');
+        baremosSelect.select2({
+            multiple: true,
+            placeholder: 'Seleccione uno o más Baremos',
+            allowClear: true,
+            closeOnSelect: true,
+            tags: false,
+            tokenSeparators: [',', ' '],
+            templateResult: function (data) {
+                const isPlazoBaremo = data.text.includes('[CITA'); 
+                if (isPlazoBaremo) {
+                    return $('<span><i class="fas fa-clock text-warning me-2"></i>' + data.text + '</span>');
+                }
+                return data.text;
+            }
+        });
+        
+        // El 'change' debe disparar el listener de validación
+        baremosSelect.val(newValidValues).trigger('change');
+    }
+    
+    // Listeners y Ejecución Inicial
+    esCitaSwitch.on('change', updateTipoRegistro);
+    
+    // Listener para la validación al cambiar la selección
+    baremosSelect.on('change', function() {
+      
+        validateAndBlockSave(); 
+    });
+    
+    // ** LISTENER CLAVE: Bloquea el guardado en el submit del formulario (REEMPLAZO) **
+    form.on('beforeSubmit', function(e) {
+        if (!validateAndBlockSave()) {
+            e.preventDefault();
+            baremosSelect.select2('close'); 
+            // Desplazar la vista hacia el mensaje de error
+            $('html, body').animate({
+                scrollTop: plazoErrorMessage.offset().top - 100
+            }, 500);
+            return false; 
+        }
+        return true;
+    });
+
+    $(document).ready(function() {
+        // Inicializar el estado y el Select2 al cargar
+        updateTipoRegistro(); 
+    });
+JS
+, \yii\web\View::POS_END); 
+?>  
+
                 
                 <div class="col-md-12">
                     <?= $form->field($model, 'costo_total')->textInput([
                         'class' => 'form-control form-control-lg',
                         'placeholder' => '0.00',
                         'autocomplete' => 'off',
-                        'id' => 'costo-total-input', // Agregamos un ID para el campo
-                        'readonly' => true, // Lo hacemos de solo lectura ya que se calculará automáticamente
+                        'id' => 'costo-total-input',
+                        'readonly' => true,
                     ])->label('Total') ?>
                 </div>
                 
@@ -398,14 +801,14 @@ $this->registerCss($css);
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
                                 'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha del Siniestro') ?>
+                            ])->label('Fecha de '. $terminoPrincipal) ?>
                         </div>
                         
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'hora')->textInput([
                                 'type' => 'time', 
                                 'class' => 'form-control form-control-lg'
-                            ])->label('Hora del Siniestro') ?>
+                            ])->label('Hora de '. $terminoPrincipal) ?>
                         </div>
                         
                         <div class="col-md-12">
@@ -440,8 +843,8 @@ $this->registerCss($css);
                             <?= $form->field($model, 'descripcion')->textarea([
                                 'rows' => 3, 
                                 'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Describa los detalles del siniestro...'
-                            ])->label('Descripción del Siniestro') ?>
+                                'placeholder' => 'Describa los detalles...'
+                            ])->label('Descripción de '. $terminoPrincipal) ?>
                         </div>
 
                          <div class="col-md-12">
@@ -453,7 +856,6 @@ $this->registerCss($css);
                                     
                                     <div class="row mt-3">
                                         <div class="col-md-6">
-
                                             <?= $form->field($model, 'imagenRecipeFile')->widget(\kartik\file\FileInput::classname(),[
                                                 'options' => [
                                                     'accept' => 'image/*, application/pdf',
@@ -468,10 +870,10 @@ $this->registerCss($css);
                                                     'showCaption' => true,
                                                     'previewFileType' => 'image',
                                                     'allowedFileExtensions' => ['jpg','jpeg','png','pdf'], 
-                                                    'maxFileSize' => 5120, // 5MB
+                                                    'maxFileSize' => 10240, // 10MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,
-                                                    'browseLabel' => 'Subir Recibo/Factura',
+                                                    'browseLabel' => 'Subir Recipe',
                                                     'removeLabel' => 'Quitar',
                                                     'fileActionSettings' => [
                                                         'showZoom' => false,
@@ -485,7 +887,7 @@ $this->registerCss($css);
                                                         'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
                                                     ],
                                                 ],
-                                            ])->label('Recipe');
+                                            ])->label('Récipe');
                                             ?>
                                         </div>
                                         
@@ -504,7 +906,7 @@ $this->registerCss($css);
                                                     'showCancel' => false,
                                                     'showCaption' => true,
                                                     'allowedFileExtensions' => ['jpg','jpeg','png','pdf'], 
-                                                    'maxFileSize' => 5120, // 5MB
+                                                    'maxFileSize' => 10240, // 10MB
                                                     'dropZoneEnabled' => false,
                                                     'showClose' => false,
                                                     'browseLabel' => 'Subir Informe Médico',
@@ -560,63 +962,96 @@ $this->registerCss($css);
 </div>
 
 <?php
-// JavaScript para calcular la suma de los baremos seleccionados
+// Codificar la información de los baremos para usarla en JavaScript
+$baremosInfoJson = json_encode($baremosInfo);
+
+// JavaScript para calcular la suma de los baremos seleccionados y generar la tabla
 $js = <<<JS
-// Función para calcular el total
-function calcularTotal() {
+// Información de los baremos, incluyendo el costo
+var baremosInfo = $baremosInfoJson; 
+
+// Función para calcular el total y renderizar la tabla
+function calcularTotalYTabla() {
     var baremosSeleccionados = $('#baremos-select').val();
+    var total = 0.00;
+    var tablaHtml = '';
     
+    // 1. Ocultar contenedores si no hay selección
     if (!baremosSeleccionados || baremosSeleccionados.length === 0) {
         $('#costo-total-container').hide();
+        $('#baremos-tabla-container').hide();
         $('#costo-total-input').val('0.00');
+        // También ocultar la advertencia
+        $('#cobertura-warning').hide().empty(); 
         return;
     }
-    
-    // Mostrar cargando
-    $('#costo-total-value').html('Calculando...');
-    $('#costo-total-container').show();
-    
-    // Hacer la petición AJAX al servidor
-    $.ajax({
-        url: 'calcular-total', // Necesitarás crear esta acción en tu controlador
-        type: 'POST',
-        data: {
-            baremos: baremosSeleccionados
-        },
-        success: function(response) {
-            if (response.success) {
-                var total = parseFloat(response.total);
-                $('#costo-total-value').html('$' + total.toFixed(2));
-                $('#costo-total-input').val(total.toFixed(2));
-                
-                // Verificar si el total supera el disponible
-                var totalDisponible = $totalDisponible; // PHP variable
-                if (total > totalDisponible) {
-                    alert('¡Advertencia! El costo total (' + total.toFixed(2) + ') supera el total disponible (' + totalDisponible.toFixed(2) + ') del afiliado.');
-                }
-            } else {
-                console.error('Error al calcular el total:', response.error);
-                $('#costo-total-container').hide();
+
+    // 2. Procesar y construir la tabla
+    baremosSeleccionados.forEach(function(baremoId) {
+        var item = baremosInfo[baremoId];
+        
+        if (item && item.costo) {
+            var costo = parseFloat(item.costo);
+            total += costo;
+            
+            // Construir la cadena de restricciones
+            var restricciones = [];
+            // Si el baremo fue excluido por plazo o límite, no estará en baremosInfo, 
+            // pero el siguiente código es para mostrar la info de los seleccionados que sí están disponibles.
+            if (item.plazo_espera) {
+                // NOTA: La lógica PHP ya determinó que el plazo fue cumplido si aparece aquí.
+                restricciones.push('Plazo: ' + item.plazo_espera + ' meses');
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error en la petición AJAX:', error);
-            $('#costo-total-container').hide();
+            if (item.cantidad_limite > 0) {
+                restricciones.push('Límite: ' + item.veces_usado + '/' + item.cantidad_limite + ' usos');
+            }
+            var restriccionesHtml = restricciones.join('<br>');
+            
+            // Construir la fila de la tabla
+            tablaHtml += '<tr>';
+            tablaHtml += '<td>' + item.nombre + '</td>';
+            tablaHtml += '<td>' + item.area + '</td>';
+            // Se muestra el estado de las restricciones para referencia
+            tablaHtml += '<td class="text-center">' + (restriccionesHtml || 'Ninguna') + '</td>'; 
+            tablaHtml += '<td class="cost-col">$' + costo.toFixed(2) + '</td>';
+            tablaHtml += '</tr>';
         }
     });
+
+    // 3. Renderizar la tabla y el total
+    $('#baremos-tabla-body').html(tablaHtml);
+    $('#baremos-tabla-container').show();
+    
+    $('#costo-total-value').html('$' + total.toFixed(2));
+    $('#costo-total-input').val(total.toFixed(2));
+    $('#costo-total-container').show();
+    
+    // 4. Verificar límite disponible (REEMPLAZO DE ALERT)
+    var totalDisponible = $totalDisponible; // PHP variable
+    var warningContainer = $('#cobertura-warning');
+    
+    warningContainer.hide().empty(); // Resetear advertencia
+    
+    if (total > totalDisponible) {
+        var warningMessage = '¡Advertencia! El costo total ($' + total.toFixed(2) + ') supera el total disponible ($' + totalDisponible.toFixed(2) + ') del afiliado. La suma no será cubierta en su totalidad.';
+        console.warn(warningMessage);
+        // Mostrar el mensaje de advertencia en el contenedor
+        warningContainer.html('<i class="fas fa-exclamation-triangle me-2"></i>' + warningMessage).show();
+    }
 }
 
-// Calcular el total cuando cambia la selección de baremos
+// Evento de cambio para la selección de baremos
 $('#baremos-select').on('change', function() {
-    calcularTotal();
+    calcularTotalYTabla();
 });
 
-// Calcular el total al cargar la página si hay baremos seleccionados
+// Calcular y mostrar al cargar la página si hay baremos seleccionados
 $(document).ready(function() {
     if ($('#baremos-select').val() && $('#baremos-select').val().length > 0) {
-        calcularTotal();
+        calcularTotalYTabla();
     }
 });
 JS;
 
-$this->registerJs($js);
+$this->registerJs($js, View::POS_READY);
+?>

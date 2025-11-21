@@ -55,7 +55,9 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'format' => 'html',
                                     'value' => function($model) {
                                         if($model->route){
-                                            return '<b>' . htmlspecialchars($model->route) . '</b>';
+                                             // Aplicar la corrección por seguridad, aunque ya hay un if,
+                                            // la lógica de Yii puede cambiar el flujo.
+                                            return '<b>' . htmlspecialchars($model->route ?? '') . '</b>';
                                         }
                                     },
                                 ],
@@ -63,7 +65,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'attribute' => 'order',
                                     'format' => 'html',
                                     'value' => function($model) {
-                                        return '<b>' . htmlspecialchars($model->order) . '</b>';
+                                       return '<b>' . htmlspecialchars($model->order ?? '') . '</b>';
                                     },
                                 ],
                                 ['class' => 'yii\grid\ActionColumn'],

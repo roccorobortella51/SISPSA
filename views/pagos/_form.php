@@ -14,6 +14,8 @@ use yii\helpers\Url;
 /** @var app\models\Pagos $model */
 /** @var yii\widgets\ActiveForm $form */
 
+$user_id = isset($user_id) ? $user_id : ($model->user_id ?? null);
+
 $js = <<<JS
     $(document).ready(function() {
         // Función para buscar la tasa de cambio
@@ -194,25 +196,53 @@ $this->registerJs($js);
     </div>  
     <div class="row mb-4">
         <div class="col-md-12">
-            <h5 class = "form-label has-star" style="font-size: 1.5rem !important;">Cuotas Pendientes</h5>
+            <h5 class="form-label has-star" style="font-size: 1.5rem !important;">Cuotas Pendientes</h5>
             <?php 
+            // DEBUG: Check what we're receiving
+            Yii::info("=== FORM DEBUG ===");
+            Yii::info("Cuotas variable type: " . gettype($cuotas));
+            Yii::info("Cuotas count: " . (is_array($cuotas) ? count($cuotas) : 'N/A'));
+            Yii::info("Cuotas empty check: " . (empty($cuotas) ? 'true' : 'false'));
+            if (is_array($cuotas) || is_object($cuotas)) {
+                foreach ($cuotas as $index => $cuota) {
+                    Yii::info("Cuota $index: " . print_r($cuota, true));
+                }
+            }
+            Yii::info("=== END DEBUG ===");
+            
             $total = 0;
             $i = 0;
             if (!empty($cuotas)): 
             ?>
-                <ul class="list-group ">
+                <ul class="list-group">
                     <?php foreach ($cuotas as $cuota): ?>
-                        <?php $i++; ?>
-                        <?php $total += $cuota->monto_usd; ?>
+                        <?php 
+                        $i++; 
+                        // Use monto_usd if available, otherwise fall back to monto
+                        $monto = !empty($cuota->monto_usd) ? $cuota->monto_usd : $cuota->monto;
+                        $total += (float)$monto;
+                        ?>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center gap-3">
-                                <?= Html::checkbox('selected_cuotas[]', false, ['value' => $cuota->id, 'id' => 'cuota-' . $cuota->id, 'class' => 'cuota-checkbox mr-4', 'data-monto' => $cuota->monto_usd]) ?>
+                                <?= Html::checkbox('selected_cuotas[]', false, [
+                                    'value' => $cuota->id, 
+                                    'id' => 'cuota-' . $cuota->id, 
+                                    'class' => 'cuota-checkbox mr-4', 
+                                    'data-monto' => $monto
+                                ]) ?>
                                 <label for="cuota-<?= $cuota->id ?>" style="margin:0;">
                                     <strong style="font-size: 1.2rem !important;">Cuota #<?= $i ?></strong>
-                                    <div style="font-size: 1rem !important;">Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?></div>
+                                    <div style="font-size: 1rem !important;">
+                                        Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?>
+                                        <?php if ($cuota->contrato): ?>
+                                            | Contrato: <?= $cuota->contrato->nrocontrato ?: $cuota->contrato_id ?>
+                                        <?php endif; ?>
+                                    </div>
                                 </label>
                             </div>
-                            <span class="badge bg-primary rounded-pill" style="font-size: 1.2rem !important;">$<?= number_format($cuota->monto_usd, 2) ?></span>
+                            <span class="badge bg-primary rounded-pill" style="font-size: 1.2rem !important;">
+                                $<?= number_format($monto, 2) ?>
+                            </span>
                         </li>
                     <?php endforeach; ?>
                     <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">
@@ -223,6 +253,11 @@ $this->registerJs($js);
             <?php else: ?>
                 <div class="alert alert-success rounded-pill">
                     <strong style="font-size: 1.5rem !important;">✅ No hay cuotas pendientes</strong>
+                    <?php if ($user_id): ?>
+                        <div class="mt-2">
+                            <small>Usuario ID: <?= $user_id ?></small>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>

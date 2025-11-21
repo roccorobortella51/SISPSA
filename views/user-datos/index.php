@@ -43,6 +43,9 @@ if ($clinica && $clinica->id !== null) {
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
 
+// Define admin roles for clinic search filter
+$isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
+
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->
@@ -139,6 +142,30 @@ if ($clinica && $clinica->id !== null) {
                             ]),
                             'contentOptions' => ['style' => 'width: 150px;'],
                         ],
+                        // Clínica search filter - ONLY for admin roles
+                        [
+                            'attribute' => 'clinica_id',
+                            'label' => 'Clínica',
+                            'value' => function ($model) {
+                                return $model->clinica ? $model->clinica->nombre : 'No asignada';
+                            },
+                            'filter' => $isAdmin ? Select2::widget([
+                                'model' => $searchModel,
+                                'attribute' => 'clinica_id',
+                                'data' => \yii\helpers\ArrayHelper::map(
+                                    \app\models\RmClinica::find()->orderBy('nombre')->all(), 
+                                    'id', 
+                                    'nombre'
+                                ),
+                                'options' => ['placeholder' => 'Seleccionar clínica'],
+                                'pluginOptions' => [
+                                    'allowClear' => true
+                                ],
+                            ]) : null,
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'contentOptions' => ['class' => 'text-center'],
+                            'visible' => $isAdmin, // Only show for admin roles
+                        ],
                         [
                             'label' => 'Nombre Completo', 
                             'attribute' => 'nombres', 
@@ -191,18 +218,10 @@ if ($clinica && $clinica->id !== null) {
                                 return null;
                             },
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
+                            'visible' => $isAdmin, // Only show for admin roles
                         ],
-                        [
-                            'label' => 'Clínica',
-                            'format' => 'ntext',
-                            'value' => function ($model) {
-                                // Muestra el nombre de la clínica a la que pertenece el afiliado
-                                return $model->clinica ? $model->clinica->nombre : null;
-                            },
-                            'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
-                        ],
+                        // REMOVED: Duplicate "Clínica" column that was next to "Asesor"
+                        // This column was showing the clinic name again without filter
 
                         [
                             'attribute' => 'estatus_solvente',
@@ -212,7 +231,8 @@ if ($clinica && $clinica->id !== null) {
                                  $isTrue = $model->estatus_solvente;
                                  return $isTrue == "Si" ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
                             },
-                            'filter' => [0 => 'No', 1 => 'Sí'],
+                            /** 'filter' => [0 => 'No', 1 => 'Sí'],**/
+                            'filter' => ['Si' => 'Sí', 'No' => 'No']
                         ],
                         
                         // Columna de Acciones - Mantenida exactamente como se solicitó

@@ -178,7 +178,7 @@ class UserDatosController extends Controller
             // Validar dirección (columna N)
             if (empty($row['L'])) {
                 $rowErrors[] = 'Dirección es obligatoria';
-            } elseif (strlen($row['L']) < 10) {
+            } elseif (strlen($row['L']) < 1) {
                 $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
             }
 
@@ -954,13 +954,22 @@ public function actionMasivo()
                         $modelContrato->save();      
                         $modelCuota = new Cuotas();
                         $modelCuota->contrato_id = $modelContrato->id;
-                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                        
+                        // FIX: Give 30-day grace period for first payment instead of using contract start date
+                        $fechaVencimiento = new \DateTime($modelContrato->fecha_ini);
+                        $fechaVencimiento->modify('+30 days');
+                        $modelCuota->fecha_vencimiento = $fechaVencimiento->format('Y-m-d');
+                        
                         $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
                         $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                         $modelCuota->Estatus = 'pendiente';
                         $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
                         $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
                         $modelCuota->save();
+                        $anio_actual = date('Y');
+                        $modelContrato->nrocontrato = $model->cedula .'-' .$anio_actual .'-' .$modelContrato->id;
+                        $model->contrato_id = $modelContrato->id;
+                        $modelContrato->save();
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);
@@ -1237,7 +1246,12 @@ public function actionMasivo()
                     }
                     $modelCuota = new Cuotas();
                     $modelCuota->contrato_id = $modelContrato->id;
-                    $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                    
+                    // FIX: Give 30-day grace period for first payment instead of using contract start date
+                    $fechaVencimiento = new \DateTime($modelContrato->fecha_ini);
+                    $fechaVencimiento->modify('+30 days');
+                    $modelCuota->fecha_vencimiento = $fechaVencimiento->format('Y-m-d');
+                    
                     $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
                     $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
                     $modelCuota->Estatus = 'pendiente';
@@ -1422,15 +1436,29 @@ public function actionGenerarContratov($id)
 }
     // -------------------------------------------------------------------------------------------------
 
-    // 💡 CÓDIGO PARA GENERAR EL NÚMERO DE CONTRATO 💡
-        $contractNumber = '';
-        if ($model->user_datos_type_id == 1) {
-            // Si es tipo simple (1), usa el prefijo 'CI'
-            $contractNumber = 'CI-' . $model->contrato_id;
-        } elseif ($model->user_datos_type_id == 2) {
-            // Si es tipo corporativo (2), usa el prefijo 'CO'
-            $contractNumber = 'CO-' . $model->contrato_id;
-        }
+    // 💡 CÓDIGO PARA OBTENER EL NÚMERO DE CONTRATO REAL Y APLICAR EL PREFIJO 💡
+    $contractNumber = 'N/A';
+    $prefix = '';
+
+    // 1. Determinar el prefijo basado en el tipo de usuario
+    if ($model->user_datos_type_id == 1) {
+        // Si es tipo simple (1), usa el prefijo 'CI-'
+        $prefix = 'CI-'; 
+    } elseif ($model->user_datos_type_id == 2) {
+        // Si es tipo corporativo (2), usa el prefijo 'CO-'
+        $prefix = 'CO-';
+    }
+
+    // 2. Obtener el número de contrato real de la tabla 'contratos'
+    $realContractNumber = $model->contrato->nrocontrato ?? null;
+
+    if ($realContractNumber) {
+        // 3. Combinar prefijo y número real
+        $contractNumber = $prefix . $realContractNumber;
+    } else {
+        // Fallback: Si no se encuentra el nrocontrato, al menos se aplica el prefijo al ID
+        $contractNumber = $prefix . ($model->contrato_id ?? 'N/A');
+    }
             
     // Preparar los datos para el PDF
     $data = [
@@ -1721,6 +1749,63 @@ public function actionGenerarContratov($id)
                 ];
             } 
     }
+    
+    /**
+ * Temporary action to activate contracts in "Esperar Penalidad" status
+ */
+public function actionActivatePenaltyContracts()
+    {
+        // Verificar que sea superadmin
+        $rol = \app\components\UserHelper::getMyRol();
+        if ($rol !== 'superadmin') {
+            \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'success' => false,
+                'message' => 'No tiene permisos para ejecutar esta acción'
+            ];
+        }
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        try {
+            // Find all contracts in "Esperar Penalidad" status
+            $contratosEspera = Contratos::find()
+                ->where(['estatus' => 'Esperar'])
+                ->orWhere(['estatus' => 'Esperar Penalidad'])
+                ->all();
+                
+            $activatedCount = 0;
+            
+            foreach ($contratosEspera as $contrato) {
+                // Activate contract immediately
+                $contrato->estatus = 'Activo';
+                $contrato->fecha_reactivacion = null;
+                
+                if ($contrato->save(false)) {
+                    $activatedCount++;
+                    
+                    // Also update user solvent status
+                    $user = UserDatos::findOne($contrato->user_id);
+                    if ($user) {
+                        $user->estatus_solvente = 'Si';
+                        $user->save(false);
+                    }
+                }
+            }
+            
+            return [
+                'success' => true,
+                'message' => "Se activaron {$activatedCount} contratos que estaban en Esperar Penalidad",
+                'activated_count' => $activatedCount
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ];
+        }
+    }
+
     /**
      * Returns JSON data for clinicas filtered by type and corporativo.
      * @return array JSON array of [id => name]

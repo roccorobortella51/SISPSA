@@ -77,7 +77,7 @@ class CuotaController extends Controller
             $cuotasVencidas = Cuotas::find()
                 ->where([
                     'contrato_id' => $contrato->id,
-                    'Estatus' => 'pendiente'
+                    'estatus' => 'pendiente'
                 ])
                 ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
                 ->count();
@@ -109,7 +109,7 @@ class CuotaController extends Controller
         
         // Obtener la última cuota pagada o la fecha de inicio del contrato
         $ultimaCuotaPagada = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id, 'Estatus' => 'pagado'])
+            ->where(['contrato_id' => $contrato->id, 'estatus' => 'pagado'])
             ->orderBy(['fecha_vencimiento' => SORT_DESC])
             ->one();
             
@@ -159,7 +159,7 @@ class CuotaController extends Controller
                         'contrato_id' => $contrato->id,
                         'fecha_vencimiento' => $fechaVencStr,
                         'monto_usd' => $contrato->monto, // Monto completo para atrasadas
-                        'Estatus' => 'pendiente',
+                        'estatus' => 'pendiente',
                         'rate_usd_bs' => $this->obtenerTasaCambioActual(),
                     ]);
                     
@@ -245,7 +245,7 @@ class CuotaController extends Controller
                 'contrato_id' => $contrato->id,
                 'fecha_vencimiento' => $fechaVencimientoStr,
                 'monto_usd' => $montoCuota,
-                'Estatus' => 'pendiente',
+                'estatus' => 'pendiente',
                 'rate_usd_bs' => $this->obtenerTasaCambioActual(),
             ]);
             
@@ -383,7 +383,7 @@ class CuotaController extends Controller
         $fechaLimite = date('Y-m-d', strtotime('-7 days')); // 7 días después del vencimiento
         
         $cuotasVencidas = Cuotas::find()
-            ->where(['Estatus' => 'pendiente'])
+            ->where(['estatus' => 'pendiente'])
             ->andWhere(['<', 'fecha_vencimiento', $fechaLimite])
             ->all();
             
@@ -646,7 +646,7 @@ class CuotaController extends Controller
     {
         // Obtener la última cuota pagada o la fecha de inicio del contrato
         $ultimaCuotaPagada = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id, 'Estatus' => 'pagado'])
+            ->where(['contrato_id' => $contrato->id, 'estatus' => 'pagado'])
             ->orderBy(['fecha_vencimiento' => SORT_DESC])
             ->one();
             
@@ -729,7 +729,7 @@ class CuotaController extends Controller
         $proximaSemana = date('Y-m-d', strtotime('+7 days'));
         
         $cuotas = Cuotas::find()
-            ->where(['Estatus' => 'pendiente'])
+            ->where(['estatus' => 'pendiente'])
             ->andWhere(['between', 'fecha_vencimiento', $hoy, $proximaSemana])
             ->all();
             
