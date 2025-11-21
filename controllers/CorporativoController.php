@@ -21,7 +21,6 @@ use app\models\MasivoAfiliadosForm;
 use yii\helpers\ArrayHelper;
 use yii\web\Response;
 
-
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
  */
@@ -439,6 +438,12 @@ class CorporativoController extends Controller
         ]);
     }
 
+    return $this->render('update', [
+        'model' => $model,
+        'afiliadosActuales' => $afiliadosActuales, // Es útil pasar esto a la vista para la selección por defecto
+    ]);
+}
+
 // controlador de carga masiva de corporativos
 
 public function actionCargaMasivaAfiliados()
@@ -714,7 +719,7 @@ public function actionCargaMasivaAfiliados()
             'inline' => false // Forzar la descarga
         ]);
     }
-
+    
     /**
      * Deletes an existing Corporativo model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
