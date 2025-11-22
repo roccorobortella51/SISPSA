@@ -127,6 +127,7 @@ $config = [
             
             // Otras rutas que son siempre permitidas (ejemplos)
             'site/*',
+            'reportes/*',
         ]
     ],
     'params' => $params,

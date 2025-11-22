@@ -132,7 +132,7 @@ if ($clinica && $clinica->id !== null) {
                                     'allowClear' => true
                                 ],
                             ]),
-                            'contentOptions' => ['style' => 'width: 150px;'],
+                            'contentOptions' => ['class' => 'text-center'],
                         ],
                         [
                             'label' => 'Nombre Completo', 
@@ -148,7 +148,7 @@ if ($clinica && $clinica->id !== null) {
                             ],
                         ],
                         [
-                            'label' => 'Cédula de Identidad',
+                            'label' => 'Nº de Cédula',
                             'attribute' => 'cedula',  
                             'value' => function ($model) {
                                 return ($model->tipo_cedula ?? '') . ' ' . ($model->cedula ?? '');
@@ -174,21 +174,7 @@ if ($clinica && $clinica->id !== null) {
                                 'class' => 'form-control text-center',
                             ],
                         ],
-                        [
-                            'label' => 'Asesor',
-                            'format' => 'ntext',
-                            'value' => function ($model) {
-                                
-                                if ($model->asesor && $model->asesor->userDatos) {
-                                    $ud = $model->asesor->userDatos;
-                                    return trim(($ud->nombres ?? '') . ' ' . ($ud->apellidos ?? '')) ?: null;
-                                }
-                                return null;
-                            },
-                            'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
-                        ],
-                        
+                                     
                         // START: MODIFIED CLINICA COLUMN WITH CONDITIONAL SEARCH
                         [
                             'attribute' => 'clinica_id', // Attribute for sorting
@@ -209,7 +195,20 @@ if ($clinica && $clinica->id !== null) {
                                 ]) : false,
                         ],
                         // END: MODIFIED CLINICA COLUMN WITH CONDITIONAL SEARCH
-
+                        [
+                            'label' => 'Asesor',
+                            'format' => 'ntext',
+                            'value' => function ($model) {
+                                
+                                if ($model->asesor && $model->asesor->userDatos) {
+                                    $ud = $model->asesor->userDatos;
+                                    return trim(($ud->nombres ?? '') . ' ' . ($ud->apellidos ?? '')) ?: null;
+                                }
+                                return null;
+                            },
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
+                        ],
                         [
                             'attribute' => 'estatus_solvente',
                             'format' => 'Html',
@@ -223,113 +222,95 @@ if ($clinica && $clinica->id !== null) {
                         
                         // Columna de Acciones - Mantenida exactamente como se solicitó
                         [
-                            'class' => 'yii\grid\ActionColumn',
-                            'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
-                            'options' => ['style' => 'width:55px; min-width:55px;'],
-                            'headerOptions' => ['style' => 'color: white!important;'],
-                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                            'buttons' => [
-                                'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
-                                    $params = ['view', 'id' => $model->id];
+                        'class' => 'yii\grid\ActionColumn',
+                        'header' => 'ACCIONES',
+                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
+                        'options' => ['style' => 'width:55px; min-width:55px;'],
+                        'headerOptions' => ['style' => 'color: white!important;'],
+                        'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                        'buttons' => [
+                            'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
+                                $params = ['view', 'id' => $model->id];
+                                if ($clinica && $clinica->id !== null) {
+                                    $params['clinica_id'] = $clinica->id;
+                                }
+                                return Html::a(
+                                    '<i class="fa fa-eye"></i>',
+                                    Url::to($params), // Asegurar clinica_id condicionalmente
+                                    [
+                                        'title' => 'Detalle de Usuario',
+                                        'class' => 'btn-action view'
+                                    ]
+                                );
+                            },
+                            'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos and $clinica
+                                if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
+                                    $params = ['update', 'id' => $model->id];
                                     if ($clinica && $clinica->id !== null) {
                                         $params['clinica_id'] = $clinica->id;
                                     }
                                     return Html::a(
-                                        '<i class="fa fa-eye"></i>',
+                                        '<i class="fas fa-pencil-alt ms-text-primary"></i>',
                                         Url::to($params), // Asegurar clinica_id condicionalmente
                                         [
-                                            'title' => 'Detalle de Usuario',
+                                            'title' => 'Editar Usuario',
                                             'class' => 'btn-action view'
                                         ]
                                     );
-                                },
-                                'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos and $clinica
-                                    if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
-                                        $params = ['update', 'id' => $model->id];
-                                        if ($clinica && $clinica->id !== null) {
-                                            $params['clinica_id'] = $clinica->id;
-                                        }
-                                        return Html::a(
-                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                            Url::to($params), // Asegurar clinica_id condicionalmente
-                                            [
-                                                'title' => 'Editar Usuario',
-                                                'class' => 'btn-action view'
-                                            ]
-                                        );
-                                    }else{
-                                        return "";
-                                    }
-                                },
-                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos and $clinica
-                                    if ($permisos == true || $rol == 'Administrador-clinica') {
-                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id];
+                                }else{
+                                    return "";
+                                }
+                            },
+                            'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos and $clinica
+                                if ($permisos == true || $rol == 'Administrador-clinica') {
+                                $params = ['/sis-siniestro/index', 'user_id' => $model->id];
+                                if ($clinica && $clinica->id !== null) {
+                                    $params['clinica_id'] = $clinica->id;
+                                }
+
+                                if($model->clinica_id){
+                                return Html::a(
+                                    '<i class="fas fa-heartbeat ms-text-primary"></i>',
+                                    Url::to($params), // Asegurar clinica_id condicionalmente
+                                    [
+                                        'title' => 'Atenciones Médicas',
+                                        'class' => 'btn-action view'
+                                    ]
+                                );}
+                                }
+                            },
+                            'pagos' => function ($url, $model, $key) {
+                                // Always show individual payments link regardless of user type
+                                $params = ['/contratos/index', 'user_id' => $model->id];
+                                return Html::a(
+                                    '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
+                                    Url::to($params),
+                                    [
+                                        'title' => 'Pagos Individuales',
+                                        'class' => 'btn-action view'
+                                    ]
+                                );
+                            },
+                            'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos and $clinica
+                                if ($permisos) {
+                                    $params = ['delete', 'id' => $model->id];
                                     if ($clinica && $clinica->id !== null) {
                                         $params['clinica_id'] = $clinica->id;
                                     }
-
-                                    if($model->clinica_id){
                                     return Html::a(
-                                        '<i class="fas fa-address-card ms-text-primary"></i>',
+                                        '<i class="far fa-trash-alt ms-text-danger"></i>',
                                         Url::to($params), // Asegurar clinica_id condicionalmente
                                         [
-                                            'title' => 'Siniestros',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );}
-                                    }
-                                },
-                                'pagos' => function ($url, $model, $key) {
-                                // For Individual affiliates (type 1)
-                                if ($model->user_datos_type_id == 1) {
-                                    $params = ['/contratos/index', 'user_id' => $model->id];
-                                    return Html::a(
-                                        '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
-                                        Url::to($params),
-                                        [
-                                            'title' => 'Pagos Individuales',
+                                            'title' => 'Eliminar Usuario',
+                                            'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
+                                            'data-method' => 'post',
                                             'class' => 'btn-action view'
                                         ]
                                     );
                                 }
-                                // For Corporativo affiliates (type 2)
-                                elseif ($model->user_datos_type_id == 2) {
-                                    // Link to corporativo payments page
-                                    $params = ['/corporativo/pagos', 'id' => $model->afiliado_corporativo_id];
-                                    return Html::a(
-                                        '<i class="fas fa-building ms-text-primary"></i>',
-                                        Url::to($params),
-                                        [
-                                            'title' => 'Pagos Corporativos',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );
-                                }
-                                
-                                return null; 
-
-                                },
-                                'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos and $clinica
-                                    if ($permisos) {
-                                        $params = ['delete', 'id' => $model->id];
-                                        if ($clinica && $clinica->id !== null) {
-                                            $params['clinica_id'] = $clinica->id;
-                                        }
-                                        return Html::a(
-                                            '<i class="far fa-trash-alt ms-text-danger"></i>',
-                                            Url::to($params), // Asegurar clinica_id condicionalmente
-                                            [
-                                                'title' => 'Eliminar Usuario',
-                                                'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                                'data-method' => 'post',
-                                                'class' => 'btn-action view'
-                                            ]
-                                        );
-                                    }
-                                },
-                            ],
+                            },
                         ],
+                    ],
                     ], // Fin de columns
                 ]); ?>
             </div>

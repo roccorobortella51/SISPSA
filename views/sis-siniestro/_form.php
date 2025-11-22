@@ -38,193 +38,245 @@ $contrato = \app\models\Contratos::find()
     ->orderBy(['created_at' => SORT_DESC])
     ->one();
 
-
-
-// CSS personalizado (Mantengo el CSS intacto)
+// CSS personalizado - Microsoft Fluent Design System Standards
 $css = <<<CSS
-/*.sis-siniestro-form {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}*/
+/* ===== MICROSOFT FLUENT DESIGN SYSTEM ===== */
+.sis-siniestro-form {
+    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
 
+/* ===== TYPOGRAPHY SCALE - Microsoft Fluent Typography ===== */
 .section-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
+    font-size: 20px; /* Title Large - Microsoft standard */
+    font-weight: 600; /* Semibold - Microsoft standard */
+    margin: 0 0 16px 0; /* 16px spacing - Microsoft standard */
     display: flex;
     align-items: center;
+    color: #323130; /* Microsoft Gray190 */
+    line-height: 1.2;
 }
 
 .section-title i {
-    margin-right: 10px;
-    font-size: 20px;
+    margin-right: 12px; /* 12px spacing */
+    font-size: 20px; /* Match title size */
+    color: #0078d4; /* Microsoft Theme Primary */
 }
 
 .text-blue-600 {
-    color: white !important;
+    color: #0078d4 !important; /* Microsoft Theme Primary */
 }
 
+/* ===== FORM CONTROLS - Microsoft Fluent Inputs ===== */
 .select2-container--krajee .select2-selection--multiple,
 .select2-container--krajee .select2-selection--single {
-    border-radius: 8px;
-    border: 1px solid #ced4da;
-    padding: 6px 15px;
-    min-height: 48px;
+    border-radius: 2px; /* Microsoft square corners */
+    border: 1px solid #605e5c; /* Microsoft Gray130 */
+    padding: 6px 8px; /* Microsoft standard padding */
+    min-height: 32px; /* Microsoft standard height */
     display: flex;
     align-items: center;
+    font-size: 14px; /* Microsoft Body */
+    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #ffffff;
+    transition: border-color 0.1s ease;
+}
+
+.select2-container--krajee .select2-selection--multiple:focus,
+.select2-container--krajee .select2-selection--single:focus {
+    border-color: #0078d4; /* Microsoft Theme Primary */
+    outline: 2px solid #0078d4;
+    outline-offset: -2px;
 }
 
 .select2-container--krajee .select2-selection--multiple .select2-selection__choice {
-    border-radius: 6px;
-    background-color: #e9f2ff;
-    border: 1px solid #c5d9f8;
-    color: #2c3e50;
-    padding: 3px 8px;
+    border-radius: 2px; /* Microsoft square corners */
+    background-color: #f3f2f1; /* Microsoft Gray20 */
+    border: 1px solid #d2d0ce; /* Microsoft Gray90 */
+    color: #323130; /* Microsoft Gray190 */
+    padding: 2px 6px; /* Microsoft compact padding */
+    font-size: 12px; /* Microsoft Caption */
+    line-height: 1.33;
 }
 
+/* ===== BUTTONS - Microsoft Fluent Buttons ===== */
 .btn {
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-weight: 600;
-    transition: all 0.3s;
+    border-radius: 2px; /* Microsoft square corners */
+    padding: 8px 16px; /* Microsoft standard padding */
+    font-weight: 600; /* Semibold */
+    transition: all 0.1s ease; /* Microsoft fast transitions */
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font-size: 14px; /* Microsoft Body */
+    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    border: 1px solid transparent;
+    line-height: 1.33;
+    min-height: 32px; /* Microsoft standard height */
 }
 
 .btn i {
     margin-right: 8px;
+    font-size: 16px;
 }
 
 .btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
+    background-color: #107c10; /* Microsoft Green */
+    border-color: #107c10;
+    color: #ffffff;
 }
 
 .btn-success:hover {
-    background-color: #218838;
-    border-color: #1e7e34;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    background-color: #0e700e;
+    border-color: #0e700e;
+    transform: none; /* Remove translateY for Microsoft flat design */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow */
 }
 
 .btn-warning {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #212529;
+    background-color: #d83b01; /* Microsoft Orange */
+    border-color: #d83b01;
+    color: #ffffff;
 }
 
 .btn-warning:hover {
-    background-color: #e0a800;
-    border-color: #d39e00;
-    color: #212529;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    background-color: #c23501;
+    border-color: #c23501;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .btn-outline-dark {
-    border-color: #343a40;
-    color: #343a40;
+    border-color: #8a8886; /* Microsoft Gray110 */
+    color: #323130; /* Microsoft Gray190 */
+    background-color: transparent;
 }
 
 .btn-outline-dark:hover {
-    background-color: #343a40;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    background-color: #f3f2f1; /* Microsoft Gray20 */
+    color: #201f1e; /* Microsoft Gray200 */
+    border-color: #8a8886;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* ===== AFILIADO CONTAINER ===== */
 .afiliado-container {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 15px;
-    border-left: 4px solid #4a90e2;
+    background-color: #faf9f8; /* Microsoft Gray10 */
+    border-radius: 2px; /* Microsoft square corners */
+    padding: 16px; /* Microsoft standard spacing */
+    border-left: 4px solid #0078d4; /* Microsoft Theme Primary */
     max-height: 600px;
     overflow-y: auto;
+    border: 1px solid #edebe9; /* Microsoft Gray30 */
 }
 
-/* Mejoras para la vista del afiliado */
 .afiliado-container .card {
     box-shadow: none;
-    border: 1px solid #e3e6f0;
-    border-radius: 8px;
+    border: 1px solid #edebe9; /* Microsoft Gray30 */
+    border-radius: 2px; /* Microsoft square corners */
 }
 
 .afiliado-container .card-header {
-    background: linear-gradient(135deg, #4a90e2 0%, #2c3e50 100%);
-    color: white;
-    border-radius: 8px 8px 0 0 !important;
+    background: #f3f2f1; /* Microsoft Gray20 */
+    color: #323130; /* Microsoft Gray190 */
+    border-radius: 2px 2px 0 0 !important;
+    font-size: 16px; /* Microsoft Title */
+    font-weight: 600;
+    padding: 12px 16px; /* Microsoft standard padding */
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
 }
 
 .afiliado-container .nav-tabs .nav-link {
-    color: #6c757d;
-    font-weight: 600;
+    color: #605e5c; /* Microsoft Gray130 */
+    font-weight: 400; /* Regular weight */
     border: none;
-    border-bottom: 3px solid transparent;
+    border-bottom: 2px solid transparent;
+    font-size: 14px; /* Microsoft Body */
+    padding: 8px 16px; /* Microsoft standard padding */
+    background: none;
 }
 
 .afiliado-container .nav-tabs .nav-link.active {
-    color: #4a90e2;
+    color: #0078d4; /* Microsoft Theme Primary */
     background-color: transparent;
-    border-color: #4a90e2;
+    border-color: #0078d4;
+    font-weight: 600; /* Semibold when active */
 }
 
 .afiliado-container .table th {
-    background-color: #f8f9fa;
-    color: #2c3e50;
-    font-weight: 600;
+    background-color: #faf9f8; /* Microsoft Gray10 */
+    color: #323130; /* Microsoft Gray190 */
+    font-weight: 600; /* Semibold */
     border-top: none;
+    font-size: 14px; /* Microsoft Body */
+    padding: 8px 12px; /* Microsoft compact padding */
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
+}
+
+.afiliado-container .table td {
+    font-size: 14px; /* Microsoft Body */
+    padding: 8px 12px; /* Microsoft compact padding */
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
+    color: #323130; /* Microsoft Gray190 */
 }
 
 .afiliado-container .badge {
-    font-weight: 500;
-    padding: 6px 10px;
-    border-radius: 4px;
+    font-weight: 600;
+    padding: 4px 8px; /* Microsoft compact padding */
+    border-radius: 2px; /* Microsoft square corners */
+    font-size: 12px; /* Microsoft Caption */
 }
 
-/* Estilo adicional para mostrar el cálculo en tiempo real */
+/* ===== TOTAL CALCULADO ===== */
 .costo-total-container {
-    background-color: #e8f5e9;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 10px;
-    border-left: 4px solid #4caf50;
+    background-color: #f8fbf8; /* Microsoft subtle green */
+    border-radius: 2px; /* Microsoft square corners */
+    padding: 16px; /* Microsoft standard spacing */
+    margin-top: 16px; /* Microsoft standard spacing */
+    margin-bottom: 24px; /* 24px spacing */
+    border-left: 4px solid #107c10; /* Microsoft Green */
+    border: 1px solid #e6e6e6;
 }
 
 .costo-total-label {
-    font-weight: 600;
-    color: #2e7d32;
+    font-weight: 600; /* Semibold */
+    color: #107c10; /* Microsoft Green */
+    font-size: 16px; /* Microsoft Title */
+    margin-bottom: 8px; /* Microsoft compact spacing */
 }
 
 .costo-total-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1b5e20;
+    font-size: 24px; /* Microsoft Display */
+    font-weight: 700; /* Bold for emphasis */
+    color: #107c10; /* Microsoft Green */
+    line-height: 1.2;
 }
 
-/* Estilo para información del plan */
+/* ===== PLAN INFORMATION ===== */
 .plan-info-container {
-    background-color: #e3f2fd;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-left: 4px solid #2196f3;
+    background-color: #f8f9fc; /* Microsoft subtle blue */
+    border-radius: 2px; /* Microsoft square corners */
+    padding: 16px; /* Microsoft standard spacing */
+    margin-bottom: 20px; /* 20px spacing */
+    border-left: 4px solid #0078d4; /* Microsoft Theme Primary */
+    border: 1px solid #e6e6e6;
 }
 
 .plan-info-title {
-    font-weight: 600;
-    color: #0d47a1;
-    margin-bottom: 10px;
+    font-weight: 600; /* Semibold */
+    color: #004578; /* Microsoft Dark Blue */
+    margin-bottom: 12px; /* Microsoft standard spacing */
+    font-size: 16px; /* Microsoft Title */
 }
 
 .plan-info-item {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed #90caf9;
+    align-items: center;
+    margin-bottom: 8px; /* Microsoft compact spacing */
+    padding-bottom: 8px; /* Microsoft compact spacing */
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
+    font-size: 14px; /* Microsoft Body */
 }
 
 .plan-info-item:last-child {
@@ -234,134 +286,333 @@ $css = <<<CSS
 }
 
 .plan-info-label {
-    font-weight: 500;
-    color: #1565c0;
+    font-weight: 600; /* Semibold */
+    color: #323130; /* Microsoft Gray190 */
+    flex: 1;
+    text-align: left;
 }
 
 .plan-info-value {
-    font-weight: 600;
-    color: #0d47a1;
+    font-weight: 400; /* Regular weight for values */
+    color: #605e5c; /* Microsoft Gray130 */
+    text-align: right;
+    flex-shrink: 0;
+    margin-left: 16px; /* Microsoft standard spacing */
+    font-family: 'Segoe UI', Consolas, monospace; /* Monospace for numbers */
 }
 
 .plan-info-total {
-    background-color: #bbdefb;
-    padding: 10px;
-    border-radius: 6px;
-    margin-top: 10px;
+    background-color: #deecf9; /* Microsoft Light Blue */
+    padding: 12px 16px; /* Microsoft standard padding */
+    border-radius: 2px; /* Microsoft square corners */
+    margin-top: 12px; /* Microsoft standard spacing */
+    font-size: 14px; /* Microsoft Body */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #c7e0f4;
 }
 
-/* Estilos para mensajes de restricciones */
+.plan-info-total .plan-info-label {
+    font-weight: 700; /* Bold for emphasis */
+    color: #004578; /* Microsoft Dark Blue */
+    font-size: 14px; /* Microsoft Body */
+    text-align: left;
+    flex: 1;
+}
+
+.plan-info-total .plan-info-value {
+    font-weight: 700; /* Bold for emphasis */
+    color: #004578; /* Microsoft Dark Blue */
+    font-size: 16px; /* Microsoft Title */
+    text-align: right;
+    flex-shrink: 0;
+    margin-left: 16px; /* Microsoft standard spacing */
+}
+
+/* ===== HINTS AND NOTES ===== */
 .hint-block {
-    color: #6c757d;
-    font-size: 0.875rem;
-    margin-top: 5px;
+    color: #605e5c; /* Microsoft Gray130 */
+    font-size: 12px; /* Microsoft Caption */
+    margin-top: 4px; /* Microsoft compact spacing */
+    line-height: 1.33;
 }
 
 .hint-block i {
-    margin-right: 5px;
+    margin-right: 6px; /* Microsoft compact spacing */
+    font-size: 12px; /* Microsoft Caption */
 }
 
-/* Estilos de la tabla de baremos */
+/* ===== BAREMOS TABLE ===== */
 #baremos-tabla-container {
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin-top: 20px; /* 20px spacing */
+    margin-bottom: 20px; /* 20px spacing */
+}
+
+#baremos-tabla-container h4.section-title {
+    font-size: 16px; /* Microsoft Title - consistent with other titles */
+    font-weight: 600; /* Semibold */
+    color: #323130; /* Microsoft Gray190 */
+    margin-bottom: 12px; /* Microsoft standard spacing */
+    display: flex;
+    align-items: center;
+}
+
+#baremos-tabla-container h4.section-title i {
+    font-size: 16px; /* Match title size */
+    margin-right: 8px; /* Microsoft compact spacing */
+    color: #0078d4; /* Microsoft Theme Primary */
 }
 
 #baremos-tabla-container table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 5px; /* Espacio entre filas */
+    border-collapse: collapse; /* Microsoft clean tables */
+    border-spacing: 0;
 }
 
 #baremos-tabla-container th, #baremos-tabla-container td {
-    padding: 10px;
+    padding: 8px 12px; /* Microsoft compact padding */
     text-align: left;
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
 }
 
 #baremos-tabla-container th {
-    background-color: #f1f1f1;
-    font-weight: 600;
+    background-color: #0078d4 !important; /* Microsoft Theme Primary - Blue background */
+    color: #ffffff !important; /* White text for table headers */
+    font-weight: 600; /* Semibold */
+    border: none;
+    font-size: 14px; /* Microsoft Body */
+    border-bottom: 2px solid #0078d4; /* Microsoft Theme Primary */
+}
+
+#baremos-tabla-container td {
+    font-size: 14px; /* Microsoft Body */
+    font-weight: 400; /* Regular weight */
+    color: #323130; /* Microsoft Gray190 */
+    vertical-align: top;
+    line-height: 1.33;
 }
 
 #baremos-tabla-container tr:nth-child(even) {
-    background-color: #f9f9f9;
+    background-color: #faf9f8; /* Microsoft Gray10 */
 }
 
-#baremos-tabla-container tr {
-    border-bottom: 1px solid #eee;
-    border-radius: 6px;
+#baremos-tabla-container tr:hover {
+    background-color: #f3f2f1; /* Microsoft Gray20 */
 }
 
 #baremos-tabla-container .cost-col {
-    font-weight: 700;
+    font-weight: 600; /* Semibold */
     text-align: right;
-    width: 120px;
+    width: 100px; /* Fixed width for alignment */
+    font-size: 14px; /* Microsoft Body */
+    color: #107c10; /* Microsoft Green */
+    font-family: 'Segoe UI', Consolas, monospace; /* Monospace for numbers */
 }
 
-@media (max-width: 768px) {
-    .sis-siniestro-form {
-        padding: 15px;
-    }
-    
-    .ms-panel-body {
-        padding: 15px;
-    }
-    
-    .btn {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    
-    .text-end {
-        text-align: left !important;
-    }
-    
-    .afiliado-container {
-        max-height: none;
-        overflow-y: visible;
-    }
+/* ===== FORM FIELDS ===== */
+.form-fields-section {
+    margin-top: 20px; /* 20px spacing */
 }
 
+.form-control, .form-control-lg {
+    font-size: 14px !important; /* Microsoft Body */
+    padding: 6px 8px !important; /* Microsoft standard padding */
+    border-radius: 2px !important; /* Microsoft square corners */
+    border: 1px solid #605e5c !important; /* Microsoft Gray130 */
+    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    min-height: 32px; /* Microsoft standard height */
+}
+
+.form-control:focus, .form-control-lg:focus {
+    border-color: #0078d4 !important; /* Microsoft Theme Primary */
+    outline: 2px solid #0078d4 !important;
+    outline-offset: -2px !important;
+    box-shadow: none !important;
+}
+
+.form-label {
+    font-size: 14px; /* Microsoft Body */
+    font-weight: 600; /* Semibold */
+    color: #323130; /* Microsoft Gray190 */
+    margin-bottom: 4px; /* Microsoft compact spacing */
+}
+
+/* Field with icons */
 .field-with-icon {
     position: relative;
 }
 
 .field-with-icon .form-control {
-    padding-left: 40px;
+    padding-left: 36px !important; /* Space for icon */
 }
 
 .field-with-icon i {
     position: absolute;
-    left: 15px;
+    left: 10px; /* Align with text */
     top: 50%;
     transform: translateY(-50%);
-    color: #6c757d;
+    color: #605e5c; /* Microsoft Gray130 */
     z-index: 5;
+    font-size: 16px;
 }
 
-/* Force the main button text/icon color to white (Primary/Browse button) */
+/* ===== FILE UPLOAD BUTTONS - WHITE TEXT ===== */
 .file-input .btn.btn-primary,
 .file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
 .file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
+.file-input .btn.btn-primary:focus {
+    background-color: #0078d4 !important; /* Microsoft Theme Primary */
+    border-color: #0078d4 !important;
+    font-size: 14px; /* Microsoft Body */
+    min-height: 32px; /* Microsoft standard height */
+    color: #ffffff !important; /* White text */
+}
+
+/* Ensure all text and icons in the primary button are white */
 .file-input .btn.btn-primary span,
 .file-input .btn.btn-primary i,
-.file-input .btn.btn-primary svg {
-    color: #fff !important;
-    fill: #fff !important; /* Ensures SVG icons are also white */
+.file-input .btn.btn-primary .fa,
+.file-input .btn.btn-primary .fas,
+.file-input .btn.btn-primary .far,
+.file-input .btn.btn-primary .fab,
+.file-input .btn.btn-primary .glyphicon {
+    color: #ffffff !important; /* White icons and text */
 }
 
-/* Ensure the file name/caption text is also white, as it's often next to the button */
-.file-caption-name {
-    color: #fff !important;
+.file-input .btn.btn-primary .file-caption-name {
+    color: #ffffff !important; /* White file name text */
 }
 
-/* Remove text shadow interference */
-.file-input .btn.btn-primary {
-    text-shadow: none !important; 
+.file-input .btn.btn-primary:hover {
+    background-color: #106ebe !important; /* Darker blue on hover */
+    border-color: #106ebe !important;
+    color: #ffffff !important; /* White text on hover */
 }
 
-/* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 
-   so it will retain its theme's default color. */
+.file-input .btn.btn-primary:focus {
+    outline: 2px solid #0078d4 !important;
+    outline-offset: 2px !important;
+    color: #ffffff !important; /* White text on focus */
+}
+
+/* Secondary button (Remove/Quitar) should keep its style */
+.file-input .btn-secondary {
+    background-color: #f3f2f1 !important; /* Microsoft Gray20 */
+    border-color: #8a8886 !important; /* Microsoft Gray110 */
+    color: #323130 !important; /* Microsoft Gray190 */
+}
+
+.file-input .btn-secondary:hover {
+    background-color: #edebe9 !important; /* Microsoft Gray30 */
+    border-color: #8a8886 !important;
+    color: #201f1e !important; /* Microsoft Gray200 */
+}
+
+/* ===== ALERTS AND MESSAGES ===== */
+.alert {
+    font-size: 14px; /* Microsoft Body */
+    padding: 12px 16px; /* Microsoft standard padding */
+    border-radius: 2px; /* Microsoft square corners */
+    border: 1px solid;
+    line-height: 1.33;
+}
+
+.alert-danger {
+    background-color: #fdf6f6; /* Microsoft subtle red */
+    border-color: #d13438; /* Microsoft Red */
+    color: #d13438;
+}
+
+.alert-warning {
+    background-color: #fff8f0; /* Microsoft subtle orange */
+    border-color: #d83b01; /* Microsoft Orange */
+    color: #d83b01;
+}
+
+.alert i {
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+#cobertura-warning, #cita-warning {
+    font-size: 14px; /* Microsoft Body */
+    padding: 8px 12px; /* Microsoft compact padding */
+}
+
+/* ===== CARD STYLES ===== */
+.card {
+    border-radius: 2px; /* Microsoft square corners */
+    border: 1px solid #edebe9; /* Microsoft Gray30 */
+}
+
+.card-body {
+    padding: 16px; /* Microsoft standard spacing */
+}
+
+.card-header {
+    font-size: 16px; /* Microsoft Title */
+    font-weight: 600; /* Semibold */
+    padding: 12px 16px; /* Microsoft standard padding */
+    background-color: #faf9f8; /* Microsoft Gray10 */
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .sis-siniestro-form {
+        padding: 16px; /* Microsoft standard spacing */
+    }
+    
+    .ms-panel-body {
+        padding: 16px; /* Microsoft standard spacing */
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 8px; /* Microsoft compact spacing */
+        font-size: 14px; /* Microsoft Body */
+    }
+    
+    .plan-info-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .plan-info-value {
+        text-align: left;
+        margin-left: 0;
+        margin-top: 4px; /* Microsoft compact spacing */
+    }
+    
+    .plan-info-total {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .plan-info-total .plan-info-value {
+        text-align: left;
+        margin-left: 0;
+        margin-top: 4px; /* Microsoft compact spacing */
+    }
+}
+
+/* Microsoft Fluent Design Depth */
+.ms-panel {
+    background: #ffffff;
+    border: 1px solid #edebe9; /* Microsoft Gray30 */
+    border-radius: 2px; /* Microsoft square corners */
+}
+
+.ms-panel-header {
+    background: #faf9f8; /* Microsoft Gray10 */
+    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
+    padding: 12px 16px; /* Microsoft standard padding */
+}
+
+.ms-panel-body {
+    padding: 16px; /* Microsoft standard spacing */
+}
 CSS;
 
 $this->registerCss($css);
@@ -451,7 +702,6 @@ $baremosInfo = [];
 $baremosRestringidosIDs = [];
 ?>
 
-
 <?php if ($contrato && $contrato->estatus === 'Activo'): ?>
     
     <div id="plazo-error-message" class="alert alert-danger" style="display: none;">
@@ -511,8 +761,8 @@ $baremosRestringidosIDs = [];
                     ->where(['baremo_id' => $item->baremo_id, 'siniestro_id' => $model->id])
                     ->count();
 
-                // Definir el costo del baremo
-                $costoBaremo = $item->baremo->costo ?? 0; // Usa el campo 'costo' del baremo, o 0 si no está definido
+                // Definir el precio del baremo - CHANGED FROM costo TO precio
+                $precioBaremo = $item->baremo->precio ?? 0; // Usa el campo 'precio' del baremo, o 0 si no está definido
 
                 // Clasificación de baremos
                 $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
@@ -530,6 +780,7 @@ $baremosRestringidosIDs = [];
                     $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
                 } elseif ($isRestrictedByPlazo) {
                     $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
+                    $baremosRestringidosIDs[] = $item->baremo_id; // Add to restricted IDs
                 } else {
                     $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
                 }
@@ -540,7 +791,7 @@ $baremosRestringidosIDs = [];
                     'plazo_espera' => $item->plazo_espera,
                     'cantidad_limite' => $item->cantidad_limite,
                     'veces_usado' => $vecesUsado,
-                    'costo' => $costoBaremo,
+                    'precio' => $precioBaremo, // CHANGED FROM 'costo' TO 'precio'
                     'is_restricted_by_plazo' => $isRestrictedByPlazo,
                     'has_plazo_ever' => $hasPlazoEver,
                 ];
@@ -597,7 +848,7 @@ $baremosRestringidosIDs = [];
 <?php endif; ?>
 
     <div id="baremos-tabla-container" style="display: none;">
-        <h4 class="section-title mb-3">
+        <h4 class="section-title mb-3 fs-3">
             <i class="fas fa-list-alt text-blue-600"></i> Resumen de Servicios
         </h4>
         <table class="table table-sm">
@@ -606,7 +857,7 @@ $baremosRestringidosIDs = [];
                     <th>Servicio</th>
                     <th>Área</th>
                     <th class="text-center">Restricciones</th>
-                    <th class="cost-col">Costo</th>
+                    <th class="cost-col">Precio</th>
                 </tr>
             </thead>
             <tbody id="baremos-tabla-body">
@@ -626,7 +877,7 @@ $baremosRestringidosIDs = [];
 
 <?php 
 // -----------------------------------------------------------------------------------------------------
-// CÓDIGO JAVASCRIPT con BLOQUEO DE GUARDADO (Modificado para usar el mensaje)
+// CÓDIGO JAVASCRIPT con BLOQUEO DE GUARDADO
 // -----------------------------------------------------------------------------------------------------
 $baremosTotalesJson = json_encode($baremosTotales);
 $baremosInfoJson = json_encode($baremosInfo);
@@ -649,7 +900,7 @@ $this->registerJs(<<<JS
     // Referencia al div del mensaje de error
     const plazoErrorMessage = $('#plazo-error-message'); 
     
-    // --- LÓGICA DE BLOQUEO CRÍTICA (REEMPLAZO) ---
+    // --- LÓGICA DE BLOQUEO CRÍTICA ---
     function validateAndBlockSave() {
         const isCitaMode = esCitaSwitch.is(':checked'); 
         plazoErrorMessage.hide(); // Ocultar por defecto antes de validar
@@ -671,7 +922,7 @@ $this->registerJs(<<<JS
     }
     // ----------------------------------
 
-    // Función para manejar el estado del formulario (Siniestro/Cita) (SIN CAMBIOS)
+    // Función para manejar el estado del formulario (Siniestro/Cita)
     function updateTipoRegistro() {
         const isCitaMode = esCitaSwitch.is(':checked');
         
@@ -691,7 +942,7 @@ $this->registerJs(<<<JS
         validateAndBlockSave(); 
     }
     
-    // Función para filtrar dinámicamente las opciones del Select2 (SIN CAMBIOS)
+    // Función para filtrar dinámicamente las opciones del Select2
     function filterBaremosForTipoRegistro(isCitaMode) {
         const selectedValues = baremosSelect.val() || [];
         const newValidValues = [];
@@ -704,11 +955,13 @@ $this->registerJs(<<<JS
             let shouldInclude = false; 
 
             if (isCitaMode) {
+                // In Cita mode: show baremos that HAVE waiting periods (both fulfilled and pending)
                 if (info.has_plazo_ever === true) {
                     shouldInclude = true;
                 }
             } else {
-                if (info.has_plazo_ever === false) {
+                // In Siniestro mode: show baremos that either DON'T have waiting periods OR have fulfilled waiting periods
+                if (info.has_plazo_ever === false || (info.has_plazo_ever === true && !info.is_restricted_by_plazo)) {
                     shouldInclude = true;
                 }
             }
@@ -750,11 +1003,10 @@ $this->registerJs(<<<JS
     
     // Listener para la validación al cambiar la selección
     baremosSelect.on('change', function() {
-      
         validateAndBlockSave(); 
     });
     
-    // ** LISTENER CLAVE: Bloquea el guardado en el submit del formulario (REEMPLAZO) **
+    // ** LISTENER CLAVE: Bloquea el guardado en el submit del formulario **
     form.on('beforeSubmit', function(e) {
         if (!validateAndBlockSave()) {
             e.preventDefault();
@@ -775,19 +1027,9 @@ $this->registerJs(<<<JS
 JS
 , \yii\web\View::POS_END); 
 ?>  
-
                 
-                <div class="col-md-12">
-                    <?= $form->field($model, 'costo_total')->textInput([
-                        'class' => 'form-control form-control-lg',
-                        'placeholder' => '0.00',
-                        'autocomplete' => 'off',
-                        'id' => 'costo-total-input',
-                        'readonly' => true,
-                    ])->label('Total') ?>
-                </div>
-                
-                <div class="col-md-6">
+                                
+                <div class="col-md-6 form-fields-section">
                     <div class="row g-3">
                         <div class="col-md-12" style="display: none;">
                              <?= $form->field($model, 'idclinica')->textInput(['value' => $afiliado->clinica_id]) ?>
@@ -967,7 +1209,7 @@ $baremosInfoJson = json_encode($baremosInfo);
 
 // JavaScript para calcular la suma de los baremos seleccionados y generar la tabla
 $js = <<<JS
-// Información de los baremos, incluyendo el costo
+// Información de los baremos, incluyendo el precio
 var baremosInfo = $baremosInfoJson; 
 
 // Función para calcular el total y renderizar la tabla
@@ -990,9 +1232,9 @@ function calcularTotalYTabla() {
     baremosSeleccionados.forEach(function(baremoId) {
         var item = baremosInfo[baremoId];
         
-        if (item && item.costo) {
-            var costo = parseFloat(item.costo);
-            total += costo;
+        if (item && item.precio !== undefined) {
+            var precio = parseFloat(item.precio);
+            total += precio;
             
             // Construir la cadena de restricciones
             var restricciones = [];
@@ -1013,7 +1255,7 @@ function calcularTotalYTabla() {
             tablaHtml += '<td>' + item.area + '</td>';
             // Se muestra el estado de las restricciones para referencia
             tablaHtml += '<td class="text-center">' + (restriccionesHtml || 'Ninguna') + '</td>'; 
-            tablaHtml += '<td class="cost-col">$' + costo.toFixed(2) + '</td>';
+            tablaHtml += '<td class="cost-col">$' + precio.toFixed(2) + '</td>';
             tablaHtml += '</tr>';
         }
     });
