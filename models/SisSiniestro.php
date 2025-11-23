@@ -195,27 +195,56 @@ class SisSiniestro extends \yii\db\ActiveRecord
             $baremoIds = [];
         }
         
-        // Eliminar las relaciones existentes
+        // 1. Eliminar las relaciones existentes
         SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
         
-        // Agregar las nuevas relaciones
+        // 2. Agregar las nuevas relaciones
         foreach ($baremoIds as $baremoId) {
+            if (empty($baremoId)) {
+                continue;
+            }
 
-            $baremocosto = Baremo::find()->where(['id' => $baremoId])->one()->precio;
+            // Es más eficiente usar scalar() si solo necesitas un campo
+            $baremocosto = Baremo::find()->select('precio')->where(['id' => $baremoId])->scalar();
 
-            if (!empty($baremoId)) {
-                $relacion = new SisSiniestroBaremo([
-                    'siniestro_id' => $this->id,
-                    'baremo_id' => $baremoId,
-                    'costo' => $baremocosto
-                ]);
-                
-                if (!$relacion->save()) {
-                    return false;
-                }
+            if ($baremocosto === null) {
+                // Manejar caso donde el Baremo no existe
+                continue;
+            }
+
+            $relacion = new SisSiniestroBaremo([
+                'siniestro_id' => $this->id,
+                'baremo_id' => $baremoId,
+                'costo' => $baremocosto // El precio del baremo
+            ]);
+            
+            if (!$relacion->save()) {
+                // Retorna false si falla la inserción de una relación
+                return false; 
             }
         }
+
+        // ====================================================================
+        // 3. Lógica para actualizar el costo_total en SisSiniestro
+        // ====================================================================
+
+        // a) Calcular la suma total de los costos de los baremos para este siniestro
+        $totalCosto = SisSiniestroBaremo::find()
+            ->where(['siniestro_id' => $this->id])
+            ->sum('costo');
+
+        // b) Asignar el total al campo costo_total del modelo actual ($this es SisSiniestro)
+        // Se usa (float) para asegurar que el valor sea numérico (sum() puede devolver NULL o un string)
+        $this->costo_total = (float) $totalCosto;
         
+        // c) Guardar el modelo SisSiniestro
+        if (!$this->save(false)) { // Usamos save(false) para omitir la validación de otros campos del SisSiniestro
+            // Retorna false si falla la actualización del costo_total
+            return false;
+        }
+
+        // ====================================================================
+
         return true;
     }
     
