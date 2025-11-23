@@ -242,4 +242,37 @@ class Pagos extends \yii\db\ActiveRecord
         
         return $estados[$this->estatus] ?? $this->estatus;
     }
+    /**
+ * Obtiene el resumen de pagos para un rango de fechas y estado específico
+ * 
+ * @param string $startDate Fecha de inicio (Y-m-d)
+ * @param string $endDate Fecha de fin (Y-m-d)
+ * @param string $status Estado del pago ('Por Conciliar', 'Conciliado')
+ * @return array|null
+ */
+public static function getPaymentsSummaryForDateRange($startDate, $endDate, $status = 'Por Conciliar')
+    {
+        $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+        
+        $query = self::find()
+            ->where(['pagos.estatus' => $status])
+            ->andWhere(['between', 
+                new \yii\db\Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        
+        $result = $query->select([
+                'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
+                'total_count' => 'COUNT(*)'
+            ])
+            ->asArray()
+            ->one();
+        
+        // Ensure we always return an array with both keys
+        return [
+            'total_monto' => $result['total_monto'] ?? 0,
+            'total_count' => $result['total_count'] ?? 0
+        ];
+    }
 }

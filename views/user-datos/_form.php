@@ -151,13 +151,13 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
                                     'data' => UserHelper::getAgenteFuerzaList(),
                                     'options' => [
-                                        'placeholder' => 'Seleccione el asesor',
+                                        'placeholder' => 'Seleccione el Agente ...',
                                         'class' => 'form-control form-control-lg',
                                     ],
                                     'pluginOptions' => [
                                         'allowClear' => false,
                                     ],
-                            ])->label('NOMBRE DEL ASESOR')
+                            ])->label('NOMBRE DEL AGENTE (Vendedor)');
                             ?>
                         </div>
                        
@@ -168,17 +168,19 @@ $this->registerJs($jsValidation);
                         <div class="col-md-6 field-with-icon">
                             
                             <?= $form->field($modelContrato, 'fecha_ini')->textInput([
-                                'class' => 'form-control form-control-lg',
+                                'class' => 'form-control form-control-lg fecha-ini-field',
                                 'type' => 'date',
+                                'required' => true,
                                 'placeholder' => 'Seleccione la fecha de inicio'
                             ])->label('Fecha de Inicio') ?>
                         </div>
 
-                        <div class="col-md-6 field-with-icon">
+                        <div class="col-md-6 field-with-icon fecha-ven-container" style="display: none;">
                             
                             <?= $form->field($modelContrato, 'fecha_ven')->textInput([
-                                'class' => 'form-control form-control-lg',
+                                'class' => 'form-control form-control-lg fecha-ven-field',
                                 'type' => 'date',
+                                'required' => true,
                                 'placeholder' => 'Seleccione la fecha de vencimiento'
                             ])->label('Fecha de Vencimiento') ?>
                         </div>
@@ -1056,13 +1058,13 @@ $(function(){
   // Cambiar estado cuando se marca/desmarca el checkbox
   $('#userdatos-tiene_contratante_diferente').on('change', function() {
     toggleContratanteSection();
- });
+  });
  
- // Funcionalidad para el grupo familiar
- var miembroIndex = 0;
+  // Funcionalidad para el grupo familiar
+  var miembroIndex = 0;
  
- // Función para agregar un nuevo miembro al grupo familiar
- function agregarMiembro() {
+  // Función para agregar un nuevo miembro al grupo familiar
+  function agregarMiembro() {
     var newIndex = Date.now();
     var miembroHtml = `
     <div class="card mb-3 miembro-familiar" data-index="${newIndex}">
@@ -1115,46 +1117,91 @@ $(function(){
     </div>
   `;
   $('#grupo-familiar-container').append(miembroHtml);
- }
+  }
  
- // Función para eliminar un miembro del grupo familiar
- function eliminarMiembro(index) {
+  // Función para eliminar un miembro del grupo familiar
+  function eliminarMiembro(index) {
    $('.miembro-familiar[data-index="' + index + '"]').remove();
- }
+  }
  
- // Evento para agregar miembro
- $('#agregar-miembro').on('click', function() {
+  // Evento para agregar miembro
+  $('#agregar-miembro').on('click', function() {
    agregarMiembro();
- });
+  });
  
- // Evento para eliminar miembro (usando delegación de eventos)
- $('#grupo-familiar-container').on('click', '.eliminar-miembro', function() {
+  // Evento para eliminar miembro (usando delegación de eventos)
+  $('#grupo-familiar-container').on('click', '.eliminar-miembro', function() {
    var index = $(this).data('index');
    eliminarMiembro(index);
- });
+  });
  
- // Mostrar/ocultar sección de afiliado corporativo
- function toggleAfiliadoCorporativo() {
+  // Mostrar/ocultar sección de afiliado corporativo
+  function toggleAfiliadoCorporativo() {
    if ($('#user_datos_type_id_field').val() == '2') { // Asumiendo que 2 es el ID para afiliado corporativo
      $('#afiliado_corporativo_container').show();
    } else {
      $('#afiliado_corporativo_container').hide();
    }
- }
+  }
 
- // Inicializar estado al cargar la página
- toggleAfiliadoCorporativo();
+  // Inicializar estado al cargar la página
+  toggleAfiliadoCorporativo();
 
- // Cambiar estado cuando se selecciona un tipo de afiliado
- $('#user_datos_type_id_field').on('change', function() {
+  // Cambiar estado cuando se selecciona un tipo de afiliado
+  $('#user_datos_type_id_field').on('change', function() {
    toggleAfiliadoCorporativo();
- });
+  });
 
- // Lógica para la visualización de las clínicas y el corporativo
-    var urlGetClinicasByCorporativo = '{$urlGetClinicasByCorporativo}';
-    var urlGetAllClinicas = '{$urlGetAllClinicas}';
+  // Lógica para la visualización de las clínicas y el corporativo
+  var urlGetClinicasByCorporativo = '{$urlGetClinicasByCorporativo}';
+  var urlGetAllClinicas = '{$urlGetAllClinicas}';
 
+  // Function to calculate and set fecha_ven
+  function calcularFechaVencimiento(fechaIni) {
+    if (fechaIni) {
+        // Parse the date string manually to avoid timezone issues
+        var parts = fechaIni.split('-');
+        var year = parseInt(parts[0]);
+        var month = parseInt(parts[1]) - 1; // Months are 0-indexed in JavaScript
+        var day = parseInt(parts[2]);
+        
+        // Create date in local timezone
+        var fecha = new Date(year, month, day);
+        fecha.setFullYear(fecha.getFullYear() + 1);
+        
+        // Format to YYYY-MM-DD for date input
+        var newYear = fecha.getFullYear();
+        var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
+        var newDay = String(fecha.getDate()).padStart(2, '0');
+        
+        return newYear + '-' + newMonth + '-' + newDay;
+    }
+    return '';
+  }
 
+  // Show/hide fecha_ven based on fecha_ini
+  function toggleFechaVen() {
+    var fechaIni = $('.fecha-ini-field').val();
+    var fechaVenContainer = $('.fecha-ven-container');
+    
+    if (fechaIni) {
+        fechaVenContainer.show();
+        // Auto-calculate fecha_ven
+        var fechaVen = calcularFechaVencimiento(fechaIni);
+        $('.fecha-ven-field').val(fechaVen);
+    } else {
+        fechaVenContainer.hide();
+        $('.fecha-ven-field').val('');
+    }
+  }
+
+  // Initialize on page load
+  toggleFechaVen();
+
+  // Add event listener for fecha_ini changes
+  $('.fecha-ini-field').on('change', function() {
+    toggleFechaVen();
+  });
 
 });
 JS);

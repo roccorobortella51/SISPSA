@@ -183,17 +183,60 @@ class PagosController extends Controller
                     }
                 }
                 
+                // VALIDATION: Ensure selected cuotas match payment amount
+                $selectedCuotaIds = Yii::$app->request->post('selected_cuotas', []);
+                if (empty($selectedCuotaIds)) {
+                    Yii::$app->session->setFlash('error', 'Debe seleccionar al menos una cuota para pagar.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $user_id,
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+                
+                // Calculate total from selected cuotas
+                $selectedCuotasTotal = 0;
+                $selectedCuotas = Cuotas::find()->where(['id' => $selectedCuotaIds])->all();
+                foreach ($selectedCuotas as $cuota) {
+                    $selectedCuotasTotal += $cuota->monto_usd ?: $cuota->monto;
+                }
+                
+                // Validate payment amount matches selected cuotas total
+                if (abs($model->monto_pagado - $selectedCuotasTotal) > 0.01) {
+                    Yii::$app->session->setFlash('error', 
+                        "El monto pagado ({$model->monto_pagado}) no coincide con el total de cuotas seleccionadas ({$selectedCuotasTotal})."
+                    );
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $user_id,
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+                
                 if ($model->save()) {
-                    // 1. Mark selected cuotas as paid and link to the payment ID
-                    $selectedCuotaIds = Yii::$app->request->post('selected_cuotas');
-                    if (!empty($selectedCuotaIds) && is_array($selectedCuotaIds)) {
-                        Cuotas::updateAll(
-                            ['id_pago' => $model->id, 'estatus' => 'pagada'],
-                            ['id' => $selectedCuotaIds]
-                        );
+                    // IMPROVED: Mark selected cuotas as paid and link to payment
+                    $updatedCount = Cuotas::updateAll(
+                        [
+                            'id_pago' => $model->id, 
+                            'estatus' => 'pagada',
+                            'fecha_pago' => $model->fecha_pago
+                        ],
+                        ['id' => $selectedCuotaIds]
+                    );
+                    
+                    Yii::info("Updated {$updatedCount} cuotas for payment ID: {$model->id}", 'pagos');
+                    
+                    if ($updatedCount != count($selectedCuotaIds)) {
+                        Yii::error("Mismatch in cuota update: expected " . count($selectedCuotaIds) . ", updated {$updatedCount}", 'pagos');
                     }
                     
-                    Yii::$app->session->setFlash('success', 'Pago registrado con éxito.');
+                    Yii::$app->session->setFlash('success', 
+                        "Pago registrado con éxito. Se actualizaron {$updatedCount} cuotas."
+                    );
                     return $this->redirect(['view', 'id' => $model->id]);
                 } else {
                     Yii::$app->session->setFlash('error', 'Error al guardar el pago en la base de datos.');
@@ -601,5 +644,37 @@ public function actionTestUser101()
                 ];
             }, $cuotas)
         ];
+    }
+    /**
+     * Valida que el pago coincida con las cuotas seleccionadas
+     */
+    private function validatePaymentCuotas($model, $selectedCuotaIds)
+    {
+        if (empty($selectedCuotaIds)) {
+            Yii::$app->session->setFlash('error', 'Debe seleccionar al menos una cuota para pagar.');
+            return false;
+        }
+        
+        $selectedCuotas = Cuotas::find()->where(['id' => $selectedCuotaIds])->all();
+        $selectedCuotasTotal = 0;
+        
+        foreach ($selectedCuotas as $cuota) {
+            // Skip cuotas that are already paid
+            if ($cuota->estatus === 'pagada') {
+                Yii::$app->session->setFlash('error', "La cuota #{$cuota->id} ya está pagada.");
+                return false;
+            }
+            $selectedCuotasTotal += $cuota->monto_usd ?: $cuota->monto;
+        }
+        
+        // Allow small rounding differences
+        if (abs($model->monto_pagado - $selectedCuotasTotal) > 0.01) {
+            Yii::$app->session->setFlash('error', 
+                "El monto pagado ({$model->monto_pagado} USD) no coincide con el total de cuotas seleccionadas ({$selectedCuotasTotal} USD)."
+            );
+            return false;
+        }
+        
+        return true;
     }
 }

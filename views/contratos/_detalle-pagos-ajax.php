@@ -1,10 +1,8 @@
-
 <?php
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 use kartik\grid\GridView;
 use yii\helpers\Url;
-
 
 if (!empty($model->pagos)) {
     echo "<h4>Pagos Realizados</h4>";
@@ -18,7 +16,6 @@ if (!empty($model->pagos)) {
         'hover' => true,
         'columns' => [
             'fecha_pago',
-            //'monto_pagado',
             [
                 'attribute' => 'monto_pagado',
                 'value' => function ($model) {
@@ -38,12 +35,28 @@ if (!empty($model->pagos)) {
             [
                 'attribute' => 'imagen_prueba',
                 'format' => 'raw',
+                'label' => 'Comprobante',
                 'value' => function($model) {
-                    $url = $model->imagen_prueba;
-                    if ($url) {
-                        return Html::a(Html::img($url, ['width' => '350']), $url, ['target' => '_blank']);
+                    if ($model->imagen_prueba) {
+                        // Use the same view-image action as in the main view
+                        $imageUrl = Url::to(['/pagos/view-image', 'id' => $model->id]);
+                        $thumbnailUrl = Url::to(['/pagos/view-image', 'id' => $model->id]);
+                        
+                        return Html::a(
+                            Html::img($thumbnailUrl, [
+                                'width' => '50', 
+                                'height' => '50',
+                                'style' => 'object-fit: cover; border-radius: 4px;',
+                                'alt' => 'Comprobante de pago'
+                            ]),
+                            $imageUrl,
+                            [
+                                'target' => '_blank',
+                                'title' => 'Ver comprobante completo'
+                            ]
+                        );
                     }
-                    return null;
+                    return '<span class="text-muted">Sin comprobante</span>';
                 },
             ],
             [
@@ -65,7 +78,7 @@ if (!empty($model->pagos)) {
                             '<i class="fa fa-eye"></i>',
                             Url::to(['pagos/view', 'id' => $model->id]),
                             [
-                                'title' => 'Detalle de Usuario',
+                                'title' => 'Detalle de Pago',
                                 'class' => 'btn btn-link btn-sm text-success',
                                 'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                             ]
@@ -76,7 +89,7 @@ if (!empty($model->pagos)) {
                             '<i class="fas fa-pencil-alt ms-text-primary"></i>',
                             Url::to(['pagos/update', 'id' => $model->id]),
                             [
-                                'title' => 'Editar Usuario',
+                                'title' => 'Editar Pago',
                                 'class' => 'btn btn-link btn-sm text-success',
                                 'style' => 'display: contents; width: 20px; height: 20px; padding: 0 !important; margin: 0 !important; line-height: 1 !important; font-size: 0.85rem;'
                             ]
@@ -89,5 +102,4 @@ if (!empty($model->pagos)) {
 } else {
     echo '<div class="alert alert-info">No hay pagos registrados.</div>';
 }
-
 ?>
