@@ -13,6 +13,10 @@ use app\models\CorporativoUser;
 use app\models\UserDatos;
 use app\models\ContratosSearch;
 use app\models\Contratos;
+use app\models\Pagos; // Requerido para manejar el pago
+use app\models\TasaCambio; // Requerido para obtener la tasa
+use app\models\Cuotas; // Requerido para manejar las cuotas
+use app\components\UserHelper; // Requerido para subir archivos
 
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
@@ -28,13 +32,61 @@ class CorporativoController extends Controller
             parent::behaviors(),
             [
                 'verbs' => [
-                    'class' => VerbFilter::className(),
+                    'class' => VerbFilter::class,
                     'actions' => [
                         'delete' => ['POST'],
+                        'tasacambio-referencial' => ['POST'], // Permitir POST para la llamada AJAX
                     ],
                 ],
             ]
         );
+    }
+
+    /**
+     * Obtiene la tasa de cambio actual (tasa_cambio) o la más reciente.
+     * Es utilizada para inicializar el campo de Tasa en el formulario de Pagos.
+     * @return float
+     */
+    private function getTasaCambioReferencial(): float
+    {
+        // Busca la tasa de cambio para la fecha actual
+        $tasaModel = TasaCambio::find()
+            ->where(['fecha' => date('Y-m-d')])
+            ->one();
+            
+        if (!$tasaModel) {
+            // Fallback: Si no existe la de hoy, busca la más reciente
+            $tasaModel = TasaCambio::find()
+                ->orderBy(['fecha' => SORT_DESC])
+                ->one();
+        }
+
+        // Usa 'tasa_cambio' según el modelo TasaCambio.php
+        return $tasaModel ? (float)$tasaModel->tasa_cambio : 0.00;
+    }
+
+    /**
+     * Acción AJAX para obtener la tasa de cambio referencial para una fecha específica.
+     * @return string Tasa formateada o '0' si no se encuentra.
+     */
+    public function actionTasacambioReferencial(): string
+    {
+        // No configuramos formato JSON, devolvemos el valor como texto plano (string).
+        $fecha = \Yii::$app->request->post('fecha');
+        
+        if (empty($fecha)) {
+            return '0';
+        }
+
+        // Buscar la tasa_cambio para la fecha dada, ordenando por hora para obtener la más reciente.
+        $tasa = TasaCambio::find()
+            ->select('tasa_cambio')
+            ->where(['fecha' => $fecha])
+            ->orderBy(['hora' => SORT_DESC]) 
+            ->scalar(); 
+        
+        // Devolvemos el valor (o '0' si es null) como string para que JavaScript lo maneje.
+        return $tasa ? number_format((float)$tasa, 2, '.', '') : '0';
     }
 
     /**
@@ -113,13 +165,13 @@ class CorporativoController extends Controller
     public function actionPagos($id)
     {
         $corporativo = $this->findModel($id);
-        $model = new \app\models\Pagos();
+        $model = new Pagos();
         $model->loadDefaultValues();
         $model->user_id = null; // Pago corporativo, no específico de user
         $model->estatus = 'Por Conciliar';
 
         // Obtener IDs de usuarios asociados
-        $userIds = \app\models\CorporativoUser::find()
+        $userIds = CorporativoUser::find()
             ->select('user_id')
             ->where(['corporativo_id' => $id])
             ->column();
@@ -128,13 +180,13 @@ class CorporativoController extends Controller
         $grandTotal = 0;
         if (!empty($userIds)) {
             foreach ($userIds as $userId) {
-                $user = \app\models\UserDatos::findOne($userId);
+                $user = UserDatos::findOne($userId);
                 if ($user) {
-                    // Cargar cuotas pendientes como en PagosController
-                    $cuotas = \app\models\Cuotas::find()
+                    // Cargar cuotas pendientes
+                    $cuotas = Cuotas::find()
                         ->select('cuotas.*')
                         ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
-                        ->where(['contratos.user_id' => $userId, 'cuotas.Estatus' => 'pendiente'])
+                        ->where(['contratos.user_id' => $userId, 'cuotas.estatus' => 'pendiente'])
                         ->orderBy(['cuotas.fecha_vencimiento' => SORT_ASC])
                         ->all();
 
@@ -147,6 +199,12 @@ class CorporativoController extends Controller
                 }
             }
         }
+        
+        // --- INICIALIZACIÓN DE LA TASA Y FECHA DE PAGO ---
+        $model->fecha_pago = date('Y-m-d'); // Set default date
+        // Formatear a 2 decimales para la vista
+        $model->tasa = number_format($this->getTasaCambioReferencial(), 2, '.', '');
+        // --- FIN DE LA INICIALIZACIÓN ---
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
@@ -158,18 +216,18 @@ class CorporativoController extends Controller
                     $model->addError('monto_pagado', 'El monto a pagar debe coincidir con el total de cuotas pendientes.');
                     Yii::$app->session->setFlash('warning', 'El monto no coincide con el total de cuotas pendientes.');
                 } else {
-                    // Manejar archivo y guardar (adaptado de PagosController)
-                    $model->tasa = \app\models\TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio ?? 1;
+                    // Manejar archivo y guardar
                     $model->imagen_prueba_file = \yii\web\UploadedFile::getInstance($model, 'imagen_prueba_file');
 
                     if ($model->imagen_prueba_file) {
-                        // Lógica de subida similar a PagosController (simplificada)
+                        // Lógica de subida (similar a PagosController)
                         $folder = 'Pago';
                         $fileName = uniqid('pago_corp_') . '.' . $model->imagen_prueba_file->extension;
                         $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
 
                         if ($model->imagen_prueba_file->saveAs($tempFilePath)) {
-                            $publicUrl = \app\components\UserHelper::uploadFileToSupabaseApi(
+                            // Usamos UserHelper para la subida
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
                                 $tempFilePath,
                                 $model->imagen_prueba_file->type,
                                 $fileName,
@@ -188,15 +246,20 @@ class CorporativoController extends Controller
 
                     $transaction = Yii::$app->db->beginTransaction();
                     try {
+                        // El campo monto_usd en Pagos en realidad está guardando el monto en Bolívares (Bs)
+                        $post = $this->request->post('Pagos');
+                        $model->monto_usd = $post['monto_usd'] ?? null;
+                        
                         if ($model->save(false)) {
                             $contratosActualizados = [];
                             
                             // Marcar TODAS las cuotas pendientes del corporativo como pagadas
                             foreach ($allCuotas as $cuota) {
-                                if ($cuota->Estatus === 'pendiente') {
-                                    $cuota->Estatus = 'pagado';
+                                if ($cuota->estatus === 'pendiente') {
+                                    $cuota->estatus = 'pagado';
                                     $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
-                                    $cuota->rate_usd_bs = $model->tasa;
+                                    // Aseguramos que la tasa guardada es la del modelo de pago
+                                    $cuota->rate_usd_bs = $model->tasa; 
                                     $cuota->id_pago = $model->id; // Guardar ID del pago para rastreo
                                     $cuota->save(false);
 
@@ -207,13 +270,13 @@ class CorporativoController extends Controller
                                 }
                             }
                             
-                            // Actualizar estatus de contratos a 'activo' una vez pagadas todas sus cuotas
+                            // Actualizar estatus de contratos
                             foreach ($contratosActualizados as $contratoId) {
-                                $contrato = \app\models\Contratos::findOne($contratoId);
+                                $contrato = Contratos::findOne($contratoId);
                                 if ($contrato) {
                                     // Verificar si el contrato tiene cuotas pendientes restantes
-                                    $cuotasPendientes = \app\models\Cuotas::find()
-                                        ->where(['contrato_id' => $contratoId, 'Estatus' => 'pendiente'])
+                                    $cuotasPendientes = Cuotas::find()
+                                        ->where(['contrato_id' => $contratoId, 'estatus' => 'pendiente'])
                                         ->count();
                                     
                                     // Si no hay cuotas pendientes, activar el contrato
@@ -225,7 +288,7 @@ class CorporativoController extends Controller
                             }
 
                             $transaction->commit();
-                            Yii::$app->session->setFlash('success', 'Pago corporativo registrado exitosamente. Todas las cuotas pendientes han sido marcadas como pagadas y los contratos activados.');
+                            Yii::$app->session->setFlash('success', 'Pago corporativo registrado exitosamente. Las cuotas han sido actualizadas.');
                             return $this->redirect(['view', 'id' => $corporativo->id]);
                         } else {
                             throw new \Exception('Error al guardar el pago.');
@@ -252,45 +315,42 @@ class CorporativoController extends Controller
      * @return string|\yii\web\Response
      */
     public function actionCreate()
-{
-    $model = new Corporativo();
-    $model->created_at = date('Y-m-d H:i:s');
+    {
+        $model = new Corporativo();
+        $model->created_at = date('Y-m-d H:i:s');
 
-    if ($this->request->isPost) {
-        if ($model->load($this->request->post())) {
-            // El modelo se carga con los datos del formulario, incluyendo el user_datos_type_id
-            
-            // Si el modelo se guarda con éxito
-            if ($model->save()) {
+        if ($this->request->isPost) {
+            if ($model->load($this->request->post())) {
                 
-                $afiliadoId = $this->request->post('Corporativo')['user_login_id'] ?? null;
-                
-                if ($afiliadoId) {
-                    $modelCorporativoUser = new CorporativoUser();
-                    $modelCorporativoUser->corporativo_id = $model->id; // El ID del corporativo recién creado
-                    $modelCorporativoUser->user_id = $afiliadoId;      // El ID del afiliado
-                    $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-                    $modelCorporativoUser->rol_en_corporativo = 'afiliado';
+                if ($model->save()) {
                     
-                    if (!$modelCorporativoUser->save()) {
-                        Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
+                    $afiliadoId = $this->request->post('Corporativo')['user_login_id'] ?? null;
+                    
+                    if ($afiliadoId) {
+                        $modelCorporativoUser = new CorporativoUser();
+                        $modelCorporativoUser->corporativo_id = $model->id;
+                        $modelCorporativoUser->user_id = $afiliadoId;
+                        $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                        $modelCorporativoUser->rol_en_corporativo = 'afiliado';
+                        
+                        if (!$modelCorporativoUser->save()) {
+                            Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
+                        }
                     }
+                
+                    Yii::$app->session->setFlash('success', 'Corporativo creado exitosamente.');
+                    return $this->redirect(['view', 'id' => $model->id]);
                 }
-               
-
-                Yii::$app->session->setFlash('success', 'Corporativo creado exitosamente.');
-                return $this->redirect(['view', 'id' => $model->id]);
             }
+        } else {
+            $model->loadDefaultValues();
         }
-    } else {
-        $model->loadDefaultValues();
-    }
 
-    return $this->render('create', [
-        'model' => $model,
-    ]);
-}
+        return $this->render('create', [
+            'model' => $model,
+        ]);
+    }
 
     /**
      * Updates an existing Corporativo model.
@@ -300,81 +360,75 @@ class CorporativoController extends Controller
      * @throws NotFoundHttpException if the model cannot be found
      */
    public function actionUpdate($id)
-{
-    $model = $this->findModel($id);
-    
-    // Obtener los IDs de los afiliados que ya están asociados con este corporativo
-    $afiliadosActuales = CorporativoUser::find()
-        ->where(['corporativo_id' => $model->id])
-        ->select('user_id')
-        ->column();
-
-    if ($this->request->isPost && $model->load($this->request->post())) {
-
-        // Obtener los IDs de los afiliados seleccionados en el formulario
-        $afiliadosSeleccionados = (array)($this->request->post('Corporativo')['users_ids'] ?? []);
+    {
+        $model = $this->findModel($id);
         
-        // --- INICIO DE LA LÍNEA CORREGIDA ---
-        // Filtrar cualquier valor nulo o vacío que pueda venir del formulario
-        $afiliadosSeleccionados = array_filter($afiliadosSeleccionados);
-        // --- FIN DE LA LÍNEA CORREGIDA ---
+        // Obtener los IDs de los afiliados que ya están asociados con este corporativo
+        $afiliadosActuales = CorporativoUser::find()
+            ->where(['corporativo_id' => $model->id])
+            ->select('user_id')
+            ->column();
 
-        // Identificar qué afiliados se deben añadir y cuáles se deben borrar
-        $afiliadosParaBorrar = array_diff($afiliadosActuales, $afiliadosSeleccionados);
-        $afiliadosParaAnadir = array_diff($afiliadosSeleccionados, $afiliadosActuales);
+        if ($this->request->isPost && $model->load($this->request->post())) {
 
-        // --- LÓGICA PARA BORRAR RELACIONES Y ACTUALIZAR USER_DATOS ---
-        foreach ($afiliadosParaBorrar as $userId) {
-            // 1. Borrar la relación de la tabla intermedia
-            $relacion = CorporativoUser::findOne(['corporativo_id' => $model->id, 'user_id' => $userId]);
-            if ($relacion) {
-                $relacion->delete();
+            $afiliadosSeleccionados = (array)($this->request->post('Corporativo')['users_ids'] ?? []);
+            $afiliadosSeleccionados = array_filter($afiliadosSeleccionados);
+            
+            $afiliadosParaBorrar = array_diff($afiliadosActuales, $afiliadosSeleccionados);
+            $afiliadosParaAnadir = array_diff($afiliadosSeleccionados, $afiliadosActuales);
+
+            // --- LÓGICA PARA BORRAR RELACIONES Y ACTUALIZAR USER_DATOS ---
+            foreach ($afiliadosParaBorrar as $userId) {
+                // 1. Borrar la relación de la tabla intermedia
+                $relacion = CorporativoUser::findOne(['corporativo_id' => $model->id, 'user_id' => $userId]);
+                if ($relacion) {
+                    $relacion->delete();
+                }
+
+                // 2. Actualizar el registro en la tabla user_datos (desvincular)
+                $userDatos = UserDatos::findOne(['user_login_id' => $userId]);
+                if ($userDatos) {
+                    $userDatos->afiliado_corporativo_id = null;
+                    $userDatos->user_datos_type_id = 1; // Asumimos 1 es "Simple"
+                    $userDatos->save(false);
+                }
+            }
+            
+            // --- LÓGICA PARA AÑADIR NUEVAS RELACIONES Y ACTUALIZAR USER_DATOS ---
+            foreach ($afiliadosParaAnadir as $userId) {
+                // 1. Crear la nueva relación en la tabla intermedia
+                $nuevaRelacion = new CorporativoUser();
+                $nuevaRelacion->corporativo_id = $model->id;
+                $nuevaRelacion->user_id = $userId;
+                $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
+                $nuevaRelacion->rol_en_corporativo = 'afiliado';
+                $nuevaRelacion->save(false);
+
+                // 2. Actualizar el registro en la tabla user_datos (vincular)
+                $userDatos = UserDatos::findOne(['user_login_id' => $userId]);
+                if ($userDatos) {
+                    $userDatos->afiliado_corporativo_id = $model->id;
+                    $userDatos->user_datos_type_id = 2; // Asumimos 2 es "Corporativo"
+                    $userDatos->save(false);
+                }
             }
 
-            // 2. Actualizar el registro en la tabla user_datos
-            $userDatos = UserDatos::findOne(['user_login_id' => $userId]);
-            if ($userDatos) {
-                $userDatos->afiliado_corporativo_id = null;
-                $userDatos->user_datos_type_id = 1; // Asumimos que 1 es el ID para "Simple"
-                $userDatos->save();
-            }
-        }
-        
-        // --- LÓGICA PARA AÑADIR NUEVAS RELACIONES Y ACTUALIZAR USER_DATOS ---
-        foreach ($afiliadosParaAnadir as $userId) {
-            // 1. Crear la nueva relación en la tabla intermedia
-            $nuevaRelacion = new CorporativoUser();
-            $nuevaRelacion->corporativo_id = $model->id;
-            $nuevaRelacion->user_id = $userId;
-            $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
-            $nuevaRelacion->rol_en_corporativo = 'afiliado';
-            $nuevaRelacion->save();
-
-            // 2. Actualizar el registro en la tabla user_datos
-            $userDatos = UserDatos::findOne(['user_login_id' => $userId]);
-            if ($userDatos) {
-                $userDatos->afiliado_corporativo_id = $model->id;
-                $userDatos->user_datos_type_id = 2; // Asumimos que 2 es el ID para "Corporativo"
-                $userDatos->save();
+            // --- LÓGICA PARA GUARDAR EL MODELO PRINCIPAL (CORPORATIVO) ---
+            if ($model->save()) {
+                Yii::$app->session->setFlash('success', 'Corporativo actualizado exitosamente.');
+                return $this->redirect(['view', 'id' => $model->id]);
+            } else {
+                Yii::$app->session->setFlash('error', 'Error al actualizar el corporativo: ' . implode(', ', array_map(function($errors) {
+                    return implode(', ', $errors);
+                }, $model->getErrors())));
             }
         }
 
-        // --- LÓGICA PARA GUARDAR EL MODELO PRINCIPAL (CORPORATIVO) ---
-        if ($model->save()) {
-            Yii::$app->session->setFlash('success', 'Corporativo actualizado exitosamente.');
-            return $this->redirect(['view', 'id' => $model->id]);
-        } else {
-            Yii::$app->session->setFlash('error', 'Error al actualizar el corporativo: ' . implode(', ', array_map(function($errors) {
-                return implode(', ', $errors);
-            }, $model->getErrors())));
-        }
+        return $this->render('update', [
+            'model' => $model,
+            'afiliadosActuales' => $afiliadosActuales,
+        ]);
     }
-
-    return $this->render('update', [
-        'model' => $model,
-        'afiliadosActuales' => $afiliadosActuales, // Es útil pasar esto a la vista para la selección por defecto
-    ]);
-}
 
     /**
      * Deletes an existing Corporativo model.

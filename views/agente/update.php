@@ -30,7 +30,7 @@ $this->registerCss("
                 </h3>
                 <?php if (!$model->isNewRecord) { ?>
                     <?= Html::a(
-                        '<i class="fas fa-users mr-2"></i> AGENTES/ASESORES DE ESTA AGENCIA',
+                        '<i class="fas fa-users mr-2"></i> AGENTES DE ESTA AGENCIA',
                         ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
                         [
                             'class' => 'btn btn-success btn-agencia-asesores',

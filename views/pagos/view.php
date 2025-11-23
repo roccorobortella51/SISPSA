@@ -161,7 +161,19 @@ $this->params['breadcrumbs'][] = $this->title;
                 <div class="col-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm">
                         <strong class="text-primary d-block mb-3">Imagen de Prueba:</strong>
-                        <?= Html::a('Ver comprobante', $model->imagen_prueba, ['target' => '_blank', 'class' => 'btn btn-primary rounded-pill']) ?>
+                        <div class="d-flex align-items-center gap-4">
+                            <div class="image-preview">
+                                <img src="<?= Url::to(['/pagos/view-image', 'id' => $model->id]) ?>" 
+                                    alt="Comprobante de pago" 
+                                    style="max-width: 200px; max-height: 150px; border-radius: 8px;"
+                                    class="img-thumbnail">
+                            </div>
+                            <div>
+                                <?= Html::a('<i class="fas fa-expand me-2"></i> Ver comprobante completo', 
+                                    Url::to(['/pagos/view-image', 'id' => $model->id]), 
+                                    ['target' => '_blank', 'class' => 'btn btn-primary rounded-pill']) ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 <?php
-// controllers/CuotaWebController.php
+// controllers/CuotaWebController.php   
 
 namespace app\controllers;
 
@@ -298,6 +298,58 @@ class CuotaWebController extends Controller
         }
     }
 
+    /**
+     * Verifica cuotas duplicadas desde la interfaz web.
+     */
+    public function actionVerificarDuplicados()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        
+        try {
+            $result = $this->runConsoleCommand('verificar-duplicados');
+            
+            return [
+                'success' => $result['success'],
+                'output' => $result['output'],
+                'message' => $result['success'] ? 'Verificación de duplicados completada' : 'Error en verificación',
+                'returnCode' => $result['returnCode']
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => $e->getMessage(),
+                'message' => 'Error ejecutando el comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Elimina cuotas duplicadas desde la interfaz web.
+     */
+    public function actionEliminarDuplicados()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        
+        try {
+            $result = $this->runConsoleCommand('eliminar-duplicados');
+            
+            return [
+                'success' => $result['success'],
+                'output' => $result['output'],
+                'message' => $result['success'] ? 'Eliminación de duplicados completada' : 'Error en eliminación',
+                'returnCode' => $result['returnCode']
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => $e->getMessage(),
+                'message' => 'Error ejecutando el comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
     public function actionActualizarMontos()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -320,4 +372,77 @@ class CuotaWebController extends Controller
             ];
         }
     }
+
+    /**
+     * Repara la relación entre pagos y cuotas desde la interfaz web.
+     */
+    public function actionRepararRelacionPagos()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        
+        try {
+            $result = $this->runConsoleCommand('reparar-relacion-pagos');
+            
+            return [
+                'success' => $result['success'],
+                'output' => $result['output'],
+                'message' => $result['success'] ? 'Reparación de relaciones pago-cuota completada' : 'Error en reparación',
+                'returnCode' => $result['returnCode']
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => $e->getMessage(),
+                'message' => 'Error ejecutando el comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+    /**
+     * Elimina cuotas incorrectas específicas (IDs 149, 150, 147)
+     */
+    public function actionEliminarIncorrectas()  // ← SHORTER NAME
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        
+        try {
+            // Delete the specific cuotas that were incorrectly generated
+            $cuotasToDelete = [149, 150, 147];
+            $deletedCount = 0;
+            $details = [];
+            
+            foreach ($cuotasToDelete as $cuotaId) {
+                $cuota = \app\models\Cuotas::findOne($cuotaId);
+                if ($cuota) {
+                    $contratoId = $cuota->contrato_id;
+                    if ($cuota->delete()) {
+                        $deletedCount++;
+                        $details[] = "✅ Cuota #{$cuotaId} (Contrato #{$contratoId}) eliminada";
+                        Yii::info("Deleted incorrect cuota #{$cuotaId} for contract #{$contratoId}", 'cuotas');
+                    } else {
+                        $details[] = "❌ Error eliminando cuota #{$cuotaId}";
+                    }
+                } else {
+                    $details[] = "⚠️ Cuota #{$cuotaId} no encontrada";
+                }
+            }
+            
+            $output = implode("\n", $details);
+            
+            return [
+                'success' => true,
+                'output' => "Resultado: {$deletedCount}/3 cuotas eliminadas\n\n" . $output,
+                'message' => 'Proceso de eliminación completado',
+                'returnCode' => 0
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error eliminando cuotas incorrectas',
+                'returnCode' => -1
+            ];
+        }
+    }
+
 }

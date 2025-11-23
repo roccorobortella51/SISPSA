@@ -51,6 +51,7 @@ class Contratos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['fecha_ini', 'fecha_ven'], 'required', 'message' => 'Este campo es obligatorio.'],
             [['plan_id', 'ente_id', 'clinica_id', 'fecha_ini', 'fecha_ven', 'monto', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_por', 'anulado_fecha', 'anulado_motivo', 'user_id', 'PDF'], 'default', 'value' => null],
             [['created_at', 'fecha_ini', 'fecha_ven', 'updated_at', 'deleted_at', 'anulado_fecha'], 'safe'],
             [['plan_id', 'ente_id', 'clinica_id', 'anulado_por', 'user_id'], 'default', 'value' => null],
@@ -74,8 +75,8 @@ class Contratos extends \yii\db\ActiveRecord
             'plan_id' => 'Plan ID',
             'ente_id' => 'Ente ID',
             'clinica_id' => 'Clinica ID',
-            'fecha_ini' => 'Fecha Ini',
-            'fecha_ven' => 'Fecha Ven',
+            'fecha_ini' => 'Fecha Ini *',
+            'fecha_ven' => 'Fecha Ven *',
             'monto' => 'Monto',
             'estatus' => 'Estatus',
             'nrocontrato' => 'Nrocontrato',
