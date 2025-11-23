@@ -310,5 +310,159 @@ class UserController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
+    // Add these methods to your existing UserController class
 
+        /**
+         * Finds user by cedula
+         * @return \yii\web\Response
+         */
+    /**
+ * Finds user by cedula for the agente form
+ * @return \yii\web\Response
+ */
+    public function actionFindByCedula()  // ← Remove the extra 'c' - should be 'Cedula' not 'Ccedula'
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        $cedula = Yii::$app->request->get('cedula');
+        
+        if (!$cedula) {
+            return ['success' => false, 'message' => 'Cédula no proporcionada'];
+        }
+        
+        try {
+            Yii::info("Searching for user with cedula: " . $cedula);
+            
+            // Clean and validate the cedula input
+            $cedula = trim($cedula);
+            
+            // Remove any non-numeric characters (in case user enters formatted cedula)
+            $cedula = preg_replace('/[^0-9]/', '', $cedula);
+            
+            if (empty($cedula)) {
+                return ['success' => false, 'message' => 'Cédula no válida'];
+            }
+            
+            // Convert to integer for database search
+            $cedulaInt = (int)$cedula;
+            
+            Yii::info("Cleaned cedula for search: " . $cedulaInt);
+            
+            // Find user by cedula in UserDatos
+            $userDatos = UserDatos::find()
+                ->where(['cedula' => $cedulaInt])
+                ->andWhere(['IS NOT', 'user_login_id', null])
+                ->with('userLogin')
+                ->one();
+            
+            Yii::info("UserDatos found: " . ($userDatos ? 'Yes' : 'No'));
+            
+            if ($userDatos && $userDatos->userLogin) {
+                return [
+                    'success' => true,
+                    'user' => [
+                        'id' => $userDatos->userLogin->id,
+                        'nombres' => $userDatos->nombres,
+                        'apellidos' => $userDatos->apellidos,
+                        'tipo_cedula' => $userDatos->tipo_cedula,
+                        'cedula' => $userDatos->cedula,
+                        'email' => $userDatos->userLogin->email,
+                    ]
+                ];
+            }
+            
+            return ['success' => false, 'message' => 'Usuario no encontrado'];
+            
+        } catch (\Exception $e) {
+            Yii::error('Error in actionFindByCedula: ' . $e->getMessage());
+            Yii::error('Stack trace: ' . $e->getTraceAsString());
+            return ['success' => false, 'message' => 'Error del sistema: ' . $e->getMessage()];
+        }
+    }
+    /**
+     * Creates a new user with Agente role for the agencia form
+     * @return \yii\web\Response
+     */
+    public function actionCreateAgenteUser()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        $post = Yii::$app->request->post();
+        
+        try {
+            // Create User model
+            $user = new User();
+            $user->scenario = 'create';
+            $user->username = $post['email']; // Use email as username
+            $user->email = $post['email'];
+            $user->password = $post['password'];
+            $user->status = User::STATUS_ACTIVE;
+            $user->roles = 'Agente'; // Predefined role
+            
+            // Create UserDatos model
+            $userDatos = new UserDatos();
+            $userDatos->nombres = $post['nombres'];
+            $userDatos->apellidos = $post['apellidos'];
+            $userDatos->tipo_cedula = $post['tipo_cedula'];
+            $userDatos->cedula = $post['cedula'];
+            $userDatos->telefono = $post['telefono'] ?? null;
+            $userDatos->email = $post['email'];
+            $userDatos->role = 'Agente'; // Predefined role
+            
+            // Validate and save both models
+            if ($user->validate() && $userDatos->validate()) {
+                $transaction = Yii::$app->db->beginTransaction();
+                
+                try {
+                    if ($user->save()) {
+                        // Assign RBAC role
+                        $auth = Yii::$app->authManager;
+                        $auth->revokeAll($user->id);
+                        $rol = $auth->getRole($user->roles);
+                        if ($rol) {
+                            $auth->assign($rol, $user->id);
+                            Yii::$app->cache->flush();
+                        }
+                        
+                        // Save UserDatos
+                        $userDatos->user_login_id = $user->id;
+                        if ($userDatos->save(false)) {
+                            $transaction->commit();
+                            
+                            return [
+                                'success' => true,
+                                'user' => [
+                                    'id' => $user->id,
+                                    'nombres' => $userDatos->nombres,
+                                    'apellidos' => $userDatos->apellidos,
+                                    'email' => $user->email
+                                ]
+                            ];
+                        }
+                    }
+                    
+                    $transaction->rollBack();
+                    return ['success' => false, 'message' => 'Error al guardar los datos del usuario'];
+                    
+                } catch (\Exception $e) {
+                    $transaction->rollBack();
+                    Yii::error('Error creating agente user: ' . $e->getMessage());
+                    return ['success' => false, 'message' => 'Error del sistema: ' . $e->getMessage()];
+                }
+            } else {
+                $errors = array_merge($user->errors, $userDatos->errors);
+                return ['success' => false, 'message' => 'Errores de validación: ' . json_encode($errors)];
+            }
+            
+        } catch (\Exception $e) {
+            Yii::error('Error in createAgenteUser: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error del sistema: ' . $e->getMessage()];
+        }
+    }
+    // Add this temporary method to your UserController for testing
+    public function actionTestConnection()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        return ['success' => true, 'message' => 'Controller is accessible', 'timestamp' => date('Y-m-d H:i:s')];
+    }
 }

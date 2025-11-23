@@ -69,7 +69,6 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
             <br> 
         <?php } ?>
         
-        <!-- Sección de Información General -->
         <div class="card mb-3">
             <div class="card-header bg-info text-center">
                 <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">INFORMACIÓN GENERAL</h6>
@@ -102,7 +101,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'pluginOptions' => [
                                     'allowClear' => false,
                                 ],
-                        ])->label('NOMBRE DEL AGENTE/ASESOR') ?> 
+                        ])->label('NOMBRE DEL AGENTE') ?> 
                     </div>
                     <div class="col-md-12">
                         <?= $form->field($model, 'registro_corredor_actividad_aseguradora')->textInput([
@@ -114,47 +113,71 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
             </div>
         </div>
 
-        <!-- Sección de Porcentajes -->
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-center"> 
-                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PORCENTAJES (%)</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <?= $form->field($model, 'por_venta')->label('PORCENTAJE POR VENTA')->textInput([
+        <div class="card mb-3 porcentajes-section">
+             <div class="card-header bg-primary text-center"> 
+                 <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PORCENTAJES (%)</h6>
+             </div>
+             <div class="card-body">
+                <div class="row g-2 justify-content-center align-items-end">
+                     <div class="col-6 col-sm-4 col-md-2">
+                         <?= $form->field($model, 'por_venta')->label('POR VENTA' . Html::tag('i', '', [
+                            'class' => 'fas fa-info-circle ml-1 text-info',
+                            'data-toggle' => 'tooltip', 
+                            'title' => 'Porcentaje de comisión por venta.',
+                            'data-placement' => 'top'
+                        ]))->textInput([
                             'class' => 'form-control form-control-lg',
                             'placeholder' => '% Venta',
                             'type' => 'number',
                             'step' => '0.01',
                         ]) ?>
                     </div>
-                    <div class="col-md-3">
-                        <?= $form->field($model, 'por_asesor')->label('PORCENTAJE DE ASESORÍA')->textInput([
+                    <div class="col-6 col-sm-4 col-md-2">
+                        <?= $form->field($model, 'por_asesor')->label('ASESORÍA' . Html::tag('i', '', [
+                            'class' => 'fas fa-info-circle ml-1 text-info',
+                            'data-toggle' => 'tooltip', 
+                            'title' => 'Porcentaje de comisión por servicios de asesoría.',
+                            'data-placement' => 'top'
+                        ]))->textInput([
                             'class' => 'form-control form-control-lg',
                             'placeholder' => '% Asesoría',
                             'type' => 'number',
                             'step' => '0.01',
                         ]) ?>
                     </div>
-                    <div class="col-md-3">
-                        <?= $form->field($model, 'por_cobranza')->label('PORCENTAJE POR COBRANZA')->textInput([
+                    <div class="col-6 col-sm-4 col-md-2">
+                        <?= $form->field($model, 'por_cobranza')->label('COBRANZA' . Html::tag('i', '', [
+                            'class' => 'fas fa-info-circle ml-1 text-info',
+                            'data-toggle' => 'tooltip', 
+                            'title' => 'Porcentaje de comisión para la gestión de cobranza.',
+                            'data-placement' => 'top'
+                        ]))->textInput([
                             'class' => 'form-control form-control-lg',
                             'placeholder' => '% Cobranza',
                             'type' => 'number',
                             'step' => '0.01',
                         ]) ?>
                     </div>
-                    <div class="col-md-3">
-                        <?= $form->field($model, 'por_post_venta')->label('PORCENTAJE POST VENTA')->textInput([
+                    <div class="col-6 col-sm-4 col-md-2">
+                        <?= $form->field($model, 'por_post_venta')->label('POST VENTA' . Html::tag('i', '', [
+                            'class' => 'fas fa-info-circle ml-1 text-info',
+                            'data-toggle' => 'tooltip', 
+                            'title' => 'Porcentaje para servicios de post-venta.',
+                            'data-placement' => 'top'
+                        ]))->textInput([
                             'class' => 'form-control form-control-lg',
                             'placeholder' => '% Post-Venta',
                             'type' => 'number',
                             'step' => '0.01',
                         ]) ?>
                     </div>
-                    <div class="col-md-3">
-                        <?= $form->field($model, 'por_registrar')->label('PORCENTAJE POR REGISTRO')->textInput([
+                    <div class="col-6 col-sm-4 col-md-2">
+                        <?= $form->field($model, 'por_registrar')->label('REGISTRO' . Html::tag('i', '', [
+                            'class' => 'fas fa-info-circle ml-1 text-info',
+                            'data-toggle' => 'tooltip', 
+                            'title' => 'Porcentaje de comisión por registro.',
+                            'data-placement' => 'top'
+                        ]))->textInput([
                             'class' => 'form-control form-control-lg', 
                             'placeholder' => '% Registro',
                             'type' => 'number',
@@ -162,18 +185,17 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         ]) ?>
                     </div>
                 </div>
-            </div>
-        </div>
+             </div>
+         </div>
         
-        <!-- Sección de Permisos -->
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-center"> 
-                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL AGENTE/ASESOR</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
+        <div class="card mb-3 permisos-section">
+             <div class="card-header bg-primary text-center"> 
+                 <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL AGENTE</h6>
+             </div>
+             <div class="card-body">
+                <div class="d-flex justify-content-center flex-row flex-wrap gap-3 align-items-start" style="overflow-x:auto; padding-bottom:8px;">
+                     <div class="flex-shrink-0" style="min-width:180px;">
+                         <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
                                 'onText' => 'Si',
@@ -184,7 +206,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'options' => ['id' => Html::getInputId($model, 'puede_vender')],
                         ])->label('Puede Vender'); ?>
                     </div>
-                    <div class="col-md-4">
+                    <div class="flex-shrink-0" style="min-width:180px;">
                         <?= $form->field($model, 'puede_asesorar')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -196,7 +218,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'options' => ['id' => Html::getInputId($model, 'puede_asesorar')],
                         ])->label('Puede Asesorar'); ?>
                     </div>
-                    <div class="col-md-4">
+                    <div class="flex-shrink-0" style="min-width:180px;">
                         <?= $form->field($model, 'puede_cobrar')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -208,7 +230,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'options' => ['id' => Html::getInputId($model, 'puede_cobrar')],
                         ])->label('Puede Cobrar'); ?>
                     </div>
-                    <div class="col-md-4">
+                    <div class="flex-shrink-0" style="min-width:180px;">
                         <?= $form->field($model, 'puede_post_venta')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -220,7 +242,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'options' => ['id' => Html::getInputId($model, 'puede_post_venta')],
                         ])->label('Puede Post Venta'); ?>
                     </div>
-                    <div class="col-md-4">
+                    <div class="flex-shrink-0" style="min-width:180px;">
                         <?= $form->field($model, 'puede_registrar')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
@@ -233,10 +255,9 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         ])->label('Puede Registrar'); ?>
                     </div>
                 </div>
-            </div>
-        </div>
+             </div>
+         </div>
         
-        <!-- Sección de Botones de Acción -->
         <div class="row">
             <div class="col-md-12">
                 <div class="form-group text-end mt-4" style="margin-right:10px;">
@@ -262,14 +283,45 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 // Script JavaScript para limpiar el formulario
 $script = <<<JS
     $('#btn-limpiar-formulario').on('click', function() {
-        // Resetea todos los campos del formulario con el ID 'agente-fuerza-form'
         $('#agente-fuerza-form')[0].reset();
-
-        // Para Select2: Si el campo 'idusuario' no se resetea visualmente,
-        // necesitas forzar el cambio. El ID por defecto de un Select2 de Yii con ActiveForm es
-        // 'nombremodelo-nombreatributo' -> '#agentefuerza-idusuario'
         $('#agentefuerza-idusuario').val('').trigger('change');
     });
 JS;
 $this->registerJs($script, View::POS_END);
+
+// Initialize Bootstrap tooltips for the inputs above
+$tooltipJs = <<<JS
+    (function(){
+        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.tooltip !== 'undefined') {
+            jQuery(function(){ jQuery('[data-toggle="tooltip"], [data-bs-toggle="tooltip"]').tooltip({container: 'body'}); });
+        }
+    })();
+JS;
+$this->registerJs($tooltipJs, View::POS_END);
 ?>
+<style>
+/* Center campos inside Porcentajes and Permisos cards */
+.porcentajes-section .form-group,
+.permisos-section .form-group {
+    text-align: center;
+}
+/* Limitar el ancho del input de porcentaje para que el centrado sea visible */
+.porcentajes-section .form-control {
+    max-width: 180px; 
+}
+.porcentajes-section .form-control,
+.permisos-section .form-control,
+.permisos-section .kv-switch {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Ensure labels are centered for these sections */
+.porcentajes-section .form-label,
+.permisos-section .form-label,
+.porcentajes-section label,
+.permisos-section label {
+    display: block;
+    text-align: center;
+}
+</style>

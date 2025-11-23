@@ -81,6 +81,21 @@ $this->params['breadcrumbs'][] = $this->title;
                             data-action-name="verificar-vencidas">
                             <i class="fas fa-exclamation-triangle"></i> Verificar y Suspender Vencidas
                         </button>
+
+                        <!-- NEW: Duplicate Management Buttons -->
+                        <button type="button" class="btn btn-outline-warning btn-lg" 
+                            onclick="executeAction(this)"
+                            data-action-url="<?= Url::to(['cuota-web/verificar-duplicados']) ?>"
+                            data-action-name="verificar-duplicados">
+                            <i class="fas fa-search"></i> Verificar Cuotas Duplicadas
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-danger btn-lg" 
+                            onclick="executeAction(this)"
+                            data-action-url="<?= Url::to(['cuota-web/eliminar-duplicados']) ?>"
+                            data-action-name="eliminar-duplicados">
+                            <i class="fas fa-trash-alt"></i> Eliminar Cuotas Duplicadas
+                        </button>
                     </div>
                 </div>
             </div>
@@ -144,7 +159,7 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0">
+                    <h5 class="card-title mb-0 text-white">
                         <i class="fas fa-tools"></i> Mantenimiento
                     </h5>
                 </div>
@@ -156,7 +171,18 @@ $this->params['breadcrumbs'][] = $this->title;
                             data-action-name="actualizar-montos">
                             <i class="fas fa-dollar-sign"></i> Actualizar Montos de Cuotas
                         </button>
-                    </div>
+                        <button type="button" class="btn btn-outline-info btn-lg" 
+                            onclick="executeAction(this)"
+                            data-action-url="<?= Url::to(['cuota-web/reparar-relacion-pagos']) ?>"
+                            data-action-name="reparar-relacion-pagos">
+                            <i class="fas fa-link"></i> Reparar Relación Pagos-Cuotas
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-lg" 
+                            onclick="executeAction(this)"
+                            data-action-url="<?= Url::to(['cuota-web/eliminar-incorrectas']) ?>" 
+                            data-action-name="eliminar-incorrectas">
+                            <i class="fas fa-trash-alt"></i> Eliminar Cuotas Incorrectas (149,150,147)
+                        </button>
                     <div class="mt-3">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i> Use estas herramientas para mantenimiento del sistema.
@@ -206,7 +232,7 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-light">
-                    <h6 class="card-title mb-0">
+                    <h6 class="card-title mb-0 text-white">
                         <i class="fas fa-info-circle"></i> Información del Sistema
                     </h6>
                 </div>

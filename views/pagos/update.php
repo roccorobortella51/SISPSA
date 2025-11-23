@@ -5,6 +5,7 @@ use yii\helpers\Url;
 
 /** @var yii\web\View $this */
 /** @var app\models\Pagos $model */
+/** @var array $cuotas */
 
 $this->title = 'Update Pagos: ' . $model->id;
 
@@ -18,12 +19,12 @@ $this->title = 'Update Pagos: ' . $model->id;
 
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-    <div class="ms-panel-body">
-        <?= $this->render('_form', [
-            'model' => $model,
-        ]) ?>
-    </div>
+            <div class="ms-panel-body">
+                <?= $this->render('_form', [
+                    'model' => $model,
+                    'cuotas' => $cuotas, // ADD THIS LINE - pass the cuotas variable
+                ]) ?>
             </div>
         </div>
-
+    </div>
 </div>

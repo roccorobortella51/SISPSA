@@ -52,6 +52,10 @@ class Pagos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            // --- ADDED: MANDATORY FIELDS ---
+            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd',], 'required'],
+            // ---------------------------------
+            
             [['recibo_id', 'fecha_pago', 'monto_pagado', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'user_id', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
             [['monto_usd', 'tasa'], 'default', 'value' => 0],
             [['created_at', 'fecha_pago', 'updated_at', 'fecha_conciliacion', 'fecha_registro', 'deleted_at'], 'safe'],
@@ -237,5 +241,38 @@ class Pagos extends \yii\db\ActiveRecord
         ];
         
         return $estados[$this->estatus] ?? $this->estatus;
+    }
+    /**
+ * Obtiene el resumen de pagos para un rango de fechas y estado específico
+ * 
+ * @param string $startDate Fecha de inicio (Y-m-d)
+ * @param string $endDate Fecha de fin (Y-m-d)
+ * @param string $status Estado del pago ('Por Conciliar', 'Conciliado')
+ * @return array|null
+ */
+public static function getPaymentsSummaryForDateRange($startDate, $endDate, $status = 'Por Conciliar')
+    {
+        $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+        
+        $query = self::find()
+            ->where(['pagos.estatus' => $status])
+            ->andWhere(['between', 
+                new \yii\db\Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        
+        $result = $query->select([
+                'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
+                'total_count' => 'COUNT(*)'
+            ])
+            ->asArray()
+            ->one();
+        
+        // Ensure we always return an array with both keys
+        return [
+            'total_monto' => $result['total_monto'] ?? 0,
+            'total_count' => $result['total_count'] ?? 0
+        ];
     }
 }

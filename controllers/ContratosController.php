@@ -196,24 +196,29 @@ class ContratosController extends Controller
     protected function generarCuotaInicial($contrato)
     {
         try {
-            // Verificar si ya existe una cuota inicial
-            $existeCuotaInicial = \app\models\Cuotas::find()
+            // VERIFICACIÓN MEJORADA: Buscar cuotas existentes para el mes de inicio
+            $fechaInicio = new \DateTime($contrato->fecha_ini);
+            $mesInicio = $fechaInicio->format('Y-m');
+            
+            $existeCuota = \app\models\Cuotas::find()
                 ->where(['contrato_id' => $contrato->id])
+                ->andWhere(['>=', 'fecha_vencimiento', $mesInicio . '-01'])
+                ->andWhere(['<=', 'fecha_vencimiento', $mesInicio . '-31'])
                 ->exists();
                 
-            if ($existeCuotaInicial) {
-                return false; // Ya existe una cuota
+            if ($existeCuota) {
+                Yii::info("Ya existe cuota para el mes de inicio en contrato #{$contrato->id}", 'contratos');
+                return false; // Ya existe una cuota para este mes
             }
             
-            // Generar cuota inicial para el mes de inicio del contrato
-            $fechaInicio = new \DateTime($contrato->fecha_ini);
-            $fechaVencimiento = $fechaInicio->format('Y-m-01');
+            // Generar cuota inicial
+            $fechaVencimiento = $fechaInicio->format('Y-m-07'); // Día 7 del mes
             
             $cuota = new \app\models\Cuotas([
                 'contrato_id' => $contrato->id,
                 'fecha_vencimiento' => $fechaVencimiento,
                 'monto_usd' => $contrato->monto,
-                'Estatus' => 'pendiente',
+                'estatus' => 'pendiente',
                 'rate_usd_bs' => $this->obtenerTasaCambioActual(),
             ]);
             

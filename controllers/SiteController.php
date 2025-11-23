@@ -109,7 +109,8 @@ class SiteController extends Controller
     {
         Yii::$app->user->logout();
 
-        return $this->goHome();
+        // Use explicit redirect to the login action
+        return $this->redirect(['site/login']);
     }
 
 
@@ -233,6 +234,34 @@ class SiteController extends Controller
         return $valor;
     }
 
+    public function actionCuotaGenerar()
+{
+    // Disable CSRF validation
+    $this->enableCsrfValidation = false;
     
+    try {
+        $cuotaController = new \app\commands\CuotaController('cuota', Yii::$app);
+        ob_start();
+        $exitCode = $cuotaController->actionGenerar();
+        $output = ob_get_clean();
+        
+        $formattedOutput = nl2br(htmlspecialchars($output));
+        
+        echo "<h1>Generación de Cuotas</h1>";
+        echo "<div style='background: #f5f5f5; padding: 15px; font-family: monospace;'>";
+        echo $formattedOutput;
+        echo "</div>";
+        
+        if ($exitCode === 0) {
+            echo "<p style='color: green;'><strong>✅ Proceso completado exitosamente</strong></p>";
+        } else {
+            echo "<p style='color: red;'><strong>❌ Error en el proceso</strong></p>";
+        }
+        
+    } catch (\Exception $e) {
+        echo "<h1>Error del Sistema</h1>";
+        echo "<p style='color: red;'>Error: " . $e->getMessage() . "</p>";
+    }
+}
 
 }
