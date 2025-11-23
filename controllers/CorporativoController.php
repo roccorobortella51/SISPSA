@@ -322,22 +322,27 @@ class CorporativoController extends Controller
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
                 
+
                 if ($model->save()) {
+
                     
-                    $afiliadoId = $this->request->post('Corporativo')['user_login_id'] ?? null;
-                    
-                    if ($afiliadoId) {
-                        $modelCorporativoUser = new CorporativoUser();
-                        $modelCorporativoUser->corporativo_id = $model->id;
-                        $modelCorporativoUser->user_id = $afiliadoId;
-                        $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-                        $modelCorporativoUser->rol_en_corporativo = 'afiliado';
-                        
-                        if (!$modelCorporativoUser->save()) {
-                            Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
-                            Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
+                   foreach($model->users_ids as $user_datos_id){
+
+                    $afiliado = UserDatos::findOne($user_datos_id);
+
+                        if ($afiliado) {
+                            $modelCorporativoUser = new CorporativoUser();
+                            $modelCorporativoUser->corporativo_id = $model->id;
+                            $modelCorporativoUser->user_id = $afiliado->id;
+                            $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                            $modelCorporativoUser->rol_en_corporativo = 'afiliado';
+                            
+                            if (!$modelCorporativoUser->save()) {
+                                Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
+                                Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
+                            }
                         }
-                    }
+                   }
                 
                     Yii::$app->session->setFlash('success', 'Corporativo creado exitosamente.');
                     return $this->redirect(['view', 'id' => $model->id]);
