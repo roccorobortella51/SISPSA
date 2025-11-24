@@ -74,11 +74,205 @@ $contrato = \app\models\Contratos::find()
                     <span class="plan-info-value"><?= number_format($totalDisponible, 2) ?></span>
                 </div>
         </div>
-            
-            <div class="row">
+
+    <?php
+// Consulta para obtener los baremos utilizados por este afiliado
+$baremosUtilizados = \app\models\SisSiniestroBaremo::find()
+    ->joinWith(['siniestro', 'baremo'])
+    ->where(['sis_siniestro.iduser' => $afiliado->id])
+    ->andWhere(['baremo.estatus' => 'Activo'])
+    ->orderBy(['sis_siniestro.fecha' => SORT_DESC])
+    ->all();
+
+// Separar en citas y siniestros
+$baremosCitas = [];
+$baremosSiniestros = [];
+
+foreach ($baremosUtilizados as $siniestroBaremo) {
+    if ($siniestroBaremo->siniestro) {
+        $item = [
+            'fecha' => $siniestroBaremo->siniestro->fecha,
+            'nombre_servicio' => $siniestroBaremo->baremo->nombre_servicio,
+            'area' => $siniestroBaremo->baremo->area ? $siniestroBaremo->baremo->area->nombre : 'Sin área',
+            'descripcion' => $siniestroBaremo->baremo->descripcion,
+            'precio' => $siniestroBaremo->baremo->precio ?? 0,
+            'tipo' => $siniestroBaremo->siniestro->es_cita ? 'Cita' : 'Siniestro',
+            'estado' => $siniestroBaremo->siniestro->estatus ?? 'Desconocido'
+        ];
+
+        if ($siniestroBaremo->siniestro->es_cita) {
+            $baremosCitas[] = $item;
+        } else {
+            $baremosSiniestros[] = $item;
+        }
+    }
+}
+?>
+
+<!-- Estilos para la tabla -->
 
 
-        <div class="row mb-4 d-none" id="tipo-registro-control">
+<div class="row">
+    <!-- Estadísticas rápidas -->
+    <div class="col-md-12">
+        <div class="stats-card">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="stats-number"><?= count($baremosCitas) + count($baremosSiniestros) ?></div>
+                    <div class="stats-label">Total Baremos Usados</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-number"><?= count($baremosCitas) ?></div>
+                    <div class="stats-label">Citas Realizadas</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-number"><?= count($baremosSiniestros) ?></div>
+                    <div class="stats-label">Siniestros Atendidos</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-number">$<?= number_format(array_sum(array_column(array_merge($baremosCitas, $baremosSiniestros), 'precio')), 2) ?></div>
+                    <div class="stats-label">Total Invertido</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if($esCita == 1){?>
+    <!-- Tabla de Citas -->
+    <div class="col-md-12">
+        <h5 class="section-title">
+            <i class="fas fa-calendar-check"></i> Citas Realizadas (<?= count($baremosCitas) ?>)
+        </h5>
+        <?php if (!empty($baremosCitas)): ?>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-baremos">
+                    <thead>
+                        <tr>
+                            <th width="120">Fecha</th>
+                            <th>Área</th>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th width="100">Precio</th>
+                            <th width="100">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($baremosCitas as $cita): ?>
+                        <tr>
+                            <td>
+                               <?= date('d/m/Y', strtotime($cita['fecha'])) ?>
+                            </td>
+                            <td>
+                                <strong><?= $cita['area'] ?></strong>
+                            </td>
+                            <td><?= $cita['nombre_servicio'] ?></td>
+                            <td>
+                                <?php if (!empty($cita['descripcion'])): ?>
+                                    <?= $cita['descripcion'] ?>
+                                <?php else: ?>
+                                    <span class="text-muted">Sin descripción</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-success">
+                                <strong>$<?= number_format($cita['precio'], 2) ?></strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-cita">Cita</span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> No se han realizado citas aún.
+            </div>
+        <?php endif; ?>
+
+<?php } ?>
+
+    <!-- Tabla de Siniestros -->
+    <?php if($esCita == 0){?>
+    <div class="col-md-12">
+        <h5 class="section-title">
+            <i class="fas fa-file-medical"></i> Siniestros Atendidos (<?= count($baremosSiniestros) ?>)
+        </h5>
+        <?php if (!empty($baremosSiniestros)): ?>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-baremos">
+                    <thead>
+                        <tr>
+                            <th width="120">Fecha</th>
+                            <th>Área</th>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th width="100">Precio</th>
+                            <th width="100">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($baremosSiniestros as $siniestro): ?>
+                        <tr>
+                            <td>
+                                <?= date('d/m/Y', strtotime($siniestro['fecha'])) ?>
+                            </td>
+                            <td>
+                                <strong><?= $siniestro['area'] ?></strong>
+                            </td>
+                            <td><?= $siniestro['nombre_servicio'] ?></td>
+                            <td>
+                                <?php if (!empty($siniestro['descripcion'])): ?>
+                                    <?= $siniestro['descripcion'] ?>
+                                <?php else: ?>
+                                    <span class="text-muted">Sin descripción</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-success">
+                                <strong>$<?= number_format($siniestro['precio'], 2) ?></strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-siniestro">Siniestro</span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> No se han atendido siniestros aún.
+            </div>
+        <?php endif; ?>
+    <?php }?>
+    </div>
+</div>
+
+<!-- Script para mejoras visuales -->
+<script>
+$(document).ready(function() {
+    // Agregar tooltips si es necesario
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Resaltar filas al pasar el mouse
+    $('.table-baremos tbody tr').hover(
+        function() {
+            $(this).addClass('table-active');
+        },
+        function() {
+            $(this).removeClass('table-active');
+        }
+    );
+});
+</script>
+
+
+
+    <br>
+    <div class="row">
+
+
+    <div class="row mb-4 d-none" id="tipo-registro-control">
     <div class="col-md-12">
         <!-- Inicio: Control de Tipo de Registro con estilo de Tarjeta -->
         <div class="card shadow-sm border-2 border-primary-subtle rounded-3">
@@ -107,9 +301,9 @@ $contrato = \app\models\Contratos::find()
                     </div>
                     
                     <!-- Información contextual -->
-                    <small class="form-text text-muted mt-2 d-block">
+                    <h5 class="form-text text-muted mt-2 d-block">
                         <strong>Siniestro:</strong> Uso inmediato. <strong>Cita:</strong> Reserva (permite Plazo Pendiente).
-                    </small>
+                    </h5>
                 </div>
             </div>
         </div>
@@ -310,6 +504,7 @@ foreach ($planesItemsCobertura as $item) {
 $baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
 ?>
 
+<div class="col-md-12" align="center"><h3>Formulario</h3></div>
 <div class="field-with-icon">
     <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
         'data' => $baremosTotales, 
