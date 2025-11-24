@@ -772,38 +772,46 @@ public static function deleteFileFromSupabaseSiniestro(string $fileUrl, string $
 
     public static function getMyClinicaId()
     {
-        $clinica_id = '';
+        $allowedRoles = [
+        "Administrador-clinica",
+        "CONTROL DE CITAS", 
+        "ADMISIÓN",
+        "ATENCIÓN",
+        "COORDINADOR-CLINICA"
+        ];
+        
         $rol = self::getMyRol();
         
-
-        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN") {
-
+        if (in_array($rol, $allowedRoles)) {
             $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
             if ($userdatos) {
-                $clinica_id = $userdatos->clinica_id;
+                return $userdatos->clinica_id;
             }
-       
         } 
-
-        return $clinica_id;
+        
+        return ''; // Return empty string if no clinic found
     }
 
     public static function getMyClinicaName()
     {
-        $clinica_id = '';
+        $allowedRoles = [
+        "Administrador-clinica",
+        "CONTROL DE CITAS", 
+        "ADMISIÓN",
+        "ATENCIÓN", 
+        "COORDINADOR-CLINICA"
+        ];
+        
         $rol = self::getMyRol();
         
-
-        if ($rol == "Administrador-clinica") {
-
+        if (in_array($rol, $allowedRoles)) {
             $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
-            if ($userdatos) {
-                $clinica_id = $userdatos->clinica->nombre;
+            if ($userdatos && $userdatos->clinica) {
+                return $userdatos->clinica->nombre;
             }
-       
-        } 
-
-        return $clinica_id;
+        }
+        
+        return '';
     }
 
     public static function getUserId()
