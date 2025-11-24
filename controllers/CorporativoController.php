@@ -17,6 +17,10 @@ use app\models\Pagos; // Requerido para manejar el pago
 use app\models\TasaCambio; // Requerido para obtener la tasa
 use app\models\Cuotas; // Requerido para manejar las cuotas
 use app\components\UserHelper; // Requerido para subir archivos
+use app\models\MasivoAfiliadosForm;
+use yii\helpers\ArrayHelper;
+use yii\web\Response;
+
 
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
@@ -432,6 +436,282 @@ class CorporativoController extends Controller
         return $this->render('update', [
             'model' => $model,
             'afiliadosActuales' => $afiliadosActuales,
+        ]);
+    }
+
+// controlador de carga masiva de corporativos
+
+public function actionCargaMasivaAfiliados()
+    {
+        $model = new MasivoAfiliadosForm();
+        
+        $corporativosData = Corporativo::find()
+            ->select(['id', 'nombre'])
+            ->where(['estatus' => 'Activo'])
+            ->asArray()
+            ->all();
+            
+        $corporativos = ArrayHelper::map($corporativosData, 'id', 'nombre');
+
+        if ($model->load(Yii::$app->request->post())) {
+            $model->masivoFile = UploadedFile::getInstance($model, 'masivoFile');
+            
+            if ($model->validate()) {
+                $filePath = $model->masivoFile->tempName;
+                $corporativoId = $model->corporativo_id;
+                
+                $resultados = $this->procesarCSV($filePath, $corporativoId);
+                
+                Yii::$app->session->setFlash('success', 'Proceso de carga finalizado. ' . $resultados['successCount'] . ' afiliados cargados con éxito, ' . count($resultados['errors']) . ' filas con errores.');
+                
+                return $this->render('carga-masiva-resumen', [
+                    'resultados' => $resultados,
+                    'corporativo' => Corporativo::findOne($corporativoId),
+                ]);
+            } else {
+                Yii::$app->session->setFlash('error', 'Error de validación del formulario de carga.');
+            }
+        }
+
+        return $this->render('carga-masiva-afiliados', [
+            'model' => $model,
+            'corporativos' => $corporativos,
+        ]);
+    }
+
+        private function procesarCSV($filePath, $corporativoId)
+    {
+        $handle = fopen($filePath, "r");
+        if ($handle === false) {
+            return ['successCount' => 0, 'errors' => ['No se pudo abrir el archivo.']];
+        }
+
+        $requiredFields = ['tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 'telefono', 'email', 'direccion', 'plan_id'];
+        
+        $headers = fgetcsv($handle, 1000, ","); 
+        $successCount = 0;
+        $errors = [];
+        $lineNumber = 1;
+        
+        // Campos nuevos que deben buscarse en el CSV
+        $validFields = array_merge($requiredFields, [
+            'asesor_id', 
+            'asesor_nombre',
+            'fecha_inicio_contrato', 
+            'fecha_vencimiento_contrato', 
+            'direccion_oficina', 
+            'telefono_oficina', 
+            'tipo_sangre',
+            'rol_en_corporativo'
+        ]);
+
+        if (array_diff($requiredFields, $headers)) {
+            return ['successCount' => 0, 'errors' => ['Línea 1 (Cabecera): Las columnas requeridas están incompletas o mal nombradas.']];
+        }
+        
+        // Mapeo inverso de cabeceras para acceder a los datos por nombre de columna
+        $headerMap = array_flip($headers);
+
+        while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+            if (empty(array_filter($data))) {
+                continue;
+            }
+            
+            $lineNumber++;
+            $transaction = Yii::$app->db->beginTransaction();
+            $logPrefix = "Línea {$lineNumber} (Cédula: " . (isset($data[$headerMap['cedula']]) ? $data[$headerMap['cedula']] : 'N/A') . "): ";
+            
+            $userLogin = null; 
+
+            try {
+                // --- Validación de Plan y Clínica (Lógica de su sistema) ---
+                if (!isset($headerMap['plan_id'])) {
+                     throw new \Exception('Columna plan_id no encontrada.');
+                }
+                
+                $planId = (int) $data[$headerMap['plan_id']];
+                $plan = Planes::findOne($planId);
+                
+                if (!$plan || !$plan->clinica_id) {
+                    throw new \Exception('El Plan ID ' . $planId . ' no existe o no tiene una clínica asociada.');
+                }
+                
+                $isAuthorized = CorporativoClinica::find()
+                    ->where(['corporativo_id' => $corporativoId])
+                    ->andWhere(['clinica_id' => $plan->clinica_id])
+                    ->exists();
+
+                if (!$isAuthorized) {
+                    throw new \Exception("La clínica asociada al Plan ID {$planId} NO está autorizada para el Corporativo seleccionado.");
+                }
+
+                // VALIDACIÓN DE CEDULA Y EMAIL: Evitar duplicados
+                $cedula = trim($data[$headerMap['cedula']]);
+                $email = trim($data[$headerMap['email']]);
+
+                if (UserDatos::find()->where(['cedula' => $cedula])->exists()) {
+                     throw new \Exception("Ya existe un afiliado con la cédula {$cedula} registrado.");
+                }
+
+                if (User::find()->where(['email' => $email])->exists()) {
+                    throw new \Exception("Ya existe un usuario con el email {$email} registrado.");
+                }
+
+                // 1. Crear el User Login
+                $userLogin = new User();
+                $userLogin->email = $email;
+                $userLogin->username = $email; 
+                $userLogin->setPassword(Yii::$app->security->generateRandomString(12)); 
+                $userLogin->generateAuthKey();
+                $userLogin->status = 10; 
+                
+                if (!$userLogin->save()) {
+                    throw new \Exception('Error al crear User Login: ' . implode(', ', $userLogin->getErrorSummary(true)));
+                }
+
+                // 2. Crear el registro UserDatos (Afiliado)
+                $afiliado = new UserDatos();
+                $afiliado->user_login_id = $userLogin->id; 
+                
+                // Campos Personales y Requeridos
+                $afiliado->tipo_cedula = trim($data[$headerMap['tipo_cedula']]);
+                $afiliado->cedula = $cedula; 
+                $afiliado->nombres = trim($data[$headerMap['nombres']]);
+                $afiliado->apellidos = trim($data[$headerMap['apellidos']]);
+                $afiliado->fechanac = date('Y-m-d', strtotime(trim($data[$headerMap['fechanac']])));
+                $afiliado->sexo = trim($data[$headerMap['sexo']]);
+                $afiliado->telefono = trim($data[$headerMap['telefono']]);
+                $afiliado->email = $email;
+                $afiliado->direccion = trim($data[$headerMap['direccion']]); 
+                $afiliado->plan_id = $planId;
+                $afiliado->clinica_id = $plan->clinica_id; 
+                
+                // --- CAMPOS CORPORATIVOS CLAVE (FIX AÑADIDO) ---
+                $afiliado->user_datos_type_id = 2; // Tipo: Afiliado Corporativo
+                // LA CORRECCIÓN CLAVE: Asignar el ID del Corporativo al campo que utiliza su actionCreate
+                $afiliado->afiliado_corporativo_id = $corporativoId; 
+                
+                // Direccion y Teléfono de Oficina 
+                if (isset($headerMap['direccion_oficina'])) {
+                    $afiliado->direccion_oficina = trim($data[$headerMap['direccion_oficina']]);
+                } else {
+                     $afiliado->direccion_oficina = trim($data[$headerMap['direccion']]); 
+                }
+
+                if (isset($headerMap['telefono_oficina'])) {
+                    $afiliado->telefono_oficina = trim($data[$headerMap['telefono_oficina']]);
+                }
+                
+                // Tipo de Sangre
+                if (isset($headerMap['tipo_sangre'])) {
+                    $afiliado->tipo_sangre = trim($data[$headerMap['tipo_sangre']]);
+                }
+                
+                $afiliado->estado = 'Activo'; 
+                $afiliado->role = 'afiliado'; 
+                $afiliado->estatus = 'Activo'; 
+                $afiliado->paso = 1.0; 
+                
+                if (!$afiliado->save()) {
+                    throw new \Exception('Error al crear UserDatos: ' . implode(', ', $afiliado->getErrorSummary(true)));
+                }
+                
+                // 3. Crear la relación CorporativoUser (Tabla Intermedia)
+                $corporativoUser = new CorporativoUser();
+                $corporativoUser->corporativo_id = $corporativoId;
+                $corporativoUser->user_id = $afiliado->id; // ID del registro UserDatos
+                $corporativoUser->fecha_vinculacion = new \yii\db\Expression('NOW()');
+
+                // Campos de Contrato y Asesor
+                if (isset($headerMap['asesor_id'])) {
+                    $corporativoUser->asesor_id = (int) $data[$headerMap['asesor_id']];
+                }
+                if (isset($headerMap['asesor_nombre'])) {
+                    $corporativoUser->asesor_nombre = trim($data[$headerMap['asesor_nombre']]);
+                }
+
+                if (isset($headerMap['fecha_inicio_contrato'])) {
+                    $dateString = trim($data[$headerMap['fecha_inicio_contrato']]);
+                    if (!empty($dateString)) {
+                         $corporativoUser->fecha_inicio_contrato = date('Y-m-d', strtotime($dateString));
+                    }
+                }
+                if (isset($headerMap['fecha_vencimiento_contrato'])) {
+                    $dateString = trim($data[$headerMap['fecha_vencimiento_contrato']]);
+                    if (!empty($dateString)) {
+                         $corporativoUser->fecha_vencimiento_contrato = date('Y-m-d', strtotime($dateString));
+                    }
+                }
+                
+                if (isset($headerMap['rol_en_corporativo'])) {
+                    $corporativoUser->rol_en_corporativo = trim($data[$headerMap['rol_en_corporativo']]);
+                }
+
+                if (!$corporativoUser->save()) {
+                    throw new \Exception('Error al vincular con CorporativoUser: ' . implode(', ', $corporativoUser->getErrorSummary(true)));
+                }
+                
+                $transaction->commit();
+                $successCount++;
+
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                $errors[] = $logPrefix . $e->getMessage();
+                if (isset($userLogin) && !$userLogin->isNewRecord) {
+                     $userLogin->delete();
+                }
+                Yii::error("Carga Masiva Error - " . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        fclose($handle);
+        return ['successCount' => $successCount, 'errors' => $errors];
+    }
+
+    /**
+     * Genera y fuerza la descarga de un archivo CSV de ejemplo (plantilla).
+     * Incluye todos los campos requeridos para la carga masiva corporativa.
+     * @return Response
+     */
+    public function actionDescargarPlantilla()
+    {
+        // Definición explícita de las cabeceras en orden (Requeridos + Opcionales)
+        $headers = [
+            'tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 'telefono', 
+            'email', 'direccion', 'plan_id', 
+            // -- CAMPOS ADICIONALES --
+            'asesor_id', 'asesor_nombre', 'fecha_inicio_contrato', 'fecha_vencimiento_contrato', 
+            'direccion_oficina', 'telefono_oficina', 'tipo_sangre', 'rol_en_corporativo'
+        ];
+        
+        // Definición explícita de los datos de ejemplo (misma cantidad y orden que headers)
+        $sampleData = [
+            'C', '100234567', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'M', '8091234567', 
+            'juan.pablo@ejemplo.com', 'CALLE SOL #123', '5', 
+            '15', 'MARIA GOMEZ', '2024-01-01', '2024-12-31', 
+            'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '8098765432', 'A+', 'Gerente' 
+        ];
+
+        // Iniciar el buffer de memoria para generar el CSV
+        $output = fopen('php://temp', 'r+'); 
+        
+        // Añadir BOM de UTF-8 para compatibilidad con Excel (maneja acentos y ñ)
+        fwrite($output, "\xEF\xBB\xBF");
+        
+        // Escribir la cabecera
+        fputcsv($output, $headers, ','); 
+        
+        // Escribir el dato de ejemplo
+        fputcsv($output, $sampleData, ',');
+
+        rewind($output); 
+        $content = stream_get_contents($output); 
+        fclose($output); 
+
+        // Usar sendContentAsFile para forzar la descarga
+        return Yii::$app->response->sendContentAsFile($content, 'plantilla_afiliados_corporativos.csv', [
+            'mimeType' => 'text/csv; charset=UTF-8',
+            'inline' => false // Forzar la descarga
         ]);
     }
 
