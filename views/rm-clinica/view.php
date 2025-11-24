@@ -2,7 +2,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use app\components\UserHelper; // Importar el UserHelper
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\RmClinica $model */
@@ -12,151 +12,131 @@ use app\components\UserHelper; // Importar el UserHelper
 /** @var array $ciudadesList */
 /** @var array $listaEstatus */
 
-// Asegúrate de que estas variables siempre tengan un valor para evitar errores
 $estadosList = $estadosList ?? [];
 $municipiosList = $municipiosList ?? [];
-$parroquiaList = $parquiaList ?? [];
+$parroquiaList = $parroquiaList ?? [];
 $ciudadesList = $ciudadesList ?? [];
 $listaEstatus = $listaEstatus ?? [];
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Administrador-clinica');
 
-$permisos2 = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "COORDINADOR-CLINICA");
+// Define which roles should see the full set of clinic management buttons
+$adminRoles = ['superadmin', 'DIRECTOR-COMERCIALIZACION', 'Administrador-clinica', 'COORDINADOR-CLINICA'];
+$permisos = in_array($rol, $adminRoles);
 
-$permisos = false;
-
-if ($rol == 'superadmin') 
-{
-    $permisos = true;
-}
+// Define which roles should see the limited set of buttons (only operational roles that are NOT admin roles)
+$operationalRoles = ['Asesor', 'Agente', 'ADMISIÓN', 'CONTROL DE CITAS'];
+$permisos2 = in_array($rol, $operationalRoles);
 
 $this->title = 'DETALLES DE LA CLÍNICA: ' . Html::encode($model->nombre);
-if($permisos == true){
-$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['index']];
+if($permisos){
+    $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['index']];
 }
 $this->params['breadcrumbs'][] = Html::encode($model->nombre);
 
-\yii\web\YiiAsset::register($this); // Esto registra los assets por defecto de Yii
+\yii\web\YiiAsset::register($this);
 
-// Función auxiliar para formatear fechas, manejando valores nulos
 function formatUpdatedAt($value) {
     if (empty($value)) {
         return 'No se ha modificado';
     }
-    // Asume que updated_at es un timestamp o fecha válida que Yii puede formatear
     return Yii::$app->formatter->asDatetime($value, 'medium');
 }
-
-
 
 ?>
 
 <div class="main-container"> 
    
-
     <!-- Encabezado y Botones de Acción Principal -->
     <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
 
         <div class="header-buttons-group"> 
-            <?php
+            <?php if($permisos): ?>
+                <?= Html::a(
+                    '<i class="fas fa-edit mr-2"></i> Actualizar',
+                    ['update', 'id' => $model->id],
+                    ['class' => 'btn-base btn-blue']
+                ); ?>
 
-            if($permisos == true){
-             echo Html::a(
-                '<i class="fas fa-edit mr-2"></i> Actualizar',
-                ['update', 'id' => $model->id],
-                ['class' => 'btn-base btn-blue']
-            );
-
-            echo Html::a(
+                <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver',
                     '#',
                     [
-                        'class' => 'btn-base btn-gray', /* Usando clases de botón definidas en el fragmento CSS */
+                        'class' => 'btn-base btn-gray',
                         'onclick' => 'window.history.back(); return false;',
                         'title' => 'Volver a la página anterior',
                     ]
-                );          
-
-            } ?>
-           
-            
+                ); ?>
+            <?php endif; ?>
         </div>
     </div>
 
-<?php if($permisos) {?>
-    <div class="nav-buttons-grid"> 
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
-                ['baremo/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base btn-blue'] 
-            ) ?>
+    <?php if($permisos): ?>
+        <div class="nav-buttons-grid"> 
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
+                    ['baremo/index', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base btn-blue'] 
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-clipboard-list mr-2"></i> Planes',
+                    ['planes/index', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-indigo'] 
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-users mr-2"></i> Afiliados',
+                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-tasks mr-2"></i> Check List',
+                    ['check-list-clinicas/index', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-cyan']
+                ) ?>
+            </div>
+            <div align="center"> 
+                <?= Html::a(
+                    '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                    ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-indigo']
+                ) ?>
+            </div>
         </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-clipboard-list mr-2"></i> Planes',
-                ['planes/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-indigo'] 
-            ) ?>
+    <?php elseif($permisos2): ?>
+        <!-- Only show this section for operational roles that are NOT admin roles -->
+        <div class="nav-buttons-grid"> 
+            <div align="center">
+                <?= Html::a(
+                    '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                    ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-indigo text-white-hover']
+                ) ?>
+            </div>
+            <div>
+                <?= Html::a(
+                    '<i class="fas fa-users mr-2"></i> Afiliados',
+                    ['user-datos/index-clinicas', 'clinica_id' => $model->id],
+                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                ) ?>
+            </div>
         </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-users mr-2"></i> Afiliados',
-                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-teal'] 
-            ) ?>
-        </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-tasks mr-2"></i> Check List',
-                ['check-list-clinicas/index', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-cyan']
-            ) ?>
-        </div>
-        <div align="center"> 
-            <?= Html::a(
-                '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
-                ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-indigo'] // Clase original que sí se ve bien
-            ) ?>
-        </div>
-    </div>
-<?php } ?>
+    <?php endif; ?>
 
-<?php 
-// Esta es la condición que evita la duplicación y funciona para roles operativos:
-// ($permisos2 es true) Y (el rol NO es superadmin)
-if($permisos2 && $rol !== 'superadmin') {
-?>
-    <div class="nav-buttons-grid"> 
-        <div align="center">
-            <?= Html::a(
-                '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
-                ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-indigo text-white-hover']
-            ) ?>
-        </div>
-        <div>
-            <?= Html::a(
-                '<i class="fas fa-users mr-2"></i> Afiliados',
-                ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                ['class' => 'nav-btn-base nav-btn-teal'] 
-            ) ?>
-        </div>
-    </div>
-
-<?php } ?>
-
-    
-
+    <!-- Rest of your cards remain the same -->
     <!-- Tarjeta de Información General de la Clínica -->
-    <div class="info-card info-card-border-blue"> <!-- Usando las clases 'info-card' y 'info-card-border-blue' definidas en el fragmento CSS -->
+    <div class="info-card info-card-border-blue">
         <h3>
             <i class="fas fa-hospital-alt text-blue-600 mr-3"></i> Información General de la Clínica
         </h3>
-        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+        <div class="info-grid">
             <div>
                 <h5><strong>Nombre:</strong> <?= Html::encode($model->nombre) ?></h5>
                 <h5><strong>RIF:</strong> <?= Html::encode($model->rif) ?></h5>
@@ -166,7 +146,7 @@ if($permisos2 && $rol !== 'superadmin') {
                 <h5><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($model->correo), 'mailto:' . Html::encode($model->correo), ['class' => 'text-blue-500']) ?></h5>
             </div>
         </div>
-        <div class="info-grid border-top-section"> <!-- Usando la clase 'border-top-section' definida en el fragmento CSS -->
+        <div class="info-grid border-top-section">
             <div>
                 <h5><strong>Código de Clínica:</strong> <?= Html::encode($model->codigo_clinica) ?></h5>
             </div>
@@ -177,11 +157,11 @@ if($permisos2 && $rol !== 'superadmin') {
     </div>
 
     <!-- Tarjeta de Ubicación Geográfica -->
-    <div class="info-card info-card-border-indigo"> <!-- Usando las clases 'info-card' y 'info-card-border-indigo' definidas en el fragmento CSS -->
+    <div class="info-card info-card-border-indigo">
         <h3>
             <i class="fas fa-map-marker-alt text-indigo-600 mr-3"></i> Ubicación Geográfica
         </h3>
-        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+        <div class="info-grid">
             <div>
                 <h5><strong>Estado:</strong> <?= Html::encode($estadosList[$model->estado] ?? 'N/A') ?></h5>
                 <h5><strong>Municipio:</strong> <?= Html::encode($municipiosList[(string)$model->municipio] ?? 'N/A') ?></h5>
@@ -191,15 +171,15 @@ if($permisos2 && $rol !== 'superadmin') {
                 <h5><strong>Ciudad:</strong> <?= Html::encode($ciudadesList[$model->ciudad] ?? 'N/A') ?></h5>
             </div>
         </div>
-        <p class="border-top-section"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></h5>
+        <p class="border-top-section"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>
     </div>
 
     <!-- Tarjeta de Información de Contacto y Redes Sociales -->
-    <div class="info-card info-card-border-yellow"> <!-- Usando las clases 'info-card' y 'info-card-border-yellow' definidas en el fragmento CSS -->
+    <div class="info-card info-card-border-yellow">
         <h3>
             <i class="fas fa-globe text-yellow-600 mr-3"></i> Web y Redes Sociales
         </h3>
-        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
+        <div class="info-grid">
             <div>
                 <h5><strong>Página Web:</strong>
                     <?php if (!empty($model->webpage)): ?>
@@ -222,16 +202,16 @@ if($permisos2 && $rol !== 'superadmin') {
     </div>
 
     <!-- Tarjeta de Fechas de Gestión -->
-    <div class="info-card info-card-border-gray"> <!-- Usando las clases 'info-card' y 'info-card-border-gray' definidas en el fragmento CSS -->
+    <div class="info-card info-card-border-gray">
         <h3>
             <i class="fas fa-calendar-alt text-gray-600 mr-3"></i> Fechas de Gestión
         </h3>
-        <div class="info-grid"> <!-- Usando la clase 'info-grid' definida en el fragmento CSS -->
-            <div class="inner-card-section"> <!-- Usando la clase 'inner-card-section' definida en el fragmento CSS -->
+        <div class="info-grid">
+            <div class="inner-card-section">
                 <h6>Fecha de Creación</h6>
                 <h5><?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'medium')) ?></h5>
             </div>
-            <div class="inner-card-section"> <!-- Usando la clase 'inner-card-section' definida en el fragmento CSS -->
+            <div class="inner-card-section">
                 <h6>Última Actualización</h6>
                 <h5><?= Html::encode(formatUpdatedAt($model->updated_at)) ?></h5>
             </div>
