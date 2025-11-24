@@ -135,138 +135,201 @@ $baremosRestringidosIDs = [];
         <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
     </div>
 
-    <?php
-        // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
+<?php
+// Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
-        // Consulta para listar los baremos de ese plan y clínica
-        $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
-            ->joinWith('baremo')
-            ->joinWith('plan')
-            ->joinWith('baremo.area')
-            ->where(['planes.clinica_id' => $afiliado->clinica_id])
-            ->andWhere(['baremo.estatus' => 'Activo'])
-            ->andWhere(['planes.id' => $afiliado->plan_id])
-            ->all();
+// Consulta para listar los baremos de ese plan y clínica
+$planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
+    ->joinWith('baremo')
+    ->joinWith('plan')
+    ->joinWith('baremo.area')
+    ->where(['planes.clinica_id' => $afiliado->clinica_id])
+    ->andWhere(['baremo.estatus' => 'Activo'])
+    ->andWhere(['planes.id' => $afiliado->plan_id])
+    ->all();
+
+// PRIMERO: Obtener los baremos seleccionados ANTES de filtrar
+$selectedBaremos = [];
+if (!$model->isNewRecord) {
+    if (method_exists($model, 'getBaremos')) {
+        $baremosRelacion = $model->getBaremos()->all();
         
-        // Crear arrays para las TRES categorías y la info de JS
-        $baremosSinPlazo = [];          // NO tiene plazo definido (SOLO para Siniestro)
-        $baremosConPlazoCumplido = [];  // Tiene plazo, pero ya se cumplió (SOLO para Cita)
-        $baremosPendientesPlazo = [];   // Tiene plazo, y está pendiente (SOLO para Cita)
-        $baremosInfo = [];              // Información auxiliar para JavaScript
-        $baremosRestringidosIDs = [];   // <--- NUEVO: IDs de baremos con Plazo PENDIENTE
+        if (empty($baremosRelacion)) {
+            $baremosDirectos = (new \yii\db\Query())
+                ->select(['baremo_id'])
+                ->from('sis_siniestro_baremo')
+                ->where(['siniestro_id' => $model->id])
+                ->column();
+            
+            if (!empty($baremosDirectos)) {
+                $selectedBaremos = $baremosDirectos;
+            }
+        } else {
+            $selectedBaremos = ArrayHelper::getColumn($baremosRelacion, 'id');
+        }
+    } else {
+        // Fallback: buscar directamente en la tabla sis_siniestro_baremo
+        $baremosDirectos = (new \yii\db\Query())
+            ->select(['baremo_id'])
+            ->from('sis_siniestro_baremo')
+            ->where(['siniestro_id' => $model->id])
+            ->column();
         
-        $fechaActual = new \DateTime();
+        if (!empty($baremosDirectos)) {
+            $selectedBaremos = $baremosDirectos;
+        }
+    }
+}
 
-        foreach ($planesItemsCobertura as $item) {
-            if ($item->baremo) {
-                $restricciones = [];
-                $isRestrictedByPlazo = false;
-                $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
+// Crear arrays para las categorías
+$baremosSinPlazo = [];          // NO tiene plazo definido
+$baremosConPlazoCumplido = [];  // Tiene plazo, pero ya se cumplió
+$baremosPendientesPlazo = [];   // Tiene plazo, y está pendiente
+$baremosForzados = [];          // Baremos ya guardados que no cumplen filtros actuales
+$baremosInfo = [];              // Información auxiliar para JavaScript
+$baremosRestringidosIDs = [];   // IDs de baremos con Plazo PENDIENTE
 
-                if ($contrato) {
-                    $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+$fechaActual = new \DateTime();
 
-                    // --- LÓGICA DE PLAZO DE ESPERA ---
-                    if ($hasPlazoEver) {
-                        $diff = $fechaContratoIni->diff($fechaActual);
-                        $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                        $plazoRequerido = (int)$item->plazo_espera;
+foreach ($planesItemsCobertura as $item) {
+    if ($item->baremo) {
+        $restricciones = [];
+        $isRestrictedByPlazo = false;
+        $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
 
-                        if ($mesesTranscurridos < $plazoRequerido) {
-                            $isRestrictedByPlazo = true; // Plazo PENDIENTE
-                        }
+        // Definir la cantidad de veces usado
+        $vecesUsado = \app\models\SisSiniestroBaremo::find()
+            ->joinWith('siniestro')
+            ->where(['baremo_id' => $item->baremo_id])
+            ->andWhere(['iduser' => $afiliado->id])
+            ->count();
+
+        // Verificar si excede el límite (solo si tiene límite definido)
+        $excedeLimite = ($item->cantidad_limite !== null && $item->cantidad_limite > 0 && $vecesUsado >= $item->cantidad_limite);
+
+        // Verificar si este baremo está entre los seleccionados (solo para update)
+        $esBaremoGuardado = !$model->isNewRecord && in_array($item->baremo_id, $selectedBaremos);
+
+        // --- LÓGICA DE FILTRADO SEGÚN MODO ---
+        $debeIncluirse = true;
+        
+        if ($esCitaMode) {
+            // MODO CITA: Aplicar todas las restricciones
+            
+            if ($contrato) {
+                $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+
+                // Lógica de plazo de espera
+                if ($hasPlazoEver) {
+                    $diff = $fechaContratoIni->diff($fechaActual);
+                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                    $plazoRequerido = (int)$item->plazo_espera;
+
+                    if ($mesesTranscurridos < $plazoRequerido) {
+                        $isRestrictedByPlazo = true; // Plazo PENDIENTE
                     }
                 }
-
-                // Si es cita y el plazo no está cumplido, excluye el baremo
-                if ($esCitaMode && $isRestrictedByPlazo) {
-                    continue; // Salta este baremo
-                }
-
-                // Definir la cantidad de veces usado
-                $vecesUsado = \app\models\SisSiniestroBaremo::find()
-                    ->where(['baremo_id' => $item->baremo_id, 'siniestro_id' => $model->id])
-                    ->count();
-
-                // Definir el precio del baremo - CHANGED FROM costo TO precio
-                $precioBaremo = $item->baremo->precio ?? 0; // Usa el campo 'precio' del baremo, o 0 si no está definido
-
-                // Clasificación de baremos
-                $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
-                $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
-
-                if (!empty($item->baremo->descripcion)) {
-                    $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
-                }
-
-                if (!empty($restricciones)) {
-                    $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
-                }
-
-                if (!$hasPlazoEver) {
-                    $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
-                } elseif ($isRestrictedByPlazo) {
-                    $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
-                    $baremosRestringidosIDs[] = $item->baremo_id; // Add to restricted IDs
-                } else {
-                    $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
-                }
-
-                $baremosInfo[$item->baremo_id] = [
-                    'nombre' => $item->baremo->nombre_servicio,
-                    'area' => $area,
-                    'plazo_espera' => $item->plazo_espera,
-                    'cantidad_limite' => $item->cantidad_limite,
-                    'veces_usado' => $vecesUsado,
-                    'precio' => $precioBaremo, // CHANGED FROM 'costo' TO 'precio'
-                    'is_restricted_by_plazo' => $isRestrictedByPlazo,
-                    'has_plazo_ever' => $hasPlazoEver,
-                ];
             }
-        }
-        
-        // IMPORTANTE: Combina las TRES listas.
-        $baremosTotales = $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
 
-        // Obtener baremos seleccionados (código sin cambios)
-        $selectedBaremos = [];
-        if (method_exists($model, 'getBaremos')) {
-            $baremosRelacion = $model->getBaremos()->all();
+            // Excluir baremos con plazo pendiente O que exceden el límite
+            // PERO incluir si es un baremo ya guardado (solo en update)
+            if (($isRestrictedByPlazo || $excedeLimite)) {
+                if (!$esBaremoGuardado) {
+                    $debeIncluirse = false;
+                }
+            }
             
-            if (empty($baremosRelacion) && !$model->isNewRecord) {
-                $baremosDirectos = (new \yii\db\Query())
-                    ->select(['baremo_id'])
-                    ->from('sis_siniestro_baremo')
-                    ->where(['siniestro_id' => $model->id])
-                    ->column();
-                
-                if (!empty($baremosDirectos)) {
-                    $selectedBaremos = $baremosDirectos;
+        } else {
+            // MODO SINIESTRO: Solo incluir baremos sin límite (cantidad_limite IS NULL)
+            // PERO incluir si es un baremo ya guardado (solo en update)
+            if ($item->cantidad_limite !== null) {
+                if (!$esBaremoGuardado) {
+                    $debeIncluirse = false;
                 }
-            } else {
-                $selectedBaremos = ArrayHelper::getColumn($baremosRelacion, 'id');
             }
         }
-    ?>
-    
-    <div class="field-with-icon">
-        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
-            'data' => $baremosTotales, 
-            'options' => [
-                'multiple' => true,
-                'value' => $selectedBaremos,
-                'placeholder' => 'Seleccione uno o más Baremos',
-                'class' => 'form-control form-lg',
-                'id' => 'baremos-select' 
-            ],
-            'pluginOptions' => [
-                'allowClear' => true,
-                'closeOnSelect' => true,
-                'tags' => false,
-                'tokenSeparators' => [',', ' '],
-            ],
-        ])->label('Baremos')->hint('Seleccione el baremo') ?>
-    </div>
+
+        // Definir el precio del baremo
+        $precioBaremo = $item->baremo->precio ?? 0;
+
+        // Clasificación de baremos
+        $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
+        $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+
+        if (!empty($item->baremo->descripcion)) {
+            $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
+        }
+
+        if (!empty($restricciones)) {
+            $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
+        }
+
+        // Si es un baremo guardado que no cumple los filtros, marcarlo como HISTÓRICO
+        if ($esBaremoGuardado && !$debeIncluirse) {
+            $baremosForzados[$item->baremo_id] = "(HISTÓRICO) " . $nombreCompleto;
+            $debeIncluirse = true; // Forzar inclusión
+        }
+
+        if (!$debeIncluirse) {
+            continue;
+        }
+
+        // Clasificación normal según disponibilidad
+        if ($esBaremoGuardado && isset($baremosForzados[$item->baremo_id])) {
+            // Ya se asignó en la sección de forzados
+        } elseif ($esCitaMode) {
+            if (!$hasPlazoEver) {
+                $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
+            } elseif ($isRestrictedByPlazo) {
+                $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
+                $baremosRestringidosIDs[] = $item->baremo_id;
+            } else {
+                $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
+            }
+        } else {
+            // Modo Siniestro - todos los baremos disponibles se muestran sin prefijo
+            $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
+        }
+
+        $baremosInfo[$item->baremo_id] = [
+            'nombre' => $item->baremo->nombre_servicio,
+            'area' => $area,
+            'plazo_espera' => $item->plazo_espera,
+            'cantidad_limite' => $item->cantidad_limite,
+            'veces_usado' => $vecesUsado,
+            'precio' => $precioBaremo,
+            'is_restricted_by_plazo' => $isRestrictedByPlazo,
+            'has_plazo_ever' => $hasPlazoEver,
+            'excede_limite' => $excedeLimite,
+            'es_historico' => $esBaremoGuardado,
+        ];
+    }
+}
+
+// COMBINAR todos los arrays: forzados + normales
+$baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
+?>
+
+<div class="field-with-icon">
+    <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
+        'data' => $baremosTotales, 
+        'options' => [
+            'multiple' => true,
+            'value' => $selectedBaremos,
+            'placeholder' => 'Seleccione uno o más Baremos',
+            'class' => 'form-control form-lg',
+            'id' => 'baremos-select' 
+        ],
+        'pluginOptions' => [
+            'allowClear' => true,
+            'closeOnSelect' => true,
+            'tags' => false,
+            'tokenSeparators' => [',', ' '],
+        ],
+    ])->label('Baremos')->hint('Seleccione el baremo') ?>
+</div>
+
+
 <?php else: ?>
     <!-- Mostrar mensaje si el contrato no está activo -->
     <div id="contrato-error-message" class="alert alert-warning" style="margin-top: 20px;">
