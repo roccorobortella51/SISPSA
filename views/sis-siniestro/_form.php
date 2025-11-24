@@ -31,8 +31,8 @@ $esCita = (int)Yii::$app->request->get('es_cita', 0);
 
 // Definir los modos y términos
 $esCitaMode = ($esCita === 1);
-$terminoPrincipal = $esCitaMode ? 'Cita' : 'Siniestro';
-$tituloSeccion = 'Datos de ' . $terminoPrincipal;
+$terminoPrincipal = $esCitaMode ? 'Cita' : 'Atención';
+$tituloSeccion = 'Datos de la ' . $terminoPrincipal;
 
 // Obtener el contrato activo del afiliado
 $contrato = \app\models\Contratos::find()
@@ -66,7 +66,7 @@ $contrato = \app\models\Contratos::find()
                     <span class="plan-info-value"><?= number_format($precioPlan, 2) ?></span>
                 </div>
                 <div class="plan-info-item">
-                    <span class="plan-info-label">Total de Siniestros Registrados:</span>
+                    <span class="plan-info-label">Total de Atenciones Médicas Registradas:</span>
                     <span class="plan-info-value"><?= number_format($sumatoriaSiniestros ?? 0, 2) ?></span>
                 </div>
                 <div class="plan-info-item plan-info-total">
@@ -728,14 +728,14 @@ JS
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
                                 'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha de '. $terminoPrincipal) ?>
+                            ])->label('Fecha del Evento de Salud') ?>
                         </div>
                         
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'hora')->textInput([
                                 'type' => 'time', 
                                 'class' => 'form-control form-control-lg'
-                            ])->label('Hora de '. $terminoPrincipal) ?>
+                            ])->label('Hora del Evento de Salud') ?>
                         </div>
                         
                         <div class="col-md-12">
@@ -755,14 +755,14 @@ JS
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
                                 'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha de Atención') ?>
+                            ])->label('Fecha de la Atención') ?>
                         </div>
                         
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'hora_atencion')->textInput([
                                 'type' => 'time', 
                                 'class' => 'form-control form-control-lg'
-                            ])->label('Hora de Atención') ?>
+                            ])->label('Hora de la Atención') ?>
                         </div>
                         
                         <div class="col-md-12 field-with-icon">
@@ -771,14 +771,14 @@ JS
                                 'rows' => 3, 
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Describa los detalles...'
-                            ])->label('Descripción de '. $terminoPrincipal) ?>
+                            ])->label('Descripción de la '. $terminoPrincipal) ?>
                         </div>
 
                          <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-body">
                                     <div class="section-title">
-                                        <i class="fas fa-camera"></i> Archivos de la Atencion
+                                        <i class="fas fa-camera"></i> Archivos de la Atención
                                     </div>
                                     
                                     <div class="row mt-3">
