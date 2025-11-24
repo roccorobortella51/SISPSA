@@ -234,6 +234,9 @@ class PagosController extends Controller
                         Yii::error("Mismatch in cuota update: expected " . count($selectedCuotaIds) . ", updated {$updatedCount}", 'pagos');
                     }
                     
+                    // Run solvent reconciliation after payment creation
+                    $this->runSolventReconciliation($model->user_id);
+                    
                     Yii::$app->session->setFlash('success', 
                         "Pago registrado con éxito. Se actualizaron {$updatedCount} cuotas."
                     );
@@ -321,6 +324,9 @@ class PagosController extends Controller
             }
 
             if ($model->save()) {
+                // Run solvent reconciliation after payment update
+                $this->runSolventReconciliation($model->user_id);
+                
                 Yii::$app->session->setFlash('success', 'Pago actualizado con éxito.');
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
@@ -344,18 +350,22 @@ class PagosController extends Controller
     {
         $model = $this->findModel($id);
         $folder = 'Pago';
+        $user_id = $model->user_id;
 
         if ($model->imagen_prueba) {
             UserHelper::deleteFileFromSupabaseApi($model->imagen_prueba, $folder);
         }
 
         if ($model->delete()) {
+            // Run solvent reconciliation after payment deletion
+            $this->runSolventReconciliation($user_id);
+            
             Yii::$app->session->setFlash('success', 'Pago y archivo asociados eliminados con éxito.');
         } else {
             Yii::$app->session->setFlash('error', 'Error al eliminar el pago.');
         }
 
-        return $this->redirect(['/contratos/index', 'user_id' => $model->user_id]);
+        return $this->redirect(['/contratos/index', 'user_id' => $user_id]);
     }
 
     /**
@@ -393,28 +403,82 @@ class PagosController extends Controller
         }
         
         $model->estatus = ($status == '1') ? 'Conciliado' : 'Por Conciliar';
-        $model->updated_at = date('Y-m-d');
-        $model->fecha_conciliacion = date('Y-m-d');
+        $model->updated_at = date('Y-m-d H:i:s');
+        $model->fecha_conciliacion = ($status == '1') ? date('Y-m-d') : null;
         $model->conciliador_id = Yii::$app->user->id;
         
         if ($model->save(false)) {
             $user = UserDatos::findOne(['id' => $model->user_id]);
             if ($user) {
-                $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'Si' : 'No';
-                $user->save(false);
-                
-                if ($user->estatus_solvente == 'Si') {
-                    $contrato = Contratos::find()->where(['user_id' => $model->user_id])->one();
-                    if ($contrato) {
-                        $contrato->estatus = 'Activo';
-                        $contrato->save(false);
+                // Only mark as solvent if payment is conciliated AND covers current obligations
+                if ($model->estatus == 'Conciliado') {
+                    // Check if this payment covers all pending cuotas
+                    $pendingCuotas = Cuotas::getPendingCuotasForUser($model->user_id);
+                    $totalPending = 0;
+                    foreach ($pendingCuotas as $cuota) {
+                        $totalPending += $cuota->monto_usd ?: $cuota->monto;
                     }
+                    
+                    // If payment covers pending amount OR payment is for current month, mark as solvent
+                    $currentMonthStart = date('Y-m-01');
+                    if ($model->monto_usd >= $totalPending || 
+                        (strtotime($model->fecha_pago) >= strtotime($currentMonthStart))) {
+                        $user->estatus_solvente = 'SI';
+                        $user->save(false);
+                        
+                        // Also activate any suspended contracts
+                        $contratos = Contratos::find()->where(['user_id' => $model->user_id])->all();
+                        foreach ($contratos as $contrato) {
+                            if ($contrato->estatus == 'suspendido') {
+                                $contrato->estatus = 'activo';
+                                $contrato->save(false);
+                            }
+                        }
+                    }
+                } else {
+                    // If payment is de-conciliated, run reconciliation to determine solvent status
+                    $this->runSolventReconciliation($model->user_id);
                 }
             }
             return ['success' => true, 'new_status' => $model->estatus];
         }
         
         return ['success' => false, 'error' => 'Error al guardar'];
+    }
+
+    /**
+     * Runs solvent reconciliation for a specific user
+     */
+    private function runSolventReconciliation($user_id)
+    {
+        $user = UserDatos::findOne(['id' => $user_id]);
+        if (!$user) return;
+        
+        // Check if user has conciliated payments in current month
+        $currentMonthStart = date('Y-m-01');
+        $hasCurrentPayment = Pagos::find()
+            ->where(['user_id' => $user_id, 'estatus' => 'Conciliado'])
+            ->andWhere(['>=', 'fecha_pago', $currentMonthStart])
+            ->exists();
+        
+        // Check if user has pending overdue cuotas
+        $hasOverdueCuotas = Cuotas::find()
+            ->joinWith(['contrato'])
+            ->where(['contratos.user_id' => $user_id])
+            ->andWhere(['cuotas.estatus' => 'pendiente'])
+            ->andWhere(['<', 'cuotas.fecha_vencimiento', date('Y-m-d')])
+            ->exists();
+        
+        // Determine solvent status
+        if ($hasCurrentPayment && !$hasOverdueCuotas) {
+            $user->estatus_solvente = 'SI';
+        } else {
+            $user->estatus_solvente = 'No';
+        }
+        
+        $user->save(false);
+        
+        Yii::info("Solvent reconciliation for user {$user_id}: currentPayment={$hasCurrentPayment}, overdueCuotas={$hasOverdueCuotas}, newStatus={$user->estatus_solvente}");
     }
 
     public function actionUpdatesolvente()
@@ -505,6 +569,7 @@ class PagosController extends Controller
         
         return $this->redirect(['index']);
     }
+
     /**
      * Debug method to check user contracts and cuotas in detail
      */
@@ -576,35 +641,36 @@ class PagosController extends Controller
     }
 
     // Add this to PagosController for testing
-public function actionTestUser101()
-{
-    $user_id = 101;
-    
-    // Test the cuotas query directly
-    $cuotas = Cuotas::getPendingCuotasForUser($user_id);
-    
-    echo "<h1>Testing User 101 Cuotas</h1>";
-    echo "<p>User ID: " . $user_id . "</p>";
-    echo "<p>Cuotas Found: " . count($cuotas) . "</p>";
-    
-    foreach ($cuotas as $cuota) {
-        echo "<p>Cuota ID: " . $cuota->id . ", Contract: " . $cuota->contrato_id . ", Monto USD: " . $cuota->monto_usd . ", Monto: " . $cuota->monto . "</p>";
+    public function actionTestUser101()
+    {
+        $user_id = 101;
+        
+        // Test the cuotas query directly
+        $cuotas = Cuotas::getPendingCuotasForUser($user_id);
+        
+        echo "<h1>Testing User 101 Cuotas</h1>";
+        echo "<p>User ID: " . $user_id . "</p>";
+        echo "<p>Cuotas Found: " . count($cuotas) . "</p>";
+        
+        foreach ($cuotas as $cuota) {
+            echo "<p>Cuota ID: " . $cuota->id . ", Contract: " . $cuota->contrato_id . ", Monto USD: " . $cuota->monto_usd . ", Monto: " . $cuota->monto . "</p>";
+        }
+        
+        // Test the view rendering
+        $model = new Pagos();
+        $model->user_id = $user_id;
+        $modelCuotas = new Cuotas();
+        $total = 58.00; // Expected total
+        
+        return $this->render('create', [
+            'model' => $model,
+            'user_id' => $user_id,
+            'cuotas' => $cuotas,
+            'modelCuotas' => $modelCuotas,
+            'total' => $total,
+        ]);
     }
-    
-    // Test the view rendering
-    $model = new Pagos();
-    $model->user_id = $user_id;
-    $modelCuotas = new Cuotas();
-    $total = 58.00; // Expected total
-    
-    return $this->render('create', [
-        'model' => $model,
-        'user_id' => $user_id,
-        'cuotas' => $cuotas,
-        'modelCuotas' => $modelCuotas,
-        'total' => $total,
-    ]);
-}
+
     /**
      * Debug method to check user contracts and cuotas
      */
@@ -645,6 +711,7 @@ public function actionTestUser101()
             }, $cuotas)
         ];
     }
+
     /**
      * Valida que el pago coincida con las cuotas seleccionadas
      */
@@ -676,5 +743,53 @@ public function actionTestUser101()
         }
         
         return true;
+    }
+
+    /**
+     * Fixes solvent status for all users
+     * Uso: `yii pagos/fix-solvent-status`
+     */
+    public function actionFixSolventStatus()
+    {
+        $this->stdout("=== CORRIGIENDO ESTATUS SOLVENTE INCONSISTENTE ===\n\n");
+        
+        $fixedCount = 0;
+        $allUsers = UserDatos::find()->all();
+        
+        foreach ($allUsers as $user) {
+            $currentStatus = $user->estatus_solvente;
+            
+            // Check if user should be solvent
+            $shouldBeSolvent = false;
+            
+            // Check for current month conciliated payments
+            $currentMonthStart = date('Y-m-01');
+            $hasCurrentPayment = Pagos::find()
+                ->where(['user_id' => $user->id, 'estatus' => 'Conciliado'])
+                ->andWhere(['>=', 'fecha_pago', $currentMonthStart])
+                ->exists();
+            
+            // Check for no overdue cuotas
+            $hasOverdueCuotas = Cuotas::find()
+                ->joinWith(['contrato'])
+                ->where(['contratos.user_id' => $user->id])
+                ->andWhere(['cuotas.estatus' => 'pendiente'])
+                ->andWhere(['<', 'cuotas.fecha_vencimiento', date('Y-m-d')])
+                ->exists();
+            
+            $shouldBeSolvent = $hasCurrentPayment && !$hasOverdueCuotas;
+            $correctStatus = $shouldBeSolvent ? 'SI' : 'No';
+            
+            if ($currentStatus !== $correctStatus) {
+                $user->estatus_solvente = $correctStatus;
+                if ($user->save(false)) {
+                    $fixedCount++;
+                    $this->stdout("✅ Corregido: {$user->nombres} {$user->apellidos} - {$currentStatus} → {$correctStatus}\n");
+                }
+            }
+        }
+        
+        $this->stdout("\n✅ Proceso completado. Se corrigieron {$fixedCount} usuarios.\n");
+        return ExitCode::OK;
     }
 }

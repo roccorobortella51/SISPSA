@@ -8,6 +8,8 @@ use yii\console\ExitCode;
 use app\models\Cuotas;
 use app\models\Contratos; // Modelo correcto
 use app\models\TasaCambio;
+use app\models\Pagos;
+use app\models\UserDatos;
 use yii\helpers\Console;
 
 /**
@@ -73,7 +75,7 @@ class CuotaController extends Controller
                 $cuotasGeneradas++;
             }
             
-            // Verificar y suspender si hay cuotas vencidas
+            // Verificar y suspender si hay cuotas vencidas - WITH SOLVENTE CHECK
             $cuotasVencidas = Cuotas::find()
                 ->where([
                     'contrato_id' => $contrato->id,
@@ -83,17 +85,28 @@ class CuotaController extends Controller
                 ->count();
                 
             if ($cuotasVencidas > 0 && $contrato->estatus !== 'suspendido') {
-                $contrato->estatus = 'suspendido';
-                if ($contrato->save()) {
-                    $contratosSuspendidos++;
-                    $this->stdout("  ⚠️  Contrato #{$contrato->id} suspendido por {$cuotasVencidas} cuotas vencidas.\n");
+                // ADDED: Don't suspend if user is solvent
+                $userDatos = UserDatos::findOne($contrato->user_id);
+                if ($userDatos && $userDatos->estatus_solvente === 'SI') {
+                    $this->stdout("  ✅ Contrato #{$contrato->id} tiene cuotas vencidas pero usuario es solvente - NO suspendiendo\n");
                 } else {
-                    $this->stderr("  ❌ Error al suspender contrato #{$contrato->id}\n");
+                    $contrato->estatus = 'suspendido';
+                    if ($contrato->save()) {
+                        $contratosSuspendidos++;
+                        $this->stdout("  ⚠️  Contrato #{$contrato->id} suspendido por {$cuotasVencidas} cuotas vencidas.\n");
+                    } else {
+                        $this->stderr("  ❌ Error al suspender contrato #{$contrato->id}\n");
+                    }
                 }
             }
         }
         
         $this->stdout("Proceso completado. Se generaron {$cuotasGeneradas} cuotas del mes actual, {$cuotasAtrasadas} cuotas atrasadas, y se suspendieron {$contratosSuspendidos} contratos con cuotas vencidas.\n");
+        
+        // ADDED: Reconcile solvent status after generation
+        $this->stdout("\nReconciliando estatus solvente...\n");
+        $this->reconcileSolventStatus();
+        
         return ExitCode::OK;
     }
     
@@ -132,12 +145,39 @@ class CuotaController extends Controller
         if ($mesesAtrasados > 0) {
             $this->stdout("  Contrato #{$contrato->id}: Generando {$mesesAtrasados} cuotas atrasadas desde {$fechaInicio}...\n");
             
-            // ... existing generation logic
+            for ($i = 0; $i < $mesesAtrasados; $i++) {
+                $fechaVencimiento = date('Y-m-d', strtotime($fechaInicio . " +{$i} months"));
+                $fechaVencimiento = date('Y-m-07', strtotime($fechaVencimiento)); // Siempre día 7 del mes
+                
+                // Verificar si ya existe una cuota para esta fecha
+                $cuotaExistente = Cuotas::find()
+                    ->where([
+                        'contrato_id' => $contrato->id,
+                        'fecha_vencimiento' => $fechaVencimiento
+                    ])
+                    ->exists();
+                    
+                if (!$cuotaExistente) {
+                    $cuota = new Cuotas([
+                        'contrato_id' => $contrato->id,
+                        'fecha_vencimiento' => $fechaVencimiento,
+                        'monto_usd' => $contrato->monto,
+                        'estatus' => 'pendiente',
+                        'rate_usd_bs' => $this->obtenerTasaCambioActual(),
+                    ]);
+                    
+                    if ($cuota->save()) {
+                        $cuotasGeneradas++;
+                        $this->stdout("    ✅ Cuota atrasada generada: {$fechaVencimiento} - {$contrato->monto} USD\n");
+                    } else {
+                        $this->stderr("    ❌ Error al generar cuota atrasada: " . print_r($cuota->errors, true) . "\n");
+                    }
+                }
+            }
         }
         
         return $cuotasGeneradas;
     }
-    
     
     /**
  * Genera la cuota del mes actual para un contrato.
@@ -472,12 +512,18 @@ public function actionVerificarDuplicados()
             
             foreach ($contratosVencidos as $contrato) {
                 if ($contrato->estatus !== 'suspendido') {
-                    $contrato->estatus = 'suspendido';
-                    if ($contrato->save()) {
-                        $contratosSuspendidos++;
-                        $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
+                    // ADDED: Check if user is solvent before suspending
+                    $userDatos = UserDatos::findOne($contrato->user_id);
+                    if ($userDatos && $userDatos->estatus_solvente === 'SI') {
+                        $this->stdout("  ✅ Contrato #{$contrato->id} vencido pero usuario es solvente - NO suspendiendo\n");
                     } else {
-                        $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                        $contrato->estatus = 'suspendido';
+                        if ($contrato->save()) {
+                            $contratosSuspendidos++;
+                            $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
+                        } else {
+                            $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                        }
                     }
                 }
             }
@@ -500,12 +546,18 @@ public function actionVerificarDuplicados()
             foreach ($cuotasVencidas as $cuota) {
                 $contrato = Contratos::findOne($cuota->contrato_id);
                 if ($contrato && $contrato->estatus !== 'suspendido') {
-                    $contrato->estatus = 'suspendido';
-                    if ($contrato->save()) {
-                        $contratosSuspendidos++;
-                        $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por cuota vencida del {$cuota->fecha_vencimiento}\n");
+                    // ADDED: Check if user is solvent before suspending
+                    $userDatos = UserDatos::findOne($contrato->user_id);
+                    if ($userDatos && $userDatos->estatus_solvente === 'SI') {
+                        $this->stdout("  ✅ Contrato #{$contrato->id} tiene cuotas vencidas pero usuario es solvente - NO suspendiendo\n");
                     } else {
-                        $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                        $contrato->estatus = 'suspendido';
+                        if ($contrato->save()) {
+                            $contratosSuspendidos++;
+                            $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por cuota vencida del {$cuota->fecha_vencimiento}\n");
+                        } else {
+                            $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                        }
                     }
                 }
             }
@@ -550,15 +602,21 @@ public function actionVerificarDuplicados()
         
         foreach ($contratosVencidos as $contrato) {
             if ($contrato->estatus !== 'suspendido') {
-                $contrato->estatus = 'suspendido';
-                if ($contrato->save()) {
-                    $contratosSuspendidos++;
-                    $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
-                    $this->stdout("   - Cliente: " . ($contrato->user ? $contrato->user->nombre : 'N/A') . "\n");
-                    $this->stdout("   - Plan: " . ($contrato->plan ? $contrato->plan->nombre : 'N/A') . "\n");
-                    $this->stdout("   - Monto: {$contrato->monto} USD\n");
+                // ADDED: Check if user is solvent before suspending
+                $userDatos = UserDatos::findOne($contrato->user_id);
+                if ($userDatos && $userDatos->estatus_solvente === 'SI') {
+                    $this->stdout("  ✅ Contrato #{$contrato->id} vencido pero usuario es solvente - NO suspendiendo\n");
                 } else {
-                    $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                    $contrato->estatus = 'suspendido';
+                    if ($contrato->save()) {
+                        $contratosSuspendidos++;
+                        $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
+                        $this->stdout("   - Cliente: " . ($contrato->user ? $contrato->user->nombre : 'N/A') . "\n");
+                        $this->stdout("   - Plan: " . ($contrato->plan ? $contrato->plan->nombre : 'N/A') . "\n");
+                        $this->stdout("   - Monto: {$contrato->monto} USD\n");
+                    } else {
+                        $this->stderr("❌ Error al suspender contrato #{$contrato->id}\n");
+                    }
                 }
             }
         }
@@ -582,7 +640,10 @@ public function actionVerificarDuplicados()
         $this->stdout("1. Verificando cuotas vencidas...\n");
         $this->runAction('verificar-vencidas');
         
-        $this->stdout("\n2. Generando cuotas mensuales (si es día 1)...\n");
+        $this->stdout("\n2. Reconciliando estatus solvente...\n");
+        $this->runAction('reconcile-solvente');
+        
+        $this->stdout("\n3. Generando cuotas mensuales (si es día 1)...\n");
         if (date('j') === '1') {
             $this->runAction('generar-mensual');
         } else {
@@ -1168,6 +1229,144 @@ public function actionVerificarDuplicados()
         }
         
         $this->stdout("✅ Proceso completado. Se repararon {$repairedCount} relaciones pago-cuota.\n");
+        return ExitCode::OK;
+    }
+
+    /**
+     * Reconcile solvent status for users with paid cuotas
+     * Uso: `yii cuota/reconcile-solvente`
+     * 
+     * @return int Código de salida
+     */
+    public function actionReconcileSolvente()
+    {
+        $this->stdout("Reconciliando estatus solvente...\n");
+        
+        $updatedCount = $this->reconcileSolventStatus();
+        
+        $this->stdout("✅ Proceso completado. {$updatedCount} usuarios actualizados a solvente.\n");
+        return ExitCode::OK;
+    }
+
+    /**
+     * Internal method to reconcile solvent status
+     * 
+     * @return int Number of users updated
+     */
+    private function reconcileSolventStatus()
+    {
+        $updatedCount = 0;
+        
+        // Find users who should be marked as SOLVENT
+        $usersToMarkSolvent = UserDatos::find()
+            ->where(['estatus_solvente' => 'No'])
+            ->andWhere(['or',
+                // Users with all cuotas paid (no pending cuotas with past due dates)
+                ['exists', '
+                    SELECT 1 FROM contratos c 
+                    WHERE c.user_id = user_datos.id 
+                    AND c.estatus IN (\'activo\', \'Activo\', \'Creado\', \'Registrado\')
+                    AND NOT EXISTS (
+                        SELECT 1 FROM cuotas cu 
+                        WHERE cu.contrato_id = c.id 
+                        AND cu.estatus = \'pendiente\'
+                        AND cu.fecha_vencimiento < CURRENT_DATE
+                    )
+                '],
+                // Users with conciliated payments in the current month
+                ['exists', '
+                    SELECT 1 FROM pagos p 
+                    WHERE p.user_id = user_datos.id 
+                    AND p.estatus = \'Conciliado\'
+                    AND p.fecha_pago >= DATE_TRUNC(\'month\', CURRENT_DATE)
+                ']
+            ])
+            ->all();
+        
+        foreach ($usersToMarkSolvent as $user) {
+            $user->estatus_solvente = 'SI';
+            if ($user->save(false)) {
+                $updatedCount++;
+                $this->stdout("✅ Usuario {$user->nombres} {$user->apellidos} (Cédula: {$user->cedula}) marcado como solvente\n");
+            }
+        }
+        
+        // Find users who should be marked as NOT SOLVENT
+        $usersToMarkNotSolvent = UserDatos::find()
+            ->where(['estatus_solvente' => 'SI'])
+            ->andWhere(['not exists', '
+                SELECT 1 FROM pagos p 
+                WHERE p.user_id = user_datos.id 
+                AND p.estatus = \'Conciliado\'
+                AND p.fecha_pago >= DATE_TRUNC(\'month\', CURRENT_DATE)
+            '])
+            ->andWhere(['exists', '
+                SELECT 1 FROM contratos c 
+                JOIN cuotas cu ON cu.contrato_id = c.id
+                WHERE c.user_id = user_datos.id 
+                AND c.estatus IN (\'activo\', \'Activo\', \'Creado\', \'Registrado\')
+                AND cu.estatus = \'pendiente\'
+                AND cu.fecha_vencimiento < CURRENT_DATE
+            '])
+            ->all();
+        
+        foreach ($usersToMarkNotSolvent as $user) {
+            $user->estatus_solvente = 'No';
+            if ($user->save(false)) {
+                $updatedCount++;
+                $this->stdout("⚠️ Usuario {$user->nombres} {$user->apellidos} (Cédula: {$user->cedula}) marcado como NO solvente\n");
+            }
+        }
+        
+        return $updatedCount;
+    }
+    /**
+ * Fixes inconsistent solvent status across the system
+ * Uso: `yii cuota/fix-solvent-status`
+ * 
+ * @return int Código de salida
+ */
+public function actionFixSolventStatus()
+    {
+        $this->stdout("=== CORRIGIENDO ESTATUS SOLVENTE INCONSISTENTE ===\n\n");
+        
+        $fixedCount = 0;
+        $allUsers = UserDatos::find()->all();
+        
+        foreach ($allUsers as $user) {
+            $currentStatus = $user->estatus_solvente;
+            
+            // Check if user should be solvent
+            $shouldBeSolvent = false;
+            
+            // Check for current month conciliated payments
+            $currentMonthStart = date('Y-m-01');
+            $hasCurrentPayment = Pagos::find()
+                ->where(['user_id' => $user->id, 'estatus' => 'Conciliado'])
+                ->andWhere(['>=', 'fecha_pago', $currentMonthStart])
+                ->exists();
+            
+            // Check for no overdue cuotas
+            $hasOverdueCuotas = Cuotas::find()
+                ->joinWith(['contrato'])
+                ->where(['contratos.user_id' => $user->id])
+                ->andWhere(['cuotas.estatus' => 'pendiente'])
+                ->andWhere(['<', 'cuotas.fecha_vencimiento', date('Y-m-d')])
+                ->exists();
+            
+            $shouldBeSolvent = $hasCurrentPayment && !$hasOverdueCuotas;
+            $correctStatus = $shouldBeSolvent ? 'SI' : 'No';
+            
+            if ($currentStatus !== $correctStatus) {
+                $user->estatus_solvente = $correctStatus;
+                if ($user->save(false)) {
+                    $fixedCount++;
+                    $this->stdout("✅ Corregido: {$user->nombres} {$user->apellidos} - {$currentStatus} → {$correctStatus}\n");
+                }
+            }
+        }
+        
+        $this->stdout("\n✅ Proceso completado. Se corrigieron {$fixedCount} usuarios.\n");
         return ExitCode::OK;
     }
 }
