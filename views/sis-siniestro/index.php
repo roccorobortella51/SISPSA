@@ -19,12 +19,13 @@ use app\components\UserHelper;
 // 1. LÓGICA DE MODO Y BOTONES
 // ----------------------------------------------------------------------
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "Administrador-clinica");
+// ADD COORDINADOR-CLINICA TO PERMISSIONS
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "Administrador-clinica" || $rol == "COORDINADOR-CLINICA");
 
 // Definir variables basadas en el modo
 $esCita = ($modo === 'cita') ? 1 : 0;
 $tituloModo = ($modo === 'cita') ? 'Citas' : 'Siniestros';
-$textoBoton = ($modo === 'cita') ? 'Crear Nueva Cita' : 'Crear Nuevo Siniestro';
+$textoBoton = ($modo === 'cita') ? 'Crear Nueva Cita' : 'Crear Nueva Atención';
 
 $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
 // Título ahora refleja el modo
