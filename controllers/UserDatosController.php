@@ -814,7 +814,7 @@ public function actionMasivo()
         //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-            / --- ADD THIS CODE BLOCK HERE ---
+            //-- --- ADD THIS CODE BLOCK HERE ---
             // Normalize estatus_solvente to consistent format
             if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
                 $model->estatus_solvente = "Si";
