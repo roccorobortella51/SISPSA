@@ -136,6 +136,7 @@ use yii\db\ActiveRecord;
  * @property string|null $tipo_cuenta_contratante
  * @property bool|null $tiene_contratante_diferente
  * @property string|null $direccion_cobro
+ * @property int|null $afiliado_corporativo_id
  *
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
@@ -183,10 +184,16 @@ class UserDatos extends ActiveRecord
     {
         return [
             // 1. Campos obligatorios - CÉDULA AHORA ES OBLIGATORIA
-            [['nombres', 'apellidos', 'fechanac', 'sexo', 'cedula', // ← Cédula agregada aquí
+            [['clinica_id', 'plan_id', 'nombres', 'apellidos', 'fechanac', 'sexo', 'cedula', // ← Cédula agregada aquí
               'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
 
-            // 2. Valores por defecto (se mantienen igual)
+            // 2. Campos obligatorios adicionales - NUEVOS CAMPOS REQUERIDOS
+            [['user_datos_type_id', 'clinica_id', 'plan_id'], 'required', 'message' => 'Este campo es obligatorio.'],
+
+            // 3. Validación condicional para afiliado_corporativo_id
+            ['afiliado_corporativo_id', 'validateCorporativoRequired'],
+
+            // 4. Valores por defecto (se mantienen igual)
             [['paso'], 'default', 'value' => 0.0],
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
@@ -194,7 +201,7 @@ class UserDatos extends ActiveRecord
 
             [['user_id', 'session_id', 'estatus_solvente'], 'string'],
             
-            // 3. Validación de tipos de datos y longitud
+            // 5. Validación de tipos de datos y longitud
             [['telefono'], 'string', 'max' => 15], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
             [['telefono'], 'match',
                 'pattern' => '/^(0416|0422|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
@@ -207,14 +214,14 @@ class UserDatos extends ActiveRecord
         
             [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
            
-            // 4. Validaciones específicas de contenido (se mantienen igual)
+            // 6. Validaciones específicas de contenido (se mantienen igual)
             [['email'], 'email'],
             [['email'], 'unique', 'targetClass' => UserDatos::class, 'message' => 'Este correo electrónico ya está registrado.'],
 
             [['paso'], 'number'],
             [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
 
-            // 5. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
+            // 7. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
             [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
             
             //validaciones para roles 
@@ -229,23 +236,23 @@ class UserDatos extends ActiveRecord
             [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G'], 'message' => 'Tipo de cédula no válido.'], 
 
         
-            // 6. Validaciones para carga de archivos (se mantienen igual)
+            // 8. Validaciones para carga de archivos (se mantienen igual)
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
             [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
             [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
 
-            // 7. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
+            // 9. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
             [['selfie', 'imagen_identificacion', 'video', 'qr'], 'string', 'max' => 255],
 
-            // 8. Campos seguros (timestamps)
+            // 10. Campos seguros (timestamps)
             [['created_at', 'updated_at', 'deleted_at', 'fechanac','clinica_id'], 'safe'],
             
-            // 9. Validación específica para cédula - debe ser numérica y ahora es obligatoria
+            // 11. Validación específica para cédula - debe ser numérica y ahora es obligatoria
             [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
             [['cedula'], 'integer', 'max' => 9999999999, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
             
-            // 10. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
+            // 12. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
@@ -254,12 +261,12 @@ class UserDatos extends ActiveRecord
             [['banco_id'], 'integer'],
             [['banco_id'], 'exist', 'skipOnError' => true, 'targetClass' => Banco::class, 'targetAttribute' => ['banco_id' => 'id'], 'message' => 'El banco seleccionado no existe.'],
 
-            // 11. Validaciones de fecha
+            // 13. Validaciones de fecha
             [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'], // Valida el formato de fecha
             [['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date',
                 'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'],
 
-            // 12. Validaciones para campos de texto (VARCHAR/TEXT)
+            // 14. Validaciones para campos de texto (VARCHAR/TEXT)
             [['nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
               'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
               'direccion_residencia', 'direccion_oficina', 'telefono_residencia', 'telefono_oficina',
@@ -284,23 +291,33 @@ class UserDatos extends ActiveRecord
               'nombre_titular_contratante', 'cedula_titular_contratante', 'numero_cuenta_contratante',
               'banco_contratante', 'tipo_cuenta_contratante', 'direccion_cobro'], 'string', 'max' => 255],
 
-            // 13. Validaciones para campos de fecha
+            // 15. Validaciones para campos de fecha
             [['fecha_nacimiento_contratante',
               'fecha_nacimiento_representante_contratante',
               'fecha_nacimiento_beneficiario'], 'date', 'format' => 'yyyy-MM-dd'],
 
-            // 14. Validaciones para campos booleanos
+            // 16. Validaciones para campos booleanos
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'default', 'value' => false],
 
-            // 15. Validaciones para campos enteros
+            // 17. Validaciones para campos enteros
             [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
 
-            // 16. Validaciones para campos de texto largo (para JSON)
+            // 18. Validaciones para campos de texto largo (para JSON)
             [['grupo_familiar'], 'string'],
             [['grupo_familiar'], 'safe'],
         ];
 
+    }
+
+    /**
+     * Custom validator for corporativo field
+     */
+    public function validateCorporativoRequired($attribute, $params)
+    {
+        if ($this->user_datos_type_id == 2 && empty($this->$attribute)) {
+            $this->addError($attribute, 'El afiliado corporativo es obligatorio cuando el tipo es corporativo.');
+        }
     }
 
     /**
@@ -399,6 +416,7 @@ class UserDatos extends ActiveRecord
             'tipo_cuenta_contratante',
             'tiene_contratante_diferente',
             'direccion_cobro',
+            'afiliado_corporativo_id',
         ]);
     }
 
@@ -410,6 +428,10 @@ class UserDatos extends ActiveRecord
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
             'direccion_cobro' => 'Dirección de Cobro',
+            'user_datos_type_id' => 'Tipo de Afiliado',
+            'clinica_id' => 'Clínica',
+            'plan_id' => 'Plan',
+            'afiliado_corporativo_id' => 'Afiliado Corporativo',
         ]);
     }
 
