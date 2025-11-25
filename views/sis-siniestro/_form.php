@@ -5,8 +5,10 @@ use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
 use yii\web\View;
 use yii\helpers\ArrayHelper;
+use yii\bootstrap4\Modal;
 
 $this->registerCssFile(Yii::getAlias('@web') . "/css/_formsiniestros.css", ['position' => View::POS_HEAD]);
+
 
 
 /* @var $this yii\web\View */
@@ -662,7 +664,10 @@ $this->registerJs(<<<JS
             }
         }
         
-        baremosSelect.select2('destroy');
+        // Comprobamos si Select2 fue inicializado antes de destruirlo.
+        if (baremosSelect.data('select2')) { 
+            baremosSelect.select2('destroy');
+        }
         baremosSelect.select2({
             multiple: true,
             placeholder: 'Seleccione uno o más Baremos',
@@ -868,7 +873,7 @@ JS
                     </div>
                 </div>
                 
-                <div class="col-md-6">
+               <div class="col-md-6">
                     <div class="ms-panel">
                         <div class="ms-panel-header">
                             <h3 class="section-title">
@@ -876,12 +881,41 @@ JS
                             </h3>
                         </div>
                         <div class="ms-panel-body">
-                            <div class="afiliado-container">
-                                <?= $this->render('/user-datos/view', ['model' => $afiliado]) ?>
-                            </div>
+                            <?= Html::button(
+                                '<i class="fas fa-eye mr-2"></i> Ver Detalles del Afiliado',
+                                [
+                                    'class' => 'btn btn-success btn-lg w-100',
+                                    'id' => 'btn-abrir-afiliado-modal', // <-- ID para que el JS lo encuentre
+                                    'type' => 'button' 
+                                    
+                                ]
+                            ) ?>
                         </div>
                     </div>
                 </div>
+
+                <?php
+               
+                Modal::begin([
+                    'title' => '<h4>Detalles del Afiliado <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></h4>',
+                    'id' => 'afiliado-modal', 
+                    'size' => Modal::SIZE_LARGE, 
+                    'options' => [
+                        'tabindex' => false, 
+                        'class' => 'fade', // Necesario para la animación
+                        'role' => 'dialog', 
+                    ],
+                  
+                    'dialogOptions' => ['class' => 'modal-dialog-centered'], 
+                ]);
+
+                // ESTE ES EL CONTENIDO QUE SE MOSTRARÁ DENTRO DE LA VENTANA MODAL
+                echo $this->render('/user-datos/view', ['model' => $afiliado]); 
+
+                Modal::end();
+                ?>
+
+
             </div>
         </div>
     </div>
@@ -981,4 +1015,21 @@ $(document).ready(function() {
 JS;
 
 $this->registerJs($js, View::POS_READY);
+?>
+
+<?php
+// Usamos View::POS_END para asegurar que este script se ejecuta lo último de lo último, 
+// después de que todos los assets y scripts del DOM estén completamente cargados.
+
+$this->registerJs(<<<JS
+    $('#btn-abrir-afiliado-modal').on('click', function(e) {
+        e.preventDefault();
+        
+        // Retraso de 50ms para evitar scripts de cierre
+        setTimeout(function() {
+            $('#afiliado-modal').modal('show');
+        }, 50); 
+    });
+JS
+, View::POS_END);
 ?>

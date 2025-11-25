@@ -2,6 +2,7 @@
 
 use yii\helpers\Html;
 
+
 /** @var yii\web\View $this */
 /** @var app\models\SisSiniestro $model */
 /** @var app\models\UserDatos $afiliado */

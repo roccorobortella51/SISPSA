@@ -76,46 +76,40 @@
     font-size: 16px;
 }
 
+/* 1. Guardar (Success/Primario -> Azul) */
 .btn-success {
-    background-color: #107c10; /* Microsoft Green */
-    border-color: #107c10;
-    color: #ffffff;
+    background-color: #007bff !important; /* Azul Primario */
+    border-color: #007bff !important;
+    color: #ffffff !important;
 }
-
 .btn-success:hover {
-    background-color: #0e700e;
-    border-color: #0e700e;
-    transform: none; /* Remove translateY for Microsoft flat design */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow */
+    background-color: #0056b3 !important; /* Azul Oscuro en hover */
+    border-color: #0056b3 !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
 }
 
+/* 2. Cancelar (Warning -> Secundario/Gris) */
 .btn-warning {
-    background-color: #d83b01; /* Microsoft Orange */
-    border-color: #d83b01;
-    color: #ffffff;
+    background-color: #dd432fe0 !important; /* Gris Secundario */
+    border-color: #6c757d !important;
+    color: #ffffff !important;
 }
-
 .btn-warning:hover {
-    background-color: #c23501;
-    border-color: #c23501;
-    transform: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: #dd432fa0!important;
+    border-color: #545b62 !important;
 }
 
+/* 3. Limpiar (Outline-Dark -> Mantener el estilo Outline, pero con mejores colores) */
 .btn-outline-dark {
-    border-color: #8a8886; /* Microsoft Gray110 */
-    color: #323130; /* Microsoft Gray190 */
-    background-color: transparent;
+     background-color: #6c757d !important; /* Gris Secundario */
+    border-color: #6c757d !important;
+    color: #ffffff !important;
 }
 
 .btn-outline-dark:hover {
-    background-color: #f3f2f1; /* Microsoft Gray20 */
-    color: #201f1e; /* Microsoft Gray200 */
-    border-color: #8a8886;
-    transform: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+   background-color: #5a6268 !important;
+    border-color: #545b62 !important;
 }
-
 /* ===== AFILIADO CONTAINER ===== */
 .afiliado-container {
     background-color: #faf9f8; /* Microsoft Gray10 */
@@ -624,4 +618,32 @@
 .stats-label {
     font-size: 2rem;
     color: #6c757d;
+}
+
+/* 1. Forzar el fondo a un z-index alto */
+.modal-backdrop {
+    z-index: 1050 !important; 
+}
+
+/* 2. Forzar la ventana del modal a un z-index MÁS alto */
+.modal {
+    z-index: 1060 !important; 
+}
+
+/* 3. Asegurar que el contenido del modal sea visible y se muestre en bloque */
+#afiliado-modal.modal.show .modal-dialog {
+    /* Mueve el diálogo del modal hacia adelante */
+    z-index: 1070 !important; 
+    /* Asegura que no se oculte por overflow */
+    visibility: visible !important;
+}
+
+#afiliado-modal.modal.show {
+    /* Forzar que el modal esté visible */
+    display: block !important; 
+    opacity: 1 !important; 
+}
+
+#afiliado-modal .modal-dialog {
+    max-width: 70% !important; /* Hazlo más ancho (puedes usar 80%, 90% o 1200px) */
 }
