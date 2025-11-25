@@ -83,14 +83,13 @@ $this->registerJs($jsValidation);
                                 'data' => UserDatosType::getList(),
                                 'options' => [
                                     'placeholder' => 'Seleccionar tipo de afiliado...',
-                                    'class' => 'form-control form-control-lg required-field',
+                                    'class' => 'form-control form-control-lg conditional-required',
                                     'id' => 'user_datos_type_id_field',
-                                    'required' => true,
                                 ],
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
-                            ])->label('Tipo de Afiliado') ?>
+                            ])->label('Tipo de Afiliado <span class="text-danger">*</span>') ?>
                         </div>
 
                         <div class="col-md-6" id="afiliado_corporativo_container" style="display: none;">
@@ -105,7 +104,7 @@ $this->registerJs($jsValidation);
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
-                            ])->label('Afiliado Corporativo <span class="text-danger">*</span>') ?>
+                            ])->label('Afiliado Corporativo <span class="text-danger conditional-asterisk">*</span>') ?>
                         </div>
 
                          <div class="col-md-6">
@@ -114,16 +113,15 @@ $this->registerJs($jsValidation);
                                 'options'=>[
                                     'id'=>'clinica_id',
                                     'placeholder' => 'Seleccione la Clínica',
-                                    'class' => 'form-control  form-control-lg required-field',
+                                    'class' => 'form-control  form-control-lg conditional-required',
                                     'allowClear' => true,
-                                    'required' => true,
                                 ],
                                 'pluginOptions'=>[
                                     'depends'=>['user_datos_type_id_field', 'corporativo_id',],
                                     'url'=>Url::to(['clinicas']),
                                     'initialize' => true,
                                     ]
-                                ])->label('Clínica');
+                                ])->label('Clínica <span class="text-danger conditional-asterisk">*</span>');
                             ?>
                         </div>
                         <div class="col-md-6">
@@ -132,9 +130,8 @@ $this->registerJs($jsValidation);
                                 'options' => [
                                     'id' => 'plan_id',
                                     'placeholder' => 'Seleccione el Plan',
-                                    'class' => 'form-control form-control-lg required-field',
+                                    'class' => 'form-control form-control-lg conditional-required',
                                     'allowClear' => true,
-                                    'required' => true,
                                 ],
                                 'pluginOptions' => [
                                     'depends' => ['clinica_id'],
@@ -147,7 +144,7 @@ $this->registerJs($jsValidation);
                                         datosplan($(this).val());
                                     }",
                                 ]
-                            ])->label('Plan <span class="text-danger">*</span>') ?>
+                            ])->label('Plan <span class="text-danger conditional-asterisk">*</span>') ?>
                         </div>
 
                         <div class="col-md-6">
@@ -1045,23 +1042,46 @@ $(function(){
     if ($inp.length) { $inp.trigger('click'); }
   });
   
-  // Function to toggle required attribute for corporativo field
-  function toggleCorporativoRequired() {
+  // Function to toggle required attributes based on affiliation type
+  function toggleConditionalRequired() {
       var tipoAfiliado = $('#user_datos_type_id_field').val();
+      var clinicaField = $('#clinica_id');
+      var planField = $('#plan_id');
       var corporativoField = $('#corporativo_id');
       
-      if (tipoAfiliado == '2') {
-          corporativoField.attr('required', true);
-          corporativoField.closest('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
-      } else {
+      if (tipoAfiliado == '1') {
+          // Individual - make clinica and plan required
+          clinicaField.attr('required', true);
+          planField.attr('required', true);
+          $('.conditional-asterisk').show();
+          $('.field-userdatos-clinica_id, .field-contratos-plan_id').addClass('required-field');
+          
+          // Remove required from corporativo
           corporativoField.removeAttr('required');
-          corporativoField.closest('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
+          $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
+      } else if (tipoAfiliado == '2') {
+          // Corporativo - remove required from clinica and plan
+          clinicaField.removeAttr('required');
+          planField.removeAttr('required');
+          $('.conditional-asterisk').hide();
+          $('.field-userdatos-clinica_id, .field-contratos-plan_id').removeClass('required-field');
+          
+          // Make corporativo required
+          corporativoField.attr('required', true);
+          $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
+      } else {
+          // No type selected - remove all conditional requirements
+          clinicaField.removeAttr('required');
+          planField.removeAttr('required');
+          corporativoField.removeAttr('required');
+          $('.conditional-asterisk').hide();
+          $('.field-userdatos-clinica_id, .field-contratos-plan_id, .field-userdatos-afiliado_corporativo_id').removeClass('required-field');
       }
   }
 
   // Enhanced form validation
   $('#user-datos-form').on('beforeValidate', function() {
-      toggleCorporativoRequired();
+      toggleConditionalRequired();
       return true;
   });
 
@@ -1076,7 +1096,7 @@ $(function(){
   
   // Inicializar estado al cargar la página
   toggleContratanteSection();
-  toggleCorporativoRequired();
+  toggleConditionalRequired();
   
   // Cambiar estado cuando se marca/desmarca el checkbox
   $('#userdatos-tiene_contratante_diferente').on('change', function() {
@@ -1162,12 +1182,8 @@ $(function(){
   function toggleAfiliadoCorporativo() {
    if ($('#user_datos_type_id_field').val() == '2') {
      $('#afiliado_corporativo_container').show();
-     $('#corporativo_id').attr('required', true);
-     $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
    } else {
      $('#afiliado_corporativo_container').hide();
-     $('#corporativo_id').removeAttr('required');
-     $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
    }
   }
 
@@ -1177,7 +1193,7 @@ $(function(){
   // Cambiar estado cuando se selecciona un tipo de afiliado
   $('#user_datos_type_id_field').on('change', function() {
    toggleAfiliadoCorporativo();
-   toggleCorporativoRequired();
+   toggleConditionalRequired();
   });
 
   // Lógica para la visualización de las clínicas y el corporativo
@@ -1315,6 +1331,11 @@ JS);
 }
 .text-danger {
     color: #dc3545;
+}
+
+/* Conditional asterisk styling */
+.conditional-asterisk {
+    display: inline;
 }
 
 /* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 

@@ -184,14 +184,30 @@ class UserDatos extends ActiveRecord
     {
         return [
             // 1. Campos obligatorios - CÉDULA AHORA ES OBLIGATORIA
-            [['clinica_id', 'plan_id', 'nombres', 'apellidos', 'fechanac', 'sexo', 'cedula', // ← Cédula agregada aquí
+            [['nombres', 'apellidos', 'fechanac', 'sexo', 'cedula', // ← Cédula agregada aquí
               'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
 
             // 2. Campos obligatorios adicionales - NUEVOS CAMPOS REQUERIDOS
-            [['user_datos_type_id', 'clinica_id', 'plan_id'], 'required', 'message' => 'Este campo es obligatorio.'],
+            [['user_datos_type_id', 'clinica_id', 'plan_id'], 'required', 
+                'when' => function($model) {
+                    return $model->user_datos_type_id == 1;
+                }, 
+                'whenClient' => "function (attribute, value) {
+                    return $('#user_datos_type_id_field').val() == '1';
+                }", 
+                'message' => 'Este campo es obligatorio para afiliados individuales.'
+            ],
 
             // 3. Validación condicional para afiliado_corporativo_id
-            ['afiliado_corporativo_id', 'validateCorporativoRequired'],
+            ['afiliado_corporativo_id', 'required', 
+                'when' => function($model) {
+                    return $model->user_datos_type_id == 2;
+                }, 
+                'whenClient' => "function (attribute, value) {
+                    return $('#user_datos_type_id_field').val() == '2';
+                }", 
+                'message' => 'El afiliado corporativo es obligatorio cuando el tipo es corporativo.'
+            ],
 
             // 4. Valores por defecto (se mantienen igual)
             [['paso'], 'default', 'value' => 0.0],
