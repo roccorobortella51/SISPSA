@@ -83,13 +83,13 @@ $this->registerJs($jsValidation);
                                 'data' => UserDatosType::getList(),
                                 'options' => [
                                     'placeholder' => 'Seleccionar tipo de afiliado...',
-                                    'class' => 'form-control form-control-lg',
+                                    'class' => 'form-control form-control-lg conditional-required',
                                     'id' => 'user_datos_type_id_field',
                                 ],
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
-                            ])->label('Tipo de Afiliado') ?>
+                            ])->label('Tipo de Afiliado <span class="text-danger">*</span>') ?>
                         </div>
 
                         <div class="col-md-6" id="afiliado_corporativo_container" style="display: none;">
@@ -98,13 +98,13 @@ $this->registerJs($jsValidation);
                                 'options' => [
                                     'id' => 'afiliado_corporativo_id',
                                     'placeholder' => 'Seleccione.',
-                                    'class' => 'form-control form-control-lg',
+                                    'class' => 'form-control form-control-lg corporativo-required',
                                     'id' => 'corporativo_id'
                                 ],
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
-                            ])->label('Afiliado Corporativo') ?>
+                            ])->label('Afiliado Corporativo <span class="text-danger conditional-asterisk">*</span>') ?>
                         </div>
 
                          <div class="col-md-6">
@@ -112,8 +112,8 @@ $this->registerJs($jsValidation);
                                 'type' => DepDrop::TYPE_SELECT2,
                                 'options'=>[
                                     'id'=>'clinica_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
+                                    'placeholder' => 'Seleccione la Clínica',
+                                    'class' => 'form-control  form-control-lg conditional-required',
                                     'allowClear' => true,
                                 ],
                                 'pluginOptions'=>[
@@ -121,7 +121,7 @@ $this->registerJs($jsValidation);
                                     'url'=>Url::to(['clinicas']),
                                     'initialize' => true,
                                     ]
-                                ])->label('Clínica');
+                                ])->label('Clínica <span class="text-danger conditional-asterisk">*</span>');
                             ?>
                         </div>
                         <div class="col-md-6">
@@ -129,8 +129,8 @@ $this->registerJs($jsValidation);
                                 'type' => DepDrop::TYPE_SELECT2,
                                 'options' => [
                                     'id' => 'plan_id',
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control form-control-lg',
+                                    'placeholder' => 'Seleccione el Plan',
+                                    'class' => 'form-control form-control-lg conditional-required',
                                     'allowClear' => true,
                                 ],
                                 'pluginOptions' => [
@@ -144,7 +144,7 @@ $this->registerJs($jsValidation);
                                         datosplan($(this).val());
                                     }",
                                 ]
-                            ])->label('Plan'); ?>
+                            ])->label('Plan <span class="text-danger conditional-asterisk">*</span>') ?>
                         </div>
 
                         <div class="col-md-6">
@@ -1019,7 +1019,6 @@ $this->registerJs($jsValidation);
 $urlGetClinicasByCorporativo = \yii\helpers\Url::to(['/user/get-clinicas-by-corporativo']);
 $urlGetAllClinicas = \yii\helpers\Url::to(['/user/get-all-clinicas']);
 
-
 $this->registerJs(<<<'JS'
 // Refuerzo de clic y diagnóstico para FileInput en este formulario
 $(function(){
@@ -1043,6 +1042,49 @@ $(function(){
     if ($inp.length) { $inp.trigger('click'); }
   });
   
+  // Function to toggle required attributes based on affiliation type
+  function toggleConditionalRequired() {
+      var tipoAfiliado = $('#user_datos_type_id_field').val();
+      var clinicaField = $('#clinica_id');
+      var planField = $('#plan_id');
+      var corporativoField = $('#corporativo_id');
+      
+      if (tipoAfiliado == '1') {
+          // Individual - make clinica and plan required
+          clinicaField.attr('required', true);
+          planField.attr('required', true);
+          $('.conditional-asterisk').show();
+          $('.field-userdatos-clinica_id, .field-contratos-plan_id').addClass('required-field');
+          
+          // Remove required from corporativo
+          corporativoField.removeAttr('required');
+          $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
+      } else if (tipoAfiliado == '2') {
+          // Corporativo - remove required from clinica and plan
+          clinicaField.removeAttr('required');
+          planField.removeAttr('required');
+          $('.conditional-asterisk').hide();
+          $('.field-userdatos-clinica_id, .field-contratos-plan_id').removeClass('required-field');
+          
+          // Make corporativo required
+          corporativoField.attr('required', true);
+          $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
+      } else {
+          // No type selected - remove all conditional requirements
+          clinicaField.removeAttr('required');
+          planField.removeAttr('required');
+          corporativoField.removeAttr('required');
+          $('.conditional-asterisk').hide();
+          $('.field-userdatos-clinica_id, .field-contratos-plan_id, .field-userdatos-afiliado_corporativo_id').removeClass('required-field');
+      }
+  }
+
+  // Enhanced form validation
+  $('#user-datos-form').on('beforeValidate', function() {
+      toggleConditionalRequired();
+      return true;
+  });
+
   // Mostrar/ocultar sección de contratante
   function toggleContratanteSection() {
     if ($('#userdatos-tiene_contratante_diferente').is(':checked')) {
@@ -1054,6 +1096,7 @@ $(function(){
   
   // Inicializar estado al cargar la página
   toggleContratanteSection();
+  toggleConditionalRequired();
   
   // Cambiar estado cuando se marca/desmarca el checkbox
   $('#userdatos-tiene_contratante_diferente').on('change', function() {
@@ -1137,7 +1180,7 @@ $(function(){
  
   // Mostrar/ocultar sección de afiliado corporativo
   function toggleAfiliadoCorporativo() {
-   if ($('#user_datos_type_id_field').val() == '2') { // Asumiendo que 2 es el ID para afiliado corporativo
+   if ($('#user_datos_type_id_field').val() == '2') {
      $('#afiliado_corporativo_container').show();
    } else {
      $('#afiliado_corporativo_container').hide();
@@ -1150,6 +1193,7 @@ $(function(){
   // Cambiar estado cuando se selecciona un tipo de afiliado
   $('#user_datos_type_id_field').on('change', function() {
    toggleAfiliadoCorporativo();
+   toggleConditionalRequired();
   });
 
   // Lógica para la visualización de las clínicas y el corporativo
@@ -1278,6 +1322,20 @@ JS);
 /* Remove text shadow interference */
 .file-input .btn.btn-primary {
     text-shadow: none !important; 
+}
+
+/* Required field styling */
+.required-field label:after {
+    content: " *";
+    color: #dc3545;
+}
+.text-danger {
+    color: #dc3545;
+}
+
+/* Conditional asterisk styling */
+.conditional-asterisk {
+    display: inline;
 }
 
 /* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 
