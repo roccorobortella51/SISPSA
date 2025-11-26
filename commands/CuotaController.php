@@ -111,7 +111,7 @@ class CuotaController extends Controller
         $ultimaCuota = Cuotas::find()
             ->where(['contrato_id' => $contrato->id])
             ->orderBy(['fecha_vencimiento' => SORT_DESC])
-            ->one();  // ← Changed to get ANY cuota, not just paid ones
+            ->one();
                 
         $fechaInicio = $ultimaCuota ?
             date('Y-m-d', strtotime($ultimaCuota->fecha_vencimiento . ' +1 month')) :
@@ -123,7 +123,6 @@ class CuotaController extends Controller
             return 0;
         }
         
-        // Rest of the method remains the same...
         $fechaActualObj = new \DateTime($fechaActual);
         $fechaInicioObj = new \DateTime($fechaInicio);
         $intervalo = $fechaInicioObj->diff($fechaActualObj);
@@ -132,7 +131,56 @@ class CuotaController extends Controller
         if ($mesesAtrasados > 0) {
             $this->stdout("  Contrato #{$contrato->id}: Generando {$mesesAtrasados} cuotas atrasadas desde {$fechaInicio}...\n");
             
-            // ... existing generation logic
+            for ($i = 0; $i < $mesesAtrasados; $i++) {
+                $fechaVencimiento = date('Y-m-07', strtotime($fechaInicio . " +{$i} months"));
+                $mesVencimiento = date('Y-m', strtotime($fechaVencimiento));
+                $primerDiaMes = date('Y-m-01', strtotime($fechaVencimiento));
+                $ultimoDiaMes = date('Y-m-t', strtotime($fechaVencimiento));
+                
+                // CHECK IF PAYMENT ALREADY EXISTS FOR THIS MONTH - CRITICAL MISSING CHECK
+                $pagoExistente = Pagos::find()
+                    ->where(['user_id' => $contrato->user_id])
+                    ->andWhere(['estatus' => 'Conciliado'])
+                    ->andWhere(['>=', 'fecha_pago', $primerDiaMes])
+                    ->andWhere(['<=', 'fecha_pago', $ultimoDiaMes])
+                    ->exists();
+                    
+                if ($pagoExistente) {
+                    $this->stdout("    ✅ Skipping {$mesVencimiento} - payment already exists\n");
+                    continue; // Skip this month, payment already made
+                }
+                
+                // Check if cuota already exists for this month
+                $existeCuota = Cuotas::find()
+                    ->where(['contrato_id' => $contrato->id])
+                    ->andWhere(['>=', 'fecha_vencimiento', $primerDiaMes])
+                    ->andWhere(['<=', 'fecha_vencimiento', $ultimoDiaMes])
+                    ->exists();
+                    
+                if (!$existeCuota) {
+                    // Create the cuota
+
+                    // Create the cuota with rounded amount
+                    $montoCuota = round($contrato->monto, 2); // ← ADD ROUND TO 2 DECIMALS
+
+                    $cuota = new Cuotas([
+                        'contrato_id' => $contrato->id,
+                        'fecha_vencimiento' => $fechaVencimiento,
+                        'monto_usd' => $montoCuota,  // ← USE ROUNDED VALUE
+                        'estatus' => 'pendiente',
+                        'rate_usd_bs' => $this->obtenerTasaCambioActual(),
+                    ]);
+                    
+                    if ($cuota->save()) {
+                        $cuotasGeneradas++;
+                        $this->stdout("    ✅ Cuota atrasada generada: {$fechaVencimiento} - {$contrato->monto} USD\n");
+                    } else {
+                        $this->stderr("    ❌ Error generando cuota atrasada: " . print_r($cuota->errors, true) . "\n");
+                    }
+                } else {
+                    $this->stdout("    ℹ️  Cuota ya existe para {$mesVencimiento}\n");
+                }
+            }
         }
         
         return $cuotasGeneradas;
@@ -213,7 +261,7 @@ private function generarCuotaMesActual($contrato)
         // ============================================================
         
         // Calcular monto (USAR MONTO COMPLETO - PRORRATEO DESHABILITADO)
-        $montoCuota = $contrato->monto;
+        $montoCuota = round($contrato->monto, 2); // ← ADD ROUND TO 2 DECIMALS
         
         /*
         // LÓGICA DE PRORRATEO DESHABILITADA - MANTENER PARA REFERENCIA FUTURA
@@ -1089,85 +1137,171 @@ public function actionVerificarDuplicados()
     }
 
     /**
-     * Verifica y repara la relación entre pagos y cuotas.
-     * Uso: `yii cuota/reparar-relacion-pagos`
-     * 
-     * @return int Código de salida
+     * Repara la relación entre pagos y cuotas - Versión Web CORREGIDA
+     * Compara los campos correctos: monto (cuotas) vs monto_pagado (pagos)
      */
     public function actionRepararRelacionPagos()
     {
-        $this->stdout("Verificando y reparando relación pagos-cuotas...\n");
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         
-        // Find payments that don't have linked cuotas
-        $paymentsWithoutCuotas = Yii::$app->db->createCommand("
-            SELECT p.id as pago_id, p.user_id, p.fecha_pago, p.monto_usd
-            FROM pagos p
-            LEFT JOIN cuotas c ON p.id = c.id_pago
-            WHERE c.id IS NULL
-            AND p.estatus IN ('Conciliado', 'Por Conciliar')
-            ORDER BY p.fecha_pago DESC
-        ")->queryAll();
-        
-        if (empty($paymentsWithoutCuotas)) {
-            $this->stdout("✅ Todos los pagos tienen cuotas vinculadas correctamente.\n");
-            return ExitCode::OK;
-        }
-        
-        $this->stdout("Se encontraron " . count($paymentsWithoutCuotas) . " pagos sin cuotas vinculadas.\n");
-        $repairedCount = 0;
-        
-        foreach ($paymentsWithoutCuotas as $payment) {
-            $this->stdout("Procesando pago #{$payment['pago_id']} para usuario {$payment['user_id']}...\n");
+        try {
+            $output = "Iniciando reparación CORREGIDA de relaciones pago-cuota...\n\n";
             
-            // Find pending cuotas for this user around payment date
-            $cuotas = Cuotas::find()
-                ->joinWith(['contrato'])
-                ->where(['contratos.user_id' => $payment['user_id']])
-                ->andWhere(['cuotas.estatus' => 'pendiente'])
-                ->andWhere(['<=', 'cuotas.fecha_vencimiento', $payment['fecha_pago']])
-                ->orderBy(['cuotas.fecha_vencimiento' => SORT_ASC])
-                ->all();
+            // Find payments that don't have linked cuotas
+            $paymentsWithoutCuotas = Yii::$app->db->createCommand("
+                SELECT p.id as pago_id, p.user_id, p.fecha_pago, p.monto_pagado, p.monto_usd,
+                    ud.nombres, ud.apellidos
+                FROM pagos p
+                LEFT JOIN cuotas c ON p.id = c.id_pago
+                LEFT JOIN user_datos ud ON p.user_id = ud.id
+                WHERE c.id IS NULL
+                AND p.estatus IN ('Conciliado', 'Por Conciliar')
+                ORDER BY p.fecha_pago DESC
+            ")->queryAll();
+            
+            if (empty($paymentsWithoutCuotas)) {
+                $output .= "✅ Todos los pagos tienen cuotas vinculadas correctamente.\n";
+                return [
+                    'success' => true, 
+                    'output' => $output, 
+                    'message' => 'No se encontraron problemas',
+                    'returnCode' => 0
+                ];
+            }
+            
+            $output .= "Se encontraron " . count($paymentsWithoutCuotas) . " pagos sin cuotas vinculadas.\n\n";
+            $repairedCount = 0;
+            
+            foreach ($paymentsWithoutCuotas as $payment) {
+                $userName = $payment['nombres'] . ' ' . $payment['apellidos'];
+                $output .= "Procesando pago #{$payment['pago_id']} para usuario {$payment['user_id']} ({$userName})...\n";
                 
-            if (!empty($cuotas)) {
-                $this->stdout("  Encontradas " . count($cuotas) . " cuotas pendientes\n");
+                // CORRECTED: Use monto_pagado (the actual payment amount in USD)
+                $paymentAmount = $payment['monto_pagado'] ?? 0;
+                $montoUsd = $payment['monto_usd'] ?? 'NULL';
+                $output .= "  💰 Monto del pago - monto_pagado: {$paymentAmount} USD (monto_usd: {$montoUsd})\n";
                 
-                // Try to match cuotas with payment amount
-                $totalCuotas = 0;
-                $cuotasToUpdate = [];
-                
-                foreach ($cuotas as $cuota) {
-                    $monto = $cuota->monto_usd ?: $cuota->monto;
-                    if (($totalCuotas + $monto) <= $payment['monto_usd'] + 0.01) { // Allow small rounding differences
-                        $totalCuotas += $monto;
-                        $cuotasToUpdate[] = $cuota->id;
-                        $this->stdout("    ✓ Cuota #{$cuota->id}: {$monto} USD\n");
-                    }
-                }
-                
-                if (!empty($cuotasToUpdate) && abs($totalCuotas - $payment['monto_usd']) <= 0.01) {
-                    // Update the cuotas
-                    $updated = Cuotas::updateAll(
-                        [
-                            'id_pago' => $payment['pago_id'],
-                            'estatus' => 'pagada', 
-                            'fecha_pago' => $payment['fecha_pago']
-                        ],
-                        ['id' => $cuotasToUpdate]
-                    );
+                // Find pending cuotas for this user around payment date
+                $cuotas = \app\models\Cuotas::find()
+                    ->joinWith(['contrato'])
+                    ->where(['contratos.user_id' => $payment['user_id']])
+                    ->andWhere(['cuotas.estatus' => 'pendiente'])
+                    ->andWhere(['<=', 'cuotas.fecha_vencimiento', $payment['fecha_pago']])
+                    ->orderBy(['cuotas.fecha_vencimiento' => SORT_ASC])
+                    ->all();
                     
-                    if ($updated > 0) {
-                        $repairedCount += $updated;
-                        $this->stdout("  ✅ Vinculadas {$updated} cuotas al pago #{$payment['pago_id']}\n");
+                if (!empty($cuotas)) {
+                    $output .= "  Encontradas " . count($cuotas) . " cuotas pendientes\n";
+                    
+                    $totalCuotas = 0;
+                    $cuotasToUpdate = [];
+                    
+                    foreach ($cuotas as $cuota) {
+                        // CORRECTED: Use monto field (the actual cuota amount in USD)
+                        $monto = $cuota->monto ?? 0;
+                        $montoUsdCuota = $cuota->monto_usd ?? 'NULL';
+                        $output .= "    📊 Cuota #{$cuota->id}: monto = {$monto} USD (monto_usd: {$montoUsdCuota})\n";
+                        
+                        if ($monto > 0) {
+                            // Normalize amounts to 2 decimal places
+                            $normalizedCuota = round($monto, 2);
+                            $normalizedPayment = round($paymentAmount, 2);
+                            
+                            // Check if this cuota matches the payment
+                            if (abs($normalizedCuota - $normalizedPayment) <= 0.01) {
+                                $totalCuotas += $monto;
+                                $cuotasToUpdate[] = $cuota->id;
+                                $output .= "    ✅ COINCIDE EXACTA: Cuota #{$cuota->id} = {$monto} USD\n";
+                            } else {
+                                $output .= "    ❌ NO COINCIDE: Cuota #{$cuota->id} = {$monto} USD vs Pago = {$paymentAmount} USD\n";
+                            }
+                        } else {
+                            $output .= "    ⚠️ Cuota #{$cuota->id}: MONTO VACÍO o CERO\n";
+                        }
+                    }
+                    
+                    if (!empty($cuotasToUpdate)) {
+                        // Update the cuotas
+                        $updated = \app\models\Cuotas::updateAll(
+                            [
+                                'id_pago' => $payment['pago_id'],
+                                'estatus' => 'pagada',
+                                'fecha_pago' => $payment['fecha_pago']
+                            ],
+                            ['id' => $cuotasToUpdate]
+                        );
+                        
+                        if ($updated > 0) {
+                            $repairedCount += $updated;
+                            $output .= "  ✅ Vinculadas {$updated} cuotas al pago #{$payment['pago_id']}\n";
+                            
+                            // Reactivate contract
+                            $this->reactivateContractIfNeeded($payment['user_id'], $output);
+                        }
+                    } else {
+                        $output .= "  ⚠️  No se encontraron cuotas que coincidan con el monto del pago\n";
                     }
                 } else {
-                    $this->stdout("  ⚠️  No se pudo encontrar combinación que coincida con el monto del pago\n");
+                    $output .= "  ℹ️  No hay cuotas pendientes para este usuario\n";
                 }
-            } else {
-                $this->stdout("  ℹ️  No hay cuotas pendientes para este usuario\n");
+                $output .= "\n";
             }
+            
+            $output .= "✅ Proceso completado. Se repararon {$repairedCount} relaciones pago-cuota.\n";
+            
+            return [
+                'success' => true,
+                'output' => $output,
+                'message' => "Reparación CORREGIDA completada - {$repairedCount} relaciones reparadas",
+                'returnCode' => 0
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "❌ Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando la reparación corregida',
+                'returnCode' => -1
+            ];
         }
-        
-        $this->stdout("✅ Proceso completado. Se repararon {$repairedCount} relaciones pago-cuota.\n");
-        return ExitCode::OK;
+    }
+
+    /**
+     * Reactiva un contrato si está suspendido
+     */
+    private function reactivateContractIfNeeded($userId, &$output)
+    {
+        try {
+            $contrato = \app\models\Contratos::find()
+                ->where(['user_id' => $userId])
+                ->andWhere(['estatus' => 'suspendido'])
+                ->one();
+                
+            if ($contrato) {
+                // Check if there are any pending cuotas
+                $pendingCuotas = \app\models\Cuotas::find()
+                    ->where(['contrato_id' => $contrato->id])
+                    ->andWhere(['estatus' => 'pendiente'])
+                    ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
+                    ->count();
+                    
+                if ($pendingCuotas == 0) {
+                    $contrato->estatus = 'Activo';
+                    if ($contrato->save()) {
+                        $output .= "  🔄 Contrato #{$contrato->id} reactivado automáticamente\n";
+                        
+                        // Also update user solvent status
+                        $user = \app\models\UserDatos::findOne($userId);
+                        if ($user) {
+                            $user->estatus_solvente = 'Si';
+                            $user->save(false);
+                            $output .= "  👤 Usuario marcado como solvente\n";
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            $output .= "  ❌ Error reactivando contrato: " . $e->getMessage() . "\n";
+        }
     }
 }

@@ -38,8 +38,27 @@ class Cuotas extends \yii\db\ActiveRecord
             [['created_at', 'fecha_vencimiento', 'fecha_pago'], 'safe'],
             [['contrato_id', 'id_pago'], 'integer'],
             [['monto', 'rate_usd_bs', 'monto_usd'], 'number'],
+            [['monto', 'monto_usd'], 'number', 'numberPattern' => '/^\d+(\.\d{1,2})?$/'], // 2 decimal validation
             [['estatus'], 'string', 'max' => 20],
         ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function beforeSave($insert)
+    {
+        if (parent::beforeSave($insert)) {
+            // Ensure monto and monto_usd always have 2 decimal places
+            if ($this->monto !== null) {
+                $this->monto = round($this->monto, 2);
+            }
+            if ($this->monto_usd !== null) {
+                $this->monto_usd = round($this->monto_usd, 2);
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -70,9 +89,9 @@ class Cuotas extends \yii\db\ActiveRecord
     }
 
     /**
- * Get pending cuotas for a user
- */
-public static function getPendingCuotasForUser($user_id)
+     * Get pending cuotas for a user
+     */
+    public static function getPendingCuotasForUser($user_id)
     {
         if (empty($user_id)) {
             return [];
@@ -104,7 +123,10 @@ public static function getPendingCuotasForUser($user_id)
         Yii::info("Found " . count($cuotas) . " pending cuotas for user_id: " . $user_id . " with contract IDs: " . implode(', ', $contratoIds));
         
         foreach ($cuotas as $cuota) {
-            Yii::info("Cuota ID: " . $cuota->id . ", Contrato ID: " . $cuota->contrato_id . ", Monto USD: " . $cuota->monto_usd . ", Monto: " . $cuota->monto);
+            // Use rounded values for logging
+            $monto = $cuota->monto ? round($cuota->monto, 2) : 0;
+            $monto_usd = $cuota->monto_usd ? round($cuota->monto_usd, 2) : 0;
+            Yii::info("Cuota ID: " . $cuota->id . ", Contrato ID: " . $cuota->contrato_id . ", Monto USD: " . $monto_usd . ", Monto: " . $monto);
         }
 
         return $cuotas;

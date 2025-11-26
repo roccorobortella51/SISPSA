@@ -213,11 +213,13 @@ class ContratosController extends Controller
             
             // Generar cuota inicial
             $fechaVencimiento = $fechaInicio->format('Y-m-07'); // Día 7 del mes
+
+            $montoCuota = round($contrato->monto, 2); // ← ADD ROUND TO 2 DECIMALS
             
             $cuota = new \app\models\Cuotas([
                 'contrato_id' => $contrato->id,
                 'fecha_vencimiento' => $fechaVencimiento,
-                'monto_usd' => $contrato->monto,
+                'monto_usd' => $montoCuota, // ← USE ROUNDED VALUE
                 'estatus' => 'pendiente',
                 'rate_usd_bs' => $this->obtenerTasaCambioActual(),
             ]);
