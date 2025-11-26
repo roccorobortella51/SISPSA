@@ -145,10 +145,10 @@ class PagosController extends Controller
         $total = 0;
         foreach ($cuotas as $cuota) {
             // Use monto_usd if available, otherwise fall back to monto
-            $monto = !empty($cuota->monto_usd) ? $cuota->monto_usd : $cuota->monto;
+            $monto = !empty($cuota->monto_usd) ? round($cuota->monto_usd, 2) : round($cuota->monto, 2);
             $total += (float)$monto;
         }
-        $model->monto_pagado = $total;
+        $model->monto_pagado = round($total, 2); // ← ALSO ROUND THE TOTAL
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
