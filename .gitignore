@@ -2,5 +2,3 @@
 migrations/
 web/img/payment/
 vendor/
-# Archivos de configuración local que nunca deben subirse
-config/db.php
