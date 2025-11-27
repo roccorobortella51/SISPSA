@@ -20,7 +20,6 @@ $urlTasaCambio = Url::to(['tasacambio-referencial']);
 
 $disabled = isset($isEditable) && !$isEditable;
 
-
 // Carga explícita del asset del DatePicker (Ayuda a solucionar problemas de visualización)
 \kartik\date\DatePickerAsset::register($this); 
 
@@ -67,35 +66,14 @@ function validateMontoUsd() {
 $(document).ready(function() {
     
     // 1. Tasa de Cambio fetch al cambiar la Fecha de Pago (ID: fecha-pago)
-    $('#fecha-pago').on('change', function() {
-        var fechaSeleccionada = $(this).val();
-
-        if (fechaSeleccionada) {
-            var ajaxUrl = '{$urlTasaCambio}'; 
-
-            // AJAX Call al actionTasacambioReferencial en CorporativoController
-            $.ajax({
-                url: ajaxUrl, 
-                type: 'post', // Usamos POST como convención
-                data: { fecha: fechaSeleccionada },
-                success: function(response) {
-                    if (response) {
-                        tasa = parseFloat(response);
-                        // Usar el ID correcto: #pagos-tasa
-                        $('#pagos-tasa').val(tasa.toFixed(2));
-                    } else {
-                        $('#pagos-tasa').val(''); // Limpiar la tasa si no se encuentra
-                    }
-                    updateMontoBsReferencial(); // Recalcular con la nueva tasa
-                },
-                error: function() {
-                    console.log('Error fetching referential exchange rate.');
-                    $('#pagos-tasa').val('');
-                    updateMontoBsReferencial();
-                }
-            });
-        }
-    });
+    // Auto-fetch tasa when page loads if fecha_pago is set
+    if ($('#fecha-pago').val()) {
+        $('#fecha-pago').trigger('change');
+    } else {
+        // If no date set, set today's date and trigger change
+        var today = new Date().toISOString().split('T')[0];
+        $('#fecha-pago').val(today).trigger('change');
+    }
 
     // 2. Recalcular si la Tasa de Cambio es modificada manualmente
     $('#pagos-tasa').on('input', updateMontoBsReferencial);
@@ -214,10 +192,11 @@ $form = ActiveForm::begin([
 ?>
 
 <div class="row">
+    <!-- SECCIÓN 1: Total a Pagar -->
     <div class="col-md-12">
         <div class="card shadow-sm border-primary mb-4">
             <div class="card-header bg-primary text-white">
-                <h1 class="card-title mb-0" style="font-size: 1.8rem !important;"><i class="fas fa-credit-card me-2"></i> Registro del Pago Corporativo</h1>
+                <h1 class="card-title mb-0" style="font-size: 1.8rem !important;"><i class="fas fa-money-bill-wave me-2"></i> Total a Pagar</h1>
             </div>
             <div class="card-body">
                 <div class="alert alert-info text-center" role="alert">
@@ -227,8 +206,76 @@ $form = ActiveForm::begin([
                         <strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong>
                     </h3>
                 </div>
-
-                <div class="row mb-3 pb-2 border-bottom"> <div class="col-md-4">
+            </div>
+        </div>
+    </div>
+    
+    <!-- SECCIÓN 2: Detalle de Cuotas Pendientes -->
+    <div class="col-md-12">
+        <div class="card shadow-sm border-info mb-4">
+            <div class="card-header bg-info text-white">
+                <h3 class="card-title mb-0" style="font-size: 1.6rem !important;"><i class="fas fa-list-ul me-2"></i> Detalle de Cuotas Pendientes</h3>
+            </div>
+            <div class="card-body p-0">
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-sm mb-0">
+                        <thead class="bg-dark"> 
+                            <tr class="text-white">
+                                <th style="color: white !important; font-size: 1.2rem !important;">ID Cuota</th>
+                                <th style="color: white !important; font-size: 1.2rem !important;">ID Afiliado</th>
+                                <th style="color: white !important; font-size: 1.2rem !important;">Afiliado</th>
+                                <th style="color: white !important; font-size: 1.2rem !important;">Contrato</th>
+                                <th style="color: white !important; font-size: 1.2rem !important;">Monto USD</th>
+                                <th style="color: white !important; font-size: 1.2rem !important;">Vencimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($allCuotas as $cuota): 
+                                // Se asume: Cuotas->contrato->user
+                                $contrato = $cuota->contrato ?? null;
+                                $userDatos = $contrato->user ?? null;
+                                
+                                $userId = $contrato->user_id ?? 'N/A';
+                                $nombreCompleto = $userDatos ? Html::encode($userDatos->nombres . ' ' . $userDatos->apellidos) : 'Afiliado no encontrado';
+                            ?>
+                            <tr>
+                                <td><?= Html::encode($cuota->id) ?></td>
+                                <td><?= $userId ?></td>
+                                <td title="<?= $nombreCompleto ?>"><?= \yii\helpers\StringHelper::truncateWords($nombreCompleto, 3, '...') ?></td>
+                                <td><?= Html::encode($contrato->nrocontrato ?? 'N/A') ?></td>
+                                <td class="text-right"><?= Yii::$app->formatter->asCurrency($cuota->monto) ?></td>
+                                <td><?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            <?php if (empty($allCuotas)): ?>
+                            <tr>
+                                <td colspan="6" class="text-center" style="font-size: 1.2rem !important;">No hay cuotas pendientes para los afiliados de este corporativo.</td>
+                            </tr>
+                            <?php endif; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-dark">
+                                <td colspan="4" class="text-right" style="font-size: 1.2rem !important;"><strong>TOTAL PENDIENTE:</strong></td>
+                                <td class="text-right" style="font-size: 1.2rem !important;"><strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SECCIÓN 3: Registro del Pago Corporativo -->
+    <div class="col-md-12">
+        <div class="card shadow-sm border-success mb-4">
+            <div class="card-header bg-success text-white">
+                <h1 class="card-title mb-0" style="font-size: 1.8rem !important;"><i class="fas fa-credit-card me-2"></i> Registro del Pago Corporativo</h1>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3 pb-2 border-bottom">
+                    <div class="col-md-4">
                         <?= $form->field($model, 'metodo_pago')->dropDownList([
                             'deposito' => 'Depósito Bancario',
                             'efectivo' => 'Efectivo',
@@ -301,140 +348,86 @@ $form = ActiveForm::begin([
                     </div>
                 </div>
 
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-12">
-        <div class="card shadow-sm border-info mb-4">
-            <div class="card-header bg-info text-white">
-                <h3 class="card-title mb-0" style="font-size: 1.6rem !important;"><i class="fas fa-list-ul me-2"></i> Detalle de Cuotas Pendientes</h3>
-            </div>
-            <div class="card-body p-0">
-                
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped table-sm mb-0">
-                        <thead class="bg-dark"> 
-                            <tr class="text-white">
-                                <th style="color: white !important; font-size: 1.2rem !important;">ID Cuota</th>
-                                <th style="color: white !important; font-size: 1.2rem !important;">ID Afiliado</th>
-                                <th style="color: white !important; font-size: 1.2rem !important;">Afiliado</th>
-                                <th style="color: white !important; font-size: 1.2rem !important;">Contrato</th>
-                                <th style="color: white !important; font-size: 1.2rem !important;">Monto USD</th>
-                                <th style="color: white !important; font-size: 1.2rem !important;">Vencimiento</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($allCuotas as $cuota): 
-                                // Se asume: Cuotas->contrato->user
-                                $contrato = $cuota->contrato ?? null;
-                                $userDatos = $contrato->user ?? null;
+                <!-- Sección de Adjuntar Comprobante dentro del Registro del Pago -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card shadow-sm border-secondary">
+                            <div class="card-header bg-secondary text-white text-center">
+                                <h4 class="card-title mb-0" style="font-size: 1.5rem !important;"><i class="fas fa-paperclip me-2"></i> Adjuntar Comprobante (JPG, PNG)</h4>
+                            </div>
+                            <div class="card-body">
+                                <?php 
+                                $initialPreview = [];
+                                $initialPreviewConfig = [];
                                 
-                                $userId = $contrato->user_id ?? 'N/A';
-                                $nombreCompleto = $userDatos ? Html::encode($userDatos->nombres . ' ' . $userDatos->apellidos) : 'Afiliado no encontrado';
-                            ?>
-                            <tr>
-                                <td><?= Html::encode($cuota->id) ?></td>
-                                <td><?= $userId ?></td>
-                                <td title="<?= $nombreCompleto ?>"><?= \yii\helpers\StringHelper::truncateWords($nombreCompleto, 3, '...') ?></td>
-                                <td><?= Html::encode($contrato->nrocontrato ?? 'N/A') ?></td>
-                                <td class="text-right"><?= Yii::$app->formatter->asCurrency($cuota->monto_usd) ?></td>
-                                <td><?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($allCuotas)): ?>
-                            <tr>
-                                <td colspan="6" class="text-center" style="font-size: 1.2rem !important;">No hay cuotas pendientes para los afiliados de este corporativo.</td>
-                            </tr>
-                            <?php endif; ?>
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-dark">
-                                <td colspan="4" class="text-right" style="font-size: 1.2rem !important;"><strong>TOTAL PENDIENTE:</strong></td>
-                                <td class="text-right" style="font-size: 1.2rem !important;"><strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong></td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                // NUCLEAR OPTION CSS - 100% guaranteed to work
+                                $this->registerCss('
+                                    /* Nuclear option - target every possible element */
+                                    .btn-file *,
+                                    .file-caption *,
+                                    .file-input *,
+                                    .kv-fileinput-caption *,
+                                    [class*="file"] {
+                                        color: white !important;
+                                    }
+                                    .btn-file,
+                                    .file-caption-name,
+                                    .file-caption-icon,
+                                    .fileinput-upload-button,
+                                    .btn-default,
+                                    .btn-kv {
+                                        color: white !important;
+                                        background-color: #007bff !important;
+                                        border-color: #007bff !important;
+                                    }
+                                    /* Force white text on all children */
+                                    .btn-file span,
+                                    .btn-file div,
+                                    .btn-file p {
+                                        color: white !important;
+                                    }
+                                    /* Target specific Kartik FileInput elements */
+                                    .file-caption,
+                                    .file-caption .file-caption-name,
+                                    .kv-fileinput-caption,
+                                    .file-input .btn,
+                                    .file-input .btn-default {
+                                        color: white !important;
+                                    }
+                                    /* Ensure hover states also maintain white text */
+                                    .btn-file:hover,
+                                    .btn-file:hover * {
+                                        color: white !important;
+                                        opacity: 0.9;
+                                    }
+                                ');
+                                ?>
+                                <?= $form->field($model, 'imagen_prueba_file')->widget(FileInput::class, [
+                                    'options' => ['accept' => 'image/*'],
+                                    'pluginOptions' => [
+                                        'showUpload' => false,
+                                        'showRemove' => false,
+                                        'maxFileSize' => 2048, // 2MB
+                                        'msgSizeTooLarge' => 'El archivo "{name}" ({sizeText}) excede el tamaño máximo permitido de {maxSize}. Pruebe una imagen más pequeña.',
+                                        'initialPreview' => $initialPreview,
+                                        'initialPreviewAsData' => true,
+                                        'initialPreviewConfig' => $initialPreviewConfig,
+                                        'overwriteInitial' => true,
+                                        'layoutTemplates' => [
+                                            'main1' => '{preview}{browse}{remove}',
+                                            'main2' => '{preview}{browse}{remove}',
+                                            'footer' => '<div class="file-thumbnail-footer">\n{progress} {actions}\n</div>',
+                                        ],
+                                        'previewSettings' => [
+                                            'image' => ['width' => '100%', 'height' => 'auto', 'max-width' => '250px'],
+                                        ],
+                                        'purifyHtml' => true,
+                                    ],
+                                ])->label(false) ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-12">
-        <div class="card shadow-sm border-secondary mb-4 mx-auto" style="max-width: 600px;">
-            <div class="card-header bg-secondary text-white text-center">
-                <h4 class="card-title mb-0" style="font-size: 1.5rem !important;"><i class="fas fa-paperclip me-2"></i> Adjuntar Comprobante (JPG, PNG)</h4>
-            </div>
-            <div class="card-body">
-                <?php 
-                $initialPreview = [];
-                $initialPreviewConfig = [];
-                
-                // NUCLEAR OPTION CSS - 100% guaranteed to work
-                $this->registerCss('
-                    /* Nuclear option - target every possible element */
-                    .btn-file *,
-                    .file-caption *,
-                    .file-input *,
-                    .kv-fileinput-caption *,
-                    [class*="file"] {
-                        color: white !important;
-                    }
-                    .btn-file,
-                    .file-caption-name,
-                    .file-caption-icon,
-                    .fileinput-upload-button,
-                    .btn-default,
-                    .btn-kv {
-                        color: white !important;
-                        background-color: #007bff !important;
-                        border-color: #007bff !important;
-                    }
-                    /* Force white text on all children */
-                    .btn-file span,
-                    .btn-file div,
-                    .btn-file p {
-                        color: white !important;
-                    }
-                    /* Target specific Kartik FileInput elements */
-                    .file-caption,
-                    .file-caption .file-caption-name,
-                    .kv-fileinput-caption,
-                    .file-input .btn,
-                    .file-input .btn-default {
-                        color: white !important;
-                    }
-                    /* Ensure hover states also maintain white text */
-                    .btn-file:hover,
-                    .btn-file:hover * {
-                        color: white !important;
-                        opacity: 0.9;
-                    }
-                ');
-                ?>
-                <?= $form->field($model, 'imagen_prueba_file')->widget(FileInput::class, [
-                    'options' => ['accept' => 'image/*'],
-                    'pluginOptions' => [
-                        'showUpload' => false,
-                        'showRemove' => false,
-                        'maxFileSize' => 2048, // 2MB
-                        'msgSizeTooLarge' => 'El archivo "{name}" ({sizeText}) excede el tamaño máximo permitido de {maxSize}. Pruebe una imagen más pequeña.',
-                        'initialPreview' => $initialPreview,
-                        'initialPreviewAsData' => true,
-                        'initialPreviewConfig' => $initialPreviewConfig,
-                        'overwriteInitial' => true,
-                        'layoutTemplates' => [
-                            'main1' => '{preview}{browse}{remove}',
-                            'main2' => '{preview}{browse}{remove}',
-                            'footer' => '<div class="file-thumbnail-footer">\n{progress} {actions}\n</div>',
-                        ],
-                        'previewSettings' => [
-                            'image' => ['width' => '100%', 'height' => 'auto', 'max-width' => '250px'],
-                        ],
-                        'purifyHtml' => true,
-                    ],
-                ])->label(false) ?>
             </div>
         </div>
     </div>

@@ -868,6 +868,9 @@ $baremosRestringidosIDs = [];
     <div class="costo-total-container" id="costo-total-container" style="display: none;">
         <div class="costo-total-label">Total calculado:</div>
         <div class="costo-total-value" id="costo-total-value">$0.00</div>
+        <!-- ADD THE HIDDEN INPUT FIELD RIGHT HERE -->
+        <?= $form->field($model, 'costo_total')->hiddenInput(['id' => 'costo-total-input'])->label(false) ?>
+
         <div id="cobertura-warning" class="mt-2 p-2 rounded-3 text-danger" style="display: none; background-color: #ffe0b2; border: 1px solid #ff9800;"></div>
         <div id="cita-warning" class="mt-2 p-2 rounded-3 text-warning" style="display: none; background-color: #fff3cd; border: 1px solid #ffc107;">
             <i class="fas fa-exclamation-triangle me-1"></i> Este registro es una **Cita**. Los baremos con Plazo Pendiente no estaran disponibles.
@@ -1222,7 +1225,7 @@ function calcularTotalYTabla() {
     if (!baremosSeleccionados || baremosSeleccionados.length === 0) {
         $('#costo-total-container').hide();
         $('#baremos-tabla-container').hide();
-        $('#costo-total-input').val('0.00');
+        $('#costo-total-input').val('0.00'); // FIXED: Use the correct ID
         // También ocultar la advertencia
         $('#cobertura-warning').hide().empty(); 
         return;
@@ -1265,7 +1268,7 @@ function calcularTotalYTabla() {
     $('#baremos-tabla-container').show();
     
     $('#costo-total-value').html('$' + total.toFixed(2));
-    $('#costo-total-input').val(total.toFixed(2));
+    $('#costo-total-input').val(total.toFixed(2)); // FIXED: Use the correct ID
     $('#costo-total-container').show();
     
     // 4. Verificar límite disponible (REEMPLAZO DE ALERT)
