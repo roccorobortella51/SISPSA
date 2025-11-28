@@ -101,12 +101,13 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                         'Inactivo' => 'Inactivo',
                                         'Pendiente' => 'Pendiente',
                                     ],
-                                    'options' => ['placeholder' => 'Filtrar por estatus...'],
+                                    'options' => ['placeholder' => 'Estatus...'],
                                     'pluginOptions' => [
                                         'allowClear' => true
                                     ],
                                 ]),
                                 'contentOptions' => ['style' => 'width: 150px;'],
+                                'contentOptions' => ['style' => 'text-align:center;'],
                             ],
                             // Columna para las clínicas asociadas (conteo y filtro)
                             [
@@ -142,12 +143,12 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                             // COLUMNA DE ACCIONES - Ajustada
                             [
                                 'class' => 'yii\grid\ActionColumn',
-                                    'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{contracts}</div>',
-                                    'options' => ['style' => 'width:75px; min-width:75px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                                    'buttons' => [
+                                'header' => 'ACCIONES',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{pay}{contracts}</div>', // Added {pay} here
+                                'options' => ['style' => 'width:100px; min-width:100px;'], // Increased width to accommodate the new button
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'buttons' => [
                                     'view' => function ($url, $model, $key) {
                                         return Html::a(
                                             '<i class="fa fa-eye"></i>',
@@ -165,6 +166,16 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                             [
                                                 'title' => 'Editar Corporativo',
                                                 'class' => 'btn-action view'
+                                            ]
+                                        );
+                                    },
+                                    'pay' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fas fa-credit-card"></i>',
+                                            Url::to(['deuda', 'id' => $model->id]), // Ajusta esta ruta según tu controlador
+                                            [
+                                                'title' => 'Pagar Corporativo',
+                                                'class' => 'btn-action pay'
                                             ]
                                         );
                                     },

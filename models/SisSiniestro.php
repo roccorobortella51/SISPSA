@@ -67,10 +67,9 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['idclinica'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['idclinica' => 'id']],
 
             [['imagen_recipe', 'imagen_informe'], 'string', 'max' => 255],
-
-           [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'El archivo no debe exceder 10MB.'],
-           [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'La imagen no debe exceder 10MB.'],
-
+            // ADD THESE FILE VALIDATION RULES:
+            [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'El archivo no debe exceder 10MB.'],
+            [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'La imagen no debe exceder 10MB.'],
         ];
     }
 

@@ -1,0 +1,364 @@
+/* ===== MICROSOFT FLUENT DESIGN SYSTEM ===== */
+    body {
+        font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+        font-size: 16px !important; /* Increased from 14px */
+        color: #323130 !important; /* Microsoft Gray190 */
+        background-color: #faf9f8 !important; /* Microsoft Gray10 */
+    }
+    
+    /* ===== TYPOGRAPHY - Microsoft Fluent Scale - ADJUSTED SIZES ===== */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+        font-weight: 600 !important; /* Semibold */
+        color: #000000 !important; /* Black for better readability */
+        margin-bottom: 16px !important; /* Adjusted spacing */
+    }
+    
+    /* ADJUSTED: Title sizes following Microsoft Fluent standards */
+    h1 { font-size: 28px !important; } /* Main header - reduced from 36px */
+    h2 { font-size: 24px !important; } /* Section headers - kept same */
+    h3 { font-size: 20px !important; } /* Sub-section headers - reduced from 22px */
+    h4 { font-size: 18px !important; } /* Minor headers - reduced from 20px */
+    
+    /* ===== BUTTONS - Microsoft Fluent Buttons - ADJUSTED SIZES ===== */
+    .btn {
+        border-radius: 2px !important; /* Microsoft square corners */
+        padding: 8px 16px !important; /* Reduced padding for smaller buttons */
+        font-weight: 600 !important; /* Semibold */
+        font-size: 16px !important; /* Reduced from 18px */
+        font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+        border: 1px solid transparent !important;
+        line-height: 1.33 !important;
+        min-height: 36px !important; /* Reduced height */
+        transition: all 0.1s ease !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .btn-lg {
+        padding: 10px 20px !important; /* Reduced padding */
+        font-size: 18px !important; /* Reduced from 20px */
+        min-height: 44px !important; /* Reduced height */
+    }
+    
+    .btn-success {
+        background-color: #107c10 !important; /* Microsoft Green */
+        border-color: #107c10 !important;
+        color: #ffffff !important;
+    }
+    
+    .btn-success:hover {
+        background-color: #0e700e !important;
+        border-color: #0e700e !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .btn-secondary {
+        background-color: #f3f2f1 !important; /* Microsoft Gray20 */
+        border-color: #8a8886 !important; /* Microsoft Gray110 */
+        color: #323130 !important; /* Microsoft Gray190 */
+    }
+    
+    .btn-secondary:hover {
+        background-color: #edebe9 !important; /* Microsoft Gray30 */
+        border-color: #8a8886 !important;
+        color: #201f1e !important; /* Microsoft Gray200 */
+    }
+    
+    .btn-outline-light {
+        background-color: transparent !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    .btn-outline-light:hover {
+        background-color: rgba(255,255,255,0.1) !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    .btn-light {
+        background-color: #ffffff !important;
+        border-color: #8a8886 !important;
+        color: #323130 !important;
+    }
+    
+    .btn-light:hover {
+        background-color: #f3f2f1 !important;
+        border-color: #8a8886 !important;
+        color: #201f1e !important;
+    }
+    
+    /* ===== SECTION TEXT SIZES - CONSISTENT ACROSS ALL SECTIONS ===== */
+    .ms-panel-body {
+        padding: 20px !important; /* Increased spacing */
+        font-size: 18px !important; /* Consistent larger body text for ALL sections */
+    }
+    
+    /* Ensure all text in sections is the same size */
+    .ms-panel-body p,
+    .ms-panel-body div:not(.btn),
+    .ms-panel-body span:not(.btn),
+    .ms-panel-body strong,
+    .ms-panel-body .text-muted {
+        font-size: 18px !important; /* Same size as Resumen Financiero */
+        line-height: 1.5 !important;
+    }
+    
+    /* Specific styling for informational sections */
+    .informacion-corporativo p,
+    .resumen-deuda p {
+        font-size: 18px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    /* ===== TABLES - Microsoft Fluent Tables - LARGER ===== */
+    .table {
+        font-size: 18px !important; /* Increased from 14px */
+        color: #323130 !important; /* Microsoft Gray190 */
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+    
+    .table th {
+        background-color: #0078d4 !important; /* Microsoft Theme Primary */
+        color: #ffffff !important; /* WHITE text */
+        font-weight: 600 !important; /* Semibold */
+        font-size: 18px !important; /* Increased from 14px */
+        padding: 12px 16px !important; /* Increased padding */
+        border: none !important;
+        border-bottom: 2px solid #0078d4 !important;
+    }
+    
+    .table td {
+        font-size: 18px !important; /* Increased from 14px */
+        padding: 12px 16px !important; /* Increased padding */
+        border-bottom: 1px solid #edebe9 !important; /* Microsoft Gray30 */
+        vertical-align: middle !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #faf9f8 !important; /* Microsoft Gray10 */
+    }
+    
+    .table-striped tbody tr:hover {
+        background-color: #f3f2f1 !important; /* Microsoft Gray20 */
+    }
+    
+    .table-bordered {
+        border: 1px solid #edebe9 !important; /* Microsoft Gray30 */
+    }
+    
+    .table-bordered th,
+    .table-bordered td {
+        border: 1px solid #edebe9 !important; /* Microsoft Gray30 */
+    }
+    
+    /* FIX: Total a Pagar row - make it readable */
+    .table-dark {
+        background-color: #0078d4 !important; /* Microsoft Theme Primary */
+        color: #ffffff !important; /* WHITE text */
+    }
+    
+    .table-dark td {
+        background-color: #0078d4 !important; /* Microsoft Theme Primary */
+        color: #ffffff !important; /* WHITE text */
+        border-color: #106ebe !important; /* Darker blue border */
+        font-size: 20px !important; /* Larger font for total */
+        font-weight: 700 !important; /* Bolder */
+    }
+    
+    .table-dark td strong {
+        color: #ffffff !important; /* Ensure strong text is white */
+    }
+    
+    /* ===== ALERTS - Microsoft Fluent Alerts - LARGER ===== */
+    .alert {
+        font-size: 18px !important; /* Increased from 14px */
+        padding: 16px 20px !important; /* Increased padding */
+        border-radius: 2px !important; /* Microsoft square corners */
+        border: 1px solid !important;
+        line-height: 1.33 !important;
+        margin-bottom: 20px !important; /* Increased spacing */
+    }
+    
+    .alert-info {
+        background-color: #f8f9fc !important; /* Microsoft subtle blue */
+        border-color: #0078d4 !important; /* Microsoft Theme Primary */
+        color: #004578 !important; /* Microsoft Dark Blue */
+    }
+    
+    /* CHANGED: Orange to Burgundy */
+    .alert-warning {
+        background-color: #fdf4f7 !important; /* Microsoft subtle burgundy */
+        border-color: #800020 !important; /* Burgundy */
+        color: #800020 !important;
+    }
+    
+    .alert-danger {
+        background-color: #fdf6f6 !important; /* Microsoft subtle red */
+        border-color: #d13438 !important; /* Microsoft Red */
+        color: #d13438 !important;
+    }
+    
+    /* ===== NO DEUDA MESSAGE - Microsoft Style - LARGER ===== */
+    .no-deuda-message {
+        background: linear-gradient(135deg, #107c10 0%, #0e700e 100%) !important; /* Microsoft Green gradient */
+        border: none !important;
+        border-radius: 2px !important; /* Microsoft square corners */
+        box-shadow: 0 8px 16px rgba(16, 124, 16, 0.3) !important;
+        color: #ffffff !important;
+        padding: 60px 40px !important; /* Increased padding */
+        text-align: center !important;
+        margin: 30px 0 !important; /* Increased spacing */
+    }
+    
+    .no-deuda-icon {
+        font-size: 80px !important; /* Increased from 64px */
+        margin-bottom: 30px !important; /* Increased spacing */
+        opacity: 0.9 !important;
+    }
+    
+    .no-deuda-title {
+        font-size: 36px !important; /* Increased from 28px */
+        font-weight: 300 !important; /* Light for elegance */
+        margin-bottom: 20px !important; /* Increased spacing */
+        letter-spacing: 0.5px !important;
+        color: #ffffff !important;
+    }
+    
+    .no-deuda-subtitle {
+        font-size: 24px !important; /* Increased from 18px */
+        opacity: 0.9 !important;
+        margin-bottom: 40px !important; /* Increased spacing */
+        color: #ffffff !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* ===== FORM CONTROLS - LARGER ===== */
+    .form-control {
+        font-size: 18px !important; /* Increased from 14px */
+        padding: 10px 12px !important; /* Increased padding */
+        border-radius: 2px !important; /* Microsoft square corners */
+        border: 1px solid #605e5c !important; /* Microsoft Gray130 */
+        font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+        min-height: 44px !important; /* Increased height */
+        background-color: #ffffff !important;
+    }
+    
+    .form-control:focus {
+        border-color: #0078d4 !important; /* Microsoft Theme Primary */
+        outline: 2px solid #0078d4 !important;
+        outline-offset: -2px !important;
+        box-shadow: none !important;
+    }
+    
+    .control-label {
+        font-size: 18px !important; /* Increased from 14px */
+        font-weight: 600 !important; /* Semibold */
+        color: #323130 !important; /* Microsoft Gray190 */
+        margin-bottom: 8px !important; /* Increased spacing */
+    }
+    
+    /* ===== LAYOUT AND SPACING - LARGER ===== */
+    .row {
+        margin: 0 !important;
+    }
+    
+    .col-xl-12, .col-md-12 {
+        padding: 12px !important; /* Increased padding */
+    }
+    
+    .text-primary { color: #0078d4 !important; } /* Microsoft Theme Primary */
+    .text-success { color: #107c10 !important; } /* Microsoft Green */
+    .text-danger { color: #d13438 !important; } /* Microsoft Red */
+    /* CHANGED: Orange to Burgundy */
+    .text-warning { color: #800020 !important; } /* Burgundy */
+    .text-info { color: #004578 !important; } /* Microsoft Dark Blue */
+    
+    .bg-primary { background-color: #0078d4 !important; } /* Microsoft Theme Primary */
+    .bg-success { background-color: #107c10 !important; } /* Microsoft Green */
+    /* CHANGED: Orange to Burgundy */
+    .bg-warning { background-color: #800020 !important; } /* Burgundy */
+    .bg-info { background-color: #004578 !important; } /* Microsoft Dark Blue */
+    .bg-dark { background-color: #323130 !important; } /* Microsoft Gray190 */
+    
+    .border-primary { border-color: #0078d4 !important; }
+    .border-success { border-color: #107c10 !important; }
+    /* CHANGED: Orange to Burgundy */
+    .border-warning { border-color: #800020 !important; }
+    .border-info { border-color: #004578 !important; }
+    
+    .shadow-sm {
+        box-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,.132), 0 0.3px 0.9px 0 rgba(0,0,0,.108) !important;
+    }
+    
+    /* ===== ICONS - LARGER ===== */
+    .fas, .fa {
+        font-size: 20px !important; /* Increased from 16px */
+        margin-right: 10px !important; /* Increased spacing */
+    }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @media (max-width: 768px) {
+        body {
+            font-size: 14px !important;
+        }
+        
+        .ms-panel-body {
+            padding: 16px !important;
+            font-size: 16px !important;
+        }
+        
+        /* ADJUSTED: Responsive title sizes */
+        h1 { font-size: 24px !important; }
+        h2 { font-size: 20px !important; }
+        h3 { font-size: 18px !important; }
+        h4 { font-size: 16px !important; }
+        
+        .btn-lg {
+            width: 100% !important;
+            margin-bottom: 12px !important;
+        }
+        
+        .no-deuda-message {
+            padding: 40px 20px !important;
+            margin: 20px 0 !important;
+        }
+        
+        .no-deuda-icon {
+            font-size: 60px !important;
+        }
+        
+        .no-deuda-title {
+            font-size: 28px !important;
+        }
+        
+        .no-deuda-subtitle {
+            font-size: 20px !important;
+        }
+        
+        .table {
+            font-size: 16px !important;
+        }
+        
+        .table th,
+        .table td {
+            font-size: 16px !important;
+            padding: 10px 12px !important;
+        }
+    }
+    
+    /* ===== ACCESSIBILITY ===== */
+    .btn:focus,
+    .form-control:focus {
+        outline: 2px solid #0078d4 !important;
+        outline-offset: 2px !important;
+    }
+    
+    .table-responsive {
+        border: 1px solid #edebe9 !important; /* Microsoft Gray30 */
+        border-radius: 2px !important; /* Microsoft square corners */
+    }

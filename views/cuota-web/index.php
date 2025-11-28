@@ -165,12 +165,30 @@ $this->params['breadcrumbs'][] = $this->title;
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
+                        <!-- Botones existentes -->
                         <button type="button" class="btn btn-outline-secondary btn-lg" 
                             onclick="executeAction(this)"
                             data-action-url="<?= Url::to(['cuota-web/actualizar-montos']) ?>"
                             data-action-name="actualizar-montos">
                             <i class="fas fa-dollar-sign"></i> Actualizar Montos de Cuotas
                         </button>
+                        
+                        <!-- NUEVOS BOTONES AÑADIDOS -->
+                        <button type="button" class="btn btn-outline-info btn-lg" 
+                            onclick="executeAction(this)"
+                            data-action-url="<?= Url::to(['cuota-web/diagnostico-inconsistencias']) ?>"
+                            data-action-name="diagnostico-inconsistencias">
+                            <i class="fas fa-stethoscope"></i> Diagnóstico de Inconsistencias
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-success btn-lg" 
+                            onclick="executeAction(this)"
+                            data-action-url="<?= Url::to(['cuota-web/generar-cuotas-faltantes']) ?>"
+                            data-action-name="generar-cuotas-faltantes">
+                            <i class="fas fa-plus-circle"></i> Generar Cuotas Faltantes
+                        </button>
+                        <!-- FIN NUEVOS BOTONES -->
+                        
                         <button type="button" class="btn btn-outline-info btn-lg" 
                             onclick="executeAction(this)"
                             data-action-url="<?= Url::to(['cuota-web/reparar-relacion-pagos']) ?>"
