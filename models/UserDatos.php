@@ -538,20 +538,9 @@ class UserDatos extends ActiveRecord
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getBanco() {return $this->hasOne(Banco::class, ['id' => 'banco_id']); }
 
-    // 1. Relación para llegar a la tabla intermedia
-    public function getCorporativoUser()
-    {
-        // Esta relación conecta el ID de usuario de la tabla user_datos
-        // con el ID de usuario de la tabla intermedia corporativo_user
-        return $this->hasOne(CorporativoUser::class, ['user_id' => 'user_login_id']);
-    }
-
-    // 2. Relación para llegar al modelo Corporativo usando la tabla intermedia
+   
     public function getCorporativo()
     {
-        // Usa la relación 'corporativoUser' como puente ('via')
-        // para llegar al modelo 'Corporativo'
-        return $this->hasOne(Corporativo::class, ['id' => 'corporativo_id'])
-            ->via('corporativoUser');
+        return $this->hasOne(Corporativo::class, ['id' => 'afiliado_corporativo_id']);
     }
 }
