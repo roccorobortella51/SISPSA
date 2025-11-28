@@ -814,7 +814,18 @@ public function actionMasivo()
         //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
+
             $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
+
+            //-- --- ADD THIS CODE BLOCK HERE ---
+            // Normalize estatus_solvente to consistent format
+            if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
+                $model->estatus_solvente = "Si";
+            } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
+                $model->estatus_solvente = "No";
+            }
+            // --- END OF ADDED CODE ---
+
             // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
@@ -1050,6 +1061,17 @@ function actionUpdate($id)
                         
             // Procesar grupo familiar
         
+
+            
+            // --- ADD THIS CODE BLOCK HERE ---
+            // Normalize estatus_solvente to consistent format
+            if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
+                $model->estatus_solvente = "Si";
+            } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
+                $model->estatus_solvente = "No";
+            }
+            // --- END OF ADDED CODE ---
+
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
                 $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
