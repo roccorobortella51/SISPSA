@@ -276,29 +276,6 @@ class CuotaWebController extends Controller
         }
     }
 
-    public function actionVerificarEspera()
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-        
-        try {
-            $result = $this->runConsoleCommand('verificar-espera');
-            
-            return [
-                'success' => $result['success'],
-                'output' => $result['output'],
-                'message' => $result['success'] ? 'Verificación de contratos en espera completada' : 'Error en verificación',
-                'returnCode' => $result['returnCode']
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'output' => $e->getMessage(),
-                'message' => 'Error ejecutando el comando',
-                'returnCode' => -1
-            ];
-        }
-    }
-
     /**
      * Verifica cuotas duplicadas desde la interfaz web.
      */
@@ -860,6 +837,97 @@ class CuotaWebController extends Controller
                 'success' => false, 
                 'output' => "❌ Error en diagnóstico: " . $e->getMessage(),
                 'message' => 'Error ejecutando el diagnóstico',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    public function actionVerificarEspera()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        
+        try {
+            $output = "Iniciando verificación de contratos en espera...\n\n";
+            
+            // Find contracts with "espera" status
+            $contratosEnEspera = \app\models\Contratos::find()
+                ->where(['estatus' => 'espera'])
+                ->all();
+            
+            $output .= "📊 Se encontraron " . count($contratosEnEspera) . " contratos en espera.\n\n";
+            
+            if (empty($contratosEnEspera)) {
+                $output .= "✅ No hay contratos en estado de espera.\n";
+            } else {
+                foreach ($contratosEnEspera as $contrato) {
+                    $output .= "📋 Contrato #{$contrato->id}\n";
+                    $output .= "   👤 User ID: {$contrato->user_id}\n";
+                    
+                    // Get user info if available
+                    $user = \app\models\UserDatos::findOne($contrato->user_id);
+                    if ($user) {
+                        $output .= "   👥 Usuario: {$user->nombres} {$user->apellidos}\n";
+                    }
+                    
+                    $output .= "   📅 Fecha inicio: {$contrato->fecha_inicio}\n";
+                    $output .= "   💰 Monto: {$contrato->monto}\n";
+                    $output .= "   🏷️  Servicio: {$contrato->servicio}\n\n";
+                }
+            }
+            
+            $output .= "✅ Verificación completada.\n";
+            
+            return [
+                'success' => true,
+                'output' => $output,
+                'message' => 'Verificación de contratos en espera completada',
+                'returnCode' => 0
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "❌ Error: " . $e->getMessage(),
+                'message' => 'Error en verificación de contratos en espera',
+                'returnCode' => -1
+            ];
+        }
+    } 
+    /**
+     * Fallback method when console command doesn't exist
+     */
+    private function verificarEsperaWeb()
+    {
+        try {
+            $output = "Iniciando verificación de contratos en espera (Web Fallback)...\n\n";
+            
+            $contratosEnEspera = \app\models\Contratos::find()
+                ->where(['estatus' => 'espera'])
+                ->all();
+            
+            $output .= "Se encontraron " . count($contratosEnEspera) . " contratos en espera.\n\n";
+            
+            foreach ($contratosEnEspera as $contrato) {
+                $output .= "📋 Contrato #{$contrato->id}\n";
+                $output .= "   👤 User ID: {$contrato->user_id}\n";
+                $output .= "   📅 Fecha inicio: {$contrato->fecha_inicio}\n";
+                $output .= "   💰 Monto: {$contrato->monto}\n\n";
+            }
+            
+            $output .= "✅ Verificación completada.\n";
+            
+            return [
+                'success' => true,
+                'output' => $output,
+                'message' => 'Verificación de contratos en espera completada',
+                'returnCode' => 0
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "❌ Error: " . $e->getMessage(),
+                'message' => 'Error en verificación de contratos en espera',
                 'returnCode' => -1
             ];
         }
