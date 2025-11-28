@@ -33,9 +33,9 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="card bg-light border-primary mb-5 shadow-sm">
         <div class="card-body">
             <h3 class="card-title text-primary mb-3"><i class="fas fa-info-circle me-2"></i> Instrucciones y Formato Requerido</h3>
-            <br>
-            
-            <p>Utilice la plantilla oficial (botón verde) para asegurar el orden y la cabecera correcta de las columnas. Recuerde la validación de clínicas.</p>
+            <p>
+                Al procesar la carga, el sistema automáticamente creará el **Contrato** y la **Cuota Inicial** para cada afiliado. Utilice la plantilla oficial (botón verde) para asegurar el orden y la cabecera correcta de las columnas.
+            </p>
             
             <!-- Tabla de Campos -->
             <table class="table table-bordered table-sm mt-3">
@@ -59,15 +59,19 @@ $this->params['breadcrumbs'][] = $this->title;
                     <tr><td>`telefono`</td><td>Texto</td><td>Teléfono de contacto (residencia o móvil).</td></tr>
                     <tr><td>`email`</td><td>Texto</td><td>Correo electrónico. **Debe ser único en el sistema.**</td></tr>
                     <tr><td>`direccion`</td><td>Texto</td><td>Dirección de residencia o cobro.</td></tr>
-                    <tr><td>`plan_id`</td><td>Número</td><td>**ID del Plan** al que se afiliará. (Requiere clínica vinculada y autorizada).</td></tr>
+                    <tr><td>`plan_id`</td><td>Número</td><td>**ID del Plan** al que se afiliará.</td></tr>
+                    <tr class="table-danger">
+                        <td>`clinica_id`</td>
+                        <td>Número</td>
+                        <td>**ID de la Clínica** a la que se vinculará el contrato. **CRÍTICO: Debe estar vinculada al Corporativo Destino.**</td>
+                    </tr>
                     
                     <tr class="table-secondary fw-bold">
                         <td colspan="3">CAMPOS OPCIONALES (Para información de contrato y oficina)</td>
                     </tr>
                     <tr><td>`asesor_id`</td><td>Número</td><td>ID del asesor (si aplica).</td></tr>
-                    <tr><td>`asesor_nombre`</td><td>Texto</td><td>Nombre del asesor.</td></tr>
-                    <tr><td>`fecha_inicio_contrato`</td><td>Fecha</td><td>Fecha de inicio de vigencia. Formato: YYYY-MM-DD.</td></tr>
-                    <tr><td>`fecha_vencimiento_contrato`</td><td>Fecha</td><td>Fecha de vencimiento. Formato: YYYY-MM-DD.</td></tr>
+                    <tr><td>`fecha_inicio_contrato`</td><td>Fecha</td><td>**Fecha de inicio de vigencia del Contrato.** Si está vacío, usa la fecha de hoy. Formato: YYYY-MM-DD.</td></tr>
+                    <tr><td>`fecha_vencimiento_contrato`</td><td>Fecha</td><td>**Fecha de vencimiento del Contrato.** Si está vacío, puede quedar nulo en el sistema. Formato: YYYY-MM-DD.</td></tr>
                     <tr><td>`direccion_oficina`</td><td>Texto</td><td>Dirección de la oficina del afiliado.</td></tr>
                     <tr><td>`telefono_oficina`</td><td>Texto</td><td>Teléfono de la oficina del afiliado.</td></tr>
                     <tr><td>`tipo_sangre`</td><td>Texto</td><td>Tipo de sangre (ej: A+, O-).</td></tr>
@@ -76,7 +80,7 @@ $this->params['breadcrumbs'][] = $this->title;
             </table>
 
             <p class="mt-4 alert alert-warning mb-0">
-                **VALIDACIÓN CRÍTICA:** La clínica asociada al `plan_id` debe estar previamente autorizada y vinculada al **Corporativo Destino** que seleccione en el formulario.
+                **VALIDACIÓN CRÍTICA (Sistema):** El sistema verificará que el `clinica_id` proporcionado en el CSV esté correctamente vinculado al **Corporativo Destino** que usted seleccione en el formulario. Si no hay vínculo, la fila será rechazada.
             </p>
         </div>
     </div>
@@ -107,7 +111,7 @@ $this->params['breadcrumbs'][] = $this->title;
             <div class="form-group pt-4 text-center">
                 <?= Html::submitButton('<i class="fas fa-paper-plane me-2"></i> Procesar Carga', [
                     'class' => 'btn btn-primary btn-xl shadow-sm', // Botón de acción principal
-                    'data-confirm' => 'ADVERTENCIA: ¿Está seguro de que desea iniciar la carga masiva? Esto creará nuevos usuarios y afiliados en el sistema.'
+                    'data-confirm' => 'ADVERTENCIA: ¿Está seguro de que desea iniciar la carga masiva? Esto creará nuevos usuarios, contratos y cuotas en el sistema.'
                 ]) ?>
             </div>
 
