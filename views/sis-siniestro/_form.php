@@ -760,14 +760,14 @@ JS
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
                                 'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha de la Atención') ?>
+                            ])->label('Fecha de la ' . $terminoPrincipal)?>
                         </div>
                         
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'hora_atencion')->textInput([
                                 'type' => 'time', 
                                 'class' => 'form-control form-control-lg'
-                            ])->label('Hora de la Atención') ?>
+                            ])->label('Hora de la ' . $terminoPrincipal)?>
                         </div>
                         
                         <div class="col-md-12 field-with-icon">

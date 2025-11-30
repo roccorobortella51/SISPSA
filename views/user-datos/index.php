@@ -349,16 +349,14 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 </div>
 
 <?php
-// Script para gestionar las opciones de Siniestro y Cita usando SweetAlert2
 $js = <<<JS
+// 1. EVENTO PARA ABRIR EL MODAL
 $(document).on('click', '.atencion-btn', function(e) {
     e.preventDefault(); 
     
-    // Obtener las URLs de los Data Attributes
     var urlSiniestro = $(this).data('url-siniestro');
     var urlCita = $(this).data('url-cita');
 
-    // Botones de Siniestro/Cita (Maquetación y redirección directa)
     var contentHtml = 
         '<p class="text-xl mt-4 mb-5 font-weight-bold">¿Desea registrar una Atención o programar una Cita?</p>' +
         '<div class="d-flex justify-content-center w-100 mt-5">' +
@@ -370,35 +368,34 @@ $(document).on('click', '.atencion-btn', function(e) {
             '</a>' +
         '</div>';
 
-    // Botón de CERRAR estilizado inyectado en el footer (pie de página)
+    // AQUI ESTA LA CLAVE: 
+    // No usamos onclick. Usamos una clase especifica: 'btn-cerrar-swal'
     var footerHtml = 
-        '<button type="button" class="btn-base btn-gray btn-lg mt-4" onclick="Swal.close()">' +
+        '<button type="button" class="btn-base btn-gray btn-lg mt-4 btn-cerrar-swal">' +
             'CERRAR' +
         '</button>';
-
 
     Swal.fire({
         title: 'Selecciona una Opción',
         icon: 'question',
-        showCloseButton: true, // Esto mantiene la 'x' en la esquina
-
+        showCloseButton: true,
         width: '50%',       
         padding: '2em',     
-        
         showConfirmButton: false, 
         showDenyButton: false,     
-        
         showCancelButton: false,    
-        
         buttonsStyling: false, 
-        
-        // Eliminamos customClass para evitar el error
-        // customClass: {...} 
-
         html: contentHtml,
-        // *** AÑADIDO: Usamos el footer para inyectar el botón estilizado ***
         footer: footerHtml 
     });
+});
+
+// 2. EVENTO GLOBAL PARA CERRAR EL MODAL
+// Este código escucha clics en cualquier elemento con la clase 'btn-cerrar-swal'
+// incluso si el elemento se creó dinámicamente.
+$(document).on('click', '.btn-cerrar-swal', function(e) {
+    e.preventDefault(); // Previene comportamientos extraños
+    Swal.close();       // Cierra el modal limpiamente
 });
 JS;
 
