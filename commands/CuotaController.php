@@ -435,7 +435,7 @@ public function actionVerificarDuplicados()
     public function actionGenerarMensual()
     {
         $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
-        $this->stdout("║        GENERACIÓN DE CUOTAS MENSUALES - REPORTE         ║\n");
+        $this->stdout("║        GENERACIÓN DE CUOTAS MENSUALES - REPORTE 1        ║\n");
         $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
         
         $fechaActual = date('Y-m-d');
