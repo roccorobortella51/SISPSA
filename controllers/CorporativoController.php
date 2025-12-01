@@ -495,11 +495,6 @@ class CorporativoController extends Controller
         ]);
     }
 
-    return $this->render('update', [
-        'model' => $model,
-        'afiliadosActuales' => $afiliadosActuales, // Es útil pasar esto a la vista para la selección por defecto
-    ]);
-}
 
 // controlador de carga masiva de corporativos
 
