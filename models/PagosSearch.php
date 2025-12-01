@@ -5,6 +5,7 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Pagos;
+use yii\db\Expression;
 
 /**
  * PagosSearch represents the model behind the search form of `app\models\Pagos`.
@@ -44,12 +45,40 @@ class PagosSearch extends Pagos
      */
     public function search($params)
     {
-        $query = Pagos::find()->joinWith(['userDatos']);
+        // 1. Asignamos alias 't' a la tabla principal 'pagos'
+        $query = Pagos::find()->alias('t')->joinWith(['userDatos']);
+        
+        // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView y el filtro/sort
+        // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna' para evitar el error de tabla indefinida.
+        $query->select([
+            't.id',
+            't.fecha_pago',
+            't.monto_pagado',
+            't.monto_usd',
+            't.estatus',
+            't.numero_referencia_pago',
+            't.metodo_pago',
+            't.fecha_conciliacion',
+            't.nombre_conciliador',
+            't.observacion', 
+            // CORREGIDO: Usar el nombre de tabla real 'user_datos'
+            'user_datos.nombres',
+            'user_datos.apellidos',
+            'user_datos.cedula',
+            'user_datos.estatus_solvente',
+            // Claves foráneas y campos de control necesarios para filtros exactos y ordenamiento
+            't.user_id',
+            't.conciliador_id',
+            't.recibo_id', 
+            't.conciliado', 
+            't.created_at',
+        ]);
+        // -------------------------
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC], // ✅ Cambiado a 'id'
+                'defaultOrder' => ['id' => SORT_DESC], 
                 'attributes' => [
                     'id',
                     'created_at',
@@ -83,9 +112,9 @@ class PagosSearch extends Pagos
             return $dataProvider;
         }
 
-        // grid filtering conditions
+        // grid filtering conditions (usamos el alias 't' o el nombre de tabla 'pagos' cuando es necesario)
         $query->andFilterWhere([
-            'pagos.id' => $this->id,
+            't.id' => $this->id,
             'recibo_id' => $this->recibo_id,
             'fecha_pago' => $this->fecha_pago,
             'monto_pagado' => $this->monto_pagado,
@@ -96,17 +125,19 @@ class PagosSearch extends Pagos
         ]);
 
         $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
-            ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 't.estatus', $this->estatus])
             ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
             ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
             ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
-            ->andFilterWhere(['ilike', 'pagos.observacion', $this->observacion])
-            ->andFilterWhere(['or',
+            ->andFilterWhere(['ilike', 't.observacion', $this->observacion]);
+        
+        // Los filtros ya usaban correctamente 'user_datos'
+        $query->andFilterWhere(['or',
                 ['ilike', 'user_datos.nombres', $this->nombreUsuario],
                 ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
             ])
-            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->cedulaUsuario]);
+            ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
 
         return $dataProvider;
     }
@@ -122,15 +153,46 @@ class PagosSearch extends Pagos
      */
     public function searchClinica($params, $formName = null, $clinica_id = null)
     {
-        $query = Pagos::find()
-            ->joinWith(['userDatos.contratos' => function($q) use ($clinica_id) {
-                $q->andWhere(['contratos.clinica_id' => $clinica_id]);
-            }]);
+        // 1. Asignamos alias 't' a la tabla principal 'pagos'
+        $query = Pagos::find()->alias('t');
+        
+        // Unir Pagos -> UserDatos -> Contratos (con filtro de clinica_id)
+        $query->joinWith(['userDatos' => function($q) use ($clinica_id) {
+            $q->joinWith(['contratos' => function($q_c) use ($clinica_id) {
+                $q_c->andWhere(['contratos.clinica_id' => $clinica_id]);
+            }], true, 'INNER JOIN'); 
+        }], true, 'INNER JOIN');
+        
+        // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView
+        // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna'
+        $query->select([
+            't.id',
+            't.fecha_pago',
+            't.monto_pagado',
+            't.monto_usd',
+            't.estatus',
+            't.numero_referencia_pago',
+            't.metodo_pago',
+            't.fecha_conciliacion',
+            't.nombre_conciliador',
+            't.observacion',
+            // CORREGIDO: Usar el nombre de tabla real 'user_datos'
+            'user_datos.nombres',
+            'user_datos.apellidos',
+            'user_datos.cedula',
+            'user_datos.estatus_solvente',
+            't.user_id',
+            't.conciliador_id',
+            't.recibo_id',
+            't.conciliado',
+            't.created_at',
+        ]);
+        // -------------------------
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['pagos.id' => SORT_DESC], // ✅ Cambiado a 'pagos.id'
+                'defaultOrder' => ['t.id' => SORT_DESC], // Usamos el alias
                 'attributes' => [
                     'id',
                     'created_at',
@@ -163,7 +225,7 @@ class PagosSearch extends Pagos
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'pagos.id' => $this->id,
+            't.id' => $this->id,
             'recibo_id' => $this->recibo_id,
             'fecha_pago' => $this->fecha_pago,
             'monto_pagado' => $this->monto_pagado,
@@ -174,17 +236,17 @@ class PagosSearch extends Pagos
         ]);
 
         $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
-            ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 't.estatus', $this->estatus])
             ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
             ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
             ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
-            ->andFilterWhere(['ilike', 'pagos.observacion', $this->observacion])
+            ->andFilterWhere(['ilike', 't.observacion', $this->observacion])
             ->andFilterWhere(['or',
                 ['ilike', 'user_datos.nombres', $this->nombreUsuario],
                 ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
             ])
-            ->andFilterWhere(['ilike', 'user_datos.cedula', $this->cedulaUsuario]);
+            ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
 
         return $dataProvider;
     }
@@ -199,14 +261,35 @@ class PagosSearch extends Pagos
      */
     public function searchByUser($params, $user_id)
     {
-        $query = Pagos::find()
-            ->where(['user_id' => $user_id])
-            ->joinWith(['userDatos']);
+        // 1. Asignamos alias 't' a la tabla principal 'pagos'
+        $query = Pagos::find()->alias('t');
+        
+        $query->where(['t.user_id' => $user_id]);
+
+        // 2. Proyección de columnas: Solo necesitamos las de Pagos
+        $query->select([
+            't.id',
+            't.fecha_pago',
+            't.monto_pagado',
+            't.monto_usd',
+            't.estatus',
+            't.numero_referencia_pago',
+            't.metodo_pago',
+            't.fecha_conciliacion',
+            't.nombre_conciliador',
+            't.observacion',
+            't.created_at',
+            't.user_id',
+            't.conciliador_id',
+            't.recibo_id',
+            't.conciliado',
+        ]);
+        // -------------------------
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC], // ✅ Cambiado a 'id'
+                'defaultOrder' => ['id' => SORT_DESC], 
                 'attributes' => [
                     'id',
                     'created_at',
@@ -232,9 +315,9 @@ class PagosSearch extends Pagos
             return $dataProvider;
         }
 
-        // grid filtering conditions
+        // grid filtering conditions (usamos el alias 't')
         $query->andFilterWhere([
-            'id' => $this->id,
+            't.id' => $this->id,
             'recibo_id' => $this->recibo_id,
             'fecha_pago' => $this->fecha_pago,
             'monto_pagado' => $this->monto_pagado,
@@ -244,7 +327,7 @@ class PagosSearch extends Pagos
         ]);
 
         $query->andFilterWhere(['ilike', 'metodo_pago', $this->metodo_pago])
-            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 't.estatus', $this->estatus])
             ->andFilterWhere(['ilike', 'numero_referencia_pago', $this->numero_referencia_pago])
             ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])

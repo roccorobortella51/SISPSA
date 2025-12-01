@@ -10005,7 +10005,7 @@ body {
 }
 /* Esto es lo que pasa cuando pones el ratón encima de una tarjeta. */
 .ms-panel:hover {
-    transform: translateY(-4px) !important;
+    transform: none !important; /* Cancela el movimiento */
     box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.08) !important;
 }
 /*

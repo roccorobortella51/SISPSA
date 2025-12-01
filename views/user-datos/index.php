@@ -8,6 +8,7 @@ use kartik\grid\GridView;
 use kartik\select2\Select2;
 use app\components\UserHelper;
 use app\models\RmClinica; // Importar el modelo de la clínica
+use yii\web\View; // <--- AÑADIDO: Importación para el registro de scripts en el DOM
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -42,6 +43,9 @@ if ($clinica && $clinica->id !== null) {
     $this->params['breadcrumbs'][] = 'AFILIADOS'; // Último elemento como texto
     $this->title = 'Gestión de Afiliados'; // Título genérico
 }
+
+// Define admin roles for clinic search filter
+$isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
 ?>
 
@@ -132,7 +136,31 @@ if ($clinica && $clinica->id !== null) {
                                     'allowClear' => true
                                 ],
                             ]),
+                            'contentOptions' => ['style' => 'width: 150px;'],
+                        ],
+                        // Clínica search filter - ONLY for admin roles
+                        [
+                            'attribute' => 'clinica_id',
+                            'label' => 'Clínica',
+                            'value' => function ($model) {
+                                return $model->clinica ? $model->clinica->nombre : 'No asignada';
+                            },
+                            'filter' => $isAdmin ? Select2::widget([
+                                'model' => $searchModel,
+                                'attribute' => 'clinica_id',
+                                'data' => \yii\helpers\ArrayHelper::map(
+                                    \app\models\RmClinica::find()->orderBy('nombre')->all(), 
+                                    'id', 
+                                    'nombre'
+                                ),
+                                'options' => ['placeholder' => 'Seleccionar clínica'],
+                                'pluginOptions' => [
+                                    'allowClear' => true
+                                ],
+                            ]) : null,
+                            'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['class' => 'text-center'],
+                            'visible' => $isAdmin, // Only show for admin roles
                         ],
                         // CORRECTED COLUMN: Corporativo Name
                         [
@@ -183,7 +211,7 @@ if ($clinica && $clinica->id !== null) {
                             ],
                         ],
                         [
-                            'label' => 'Nº de Cédula',
+                            'label' => 'Cédula de Identidad',
                             'attribute' => 'cedula',  
                             'value' => function ($model) {
                                 return ($model->tipo_cedula ?? '') . ' ' . ($model->cedula ?? '');
@@ -209,27 +237,6 @@ if ($clinica && $clinica->id !== null) {
                                 'class' => 'form-control text-center',
                             ],
                         ],
-                                     
-                        // START: MODIFIED CLINICA COLUMN WITH CONDITIONAL SEARCH
-                        [
-                            'attribute' => 'clinica_id', // Attribute for sorting
-                            'label' => 'Clínica',
-                            'format' => 'ntext',
-                            'value' => function ($model) {
-                                // Muestra el nombre de la clínica a la que pertenece el afiliado
-                                return $model->clinica ? $model->clinica->nombre : null;
-                            },
-                            'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
-                            
-                            // CONDITIONAL FILTER: Only rendered for 'superadmin'
-                            'filter' => ($rol == 'superadmin') ?
-                                Html::activeInput('text', $searchModel, 'clinica_nombre', [ // Uses the new attribute
-                                    'class' => 'form-control',
-                                    'placeholder' => 'Buscar Clínica...'
-                                ]) : false,
-                        ],
-                        // END: MODIFIED CLINICA COLUMN WITH CONDITIONAL SEARCH
                         [
                             'label' => 'Asesor',
                             'format' => 'ntext',
@@ -242,8 +249,11 @@ if ($clinica && $clinica->id !== null) {
                                 return null;
                             },
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => in_array(\app\components\UserHelper::getMyRol(), ['superadmin','DIRECTOR-COMERCIALIZACIÓN']),
+                            'visible' => $isAdmin, // Only show for admin roles
                         ],
+                        // REMOVED: Duplicate "Clínica" column that was next to "Asesor"
+                        // This column was showing the clinic name again without filter
+
                         [
                             'attribute' => 'estatus_solvente',
                             'format' => 'Html',
@@ -257,103 +267,172 @@ if ($clinica && $clinica->id !== null) {
                                     return '<p class="status-badge inactive">No</p>';
                                 }
                             },
-                            'filter' => ['No' => 'No', 'Si' => 'Sí'],
+
+                            /** 'filter' => [0 => 'No', 1 => 'Sí'],**/
+                            'filter' => ['Si' => 'Sí', 'No' => 'No']
                         ],
                         
-                        // Columna de Acciones - Mantenida exactamente como se solicitó
                         [
-                        'class' => 'yii\grid\ActionColumn',
-                        'header' => 'ACCIONES',
-                        'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{pagos}</div>',
-                        'options' => ['style' => 'width:55px; min-width:55px;'],
-                        'headerOptions' => ['style' => 'color: white!important;'],
-                        'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                        'buttons' => [
-                            'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
-                                $params = ['view', 'id' => $model->id];
-                                if ($clinica && $clinica->id !== null) {
-                                    $params['clinica_id'] = $clinica->id;
-                                }
-                                return Html::a(
-                                    '<i class="fa fa-eye"></i>',
-                                    Url::to($params), // Asegurar clinica_id condicionalmente
-                                    [
-                                        'title' => 'Detalle de Usuario',
-                                        'class' => 'btn-action view'
-                                    ]
-                                );
-                            },
-                            'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos and $clinica
-                                if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
-                                    $params = ['update', 'id' => $model->id];
+                            'class' => 'yii\grid\ActionColumn',
+                            'header' => 'ACCIONES',
+                            // MODIFICADO: Se usa {atencion} en lugar de {siniestro} y {cita}
+                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{atencion}{pagos}</div>',
+                            'options' => ['style' => 'width:55px; min-width:55px;'],
+                            'headerOptions' => ['style' => 'color: white!important;'],
+                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                            'buttons' => [
+                                'view' => function ($url, $model, $key) use ($clinica) { // Pasar $clinica
+                                    $params = ['view', 'id' => $model->id];
                                     if ($clinica && $clinica->id !== null) {
                                         $params['clinica_id'] = $clinica->id;
                                     }
                                     return Html::a(
-                                        '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                        '<i class="fa fa-eye"></i>',
                                         Url::to($params), // Asegurar clinica_id condicionalmente
                                         [
-                                            'title' => 'Editar Usuario',
+                                            'title' => 'Detalle de Usuario',
                                             'class' => 'btn-action view'
                                         ]
                                     );
-                                }else{
-                                    return "";
-                                }
-                            },
-                            'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos and $clinica
-                                if ($permisos == true || $rol == 'Administrador-clinica') {
-                                $params = ['/sis-siniestro/index', 'user_id' => $model->id];
-                                if ($clinica && $clinica->id !== null) {
-                                    $params['clinica_id'] = $clinica->id;
-                                }
+                                },
+                                'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos y $clinica
+                                    if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
+                                        $params = ['update', 'id' => $model->id];
+                                        if ($clinica && $clinica->id !== null) {
+                                            $params['clinica_id'] = $clinica->id;
+                                        }
+                                        return Html::a(
+                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                            Url::to($params), // Asegurar clinica_id condicionalmente
+                                            [
+                                                'title' => 'Editar Usuario',
+                                                'class' => 'btn-action view'
+                                            ]
+                                        );
+                                    }else{
+                                        return "";
+                                    }
+                                },
+                                // BOTÓN DE ATENCION
+                                'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
+                                    // Aplicar la misma lógica de permisos y verificación de clinica_id
+                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
+                                        
+                                        // URLs para pasar a la función JS
+                                        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
+                                        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
 
-                                if($model->clinica_id){
-                                return Html::a(
-                                    '<i class="fas fa-heartbeat ms-text-primary"></i>',
-                                    Url::to($params), // Asegurar clinica_id condicionalmente
-                                    [
-                                        'title' => 'Atenciones Médicas',
-                                        'class' => 'btn-action view'
-                                    ]
-                                );}
-                                }
-                            },
-                            'pagos' => function ($url, $model, $key) {
-                                // Always show individual payments link regardless of user type
-                                $params = ['/contratos/index', 'user_id' => $model->id];
-                                return Html::a(
-                                    '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
-                                    Url::to($params),
-                                    [
-                                        'title' => 'Pagos Individuales',
-                                        'class' => 'btn-action view'
-                                    ]
-                                );
-                            },
-                            'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos and $clinica
-                                if ($permisos) {
-                                    $params = ['delete', 'id' => $model->id];
-                                    if ($clinica && $clinica->id !== null) {
-                                        $params['clinica_id'] = $clinica->id;
+                                        // Botón que usa DATA ATTRIBUTES para las URLs
+                                        return Html::a(
+                                            '<i class="fas fa-notes-medical ms-text-primary" style="color: #f92011ff !important;"></i>', // Icono general
+                                            '#', // URL vacía, la acción será manejada por JS
+                                            [
+                                                'title' => 'Gestionar Atención',
+                                                'class' => 'btn-action view atencion-btn', // AÑADIDO: Clase específica para JS
+                                                'data' => [
+                                                    'url-siniestro' => $urlSiniestro,
+                                                    'url-cita' => $urlCita,
+                                                ],
+                                            ]
+                                        );
                                     }
-                                    return Html::a(
-                                        '<i class="far fa-trash-alt ms-text-danger"></i>',
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Eliminar Usuario',
-                                            'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                            'data-method' => 'post',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );
-                                }
-                            },
+                                    return "";
+                                },
+                                'pagos' => function ($url, $model, $key) {
+                                    // Si el tipo de afiliado (user_datos_type_id) NO es 2 (Corporativo), muestra el botón.
+                                    // user_datos_type_id = 1 (Individual)
+                                    if ($model->user_datos_type_id != 2) {
+                                        $params = ['/contratos/index', 'user_id' => $model->id];
+                                        return Html::a(
+                                            '<i class="fas fa-file-invoice-dollar ms-text-success"></i>',
+                                            Url::to($params),
+                                            [
+                                                'title' => 'Pagos',
+                                                'class' => 'btn-action view'
+                                            ]
+                                        );
+                                    }
+                                    // Si es tipo 2, la función no devuelve nada, por lo que el botón no se renderiza.
+                                    return null; 
+
+                                },
+                                'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
+                                    if ($permisos) {
+                                        $params = ['delete', 'id' => $model->id];
+                                        if ($clinica && $clinica->id !== null) {
+                                            $params['clinica_id'] = $clinica->id;
+                                        }
+                                        return Html::a(
+                                            '<i class="far fa-trash-alt ms-text-danger"></i>',
+                                            Url::to($params), // Asegurar clinica_id condicionalmente
+                                            [
+                                                'title' => 'Eliminar Usuario',
+                                                'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
+                                                'data-method' => 'post',
+                                                'class' => 'btn-action view'
+                                            ]
+                                        );
+                                    }
+                                },
+                            ],
                         ],
-                    ],
                     ], // Fin de columns
                 ]); ?>
             </div>
         </div>
     </div>
 </div>
+
+<?php
+$js = <<<JS
+// 1. EVENTO PARA ABRIR EL MODAL
+$(document).on('click', '.atencion-btn', function(e) {
+    e.preventDefault(); 
+    
+    var urlSiniestro = $(this).data('url-siniestro');
+    var urlCita = $(this).data('url-cita');
+
+    var contentHtml = 
+        '<p class="text-xl mt-4 mb-5 font-weight-bold">¿Desea registrar una Atención o programar una Cita?</p>' +
+        '<div class="d-flex justify-content-center w-100 mt-5">' +
+            '<a href="' + urlSiniestro + '" class="btn-base btn-danger btn-lg mx-4 px-5 py-4" style="color: white; text-decoration: none; font-size: 1.5rem; min-width: 250px;">' +
+                '<i class="fas fa-hand-holding-medical me-3"></i> ATENCION' +
+            '</a>' +
+            '<a href="' + urlCita + '" class="btn-base btn-success btn-lg mx-4 px-5 py-4" style="color: white; text-decoration: none; font-size: 1.5rem; min-width: 250px;">' +
+                '<i class="fas fa-calendar-check me-3"></i> CITA' +
+            '</a>' +
+        '</div>';
+
+    // AQUI ESTA LA CLAVE: 
+    // No usamos onclick. Usamos una clase especifica: 'btn-cerrar-swal'
+    var footerHtml = 
+        '<button type="button" class="btn-base btn-gray btn-lg mt-4 btn-cerrar-swal">' +
+            'CERRAR' +
+        '</button>';
+
+    Swal.fire({
+        title: 'Selecciona una Opción',
+        icon: 'question',
+        showCloseButton: true,
+        width: '50%',       
+        padding: '2em',     
+        showConfirmButton: false, 
+        showDenyButton: false,     
+        showCancelButton: false,    
+        buttonsStyling: false, 
+        html: contentHtml,
+        footer: footerHtml 
+    });
+});
+
+// 2. EVENTO GLOBAL PARA CERRAR EL MODAL
+// Este código escucha clics en cualquier elemento con la clase 'btn-cerrar-swal'
+// incluso si el elemento se creó dinámicamente.
+$(document).on('click', '.btn-cerrar-swal', function(e) {
+    e.preventDefault(); // Previene comportamientos extraños
+    Swal.close();       // Cierra el modal limpiamente
+});
+JS;
+
+$this->registerJs($js, View::POS_READY);
+?>

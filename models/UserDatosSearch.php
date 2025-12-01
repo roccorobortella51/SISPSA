@@ -55,6 +55,38 @@ class UserDatosSearch extends UserDatos
 
         $rol = UserHelper::getMyRol();
         $query = UserDatos::find();
+
+        // INICIO DE LA OPTIMIZACIÓN
+        $query->select([
+            // Columnas DIRECTAS de la tabla user_datos
+            'user_datos.id',
+            'user_datos.created_at',
+            'user_datos.nombres',
+            'user_datos.apellidos',
+            'user_datos.cedula',
+            'user_datos.tipo_cedula',
+            'user_datos.telefono',
+            'user_datos.email',
+            'user_datos.estatus_solvente',
+            'user_datos.user_datos_type_id',
+            'user_datos.clinica_id',
+            'user_datos.asesor_id',
+            'user_datos.deleted_at',
+            
+            // Usar el nombre de la tabla en la DB: 'user_datos_type'
+            'user_datos_type.nombre as userDatosTypeNombre', 
+            
+            // Usar el nombre de la tabla en la DB: 'rm_clinica'
+            // (Asumiendo que el modelo de la relación 'clinica' se llama 'RmClinica' y su tabla 'rm_clinica')
+            'rm_clinica.nombre as clinicaNombre', 
+            
+            // Columnas del ASESOR (este ya estaba bien)
+            'ud_asesor.nombres as asesorNombres',
+            'ud_asesor.apellidos as asesorApellidos',
+        ]);
+        // FIN DE LA OPTIMIZACIÓN
+
+
         $query->joinWith(['userDatosType']);
         // Eager loading para evitar N+1 y asegurar acceso a asesor (persona) y clínica en el Grid
         // Importante: alias para user_datos del asesor para no colisionar con la tabla principal
