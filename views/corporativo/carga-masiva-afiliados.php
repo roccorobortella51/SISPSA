@@ -12,15 +12,14 @@ use yii\web\View;
 $this->title = 'Gestión: Carga Masiva de Afiliados Corporativos';
 $this->params['breadcrumbs'][] = $this->title;
 
-// Asumimos que el tema de Yii o Bootstrap ya maneja iconos (fas) y clases de diseño.
-// Registramos el script de JavaScript para manejar la funcionalidad de las clínicas.
+// Registramos el script de JavaScript para manejar la funcionalidad de las clínicas y planes.
 $this->registerJs(
     "
-    // URL para obtener las clínicas, debes crear esta acción en tu controlador.
-    const clinicasUrl = " . json_encode(Yii::$app->urlManager->createUrl(['corporativo/obtener-clinicas-por-corporativo'])) . ";
+    // URL para obtener las clínicas Y planes
+    const clinicasPlanesUrl = " . json_encode(Yii::$app->urlManager->createUrl(['corporativo/obtener-clinicas-con-planes-por-corporativo'])) . ";
 
-    // Función que carga las clínicas vía AJAX
-    function cargarClinicas(corporativoId) {
+    // Función que carga las clínicas y planes vía AJAX
+    function cargarClinicasPlanes(corporativoId) {
         const infoDiv = $('#clinicas-asociadas-info');
         
         if (!corporativoId) {
@@ -28,47 +27,81 @@ $this->registerJs(
             return;
         }
 
-        infoDiv.html('<div class=\"text-center py-3\"><i class=\"fas fa-spinner fa-spin me-2\"></i> Cargando clínicas asociadas...</div>');
+        infoDiv.html('<div class=\"text-center py-3\"><i class=\"fas fa-spinner fa-spin me-2\"></i> Cargando clínicas y planes asociados...</div>');
 
         $.ajax({
-            url: clinicasUrl,
+            url: clinicasPlanesUrl,
             type: 'GET',
             data: { id: corporativoId },
             dataType: 'json',
-            success: function(data) {
-                if (data.length > 0) {
-                    let html = '<h3 class=\"text-success mb-3\"><i class=\"fas fa-notes-medical me-2\"></i> Clínicas Asociadas (ID Válidos para CSV):</h5>';
-                    html += '<table class=\"table table-striped fs-5\">';
-                    html += '<thead><tr><th>ID</th><th>Nombre de la Clínica</th></tr></thead>';
-                    html += '<tbody>';
+            success: function(response) {
+                // Manejamos la respuesta con la estructura { success: true, data: [...] }
+                if (response.success && response.data.length > 0) {
                     
-                    data.forEach(function(clinica) {
-                        // Asumimos que la respuesta JSON tiene 'id' y 'nombre'
-                        html += '<tr><td class=\"fw-bold text-success align-middle text-center\">' + clinica.id + '</td><td>' + clinica.nombre + '</td></tr>';
-                    });
+                    let html = '<h3 class=\"text-primary mb-4\"><i class=\"fas fa-check-double me-2\"></i> IDs Válidos para su Plantilla CSV:</h5>';
+                    
+                    response.data.forEach(function(clinica) {
+                        // --- INICIO DE MEJORA: Tarjeta para cada Clínica ---
+                        html += '<div class=\"card border-info mb-4 shadow-lg\">'; // Usamos border-info
+                        
+                        // Encabezado mejorado para resaltar el ID de la Clínica
+                        html += '<div class=\"card-header bg-info text-white fw-bold d-flex justify-content-between align-items-center\">';
+                        html += '<div><i class=\"fas fa-hospital-alt me-2\"></i> Clínica: ' + clinica.nombre + '</div>';
+                        // ID de la Clínica con un badge grande y amarillo para máxima visibilidad
+                        html += '<span class=\"badge bg-warning text-dark fs-5 py-2 px-3 fw-bolder\">ID CLÍNICA: ' + clinica.id + '</span>'; 
+                        html += '</div>';
+                        
+                        // Cuerpo de la tarjeta para los planes
+                        if (clinica.planes && clinica.planes.length > 0) {
+                            html += '<div class=\"card-body p-3\">';
+                            html += '<h5 class=\"text-dark ms-2 mt-2\">Planes de esta Clínica (IDs para `plan_id` en CSV):</h5>';
+                            html += '<table class=\"table table-bordered table-sm fs-6\">';
+                            html += '<thead class=\"bg-light\"><tr><th style=\"width: 30%;\">ID del Plan</th><th>Nombre del Plan</th></tr></thead>';
+                            html += '<tbody>';
 
-                    html += '</tbody></table>';
+                            clinica.planes.forEach(function(plan) {
+                                html += '<tr>';
+                                // ID del Plan resaltado en negrita y color rojo de peligro para diferenciarlo
+                                html += '<td class=\"fw-bolder text-danger align-middle\">' + plan.id + '</td>'; 
+                                html += '<td>' + plan.nombre + '</td>';
+                                html += '</tr>';
+                            });
+
+                            html += '</tbody></table>';
+                            html += '</div>'; // card-body
+                        } else {
+                            html += '<div class=\"card-body\"><p class=\"alert alert-warning mb-0\">No hay planes activos asociados a esta clínica (' + clinica.nombre + ').</p></div>';
+                        }
+                        
+                        html += '</div>'; // card
+                        // --- FIN DE MEJORA ---
+                    });
+                    
                     infoDiv.html(html);
-                } else {
+
+                } else if (response.success && response.data.length === 0) {
                     infoDiv.html('<p class=\"alert alert-warning\">No se encontraron clínicas asociadas para el corporativo seleccionado.</p>');
+                } else if (response.error) {
+                     // Manejo de errores detallado si el controlador falla
+                     infoDiv.html('<p class=\"alert alert-danger\">Error del Servidor: ' + response.error + '</p>');
                 }
             },
-            error: function() {
-                infoDiv.html('<p class=\"alert alert-danger\">Error al cargar las clínicas. Por favor, intente de nuevo.</p>');
+            error: function(jqXHR, textStatus, errorThrown) {
+                infoDiv.html('<p class=\"alert alert-danger\">Error de Conexión. Asegúrese de que el ID del corporativo es válido.</p>');
             }
         });
     }
 
     // Escucha el cambio en el selector del corporativo
     $('#masivoafiliadosform-corporativo_id').on('change', function() {
-        cargarClinicas($(this).val());
+        cargarClinicasPlanes($(this).val());
     });
 
     // Carga inicial (si ya hay un valor seleccionado al cargar la página)
-    cargarClinicas($('#masivoafiliadosform-corporativo_id').val());
+    cargarClinicasPlanes($('#masivoafiliadosform-corporativo_id').val());
 
     ",
-    View::POS_END // Coloca el script al final del cuerpo (body)
+    View::POS_END 
 );
 ?>
 
@@ -118,11 +151,15 @@ $this->registerJs(
                     <tr><td>`telefono`</td><td>Texto</td><td>Teléfono de contacto (residencia o móvil).</td></tr>
                     <tr><td>`email`</td><td>Texto</td><td>Correo electrónico. (Debe ser único en el sistema)</td></tr>
                     <tr><td>`direccion`</td><td>Texto</td><td>Dirección de residencia o cobro.</td></tr>
-                    <tr><td>`plan_id`</td><td>Número</td><td>ID del Plan al que se afiliará.</td></tr>
+                    <tr class="table-danger">
+                        <td>`plan_id`</td>
+                        <td>Número</td>
+                        <td>ID del Plan al que se afiliará. **(Debe ser un plan listado en la sección de guía)**</td>
+                    </tr>
                     <tr class="table-danger">
                         <td>`clinica_id`</td>
                         <td>Número</td>
-                        <td>ID de la Clínica a la que se vinculará el contrato. Observacion: Debe estar vinculada al Corporativo Destino.**</td>
+                        <td>ID de la Clínica a la que se vinculará el contrato. **(Debe ser una clínica listada en la sección de guía)**</td>
                     </tr>
                     
                     <tr class="table-secondary fw-bold">
@@ -134,7 +171,7 @@ $this->registerJs(
                     <tr><td>`direccion_oficina`</td><td>Texto</td><td>Dirección de la oficina del afiliado.</td></tr>
                     <tr><td>`telefono_oficina`</td><td>Texto</td><td>Teléfono de la oficina del afiliado.</td></tr>
                     <tr><td>`tipo_sangre`</td><td>Texto</td><td>Tipo de sangre (ej: A+, O-).</td></tr>
-                    <tr><td>`rol_en_corporativo`</td><td>Texto</td><td>Posición o rol del afiliado dentro de la empresa.</td></tr>
+                    <tr><td>`rol_en-corporativo`</td><td>Texto</td><td>Posición o rol del afiliado dentro de la empresa.</td></tr>
                     <tr><td>`nacionalidad`</td><td>Texto</td><td>Nacionalidad de origen  (ej: Venezolano o Extranjero).</td></tr>
                     <tr><td>`estado_civil`</td><td>Texto</td><td>Soltero, Casado, Divorciado o Viudo</td></tr>
                     <tr><td>`Lugar_nacimiento`</td><td>Texto</td><td>Escriba un estado por ejemplo</td></tr>
@@ -151,18 +188,18 @@ $this->registerJs(
             </table>
 
             <p class="mt-4 alert alert-warning mb-0">
-                VALIDACIÓN CRÍTICA (Sistema): El sistema verificará que el `clinica_id` proporcionado en el CSV esté correctamente vinculado al Corporativo Destino que usted seleccione en el formulario. Si no hay vínculo, la fila será rechazada.
+                VALIDACIÓN CRÍTICA (Sistema): El sistema verificará que el `clinica_id` proporcionado en el CSV esté correctamente vinculado al Corporativo Destino que usted seleccione en el formulario.
             </p>
         </div>
     </div>
 
-    <!-- Sección de Ayuda Dinámica de Clínicas (NUEVO) -->
+    <!-- Sección de Ayuda Dinámica de Clínicas y Planes -->
     <div class="card shadow-sm border-info mt-4 mb-5">
         <div class="card-header bg-info text-white">
-            <h4 class="mb-0"><i class="fas fa-hospital-alt me-2"></i> Guía de IDs de Clínica por Corporativo</h4>
+            <h4 class="mb-0"><i class="fas fa-hospital-alt me-2"></i> Guía de IDs de Clínica y Plan por Corporativo</h4>
         </div>
         <div class="card-body" id="clinicas-asociadas-info">
-            <p class="alert alert-info">Seleccione un corporativo en el paso 1 del proceso de carga para ver los ID de clínica válidos que debe usar en su plantilla CSV.</p>
+            <p class="alert alert-info">Seleccione un corporativo en el paso 1 del proceso de carga para ver los ID de clínica y plan válidos que debe usar en su plantilla CSV.</p>
         </div>
     </div>
     <!-- Fin de Sección de Ayuda Dinámica de Clínicas -->
