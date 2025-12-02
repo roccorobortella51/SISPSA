@@ -814,6 +814,9 @@ public function actionMasivo()
         //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
+
+            $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
+
             //-- --- ADD THIS CODE BLOCK HERE ---
             // Normalize estatus_solvente to consistent format
             if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
@@ -822,6 +825,7 @@ public function actionMasivo()
                 $model->estatus_solvente = "No";
             }
             // --- END OF ADDED CODE ---
+
             // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
@@ -1038,7 +1042,7 @@ public function actionMasivo()
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionUpdate($id)
+function actionUpdate($id)
     {  
         $model = $this->findModel($id);
         $modelContrato = Contratos::find()->where(['user_id' => $id])->one();
@@ -1052,6 +1056,12 @@ public function actionMasivo()
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
             Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
+
+            $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
+                        
+            // Procesar grupo familiar
+        
+
             
             // --- ADD THIS CODE BLOCK HERE ---
             // Normalize estatus_solvente to consistent format
@@ -1745,27 +1755,69 @@ public function actionGenerarContratov($id)
         return ['output' => '', 'selected' => ''];
     }
 
-    public function actionDatosdelplan(){
-
+        public function actionDatosdelplan()
+    {
         if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
             $datos = Yii::$app->getRequest()->post();
 
-            $plan_id = $datos['id'];
+            $plan_id = $datos['id'] ?? null; // Usar operador Elvis para evitar errores si 'id' no existe
 
-            $plan = Planes::find()->where(['id' => $plan_id])->one();
-   
+            // --- INICIO DE LA CORRECCIÓN CRÍTICA ---
+            // 1. VALIDACIÓN: Asegura que el ID existe, no es nulo y es un valor numérico.
+            // Esto previene que se pase 'Loading ...' o cualquier otra cadena a la base de datos.
+            if (empty($plan_id) || !is_numeric($plan_id) || $plan_id <= 0) {
+                // Registrar el intento de consulta inválido
+                Yii::warning("Intento de consulta de plan con ID inválido o no numérico: {$plan_id}", 'datosdelplan');
+                
+                // Retornar una respuesta JSON controlada y vacía para que el frontend no falle.
                 return [
                     'data' => [
-                        'comision' => $plan->comision,
-                        'precio' => $plan->precio,
+                        'comision' => 0, 
+                        'precio' => 0,
                         'moneda' => "USD",
                         'deducible' => 0,
-                        'limite_cobertura' => $plan->cobertura
+                        'limite_cobertura' => 0
                     ]
                 ];
-            } 
+            }
+            // --- FIN DE LA CORRECCIÓN CRÍTICA ---
+
+
+            // La búsqueda en la base de datos solo se ejecuta si la validación pasó.
+            // Usamos (int) $plan_id para asegurar que es un entero.
+            $plan = Planes::find()->where(['id' => (int) $plan_id])->one();
+
+            // 2. Manejar el caso donde el plan ID es válido pero no existe en la DB
+            if (!$plan) {
+                 Yii::warning("Plan no encontrado para ID: {$plan_id}", 'datosdelplan');
+                 return [
+                    'data' => [
+                        'comision' => 0, 
+                        'precio' => 0,
+                        'moneda' => "USD",
+                        'deducible' => 0,
+                        'limite_cobertura' => 0
+                    ]
+                ];
+            }
+   
+            // 3. Retornar los datos del plan encontrado
+            return [
+                'data' => [
+                    'comision' => $plan->comision,
+                    'precio' => $plan->precio,
+                    'moneda' => "USD",
+                    'deducible' => 0,
+                    'limite_cobertura' => $plan->cobertura
+                ]
+            ];
+        } 
+        
+        // Si no es una petición AJAX, retorna un error 400
+        throw new \yii\web\BadRequestHttpException('Solo se permiten peticiones AJAX para esta acción.');
     }
+
     /**
      * Returns JSON data for clinicas filtered by type and corporativo.
      * @return array JSON array of [id => name]

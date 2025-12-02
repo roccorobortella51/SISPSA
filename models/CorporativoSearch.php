@@ -41,7 +41,19 @@ class CorporativoSearch extends Corporativo
      */
     public function search($params, $formName = null)
     {
-        $query = Corporativo::find()->with(['users', 'clinicas']);
+        $query = Corporativo::find()->alias('t')->with(['users', 'clinicas']);
+
+        // INICIO DE LA OPTIMIZACIÓN (Proyección de Columnas)
+        // el alias 't' en el select para referenciar las columnas
+        $query->select([
+            't.id',
+            't.nombre',
+            't.rif',
+            't.email',
+            't.telefono',
+            't.estatus',
+        ]);
+        // 🛑 FIN DE LA OPTIMIZACIÓN
 
         // add conditions that should always apply here
 

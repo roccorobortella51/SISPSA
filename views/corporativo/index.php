@@ -32,9 +32,9 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                 <h1><?= Html::encode($this->title); ?></h1>
 
                 <div>
-                    <?= Html::a(
+                   <?= Html::a(
                         '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE CORPORATIVOS',
-                        ['#'], // Ajusta esta ruta si tienes una funcionalidad de carga masiva
+                        ['corporativo/carga-masiva-afiliados'], // <--- RUTA CORREGIDA AQUÍ
                         ['class' => 'btn btn-outline-primary btn-lg me-3']
                     ) ?>
                     <?= Html::a(

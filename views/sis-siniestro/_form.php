@@ -5,6 +5,11 @@ use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
 use yii\web\View;
 use yii\helpers\ArrayHelper;
+use yii\bootstrap4\Modal;
+
+$this->registerCssFile(Yii::getAlias('@web') . "/css/_formsiniestros.css", ['position' => View::POS_HEAD]);
+
+
 
 /* @var $this yii\web\View */
 /* @var $model app\models\SisSiniestro */
@@ -38,584 +43,8 @@ $contrato = \app\models\Contratos::find()
     ->orderBy(['created_at' => SORT_DESC])
     ->one();
 
-// CSS personalizado - Microsoft Fluent Design System Standards
-$css = <<<CSS
-/* ===== MICROSOFT FLUENT DESIGN SYSTEM ===== */
-.sis-siniestro-form {
-    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-}
 
-/* ===== TYPOGRAPHY SCALE - Microsoft Fluent Typography ===== */
-.section-title {
-    font-size: 20px; /* Title Large - Microsoft standard */
-    font-weight: 600; /* Semibold - Microsoft standard */
-    margin: 0 0 16px 0; /* 16px spacing - Microsoft standard */
-    display: flex;
-    align-items: center;
-    color: #323130; /* Microsoft Gray190 */
-    line-height: 1.2;
-}
 
-.section-title i {
-    margin-right: 12px; /* 12px spacing */
-    font-size: 20px; /* Match title size */
-    color: #0078d4; /* Microsoft Theme Primary */
-}
-
-.text-blue-600 {
-    color: #0078d4 !important; /* Microsoft Theme Primary */
-}
-
-/* ===== FORM CONTROLS - Microsoft Fluent Inputs ===== */
-.select2-container--krajee .select2-selection--multiple,
-.select2-container--krajee .select2-selection--single {
-    border-radius: 2px; /* Microsoft square corners */
-    border: 1px solid #605e5c; /* Microsoft Gray130 */
-    padding: 6px 8px; /* Microsoft standard padding */
-    min-height: 32px; /* Microsoft standard height */
-    display: flex;
-    align-items: center;
-    font-size: 14px; /* Microsoft Body */
-    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background-color: #ffffff;
-    transition: border-color 0.1s ease;
-}
-
-.select2-container--krajee .select2-selection--multiple:focus,
-.select2-container--krajee .select2-selection--single:focus {
-    border-color: #0078d4; /* Microsoft Theme Primary */
-    outline: 2px solid #0078d4;
-    outline-offset: -2px;
-}
-
-.select2-container--krajee .select2-selection--multiple .select2-selection__choice {
-    border-radius: 2px; /* Microsoft square corners */
-    background-color: #f3f2f1; /* Microsoft Gray20 */
-    border: 1px solid #d2d0ce; /* Microsoft Gray90 */
-    color: #323130; /* Microsoft Gray190 */
-    padding: 2px 6px; /* Microsoft compact padding */
-    font-size: 12px; /* Microsoft Caption */
-    line-height: 1.33;
-}
-
-/* ===== BUTTONS - Microsoft Fluent Buttons ===== */
-.btn {
-    border-radius: 2px; /* Microsoft square corners */
-    padding: 8px 16px; /* Microsoft standard padding */
-    font-weight: 600; /* Semibold */
-    transition: all 0.1s ease; /* Microsoft fast transitions */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px; /* Microsoft Body */
-    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    border: 1px solid transparent;
-    line-height: 1.33;
-    min-height: 32px; /* Microsoft standard height */
-}
-
-.btn i {
-    margin-right: 8px;
-    font-size: 16px;
-}
-
-.btn-success {
-    background-color: #107c10; /* Microsoft Green */
-    border-color: #107c10;
-    color: #ffffff;
-}
-
-.btn-success:hover {
-    background-color: #0e700e;
-    border-color: #0e700e;
-    transform: none; /* Remove translateY for Microsoft flat design */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow */
-}
-
-.btn-warning {
-    background-color: #d83b01; /* Microsoft Orange */
-    border-color: #d83b01;
-    color: #ffffff;
-}
-
-.btn-warning:hover {
-    background-color: #c23501;
-    border-color: #c23501;
-    transform: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-outline-dark {
-    border-color: #8a8886; /* Microsoft Gray110 */
-    color: #323130; /* Microsoft Gray190 */
-    background-color: transparent;
-}
-
-.btn-outline-dark:hover {
-    background-color: #f3f2f1; /* Microsoft Gray20 */
-    color: #201f1e; /* Microsoft Gray200 */
-    border-color: #8a8886;
-    transform: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* ===== AFILIADO CONTAINER ===== */
-.afiliado-container {
-    background-color: #faf9f8; /* Microsoft Gray10 */
-    border-radius: 2px; /* Microsoft square corners */
-    padding: 16px; /* Microsoft standard spacing */
-    border-left: 4px solid #0078d4; /* Microsoft Theme Primary */
-    max-height: 600px;
-    overflow-y: auto;
-    border: 1px solid #edebe9; /* Microsoft Gray30 */
-}
-
-.afiliado-container .card {
-    box-shadow: none;
-    border: 1px solid #edebe9; /* Microsoft Gray30 */
-    border-radius: 2px; /* Microsoft square corners */
-}
-
-.afiliado-container .card-header {
-    background: #f3f2f1; /* Microsoft Gray20 */
-    color: #323130; /* Microsoft Gray190 */
-    border-radius: 2px 2px 0 0 !important;
-    font-size: 16px; /* Microsoft Title */
-    font-weight: 600;
-    padding: 12px 16px; /* Microsoft standard padding */
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-}
-
-.afiliado-container .nav-tabs .nav-link {
-    color: #605e5c; /* Microsoft Gray130 */
-    font-weight: 400; /* Regular weight */
-    border: none;
-    border-bottom: 2px solid transparent;
-    font-size: 14px; /* Microsoft Body */
-    padding: 8px 16px; /* Microsoft standard padding */
-    background: none;
-}
-
-.afiliado-container .nav-tabs .nav-link.active {
-    color: #0078d4; /* Microsoft Theme Primary */
-    background-color: transparent;
-    border-color: #0078d4;
-    font-weight: 600; /* Semibold when active */
-}
-
-.afiliado-container .table th {
-    background-color: #faf9f8; /* Microsoft Gray10 */
-    color: #323130; /* Microsoft Gray190 */
-    font-weight: 600; /* Semibold */
-    border-top: none;
-    font-size: 14px; /* Microsoft Body */
-    padding: 8px 12px; /* Microsoft compact padding */
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-}
-
-.afiliado-container .table td {
-    font-size: 14px; /* Microsoft Body */
-    padding: 8px 12px; /* Microsoft compact padding */
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-    color: #323130; /* Microsoft Gray190 */
-}
-
-.afiliado-container .badge {
-    font-weight: 600;
-    padding: 4px 8px; /* Microsoft compact padding */
-    border-radius: 2px; /* Microsoft square corners */
-    font-size: 12px; /* Microsoft Caption */
-}
-
-/* ===== TOTAL CALCULADO ===== */
-.costo-total-container {
-    background-color: #f8fbf8; /* Microsoft subtle green */
-    border-radius: 2px; /* Microsoft square corners */
-    padding: 16px; /* Microsoft standard spacing */
-    margin-top: 16px; /* Microsoft standard spacing */
-    margin-bottom: 24px; /* 24px spacing */
-    border-left: 4px solid #107c10; /* Microsoft Green */
-    border: 1px solid #e6e6e6;
-}
-
-.costo-total-label {
-    font-weight: 600; /* Semibold */
-    color: #107c10; /* Microsoft Green */
-    font-size: 16px; /* Microsoft Title */
-    margin-bottom: 8px; /* Microsoft compact spacing */
-}
-
-.costo-total-value {
-    font-size: 24px; /* Microsoft Display */
-    font-weight: 700; /* Bold for emphasis */
-    color: #107c10; /* Microsoft Green */
-    line-height: 1.2;
-}
-
-/* ===== PLAN INFORMATION ===== */
-.plan-info-container {
-    background-color: #f8f9fc; /* Microsoft subtle blue */
-    border-radius: 2px; /* Microsoft square corners */
-    padding: 16px; /* Microsoft standard spacing */
-    margin-bottom: 20px; /* 20px spacing */
-    border-left: 4px solid #0078d4; /* Microsoft Theme Primary */
-    border: 1px solid #e6e6e6;
-}
-
-.plan-info-title {
-    font-weight: 600; /* Semibold */
-    color: #004578; /* Microsoft Dark Blue */
-    margin-bottom: 12px; /* Microsoft standard spacing */
-    font-size: 16px; /* Microsoft Title */
-}
-
-.plan-info-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px; /* Microsoft compact spacing */
-    padding-bottom: 8px; /* Microsoft compact spacing */
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-    font-size: 14px; /* Microsoft Body */
-}
-
-.plan-info-item:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.plan-info-label {
-    font-weight: 600; /* Semibold */
-    color: #323130; /* Microsoft Gray190 */
-    flex: 1;
-    text-align: left;
-}
-
-.plan-info-value {
-    font-weight: 400; /* Regular weight for values */
-    color: #605e5c; /* Microsoft Gray130 */
-    text-align: right;
-    flex-shrink: 0;
-    margin-left: 16px; /* Microsoft standard spacing */
-    font-family: 'Segoe UI', Consolas, monospace; /* Monospace for numbers */
-}
-
-.plan-info-total {
-    background-color: #deecf9; /* Microsoft Light Blue */
-    padding: 12px 16px; /* Microsoft standard padding */
-    border-radius: 2px; /* Microsoft square corners */
-    margin-top: 12px; /* Microsoft standard spacing */
-    font-size: 14px; /* Microsoft Body */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid #c7e0f4;
-}
-
-.plan-info-total .plan-info-label {
-    font-weight: 700; /* Bold for emphasis */
-    color: #004578; /* Microsoft Dark Blue */
-    font-size: 14px; /* Microsoft Body */
-    text-align: left;
-    flex: 1;
-}
-
-.plan-info-total .plan-info-value {
-    font-weight: 700; /* Bold for emphasis */
-    color: #004578; /* Microsoft Dark Blue */
-    font-size: 16px; /* Microsoft Title */
-    text-align: right;
-    flex-shrink: 0;
-    margin-left: 16px; /* Microsoft standard spacing */
-}
-
-/* ===== HINTS AND NOTES ===== */
-.hint-block {
-    color: #605e5c; /* Microsoft Gray130 */
-    font-size: 12px; /* Microsoft Caption */
-    margin-top: 4px; /* Microsoft compact spacing */
-    line-height: 1.33;
-}
-
-.hint-block i {
-    margin-right: 6px; /* Microsoft compact spacing */
-    font-size: 12px; /* Microsoft Caption */
-}
-
-/* ===== BAREMOS TABLE ===== */
-#baremos-tabla-container {
-    margin-top: 20px; /* 20px spacing */
-    margin-bottom: 20px; /* 20px spacing */
-}
-
-#baremos-tabla-container h4.section-title {
-    font-size: 16px; /* Microsoft Title - consistent with other titles */
-    font-weight: 600; /* Semibold */
-    color: #323130; /* Microsoft Gray190 */
-    margin-bottom: 12px; /* Microsoft standard spacing */
-    display: flex;
-    align-items: center;
-}
-
-#baremos-tabla-container h4.section-title i {
-    font-size: 16px; /* Match title size */
-    margin-right: 8px; /* Microsoft compact spacing */
-    color: #0078d4; /* Microsoft Theme Primary */
-}
-
-#baremos-tabla-container table {
-    width: 100%;
-    border-collapse: collapse; /* Microsoft clean tables */
-    border-spacing: 0;
-}
-
-#baremos-tabla-container th, #baremos-tabla-container td {
-    padding: 8px 12px; /* Microsoft compact padding */
-    text-align: left;
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-}
-
-#baremos-tabla-container th {
-    background-color: #0078d4 !important; /* Microsoft Theme Primary - Blue background */
-    color: #ffffff !important; /* White text for table headers */
-    font-weight: 600; /* Semibold */
-    border: none;
-    font-size: 14px; /* Microsoft Body */
-    border-bottom: 2px solid #0078d4; /* Microsoft Theme Primary */
-}
-
-#baremos-tabla-container td {
-    font-size: 14px; /* Microsoft Body */
-    font-weight: 400; /* Regular weight */
-    color: #323130; /* Microsoft Gray190 */
-    vertical-align: top;
-    line-height: 1.33;
-}
-
-#baremos-tabla-container tr:nth-child(even) {
-    background-color: #faf9f8; /* Microsoft Gray10 */
-}
-
-#baremos-tabla-container tr:hover {
-    background-color: #f3f2f1; /* Microsoft Gray20 */
-}
-
-#baremos-tabla-container .cost-col {
-    font-weight: 600; /* Semibold */
-    text-align: right;
-    width: 100px; /* Fixed width for alignment */
-    font-size: 14px; /* Microsoft Body */
-    color: #107c10; /* Microsoft Green */
-    font-family: 'Segoe UI', Consolas, monospace; /* Monospace for numbers */
-}
-
-/* ===== FORM FIELDS ===== */
-.form-fields-section {
-    margin-top: 20px; /* 20px spacing */
-}
-
-.form-control, .form-control-lg {
-    font-size: 14px !important; /* Microsoft Body */
-    padding: 6px 8px !important; /* Microsoft standard padding */
-    border-radius: 2px !important; /* Microsoft square corners */
-    border: 1px solid #605e5c !important; /* Microsoft Gray130 */
-    font-family: 'Segoe UI', SegoeUI, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    min-height: 32px; /* Microsoft standard height */
-}
-
-.form-control:focus, .form-control-lg:focus {
-    border-color: #0078d4 !important; /* Microsoft Theme Primary */
-    outline: 2px solid #0078d4 !important;
-    outline-offset: -2px !important;
-    box-shadow: none !important;
-}
-
-.form-label {
-    font-size: 14px; /* Microsoft Body */
-    font-weight: 600; /* Semibold */
-    color: #323130; /* Microsoft Gray190 */
-    margin-bottom: 4px; /* Microsoft compact spacing */
-}
-
-/* Field with icons */
-.field-with-icon {
-    position: relative;
-}
-
-.field-with-icon .form-control {
-    padding-left: 36px !important; /* Space for icon */
-}
-
-.field-with-icon i {
-    position: absolute;
-    left: 10px; /* Align with text */
-    top: 50%;
-    transform: translateY(-50%);
-    color: #605e5c; /* Microsoft Gray130 */
-    z-index: 5;
-    font-size: 16px;
-}
-
-/* ===== FILE UPLOAD BUTTONS - WHITE TEXT ===== */
-.file-input .btn.btn-primary,
-.file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
-.file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
-.file-input .btn.btn-primary:focus {
-    background-color: #0078d4 !important; /* Microsoft Theme Primary */
-    border-color: #0078d4 !important;
-    font-size: 14px; /* Microsoft Body */
-    min-height: 32px; /* Microsoft standard height */
-    color: #ffffff !important; /* White text */
-}
-
-/* Ensure all text and icons in the primary button are white */
-.file-input .btn.btn-primary span,
-.file-input .btn.btn-primary i,
-.file-input .btn.btn-primary .fa,
-.file-input .btn.btn-primary .fas,
-.file-input .btn.btn-primary .far,
-.file-input .btn.btn-primary .fab,
-.file-input .btn.btn-primary .glyphicon {
-    color: #ffffff !important; /* White icons and text */
-}
-
-.file-input .btn.btn-primary .file-caption-name {
-    color: #ffffff !important; /* White file name text */
-}
-
-.file-input .btn.btn-primary:hover {
-    background-color: #106ebe !important; /* Darker blue on hover */
-    border-color: #106ebe !important;
-    color: #ffffff !important; /* White text on hover */
-}
-
-.file-input .btn.btn-primary:focus {
-    outline: 2px solid #0078d4 !important;
-    outline-offset: 2px !important;
-    color: #ffffff !important; /* White text on focus */
-}
-
-/* Secondary button (Remove/Quitar) should keep its style */
-.file-input .btn-secondary {
-    background-color: #f3f2f1 !important; /* Microsoft Gray20 */
-    border-color: #8a8886 !important; /* Microsoft Gray110 */
-    color: #323130 !important; /* Microsoft Gray190 */
-}
-
-.file-input .btn-secondary:hover {
-    background-color: #edebe9 !important; /* Microsoft Gray30 */
-    border-color: #8a8886 !important;
-    color: #201f1e !important; /* Microsoft Gray200 */
-}
-
-/* ===== ALERTS AND MESSAGES ===== */
-.alert {
-    font-size: 14px; /* Microsoft Body */
-    padding: 12px 16px; /* Microsoft standard padding */
-    border-radius: 2px; /* Microsoft square corners */
-    border: 1px solid;
-    line-height: 1.33;
-}
-
-.alert-danger {
-    background-color: #fdf6f6; /* Microsoft subtle red */
-    border-color: #d13438; /* Microsoft Red */
-    color: #d13438;
-}
-
-.alert-warning {
-    background-color: #fff8f0; /* Microsoft subtle orange */
-    border-color: #d83b01; /* Microsoft Orange */
-    color: #d83b01;
-}
-
-.alert i {
-    font-size: 16px;
-    margin-right: 8px;
-}
-
-#cobertura-warning, #cita-warning {
-    font-size: 14px; /* Microsoft Body */
-    padding: 8px 12px; /* Microsoft compact padding */
-}
-
-/* ===== CARD STYLES ===== */
-.card {
-    border-radius: 2px; /* Microsoft square corners */
-    border: 1px solid #edebe9; /* Microsoft Gray30 */
-}
-
-.card-body {
-    padding: 16px; /* Microsoft standard spacing */
-}
-
-.card-header {
-    font-size: 16px; /* Microsoft Title */
-    font-weight: 600; /* Semibold */
-    padding: 12px 16px; /* Microsoft standard padding */
-    background-color: #faf9f8; /* Microsoft Gray10 */
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-}
-
-/* ===== RESPONSIVE DESIGN ===== */
-@media (max-width: 768px) {
-    .sis-siniestro-form {
-        padding: 16px; /* Microsoft standard spacing */
-    }
-    
-    .ms-panel-body {
-        padding: 16px; /* Microsoft standard spacing */
-    }
-    
-    .btn {
-        width: 100%;
-        margin-bottom: 8px; /* Microsoft compact spacing */
-        font-size: 14px; /* Microsoft Body */
-    }
-    
-    .plan-info-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .plan-info-value {
-        text-align: left;
-        margin-left: 0;
-        margin-top: 4px; /* Microsoft compact spacing */
-    }
-    
-    .plan-info-total {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .plan-info-total .plan-info-value {
-        text-align: left;
-        margin-left: 0;
-        margin-top: 4px; /* Microsoft compact spacing */
-    }
-}
-
-/* Microsoft Fluent Design Depth */
-.ms-panel {
-    background: #ffffff;
-    border: 1px solid #edebe9; /* Microsoft Gray30 */
-    border-radius: 2px; /* Microsoft square corners */
-}
-
-.ms-panel-header {
-    background: #faf9f8; /* Microsoft Gray10 */
-    border-bottom: 1px solid #edebe9; /* Microsoft Gray30 */
-    padding: 12px 16px; /* Microsoft standard padding */
-}
-
-.ms-panel-body {
-    padding: 16px; /* Microsoft standard spacing */
-}
-CSS;
-
-$this->registerCss($css);
 ?>
 
 <div class="sis-siniestro-form">
@@ -647,11 +76,205 @@ $this->registerCss($css);
                     <span class="plan-info-value"><?= number_format($totalDisponible, 2) ?></span>
                 </div>
         </div>
-            
-            <div class="row">
+
+    <?php
+// Consulta para obtener los baremos utilizados por este afiliado
+$baremosUtilizados = \app\models\SisSiniestroBaremo::find()
+    ->joinWith(['siniestro', 'baremo'])
+    ->where(['sis_siniestro.iduser' => $afiliado->id])
+    ->andWhere(['baremo.estatus' => 'Activo'])
+    ->orderBy(['sis_siniestro.fecha' => SORT_DESC])
+    ->all();
+
+// Separar en citas y siniestros
+$baremosCitas = [];
+$baremosSiniestros = [];
+
+foreach ($baremosUtilizados as $siniestroBaremo) {
+    if ($siniestroBaremo->siniestro) {
+        $item = [
+            'fecha' => $siniestroBaremo->siniestro->fecha,
+            'nombre_servicio' => $siniestroBaremo->baremo->nombre_servicio,
+            'area' => $siniestroBaremo->baremo->area ? $siniestroBaremo->baremo->area->nombre : 'Sin área',
+            'descripcion' => $siniestroBaremo->baremo->descripcion,
+            'precio' => $siniestroBaremo->baremo->precio ?? 0,
+            'tipo' => $siniestroBaremo->siniestro->es_cita ? 'Cita' : 'Siniestro',
+            'estado' => $siniestroBaremo->siniestro->estatus ?? 'Desconocido'
+        ];
+
+        if ($siniestroBaremo->siniestro->es_cita) {
+            $baremosCitas[] = $item;
+        } else {
+            $baremosSiniestros[] = $item;
+        }
+    }
+}
+?>
+
+<!-- Estilos para la tabla -->
 
 
-        <div class="row mb-4 d-none" id="tipo-registro-control">
+<div class="row">
+    <!-- Estadísticas rápidas -->
+    <div class="col-md-12">
+        <div class="stats-card">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="stats-number"><?= count($baremosCitas) + count($baremosSiniestros) ?></div>
+                    <div class="stats-label">Total Baremos Usados</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-number"><?= count($baremosCitas) ?></div>
+                    <div class="stats-label">Citas Realizadas</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-number"><?= count($baremosSiniestros) ?></div>
+                    <div class="stats-label">Siniestros Atendidos</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-number">$<?= number_format(array_sum(array_column(array_merge($baremosCitas, $baremosSiniestros), 'precio')), 2) ?></div>
+                    <div class="stats-label">Total Invertido</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if($esCita == 1){?>
+    <!-- Tabla de Citas -->
+    <div class="col-md-12">
+        <h5 class="section-title">
+            <i class="fas fa-calendar-check"></i> Citas Realizadas (<?= count($baremosCitas) ?>)
+        </h5>
+        <?php if (!empty($baremosCitas)): ?>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-baremos">
+                    <thead>
+                        <tr>
+                            <th width="120">Fecha</th>
+                            <th>Área</th>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th width="100">Precio</th>
+                            <th width="100">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($baremosCitas as $cita): ?>
+                        <tr>
+                            <td>
+                               <?= date('d/m/Y', strtotime($cita['fecha'])) ?>
+                            </td>
+                            <td>
+                                <strong><?= $cita['area'] ?></strong>
+                            </td>
+                            <td><?= $cita['nombre_servicio'] ?></td>
+                            <td>
+                                <?php if (!empty($cita['descripcion'])): ?>
+                                    <?= $cita['descripcion'] ?>
+                                <?php else: ?>
+                                    <span class="text-muted">Sin descripción</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-success">
+                                <strong>$<?= number_format($cita['precio'], 2) ?></strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-cita">Cita</span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> No se han realizado citas aún.
+            </div>
+        <?php endif; ?>
+
+<?php } ?>
+
+    <!-- Tabla de Siniestros -->
+    <?php if($esCita == 0){?>
+    <div class="col-md-12">
+        <h5 class="section-title">
+            <i class="fas fa-file-medical"></i> Siniestros Atendidos (<?= count($baremosSiniestros) ?>)
+        </h5>
+        <?php if (!empty($baremosSiniestros)): ?>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-baremos">
+                    <thead>
+                        <tr>
+                            <th width="120">Fecha</th>
+                            <th>Área</th>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th width="100">Precio</th>
+                            <th width="100">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($baremosSiniestros as $siniestro): ?>
+                        <tr>
+                            <td>
+                                <?= date('d/m/Y', strtotime($siniestro['fecha'])) ?>
+                            </td>
+                            <td>
+                                <strong><?= $siniestro['area'] ?></strong>
+                            </td>
+                            <td><?= $siniestro['nombre_servicio'] ?></td>
+                            <td>
+                                <?php if (!empty($siniestro['descripcion'])): ?>
+                                    <?= $siniestro['descripcion'] ?>
+                                <?php else: ?>
+                                    <span class="text-muted">Sin descripción</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-success">
+                                <strong>$<?= number_format($siniestro['precio'], 2) ?></strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-siniestro">Siniestro</span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> No se han atendido siniestros aún.
+            </div>
+        <?php endif; ?>
+    <?php }?>
+    </div>
+</div>
+
+<!-- Script para mejoras visuales -->
+<script>
+$(document).ready(function() {
+    // Agregar tooltips si es necesario
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Resaltar filas al pasar el mouse
+    $('.table-baremos tbody tr').hover(
+        function() {
+            $(this).addClass('table-active');
+        },
+        function() {
+            $(this).removeClass('table-active');
+        }
+    );
+});
+</script>
+
+
+
+    <br>
+    <div class="row">
+
+
+    <div class="row mb-4 d-none" id="tipo-registro-control">
     <div class="col-md-12">
         <!-- Inicio: Control de Tipo de Registro con estilo de Tarjeta -->
         <div class="card shadow-sm border-2 border-primary-subtle rounded-3">
@@ -680,9 +303,9 @@ $this->registerCss($css);
                     </div>
                     
                     <!-- Información contextual -->
-                    <small class="form-text text-muted mt-2 d-block">
+                    <h5 class="form-text text-muted mt-2 d-block">
                         <strong>Siniestro:</strong> Uso inmediato. <strong>Cita:</strong> Reserva (permite Plazo Pendiente).
-                    </small>
+                    </h5>
                 </div>
             </div>
         </div>
@@ -708,138 +331,202 @@ $baremosRestringidosIDs = [];
         <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
     </div>
 
-    <?php
-        // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
+<?php
+// Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
-        // Consulta para listar los baremos de ese plan y clínica
-        $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
-            ->joinWith('baremo')
-            ->joinWith('plan')
-            ->joinWith('baremo.area')
-            ->where(['planes.clinica_id' => $afiliado->clinica_id])
-            ->andWhere(['baremo.estatus' => 'Activo'])
-            ->andWhere(['planes.id' => $afiliado->plan_id])
-            ->all();
+// Consulta para listar los baremos de ese plan y clínica
+$planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
+    ->joinWith('baremo')
+    ->joinWith('plan')
+    ->joinWith('baremo.area')
+    ->where(['planes.clinica_id' => $afiliado->clinica_id])
+    ->andWhere(['baremo.estatus' => 'Activo'])
+    ->andWhere(['planes.id' => $afiliado->plan_id])
+    ->all();
+
+// PRIMERO: Obtener los baremos seleccionados ANTES de filtrar
+$selectedBaremos = [];
+if (!$model->isNewRecord) {
+    if (method_exists($model, 'getBaremos')) {
+        $baremosRelacion = $model->getBaremos()->all();
         
-        // Crear arrays para las TRES categorías y la info de JS
-        $baremosSinPlazo = [];          // NO tiene plazo definido (SOLO para Siniestro)
-        $baremosConPlazoCumplido = [];  // Tiene plazo, pero ya se cumplió (SOLO para Cita)
-        $baremosPendientesPlazo = [];   // Tiene plazo, y está pendiente (SOLO para Cita)
-        $baremosInfo = [];              // Información auxiliar para JavaScript
-        $baremosRestringidosIDs = [];   // <--- NUEVO: IDs de baremos con Plazo PENDIENTE
+        if (empty($baremosRelacion)) {
+            $baremosDirectos = (new \yii\db\Query())
+                ->select(['baremo_id'])
+                ->from('sis_siniestro_baremo')
+                ->where(['siniestro_id' => $model->id])
+                ->column();
+            
+            if (!empty($baremosDirectos)) {
+                $selectedBaremos = $baremosDirectos;
+            }
+        } else {
+            $selectedBaremos = ArrayHelper::getColumn($baremosRelacion, 'id');
+        }
+    } else {
+        // Fallback: buscar directamente en la tabla sis_siniestro_baremo
+        $baremosDirectos = (new \yii\db\Query())
+            ->select(['baremo_id'])
+            ->from('sis_siniestro_baremo')
+            ->where(['siniestro_id' => $model->id])
+            ->column();
         
-        $fechaActual = new \DateTime();
+        if (!empty($baremosDirectos)) {
+            $selectedBaremos = $baremosDirectos;
+        }
+    }
+}
 
-        foreach ($planesItemsCobertura as $item) {
-            if ($item->baremo) {
-                $restricciones = [];
-                $isRestrictedByPlazo = false;
-                $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
+// Crear arrays para las categorías
+$baremosSinPlazo = [];          // NO tiene plazo definido
+$baremosConPlazoCumplido = [];  // Tiene plazo, pero ya se cumplió
+$baremosPendientesPlazo = [];   // Tiene plazo, y está pendiente
+$baremosForzados = [];          // Baremos ya guardados que no cumplen filtros actuales
+$baremosInfo = [];              // Información auxiliar para JavaScript
+$baremosRestringidosIDs = [];   // IDs de baremos con Plazo PENDIENTE
 
-                if ($contrato) {
-                    $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+$fechaActual = new \DateTime();
 
-                    // --- LÓGICA DE PLAZO DE ESPERA ---
-                    if ($hasPlazoEver) {
-                        $diff = $fechaContratoIni->diff($fechaActual);
-                        $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                        $plazoRequerido = (int)$item->plazo_espera;
+foreach ($planesItemsCobertura as $item) {
+    if ($item->baremo) {
+        $restricciones = [];
+        $isRestrictedByPlazo = false;
+        $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
 
-                        if ($mesesTranscurridos < $plazoRequerido) {
-                            $isRestrictedByPlazo = true; // Plazo PENDIENTE
-                        }
+        // Definir la cantidad de veces usado
+        $vecesUsado = \app\models\SisSiniestroBaremo::find()
+            ->joinWith('siniestro')
+            ->where(['baremo_id' => $item->baremo_id])
+            ->andWhere(['iduser' => $afiliado->id])
+            ->count();
+
+        // Verificar si excede el límite (solo si tiene límite definido)
+        $excedeLimite = ($item->cantidad_limite !== null && $item->cantidad_limite > 0 && $vecesUsado >= $item->cantidad_limite);
+
+        // Verificar si este baremo está entre los seleccionados (solo para update)
+        $esBaremoGuardado = !$model->isNewRecord && in_array($item->baremo_id, $selectedBaremos);
+
+        // --- LÓGICA DE FILTRADO SEGÚN MODO ---
+        $debeIncluirse = true;
+        
+        if ($esCitaMode) {
+            // MODO CITA: Aplicar todas las restricciones
+            
+            if ($contrato) {
+                $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+
+                // Lógica de plazo de espera
+                if ($hasPlazoEver) {
+                    $diff = $fechaContratoIni->diff($fechaActual);
+                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                    $plazoRequerido = (int)$item->plazo_espera;
+
+                    if ($mesesTranscurridos < $plazoRequerido) {
+                        $isRestrictedByPlazo = true; // Plazo PENDIENTE
                     }
                 }
-
-                // Si es cita y el plazo no está cumplido, excluye el baremo
-                if ($esCitaMode && $isRestrictedByPlazo) {
-                    continue; // Salta este baremo
-                }
-
-                // Definir la cantidad de veces usado
-                $vecesUsado = \app\models\SisSiniestroBaremo::find()
-                    ->where(['baremo_id' => $item->baremo_id, 'siniestro_id' => $model->id])
-                    ->count();
-
-                // Definir el precio del baremo - CHANGED FROM costo TO precio
-                $precioBaremo = $item->baremo->precio ?? 0; // Usa el campo 'precio' del baremo, o 0 si no está definido
-
-                // Clasificación de baremos
-                $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
-                $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
-
-                if (!empty($item->baremo->descripcion)) {
-                    $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
-                }
-
-                if (!empty($restricciones)) {
-                    $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
-                }
-
-                if (!$hasPlazoEver) {
-                    $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
-                } elseif ($isRestrictedByPlazo) {
-                    $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
-                    $baremosRestringidosIDs[] = $item->baremo_id; // Add to restricted IDs
-                } else {
-                    $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
-                }
-
-                $baremosInfo[$item->baremo_id] = [
-                    'nombre' => $item->baremo->nombre_servicio,
-                    'area' => $area,
-                    'plazo_espera' => $item->plazo_espera,
-                    'cantidad_limite' => $item->cantidad_limite,
-                    'veces_usado' => $vecesUsado,
-                    'precio' => $precioBaremo, // CHANGED FROM 'costo' TO 'precio'
-                    'is_restricted_by_plazo' => $isRestrictedByPlazo,
-                    'has_plazo_ever' => $hasPlazoEver,
-                ];
             }
-        }
-        
-        // IMPORTANTE: Combina las TRES listas.
-        $baremosTotales = $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
 
-        // Obtener baremos seleccionados (código sin cambios)
-        $selectedBaremos = [];
-        if (method_exists($model, 'getBaremos')) {
-            $baremosRelacion = $model->getBaremos()->all();
+            // Excluir baremos con plazo pendiente O que exceden el límite
+            // PERO incluir si es un baremo ya guardado (solo en update)
+            if (($isRestrictedByPlazo || $excedeLimite)) {
+                if (!$esBaremoGuardado) {
+                    $debeIncluirse = false;
+                }
+            }
             
-            if (empty($baremosRelacion) && !$model->isNewRecord) {
-                $baremosDirectos = (new \yii\db\Query())
-                    ->select(['baremo_id'])
-                    ->from('sis_siniestro_baremo')
-                    ->where(['siniestro_id' => $model->id])
-                    ->column();
-                
-                if (!empty($baremosDirectos)) {
-                    $selectedBaremos = $baremosDirectos;
+        } else {
+            // MODO SINIESTRO: Solo incluir baremos sin límite (cantidad_limite IS NULL)
+            // PERO incluir si es un baremo ya guardado (solo en update)
+            if ($item->cantidad_limite !== null) {
+                if (!$esBaremoGuardado) {
+                    $debeIncluirse = false;
                 }
-            } else {
-                $selectedBaremos = ArrayHelper::getColumn($baremosRelacion, 'id');
             }
         }
-    ?>
-    
-    <div class="field-with-icon">
-        <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
-            'data' => $baremosTotales, 
-            'options' => [
-                'multiple' => true,
-                'value' => $selectedBaremos,
-                'placeholder' => 'Seleccione uno o más Baremos',
-                'class' => 'form-control form-lg',
-                'id' => 'baremos-select' 
-            ],
-            'pluginOptions' => [
-                'allowClear' => true,
-                'closeOnSelect' => true,
-                'tags' => false,
-                'tokenSeparators' => [',', ' '],
-            ],
-        ])->label('Baremos')->hint('Seleccione el baremo') ?>
-    </div>
+
+        // Definir el precio del baremo
+        $precioBaremo = $item->baremo->precio ?? 0;
+
+        // Clasificación de baremos
+        $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
+        $nombreCompleto = "ÁREA: {$area} - SERVICIO: {$item->baremo->nombre_servicio}";
+
+        if (!empty($item->baremo->descripcion)) {
+            $nombreCompleto .= " | DESCRIPCIÓN: {$item->baremo->descripcion}";
+        }
+
+        if (!empty($restricciones)) {
+            $nombreCompleto .= " [" . implode(", ", $restricciones) . "]";
+        }
+
+        // Si es un baremo guardado que no cumple los filtros, marcarlo como HISTÓRICO
+        if ($esBaremoGuardado && !$debeIncluirse) {
+            $baremosForzados[$item->baremo_id] = "(HISTÓRICO) " . $nombreCompleto;
+            $debeIncluirse = true; // Forzar inclusión
+        }
+
+        if (!$debeIncluirse) {
+            continue;
+        }
+
+        // Clasificación normal según disponibilidad
+        if ($esBaremoGuardado && isset($baremosForzados[$item->baremo_id])) {
+            // Ya se asignó en la sección de forzados
+        } elseif ($esCitaMode) {
+            if (!$hasPlazoEver) {
+                $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
+            } elseif ($isRestrictedByPlazo) {
+                $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
+                $baremosRestringidosIDs[] = $item->baremo_id;
+            } else {
+                $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
+            }
+        } else {
+            // Modo Siniestro - todos los baremos disponibles se muestran sin prefijo
+            $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
+        }
+
+        $baremosInfo[$item->baremo_id] = [
+            'nombre' => $item->baremo->nombre_servicio,
+            'area' => $area,
+            'plazo_espera' => $item->plazo_espera,
+            'cantidad_limite' => $item->cantidad_limite,
+            'veces_usado' => $vecesUsado,
+            'precio' => $precioBaremo,
+            'is_restricted_by_plazo' => $isRestrictedByPlazo,
+            'has_plazo_ever' => $hasPlazoEver,
+            'excede_limite' => $excedeLimite,
+            'es_historico' => $esBaremoGuardado,
+        ];
+    }
+}
+
+// COMBINAR todos los arrays: forzados + normales
+$baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
+?>
+
+<div class="col-md-12" align="center"><h3>Formulario</h3></div>
+<div class="field-with-icon">
+    <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
+        'data' => $baremosTotales, 
+        'options' => [
+            'multiple' => true,
+            'value' => $selectedBaremos,
+            'placeholder' => 'Seleccione uno o más Baremos',
+            'class' => 'form-control form-lg',
+            'id' => 'baremos-select' 
+        ],
+        'pluginOptions' => [
+            'allowClear' => true,
+            'closeOnSelect' => true,
+            'tags' => false,
+            'tokenSeparators' => [',', ' '],
+        ],
+    ])->label('Baremos')->hint('Seleccione el baremo') ?>
+</div>
+
+
 <?php else: ?>
     <!-- Mostrar mensaje si el contrato no está activo -->
     <div id="contrato-error-message" class="alert alert-warning" style="margin-top: 20px;">
@@ -980,7 +667,10 @@ $this->registerJs(<<<JS
             }
         }
         
-        baremosSelect.select2('destroy');
+        // Comprobamos si Select2 fue inicializado antes de destruirlo.
+        if (baremosSelect.data('select2')) { 
+            baremosSelect.select2('destroy');
+        }
         baremosSelect.select2({
             multiple: true,
             placeholder: 'Seleccione uno o más Baremos',
@@ -1073,14 +763,14 @@ JS
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
                                 'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha de la Atención') ?>
+                            ])->label('Fecha de la ' . $terminoPrincipal)?>
                         </div>
                         
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'hora_atencion')->textInput([
                                 'type' => 'time', 
                                 'class' => 'form-control form-control-lg'
-                            ])->label('Hora de la Atención') ?>
+                            ])->label('Hora de la ' . $terminoPrincipal)?>
                         </div>
                         
                         <div class="col-md-12 field-with-icon">
@@ -1186,7 +876,7 @@ JS
                     </div>
                 </div>
                 
-                <div class="col-md-6">
+               <div class="col-md-6">
                     <div class="ms-panel">
                         <div class="ms-panel-header">
                             <h3 class="section-title">
@@ -1194,12 +884,41 @@ JS
                             </h3>
                         </div>
                         <div class="ms-panel-body">
-                            <div class="afiliado-container">
-                                <?= $this->render('/user-datos/view', ['model' => $afiliado]) ?>
-                            </div>
+                            <?= Html::button(
+                                '<i class="fas fa-eye mr-2"></i> Ver Detalles del Afiliado',
+                                [
+                                    'class' => 'btn btn-success btn-lg w-100',
+                                    'id' => 'btn-abrir-afiliado-modal', // <-- ID para que el JS lo encuentre
+                                    'type' => 'button' 
+                                    
+                                ]
+                            ) ?>
                         </div>
                     </div>
                 </div>
+
+                <?php
+               
+                Modal::begin([
+                    'title' => '<h4>Detalles del Afiliado <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></h4>',
+                    'id' => 'afiliado-modal', 
+                    'size' => Modal::SIZE_LARGE, 
+                    'options' => [
+                        'tabindex' => false, 
+                        'class' => 'fade', // Necesario para la animación
+                        'role' => 'dialog', 
+                    ],
+                  
+                    'dialogOptions' => ['class' => 'modal-dialog-centered'], 
+                ]);
+
+                // ESTE ES EL CONTENIDO QUE SE MOSTRARÁ DENTRO DE LA VENTANA MODAL
+                echo $this->render('/user-datos/view', ['model' => $afiliado]); 
+
+                Modal::end();
+                ?>
+
+
             </div>
         </div>
     </div>
@@ -1299,4 +1018,21 @@ $(document).ready(function() {
 JS;
 
 $this->registerJs($js, View::POS_READY);
+?>
+
+<?php
+// Usamos View::POS_END para asegurar que este script se ejecuta lo último de lo último, 
+// después de que todos los assets y scripts del DOM estén completamente cargados.
+
+$this->registerJs(<<<JS
+    $('#btn-abrir-afiliado-modal').on('click', function(e) {
+        e.preventDefault();
+        
+        // Retraso de 50ms para evitar scripts de cierre
+        setTimeout(function() {
+            $('#afiliado-modal').modal('show');
+        }, 50); 
+    });
+JS
+, View::POS_END);
 ?>
