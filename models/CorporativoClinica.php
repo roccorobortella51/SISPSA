@@ -38,7 +38,7 @@ class CorporativoClinica extends \yii\db\ActiveRecord
             [['corporativo_id', 'clinica_id'], 'integer'],
             [['created_at'], 'safe'],
             [['corporativo_id', 'clinica_id'], 'unique', 'targetAttribute' => ['corporativo_id', 'clinica_id']],
-            [['corporativo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Corporativos::class, 'targetAttribute' => ['corporativo_id' => 'id']],
+            [['corporativo_id'], 'exist', 'skipOnError' => true, 'targetClass' => Corporativo::class, 'targetAttribute' => ['corporativo_id' => 'id']],
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id']],
         ];
     }

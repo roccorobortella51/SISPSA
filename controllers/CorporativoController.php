@@ -26,7 +26,6 @@ use app\models\CorporativoClinica;
 use app\models\User;
 use app\models\RmEstado;
 use \yii\db\Expression;
- 
 
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
@@ -1071,6 +1070,61 @@ class CorporativoController extends Controller
     return $clinicasData;
 }
 
+ /**
+     * Obtiene la lista de clínicas asociadas a un corporativo dado,
+     * incluyendo la relación de Planes de cada clínica.
+     * @param int $id ID del Corporativo
+     * @return array
+     */
+    public function actionObtenerClinicasConPlanesPorCorporativo($id)
+    {
+        // 1. Configurar la respuesta como JSON
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        try {
+            // 2. Consulta con Eager Loading (Carga anticipada de relaciones)
+            // Se asume que \app\models\RmClinica tiene la relación 'planes'
+            $clinicas = \app\models\RmClinica::find()
+                // FILTRO: joinWith para asegurar que la clínica está asociada al corporativo ($id)
+                ->joinWith(['corporativoClinicas' => function ($query) use ($id) {
+                    $query->andWhere(['corporativo_id' => $id]);
+                }])
+                // CARGA: with() para cargar los planes asociados a CADA clínica encontrada.
+                ->with('planes') 
+                ->all();
+
+            // 3. Mapeo a Array para generar la estructura JSON deseada
+            $data = \yii\helpers\ArrayHelper::toArray($clinicas, [
+                'app\models\RmClinica' => [
+                    'id',
+                    'nombre' => 'nombre',
+                    
+                    // Mapeo de la relación anidada 'planes'
+                    'planes' => function ($clinica) {
+                        return \yii\helpers\ArrayHelper::toArray($clinica->planes, [
+                            'app\models\Planes' => [
+                                'id',
+                                'nombre',
+                            ]
+                        ]);
+                    },
+                ]
+            ]);
+
+            // Respuesta de éxito con los datos
+            return ['success' => true, 'data' => $data];
+
+        } catch (\Exception $e) {
+            // Manejo de errores detallado
+            Yii::error('Error al obtener clínicas con planes: ' . $e->getMessage(), __METHOD__);
+            return [
+                'success' => false,
+                'error' => 'Error al obtener clínicas con planes: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ];
+        }
+    }
 
 
 /** ----------------------------------------  Fin de Carga Masiva -------------------------------------- */ 
