@@ -6,8 +6,7 @@ use yii\base\Model;
 use yii\web\UploadedFile;
 
 /**
- * Modelo para el formulario de carga masiva de afiliados corporativos.
- * Contiene el ID del corporativo seleccionado y el archivo CSV subido.
+ * MasivoAfiliadosForm es el modelo para el formulario de carga de afiliados masivos.
  */
 class MasivoAfiliadosForm extends Model
 {
@@ -15,39 +14,53 @@ class MasivoAfiliadosForm extends Model
      * @var int ID del corporativo seleccionado en el formulario.
      */
     public $corporativo_id;
-
+    
     /**
-     * @var UploadedFile Atributo para el archivo subido.
+     * @var UploadedFile El archivo CSV a subir.
      */
     public $masivoFile;
 
     /**
-     * Define las reglas de validación para el formulario.
+     * Define las reglas de validación para los atributos del formulario.
      */
     public function rules()
-    {
-        return [
-            [['corporativo_id'], 'required', 'message' => 'Debe seleccionar un corporativo destino.'],
-            [['corporativo_id'], 'integer'],
-            // Regla para el archivo subido
-            [['masivoFile'], 'file', 
-                'skipOnEmpty' => false, 
-                'extensions' => 'csv', 
-                'maxSize' => 1024 * 1024 * 5, // 5MB limit
-                'tooBig' => 'El archivo no debe exceder los 5MB.',
-                'uploadRequired' => 'Debe seleccionar un archivo CSV para cargar.'
-            ],
-        ];
-    }
+{
+    return [
+        // El corporativo_id es requerido y debe ser un entero
+        [['corporativo_id'], 'required', 'message' => 'Debe seleccionar un corporativo.'],
+        [['corporativo_id'], 'integer'],
 
+        // REGLA CRÍTICA CORREGIDA: Hacemos la validación de archivo más permisiva
+        [['masivoFile'], 'file', 
+            'skipOnEmpty' => false, 
+            // Acepta .csv en mayúsculas y minúsculas, e incluso .txt (ya que el CSV es un archivo de texto)
+            'extensions' => ['csv', 'CSV', 'txt'], 
+            
+            // Acepta los MIME types comunes que usan los navegadores para los CSV
+            'mimeTypes' => [
+                'text/csv', 
+                'text/plain', 
+                'application/vnd.ms-excel', // A veces se reporta así si viene de Excel
+            ],
+            
+            'maxSize' => 1024 * 1024 * 5, // 5MB
+            'tooBig' => 'El archivo es demasiado grande. El máximo permitido es 5MB.',
+            'wrongExtension' => 'Sólo se aceptan archivos con las siguientes extensiones: {extensions}',
+            
+            // Desactivamos la verificación estricta del MIME type si la extensión es correcta.
+            'checkExtensionByMimeType' => false, 
+        ],
+    ];
+}
+    
     /**
-     * Define las etiquetas de atributos (labels) para la vista.
+     * Define las etiquetas de los atributos para la vista.
      */
     public function attributeLabels()
     {
         return [
             'corporativo_id' => 'Corporativo Destino',
-            'masivoFile' => 'Archivo de Afiliados (CSV)',
+            'masivoFile' => 'Archivo CSV de Afiliados',
         ];
     }
 }
