@@ -232,8 +232,8 @@ $this->registerJs($js);
                                     'data-monto' => $monto
                                 ]) ?>
                                 <label for="cuota-<?= $cuota->id ?>" style="margin:0;">
-                                    <strong style="font-size: 1.2rem !important;">Cuota #<?= $i ?></strong>
-                                    <div style="font-size: 1rem !important;">
+                                    <strong style="font-size: 1.5rem !important;">Cuota #<?= $i ?></strong>
+                                    <div style="font-size: 1.4rem !important;">
                                         Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento) ?>
                                         <?php if ($cuota->contrato): ?>
                                             | Contrato: <?= $cuota->contrato->nrocontrato ?: $cuota->contrato_id ?>
@@ -241,14 +241,14 @@ $this->registerJs($js);
                                     </div>
                                 </label>
                             </div>
-                            <span class="badge bg-primary rounded-pill" style="font-size: 1.2rem !important;">
+                            <span class="badge bg-primary rounded-pill" style="font-size: 1.5rem !important;">
                                 $<?= number_format($monto, 2) ?>
                             </span>
                         </li>
                     <?php endforeach; ?>
                     <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">
-                        <strong style="font-size: 1.5rem !important;">TOTAL PENDIENTE:</strong>
-                        <strong style="font-size: 1.5rem !important;">$<?= number_format($total, 2) ?></strong>
+                        <strong style="font-size: 1.6rem !important;">TOTAL PENDIENTE:</strong>
+                        <strong style="font-size: 1.6rem !important;">$<?= number_format($total, 2) ?></strong>
                     </li>
                 </ul>
             <?php else: ?>
