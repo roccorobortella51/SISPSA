@@ -166,6 +166,41 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'contentOptions' => ['class' => 'text-center'],
                             'visible' => $isAdmin, // Only show for admin roles
                         ],
+                        // CORRECTED COLUMN: Corporativo Name
+                        [
+                            'attribute' => 'afiliado_corporativo_id',
+                            'label' => 'Corporativo',
+                            'value' => function($model) {
+                                // Only show corporativo name for corporativo affiliates (type_id = 2)
+                                if ($model->user_datos_type_id == 2 && $model->corporativo) {
+                                    return $model->corporativo->nombre;
+                                }
+                                return null; // Or empty string for individual affiliates
+                            },
+                            'filter' => \kartik\select2\Select2::widget([
+                                'model' => $searchModel,
+                                'attribute' => 'afiliado_corporativo_id',
+                                'data' => \yii\helpers\ArrayHelper::map(
+                                    \app\models\Corporativo::find()->orderBy('nombre')->all(), 
+                                    'id', 
+                                    'nombre'
+                                ),
+                                'options' => [
+                                    'placeholder' => 'Seleccionar corporativo',
+                                    'class' => 'form-control'
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => true
+                                ],
+                            ]),
+                            'contentOptions' => function($model) {
+                                // Style differently for corporativo affiliates
+                                if ($model->user_datos_type_id == 2) {
+                                    return ['class' => 'corporativo-affiliate'];
+                                }
+                                return [];
+                            },
+                        ],
                         [
                             'label' => 'Nombre Completo', 
                             'attribute' => 'nombres', 

@@ -542,26 +542,19 @@ class UserDatos extends ActiveRecord
     public function getPlan() { return $this->hasOne(Planes::class, ['id' => 'plan_id']); }
     public function getAsesor() { return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']); }
     public function getContrato() { return $this->hasOne(Contratos::class, ['id' => 'contrato_id']); }
+    public function getContratos()
+    {
+        return $this->hasMany(Contratos::class, ['user_id' => 'id']);
+    }
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getBanco() {return $this->hasOne(Banco::class, ['id' => 'banco_id']); }
 
-    // 1. Relación para llegar a la tabla intermedia
-    public function getCorporativoUser()
-    {
-        // Esta relación conecta el ID de usuario de la tabla user_datos
-        // con el ID de usuario de la tabla intermedia corporativo_user
-        return $this->hasOne(CorporativoUser::class, ['user_id' => 'user_login_id']);
-    }
-
-    // 2. Relación para llegar al modelo Corporativo usando la tabla intermedia
+   
     public function getCorporativo()
     {
-        // Usa la relación 'corporativoUser' como puente ('via')
-        // para llegar al modelo 'Corporativo'
-        return $this->hasOne(Corporativo::class, ['id' => 'corporativo_id'])
-            ->via('corporativoUser');
+        return $this->hasOne(Corporativo::class, ['id' => 'afiliado_corporativo_id']);
     }
 
     public function beforeValidate()

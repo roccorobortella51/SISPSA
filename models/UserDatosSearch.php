@@ -95,7 +95,8 @@ class UserDatosSearch extends UserDatos
                 // alias de la tabla user_datos relacionada al asesor
                 $q->from(['ud_asesor' => 'user_datos']);
             },
-            'clinica'
+            'clinica',
+            'corporativo' // ADDED: Eager load corporativo relation for proper display
         ]);
 
         if($rol == "Asesor"){
@@ -105,7 +106,6 @@ class UserDatosSearch extends UserDatos
         if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
             $query->andFilterWhere(['user_datos.clinica_id' => UserHelper::getMyClinicaId()]);
         }
-
 
         // add conditions that should always apply here
 
@@ -118,6 +118,13 @@ class UserDatosSearch extends UserDatos
                
             ],
         ]);
+
+        // ADDED: Enable sorting for corporativo name
+        $dataProvider->sort->attributes['corporativo'] = [
+            'asc' => ['corporativos.nombre' => SORT_ASC], // FIXED: Changed 'corporativo' to 'corporativos'
+            'desc' => ['corporativos.nombre' => SORT_DESC], // FIXED: Changed 'corporativo' to 'corporativos'
+        ];
+
         // campo 'Tipo Afiliado'
         $dataProvider->sort->attributes['user_datos_type_id'] = [
             'asc' => ['user_datos_type.nombre' => SORT_ASC],
@@ -187,6 +194,8 @@ class UserDatosSearch extends UserDatos
             ->andFilterWhere(['ilike', 'user_datos.estatus_solvente', $this->estatus_solvente])
             // ADDED: Search filter for clinic name
             ->andFilterWhere(['ilike', 'rm_clinica.nombre', $this->clinica_nombre])
+            // FIXED: Search filter for corporativo name - use correct table name
+            ->andFilterWhere(['user_datos.afiliado_corporativo_id' => $this->afiliado_corporativo_id])
             // Usando una expresión en lugar de un simple 'ilike'
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedula])
             ->andWhere(['is', 'user_datos.deleted_at', null]);
