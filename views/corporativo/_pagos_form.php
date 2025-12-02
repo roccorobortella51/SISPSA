@@ -26,13 +26,34 @@ $disabled = isset($isEditable) && !$isEditable;
 // Registrar variable global en HEAD para evitar problemas con heredoc
 $this->registerJs('var grandTotal = ' . Json::encode($grandTotal) . ';', \yii\web\View::POS_HEAD);
 
-// --- BLOQUE DE JAVASCRIPT (Funcionalidad inalterada) ---
+// --- BLOJO DE JAVASCRIPT ACTUALIZADO ---
 $js = <<<JS
+// Función para buscar la tasa de cambio
+function fetchTasaCambio(fecha) {
+    if (!fecha) return;
+    
+    $.ajax({
+        url: 'tasacambio-referencial',
+        type: 'post',
+        data: { fecha: fecha },
+        success: function(response) {
+            if (response && response !== '0') {
+                var tasa = parseFloat(response);
+                $('#pagos-tasa').val(tasa.toFixed(2));
+                updateMontoBsReferencial(); // Recalcular montos
+            } else {
+                console.warn('No se encontró tasa para la fecha: ' + fecha);
+            }
+        },
+        error: function() {
+            console.error('Error al buscar la tasa de cambio');
+        }
+    });
+}
+
 // Función para calcular Monto en Bs (Referencial)
 function updateMontoBsReferencial() {
-    // Usar el ID correcto: #pagos-monto_pagado
     var montoUsd = parseFloat($('#pagos-monto_pagado').val().replace(/[^0-9.]/g, '')) || 0; 
-    // Usar el ID correcto: #pagos-tasa
     var tasa = parseFloat($('#pagos-tasa').val()) || 0;
     var montoBs = 0;
 
@@ -41,7 +62,7 @@ function updateMontoBsReferencial() {
         montoBs = montoUsd * tasa;
     }
 
-    // Actualizar el campo de visualización (Ahora usa el ID del textInput dentro del ActiveField)
+    // Actualizar el campo de visualización
     $('#monto-bs-display').val(montoBs.toFixed(4));
     // Actualizar el campo oculto del modelo
     $('#pagos-monto_bs').val(montoBs.toFixed(4));
@@ -49,7 +70,6 @@ function updateMontoBsReferencial() {
 
 // Función para validar Monto USD
 function validateMontoUsd() {
-    // Usar el ID correcto: #pagos-monto_pagado
     var montoUsd = parseFloat($('#pagos-monto_pagado').val().replace(/[^0-9.]/g, '')) || 0;
     
     // Validación: El monto a pagar no debe superar el grandTotal
@@ -62,10 +82,14 @@ function validateMontoUsd() {
     }
 }
 
-
 $(document).ready(function() {
     
     // 1. Tasa de Cambio fetch al cambiar la Fecha de Pago (ID: fecha-pago)
+    $('#fecha-pago').on('change', function() {
+        var fechaSeleccionada = $(this).val();
+        fetchTasaCambio(fechaSeleccionada);
+    });
+    
     // Auto-fetch tasa when page loads if fecha_pago is set
     if ($('#fecha-pago').val()) {
         $('#fecha-pago').trigger('change');
@@ -79,7 +103,6 @@ $(document).ready(function() {
     $('#pagos-tasa').on('input', updateMontoBsReferencial);
     
     // 3. Recalcular Monto Bs y Validar Monto USD cuando Monto Pagado cambia
-    // Usamos el ID correcto: #pagos-monto_pagado
     $('#pagos-monto_pagado').on('input', function() {
         validateMontoUsd();
         updateMontoBsReferencial();
