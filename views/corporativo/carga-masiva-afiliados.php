@@ -24,7 +24,7 @@ $this->registerJs(
         const infoDiv = $('#clinicas-asociadas-info');
         
         if (!corporativoId) {
-            infoDiv.html('<p class=\"alert alert-info\">Seleccione un corporativo arriba para ver las clínicas asociadas.</p>');
+            infoDiv.html('<p class=\"alert alert-info\">Seleccione un corporativo abajo para ver las clínicas asociadas.</p>');
             return;
         }
 
