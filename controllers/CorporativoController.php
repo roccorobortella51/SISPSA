@@ -511,7 +511,7 @@ class CorporativoController extends Controller
 
 // ------------------- Controlador de carga masiva de corporativos -------------------------
 
-/**
+ /**
      * Acción principal para mostrar y procesar el formulario de carga masiva de afiliados.
      * @return string|\yii\web\Response
      */
@@ -576,7 +576,10 @@ class CorporativoController extends Controller
 /**
      * Lógica principal para leer el archivo CSV y procesar los afiliados,
      * asegurando el cumplimiento de las reglas de validación de UserDatos.
-     * @param string $filePath Ruta temporal del archivo CSV.
+     * * SE HAN AÑADIDO: nacionalidad, estado_civil, lugar_nacimiento, profesion, ocupacion,
+     * actividad_economica, ramo_comercial, descripcion_actividad, ingreso_anual,
+     * direccion_cobro, y telefono_residencia.
+     * * @param string $filePath Ruta temporal del archivo CSV.
      * @param int $corporativoId ID del corporativo destino.
      * @return array Array con el conteo de éxitos y los errores encontrados.
      */
@@ -587,6 +590,7 @@ class CorporativoController extends Controller
             return ['successCount' => 0, 'errors' => ['No se pudo abrir el archivo.']];
         }
 
+        // Campos requeridos originales
         $requiredFields = [
             'tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 
             'telefono', 'email', 'direccion', 'plan_id', 'clinica_id', 'estado' 
@@ -628,6 +632,19 @@ class CorporativoController extends Controller
             }
         }
 
+        // Definición de rangos de valores válidos para nuevos campos
+        $validRanges = [
+            'estado_civil' => ['Soltero', 'Casado', 'Divorciado', 'Viudo'],
+            'actividad_economica' => ['Industrial', 'Comercial', 'Profesional', 'Gubernamental'],
+            'descripcion_actividad' => ['Independiente', 'Dependiente', 'Societaria'],
+            'ingreso_anual' => [
+                'De 1 a 5 Salarios mínimos', 
+                'De 6 a 10 Salarios mínimos', 
+                'De 11 a 20 Salarios mínimos', 
+                'De 20 Salarios mínimos en adelante'
+            ]
+        ];
+
         // Procesar cada línea del CSV
         while (($data = fgetcsv($handle, 1000, ",")) !== false) {
             if (empty(array_filter($data, function($value) { return $value !== ''; }))) {
@@ -640,7 +657,6 @@ class CorporativoController extends Controller
             $cedulaCsv = trim($data[$headerMap['cedula']] ?? '');
             
             // --- CORRECCIÓN CRÍTICA: LIMPIEZA DE CÉDULA NUMÉRICA ---
-            // El campo 'cedula' en DB es INTEGER, solo debe recibir números.
             $cedulaLimpia = $this->limpiarSoloNumeros($cedulaCsv);
             // -------------------------------------------------------
 
@@ -657,14 +673,30 @@ class CorporativoController extends Controller
                 $direccionResidencia = trim($data[$headerMap['direccion']] ?? ''); 
                 $estadoNameCsv = trim($data[$headerMap['estado']] ?? ''); 
 
+                // Extracción y saneamiento de NUEVOS CAMPOS
+                $nacionalidad = trim($data[$headerMap['nacionalidad']] ?? '');
+                $estadoCivilCsv = trim($data[$headerMap['estado_civil']] ?? '');
+                $lugarNacimiento = trim($data[$headerMap['lugar_nacimiento']] ?? '');
+                $profesion = trim($data[$headerMap['profesion']] ?? '');
+                $ocupacion = trim($data[$headerMap['ocupacion']] ?? '');
+                $actividadEconomicaCsv = trim($data[$headerMap['actividad_economica']] ?? '');
+                $ramoComercial = trim($data[$headerMap['ramo_comercial']] ?? '');
+                $descripcionActividadCsv = trim($data[$headerMap['descripcion_actividad']] ?? '');
+                $ingresoAnualCsv = trim($data[$headerMap['ingreso_anual']] ?? '');
+                $direccionCobro = trim($data[$headerMap['direccion_cobro']] ?? '');
+                $telefonoResidenciaCsv = trim($data[$headerMap['telefono_residencia']] ?? '');
+
                 // Validación de datos principales
                 if (empty($cedulaLimpia) || empty($email) || $planId <= 0 || $clinicaId <= 0) {
                      throw new \Exception('Datos principales (cédula, email, plan_id, o clinica_id) están incompletos o inválidos.');
                 }
                 
-                // Validación del Teléfono (se limpia a 11 dígitos, ej. 04121234567)
+                // Validación del Teléfono Celular (se limpia a 11 dígitos, ej. 04121234567)
                 $telefonoCelularLimpio = $this->limpiarTelefono($telefonoCelularCsv);
                 
+                // Validación del Teléfono de Residencia
+                $telefonoResidenciaLimpio = !empty($telefonoResidenciaCsv) ? $this->limpiarTelefono($telefonoResidenciaCsv) : null;
+
                 // Validación de Estado (Nombre a ID)
                 if (empty($estadoNameCsv)) {
                     throw new \Exception("El campo 'estado' está vacío.");
@@ -698,7 +730,21 @@ class CorporativoController extends Controller
                     throw new \Exception("Ya existe un usuario con el email {$email} registrado.");
                 }
 
-                // 4. Crear el User Login
+                // 4. Validaciones de Rango para Nuevos Campos (si no están vacíos)
+                if (!empty($estadoCivilCsv) && !in_array($estadoCivilCsv, $validRanges['estado_civil'])) {
+                    throw new \Exception("Valor inválido para 'estado_civil': '{$estadoCivilCsv}'. Debe ser uno de: " . implode(', ', $validRanges['estado_civil']));
+                }
+                if (!empty($actividadEconomicaCsv) && !in_array($actividadEconomicaCsv, $validRanges['actividad_economica'])) {
+                    throw new \Exception("Valor inválido para 'actividad_economica': '{$actividadEconomicaCsv}'. Debe ser uno de: " . implode(', ', $validRanges['actividad_economica']));
+                }
+                if (!empty($descripcionActividadCsv) && !in_array($descripcionActividadCsv, $validRanges['descripcion_actividad'])) {
+                    throw new \Exception("Valor inválido para 'descripcion_actividad': '{$descripcionActividadCsv}'. Debe ser uno de: " . implode(', ', $validRanges['descripcion_actividad']));
+                }
+                if (!empty($ingresoAnualCsv) && !in_array($ingresoAnualCsv, $validRanges['ingreso_anual'])) {
+                    throw new \Exception("Valor inválido para 'ingreso_anual': '{$ingresoAnualCsv}'. Debe ser uno de: " . implode(', ', $validRanges['ingreso_anual']));
+                }
+                
+                // 5. Crear el User Login
                 $userLogin = new User();
                 $userLogin->email = $email;
                 $userLogin->username = $email; 
@@ -711,11 +757,11 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al crear User Login: ' . implode(', ', ArrayHelper::flatten($userLogin->getErrors())));
                 }
 
-                // 5. Crear el registro UserDatos (Afiliado)
+                // 6. Crear el registro UserDatos (Afiliado)
                 $afiliado = new UserDatos();
                 $afiliado->user_login_id = $userLogin->id; 
                 
-                // Mapeo de campos del CSV
+                // Mapeo de campos del CSV (Existentes)
                 $afiliado->tipo_cedula = trim($data[$headerMap['tipo_cedula']]);
                 $afiliado->cedula = $cedulaLimpia; // Asignación del valor NUMÉRICO
                 $afiliado->nombres = trim($data[$headerMap['nombres']]);
@@ -748,6 +794,19 @@ class CorporativoController extends Controller
                 
                 // ** IMPORTANTE: Asignación del NOMBRE del estado (string) - Cumple con la validación del modelo **
                 $afiliado->estado = $estadoNombreParaUserDatos; 
+                
+                // Mapeo de campos del CSV (Nuevos Campos)
+                $afiliado->nacionalidad = $nacionalidad ?: null;
+                $afiliado->estado_civil = $estadoCivilCsv ?: null;
+                $afiliado->lugar_nacimiento = $lugarNacimiento ?: null;
+                $afiliado->profesion = $profesion ?: null;
+                $afiliado->ocupacion = $ocupacion ?: null;
+                $afiliado->actividad_economica = $actividadEconomicaCsv ?: null;
+                $afiliado->ramo_comercial = $ramoComercial ?: null;
+                $afiliado->descripcion_actividad = $descripcionActividadCsv ?: null;
+                $afiliado->ingreso_anual = $ingresoAnualCsv ?: null;
+                $afiliado->direccion_cobro = $direccionCobro ?: null;
+                $afiliado->telefono_residencia = $telefonoResidenciaLimpio; // Limpiado o null
                 
                 // Campos Fijos y Opcionales (si existen en el CSV)
                 $afiliado->user_datos_type_id = 2; // Tipo: Afiliado Corporativo
@@ -782,7 +841,7 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al crear UserDatos (Validación): ' . implode('; ', $errorMessages));
                 }
                 
-                // 6. Creación de Contrato, Cuota, CorporativoUser y Asignación de Rol
+                // 7. Creación de Contrato, Cuota, CorporativoUser y Asignación de Rol
                 $modelContrato = new Contratos();
                 $modelContrato->user_id = $afiliado->id; 
                 $modelContrato->estatus = 'Registrado';
@@ -880,15 +939,11 @@ class CorporativoController extends Controller
         return ['successCount' => $successCount, 'errors' => $errors];
     }
     
-
-    
     /**
      * Genera y fuerza la descarga de un archivo CSV de ejemplo (plantilla).
-     * Incluye todos los campos requeridos y opcionales, indicando que 'estado' espera el NOMBRE.
-     * @return Response
-     */
-/**
-     * Genera y fuerza la descarga de un archivo CSV de ejemplo (plantilla).
+     * Se han añadido los campos: nacionalidad, estado_civil, lugar_nacimiento, profesion, 
+     * ocupacion, actividad_economica, ramo_comercial, descripcion_actividad, 
+     * ingreso_anual, direccion_cobro, y telefono_residencia.
      * @return \yii\web\Response
      */
     public function actionDescargarPlantilla()
@@ -896,6 +951,13 @@ class CorporativoController extends Controller
         $headers = [
             'tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 'telefono', 
             'email', 'direccion', 'plan_id', 'clinica_id', 'estado', 
+            
+            // Nuevos campos
+            'nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
+            'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
+            'direccion_cobro', 'telefono_residencia',
+
+            // Campos opcionales existentes
             'asesor_id', 'fecha_inicio_contrato', 'fecha_vencimiento_contrato', 
             'direccion_oficina', 'telefono_oficina', 'tipo_sangre', 'rol_en_corporativo' 
         ];
@@ -903,6 +965,13 @@ class CorporativoController extends Controller
         $sampleData = [
             'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'M', '04121234567', 
             'juan.pablo@yopmail.com', 'CALLE SOL #123', '2', '2', 'MIRANDA', // ESTADO (NOMBRE)
+            
+            // Datos de muestra para nuevos campos
+            'VENEZOLANA', 'Casado', 'CARACAS', 'INGENIERO', 'EMPLEADO',
+            'Profesional', 'SERVICIOS', 'Dependiente', 'De 6 a 10 Salarios mínimos',
+            'DIRECCION PARA ENVIAR ESTADOS DE CUENTA', '02125551234',
+
+            // Datos de muestra para campos opcionales existentes
             '', '2025-12-01', '2026-12-01', 
             'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+', 'Afiliado' 
         ];
@@ -923,7 +992,7 @@ class CorporativoController extends Controller
         ]);
     }
 
-/**
+    /**
      * Limpia y formatea un número de teléfono (celular o fijo).
      * Asegura que el formato sea de 11 dígitos, cumpliendo la validación de UserDatos.
      * @param string $telefono El número de teléfono del CSV.
@@ -977,9 +1046,34 @@ class CorporativoController extends Controller
     }
 
 
+    public function actionObtenerClinicasPorCorporativo($id)
+{
+    Yii::$app->response->format = Response::FORMAT_JSON;
+
+    // 1. Obtener los modelos CorporativoClinica asociados
+    $asociaciones = CorporativoClinica::find()
+        ->where(['corporativo_id' => $id])
+        ->all();
+        
+    $clinicasData = [];
+
+    // 2. Iterar sobre las asociaciones para obtener los datos de la clínica
+    foreach ($asociaciones as $asociacion) {
+        // Asumiendo que el modelo CorporativoClinica tiene una relación 'clinica'
+        // y que el modelo de Clínica tiene las propiedades 'id' y 'nombre'.
+        $clinicasData[] = [
+            'id' => $asociacion->clinica->id,
+            'nombre' => $asociacion->clinica->nombre, // Asegúrate de que 'nombre' es el atributo correcto.
+        ];
+    }
+    
+    // Devolver el array JSON
+    return $clinicasData;
+}
 
 
-/** ----------------------------------------  Fin de Carga Masiva ----------------------------- */ 
+
+/** ----------------------------------------  Fin de Carga Masiva -------------------------------------- */ 
 
     
     /**
