@@ -8,6 +8,7 @@ use kartik\grid\GridView;
 use kartik\select2\Select2;
 use app\components\UserHelper;
 use app\models\RmClinica; // Importar el modelo de la clínica
+use yii\web\View; // <--- AÑADIDO: Importación para el registro de scripts en el DOM
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -48,10 +49,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
 ?>
 
-<div class="main-container"> <!-- Contenedor principal de la vista -->
-    <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
+<div class="main-container"> <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
     
-    <!-- Encabezado y Botones de Acción Principal -->
     <div class="header-section"> 
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
@@ -67,7 +66,6 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
                 ) ?> 
             <?php endif; ?>
-            <!-- Botón "Volver a Clínica" condicional -->
             <?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
                     '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
@@ -81,9 +79,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
         </div>
     </div>
 
-    <!-- Panel para la Gestión de Afiliados (GridView) -->
-    <div class="ms-panel ms-panel-fh border-indigo"> <!-- Usando ms-panel y borde indigo -->
-        <div class="ms-panel-header">
+    <div class="ms-panel ms-panel-fh border-indigo"> <div class="ms-panel-header">
             <h3 class="section-title">
                 <i class="fas fa-users mr-3 text-indigo-600"></i> Listado de Afiliados
             </h3>
@@ -279,8 +275,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            // Añadimos {cita} al template
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestro}{cita}{pagos}</div>',
+                            // MODIFICADO: Se usa {atencion} en lugar de {siniestro} y {cita}
+                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{atencion}{pagos}</div>',
                             'options' => ['style' => 'width:55px; min-width:55px;'],
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
@@ -317,43 +313,30 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                         return "";
                                     }
                                 },
-                                // BOTÓN DE SINIESTRO 
-                                'siniestro' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
-                                    if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro'];
-                                    if ($clinica && $clinica->id !== null) {
-                                        $params['clinica_id'] = $clinica->id;
-                                    }
+                                // BOTÓN DE ATENCION
+                                'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
+                                    // Aplicar la misma lógica de permisos y verificación de clinica_id
+                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
+                                        
+                                        // URLs para pasar a la función JS
+                                        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
+                                        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
 
-                                    if($model->clinica_id){
-                                    return Html::a(
-                                        '<i class="fas fa-hand-holding-medical ms-text-primary" style="color: #d9534f !important;"></i>', // Icono y color para Siniestros
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Ver Siniestros',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );}
+                                        // Botón que usa DATA ATTRIBUTES para las URLs
+                                        return Html::a(
+                                            '<i class="fas fa-notes-medical ms-text-primary" style="color: #f92011ff !important;"></i>', // Icono general
+                                            '#', // URL vacía, la acción será manejada por JS
+                                            [
+                                                'title' => 'Gestionar Atención',
+                                                'class' => 'btn-action view atencion-btn', // AÑADIDO: Clase específica para JS
+                                                'data' => [
+                                                    'url-siniestro' => $urlSiniestro,
+                                                    'url-cita' => $urlCita,
+                                                ],
+                                            ]
+                                        );
                                     }
-                                },
-                                // BOTÓN DE CITA 
-                                'cita' => function ($url, $model, $key) use ($permisos, $clinica, $rol) { // Pasar $permisos y $clinica
-                                    if ($permisos == true || $rol == 'COORDINADOR-CLINICA') {
-                                    $params = ['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita'];
-                                    if ($clinica && $clinica->id !== null) {
-                                        $params['clinica_id'] = $clinica->id;
-                                    }
-
-                                    if($model->clinica_id){
-                                    return Html::a(
-                                        '<i class="fas fa-calendar-check ms-text-primary" style="color: #5cb85c !important;"></i>', // Icono y color para Citas
-                                        Url::to($params), // Asegurar clinica_id condicionalmente
-                                        [
-                                            'title' => 'Ver Citas',
-                                            'class' => 'btn-action view'
-                                        ]
-                                    );}
-                                    }
+                                    return "";
                                 },
                                 'pagos' => function ($url, $model, $key) {
                                     // Si el tipo de afiliado (user_datos_type_id) NO es 2 (Corporativo), muestra el botón.
@@ -361,7 +344,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                     if ($model->user_datos_type_id != 2) {
                                         $params = ['/contratos/index', 'user_id' => $model->id];
                                         return Html::a(
-                                            '<i class="fas fa-file-invoice-dollar ms-text-primary"></i>',
+                                            '<i class="fas fa-file-invoice-dollar ms-text-success"></i>',
                                             Url::to($params),
                                             [
                                                 'title' => 'Pagos',
@@ -399,3 +382,57 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
         </div>
     </div>
 </div>
+
+<?php
+$js = <<<JS
+// 1. EVENTO PARA ABRIR EL MODAL
+$(document).on('click', '.atencion-btn', function(e) {
+    e.preventDefault(); 
+    
+    var urlSiniestro = $(this).data('url-siniestro');
+    var urlCita = $(this).data('url-cita');
+
+    var contentHtml = 
+        '<p class="text-xl mt-4 mb-5 font-weight-bold">¿Desea registrar una Atención o programar una Cita?</p>' +
+        '<div class="d-flex justify-content-center w-100 mt-5">' +
+            '<a href="' + urlSiniestro + '" class="btn-base btn-danger btn-lg mx-4 px-5 py-4" style="color: white; text-decoration: none; font-size: 1.5rem; min-width: 250px;">' +
+                '<i class="fas fa-hand-holding-medical me-3"></i> ATENCION' +
+            '</a>' +
+            '<a href="' + urlCita + '" class="btn-base btn-success btn-lg mx-4 px-5 py-4" style="color: white; text-decoration: none; font-size: 1.5rem; min-width: 250px;">' +
+                '<i class="fas fa-calendar-check me-3"></i> CITA' +
+            '</a>' +
+        '</div>';
+
+    // AQUI ESTA LA CLAVE: 
+    // No usamos onclick. Usamos una clase especifica: 'btn-cerrar-swal'
+    var footerHtml = 
+        '<button type="button" class="btn-base btn-gray btn-lg mt-4 btn-cerrar-swal">' +
+            'CERRAR' +
+        '</button>';
+
+    Swal.fire({
+        title: 'Selecciona una Opción',
+        icon: 'question',
+        showCloseButton: true,
+        width: '50%',       
+        padding: '2em',     
+        showConfirmButton: false, 
+        showDenyButton: false,     
+        showCancelButton: false,    
+        buttonsStyling: false, 
+        html: contentHtml,
+        footer: footerHtml 
+    });
+});
+
+// 2. EVENTO GLOBAL PARA CERRAR EL MODAL
+// Este código escucha clics en cualquier elemento con la clase 'btn-cerrar-swal'
+// incluso si el elemento se creó dinámicamente.
+$(document).on('click', '.btn-cerrar-swal', function(e) {
+    e.preventDefault(); // Previene comportamientos extraños
+    Swal.close();       // Cierra el modal limpiamente
+});
+JS;
+
+$this->registerJs($js, View::POS_READY);
+?>
