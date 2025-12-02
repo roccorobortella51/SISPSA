@@ -50,12 +50,13 @@ class PagosReporteSearch extends Pagos
      * @param array $params Parámetros de búsqueda.
      * @param string $startDate Fecha de inicio del rango 'Y-m-d'.
      * @param string $endDate Fecha de fin del rango 'Y-m-d'.
-     * @param string $status Estatus del pago ('Conciliado', 'Pendiente', etc.)
+     * @param string $status Estatus del pago ('Conciliado', 'Pendiente', 'todos', etc.)
+     * @param array $clinicas Array de IDs de clínicas a filtrar
      * @return ActiveDataProvider
      */
-    public function search($params, $startDate, $endDate, $status = 'Conciliado')
+    public function search($params, $startDate, $endDate, $status = 'Conciliado', $clinicas = [])
     {
-        // 1. Inicializar la consulta y el JOIN
+        // 1. Inicializar la consulta básica - SOLO con JOIN necesario para nombres, apellidos, cédula
         $query = Pagos::find()->joinWith(['userDatos']);
         
         // 2. Configurar el proveedor de datos
@@ -67,7 +68,7 @@ class PagosReporteSearch extends Pagos
             // 3. Configuración de Ordenación (Sort)
             'sort' => [
                 'defaultOrder' => [
-                    'id' => SORT_ASC, // **CAMBIO CLAVE: Ordenar por ID descendente (más reciente primero)**
+                    'id' => SORT_ASC, // Ordenar por ID ascendente
                 ],
                 'attributes' => [
                     'id', // Permitir ordenar por ID
@@ -86,6 +87,7 @@ class PagosReporteSearch extends Pagos
                     'monto_usd',
                     'fecha_pago',
                     'metodo_pago',
+                    'estatus',
                 ],
             ],
         ]);
@@ -100,8 +102,10 @@ class PagosReporteSearch extends Pagos
         
         // 4. Aplicar Filtros Específicos del Reporte
         
-        // Filtro de Estatus: Usar el parámetro $status
-        $query->andWhere(['pagos.estatus' => $status]); 
+        // Filtro de Estatus: Usar el parámetro $status (si no es 'todos')
+        if ($status !== 'todos') {
+            $query->andWhere(['pagos.estatus' => $status]);
+        }
         
         // Filtro de Rango de Fecha (provee el controlador)
         if ($startDate && $endDate) {
@@ -124,7 +128,8 @@ class PagosReporteSearch extends Pagos
         
         // Filtros de texto (LIKE) en la tabla Pagos
         $query->andFilterWhere(['ilike', 'pagos.metodo_pago', $this->metodo_pago])
-            ->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago]);
+            ->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus]);
 
         // Filtros de texto (LIKE) en la tabla UserDatos (para Nombres, Apellidos, Cédula)
         $query->andFilterWhere(['ilike', 'userDatos.nombres', $this->nombres])
@@ -132,5 +137,308 @@ class PagosReporteSearch extends Pagos
             ->andFilterWhere(['ilike', 'userDatos.cedula', $this->cedula]);
 
         return $dataProvider;
+    }
+
+    /**
+     * Versión alternativa del método search con filtrado por clínicas
+     * Usa una subconsulta para evitar problemas de JOIN complejos
+     * 
+     * @param array $params Parámetros de búsqueda.
+     * @param string $startDate Fecha de inicio del rango 'Y-m-d'.
+     * @param string $endDate Fecha de fin del rango 'Y-m-d'.
+     * @param string $status Estatus del pago ('Conciliado', 'Pendiente', 'todos', etc.)
+     * @param array $clinicas Array de IDs de clínicas a filtrar
+     * @return ActiveDataProvider
+     */
+    public function searchConClinicas($params, $startDate, $endDate, $status = 'Conciliado', $clinicas = [])
+    {
+        // 1. Inicializar la consulta básica
+        $query = Pagos::find()->joinWith(['userDatos']);
+        
+        // 2. Si hay filtro de clínicas, aplicar subconsulta
+        if (!empty($clinicas) && !in_array('todas', $clinicas)) {
+            // Subconsulta para obtener user_ids que tienen contratos con las clínicas seleccionadas
+            $subQuery = Contratos::find()
+                ->select(['user_id'])
+                ->where(['clinica_id' => $clinicas])
+                ->distinct();
+            
+            // Aplicar el filtro a la consulta principal
+            $query->andWhere(['pagos.user_id' => $subQuery]);
+        }
+        
+        // 3. Configurar el proveedor de datos (igual que en search())
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => 50,
+            ],
+            'sort' => [
+                'defaultOrder' => ['id' => SORT_ASC],
+                'attributes' => [
+                    'id',
+                    'nombres' => [
+                        'asc' => ['userDatos.nombres' => SORT_ASC],
+                        'desc' => ['userDatos.nombres' => SORT_DESC],
+                    ],
+                    'apellidos' => [
+                        'asc' => ['userDatos.apellidos' => SORT_ASC],
+                        'desc' => ['userDatos.apellidos' => SORT_DESC],
+                    ],
+                    'cedula' => [
+                        'asc' => ['userDatos.cedula' => SORT_ASC],
+                        'desc' => ['userDatos.cedula' => SORT_DESC],
+                    ],
+                    'monto_usd',
+                    'fecha_pago',
+                    'metodo_pago',
+                    'estatus',
+                ],
+            ],
+        ]);
+
+        $this->load($params);
+
+        if (!$this->validate()) {
+            return $dataProvider;
+        }
+        
+        // 4. Aplicar Filtros Específicos del Reporte
+        
+        // Filtro de Estatus
+        if ($status !== 'todos') {
+            $query->andWhere(['pagos.estatus' => $status]);
+        }
+        
+        // Filtro de Rango de Fecha
+        if ($startDate && $endDate) {
+            $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+            $query->andWhere(['between', 
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        }
+        
+        // 5. Aplicar Filtros del GridView
+        $query->andFilterWhere([
+            'pagos.id' => $this->id,
+            'pagos.recibo_id' => $this->recibo_id,
+            'pagos.user_id' => $this->user_id,
+        ]);
+        
+        $query->andFilterWhere(['ilike', 'pagos.metodo_pago', $this->metodo_pago])
+            ->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago])
+            ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 'userDatos.nombres', $this->nombres])
+            ->andFilterWhere(['ilike', 'userDatos.apellidos', $this->apellidos])
+            ->andFilterWhere(['ilike', 'userDatos.cedula', $this->cedula]);
+
+        return $dataProvider;
+    }
+
+    /**
+     * Método para obtener resumen por clínica (para mostrar en el panel)
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @param string $status
+     * @param array $clinicas
+     * @return array
+     */
+    public function obtenerResumenPorClinica($startDate, $endDate, $status = 'todos', $clinicas = [])
+    {
+        $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+        
+        // Construir consulta base para pagos
+        $query = Pagos::find()
+            ->joinWith(['userDatos.contratos.clinica'])
+            ->where(['between', 
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        
+        // Filtrar por estado si no es "todos"
+        if ($status !== 'todos') {
+            $query->andWhere(['pagos.estatus' => $status]);
+        }
+        
+        // Filtrar por clínicas si se especifican
+        if (!empty($clinicas) && !in_array('todas', $clinicas)) {
+            $query->andWhere(['rm_clinica.id' => $clinicas]);
+        }
+        
+        // Agrupar por clínica y obtener resumen - CORREGIDO: usar comillas simples para strings
+        $result = $query->select([
+                'clinica_id' => 'rm_clinica.id',
+                'clinica_nombre' => 'rm_clinica.nombre',
+                'clinica_rif' => 'rm_clinica.rif',
+                'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
+                'total_pagos' => 'COUNT(DISTINCT pagos.id)',
+                // CORRECCIÓN: Usar comillas simples para valores de string
+                'conciliados' => new Expression("SUM(CASE WHEN pagos.estatus = 'Conciliado' THEN 1 ELSE 0 END)"),
+                'pendientes' => new Expression("SUM(CASE WHEN pagos.estatus = 'Por Conciliar' THEN 1 ELSE 0 END)")
+            ])
+            ->groupBy(['rm_clinica.id', 'rm_clinica.nombre', 'rm_clinica.rif'])
+            ->orderBy(['total_monto' => SORT_DESC])
+            ->asArray()
+            ->all();
+        
+        return $result ?: [];
+    }
+
+    /**
+     * Método adicional para obtener el total de pagos conciliados vs pendientes
+     * Útil para estadísticas rápidas
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @param array $clinicas
+     * @return array
+     */
+    public function obtenerEstadisticasEstatus($startDate, $endDate, $clinicas = [])
+    {
+        $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+        
+        $query = Pagos::find()
+            ->where(['between', 
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        
+        // Si hay filtro de clínicas, usar subconsulta
+        if (!empty($clinicas) && !in_array('todas', $clinicas)) {
+            $subQuery = Contratos::find()
+                ->select(['user_id'])
+                ->where(['clinica_id' => $clinicas])
+                ->distinct();
+            
+            $query->andWhere(['pagos.user_id' => $subQuery]);
+        }
+        
+        $result = $query->select([
+                'conciliados' => 'SUM(CASE WHEN pagos.estatus = "Conciliado" THEN 1 ELSE 0 END)',
+                'pendientes' => 'SUM(CASE WHEN pagos.estatus = "Por Conciliar" THEN 1 ELSE 0 END)',
+                'total' => 'COUNT(*)'
+            ])
+            ->asArray()
+            ->one();
+        
+        return [
+            'conciliados' => $result['conciliados'] ?? 0,
+            'pendientes' => $result['pendientes'] ?? 0,
+            'total' => $result['total'] ?? 0
+        ];
+    }
+
+    /**
+     * Obtiene el resumen agrupado por método de pago
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @param string $status
+     * @param array $clinicas
+     * @return array
+     */
+    public function obtenerResumenPorMetodoPago($startDate, $endDate, $status = 'todos', $clinicas = [])
+    {
+        $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+        
+        $query = Pagos::find()
+            ->where(['between', 
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        
+        // Filtrar por estado si no es "todos"
+        if ($status !== 'todos') {
+            $query->andWhere(['pagos.estatus' => $status]);
+        }
+        
+        // Si hay filtro de clínicas, usar subconsulta
+        if (!empty($clinicas) && !in_array('todas', $clinicas)) {
+            $subQuery = Contratos::find()
+                ->select(['user_id'])
+                ->where(['clinica_id' => $clinicas])
+                ->distinct();
+            
+            $query->andWhere(['pagos.user_id' => $subQuery]);
+        }
+        
+        $result = $query->select([
+                'metodo_pago',
+                'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
+                'total_pagos' => 'COUNT(*)'
+            ])
+            ->groupBy(['pagos.metodo_pago'])
+            ->orderBy(['total_monto' => SORT_DESC])
+            ->asArray()
+            ->all();
+        
+        return $result ?: [];
+    }
+
+    public function obtenerResumenGeneral($startDate, $endDate, $status = 'todos', $clinicas = [])
+    {
+        $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
+        
+        $query = Pagos::find()
+            ->where(['between', 
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
+                $startDate, 
+                $adjustedEndDate
+            ]);
+        
+        // Filtrar por estado si no es "todos"
+        if ($status !== 'todos') {
+            $query->andWhere(['pagos.estatus' => $status]);
+        }
+        
+        // Si hay filtro de clínicas, usar subconsulta
+        if (!empty($clinicas) && !in_array('todas', $clinicas)) {
+            $subQuery = Contratos::find()
+                ->select(['user_id'])
+                ->where(['clinica_id' => $clinicas])
+                ->distinct();
+            
+            $query->andWhere(['pagos.user_id' => $subQuery]);
+        }
+        
+        // Obtener total monto y count
+        $totalMonto = $query->sum('pagos.monto_usd');
+        $totalCount = $query->count();
+        
+        // Obtener conteos por estado
+        $conciliadosCount = 0;
+        $pendientesCount = 0;
+        
+        if ($status === 'todos') {
+            // Si estamos viendo todos los estados, contar separadamente
+            $queryConciliados = clone $query;
+            $queryPendientes = clone $query;
+            
+            $conciliadosCount = $queryConciliados->andWhere(['pagos.estatus' => 'Conciliado'])->count();
+            $pendientesCount = $queryPendientes->andWhere(['pagos.estatus' => 'Por Conciliar'])->count();
+        } else {
+            // Si estamos filtrando por un estado específico
+            if ($status === 'Conciliado') {
+                $conciliadosCount = $totalCount;
+                $pendientesCount = 0;
+            } else if ($status === 'Por Conciliar') {
+                $conciliadosCount = 0;
+                $pendientesCount = $totalCount;
+            }
+        }
+        
+        // Always return valid array
+        return [
+            'total_monto' => $totalMonto ? (float)$totalMonto : 0,
+            'total_count' => $totalCount ? (int)$totalCount : 0,
+            'conciliados' => $conciliadosCount,
+            'pendientes' => $pendientesCount
+        ];
     }
 }

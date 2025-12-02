@@ -542,6 +542,10 @@ class UserDatos extends ActiveRecord
     public function getPlan() { return $this->hasOne(Planes::class, ['id' => 'plan_id']); }
     public function getAsesor() { return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']); }
     public function getContrato() { return $this->hasOne(Contratos::class, ['id' => 'contrato_id']); }
+    public function getContratos()
+    {
+        return $this->hasMany(Contratos::class, ['user_id' => 'id']);
+    }
     public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
     public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
     public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
