@@ -222,16 +222,59 @@ class SiteController extends Controller
     }
 
     private function explorartasabcv() {
-        $url = "https://www.bcv.org.ve/";
-        $html = file_get_contents($url, false, stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]));
-        $dom = new \DOMDocument();
-        libxml_use_internal_errors(true);
-        $dom->loadHTML($html);
-        $xpath = new \DOMXPath($dom);
-        $tasa_bcv = $xpath->query("//*[@id='dolar']/div/div/div/strong");
-        $valor = str_replace(',', '.', $tasa_bcv->item(0)->nodeValue);
-        $valor = floatval($valor);
-        return $valor;
+    $url = "https://www.bcv.org.ve/";
+    
+    // Add timeout context
+    $context = stream_context_create([
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        ],
+        'http' => [
+            'timeout' => 30, // Increase timeout to 30 seconds
+        ]
+    ]);
+    
+    // Use @ to suppress warnings and add error handling
+    $html = @file_get_contents($url, false, $context);
+    
+    // Check if fetch failed
+    if ($html === false) {
+        // Log the error for debugging
+        Yii::warning("Failed to fetch BCV data. Error: " . 
+                     (error_get_last()['message'] ?? 'Unknown error'));
+        
+        // Return a default value instead of breaking the page
+        return $this->getDefaultExchangeRate();
+    }
+    
+    $dom = new \DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML($html);
+    $xpath = new \DOMXPath($dom);
+    $tasa_bcv = $xpath->query("//*[@id='dolar']/div/div/div/strong");
+    
+    // Check if element was found
+    if ($tasa_bcv->length > 0) {
+        $valor = str_replace(',', '.', trim($tasa_bcv->item(0)->textContent));
+        return (float) $valor;
+    } else {
+        Yii::warning("Could not find exchange rate element on BCV page");
+        return $this->getDefaultExchangeRate();
+    }
+    }
+
+    // Add this helper function to provide a default value
+    private function getDefaultExchangeRate() {
+        // Try to get the latest rate from your database
+        $latestRate = TasaCambio::find()
+            ->select(['tasa_cambio'])
+            ->orderBy(['fecha' => SORT_DESC])
+            ->limit(1)
+            ->scalar();
+        
+        // If no rate in database, use a reasonable default
+        return $latestRate ?: 36.00;
     }
 
     public function actionCuotaGenerar()
