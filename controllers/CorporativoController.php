@@ -1203,4 +1203,213 @@ class CorporativoController extends Controller
             'grandTotal' => $grandTotal,
         ]);
     }
+    /**
+     * Realiza un pago corporativo PARCIAL para cuotas específicas seleccionadas.
+     * @param int $id Corporativo ID
+     * @param string $cuotas Comma-separated list of cuota IDs
+     * @return string|\yii\web\Response
+     * @throws NotFoundHttpException if the corporativo cannot be found
+     */
+    public function actionPagosParcial($id, $cuotas)
+    {
+        $corporativo = $this->findModel($id);
+        $model = new Pagos();
+        $model->loadDefaultValues();
+        $model->user_id = null;
+        $model->estatus = 'Por Conciliar';
+        $model->tipo_pago = 'corporativo';
+
+        // Parse comma-separated cuota IDs
+        $selectedCuotaIds = explode(',', $cuotas);
+        
+        // Fetch only the selected cuotas
+        $allCuotas = [];
+        $grandTotal = 0;
+        $userAmounts = [];
+        
+        if (!empty($selectedCuotaIds)) {
+            foreach ($selectedCuotaIds as $cuotaId) {
+                $cuota = Cuotas::find()
+                    ->select('cuotas.*')
+                    ->innerJoinWith(['contrato'])
+                    ->where(['cuotas.id' => $cuotaId])
+                    ->andWhere(['cuotas.estatus' => 'pendiente'])
+                    ->one();
+
+                if ($cuota && $cuota->contrato) {
+                    $userId = $cuota->contrato->user_id;
+                    
+                    if (!isset($userAmounts[$userId])) {
+                        $userAmounts[$userId] = 0;
+                    }
+                    
+                    $monto = $cuota->monto ?: 0;
+                    if ($monto > 0) {
+                        $allCuotas[] = $cuota;
+                        $userAmounts[$userId] += $monto;
+                        $grandTotal += $monto;
+                    }
+                }
+            }
+        }
+
+        // --- FIXED: PROPERLY INITIALIZE TASA AND FECHA_PAGO ---
+        $model->fecha_pago = date('Y-m-d'); // Set default date
+        
+        // Get current exchange rate and format it properly
+        $currentTasa = $this->getTasaCambioReferencial();
+        $model->tasa = number_format($currentTasa, 2, '.', '');
+        
+        // Pre-fill the payment amount with the calculated total
+        $model->monto_pagado = $grandTotal;
+        
+        // Calculate initial monto_usd (Bs) based on the current rate
+        if ($grandTotal > 0 && $currentTasa > 0) {
+            $model->monto_usd = $grandTotal * $currentTasa;
+        }
+        // --- END FIX ---
+
+        if ($this->request->isPost) {
+            if ($model->load($this->request->post())) {
+                $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
+                
+                if (abs($grandTotal - $montoPagadoPosted) > 0.01) {
+                    $model->addError('monto_pagado', 'El monto a pagar debe coincidir con el total de cuotas seleccionadas.');
+                    Yii::$app->session->setFlash('warning', 'El monto no coincide con el total de cuotas seleccionadas.');
+                } else {
+                    // Handle file upload
+                    $model->imagen_prueba_file = \yii\web\UploadedFile::getInstance($model, 'imagen_prueba_file');
+
+                    if ($model->imagen_prueba_file) {
+                        $folder = 'Pago';
+                        $fileName = uniqid('pago_corp_') . '.' . $model->imagen_prueba_file->extension;
+                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+
+                        if ($model->imagen_prueba_file->saveAs($tempFilePath)) {
+                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                                $tempFilePath,
+                                $model->imagen_prueba_file->type,
+                                $fileName,
+                                $folder
+                            );
+
+                            if (file_exists($tempFilePath)) {
+                                unlink($tempFilePath);
+                            }
+
+                            if ($publicUrl) {
+                                $model->imagen_prueba = $publicUrl;
+                            }
+                        }
+                    }
+
+                    $transaction = Yii::$app->db->beginTransaction();
+                    try {
+                        $model->corporativo_id = $corporativo->id;
+                        $post = $this->request->post('Pagos');
+                        $model->monto_usd = $post['monto_usd'] ?? null;
+                        
+                        if ($model->save(false)) {
+                            $mainPaymentId = $model->id;
+                            $affiliatePaymentsCount = 0;
+                            
+                            // Create individual payment records for each affiliate
+                            foreach ($userAmounts as $userId => $userAmount) {
+                                if ($userAmount > 0) {
+                                    $affiliatePayment = new Pagos();
+                                    
+                                    // Copy only the safe attributes, excluding the ID
+                                    $affiliatePayment->created_at = $model->created_at;
+                                    $affiliatePayment->recibo_id = $model->recibo_id;
+                                    $affiliatePayment->fecha_pago = $model->fecha_pago;
+                                    $affiliatePayment->monto_pagado = $userAmount; // User-specific amount
+                                    $affiliatePayment->metodo_pago = $model->metodo_pago;
+                                    $affiliatePayment->estatus = $model->estatus;
+                                    $affiliatePayment->numero_referencia_pago = $model->numero_referencia_pago;
+                                    $affiliatePayment->imagen_prueba = $model->imagen_prueba;
+                                    $affiliatePayment->tasa = $model->tasa;
+                                    $affiliatePayment->monto_usd = $userAmount * $model->tasa; // Calculate user-specific amount in Bs
+                                    $affiliatePayment->observacion = $model->observacion;
+                                    
+                                    // Set the relationship fields
+                                    $affiliatePayment->user_id = $userId; // Specific affiliate
+                                    $affiliatePayment->corporativo_id = $corporativo->id;
+                                    $affiliatePayment->pago_corporativo_id = $mainPaymentId; // Link to main payment
+                                    $affiliatePayment->tipo_pago = 'afiliado_corporativo';
+                                    
+                                    if ($affiliatePayment->save(false)) {
+                                        $affiliatePaymentsCount++;
+                                        \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}");
+                                    } else {
+                                        \Yii::error("Failed to create affiliate payment for user {$userId}: " . print_r($affiliatePayment->errors, true));
+                                        throw new \Exception("Failed to create affiliate payment for user {$userId}");
+                                    }
+                                }
+                            }
+
+                            $contratosActualizados = [];
+                            $cuotasUpdatedCount = 0;
+                            
+                            foreach ($allCuotas as $cuota) {
+                                if ($cuota->estatus === 'pendiente') {
+                                    $cuota->estatus = 'pagado';
+                                    $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
+                                    $cuota->rate_usd_bs = $model->tasa; 
+                                    $cuota->id_pago = $mainPaymentId;
+                                    
+                                    if ($cuota->save(false)) {
+                                        $cuotasUpdatedCount++;
+                                        if (!in_array($cuota->contrato_id, $contratosActualizados)) {
+                                            $contratosActualizados[] = $cuota->contrato_id;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            $contractsActivatedCount = 0;
+                            foreach ($contratosActualizados as $contratoId) {
+                                $contrato = Contratos::findOne($contratoId);
+                                if ($contrato) {
+                                    $cuotasPendientes = Cuotas::find()
+                                        ->where(['contrato_id' => $contratoId, 'estatus' => 'pendiente'])
+                                        ->count();
+                                    
+                                    if ($cuotasPendientes == 0 && $contrato->estatus !== 'activo') {
+                                        $contrato->estatus = 'activo';
+                                        if ($contrato->save(false)) {
+                                            $contractsActivatedCount++;
+                                        }
+                                    }
+                                }
+                            }
+
+                            $transaction->commit();
+                            
+                            Yii::$app->session->setFlash('success', 
+                                'Pago corporativo PARCIAL registrado exitosamente. ' . 
+                                $affiliatePaymentsCount . ' afiliados procesados. ' .
+                                $cuotasUpdatedCount . ' cuotas actualizadas. ' .
+                                $contractsActivatedCount . ' contratos activados.'
+                            );
+                            
+                            return $this->redirect(['view', 'id' => $corporativo->id]);
+                        } else {
+                            throw new \Exception('Error al guardar el pago corporativo principal.');
+                        }
+                    } catch (\Exception $e) {
+                        $transaction->rollBack();
+                        Yii::$app->session->setFlash('error', 'Error al procesar el pago: ' . $e->getMessage());
+                    }
+                }
+            }
+        }
+
+        return $this->render('pagos', [
+            'model' => $model,
+            'corporativo' => $corporativo,
+            'allCuotas' => $allCuotas,
+            'grandTotal' => $grandTotal,
+            'isParcial' => true, // Flag to indicate partial payment
+        ]);
+    }
 }

@@ -2,6 +2,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var app\models\Pagos $model */
@@ -366,6 +367,70 @@ h4 { font-size: 18px !important; }
     margin-right: 10px !important;
 }
 
+/* ===== CHECKBOX STYLING ===== */
+.checkbox-cell {
+    width: 50px !important;
+    text-align: center !important;
+}
+
+.checkbox-header {
+    width: 50px !important;
+    text-align: center !important;
+}
+
+.checkbox-select-all {
+    margin: 0 !important;
+    transform: scale(1.2) !important;
+}
+
+.checkbox-cuota {
+    margin: 0 !important;
+    transform: scale(1.2) !important;
+}
+
+/* Checkbox container styling */
+.checkbox-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+}
+
+/* ===== SELECTION INFO PANEL ===== */
+.selection-info-panel {
+    background-color: #f3f2f1 !important;
+    border: 1px solid #edebe9 !important;
+    border-radius: 2px !important;
+    padding: 16px 20px !important;
+    margin-bottom: 20px !important;
+    display: none !important;
+}
+
+.selection-info-panel.active {
+    display: block !important;
+    animation: fadeIn 0.3s ease-in !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.selection-info-content {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.selection-info-text {
+    font-size: 18px !important;
+    color: #323130 !important;
+}
+
+.selection-info-text strong {
+    color: #107c10 !important;
+}
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
     body {
@@ -414,6 +479,12 @@ h4 { font-size: 18px !important; }
         font-size: 16px !important;
         padding: 10px 12px !important;
     }
+    
+    .selection-info-content {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
 }
 
 /* ===== ACCESSIBILITY ===== */
@@ -456,7 +527,101 @@ h4 { font-size: 18px !important; }
 }
 CSS
 );
-?>    
+
+// JavaScript for checkbox functionality
+$this->registerJs(<<<JS
+$(document).ready(function() {
+    // Store cuota amounts in a data attribute for easier access
+    $('.checkbox-cuota').each(function() {
+        var cuotaRow = $(this).closest('tr');
+        var amountText = cuotaRow.find('td:eq(5)').text().trim(); // Changed from eq(4) to eq(5) because we added checkbox column
+        
+        // Parse currency value
+        var amount = parseCurrency(amountText);
+        $(this).data('amount', amount);
+    });
+    
+    // Select all checkbox functionality
+    $('#select-all-cuotas').on('change', function() {
+        var isChecked = $(this).prop('checked');
+        $('.checkbox-cuota').prop('checked', isChecked);
+        updateSelectionInfo();
+    });
+    
+    // Individual checkbox functionality
+    $('.checkbox-cuota').on('change', function() {
+        updateSelectionInfo();
+        
+        // Update select all checkbox state
+        var totalCheckboxes = $('.checkbox-cuota').length;
+        var checkedCheckboxes = $('.checkbox-cuota:checked').length;
+        $('#select-all-cuotas').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // Update selection info panel
+    function updateSelectionInfo() {
+        var selectedCuotas = $('.checkbox-cuota:checked');
+        var selectedCount = selectedCuotas.length;
+        var selectedTotal = 0;
+        
+        // Calculate total amount of selected cuotas
+        selectedCuotas.each(function() {
+            var amount = $(this).data('amount') || 0;
+            if (!isNaN(amount)) {
+                selectedTotal += amount;
+            }
+        });
+        
+        if (selectedCount > 0) {
+            $('#selection-info-panel').addClass('active');
+            $('#selected-count').text(selectedCount);
+            $('#selected-total').text(selectedTotal.toFixed(2));
+            
+            // Update payment button
+            var paymentBtn = $('#pago-parcial-btn');
+            paymentBtn.text('Realizar Pago Corporativo por ' + selectedTotal.toFixed(2) + ' USD');
+            
+            // Get selected cuota IDs
+            var selectedIds = [];
+            selectedCuotas.each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            // Update button URL
+            var baseUrl = $('#pago-parcial-base-url').val();
+            paymentBtn.attr('href', baseUrl + '&cuotas=' + selectedIds.join(','));
+        } else {
+            $('#selection-info-panel').removeClass('active');
+        }
+    }
+    
+    // Helper function to parse currency strings
+    function parseCurrency(currencyString) {
+        // Remove all non-numeric characters except decimal point and minus sign
+        var cleaned = currencyString.replace(/[^0-9.,-]+/g, '');
+        
+        // Replace comma with dot if comma is used as decimal separator
+        cleaned = cleaned.replace(',', '.');
+        
+        // Parse as float
+        var result = parseFloat(cleaned);
+        
+        // Return 0 if parsing fails
+        return isNaN(result) ? 0 : result;
+    }
+    
+    // Initialize selection info
+    updateSelectionInfo();
+    
+    // Clear selection button
+    $('#clear-selection').on('click', function() {
+        $('.checkbox-cuota, #select-all-cuotas').prop('checked', false);
+        updateSelectionInfo();
+    });
+});
+JS
+);
+?>
 
 <div class="row">
     <div class="col-xl-12 col-md-12">
@@ -490,6 +655,10 @@ CSS
         
         <?php else: ?>
         
+        <!-- Hidden fields for URLs and IDs -->
+        <input type="hidden" id="corporativo-id" value="<?= $corporativo->id ?>">
+        <input type="hidden" id="pago-parcial-base-url" value="<?= \yii\helpers\Url::to(['pagos-parcial', 'id' => $corporativo->id]) ?>">
+        
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header d-flex justify-content-between align-items-center">
                 <h1 style="font-size: 26px !important; font-weight: 700 !important;">
@@ -497,7 +666,7 @@ CSS
                 </h1>
                 <div style="margin-left: 40px !important;"> 
                     <?= Html::a(
-                        '<i class="fas fa-credit-card me-2"></i> Realizar Pago Corporativo',
+                        '<i class="fas fa-credit-card me-2"></i> Realizar Pago Corporativo Completo',
                         ['pagos', 'id' => $corporativo->id],
                         ['class' => 'btn btn-success btn-lg']
                     ) ?>
@@ -566,6 +735,11 @@ CSS
                                     <table class="table table-bordered table-striped mb-0">
                                         <thead>
                                             <tr>
+                                                <th class="checkbox-header">
+                                                    <div class="checkbox-container">
+                                                        <input type="checkbox" id="select-all-cuotas" class="checkbox-select-all">
+                                                    </div>
+                                                </th>
                                                 <th>ID Cuota</th>
                                                 <th>ID Afiliado</th>
                                                 <th>Afiliado</th>
@@ -583,6 +757,11 @@ CSS
                                                 $nombreCompleto = $userDatos ? Html::encode($userDatos->nombres . ' ' . $userDatos->apellidos) : 'Afiliado no encontrado';
                                             ?>
                                             <tr>
+                                                <td class="checkbox-cell">
+                                                    <div class="checkbox-container">
+                                                        <input type="checkbox" class="checkbox-cuota" value="<?= $cuota->id ?>" data-cuota-id="<?= $cuota->id ?>">
+                                                    </div>
+                                                </td>
                                                 <td><?= Html::encode($cuota->id) ?></td>
                                                 <td><?= $userId ?></td>
                                                 <td title="<?= $nombreCompleto ?>"><?= \yii\helpers\StringHelper::truncateWords($nombreCompleto, 3, '...') ?></td>
@@ -593,18 +772,42 @@ CSS
                                             <?php endforeach; ?>
                                             <?php if (empty($allCuotas)): ?>
                                             <tr>
-                                                <td colspan="6" class="text-center">No hay cuotas pendientes para los afiliados de este corporativo.</td>
+                                                <td colspan="7" class="text-center">No hay cuotas pendientes para los afiliados de este corporativo.</td>
                                             </tr>
                                             <?php endif; ?>
                                         </tbody>
                                         <tfoot>
                                             <tr class="table-dark">
-                                                <td colspan="4" class="text-end"><strong>TOTAL PENDIENTE:</strong></td>
+                                                <td colspan="5" class="text-end"><strong>TOTAL PENDIENTE:</strong></td>
                                                 <td class="text-end"><strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong></td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>
                                     </table>
+                                </div>
+                                
+                                <!-- Selection Info Panel (moved here, right after the table) -->
+                                <div class="selection-info-panel mt-4" id="selection-info-panel">
+                                    <div class="selection-info-content">
+                                        <div class="selection-info-text">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            <span id="selected-count">0</span> cuota(s) seleccionada(s) - 
+                                            Total: <strong>$<span id="selected-total">0.00</span> USD</strong>
+                                        </div>
+                                        <div>
+                                            <?= Html::a(
+                                                '<i class="fas fa-credit-card me-2"></i> Pagar Seleccionadas',
+                                                '#',
+                                                [
+                                                    'class' => 'btn btn-success btn-lg',
+                                                    'id' => 'pago-parcial-btn'
+                                                ]
+                                            ) ?>
+                                            <button type="button" class="btn btn-secondary btn-lg ms-2" id="clear-selection">
+                                                <i class="fas fa-times me-2"></i> Limpiar
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -634,7 +837,7 @@ CSS
                                 
                                 <div class="text-center mt-4">
                                     <?= Html::a(
-                                        '<i class="fas fa-credit-card me-2"></i> Realizar Pago Corporativo por ' . number_format($grandTotal, 2, ',', '.') . ' USD',
+                                        '<i class="fas fa-credit-card me-2"></i> Realizar Pago Corporativo Completo por ' . number_format($grandTotal, 2, ',', '.') . ' USD',
                                         ['pagos', 'id' => $corporativo->id],
                                         ['class' => 'btn btn-success btn-lg']
                                     ) ?>
