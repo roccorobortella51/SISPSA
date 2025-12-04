@@ -146,6 +146,36 @@ $this->registerJs($js);
         color: #333 !important;
     }
 
+    /* ADDED: Custom CSS for larger error messages */
+    .field-pagos-imagen_prueba_file .help-block {
+        font-size: 1.8rem !important; /* Larger font size for error message */
+        font-weight: bold !important;
+        color: #dc3545 !important; /* Red color for error */
+        margin-top: 10px !important;
+        padding: 10px !important;
+        background-color: #ffe6e6 !important; /* Light red background */
+        border-radius: 8px !important;
+        border-left: 4px solid #dc3545 !important;
+    }
+    
+    .field-pagos-numero_referencia_pago .help-block {
+        font-size: 1.8rem !important; /* Larger font size for error message */
+        font-weight: bold !important;
+        color: #dc3545 !important; /* Red color for error */
+        margin-top: 10px !important;
+        padding: 10px !important;
+        background-color: #ffe6e6 !important; /* Light red background */
+        border-radius: 8px !important;
+        border-left: 4px solid #dc3545 !important;
+    }
+    
+    /* Style for the required field indicator */
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+        font-size: 1.5rem;
+    }
+
 </style>
 
 <div class="pagos-form p-4 rounded-3 shadow-sm bg-light">
@@ -156,6 +186,12 @@ $this->registerJs($js);
         'formConfig' => [
             'labelSpan' => 12, // Etiqueta ocupa todo el ancho de la columna
             'deviceSize' => ActiveForm::SIZE_MEDIUM,
+        ],
+        'fieldConfig' => [
+            'errorOptions' => [
+                'class' => 'text-danger', // ADDED: Custom error class
+                'style' => 'font-size: 1.8rem; font-weight: bold; padding: 10px;', // ADDED: Bigger font for errors
+            ],
         ],
     ]); ?>
 
@@ -183,7 +219,7 @@ $this->registerJs($js);
                 'pluginOptions' => [
                     'allowClear' => false,
                 ],
-            ])->label('Método de Pago') ?>
+            ])->label('Método de Pago' . '<span class="required-field"></span>') ?>
         </div>
         <div class="col-md-6">
             <?= $form->field($model, 'fecha_pago')->textInput([
@@ -192,7 +228,7 @@ $this->registerJs($js);
                 'placeholder' => 'Seleccione la fecha del pago',
                 'disabled' => $disabled,
                 'id' => 'fecha-pago', // ID único
-            ])->label('Fecha de Pago') ?>
+            ])->label('Fecha de Pago' . '<span class="required-field"></span>') ?>
         </div>
     </div>  
     <div class="row mb-4">
@@ -268,7 +304,7 @@ $this->registerJs($js);
             <?= $form->field($model, 'monto_pagado')->textInput([
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'placeholder' => 'Ingrese el monto pagado',
-            ])->label('Monto a Pagar en USD') ?>
+            ])->label('Monto a Pagar en USD' . '<span class="required-field"></span>') ?>
         </div>
         <div class="col-md-4">
             <?= $form->field($model, 'tasa')->textInput([
@@ -277,14 +313,14 @@ $this->registerJs($js);
                 'step' => '0.0001', // Para tasas con más decimales
                 'placeholder' => 'Ingrese la tasa de cambio',
                 'id' => 'pagos-tasa', // ID único
-            ])->label('Tasa de Cambio USD a Bs(BCV)') ?>
+            ])->label('Tasa de Cambio USD a Bs(BCV)' . '<span class="required-field"></span>') ?>
         </div>
         <div class="col-md-4">
             <?= $form->field($model, 'monto_usd')->textInput([
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'readonly' => true, // Siempre solo lectura
                 'placeholder' => 'Monto en Bs (calculado)',
-            ])->label('Monto en Bs') ?>
+            ])->label('Monto en Bs' . '<span class="required-field"></span>') ?>
         </div>
     </div>
 
@@ -295,7 +331,7 @@ $this->registerJs($js);
                 'type' => 'text',
                 'placeholder' => 'Ingrese el número de referencia del pago',
                 'disabled' => $disabled,
-            ])->label('Número de Referencia') ?>
+            ])->label('Número de Referencia' . '<span class="required-field"></span>') ?>
         </div>
     </div>
 
@@ -348,7 +384,7 @@ $this->registerJs($js);
                     ],
                     'purifyHtml' => true, // Para mayor seguridad
                 ],
-            ])->label('Adjuntar Comprobante (JPG, PNG)') ?>
+            ])->label('Adjuntar Comprobante (JPG, PNG)' . '<span class="required-field"></span>') ?>
         </div>
     </div>
 

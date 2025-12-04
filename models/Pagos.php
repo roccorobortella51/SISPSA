@@ -52,9 +52,14 @@ class Pagos extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            // --- ADDED: MANDATORY FIELDS ---
-            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd',], 'required'],
+            // --- MANDATORY FIELDS ---
+            // This is the correct syntax for required fields
+            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago'], 'required'],
             // ---------------------------------
+            
+            // For new records only, make imagen_prueba_file required
+            [['imagen_prueba_file'], 'required', 'on' => 'create'], // ADD THIS LINE - Comprobante is mandatory on create
+            
             [['corporativo_id', 'pago_corporativo_id'], 'integer'],
             [['tipo_pago'], 'string', 'max' => 50],
             [['tipo_pago'], 'default', 'value' => 'individual'], // Default value
@@ -270,8 +275,8 @@ class Pagos extends \yii\db\ActiveRecord
             
             $result = $query->select([
                     'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
-                    'total_count' => 'COUNT(*)'
-                ])
+                    'total_count' => 'COUNT(*)']
+                )
                 ->asArray()
                 ->one();
             
@@ -295,5 +300,17 @@ class Pagos extends \yii\db\ActiveRecord
     public function getPagosAfiliados()
     {
         return $this->hasMany(Pagos::class, ['pago_corporativo_id' => 'id']);
+    }
+
+    /**
+     * Returns the list of scenarios and their corresponding active attributes.
+     * @return array
+     */
+    public function scenarios()
+    {
+        $scenarios = parent::scenarios();
+        $scenarios['create'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'user_id', 'estatus', 'observacion'];
+        $scenarios['update'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'estatus', 'observacion'];
+        return $scenarios;
     }
 }
