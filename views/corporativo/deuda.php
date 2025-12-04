@@ -11,7 +11,22 @@ use yii\widgets\ActiveForm;
 /** @var float $grandTotal Total sum of pending cuotas >0 */
 $grandTotal = $grandTotal ?? 0;
 
-// Registrar variable global en HEAD para evitar problemas con heredoc
+// Calculate consecutive numbers for each affiliate
+$affiliateNumbers = [];
+$currentNumber = 1;
+if (!empty($allCuotas)) {
+    foreach ($allCuotas as $cuota) {
+        $contrato = $cuota->contrato ?? null;
+        $userId = $contrato->user_id ?? null;
+        
+        if ($userId && !isset($affiliateNumbers[$userId])) {
+            $affiliateNumbers[$userId] = $currentNumber;
+            $currentNumber++;
+        }
+    }
+}
+
+// Register variable global in HEAD to avoid problems with heredoc
 $this->registerJs('var grandTotal = ' . Json::encode($grandTotal) . ';', \yii\web\View::POS_HEAD);
 
 // Register Microsoft Fluent Design CSS
@@ -431,6 +446,22 @@ h4 { font-size: 18px !important; }
     color: #107c10 !important;
 }
 
+/* ===== AFFILIATE NUMBER COLUMN STYLING ===== */
+.affiliate-number {
+    width: 50px !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+    background-color: #f3f2f1 !important;
+    border-right: 2px solid #0078d4 !important;
+}
+
+.affiliate-number-header {
+    width: 50px !important;
+    text-align: center !important;
+    background-color: #005a9e !important;
+    border-right: 2px solid #ffffff !important;
+}
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
     body {
@@ -485,6 +516,17 @@ h4 { font-size: 18px !important; }
         align-items: flex-start !important;
         gap: 10px !important;
     }
+    
+    /* Adjust column widths for mobile */
+    .affiliate-number,
+    .affiliate-number-header {
+        width: 40px !important;
+    }
+    
+    .checkbox-cell,
+    .checkbox-header {
+        width: 40px !important;
+    }
 }
 
 /* ===== ACCESSIBILITY ===== */
@@ -534,7 +576,7 @@ $(document).ready(function() {
     // Store cuota amounts in a data attribute for easier access
     $('.checkbox-cuota').each(function() {
         var cuotaRow = $(this).closest('tr');
-        var amountText = cuotaRow.find('td:eq(5)').text().trim(); // Changed from eq(4) to eq(5) because we added checkbox column
+        var amountText = cuotaRow.find('td:eq(6)').text().trim(); // Changed index because we added affiliate number column
         
         // Parse currency value
         var amount = parseCurrency(amountText);
@@ -735,6 +777,7 @@ JS
                                     <table class="table table-bordered table-striped mb-0">
                                         <thead>
                                             <tr>
+                                                <th class="affiliate-number-header">#</th>
                                                 <th class="checkbox-header">
                                                     <div class="checkbox-container">
                                                         <input type="checkbox" id="select-all-cuotas" class="checkbox-select-all">
@@ -755,8 +798,12 @@ JS
                                                 
                                                 $userId = $contrato->user_id ?? 'N/A';
                                                 $nombreCompleto = $userDatos ? Html::encode($userDatos->nombres . ' ' . $userDatos->apellidos) : 'Afiliado no encontrado';
+                                                
+                                                // Get the consecutive number for this affiliate
+                                                $affiliateNumber = isset($affiliateNumbers[$userId]) ? $affiliateNumbers[$userId] : '';
                                             ?>
                                             <tr>
+                                                <td class="affiliate-number"><?= $affiliateNumber ?></td>
                                                 <td class="checkbox-cell">
                                                     <div class="checkbox-container">
                                                         <input type="checkbox" class="checkbox-cuota" value="<?= $cuota->id ?>" data-cuota-id="<?= $cuota->id ?>">
@@ -772,13 +819,13 @@ JS
                                             <?php endforeach; ?>
                                             <?php if (empty($allCuotas)): ?>
                                             <tr>
-                                                <td colspan="7" class="text-center">No hay cuotas pendientes para los afiliados de este corporativo.</td>
+                                                <td colspan="8" class="text-center">No hay cuotas pendientes para los afiliados de este corporativo.</td>
                                             </tr>
                                             <?php endif; ?>
                                         </tbody>
                                         <tfoot>
                                             <tr class="table-dark">
-                                                <td colspan="5" class="text-end"><strong>TOTAL PENDIENTE:</strong></td>
+                                                <td colspan="6" class="text-end"><strong>TOTAL PENDIENTE:</strong></td>
                                                 <td class="text-end"><strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong></td>
                                                 <td></td>
                                             </tr>
@@ -824,6 +871,7 @@ JS
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p><strong>Total de Cuotas Pendientes:</strong> <?= count($allCuotas) ?></p>
+                                        <p><strong>Total Afiliados con Deuda:</strong> <?= count($affiliateNumbers) ?></p>
                                         <p><strong>Corporativo:</strong> <?= Html::encode($corporativo->nombre) ?></p>
                                         <p><strong>Calculado el:</strong> <?= date('d/m/Y H:i:s') ?></p>
                                     </div>
@@ -831,6 +879,7 @@ JS
                                         <div class="text-end">
                                             <p class="text-muted mb-1">Total Deuda Pendiente</p>
                                             <h3 class="text-primary mb-0"><?= number_format($grandTotal, 2, ',', '.') ?> USD</h3>
+                                            <p class="text-muted mt-2">Promedio por afiliado: <?= number_format(count($affiliateNumbers) > 0 ? $grandTotal / count($affiliateNumbers) : 0, 2, ',', '.') ?> USD</p>
                                         </div>
                                     </div>
                                 </div>
