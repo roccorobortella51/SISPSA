@@ -1159,49 +1159,70 @@ class CorporativoController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
-   public function actionDeuda($id)
+    public function actionDeuda($id)
     {
         $corporativo = $this->findModel($id);
         
-        // Get all users associated with this corporativo
-        $userIds = \yii\helpers\ArrayHelper::getColumn($corporativo->users, 'id');
+        // Get ALL user IDs for this corporate (BOTH methods)
+        $allUserIds = $this->getAllCorporateUserIds($id);
         
         $allCuotas = [];
         $grandTotal = 0;
 
-        if (!empty($userIds)) {
-            // Get all contracts for these users
-            $contratos = \app\models\Contratos::find()
-                ->where(['user_id' => $userIds])
-                ->all();
+        if (!empty($allUserIds)) {
+            // Use INNER JOIN approach (same as actionPagos())
+            $allCuotas = \app\models\Cuotas::find()
+            ->select('cuotas.*')
+            ->innerJoinWith(['contrato' => function($query) {
+                $query->innerJoinWith(['user']); // Join with user_datos for ordering by name
+            }])
+            ->where(['contratos.user_id' => $allUserIds])
+            ->andWhere(['cuotas.estatus' => 'pendiente'])
+            ->andWhere(['>', 'cuotas.monto', 0])
+            // Order by expiration date (oldest first) and then by affiliate name
+            ->orderBy([
+                'cuotas.fecha_vencimiento' => SORT_ASC, // Oldest first
+                'user_datos.nombres' => SORT_ASC, // Then by first name
+            ])
+            ->all();
                 
-            $contratoIds = \yii\helpers\ArrayHelper::getColumn($contratos, 'id');
-            
-            if (!empty($contratoIds)) {
-                // Use the exact same query as the debug action
-                $allCuotas = \app\models\Cuotas::find()
-                    ->where(['contrato_id' => $contratoIds])
-                    ->andWhere(['estatus' => 'pendiente']) // lowercase
-                    ->andWhere(['>', 'monto', 0])
-                    ->all();
-                    
-                // Calculate grand total - ensure we're using the same calculation
-                foreach ($allCuotas as $cuota) {
-                    // Make sure we're converting to float properly
-                    $amount = floatval($cuota->monto);
-                    $grandTotal += $amount;
-                    Yii::debug("Adding cuota {$cuota->id}: {$cuota->monto} -> {$amount}, running total: {$grandTotal}");
-                }
+            // Calculate grand total
+            foreach ($allCuotas as $cuota) {
+                $amount = floatval($cuota->monto);
+                $grandTotal += $amount;
             }
         }
 
-        Yii::debug("Final calculation: grandTotal = {$grandTotal}, cuotas count = " . count($allCuotas));
+        Yii::debug("Corporate ID={$id}: Total users=" . count($allUserIds) . 
+                ", Total fees=" . count($allCuotas) . 
+                ", Total amount={$grandTotal}");
 
         return $this->render('deuda', [
             'corporativo' => $corporativo,
             'allCuotas' => $allCuotas,
             'grandTotal' => $grandTotal,
         ]);
+    }
+
+    /**
+     * Helper method to get ALL user IDs for a corporate (both direct and indirect)
+     */
+    private function getAllCorporateUserIds($corporativoId)
+    {
+        // 1. Direct users (from corporativo_user table)
+        $directUserIds = \app\models\CorporativoUser::find()
+            ->select('user_id')
+            ->where(['corporativo_id' => $corporativoId])
+            ->column();
+        
+        // 2. Indirect users (from user_datos.afiliado_corporativo_id field)
+        $indirectUserIds = \app\models\UserDatos::find()
+            ->select('id')
+            ->where(['afiliado_corporativo_id' => $corporativoId])
+            ->column();
+        
+        // 3. Combine and remove duplicates
+        return array_unique(array_merge($directUserIds, $indirectUserIds));
     }
     /**
      * Realiza un pago corporativo PARCIAL para cuotas específicas seleccionadas.
