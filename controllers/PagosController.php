@@ -116,12 +116,15 @@ class PagosController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
+
     public function actionCreate($user_id = null)
     {
         // CORRECCIÓN: Usar método privado en lugar de llamar a la acción
         $tasa_completa = $this->getTasaCambio();
         
         $model = new Pagos();
+        $model->scenario = 'create'; // ADD THIS LINE to use the 'create' scenario
+        
         $model->tasa = number_format($tasa_completa, 2, '.', '');
         $model->user_id = $user_id;
         $fileName = null;
@@ -130,31 +133,34 @@ class PagosController extends Controller
         $model->estatus = 'Por Conciliar';
         $modelCuotas = new Cuotas();
         
-        // Use the new method to get pending cuotas - FIXED: Make sure we call the static method correctly
+        // Use the new method to get pending cuotas
         $cuotas = Cuotas::getPendingCuotasForUser($user_id);
             
-        // DEBUG: Verificar qué estamos obteniendo
-        Yii::info("=== PAGOS CREATE DEBUG ===");
-        Yii::info("User ID passed: " . $user_id);
-        Yii::info("Number of cuotas found: " . count($cuotas));
-        foreach ($cuotas as $cuota) {
-            Yii::info("Cuota ID: " . $cuota->id . ", Contrato ID: " . $cuota->contrato_id . ", Monto USD: " . $cuota->monto_usd . ", Monto: " . $cuota->monto);
-        }
-        Yii::info("=== END DEBUG ===");
-
         $total = 0;
         foreach ($cuotas as $cuota) {
             // Use monto_usd if available, otherwise fall back to monto
             $monto = !empty($cuota->monto_usd) ? round($cuota->monto_usd, 2) : round($cuota->monto, 2);
             $total += (float)$monto;
         }
-        $model->monto_pagado = round($total, 2); // ← ALSO ROUND THE TOTAL
+        $model->monto_pagado = round($total, 2);
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
                 
                 // --- ADDED POST HANDLING LOGIC: START ---
                 $uploadedFileInstance = UploadedFile::getInstance($model, 'imagen_prueba_file');
+                
+                // ADD THIS VALIDATION for the file
+                if (!$uploadedFileInstance) {
+                    Yii::$app->session->setFlash('error', 'Debe adjuntar un comprobante de pago.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $user_id,
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
                 
                 if ($uploadedFileInstance) {
                     $fileName = uniqid('pago_') . '.' . $uploadedFileInstance->extension;
@@ -217,6 +223,18 @@ class PagosController extends Controller
                     ]);
                 }
                 
+                // ADD THIS VALIDATION for numero_referencia_pago
+                if (empty($model->numero_referencia_pago)) {
+                    Yii::$app->session->setFlash('error', 'El número de referencia es obligatorio.');
+                    return $this->render('create', [
+                        'model' => $model,
+                        'user_id' => $user_id,
+                        'cuotas' => $cuotas,
+                        'modelCuotas' => $modelCuotas,
+                        'total' => $total,
+                    ]);
+                }
+                
                 if ($model->save()) {
                     // IMPROVED: Mark selected cuotas as paid and link to payment
                     $updatedCount = Cuotas::updateAll(
@@ -239,7 +257,8 @@ class PagosController extends Controller
                     );
                     return $this->redirect(['view', 'id' => $model->id]);
                 } else {
-                    Yii::$app->session->setFlash('error', 'Error al guardar el pago en la base de datos.');
+                    // Show validation errors
+                    Yii::$app->session->setFlash('error', 'Error al guardar el pago: ' . implode(', ', $model->getErrorSummary(true)));
                     // If save fails, re-render the form with error messages
                     return $this->render('create', [
                         'model' => $model,
@@ -277,6 +296,7 @@ class PagosController extends Controller
         $tasa_completa = $this->getTasaCambio();
         
         $model = $this->findModel($id);
+        $model->scenario = 'update'; // SET THE UPDATE SCENARIO
         $model->tasa = number_format($tasa_completa, 2, '.', '');
 
         $oldImagePath = $model->imagen_prueba;
