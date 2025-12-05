@@ -49,20 +49,20 @@ class Pagos extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
+    // En Pagos.php, actualiza la regla para el archivo:
     public function rules()
     {
         return [
             // --- MANDATORY FIELDS ---
-            // This is the correct syntax for required fields
             [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago'], 'required'],
             // ---------------------------------
             
-            // For new records only, make imagen_prueba_file required
-            [['imagen_prueba_file'], 'required', 'on' => 'create'], // ADD THIS LINE - Comprobante is mandatory on create
+            // Para nuevos registros, requerir O imagen_prueba_file O imagen_prueba (ya subida)
+            [['imagen_prueba'], 'required', 'on' => 'create', 'message' => 'Comprobante de Pago no puede estar vacío'],
             
             [['corporativo_id', 'pago_corporativo_id'], 'integer'],
             [['tipo_pago'], 'string', 'max' => 50],
-            [['tipo_pago'], 'default', 'value' => 'individual'], // Default value
+            [['tipo_pago'], 'default', 'value' => 'individual'],
             
             [['recibo_id', 'fecha_pago', 'monto_pagado', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'user_id', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
             [['monto_usd', 'tasa'], 'default', 'value' => 0],
