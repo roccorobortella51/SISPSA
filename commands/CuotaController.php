@@ -171,6 +171,7 @@ class CuotaController extends Controller
                         'contrato_id' => $contrato->id,
                         'fecha_vencimiento' => $fechaVencimiento,
                         'monto_usd' => $montoCuota,  // ← USE ROUNDED VALUE
+                        'monto' => $montoCuota,    
                         'estatus' => 'pendiente',
                         'rate_usd_bs' => $this->obtenerTasaCambioActual(),
                     ]);
@@ -296,6 +297,7 @@ private function generarCuotaMesActual($contrato)
             'contrato_id' => $contrato->id,
             'fecha_vencimiento' => $fechaVencimientoStr,
             'monto_usd' => $montoCuota,
+            'monto' => $montoCuota,         // ALSO SET MONTO FIELD!
             'estatus' => 'pendiente',
             'rate_usd_bs' => $this->obtenerTasaCambioActual(),
         ]);

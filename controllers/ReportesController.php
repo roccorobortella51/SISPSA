@@ -20,28 +20,25 @@ class ReportesController extends Controller
     public function behaviors()
     {
         return [
-            'access' => [
-                'class' => AccessControl::class,
-                'rules' => [
-                    [
-                        'allow' => true,
-                        // Permitir a ambas acciones (index y ajax/pdf)
-                        'actions' => ['index', 'get-pagos-detail', 'generate-pdf'], 
-                        // Acceso solo para 'superadmin'
-                        'roles' => ['superadmin'], 
-                    ],
+        'access' => [
+            'class' => AccessControl::class,
+            'rules' => [
+                [
+                    'allow' => true,
+                    // Todas las acciones del controlador
+                    'actions' => ['index', 'get-pagos-detail', 'generate-pdf', 'export-excel'], 
+                    // Acceso para 'superadmin' y 'finanzas'
+                    'roles' => ['superadmin', 'FINANZAS'], 
                 ],
             ],
-            // === VERBFILTER: Se añade 'generate-pdf' con método GET ===
-            'verbs' => [
-                'class' => VerbFilter::class,
-                'actions' => [
-                    // La acción de AJAX DEBE aceptar POST
-                    'get-pagos-detail' => ['POST'],
-                    // El index solo necesita GET
-                    'index' => ['GET'],
-                    // La acción de PDF DEBE aceptar GET para que funcione el target='_blank'
-                    'generate-pdf' => ['GET'], 
+        ],
+        'verbs' => [
+            'class' => VerbFilter::class,
+            'actions' => [
+                'get-pagos-detail' => ['POST'],
+                'index' => ['GET'],
+                'generate-pdf' => ['GET'],
+                'export-excel' => ['GET'],  
                 ],
             ],
         ];

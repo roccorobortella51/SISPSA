@@ -49,15 +49,20 @@ class Pagos extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
+    // En Pagos.php, actualiza la regla para el archivo:
     public function rules()
     {
         return [
-            // --- ADDED: MANDATORY FIELDS ---
-            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd',], 'required'],
+            // --- MANDATORY FIELDS ---
+            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago'], 'required'],
             // ---------------------------------
+            
+            // Para nuevos registros, requerir O imagen_prueba_file O imagen_prueba (ya subida)
+            [['imagen_prueba'], 'required', 'on' => 'create', 'message' => 'Comprobante de Pago no puede estar vacío'],
+            
             [['corporativo_id', 'pago_corporativo_id'], 'integer'],
             [['tipo_pago'], 'string', 'max' => 50],
-            [['tipo_pago'], 'default', 'value' => 'individual'], // Default value
+            [['tipo_pago'], 'default', 'value' => 'individual'],
             
             [['recibo_id', 'fecha_pago', 'monto_pagado', 'metodo_pago', 'estatus', 'numero_referencia_pago', 'updated_at', 'imagen_prueba', 'user_id', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'deleted_at', 'conciliador_id', 'conciliado'], 'default', 'value' => null],
             [['monto_usd', 'tasa'], 'default', 'value' => 0],
@@ -270,8 +275,8 @@ class Pagos extends \yii\db\ActiveRecord
             
             $result = $query->select([
                     'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
-                    'total_count' => 'COUNT(*)'
-                ])
+                    'total_count' => 'COUNT(*)']
+                )
                 ->asArray()
                 ->one();
             
@@ -295,5 +300,17 @@ class Pagos extends \yii\db\ActiveRecord
     public function getPagosAfiliados()
     {
         return $this->hasMany(Pagos::class, ['pago_corporativo_id' => 'id']);
+    }
+
+    /**
+     * Returns the list of scenarios and their corresponding active attributes.
+     * @return array
+     */
+    public function scenarios()
+    {
+        $scenarios = parent::scenarios();
+        $scenarios['create'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'user_id', 'estatus', 'observacion'];
+        $scenarios['update'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'estatus', 'observacion'];
+        return $scenarios;
     }
 }
