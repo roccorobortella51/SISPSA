@@ -178,7 +178,8 @@ $this->registerJs(
                     <tr><td>`profesion`</td><td>Texto</td><td>Profesión del afiliado.</td></tr>
                     <tr><td>`ocupacion`</td><td>Texto</td><td>Ocupación del afiliado.</td></tr>
                     <tr><td>`actividad_económica`</td><td>Texto</td><td>Actividad económica del afiliado.(ej: Industrial, Comercial, Gubernamental)</td></tr>
-                    <tr><td>`ramo_comercial`</td><td>Texto</td><td>Descripción de la actividad económica del afiliado.(ej: Independiente, Dependiente,Societaria)</td></tr>
+                    <tr><td>`ramo_comercial`</td><td>Texto</td><td>Descripción del ramo comercial donde trabaja el afiliado.</td></tr>
+                    <tr><td>`Descripcion_actividad`</td><td>Texto</td><td>Descripción de la actividad económica del afiliado.(ej: Independiente, Dependiente,Societaria)</td></tr>
                     <tr><td>`ingreso_anual`</td><td>Texto</td><td>Ingreso anual del afiliado.(ej: De 1 a 5 Salarios mínimos, De 6 a 10 Salarios mínimos, De 11 a 20 Salarios mínimos, De 20 Salarios mínimos en adelante)</td></tr>
                     <tr><td>`dirección_cobro`</td><td>Texto</td><td>Dirección de cobro del afiliado.</td></tr>
                     <tr><td>`telefono_residencia`</td><td>Texto</td><td>Telefono de Residencia del afiliado.(ej: Independiente, Dependiente,Societaria)</td></tr>
