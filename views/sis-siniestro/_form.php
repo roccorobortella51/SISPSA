@@ -339,7 +339,6 @@ $baremosRestringidosIDs = [];
 // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
 // Consulta para listar los baremos de ese plan y clínica
-// Consulta para listar los baremos de ese plan y clínica
 $query = \app\models\PlanesItemsCobertura::find()
     ->joinWith('baremo')
     ->joinWith('plan')
@@ -358,7 +357,6 @@ if (!$esCitaMode) {
         ['planes_items_cobertura.plazo_espera' => null],
         ['planes_items_cobertura.plazo_espera' => ''],
         ['planes_items_cobertura.plazo_espera' => '0'],
-        ['planes_items_cobertura.plazo_espera' => 0]
     ]);
 }
 
