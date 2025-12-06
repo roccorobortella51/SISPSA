@@ -354,12 +354,26 @@ if (!$esCitaMode) {
         ['planes_items_cobertura.cantidad_limite' => 0]
     ])
     ->andWhere(['or',
+        ['planes_items_cobertura.plazo_espera' => null],
         ['planes_items_cobertura.plazo_espera' => ''],
         ['planes_items_cobertura.plazo_espera' => '0'],
+        ['planes_items_cobertura.plazo_espera' => 0]
     ]);
 }
 
+// Primero ejecutamos la consulta
 $planesItemsCobertura = $query->all();
+
+// Luego mostramos la información de depuración
+echo '<pre>';
+echo "Consulta SQL:\n" . $query->createCommand()->rawSql . "\n\n";
+echo "Total de baremos encontrados: " . count($planesItemsCobertura) . "\n\n";
+echo "Valor de esCitaMode: " . ($esCitaMode ? 'true' : 'false') . "\n";
+echo "Valor de plan_id: " . $afiliado->plan_id . "\n";
+echo "Valor de clinica_id: " . $afiliado->clinica_id . "\n";
+echo '</pre>';
+
+
 
 // PRIMERO: Obtener los baremos seleccionados ANTES de filtrar
 $selectedBaremos = [];
