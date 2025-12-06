@@ -466,9 +466,9 @@ foreach ($planesItemsCobertura as $item) {
             $debeIncluirse = true; // Forzar inclusión
         }
 
-        if (!$debeIncluirse) {
+        /*if (!$debeIncluirse) {
             continue;
-        }
+        }*/
 
         // Clasificación normal según disponibilidad
         if ($esBaremoGuardado && isset($baremosForzados[$item->baremo_id])) {
@@ -477,7 +477,7 @@ foreach ($planesItemsCobertura as $item) {
             if (!$hasPlazoEver) {
                 $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
             } elseif ($isRestrictedByPlazo) {
-                $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE) " . $nombreCompleto;
+                $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE NO CUMPLE CON EL PLAZO) " . $nombreCompleto;
                 $baremosRestringidosIDs[] = $item->baremo_id;
             } else {
                 $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
