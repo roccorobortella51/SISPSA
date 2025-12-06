@@ -352,8 +352,7 @@ $query = \app\models\PlanesItemsCobertura::find()
 if (!$esCitaMode) {
     $query->andWhere(['or',
         ['planes_items_cobertura.cantidad_limite' => null],
-        ['planes_items_cobertura.cantidad_limite' => 0],
-        ['planes_items_cobertura.cantidad_limite' => '']
+        ['planes_items_cobertura.cantidad_limite' => 0]
     ])
     ->andWhere(['or',
         ['planes_items_cobertura.plazo_espera' => null],
