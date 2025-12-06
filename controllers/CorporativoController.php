@@ -397,24 +397,24 @@ class CorporativoController extends Controller
 
                 if ($model->save()) {
 
-                    
-                   foreach($model->users_ids as $user_datos_id){
+                $usersIds = array_filter((array) $model->users_ids); // Elimina vacíos y nulls
+                foreach ($usersIds as $user_datos_id) {
+                    if (empty($user_datos_id)) continue; // Extra seguridad
 
                     $afiliado = UserDatos::findOne($user_datos_id);
+                    if ($afiliado) {
+                        $modelCorporativoUser = new CorporativoUser();
+                        $modelCorporativoUser->corporativo_id = $model->id;
+                        $modelCorporativoUser->user_id = $afiliado->id;
+                        $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                        $modelCorporativoUser->rol_en_corporativo = 'afiliado';
 
-                        if ($afiliado) {
-                            $modelCorporativoUser = new CorporativoUser();
-                            $modelCorporativoUser->corporativo_id = $model->id;
-                            $modelCorporativoUser->user_id = $afiliado->id;
-                            $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-                            $modelCorporativoUser->rol_en_corporativo = 'afiliado';
-                            
-                            if (!$modelCorporativoUser->save()) {
-                                Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
-                                Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
-                            }
+                        if (!$modelCorporativoUser->save()) {
+                            Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
+                            Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
                         }
-                   }
+                    }
+                }
                 
                     Yii::$app->session->setFlash('success', 'Corporativo creado exitosamente.');
                     return $this->redirect(['view', 'id' => $model->id]);
@@ -967,7 +967,7 @@ class CorporativoController extends Controller
             
             // Datos de muestra para nuevos campos
             'VENEZOLANA', 'Casado', 'CARACAS', 'INGENIERO', 'EMPLEADO',
-            'Profesional', 'SERVICIOS', 'Dependiente', 'De 6 a 10 Salarios mínimos',
+            'Gubernamental', 'SERVICIOS', 'Dependiente', 'De 6 a 10 Salarios mínimos',
             'DIRECCION PARA ENVIAR ESTADOS DE CUENTA', '02125551234',
 
             // Datos de muestra para campos opcionales existentes
