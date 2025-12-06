@@ -83,6 +83,11 @@ $this->title = $tituloModo . ' para ' . Html::encode($afiliado->nombres . " " . 
                         ],
                         'columns' => [
                             [
+                                'attribute' => 'id',
+                                'value' => 'id', // Corregido para usar la relación 'clinica'
+                                'label' => 'ID',
+                            ],
+                            [
                                 'attribute' => 'idclinica',
                                 'value' => 'clinica.nombre', // Corregido para usar la relación 'clinica'
                                 'label' => 'Clínica',
