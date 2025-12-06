@@ -330,6 +330,7 @@ $baremosRestringidosIDs = [];
     <div id="plazo-error-message" class="alert alert-danger" style="display: none;">
         <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
     </div>
+
 <?php
 // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
@@ -465,10 +466,9 @@ foreach ($planesItemsCobertura as $item) {
             $debeIncluirse = true; // Forzar inclusión
         }
 
-        // Si no debe incluirse, continuar con el siguiente baremo
-        if (!$debeIncluirse) {
+        /*if (!$debeIncluirse) {
             continue;
-        }
+        }*/
 
         // Clasificación normal según disponibilidad
         if ($esBaremoGuardado && isset($baremosForzados[$item->baremo_id])) {
@@ -500,7 +500,12 @@ foreach ($planesItemsCobertura as $item) {
             'es_historico' => $esBaremoGuardado,
         ];
     }
-} ?>
+}
+
+// COMBINAR todos los arrays: forzados + normales
+$baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
+?>
+
 <div class="col-md-12" align="center"><h3>Formulario</h3></div>
 <div class="field-with-icon">
     <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
