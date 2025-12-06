@@ -503,7 +503,8 @@ foreach ($planesItemsCobertura as $item) {
 }
 
 // COMBINAR todos los arrays: forzados + normales
-$baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;
+$baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido + $baremosPendientesPlazo;  
+
 ?>
 
 <div class="col-md-12" align="center"><h3>Formulario</h3></div>
