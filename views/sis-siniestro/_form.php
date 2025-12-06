@@ -328,21 +328,40 @@ $baremosRestringidosIDs = [];
 <?php if ($contrato && $contrato->estatus === 'Activo'): ?>
     
     <div id="plazo-error-message" class="alert alert-danger" style="display: none;">
-        <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
+        <i class="fas fa-exclamation-triangle"></i> ADVERTENCIA: No se puede guardar la CITA. El baremo seleccionado requiere un **Plazo de Espera Pendiente**. Por favor, deseleccione el baremo para continuar.
+    </div>
+
+    <div id="plazo-no-cumplido-message" class="alert alert-warning" style="display: none; margin-top: 20px;">
+        <i class="fas fa-clock"></i> ATENCIÓN: Este servicio tiene un plazo de espera de <span id="plazo-meses"></span> meses a partir de la fecha de inicio del contrato.
     </div>
 
 <?php
 // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
 // Consulta para listar los baremos de ese plan y clínica
-$planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
+// Consulta para listar los baremos de ese plan y clínica
+$query = \app\models\PlanesItemsCobertura::find()
     ->joinWith('baremo')
     ->joinWith('plan')
     ->joinWith('baremo.area')
     ->where(['planes.clinica_id' => $afiliado->clinica_id])
     ->andWhere(['baremo.estatus' => 'Activo'])
-    ->andWhere(['planes.id' => $afiliado->plan_id])
-    ->all();
+    ->andWhere(['planes.id' => $afiliado->plan_id]);
+
+// Si es modo siniestro, filtrar por cantidad_limite y plazo_espera
+if (!$esCitaMode) {
+    $query->andWhere(['or',
+        ['planes_items_cobertura.cantidad_limite' => null],
+        ['planes_items_cobertura.cantidad_limite' => 0]
+    ])
+    ->andWhere(['or',
+        ['planes_items_cobertura.plazo_espera' => null],
+        ['planes_items_cobertura.plazo_espera' => ''],
+        ['planes_items_cobertura.plazo_espera' => '0']
+    ]);
+}
+
+$planesItemsCobertura = $query->all();
 
 // PRIMERO: Obtener los baremos seleccionados ANTES de filtrar
 $selectedBaremos = [];
@@ -436,9 +455,9 @@ foreach ($planesItemsCobertura as $item) {
             }
             
         } else {
-            // MODO SINIESTRO: Solo incluir baremos sin límite (cantidad_limite IS NULL)
+            // MODO SINIESTRO: Solo incluir baremos sin límite (cantidad_limite IS NULL) y sin plazo_espera
             // PERO incluir si es un baremo ya guardado (solo en update)
-            if ($item->cantidad_limite !== null) {
+            if ($item->cantidad_limite !== null || !empty($item->plazo_espera)) {
                 if (!$esBaremoGuardado) {
                     $debeIncluirse = false;
                 }
@@ -480,7 +499,7 @@ foreach ($planesItemsCobertura as $item) {
                 $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE NO CUMPLE CON EL PLAZO) " . $nombreCompleto;
                 $baremosRestringidosIDs[] = $item->baremo_id;
             } else {
-                $baremosConPlazoCumplido[$item->baremo_id] = "(DISPONIBLE) " . $nombreCompleto;
+                $baremosConPlazoCumplido[$item->baremo_id] =  $nombreCompleto;
             }
         } else {
             // Modo Siniestro - todos los baremos disponibles se muestran sin prefijo
@@ -531,7 +550,7 @@ $baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido
 <?php else: ?>
     <!-- Mostrar mensaje si el contrato no está activo -->
     <div id="contrato-error-message" class="alert alert-warning" style="margin-top: 20px;">
-        <i class="fas fa-exclamation-triangle"></i> **ADVERTENCIA:** El contrato del afiliado no está activado. Por favor, active el contrato para continuar.
+        <i class="fas fa-exclamation-triangle"></i> ADVERTENCIA: El contrato del afiliado no está activado. Por favor, active el contrato para continuar.
     </div>
 <?php endif; ?>
 
@@ -1036,4 +1055,32 @@ $this->registerJs(<<<JS
     });
 JS
 , View::POS_END);
-?>
+
+// Código para manejar el mensaje de plazo de espera
+$this->registerJs(<<<JS
+function actualizarMensajePlazo() {
+    const select = document.getElementById('baremos-select');
+    const mensajePlazo = document.getElementById('plazo-no-cumplido-message');
+    const spanMeses = document.getElementById('plazo-meses');
+    
+    if (!select || !mensajePlazo || !spanMeses) return;
+    
+    function manejarCambio() {
+        const selectedBaremoId = select.value;
+        if (selectedBaremoId && baremosInfo && baremosInfo[selectedBaremoId] && baremosInfo[selectedBaremoId].plazo_espera) {
+            spanMeses.textContent = baremosInfo[selectedBaremoId].plazo_espera;
+            mensajePlazo.style.display = 'block';
+        } else {
+            mensajePlazo.style.display = 'none';
+        }
+    }
+    
+    select.addEventListener('change', manejarCambio);
+    manejarCambio();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarMensajePlazo();
+});
+JS
+, \yii\web\View::POS_READY);
