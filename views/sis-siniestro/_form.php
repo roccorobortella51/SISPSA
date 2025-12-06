@@ -354,7 +354,6 @@ if (!$esCitaMode) {
         ['planes_items_cobertura.cantidad_limite' => 0]
     ])
     ->andWhere(['or',
-        ['planes_items_cobertura.plazo_espera' => null],
         ['planes_items_cobertura.plazo_espera' => ''],
         ['planes_items_cobertura.plazo_espera' => '0'],
     ]);
