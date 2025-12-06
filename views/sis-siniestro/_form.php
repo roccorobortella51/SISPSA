@@ -350,7 +350,69 @@ $query = \app\models\PlanesItemsCobertura::find()
 
 $totalSinFiltros = $query->count();
 
-// Luego aplicamos los filtros
+// Mostrar información detallada
+echo '<pre>';
+echo "=== INFORMACIÓN DE DEPURACIÓN ===\n";
+echo "Total de baremos (sin filtros): " . $totalSinFiltros . "\n\n";
+
+// Contar con cada condición por separado
+$soloCantidadLimite = (clone $query)->andWhere(['or',
+    ['planes_items_cobertura.cantidad_limite' => null],
+    ['planes_items_cobertura.cantidad_limite' => 0]
+])->count();
+
+$soloPlazoEspera = (clone $query)->andWhere(['or',
+    ['planes_items_cobertura.plazo_espera' => null],
+    ['planes_items_cobertura.plazo_espera' => ''],
+    ['planes_items_cobertura.plazo_espera' => '0'],
+    ['planes_items_cobertura.plazo_espera' => 0]
+])->count();
+
+// Contar con ambas condiciones juntas
+$conAmbasCondiciones = (clone $query)
+    ->andWhere(['or',
+        ['planes_items_cobertura.cantidad_limite' => null],
+        ['planes_items_cobertura.cantidad_limite' => 0]
+    ])
+    ->andWhere(['or',
+        ['planes_items_cobertura.plazo_espera' => null],
+        ['planes_items_cobertura.plazo_espera' => ''],
+        ['planes_items_cobertura.plazo_espera' => '0'],
+        ['planes_items_cobertura.plazo_espera' => 0]
+    ])->count();
+
+echo "Baremos que cumplen SOLO cantidad_limite (nulo o 0): " . $soloCantidadLimite . "\n";
+echo "Baremos que cumplen SOLO plazo_espera (nulo, '', '0' o 0): " . $soloPlazoEspera . "\n";
+echo "Baremos que cumplen AMBAS condiciones: " . $conAmbasCondiciones . "\n\n";
+
+// Mostrar algunos ejemplos de los baremos que no cumplen las condiciones
+$ejemploBaremos = \app\models\PlanesItemsCobertura::find()
+    ->joinWith('baremo')
+    ->joinWith('plan')
+    ->where(['planes.clinica_id' => $afiliado->clinica_id])
+    ->andWhere(['baremo.estatus' => 'Activo'])
+    ->andWhere(['planes.id' => $afiliado->plan_id])
+    ->limit(3)
+    ->all();
+
+echo "=== EJEMPLO DE BAREMOS (primeros 3) ===\n";
+foreach ($ejemploBaremos as $baremo) {
+    echo "ID: " . $baremo->id . "\n";
+    echo "Baremo: " . ($baremo->baremo ? $baremo->baremo->descripcion : 'N/A') . "\n";
+    echo "cantidad_limite: " . (is_null($baremo->cantidad_limite) ? 'NULL' : $baremo->cantidad_limite) . "\n";
+    echo "plazo_espera: " . (is_null($baremo->plazo_espera) ? 'NULL' : "'" . $baremo->plazo_espera . "'") . "\n";
+    echo "---\n";
+}
+
+echo "\n=== CONSULTA FINAL ===\n";
+echo $query->createCommand()->rawSql . "\n\n";
+echo "Total con filtros: " . $conAmbasCondiciones . "\n";
+echo "Plan: " . ($afiliado->plan ? $afiliado->plan->nombre : 'No disponible') . " (ID: " . $afiliado->plan_id . ")\n";
+echo "Clínica: " . ($afiliado->clinica ? $afiliado->clinica->nombre : 'No disponible') . " (ID: " . $afiliado->clinica_id . ")\n";
+echo "esCitaMode: " . ($esCitaMode ? 'true' : 'false') . "\n";
+echo '</pre>';
+
+// Aplicar filtros para la consulta final
 if (!$esCitaMode) {
     $query->andWhere(['or',
         ['planes_items_cobertura.cantidad_limite' => null],
