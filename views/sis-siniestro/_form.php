@@ -340,7 +340,7 @@ $baremosRestringidosIDs = [];
 
 // Consulta para listar los baremos de ese plan y clínica
 // Primero, mostramos el conteo sin filtros
-$queryBase = \app\models\PlanesItemsCobertura::find()
+$query = \app\models\PlanesItemsCobertura::find()
     ->joinWith('baremo')
     ->joinWith('plan')
     ->joinWith('baremo.area')
@@ -348,7 +348,7 @@ $queryBase = \app\models\PlanesItemsCobertura::find()
     ->andWhere(['baremo.estatus' => 'Activo'])
     ->andWhere(['planes.id' => $afiliado->plan_id]);
 
-$totalSinFiltros = $queryBase->count();
+$totalSinFiltros = $query->count();
 
 // Luego aplicamos los filtros
 if (!$esCitaMode) {
@@ -374,6 +374,8 @@ echo "Consulta SQL:\n" . $query->createCommand()->rawSql . "\n\n";
 echo "Valor de esCitaMode: " . ($esCitaMode ? 'true' : 'false') . "\n";
 echo "Valor de plan_id: " . $afiliado->plan_id . "\n";
 echo "Valor de clinica_id: " . $afiliado->clinica_id . "\n";
+echo "Valor de plan_nombre: " . ($afiliado->plan ? $afiliado->plan->nombre : 'No disponible') . "\n";
+echo "Valor de clinica_nombre: " . ($afiliado->clinica ? $afiliado->clinica->nombre : 'No disponible') . "\n";
 echo '</pre>';
 
 
