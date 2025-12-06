@@ -339,7 +339,8 @@ $baremosRestringidosIDs = [];
 // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
 // Consulta para listar los baremos de ese plan y clínica
-$query = \app\models\PlanesItemsCobertura::find()
+// Primero, mostramos el conteo sin filtros
+$queryBase = \app\models\PlanesItemsCobertura::find()
     ->joinWith('baremo')
     ->joinWith('plan')
     ->joinWith('baremo.area')
@@ -347,7 +348,9 @@ $query = \app\models\PlanesItemsCobertura::find()
     ->andWhere(['baremo.estatus' => 'Activo'])
     ->andWhere(['planes.id' => $afiliado->plan_id]);
 
-// Si es modo siniestro, filtrar por cantidad_limite y plazo_espera
+$totalSinFiltros = $queryBase->count();
+
+// Luego aplicamos los filtros
 if (!$esCitaMode) {
     $query->andWhere(['or',
         ['planes_items_cobertura.cantidad_limite' => null],
@@ -361,13 +364,13 @@ if (!$esCitaMode) {
     ]);
 }
 
-// Primero ejecutamos la consulta
 $planesItemsCobertura = $query->all();
 
-// Luego mostramos la información de depuración
+// Mostramos información de depuración
 echo '<pre>';
+echo "Total sin filtros: " . $totalSinFiltros . "\n";
+echo "Total con filtros: " . count($planesItemsCobertura) . "\n";
 echo "Consulta SQL:\n" . $query->createCommand()->rawSql . "\n\n";
-echo "Total de baremos encontrados: " . count($planesItemsCobertura) . "\n\n";
 echo "Valor de esCitaMode: " . ($esCitaMode ? 'true' : 'false') . "\n";
 echo "Valor de plan_id: " . $afiliado->plan_id . "\n";
 echo "Valor de clinica_id: " . $afiliado->clinica_id . "\n";
