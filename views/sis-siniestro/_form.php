@@ -129,7 +129,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 </div>
                 <div class="col-md-3">
                     <div class="stats-number"><?= count($baremosSiniestros) ?></div>
-                    <div class="stats-label">Siniestros Atendidos</div>
+                    <div class="stats-label">Atenciones Realizadas</div>
                 </div>
                 <div class="col-md-3">
                     <div class="stats-number">$<?= number_format(array_sum(array_column(array_merge($baremosCitas, $baremosSiniestros), 'precio')), 2) ?></div>
@@ -243,7 +243,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             </div>
         <?php else: ?>
             <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle"></i> No se han atendido siniestros aún.
+                <i class="fas fa-info-circle"></i> No se han realizado atenciones aún.
             </div>
         <?php endif; ?>
     <?php }?>
