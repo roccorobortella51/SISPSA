@@ -515,7 +515,7 @@ foreach ($planesItemsCobertura as $item) {
             'es_cita_mode' => $esCitaMode,
         ];
     }
-}
+} ?>
 <div class="col-md-12" align="center"><h3>Formulario</h3></div>
 <div class="field-with-icon">
     <?= $form->field($model, 'idbaremo[]')->widget(Select2::class, [ 
