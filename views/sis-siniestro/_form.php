@@ -339,6 +339,7 @@ $baremosRestringidosIDs = [];
 // Las sentencias 'use' (ArrayHelper, Select2) se asumen existentes.
 
 // Consulta para listar los baremos de ese plan y clínica
+// Consulta base
 $query = \app\models\PlanesItemsCobertura::find()
     ->joinWith('baremo')
     ->joinWith('plan')
@@ -347,30 +348,16 @@ $query = \app\models\PlanesItemsCobertura::find()
     ->andWhere(['baremo.estatus' => 'Activo'])
     ->andWhere(['planes.id' => $afiliado->plan_id]);
 
-// Si es modo siniestro, filtrar por cantidad_limite y plazo_espera
-
+// Si es modo siniestro, filtrar por cantidad_limite o plazo_espera
 if (!$esCitaMode) {
-    $query->andWhere(['or',
-        // Si cumple la condición de cantidad_limite
-        ['and',
-            ['or',
-                ['planes_items_cobertura.cantidad_limite' => null],
-                ['planes_items_cobertura.cantidad_limite' => 0]
-            ],
-            // Y cualquiera de las condiciones de plazo_espera
-            ['or',
-                ['planes_items_cobertura.plazo_espera' => null],
-                ['planes_items_cobertura.plazo_espera' => ''],
-                ['planes_items_cobertura.plazo_espera' => '0'],
-                ['planes_items_cobertura.plazo_espera' => 0]
-            ]
-        ],
-        // O si cumple la condición de cantidad_limite (nuevamente)
+    $query->andWhere([
+        'or',
+        // Condición 1: cantidad_limite es nulo o 0
         ['or',
             ['planes_items_cobertura.cantidad_limite' => null],
             ['planes_items_cobertura.cantidad_limite' => 0]
         ],
-        // O si cumple alguna condición de plazo_espera
+        // O condición 2: plazo_espera es nulo, vacío, '0' o 0
         ['or',
             ['planes_items_cobertura.plazo_espera' => null],
             ['planes_items_cobertura.plazo_espera' => ''],
@@ -379,6 +366,8 @@ if (!$esCitaMode) {
         ]
     ]);
 }
+
+$planesItemsCobertura = $query->all();
 
 $planesItemsCobertura = $query->all();
 
