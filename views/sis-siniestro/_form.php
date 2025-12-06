@@ -352,12 +352,14 @@ $query = \app\models\PlanesItemsCobertura::find()
 if (!$esCitaMode) {
     $query->andWhere(['or',
         ['planes_items_cobertura.cantidad_limite' => null],
-        ['planes_items_cobertura.cantidad_limite' => 0]
+        ['planes_items_cobertura.cantidad_limite' => 0],
+        ['planes_items_cobertura.cantidad_limite' => '']
     ])
     ->andWhere(['or',
         ['planes_items_cobertura.plazo_espera' => null],
         ['planes_items_cobertura.plazo_espera' => ''],
-        ['planes_items_cobertura.plazo_espera' => '0']
+        ['planes_items_cobertura.plazo_espera' => '0'],
+        ['planes_items_cobertura.plazo_espera' => 0]
     ]);
 }
 
@@ -497,7 +499,7 @@ foreach ($planesItemsCobertura as $item) {
                 $baremosSinPlazo[$item->baremo_id] = $nombreCompleto;
             } elseif ($isRestrictedByPlazo) {
                 $baremosPendientesPlazo[$item->baremo_id] = "(NO DISPONIBLE NO CUMPLE CON EL PLAZO) " . $nombreCompleto;
-                $baremosRestringidosIDs[] = $item->baremo_id;
+                $baremosRestringidosIDs[] = "(DISPONIBLE) " . $item->baremo_id;
             } else {
                 $baremosConPlazoCumplido[$item->baremo_id] =  $nombreCompleto;
             }
