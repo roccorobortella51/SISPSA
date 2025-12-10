@@ -189,63 +189,92 @@ class SisSiniestro extends \yii\db\ActiveRecord
      * @return bool
      */
     public function saveBaremos($baremoIds)
-    {
-        if (!is_array($baremoIds)) {
-            $baremoIds = [];
+{
+    if (!is_array($baremoIds)) {
+        $baremoIds = [];
+    }
+    
+    // 1. Eliminar las relaciones existentes
+    SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
+    
+    // 2. Agregar las nuevas relaciones
+    foreach ($baremoIds as $baremoId) {
+        if (empty($baremoId)) {
+            continue;
+        }
+
+        // Es más eficiente usar scalar() si solo necesitas un campo
+        $baremocosto = Baremo::find()->select('precio')->where(['id' => $baremoId])->scalar();
+
+        if ($baremocosto === null) {
+            // Manejar caso donde el Baremo no existe
+            continue;
+        }
+
+        $relacion = new SisSiniestroBaremo([
+            'siniestro_id' => $this->id,
+            'baremo_id' => $baremoId,
+            'costo' => $baremocosto // El precio del baremo
+        ]);
+        
+        if (!$relacion->save()) {
+            // Retorna false si falla la inserción de una relación
+            return false; 
         }
         
-        // 1. Eliminar las relaciones existentes
-        SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
-        
-        // 2. Agregar las nuevas relaciones
-        foreach ($baremoIds as $baremoId) {
-            if (empty($baremoId)) {
-                continue;
-            }
-
-            // Es más eficiente usar scalar() si solo necesitas un campo
-            $baremocosto = Baremo::find()->select('precio')->where(['id' => $baremoId])->scalar();
-
-            if ($baremocosto === null) {
-                // Manejar caso donde el Baremo no existe
-                continue;
-            }
-
-            $relacion = new SisSiniestroBaremo([
-                'siniestro_id' => $this->id,
-                'baremo_id' => $baremoId,
-                'costo' => $baremocosto // El precio del baremo
+        // ============ ADD THIS NEW CODE: Decrement cantidad_limite ============
+        // Only decrement for Siniestros (not Citas)
+        if ($this->es_cita == 0) {
+            // Find the PlanesItemsCobertura record for this baremo and plan
+            $planItemCobertura = PlanesItemsCobertura::findOne([
+                'plan_id' => $this->afiliado->plan_id,
+                'baremo_id' => $baremoId
             ]);
             
-            if (!$relacion->save()) {
-                // Retorna false si falla la inserción de una relación
-                return false; 
+            if ($planItemCobertura && $planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
+                // Decrement the limit
+                $planItemCobertura->cantidad_limite -= 1;
+                
+                // Ensure it doesn't go below 0
+                if ($planItemCobertura->cantidad_limite < 0) {
+                    $planItemCobertura->cantidad_limite = 0;
+                }
+                
+                // Save the updated limit
+                if (!$planItemCobertura->save()) {
+                    Yii::error("Failed to decrement cantidad_limite for baremo {$baremoId}. Errors: " . print_r($planItemCobertura->errors, true));
+                    // Don't return false here - the siniestro should still save even if limit update fails
+                } else {
+                    Yii::info("Decremented cantidad_limite for baremo {$baremoId} from plan {$this->afiliado->plan_id}. New limit: {$planItemCobertura->cantidad_limite}");
+                }
             }
         }
-
-        // ====================================================================
-        // 3. Lógica para actualizar el costo_total en SisSiniestro
-        // ====================================================================
-
-        // a) Calcular la suma total de los costos de los baremos para este siniestro
-        $totalCosto = SisSiniestroBaremo::find()
-            ->where(['siniestro_id' => $this->id])
-            ->sum('costo');
-
-        // b) Asignar el total al campo costo_total del modelo actual ($this es SisSiniestro)
-        // Se usa (float) para asegurar que el valor sea numérico (sum() puede devolver NULL o un string)
-        $this->costo_total = (float) $totalCosto;
-        
-        // c) Guardar el modelo SisSiniestro
-        if (!$this->save(false)) { // Usamos save(false) para omitir la validación de otros campos del SisSiniestro
-            // Retorna false si falla la actualización del costo_total
-            return false;
-        }
-
-        // ====================================================================
-
-        return true;
+        // ============ END NEW CODE ============
     }
+
+    // ====================================================================
+    // 3. Lógica para actualizar el costo_total en SisSiniestro
+    // ====================================================================
+
+    // a) Calcular la suma total de los costos de los baremos para este siniestro
+    $totalCosto = SisSiniestroBaremo::find()
+        ->where(['siniestro_id' => $this->id])
+        ->sum('costo');
+
+    // b) Asignar el total al campo costo_total del modelo actual ($this es SisSiniestro)
+    // Se usa (float) para asegurar que el valor sea numérico (sum() puede devolver NULL o un string)
+    $this->costo_total = (float) $totalCosto;
+    
+    // c) Guardar el modelo SisSiniestro
+    if (!$this->save(false)) { // Usamos save(false) para omitir la validación de otros campos del SisSiniestro
+        // Retorna false si falla la actualización del costo_total
+        return false;
+    }
+
+    // ====================================================================
+
+    return true;
+}
     
     /**
      * Valida los baremos seleccionados contra las restricciones del plan
