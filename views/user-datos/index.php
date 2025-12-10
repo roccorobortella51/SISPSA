@@ -314,30 +314,31 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                     }
                                 },
                                 // BOTÓN DE ATENCION
-                                'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
-                                    // Aplicar la misma lógica de permisos y verificación de clinica_id
-                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
-                                        
-                                        // URLs para pasar a la función JS
-                                        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
-                                        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
+'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
+    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
+        
+        // URLs para pasar a la función JS
+        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
+        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
 
-                                        // Botón que usa DATA ATTRIBUTES para las URLs
-                                        return Html::a(
-                                            '<i class="fas fa-notes-medical ms-text-primary" style="color: #f92011ff !important;"></i>', // Icono general
-                                            '#', // URL vacía, la acción será manejada por JS
-                                            [
-                                                'title' => 'Gestionar Atención',
-                                                'class' => 'btn-action view atencion-btn', // AÑADIDO: Clase específica para JS
-                                                'data' => [
-                                                    'url-siniestro' => $urlSiniestro,
-                                                    'url-cita' => $urlCita,
-                                                ],
-                                            ]
-                                        );
-                                    }
-                                    return "";
-                                },
+        // Botón que usa DATA ATTRIBUTES para las URLs
+        return Html::a(
+            // --- CÓDIGO DEL ÍCONO MODIFICADO (Font Awesome Heart) ---
+            '<i class="fas fa-heartbeat" style="color: red;"></i>', 
+            // --------------------------------------------------------
+            '#', // URL vacía, la acción será manejada por JS
+            [
+                'title' => 'Gestionar Atención',
+                'class' => 'btn-action view atencion-btn', 
+                'data' => [
+                    'url-siniestro' => $urlSiniestro,
+                    'url-cita' => $urlCita,
+                ],
+            ]
+        );
+    }
+    return "";
+},
                                 'pagos' => function ($url, $model, $key) {
                                     // Si el tipo de afiliado (user_datos_type_id) NO es 2 (Corporativo), muestra el botón.
                                     // user_datos_type_id = 1 (Individual)

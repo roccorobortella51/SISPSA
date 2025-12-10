@@ -24,7 +24,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
 
 // Definir variables basadas en el modo
 $esCita = ($modo === 'cita') ? 1 : 0;
-$tituloModo = ($modo === 'cita') ? 'Citas' : 'Siniestros';
+$tituloModo = ($modo === 'cita') ? 'Citas' : 'Atención';
 $textoBoton = ($modo === 'cita') ? 'Crear Nueva Cita' : 'Crear Nueva Atención';
 
 $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
@@ -82,6 +82,11 @@ $this->title = $tituloModo . ' para ' . Html::encode($afiliado->nombres . " " . 
                             'class' => 'grid-view-container table-responsive',
                         ],
                         'columns' => [
+                            [
+                                'attribute' => 'id',
+                                'value' => 'id', // Corregido para usar la relación 'clinica'
+                                'label' => 'ID',
+                            ],
                             [
                                 'attribute' => 'idclinica',
                                 'value' => 'clinica.nombre', // Corregido para usar la relación 'clinica'
