@@ -317,6 +317,14 @@ public function actionCreate($user_id, $es_cita = 0)
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
         
+        // Obtener el modo (cita o siniestro) de la URL o del modelo
+        $esCita = (int)Yii::$app->request->get('es_cita', $model->es_cita);
+        
+        // Actualizar el modelo con el valor de es_cita si se proporcionó en la URL
+        if (Yii::$app->request->get('es_cita') !== null) {
+            $model->es_cita = $esCita;
+        }
+        
         // Obtener los baremos actuales del modelo
         $baremosActuales = $model->getBaremoIds();
         $baremos = $model->baremos; // Asegurarse de cargar la relación de baremos
@@ -437,15 +445,27 @@ public function actionCreate($user_id, $es_cita = 0)
                 $transaction->rollBack();
                 Yii::error('Error al actualizar siniestro: ' . $e->getMessage(), __METHOD__);
                 Yii::$app->session->setFlash('error', 'Error al actualizar el siniestro: ' . $e->getMessage());
-                return $this->refresh();
+                
+                // En caso de error, volver a cargar la vista con los datos actuales
+                return $this->render('update', [
+                    'model' => $model,
+                    'afiliado' => $afiliado,
+                    'baremos' => $baremos,
+                    'baremosActuales' => $baremosActuales,
+                    'es_cita' => $esCita,
+                ]);
             }
         }
-    
+        
+        // Cargar la vista con los datos del modelo
         return $this->render('update', [
             'model' => $model,
             'afiliado' => $afiliado,
-            'baremos' => $baremos
+            'baremos' => $baremos,
+            'baremosActuales' => $baremosActuales,
+            'es_cita' => $esCita,
         ]);
+    
     }
 
 /**
