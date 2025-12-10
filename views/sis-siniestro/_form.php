@@ -516,16 +516,39 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
     $baremosPendientesPlazo = [];
     $baremosAgotados = [];
 
-    // Calculate baremos data
-    if ($contrato && $contrato->estatus === 'Activo') {
-        $planesItemsCobertura = \app\models\PlanesItemsCobertura::find()
-            ->joinWith('baremo')
-            ->joinWith('plan')
-            ->joinWith('baremo.area')
-            ->where(['planes.clinica_id' => $afiliado->clinica_id])
-            ->andWhere(['baremo.estatus' => 'Activo'])
-            ->andWhere(['planes.id' => $afiliado->plan_id])
-            ->all();
+// Calculate baremos data
+if ($contrato && $contrato->estatus === 'Activo') {
+    $query = \app\models\PlanesItemsCobertura::find()
+        ->joinWith('baremo')
+        ->joinWith('plan')
+        ->joinWith('baremo.area')
+        ->where(['planes.clinica_id' => $afiliado->clinica_id])
+        ->andWhere(['baremo.estatus' => 'Activo'])
+        ->andWhere(['planes.id' => $afiliado->plan_id]);
+
+    if ($esCitaMode) {
+        // Modo Cita: Mostrar solo servicios con restricciones
+        $query->andWhere([
+            'or',
+            ['>', 'planes_items_cobertura.plazo_espera', 0],
+            ['>', 'planes_items_cobertura.cantidad_limite', 0]
+        ]);
+    } else {
+        // Modo Siniestro: Mostrar solo servicios SIN restricciones
+        $query->andWhere([
+            'and',
+            ['or',
+                ['planes_items_cobertura.plazo_espera' => null],
+                ['planes_items_cobertura.plazo_espera' => 0]
+            ],
+            ['or',
+                ['planes_items_cobertura.cantidad_limite' => null],
+                ['planes_items_cobertura.cantidad_limite' => 0]
+            ]
+        ]);
+    }
+    
+    $planesItemsCobertura = $query->all();
         
         $selectedBaremos = [];
         if (!$model->isNewRecord) {
@@ -581,13 +604,9 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
 
                 // Verificar si excede el límite (solo si tiene límite definido)
                 $excedeLimite = false;
-                if ($item->cantidad_limite !== null) {
-                    // If limit is 0 or negative, it's not available
-                    if ($item->cantidad_limite <= 0) {
-                        $excedeLimite = true;
-                    }
-                    // If limit is positive, check if reached
-                    elseif ($vecesUsado >= $item->cantidad_limite) {
+                if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
+                    // Si tiene un límite positivo, verificamos si se alcanzó
+                    if ($vecesUsado >= $item->cantidad_limite) {
                         $excedeLimite = true;
                     }
                 }

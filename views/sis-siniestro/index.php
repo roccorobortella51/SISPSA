@@ -205,17 +205,22 @@ $this->title = $tituloModo . ' para ' . Html::encode($afiliado->nombres . " " . 
                                     },
                                     'update' => function ($url, $model, $key)use($permisos) {
                                         if($permisos){
-                                        // Aseguramos que user_id se pase para mantener la navegación contextual.
+                                        // Aseguramos que user_id y es_cita se pasen para mantener la navegación contextual
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt"></i>',
-                                            Url::to(['update', 'id' => $model->id, 'user_id' => $model->iduser]), 
+                                            Url::to([
+                                                'update', 
+                                                'id' => $model->id, 
+                                                'user_id' => $model->iduser,
+                                                'es_cita' => (int)$model->es_cita // Añadimos el parámetro es_cita
+                                            ]), 
                                             [
                                                 'title' => 'Editar',
                                                 'class' => 'btn-action edit'
                                             ]
                                         );}
                                     },
-                                    // ... (Botón de delete comentado) ...
+
                                 ],
                             ],
                         ],
