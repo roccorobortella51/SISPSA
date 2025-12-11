@@ -95,7 +95,7 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
             <!-- Fila 2: Rango de Fechas -->
             <div class="row g-4 mb-4">
                 <!-- Columna 1: Rangos Predefinidos -->
-                <div class="col-lg-8">
+                <div class="col-lg-6">
                     <div class="filter-card">
                         <div class="d-flex align-items-center mb-3">
                             <i class="fas fa-clock text-warning me-2 fs-5"></i>
@@ -123,24 +123,42 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                     </div>
                 </div>
                 
-                <!-- Columna 2: Fecha Específica -->
-                <div class="col-lg-4">
+                <!-- Columna 2: Rango de Fechas Personalizado -->
+                <div class="col-lg-6">
                     <div class="filter-card">
                         <div class="d-flex align-items-center mb-3">
-                            <i class="fas fa-calendar-day text-danger me-2 fs-5"></i>
-                            <h5 class="mb-0 fw-bold">Fecha Específica</h5>
+                            <i class="fas fa-calendar-range text-danger me-2 fs-5"></i>
+                            <h5 class="mb-0 fw-bold">Rango de Fechas Personalizado</h5>
                         </div>
-                        <div class="input-group input-group-lg">
-                            <span class="input-group-text bg-light">
-                                <i class="fas fa-calendar text-primary"></i>
-                            </span>
-                            <input type="date" id="specific-date" class="form-control border-primary" 
-                                   placeholder="YYYY-MM-DD">
-                            <button class="btn btn-primary" type="button" id="btn-specific-date">
-                                <i class="fas fa-search me-1"></i> Consultar
-                            </button>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-day text-primary"></i>
+                                    </span>
+                                    <input type="date" id="date-from" class="form-control border-primary" 
+                                           placeholder="Desde">
+                                </div>
+                                <small class="text-muted mt-1 d-block">Fecha inicial</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-day text-primary"></i>
+                                    </span>
+                                    <input type="date" id="date-to" class="form-control border-primary" 
+                                           placeholder="Hasta">
+                                </div>
+                                <small class="text-muted mt-1 d-block">Fecha final</small>
+                            </div>
                         </div>
-                        <small class="text-muted mt-2 d-block">Seleccione una fecha específica para el reporte</small>
+                        <div class="mt-3">
+                            <?= Html::button('<i class="fas fa-search me-2"></i> Consultar Rango', [
+                                'id' => 'btn-custom-range',
+                                'class' => 'btn btn-primary w-100'
+                            ]) ?>
+                        </div>
+                        <small class="text-muted mt-2 d-block">Seleccione un rango personalizado para el reporte</small>
                     </div>
                 </div>
             </div>
@@ -286,9 +304,10 @@ $this->registerJs(<<<JS
             results: '#report-results',
             status: '#pago-status-selector',
             clinica: '#clinica-filter',
-            dateInput: '#specific-date',
+            dateFrom: '#date-from',
+            dateTo: '#date-to',
             aplicarBtn: '#btn-aplicar-filtros',
-            specificDateBtn: '#btn-specific-date'
+            customRangeBtn: '#btn-custom-range'
         }
     };
     
@@ -307,6 +326,13 @@ $this->registerJs(<<<JS
             });
         }
         
+        // Set default dates for range inputs (today and yesterday)
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        
+        \$(config.selectors.dateFrom).val(yesterday);
+        \$(config.selectors.dateTo).val(today);
+        
         // Marcar botón inicial como activo
         \$('.btn-range[data-range="day"]').addClass('active');
     }
@@ -315,52 +341,13 @@ $this->registerJs(<<<JS
     // FUNCIONES UTILITARIAS
     // =============================================
     function showLoading() {
-        \$(config.selectors.results).html(`
-            <div class="col-12">
-                <div class="card border-0 shadow">
-                    <div class="card-body text-center py-5">
-                        <div class="loading-pulse">
-                            <i class="fas fa-chart-bar fa-4x text-primary mb-4"></i>
-                            <h4 class="text-primary">Generando Reporte</h4>
-                            <p class="text-muted">Por favor espere mientras procesamos los datos...</p>
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `);
+        \$(config.selectors.results).html('<div class="col-12"><div class="card border-0 shadow"><div class="card-body text-center py-5"><div class="loading-pulse"><i class="fas fa-chart-bar fa-4x text-primary mb-4"></i><h4 class="text-primary">Generando Reporte</h4><p class="text-muted">Por favor espere mientras procesamos los datos...</p><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div></div></div></div>');
     }
     
     function showError(message) {
-        \$(config.selectors.results).html(`
-            <div class="col-12">
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Error:</strong> \${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            </div>
-        `);
+        \$(config.selectors.results).html('<div class="col-12"><div class="alert alert-danger alert-dismissible fade show" role="alert"><i class="fas fa-exclamation-triangle me-2"></i><strong>Error:</strong> ' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div></div>');
     }
     
-    function updatePDFButton(params, status, clinicasSeleccionadas) {
-        const pdfBtn = \$('#btn-print-pdf');
-        if (pdfBtn.length) {
-            const pdfParams = {
-                range: params.range || 'day',
-                status: status,
-                clinicas: clinicasSeleccionadas ? clinicasSeleccionadas.join(',') : 'todas',
-                ...(params.specific_date && { specific_date: params.specific_date })
-            };
-            
-            const pdfUrl = config.pdfUrl + '?' + new URLSearchParams(pdfParams).toString();
-            pdfBtn.attr('href', pdfUrl).prop('disabled', false);
-        }
-    }
-    
-    // Function to show notifications
     function showNotification(type, title, message) {
         // Remove any existing notifications
         \$('.export-notification').remove();
@@ -391,12 +378,55 @@ $this->registerJs(<<<JS
         }, 5000);
     }
     
-    // Function to export to Excel
+    function validateDateRange(dateFrom, dateTo) {
+        if (!dateFrom || !dateTo) {
+            return { valid: false, message: 'Ambas fechas son requeridas' };
+        }
+        
+        if (dateFrom > dateTo) {
+            return { valid: false, message: 'La fecha inicial no puede ser mayor a la fecha final' };
+        }
+        
+        // Optional: Add date range limit (e.g., max 365 days)
+        const fromDate = new Date(dateFrom);
+        const toDate = new Date(dateTo);
+        const diffTime = Math.abs(toDate - fromDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 365) {
+            return { 
+                valid: false, 
+                message: 'El rango máximo permitido es de 365 días. Por favor seleccione un rango más corto.' 
+            };
+        }
+        
+        return { valid: true };
+    }
+    
+    function updatePDFButton(params, status, clinicasSeleccionadas) {
+        const pdfBtn = \$('#btn-print-pdf');
+        if (pdfBtn.length) {
+            const pdfParams = {
+                range: params.range || 'day',
+                status: status,
+                clinicas: clinicasSeleccionadas ? clinicasSeleccionadas.join(',') : 'todas',
+                ...(params.specific_date && { specific_date: params.specific_date }),
+                ...(params.custom_range && { custom_range: 'true' }),
+                ...(params.date_from && { date_from: params.date_from }),
+                ...(params.date_to && { date_to: params.date_to })
+            };
+            
+            const pdfUrl = config.pdfUrl + '?' + new URLSearchParams(pdfParams).toString();
+            pdfBtn.attr('href', pdfUrl).prop('disabled', false);
+        }
+    }
+    
     function exportToExcel() {
         const status = \$(config.selectors.status).val();
         const clinicasSeleccionadas = \$(config.selectors.clinica).val();
         const activeRange = \$('.btn-range.active').data('range');
-        const specificDate = \$(config.selectors.dateInput).val();
+        const dateFrom = \$(config.selectors.dateFrom).val();
+        const dateTo = \$(config.selectors.dateTo).val();
         const range = activeRange || 'day';
         
         // Build export URL
@@ -405,8 +435,11 @@ $this->registerJs(<<<JS
         exportUrl += '&status=' + encodeURIComponent(status);
         exportUrl += '&clinicas=' + (clinicasSeleccionadas ? clinicasSeleccionadas.join(',') : 'todas');
         
-        if (specificDate) {
-            exportUrl += '&specific_date=' + encodeURIComponent(specificDate);
+        // Add custom range if active
+        if (dateFrom && dateTo) {
+            exportUrl += '&date_from=' + encodeURIComponent(dateFrom);
+            exportUrl += '&date_to=' + encodeURIComponent(dateTo);
+            exportUrl += '&custom_range=true';
         }
         
         // Show loading state on button
@@ -462,6 +495,12 @@ $this->registerJs(<<<JS
                 status: \$(config.selectors.status).val(),
                 clinicas: \$(config.selectors.clinica).val() || []
             };
+            
+            // Add custom range dates if they exist in params
+            if (params.custom_range) {
+                requestData.date_from = params.date_from;
+                requestData.date_to = params.date_to;
+            }
             
             // Realizar solicitud AJAX
             const response = await \$.ajax({
@@ -521,67 +560,143 @@ $this->registerJs(<<<JS
             \$('.btn-range').removeClass('active');
             \$(this).addClass('active');
             
-            // Limpiar fecha específica
-            \$(config.selectors.dateInput).val('');
-            
             // Cargar reporte
             cargarReporte({ range: range });
         });
         
-        // 2. Botón de fecha específica
-        \$(config.selectors.specificDateBtn).on('click', function() {
-            const specificDate = \$(config.selectors.dateInput).val();
+        // 2. Botón de rango personalizado
+        \$(config.selectors.customRangeBtn).on('click', function() {
+            const dateFrom = \$(config.selectors.dateFrom).val();
+            const dateTo = \$(config.selectors.dateTo).val();
             
-            if (!specificDate) {
+            // Validar fechas
+            const validation = validateDateRange(dateFrom, dateTo);
+            if (!validation.valid) {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Fecha requerida',
-                        text: 'Por favor seleccione una fecha específica',
+                        title: 'Error en fechas',
+                        text: validation.message,
                         confirmButtonColor: '#007bff'
                     });
                 } else {
-                    alert('Por favor seleccione una fecha específica');
+                    alert(validation.message);
                 }
                 return;
             }
             
-            // Remover estado activo de botones de rango
+            // Remover estado activo de botones de rango predefinido
             \$('.btn-range').removeClass('active');
             
-            // Cargar reporte
-            cargarReporte({ specific_date: specificDate });
+            // Cargar reporte con rango personalizado
+            cargarReporte({ 
+                custom_range: true,
+                date_from: dateFrom,
+                date_to: dateTo 
+            });
         });
         
         // 3. Cambio en selector de estado
         \$(config.selectors.status).on('change', function() {
             const activeRange = \$('.btn-range.active').data('range');
-            const range = activeRange || 'day';
-            cargarReporte({ range: range });
+            
+            // Check if we're in custom range mode
+            if (!activeRange) {
+                // Custom range mode
+                const dateFrom = \$(config.selectors.dateFrom).val();
+                const dateTo = \$(config.selectors.dateTo).val();
+                
+                if (dateFrom && dateTo) {
+                    const validation = validateDateRange(dateFrom, dateTo);
+                    if (validation.valid) {
+                        cargarReporte({ 
+                            custom_range: true,
+                            date_from: dateFrom,
+                            date_to: dateTo 
+                        });
+                    }
+                }
+            } else {
+                // Predefined range mode
+                cargarReporte({ range: activeRange });
+            }
         });
         
         // 4. Cambio en selector de clínicas
         \$(config.selectors.clinica).on('change', function() {
             const activeRange = \$('.btn-range.active').data('range');
-            const range = activeRange || 'day';
-            cargarReporte({ range: range });
+            
+            // Check if we're in custom range mode
+            if (!activeRange) {
+                // Custom range mode
+                const dateFrom = \$(config.selectors.dateFrom).val();
+                const dateTo = \$(config.selectors.dateTo).val();
+                
+                if (dateFrom && dateTo) {
+                    const validation = validateDateRange(dateFrom, dateTo);
+                    if (validation.valid) {
+                        cargarReporte({ 
+                            custom_range: true,
+                            date_from: dateFrom,
+                            date_to: dateTo 
+                        });
+                    }
+                }
+            } else {
+                // Predefined range mode
+                cargarReporte({ range: activeRange });
+            }
         });
         
         // 5. Botón principal de aplicar filtros
         \$(config.selectors.aplicarBtn).on('click', function() {
             const activeRange = \$('.btn-range.active').data('range');
-            const specificDate = \$(config.selectors.dateInput).val();
-            const range = activeRange || 'day';
             
-            const params = specificDate ? { specific_date: specificDate } : { range: range };
-            cargarReporte(params);
+            if (activeRange) {
+                // Use predefined range
+                cargarReporte({ range: activeRange });
+            } else {
+                // Use custom range
+                const dateFrom = \$(config.selectors.dateFrom).val();
+                const dateTo = \$(config.selectors.dateTo).val();
+                
+                const validation = validateDateRange(dateFrom, dateTo);
+                if (!validation.valid) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Error en fechas',
+                            text: validation.message,
+                            confirmButtonColor: '#007bff'
+                        });
+                    } else {
+                        alert(validation.message);
+                    }
+                    return;
+                }
+                
+                cargarReporte({ 
+                    custom_range: true,
+                    date_from: dateFrom,
+                    date_to: dateTo 
+                });
+            }
         });
         
-        // 6. Enter en campo de fecha
-        \$(config.selectors.dateInput).on('keypress', function(e) {
-            if (e.which === 13) { // Enter key
-                \$(config.selectors.specificDateBtn).click();
-            }
+        // 6. Quick date range buttons (optional)
+        \$(document).on('click', '.btn-quick-range', function() {
+            const days = \$(this).data('days');
+            const today = new Date();
+            const fromDate = new Date(today);
+            fromDate.setDate(today.getDate() - days);
+            
+            const formatDate = (date) => date.toISOString().split('T')[0];
+            
+            \$(config.selectors.dateFrom).val(formatDate(fromDate));
+            \$(config.selectors.dateTo).val(formatDate(today));
+            
+            // Trigger custom range button
+            \$(config.selectors.customRangeBtn).click();
         });
     }
     
