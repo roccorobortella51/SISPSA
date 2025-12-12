@@ -63,6 +63,33 @@ use kartik\select2\Select2;
 
             </div>
         </div>
+
+        <div class="alert alert-info" role="alert">
+    <h4 class="alert-heading text-primary">
+        Instrucciones Importantes para Baremos
+    </h4>
+    
+    <p>
+        Al configurar los baremos, por favor considere la siguiente lógica de asignación para el sistema:
+    </p>
+
+    <hr>
+    
+    <p class="mb-1 fw-bold text-danger">
+        1. Para Atención Médica (No genera cita):
+    </p>
+    <p class="ms-3">
+        Debe colocar la cantidad en: <span class="badge bg-danger fs-6 p-2">0</span> (Cero).
+    </p>
+
+    <p class="mb-1 fw-bold text-success">
+        2. Para Cita Programada (Genera cita en agenda):
+    </p>
+    <p class="ms-3">
+        Debe colocar la cantidad en: <span class="badge bg-success fs-6 p-2">1</span> o un número mayor.
+    </p>
+</div>
+
     </div>
     
     <div class="col-md-6">

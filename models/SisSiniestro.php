@@ -283,7 +283,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
      * @param int $esCita 0=Siniestro, 1=Cita (Permite omitir ciertas validaciones)
      * @return array ['valid' => bool, 'errors' => array]
      */
-    public static function validarBaremosConPlan($baremoIds, $userId, $esCita = 0)
+    public static function validarBaremosConPlan($baremoIds, $userId, $esCita = 0, $model = null)
     {
         $errors = [];
         
@@ -335,89 +335,59 @@ class SisSiniestro extends \yii\db\ActiveRecord
             $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
             
             // ----------------------------------------------------------------------------------
-            // APLICACIÓN DEL MODO CITA (NUEVO)
+            // APLICACIÓN DEL MODO CITA
             // Si el registro es una Cita (es_cita = 1), omitimos todas las validaciones de 
             // Plazo y Límite de uso. El propósito de la cita es reservar el servicio.
             // ----------------------------------------------------------------------------------
             if ($esCita == 1) {
-                continue; 
+                // Validar plazo de espera
+                if (!empty($planItemCobertura->plazo_espera) && $planItemCobertura->plazo_espera > 0) {
+                    $diff = $fechaInicioContrato->diff($fechaActual);
+                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                    
+                    if ($mesesTranscurridos < $planItemCobertura->plazo_espera) {
+                        $errors[] = "No se puede agendar la cita para '$nombreBaremo'. Aún no ha cumplido el plazo de espera de {$planItemCobertura->plazo_espera} meses desde la fecha de inicio del contrato.";
+                        continue;
+                    }
+                }
+            
+                // Validar límite de uso para citas
+                if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
+                    $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
+                    list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
+                    
+                    // Contar usos en el período actual (excluyendo la cita actual si es una actualización)
+                    $siniestrosUsados = self::find()
+                        ->alias('s')
+                        ->innerJoin('sis_siniestro_baremo sb', 'sb.siniestro_id = s.id')
+                        ->where(['s.iduser' => $afiliado->id])
+                        ->andWhere(['sb.baremo_id' => $baremoId])
+                        ->andWhere(['>=', 's.fecha', $inicioAnioVigencia->format('Y-m-d')])
+                        ->andWhere(['<=', 's.fecha', $finAnioVigencia->format('Y-m-d')]);
+                    
+                        if ($model && !$model->isNewRecord) {
+                            $siniestrosUsados->andWhere(['<>', 's.id', $model->id]);
+                        }
+                    
+                    $vecesUsado = $siniestrosUsados->count();
+                    
+                    // Verificar si excede el límite
+                    if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
+                        $errors[] = "No se puede agendar la cita para '$nombreBaremo'. "
+                                  . "Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos en el período actual. "
+                                  . "Ya se ha utilizado $vecesUsado veces.";
+                        continue;
+                    }
+                }
+                
+                continue; // Continuar con el siguiente baremo
             }
             
             // ----------------------------------------------------------------------------------
             // LÓGICA DE VALIDACIÓN EXISTENTE (SOLO PARA SINIESTRO: es_cita = 0)
             // ----------------------------------------------------------------------------------
 
-            // VALIDACIÓN: Cantidad límite de uso (ANUAL) y Plazo de Espera después del límite
-            if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
-                // Calcular el período anual actual desde la fecha de afiliación
-                $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
-                
-                // Calcular las fechas de inicio y fin del año de vigencia actual
-                $inicioAnioVigencia = clone $fechaInicioContrato;
-                $inicioAnioVigencia->modify("+{$anioActual} years");
-                
-                $finAnioVigencia = clone $inicioAnioVigencia;
-                $finAnioVigencia->modify("+1 year -1 day");
-                
-                // Contar cuántas veces se ha usado este baremo en el año de vigencia actual
-                // Solo contamos SisSiniestro que NO son citas (es_cita = 0)
-                $siniestrosUsados = SisSiniestroBaremo::find()
-                    ->joinWith(['siniestro' => function($query) {
-                        $query->andWhere(['sis_siniestro.es_cita' => 0]); // <-- Filtro añadido
-                    }])
-                    ->where(['sis_siniestro_baremo.baremo_id' => $baremoId])
-                    ->andWhere(['sis_siniestro.iduser' => $userId])
-                    ->andWhere(['IS', 'sis_siniestro.deleted_at', null])
-                    ->andWhere(['>=', 'sis_siniestro.fecha', $inicioAnioVigencia->format('Y-m-d')])
-                    ->andWhere(['<=', 'sis_siniestro.fecha', $finAnioVigencia->format('Y-m-d')])
-                    ->orderBy(['sis_siniestro.fecha' => SORT_DESC])
-                    ->all();
-                
-                $vecesUsado = count($siniestrosUsados);
-                
-                // Si alcanzó el límite, verificar el plazo de espera
-                if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
-                    // Si hay plazo de espera configurado
-                    if (!empty($planItemCobertura->plazo_espera)) {
-                        $plazoEspera = self::parsePlazoEspera($planItemCobertura->plazo_espera);
-                        
-                        if ($plazoEspera > 0 && !empty($siniestrosUsados)) {
-                            // Obtener la fecha del último uso
-                            $ultimoSiniestro = $siniestrosUsados[0]->siniestro;
-                            $fechaUltimoUso = new \DateTime($ultimoSiniestro->fecha);
-                            
-                            // Calcular cuándo se puede volver a usar
-                            $fechaHabilitacion = clone $fechaUltimoUso;
-                            $fechaHabilitacion->modify("+{$plazoEspera} months");
-                            
-                            // Si aún no ha pasado el plazo de espera
-                            if ($fechaActual < $fechaHabilitacion) {
-                                $diasRestantes = $fechaActual->diff($fechaHabilitacion)->days;
-                                $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite de uso "
-                                          . "({$planItemCobertura->cantidad_limite} veces en el año actual). "
-                                          . "Último uso: " . $fechaUltimoUso->format('d/m/Y') . ". "
-                                          . "Debe esperar {$planItemCobertura->plazo_espera} desde el último uso. "
-                                          . "Podrá utilizarlo nuevamente a partir del " . $fechaHabilitacion->format('d/m/Y') 
-                                          . " (faltan $diasRestantes días).";
-                            }
-                            // Si ya pasó el plazo, se puede usar de nuevo (no hay error)
-                        } else {
-                            // Tiene límite pero no tiene plazo de espera
-                            $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite anual de uso "
-                                      . "({$planItemCobertura->cantidad_limite} veces). "
-                                      . "Ya se ha utilizado $vecesUsado veces en el período. "
-                                      . "Se renovará el " . $finAnioVigencia->modify('+1 day')->format('d/m/Y') . ".";
-                        }
-                    } else {
-                        // Tiene límite pero no tiene plazo de espera
-                        $errors[] = "El baremo '$nombreBaremo' ha alcanzado su límite anual de uso "
-                                  . "({$planItemCobertura->cantidad_limite} veces). "
-                                  . "Ya se ha utilizado $vecesUsado veces en el período. "
-                                  . "Se renovará el " . $finAnioVigencia->modify('+1 day')->format('d/m/Y') . ".";
-                    }
-                }
-                // Si no ha alcanzado el límite, puede usar libremente
-            }
+            continue; // Continuar con el siguiente baremo sin validaciones adicionales
         }
         
         return [
@@ -457,5 +427,22 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         $diferencia = $fechaInicio->diff($fechaActual);
         return $diferencia->y; // Retorna el número de años completos
+    }
+
+        /**
+     * Calcula el período de vigencia (fecha de inicio y fin) para un año específico
+     * @param \DateTime $fechaInicio Fecha de inicio del contrato
+     * @param int $anioVigencia Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     * @return array [DateTime $inicio, DateTime $fin]
+     */
+    private static function calcularPeriodoVigencia($fechaInicio, $anioVigencia)
+    {
+        $inicio = clone $fechaInicio;
+        $inicio->modify("+{$anioVigencia} years");
+        
+        $fin = clone $inicio;
+        $fin->modify('+1 year -1 day');
+        
+        return [$inicio, $fin];
     }
 }
