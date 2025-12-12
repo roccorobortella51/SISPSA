@@ -58,6 +58,21 @@ class ReportesController extends Controller
         return parent::beforeAction($action);
     }
     
+    public function actionTestAccess()
+{
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    return [
+        'isGuest' => Yii::$app->user->isGuest,
+        'userId' => Yii::$app->user->id,
+        'identity' => Yii::$app->user->identity ? Yii::$app->user->identity->username : null,
+        'roles' => array_keys(Yii::$app->authManager->getRolesByUser(Yii::$app->user->id)),
+        'canAccess' => Yii::$app->user->can('superadmin') || Yii::$app->user->can('FINANZAS'),
+        'sessionId' => session_id(),
+        'csrfToken' => Yii::$app->request->csrfToken,
+    ];
+}
+
     /**
      * Muestra la vista principal del reporte (Grid y filtros).
      * @return string
@@ -75,34 +90,44 @@ class ReportesController extends Controller
         // Parámetros de la vista
         $range = $request->post('range', 'day'); // 'day', 'week', 'month', 'last-month'
         $specificDate = $request->post('specific_date');
+        $customRange = $request->post('custom_range', false);
+        $dateFrom = $request->post('date_from');
+        $dateTo = $request->post('date_to');
         $status = $request->post('status', 'Por Conciliar');
-        $clinicas = $request->post('clinicas', []); // Nuevo: array de IDs de clínicas
+        $clinicas = $request->post('clinicas', []);
         
         $startDate = date('Y-m-d');
         $endDate = date('Y-m-d');
         $title = "Detalle de Pagos de Hoy";
 
-        // 1. Lógica de rango de fechas (CON NUEVO CASO PARA MES ANTERIOR)
-        switch ($range) {
-            case 'week':
-                $startDate = date('Y-m-d', strtotime('last Monday'));
-                $title = "Detalle de Pagos Semanales";
-                break;
-            case 'month':
-                $startDate = date('Y-m-01');
-                $title = "Detalle de Pagos Mensuales";
-                break;
-            case 'last-month':
-                $startDate = date('Y-m-01', strtotime('first day of last month'));
-                $endDate = date('Y-m-t', strtotime('last month'));
-                $title = "Detalle de Pagos del Mes Anterior";
-                break;
-        }
+        // 1. Lógica de rango de fechas (CON NUEVO CASO PARA RANGO PERSONALIZADO)
+        if ($customRange && $dateFrom && $dateTo) {
+            $startDate = $dateFrom;
+            $endDate = $dateTo;
+            $title = "Detalle de Pagos del " . Yii::$app->formatter->asDate($dateFrom, 'long') . 
+                    " al " . Yii::$app->formatter->asDate($dateTo, 'long');
+        } else {
+            switch ($range) {
+                case 'week':
+                    $startDate = date('Y-m-d', strtotime('last Monday'));
+                    $title = "Detalle de Pagos Semanales";
+                    break;
+                case 'month':
+                    $startDate = date('Y-m-01');
+                    $title = "Detalle de Pagos Mensuales";
+                    break;
+                case 'last-month':
+                    $startDate = date('Y-m-01', strtotime('first day of last month'));
+                    $endDate = date('Y-m-t', strtotime('last month'));
+                    $title = "Detalle de Pagos del Mes Anterior";
+                    break;
+            }
 
-        if ($specificDate && $specificDate !== 'Invalid date') {
-            $startDate = $specificDate;
-            $endDate = $specificDate;
-            $title = "Detalle de Pagos para el día: " . Yii::$app->formatter->asDate($specificDate, 'long');
+            if ($specificDate && $specificDate !== 'Invalid date') {
+                $startDate = $specificDate;
+                $endDate = $specificDate;
+                $title = "Detalle de Pagos para el día: " . Yii::$app->formatter->asDate($specificDate, 'long');
+            }
         }
         
         // Modificar título para reflejar el estado seleccionado
