@@ -248,7 +248,7 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                     <div class="text-center border-top pt-4">
                         <div class="d-inline-block p-3 rounded-3 shadow-lg"
                             style="background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);">
-                            <?= Html::button('<i class="fas fa-chart-bar me-3"></i> Generar Reporte de Análisis', [
+                            <?= Html::button('<i class="fas fa-chart-bar me-3"></i> Generar Reporte', [
                                 'id' => 'btn-aplicar-filtros',
                                 'class' => 'btn btn-light btn-xl px-4 py-3 fw-bold shadow-lg',
                                 'style' => 'font-size: 1.6rem !important; border-radius: 10px;'
@@ -279,42 +279,6 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                         Configure los filtros arriba y presione <span class="badge bg-primary px-4 py-3 fs-5">Generar Reporte</span><br>
                         para visualizar el análisis de datos.
                     </p>
-
-                    <div class="row mt-5">
-                        <div class="col-md-4 mb-4">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body text-center p-4">
-                                    <div class="icon-container bg-primary bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
-                                        <i class="fas fa-filter text-primary fa-3x"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold">Filtros Avanzados</h5>
-                                    <p class="card-text text-muted">Combinación inteligente de criterios para análisis específicos.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body text-center p-4">
-                                    <div class="icon-container bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
-                                        <i class="fas fa-chart-line text-success fa-3x"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold">Visualización Gráfica</h5>
-                                    <p class="card-text text-muted">Gráficos interactivos y resúmenes visuales comprensibles.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body text-center p-4">
-                                    <div class="icon-container bg-danger bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
-                                        <i class="fas fa-file-export text-danger fa-3x"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold">Exportación</h5>
-                                    <p class="card-text text-muted">Descarga en formatos PDF y Excel con un solo clic.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
