@@ -18,6 +18,8 @@ class PagosReporteSearch extends Pagos
     public $nombres;
     public $apellidos;
     public $cedula;
+    public $clinica_nombre; // Agregar este atributo virtual
+
 
     /**
      * {@inheritdoc}
@@ -31,10 +33,22 @@ class PagosReporteSearch extends Pagos
             [['monto_usd'], 'number'],
 
             // Reglas para los atributos virtuales de UserDatos (Nombres, Apellidos, Cédula)
-            [['nombres', 'apellidos', 'cedula'], 'safe'],
+            [['nombres', 'apellidos', 'cedula', 'clinica_nombre'], 'safe'],
         ];
     }
 
+    public function attributeLabels()
+    {
+        $labels = parent::attributeLabels();
+
+        // Agregar etiquetas para atributos virtuales
+        $labels['nombres'] = 'Nombres';
+        $labels['apellidos'] = 'Apellidos';
+        $labels['cedula'] = 'Cédula';
+        $labels['clinica_nombre'] = 'Clínica'; // Agregar esta etiqueta
+
+        return $labels;
+    }
     /**
      * {@inheritdoc}
      */
@@ -57,7 +71,8 @@ class PagosReporteSearch extends Pagos
     public function search($params, $startDate, $endDate, $status = 'Conciliado', $clinicas = [])
     {
         // 1. Inicializar la consulta básica - SOLO con JOIN necesario para nombres, apellidos, cédula
-        $query = Pagos::find()->joinWith(['userDatos.contratos.clinica']);
+        $query = Pagos::find()
+            ->joinWith(['userDatos', 'contratos.clinica']); // Agregar JOIN a contratos y clínica
 
         // 2. Configurar el proveedor de datos
         $dataProvider = new ActiveDataProvider([
@@ -68,6 +83,8 @@ class PagosReporteSearch extends Pagos
             // 3. Configuración de Ordenación (Sort)
             'sort' => [
                 'defaultOrder' => [
+                    'clinica_nombre' => SORT_ASC, // Ordenar por nombre de clínica ascendente por defecto
+
                     'id' => SORT_ASC, // Ordenar por ID ascendente
                 ],
                 'attributes' => [
@@ -88,11 +105,12 @@ class PagosReporteSearch extends Pagos
                     'fecha_pago',
                     'metodo_pago',
                     'estatus',
-                    // ADD THIS NEW ATTRIBUTE FOR HOSPITAL SORTING:
+                    // AGREGAR ATRIBUTO VIRTUAL PARA ORDENAR POR CLÍNICA
                     'clinica_nombre' => [
                         'asc' => ['rm_clinica.nombre' => SORT_ASC],
                         'desc' => ['rm_clinica.nombre' => SORT_DESC],
-                    ]
+                        'label' => 'Clínica',
+                    ],
                 ],
             ],
         ]);
@@ -161,7 +179,8 @@ class PagosReporteSearch extends Pagos
     public function searchConClinicas($params, $startDate, $endDate, $status = 'Conciliado', $clinicas = [])
     {
         // 1. Inicializar la consulta básica
-        $query = Pagos::find()->joinWith(['userDatos.contratos.clinica']);
+        $query = Pagos::find()->joinWith(['userDatos', 'contratos.clinica']); // Agregar JOIN a contratos y clínica
+
 
         // 2. Si hay filtro de clínicas, aplicar subconsulta
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
@@ -184,6 +203,8 @@ class PagosReporteSearch extends Pagos
             'sort' => [
                 'defaultOrder' => ['id' => SORT_ASC],
                 'attributes' => [
+                    'clinica_nombre' => SORT_ASC, // Ordenar por clínica por defecto
+
                     'id',
                     'nombres' => [
                         'asc' => ['userDatos.nombres' => SORT_ASC],
@@ -201,11 +222,12 @@ class PagosReporteSearch extends Pagos
                     'fecha_pago',
                     'metodo_pago',
                     'estatus',
-                    // ADD THIS NEW ATTRIBUTE FOR HOSPITAL SORTING:
+                    // AGREGAR ATRIBUTO VIRTUAL PARA ORDENAR POR CLÍNICA
                     'clinica_nombre' => [
                         'asc' => ['rm_clinica.nombre' => SORT_ASC],
                         'desc' => ['rm_clinica.nombre' => SORT_DESC],
-                    ]
+                        'label' => 'Clínica',
+                    ],
                 ],
             ],
         ]);
@@ -284,13 +306,14 @@ class PagosReporteSearch extends Pagos
             $query->andWhere(['rm_clinica.id' => $clinicas]);
         }
 
-        // Agrupar por clínica y obtener resumen - CORREGIDO: usando comillas simples dentro de comillas dobles
+        // Agrupar por clínica y obtener resumen - CORREGIDO: usar comillas simples para strings
         $result = $query->select([
             'clinica_id' => 'rm_clinica.id',
             'clinica_nombre' => 'rm_clinica.nombre',
             'clinica_rif' => 'rm_clinica.rif',
             'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
             'total_pagos' => 'COUNT(DISTINCT pagos.id)',
+            // CORRECCIÓN: Usar comillas simples para valores de string
             'conciliados' => new Expression("SUM(CASE WHEN pagos.estatus = 'Conciliado' THEN 1 ELSE 0 END)"),
             'pendientes' => new Expression("SUM(CASE WHEN pagos.estatus = 'Por Conciliar' THEN 1 ELSE 0 END)")
         ])
@@ -334,8 +357,8 @@ class PagosReporteSearch extends Pagos
         }
 
         $result = $query->select([
-            'conciliados' => new Expression("SUM(CASE WHEN pagos.estatus = 'Conciliado' THEN 1 ELSE 0 END)"),
-            'pendientes' => new Expression("SUM(CASE WHEN pagos.estatus = 'Por Conciliar' THEN 1 ELSE 0 END)"),
+            'conciliados' => 'SUM(CASE WHEN pagos.estatus = "Conciliado" THEN 1 ELSE 0 END)',
+            'pendientes' => 'SUM(CASE WHEN pagos.estatus = "Por Conciliar" THEN 1 ELSE 0 END)',
             'total' => 'COUNT(*)'
         ])
             ->asArray()

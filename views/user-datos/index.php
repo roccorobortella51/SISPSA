@@ -30,8 +30,8 @@ $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA"); // Lógica de permisos original
 
 // --- BREADCRUMBS CONDICIONALES ---
-if($permisos == true){
-$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']]; // Siempre se muestra la raíz de clínicas
+if ($permisos == true) {
+    $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']]; // Siempre se muestra la raíz de clínicas
 }
 if ($clinica && $clinica->id !== null) {
     // Si estamos en el contexto de una clínica, añadirla a las migas de pan
@@ -50,28 +50,28 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 ?>
 
 <div class="main-container"> <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
-    
-    <div class="header-section"> 
+
+    <div class="header-section">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
             <?php if ($permisos) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS', 
-                    ['masivo'], 
+                    '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS',
+                    ['masivo'],
                     ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
-                ) ?> 
+                ) ?>
                 <?= Html::a(
-                    '<i class="fas fa-plus mr-2"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA', 
-                    ['create'], 
+                    '<i class="fas fa-plus mr-2"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA',
+                    ['create'],
                     ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
-                ) ?> 
+                ) ?>
             <?php endif; ?>
             <?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-undo mr-2"></i> Volver a Clínica', 
-                    ['/rm-clinica/view', 'id' => $clinica->id], 
+                    '<i class="fas fa-undo mr-2"></i> Volver a Clínica',
+                    ['/rm-clinica/view', 'id' => $clinica->id],
                     [
-                        'class' => 'btn-base btn-gray', 
+                        'class' => 'btn-base btn-gray',
                         'title' => 'Volver a los detalles de la clínica',
                     ]
                 ) ?>
@@ -79,7 +79,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
         </div>
     </div>
 
-    <div class="ms-panel ms-panel-fh border-indigo"> <div class="ms-panel-header">
+    <div class="ms-panel ms-panel-fh border-indigo">
+        <div class="ms-panel-header">
             <h3 class="section-title">
                 <i class="fas fa-users mr-3 text-indigo-600"></i> Listado de Afiliados
             </h3>
@@ -130,7 +131,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'filter' => Select2::widget([
                                 'model' => $searchModel,
                                 'attribute' => 'user_datos_type_id',
-                                'data' => app\models\UserDatosType::getList(), 
+                                'data' => app\models\UserDatosType::getList(),
                                 'options' => ['placeholder' => 'Seleccionar tipo'],
                                 'pluginOptions' => [
                                     'allowClear' => true
@@ -149,8 +150,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'model' => $searchModel,
                                 'attribute' => 'clinica_id',
                                 'data' => \yii\helpers\ArrayHelper::map(
-                                    \app\models\RmClinica::find()->orderBy('nombre')->all(), 
-                                    'id', 
+                                    \app\models\RmClinica::find()->orderBy('nombre')->all(),
+                                    'id',
                                     'nombre'
                                 ),
                                 'options' => ['placeholder' => 'Seleccionar clínica'],
@@ -166,7 +167,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         [
                             'attribute' => 'afiliado_corporativo_id',
                             'label' => 'Corporativo',
-                            'value' => function($model) {
+                            'value' => function ($model) {
                                 // Only show corporativo name for corporativo affiliates (type_id = 2)
                                 if ($model->user_datos_type_id == 2 && $model->corporativo) {
                                     return $model->corporativo->nombre;
@@ -177,8 +178,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'model' => $searchModel,
                                 'attribute' => 'afiliado_corporativo_id',
                                 'data' => \yii\helpers\ArrayHelper::map(
-                                    \app\models\Corporativo::find()->orderBy('nombre')->all(), 
-                                    'id', 
+                                    \app\models\Corporativo::find()->orderBy('nombre')->all(),
+                                    'id',
                                     'nombre'
                                 ),
                                 'options' => [
@@ -189,7 +190,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                     'allowClear' => true
                                 ],
                             ]),
-                            'contentOptions' => function($model) {
+                            'contentOptions' => function ($model) {
                                 // Style differently for corporativo affiliates
                                 if ($model->user_datos_type_id == 2) {
                                     return ['class' => 'corporativo-affiliate'];
@@ -198,8 +199,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             },
                         ],
                         [
-                            'label' => 'Nombre Completo', 
-                            'attribute' => 'nombres', 
+                            'label' => 'Nombre Completo',
+                            'attribute' => 'nombres',
                             'value' => function ($model) {
                                 return $model->nombres . ' ' . $model->apellidos;
                             },
@@ -212,27 +213,27 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         ],
                         [
                             'label' => 'Cédula de Identidad',
-                            'attribute' => 'cedula',  
+                            'attribute' => 'cedula',
                             'value' => function ($model) {
                                 return ($model->tipo_cedula ?? '') . ' ' . ($model->cedula ?? '');
                             },
-                            'format' => 'ntext', 
+                            'format' => 'ntext',
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'options' => ['style' => 'width: 200px;'], 
-                            'contentOptions' => ['class' => 'text-center'], 
+                            'options' => ['style' => 'width: 200px;'],
+                            'contentOptions' => ['class' => 'text-center'],
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar por cédula', 
+                                'placeholder' => 'Buscar por cédula',
                                 'class' => 'form-control text-center',
                             ],
                         ],
                         'telefono',
                         [
                             'attribute' => 'email',
-                            'label' => 'Correo Electrónico', 
-                            'format' => 'email', 
+                            'label' => 'Correo Electrónico',
+                            'format' => 'email',
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'options' => ['style' => 'width: 300px;'], 
-                            'filterInputOptions' => [ 
+                            'options' => ['style' => 'width: 300px;'],
+                            'filterInputOptions' => [
                                 'placeholder' => 'Buscar por correo',
                                 'class' => 'form-control text-center',
                             ],
@@ -241,7 +242,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'label' => 'Asesor',
                             'format' => 'ntext',
                             'value' => function ($model) {
-                                
+
                                 if ($model->asesor && $model->asesor->userDatos) {
                                     $ud = $model->asesor->userDatos;
                                     return trim(($ud->nombres ?? '') . ' ' . ($ud->apellidos ?? '')) ?: null;
@@ -258,7 +259,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'attribute' => 'estatus_solvente',
                             'format' => 'Html',
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                            'value' => function($model) {
+                            'value' => function ($model) {
                                 $value = $model->estatus_solvente;
                                 // Handle different possible values (uppercase, lowercase, boolean, numeric)
                                 if (strtoupper($value) === "SI" || $value === 1 || $value === true || $value === "Sí") {
@@ -271,7 +272,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             /** 'filter' => [0 => 'No', 1 => 'Sí'],**/
                             'filter' => ['Si' => 'Sí', 'No' => 'No']
                         ],
-                        
+
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
@@ -295,7 +296,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ( $clinica, $rol) { // Pasar $permisos y $clinica
+                                'update' => function ($url, $model, $key) use ($clinica, $rol) { // Pasar $permisos y $clinica
                                     if ($rol == 'superadmin' || $rol = 'DIRECTOR-COMERCIALIZACIÓN') {
                                         $params = ['update', 'id' => $model->id];
                                         if ($clinica && $clinica->id !== null) {
@@ -309,40 +310,39 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                                 'class' => 'btn-action view'
                                             ]
                                         );
-                                    }else{
+                                    } else {
                                         return "";
                                     }
                                 },
                                 // BOTÓN DE ATENCION
-'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
-    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
-        
-        // URLs para pasar a la función JS
-        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
-        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
+                                'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
+                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
 
-        // Botón que usa DATA ATTRIBUTES para las URLs
-        return Html::a(
-            // --- CÓDIGO DEL ÍCONO MODIFICADO (Font Awesome Heart) ---
-            '<i class="fas fa-heartbeat" style="color: red;"></i>', 
-            // --------------------------------------------------------
-            '#', // URL vacía, la acción será manejada por JS
-            [
-                'title' => 'Gestionar Atención',
-                'class' => 'btn-action view atencion-btn', 
-                'data' => [
-                    'url-siniestro' => $urlSiniestro,
-                    'url-cita' => $urlCita,
-                ],
-            ]
-        );
-    }
-    return "";
-},
+                                        // URLs para pasar a la función JS
+                                        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
+                                        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
+
+                                        // Botón que usa DATA ATTRIBUTES para las URLs
+                                        return Html::a(
+                                            // --- CÓDIGO DEL ÍCONO MODIFICADO (Font Awesome Heart) ---
+                                            '<i class="fas fa-heartbeat" style="color: red;"></i>',
+                                            // --------------------------------------------------------
+                                            '#', // URL vacía, la acción será manejada por JS
+                                            [
+                                                'title' => 'Gestionar Atención',
+                                                'class' => 'btn-action view atencion-btn',
+                                                'data' => [
+                                                    'url-siniestro' => $urlSiniestro,
+                                                    'url-cita' => $urlCita,
+                                                ],
+                                            ]
+                                        );
+                                    }
+                                    return "";
+                                },
                                 'pagos' => function ($url, $model, $key) {
-                                    // Si el tipo de afiliado (user_datos_type_id) NO es 2 (Corporativo), muestra el botón.
-                                    // user_datos_type_id = 1 (Individual)
-                                    if ($model->user_datos_type_id != 2) {
+                                    // Show for both Individual (1) AND Corporativo (2)
+                                    if ($model->user_datos_type_id == 1 || $model->user_datos_type_id == 2) {
                                         $params = ['/contratos/index', 'user_id' => $model->id];
                                         return Html::a(
                                             '<i class="fas fa-file-invoice-dollar ms-text-success"></i>',
@@ -353,9 +353,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                             ]
                                         );
                                     }
-                                    // Si es tipo 2, la función no devuelve nada, por lo que el botón no se renderiza.
-                                    return null; 
-
+                                    return null;
                                 },
                                 'delete' => function ($url, $model, $key) use ($permisos, $clinica) { // Pasar $permisos y $clinica
                                     if ($permisos) {
