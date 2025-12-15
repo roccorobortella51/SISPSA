@@ -22,62 +22,7 @@ if (!empty($summaryPorClinica)):
 ?>
     <!-- Microsoft Professional Resumen Section - Adjusted -->
     <div class="col-12 resumen-section mb-4">
-        <!-- Panel de Resumen por Clínica - Adjusted Header -->
-        <div class="ms-card border-0 shadow-lg mb-4 ms-fade-in"
-            style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #0078d4;">
-            <div class="ms-card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-lg-8 mb-3 mb-lg-0">
-                        <div class="d-flex align-items-center">
-                            <div class="me-3">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center shadow"
-                                    style="width: 70px; height: 70px; background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);">
-                                    <i class="fas fa-hospital text-white" style="font-size: 2.2rem;"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <h2 class="display-5 fw-bold mb-1 ms-primary" style="font-size: 1.8rem !important;">
-                                    <i class="fas fa-chart-pie me-2"></i>Resumen por Clínica
-                                </h2>
-                                <div class="d-flex flex-wrap align-items-center gap-3">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-chart-bar me-2 ms-primary" style="font-size: 1.3rem;"></i>
-                                        <span class="ms-body-lg fw-semibold" style="font-size: 1.3rem !important;">
-                                            Distribución de pagos por institución médica
-                                        </span>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <i class="far fa-calendar-alt me-2 ms-primary" style="font-size: 1.3rem;"></i>
-                                        <span class="ms-body-lg fw-bold" style="font-size: 1.3rem !important;">
-                                            <?= $startDate ?> al <?= $endDate ?>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="d-flex flex-column align-items-lg-end gap-2">
-                            <button class="ms-btn ms-btn-danger px-3 py-2 shadow" id="btn-resumen-pdf"
-                                style="font-size: 1.3rem !important;">
-                                <i class="fas fa-file-pdf me-2" style="font-size: 1.3rem;"></i> Resumen PDF
-                            </button>
-                            <div class="text-center text-lg-end">
-                                <div class="d-inline-block px-3 py-2 rounded-3 shadow-sm"
-                                    style="background: white; border-left: 4px solid #107c10;">
-                                    <div class="ms-body-sm text-muted mb-1" style="font-size: 1.1rem !important;">
-                                        Clínicas Analizadas
-                                    </div>
-                                    <div class="display-6 fw-bold text-success" style="font-size: 2.2rem !important;">
-                                        <?= count($summaryPorClinica) ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Tabla de Resumen Ajustada -->
         <div class="ms-card border-0 shadow-lg p-0 ms-fade-in" style="animation-delay: 0.1s;">
@@ -247,12 +192,7 @@ if (!empty($summaryPorClinica)):
                                         <span class="display-6 fw-bold text-success mb-1" style="font-size: 1.4rem !important;">
                                             <?= Yii::$app->formatter->asCurrency($resumen['total_monto'], 'VES') ?>
                                         </span>
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-percentage me-1" style="font-size: 1.1rem; color: #605e5c;"></i>
-                                            <small class="ms-body-sm text-muted" style="font-size: 1.1rem !important;">
-                                                <?= number_format($porcentajeTotal, 1) ?>% del total
-                                            </small>
-                                        </div>
+
                                     </div>
                                 </td>
                             </tr>
