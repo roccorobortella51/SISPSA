@@ -131,7 +131,6 @@ class Cuotas extends \yii\db\ActiveRecord
 
         return $cuotas;
     }
-    // Add these methods to app/models/Cuotas.php
 
     /**
      * Get the last cuota (paid or pending) for a contract
@@ -163,9 +162,87 @@ class Cuotas extends \yii\db\ActiveRecord
     }
 
     /**
-     * Generate advance cuotas for a contract
+     * Preview advance cuotas without saving - CORREGIDO: Cambiado de nombre a previewCuotasAdelantadas
      */
-    public static function generarCuotasAdelantadas($contrato_id, $num_cuotas, $fecha_inicio = null, $monto = null)
+    public static function previewCuotasAdelantadas($contrato_id, $num_cuotas, $fecha_inicio = null, $meses = '', $modo = 'cantidad', $fecha_limite = null)
+    {
+        try {
+            // Get contract details
+            $contrato = Contratos::findOne($contrato_id);
+            if (!$contrato) {
+                throw new \Exception("Contrato no encontrado");
+            }
+
+            // Get last cuota
+            $lastCuota = self::getLastCuotaForContract($contrato_id);
+            $startDate = $fecha_inicio;
+
+            if (!$startDate && $lastCuota) {
+                $startDate = $lastCuota->fecha_vencimiento;
+            } elseif (!$startDate) {
+                // CORREGIDO: Cambiar fecha_inicio por fecha_ini
+                $startDate = $contrato->fecha_ini ?: date('Y-m-d');
+            }
+
+            // Determine amount
+            $montoCuota = $contrato->monto;
+            if (!$montoCuota && $lastCuota) {
+                $montoCuota = $lastCuota->monto_usd ?: $lastCuota->monto;
+            }
+
+            $previewCuotas = [];
+            $currentDate = new \DateTime($startDate);
+
+            for ($i = 0; $i < $num_cuotas; $i++) {
+                $currentDate->modify('+1 month');
+                $fechaVencimiento = $currentDate->format('Y-m-07');
+
+                // Check if exists
+                $exists = self::find()
+                    ->where([
+                        'contrato_id' => $contrato_id,
+                        'fecha_vencimiento' => $fechaVencimiento
+                    ])
+                    ->exists();
+
+                $previewCuotas[] = [
+                    'numero' => $i + 1,
+                    'fecha_vencimiento' => $fechaVencimiento,
+                    'monto' => round($montoCuota, 2),
+                    'existe' => $exists,
+                    'mes' => $currentDate->format('F Y')
+                ];
+            }
+
+            return [
+                'success' => true,
+                'contrato' => [
+                    'id' => $contrato->id,
+                    'nrocontrato' => $contrato->nrocontrato,
+                    'user_id' => $contrato->user_id,
+                    'fecha_ini' => $contrato->fecha_ini // Añadir esto para referencia
+                ],
+                'last_cuota' => $lastCuota ? [
+                    'fecha_vencimiento' => $lastCuota->fecha_vencimiento,
+                    'estatus' => $lastCuota->estatus,
+                    'monto' => $lastCuota->monto_usd ?: $lastCuota->monto
+                ] : null,
+                'preview' => $previewCuotas,
+                'total' => round($montoCuota * $num_cuotas, 2)
+            ];
+        } catch (\Exception $e) {
+            \Yii::error("Error in previewCuotasAdelantadas: " . $e->getMessage(), 'cuotas');
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate advance cuotas for a contract with 1-year limit
+     */
+    public static function generarCuotasAdelantadas($contrato_id, $num_cuotas, $fecha_inicio = null, $meses = '', $fecha_limite = null)
     {
         $transaction = Yii::$app->db->beginTransaction();
         try {
@@ -188,7 +265,7 @@ class Cuotas extends \yii\db\ActiveRecord
             }
 
             // Determine amount to use
-            $montoCuota = $monto ?: $contrato->monto;
+            $montoCuota = $contrato->monto;
             if (!$montoCuota && $lastCuota) {
                 $montoCuota = $lastCuota->monto_usd ?: $lastCuota->monto;
             }
@@ -200,10 +277,72 @@ class Cuotas extends \yii\db\ActiveRecord
             $generatedCuotas = [];
             $currentDate = new \DateTime($startDate);
 
-            for ($i = 0; $i < $num_cuotas; $i++) {
-                // Calculate next due date (7th of next month)
-                $currentDate->modify('+1 month');
-                $fechaVencimiento = $currentDate->format('Y-m-07');
+            // Preparar array de cuotas a generar
+            $cuotas_a_generar = [];
+
+            // Si hay meses específicos
+            if (!empty($meses)) {
+                $mesesArray = explode(',', $meses);
+                $contador = 1;
+                foreach ($mesesArray as $mes) {
+                    // Crear fecha del primer día del mes
+                    $fechaVencimiento = new \DateTime($mes . '-01');
+                    // Establecer como día 7 del mes
+                    $fechaVencimiento->setDate(
+                        $fechaVencimiento->format('Y'),
+                        $fechaVencimiento->format('m'),
+                        7
+                    );
+
+                    $cuotas_a_generar[] = [
+                        'numero' => $contador++,
+                        'fecha_vencimiento' => $fechaVencimiento->format('Y-m-d'),
+                        'mes' => $fechaVencimiento->format('F Y')
+                    ];
+                }
+            } else {
+                // Modo: por cantidad de cuotas
+                for ($i = 0; $i < $num_cuotas; $i++) {
+                    $fechaVencimiento = clone $currentDate;
+                    $fechaVencimiento->modify('+' . ($i + 1) . ' month');
+                    $fechaVencimiento->setDate(
+                        $fechaVencimiento->format('Y'),
+                        $fechaVencimiento->format('m'),
+                        7
+                    );
+
+                    $cuotas_a_generar[] = [
+                        'numero' => $i + 1,
+                        'fecha_vencimiento' => $fechaVencimiento->format('Y-m-d'),
+                        'mes' => $fechaVencimiento->format('F Y')
+                    ];
+                }
+            }
+
+            // ==============================================
+            // VALIDACIÓN DE LÍMITE DE 1 AÑO - INSERTA ESTO
+            // ==============================================
+            if ($fecha_limite) {
+                $fechaLimiteObj = new \DateTime($fecha_limite);
+                foreach ($cuotas_a_generar as $cuota) {
+                    $fechaCuota = new \DateTime($cuota['fecha_vencimiento']);
+                    if ($fechaCuota > $fechaLimiteObj) {
+                        return [
+                            'success' => false,
+                            'error' => "No se pueden generar cuotas después de " . $fechaLimiteObj->format('Y-m-d') .
+                                " (límite de 1 año desde inicio del contrato)",
+                            'generated' => 0
+                        ];
+                    }
+                }
+            }
+            // ==============================================
+            // FIN DE LA VALIDACIÓN
+            // ==============================================
+
+            // Generar las cuotas válidas
+            foreach ($cuotas_a_generar as $cuotaData) {
+                $fechaVencimiento = $cuotaData['fecha_vencimiento'];
 
                 // Check if cuota already exists for this date
                 $existingCuota = self::find()
@@ -246,81 +385,6 @@ class Cuotas extends \yii\db\ActiveRecord
         } catch (\Exception $e) {
             $transaction->rollBack();
             Yii::error("Error generando cuotas adelantadas: " . $e->getMessage(), 'cuotas');
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Preview advance cuotas without saving
-     */
-    public static function previewCuotasAdelantadas($contrato_id, $num_cuotas, $fecha_inicio = null, $meses = '', $modo = 'cantidad')
-    {
-        try {
-            // Get contract details
-            $contrato = Contratos::findOne($contrato_id);
-            if (!$contrato) {
-                throw new \Exception("Contrato no encontrado");
-            }
-
-            // Get last cuota
-            $lastCuota = self::getLastCuotaForContract($contrato_id);
-            $startDate = $fecha_inicio;
-
-            if (!$startDate && $lastCuota) {
-                $startDate = $lastCuota->fecha_vencimiento;
-            } elseif (!$startDate) {
-                $startDate = $contrato->fecha_ini ?: date('Y-m-d');
-            }
-
-            // Determine amount
-            $montoCuota = $contrato->monto;
-            if (!$montoCuota && $lastCuota) {
-                $montoCuota = $lastCuota->monto_usd ?: $lastCuota->monto;
-            }
-
-            $previewCuotas = [];
-            $currentDate = new \DateTime($startDate);
-
-            for ($i = 0; $i < $num_cuotas; $i++) {
-                $currentDate->modify('+1 month');
-                $fechaVencimiento = $currentDate->format('Y-m-07');
-
-                // Check if exists
-                $exists = self::find()
-                    ->where([
-                        'contrato_id' => $contrato_id,
-                        'fecha_vencimiento' => $fechaVencimiento
-                    ])
-                    ->exists();
-
-                $previewCuotas[] = [
-                    'numero' => $i + 1,
-                    'fecha_vencimiento' => $fechaVencimiento,
-                    'monto' => round($montoCuota, 2),
-                    'existe' => $exists,
-                    'mes' => $currentDate->format('F Y')
-                ];
-            }
-
-            return [
-                'success' => true,
-                'contrato' => [
-                    'id' => $contrato->id,
-                    'nrocontrato' => $contrato->nrocontrato,
-                    'user_id' => $contrato->user_id
-                ],
-                'last_cuota' => $lastCuota ? [
-                    'fecha_vencimiento' => $lastCuota->fecha_vencimiento,
-                    'estatus' => $lastCuota->estatus,
-                    'monto' => $lastCuota->monto_usd ?: $lastCuota->monto
-                ] : null,
-                'preview' => $previewCuotas,
-                'total' => round($montoCuota * $num_cuotas, 2)
-            ];
-        } catch (\Exception $e) {
             return [
                 'success' => false,
                 'error' => $e->getMessage()

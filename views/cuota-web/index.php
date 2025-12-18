@@ -403,12 +403,11 @@ $this->params['breadcrumbs'][] = $this->title;
                                 <div class="form-group">
                                     <label class="form-label">Seleccionar Meses</label>
                                     <div id="months-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px; background: #f8f9fa;">
-                                        <!-- Months will be populated by JavaScript -->
-                                        <div class="text-center py-3 text-muted">
-                                            <i class="fas fa-spinner fa-spin"></i> Cargando meses...
+                                        <!-- Los meses se cargarán cuando se seleccione un contrato -->
+                                        <div class="text-center text-muted py-3">
+                                            <i class="fas fa-calendar-alt"></i> Primero seleccione un contrato para ver los meses disponibles
                                         </div>
                                     </div>
-                                    <small class="form-text text-muted">Seleccione los meses específicos para generar cuotas</small>
                                 </div>
                             </div>
 
@@ -418,9 +417,6 @@ $this->params['breadcrumbs'][] = $this->title;
                                 <small class="form-text text-muted">Si se deja vacío, se usará la última cuota o fecha del contrato</small>
                             </div>
 
-                            <button type="button" class="btn btn-outline-primary" onclick="previewCuotas()">
-                                <i class="fas fa-eye"></i> Previsualizar Cuotas
-                            </button>
                         </div>
 
                         <div id="adelantadas-step-3" style="display: none;">
@@ -767,6 +763,23 @@ $this->params['breadcrumbs'][] = $this->title;
                 alert('Error: Modal no encontrado. Recargue la página.');
                 return;
             }
+            // Reset modal content
+            resetModal();
+
+            // ==============================================
+            // AÑADE ESTO AQUÍ - LIMITAR CUOTAS A 12
+            // ==============================================
+            // También actualizar el input de cantidad de cuotas
+            document.getElementById('num-cuotas').max = 12; // Máximo 12 cuotas (1 año)
+            document.getElementById('num-cuotas').value = Math.min(3, 12); // Asegurar que no sea mayor a 12
+            // ==============================================
+
+            // Show the modal with Bootstrap
+            modal.modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: true
+            });
 
             // Ensure no blur/opacity filters are applied
             $('body').css({
@@ -778,15 +791,9 @@ $this->params['breadcrumbs'][] = $this->title;
             // Remove any existing conflicting modals
             $('.modal').not('#adelantadasModal').modal('hide');
 
-            // Show the modal with Bootstrap
-            modal.modal({
-                backdrop: 'static',
-                keyboard: false,
-                show: true
-            });
 
-            // Reset modal content
-            resetModal();
+
+
 
             console.log('Modal should be fully visible now');
         }
@@ -826,6 +833,14 @@ $this->params['breadcrumbs'][] = $this->title;
             $('#preview-table-body').empty();
             $('#preview-total').text('0.00');
 
+            // ==============================================
+            // AÑADE ESTO AQUÍ - LIMITAR CUOTAS A 12
+            // ==============================================
+            // También actualizar el input de cantidad de cuotas
+            document.getElementById('num-cuotas').max = 12; // Máximo 12 cuotas (1 año)
+            document.getElementById('num-cuotas').value = Math.min(3, 12); // Asegurar que no sea mayor a 12
+            // ==============================================
+
             console.log('Modal content reset complete');
         }
 
@@ -864,29 +879,58 @@ $this->params['breadcrumbs'][] = $this->title;
         }
 
         function resetModal() {
+            console.log('resetModal - Initializing modal content');
+
             currentStep = 1;
             selectedUserId = null;
             selectedContractId = null;
             previewData = null;
 
-            // Reset UI
-            document.getElementById('adelantadas-step-1').style.display = 'block';
-            document.getElementById('adelantadas-step-2').style.display = 'none';
-            document.getElementById('adelantadas-step-3').style.display = 'none';
-            document.getElementById('prev-step-btn').style.display = 'none';
-            document.getElementById('next-step-btn').style.display = 'block';
-            document.getElementById('generate-btn').style.display = 'none';
+            // Show step 1, hide others
+            $('#adelantadas-step-1').show();
+            $('#adelantadas-step-2').hide();
+            $('#adelantadas-step-3').hide();
+
+            // Reset buttons
+            $('#prev-step-btn').hide();
+            $('#next-step-btn').show();
+            $('#generate-btn').hide();
 
             // Clear fields
-            document.getElementById('user-search').value = '';
-            document.getElementById('users-list').innerHTML = '';
-            document.getElementById('user-results').style.display = 'none';
-            document.getElementById('selected-user').style.display = 'none';
-            document.getElementById('contracts-section').style.display = 'none';
-            document.getElementById('contract-info').style.display = 'none';
-            document.getElementById('contrato-select').innerHTML = '<option value="">Seleccione un contrato...</option>';
-            document.getElementById('preview-table-body').innerHTML = '';
-            document.getElementById('preview-total').textContent = '0.00';
+            $('#user-search').val('');
+            $('#users-list').empty();
+            $('#user-results').hide();
+            $('#selected-user').hide();
+            $('#contracts-section').hide();
+            $('#contract-info').hide();
+
+            $('#contrato-select').html('<option value="">Seleccione un contrato...</option>');
+            $('#preview-table-body').empty();
+            $('#preview-total').text('0.00');
+
+            // Reset generation mode to "cantidad" (default)
+            document.getElementById('mode-cantidad').checked = true;
+            document.getElementById('mode-meses').checked = false;
+
+            // Show cantidad fields, hide meses fields
+            document.getElementById('mode-cantidad-fields').style.display = 'block';
+            document.getElementById('mode-meses-fields').style.display = 'none';
+
+            // Show fecha-inicio field (visible in cantidad mode)
+            const fechaInicioGroup = document.querySelector('#fecha-inicio').closest('.form-group');
+            if (fechaInicioGroup) {
+                fechaInicioGroup.style.display = 'block';
+            }
+
+            // ==============================================
+            // AÑADE ESTO AQUÍ - LIMITAR CUOTAS A 12
+            // ==============================================
+            // También actualizar el input de cantidad de cuotas
+            document.getElementById('num-cuotas').max = 12; // Máximo 12 cuotas (1 año)
+            document.getElementById('num-cuotas').value = Math.min(3, 12); // Asegurar que no sea mayor a 12
+            // ==============================================
+
+            console.log('Modal content reset complete');
         }
 
         function searchUser() {
@@ -1021,6 +1065,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                 option.value = contrato.id;
                                 option.textContent = `Contrato ${contrato.nrocontrato} - ${contrato.estatus} ${lastCuotaInfo}`;
                                 option.setAttribute('data-monto', contrato.monto);
+                                option.setAttribute('data-fecha-ini', contrato.fecha_ini); // AÑADIR ESTO
                                 select.appendChild(option);
                             });
                         }
@@ -1048,13 +1093,24 @@ $this->params['breadcrumbs'][] = $this->title;
 
             const selectedOption = select.options[select.selectedIndex];
             const monto = selectedOption.getAttribute('data-monto') || '0.00';
+            const fechaIni = selectedOption.getAttribute('data-fecha-ini') || 'No disponible';
+
+            // Formatear fecha
+            const fechaFormateada = fechaIni !== 'No disponible' ?
+                new Date(fechaIni).toLocaleDateString('es-ES') : 'No disponible';
 
             document.getElementById('contract-details').innerHTML = `
         <strong>Contrato seleccionado:</strong> ${selectedOption.textContent}<br>
-        <strong>Monto de cuota:</strong> ${parseFloat(monto).toFixed(2)} USD
+        <strong>Monto de cuota:</strong> ${parseFloat(monto).toFixed(2)} USD<br>
+        <strong>Fecha inicio:</strong> ${fechaFormateada}
     `;
 
             document.getElementById('contract-info').style.display = 'block';
+
+            // Si estamos en modo "meses específicos", actualizar los meses
+            if (!document.getElementById('mode-cantidad').checked) {
+                populateMonths();
+            }
         }
 
         function nextStep() {
@@ -1121,58 +1177,179 @@ $this->params['breadcrumbs'][] = $this->title;
 
         function toggleGenerationMode() {
             const modeCantidad = document.getElementById('mode-cantidad').checked;
+            const fechaInicioGroup = document.querySelector('#fecha-inicio').closest('.form-group');
 
             if (modeCantidad) {
                 document.getElementById('mode-cantidad-fields').style.display = 'block';
                 document.getElementById('mode-meses-fields').style.display = 'none';
+
+                // Show the fecha-inicio field when in cantidad mode
+                if (fechaInicioGroup) {
+                    fechaInicioGroup.style.display = 'block';
+                }
             } else {
                 document.getElementById('mode-cantidad-fields').style.display = 'none';
                 document.getElementById('mode-meses-fields').style.display = 'block';
 
-                // Populate months immediately when switching to this mode
-                populateMonths();
+                // Hide the fecha-inicio field when in meses mode
+                if (fechaInicioGroup) {
+                    fechaInicioGroup.style.display = 'none';
+                }
 
-                // Force a reflow to ensure proper rendering
+                // Populate months immediately when switching to this mode
+                // Usar setTimeout para asegurar que el DOM esté listo
                 setTimeout(() => {
-                    const container = document.getElementById('months-container');
-                    if (container) {
-                        container.style.display = 'block';
-                    }
-                }, 10);
+                    populateMonths();
+                }, 50);
             }
         }
 
         function populateMonths() {
             const container = document.getElementById('months-container');
+            if (!container) return;
+
             container.innerHTML = '';
 
-            const today = new Date();
-            // We start from month 0 (this month) or month 1 (next month) 
-            // depending on your business logic. Here we start with NEXT month.
-
-            let html = '';
-            for (let i = 1; i <= 24; i++) {
-                const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-                const monthName = date.toLocaleString('es-ES', {
-                    month: 'long',
-                    year: 'numeric'
-                });
-                const monthValue = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-
-                // Create a flat structure. No .row or .col classes!
-                html += `
-            <div class="month-selector-item">
-                <input type="checkbox" 
-                       class="month-checkbox" 
-                       id="month-${i}" 
-                       value="${monthValue}">
-                <label for="month-${i}">
-                    ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}
-                </label>
-            </div>`;
+            // Verificar si hay contrato seleccionado
+            if (!selectedContractId) {
+                container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-exclamation-circle"></i> Primero seleccione un contrato</div>';
+                return;
             }
 
+            // Obtener información del contrato seleccionado
+            const select = document.getElementById('contrato-select');
+            const selectedOption = select.options[select.selectedIndex];
+
+            if (!selectedOption || selectedOption.value === '') {
+                container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-exclamation-circle"></i> Contrato no seleccionado</div>';
+                return;
+            }
+
+            // Obtener fecha_ini del contrato
+            const fechaIni = selectedOption.getAttribute('data-fecha-ini');
+
+            if (!fechaIni) {
+                container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-exclamation-circle"></i> Fecha de inicio del contrato no disponible</div>';
+                return;
+            }
+
+            // Calcular fechas de límite
+            const fechaInicioContrato = new Date(fechaIni);
+            const fechaLimite = new Date(fechaInicioContrato);
+            fechaLimite.setFullYear(fechaLimite.getFullYear() + 1); // +1 año desde inicio
+
+            const hoy = new Date();
+            const months = [];
+
+            // Generar meses desde la fecha de inicio del contrato
+            // Comenzar desde el mes siguiente al inicio del contrato
+            let currentMonth = new Date(fechaInicioContrato);
+            currentMonth.setMonth(currentMonth.getMonth() + 1); // Primer mes después del inicio
+
+            // Generar máximo 12 meses o hasta la fecha límite
+            for (let i = 0; i < 12; i++) {
+                // Si ya pasamos la fecha límite, detener
+                if (currentMonth > fechaLimite) {
+                    break;
+                }
+
+                // Si el mes es en el futuro (al menos del mes actual), mostrarlo
+                if (currentMonth >= hoy) {
+                    const monthName = currentMonth.toLocaleString('es-ES', {
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                    const monthValue = currentMonth.getMonth() + 1;
+                    const yearValue = currentMonth.getFullYear();
+                    const value = `${yearValue}-${monthValue.toString().padStart(2, '0')}`;
+
+                    months.push({
+                        name: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+                        value: value,
+                        date: new Date(currentMonth)
+                    });
+                }
+
+                // Pasar al siguiente mes
+                currentMonth.setMonth(currentMonth.getMonth() + 1);
+            }
+
+            // Ordenar meses por fecha
+            months.sort((a, b) => a.date - b.date);
+
+            if (months.length === 0) {
+                container.innerHTML = '<div class="text-center text-warning py-3"><i class="fas fa-calendar-times"></i> No hay meses disponibles dentro del período permitido</div>';
+                return;
+            }
+
+            // Formatear fechas para mostrar
+            const fechaInicioFormatted = fechaInicioContrato.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            const fechaLimiteFormatted = fechaLimite.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            // Construir HTML
+            let html = `
+        <div class="month-limit-box alert alert-info">
+            <p class="mb-1"><strong><i class="fas fa-calendar-alt"></i> Límite:</strong> Máximo 1 año desde inicio del contrato</p>
+            <p class="mb-0" style="font-size: 0.9rem;">
+                <strong>Fecha inicio:</strong> ${fechaInicioFormatted}<br>
+                <strong>Fecha límite:</strong> ${fechaLimiteFormatted}
+            </p>
+        </div>
+
+        <div class="select-all-wrapper mb-3">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="select-all-months">
+                <label class="form-check-label font-weight-bold" for="select-all-months" style="cursor:pointer;">
+                    <i class="fas fa-check-double text-primary"></i> Seleccionar todos los meses disponibles (${months.length})
+                </label>
+            </div>
+        </div>
+
+        <div class="months-grid-wrapper"> 
+    `;
+
+            // Generar checkboxes para cada mes disponible
+            months.forEach((month, index) => {
+                const checkboxId = `month-${index}`;
+
+                html += `
+            <div class="month-item-card" onclick="toggleMonthCheckbox('${checkboxId}')">
+                <input type="checkbox" 
+                       class="month-checkbox" 
+                       id="${checkboxId}" 
+                       value="${month.value}"
+                       onclick="event.stopPropagation();">
+                <label for="${checkboxId}">${month.name}</label>
+            </div>`;
+            });
+
+            html += '</div>';
             container.innerHTML = html;
+
+            // Añadir funcionalidad "Seleccionar todos"
+            const selectAll = document.getElementById('select-all-months');
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.month-checkbox');
+                    checkboxes.forEach(cb => {
+                        cb.checked = this.checked;
+                        const card = cb.closest('.month-item-card');
+                        if (card) {
+                            card.style.background = this.checked ? '#f0f7ff' : '#ffffff';
+                            card.style.borderColor = this.checked ? '#007bff' : '#dee2e6';
+                        }
+                    });
+                });
+            }
         }
 
         function previewCuotas() {
@@ -1188,8 +1365,8 @@ $this->params['breadcrumbs'][] = $this->title;
             if (modeCantidad) {
                 // MODE: Por cantidad de cuotas
                 numCuotas = parseInt(document.getElementById('num-cuotas').value);
-                if (isNaN(numCuotas) || numCuotas <= 0 || numCuotas > 24) {
-                    alert('Ingrese un número válido de cuotas (1-24)');
+                if (isNaN(numCuotas) || numCuotas <= 0 || numCuotas > 12) {
+                    alert('Ingrese un número válido de cuotas (1-12)');
                     return;
                 }
             } else {
@@ -1406,6 +1583,14 @@ $this->params['breadcrumbs'][] = $this->title;
                 show: false // Don't show on init
             });
 
+            // ==============================================
+            // AÑADE ESTO AQUÍ - LIMITAR CUOTAS A 12
+            // ==============================================
+            // También actualizar el input de cantidad de cuotas
+            document.getElementById('num-cuotas').max = 12; // Máximo 12 cuotas (1 año)
+            document.getElementById('num-cuotas').value = Math.min(3, 12); // Asegurar que no sea mayor a 12
+            // ==============================================
+
             // Mostrar panel de diagnóstico en desarrollo
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                 document.getElementById('diagnostic-panel').style.display = 'block';
@@ -1515,113 +1700,87 @@ $this->params['breadcrumbs'][] = $this->title;
             opacity: 1 !important;
         }
 
-        /* Better spacing for month checkboxes */
-        #months-container .month-item {
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            margin: 5px 0;
-        }
-
-        #months-container .form-check {
-            min-height: 30px;
-            display: flex;
-            align-items: center;
-        }
-
-        #months-container .form-check-input {
-            margin-right: 15px !important;
-            flex-shrink: 0;
-        }
-
-        #months-container .form-check-label {
-            flex-grow: 1;
-        }
-
-        /* NUCLEAR CSS SOLUTION FOR MONTH CHECKBOXES */
+        /* --- SIMPLE MONTH SELECTOR - NO GRID, NO COMPLEX CSS --- */
         #months-container {
+            padding: 10px !important;
+            background: #ffffff !important;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
             max-height: 400px;
             overflow-y: auto;
-            padding: 10px;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            background: white;
         }
 
-        #months-container .month-option-container {
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 12px 15px !important;
-            margin: 8px 0 !important;
-            border-left: 5px solid #007bff !important;
-            transition: all 0.2s;
-            min-height: 50px;
+        /* Simple alert box for info */
+        #months-container .alert-info {
+            margin-bottom: 15px;
+            padding: 10px 15px;
         }
 
-        #months-container .month-option-container:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
+        /* Simple select all option */
+        #months-container .select-all-wrapper {
+            padding: 8px 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
         }
 
-        #months-container .form-check {
+        /* THE SIMPLE FIX: Use flexbox columns instead of grid */
+        #months-container .months-simple-list {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+
+        /* Simple month item - NO GRID, NO COMPLEXITY */
+        .month-simple-item {
             display: flex !important;
             align-items: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            min-height: auto !important;
+            padding: 10px 15px !important;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            transition: background-color 0.2s;
         }
 
-        #months-container .form-check-input {
-            width: 22px !important;
-            height: 22px !important;
-            min-width: 22px !important;
-            margin-right: 20px !important;
-            margin-top: 0 !important;
-            margin-left: 0 !important;
+        .month-simple-item:hover {
+            background: #e9ecef;
+        }
+
+        /* Checkbox with GOOD SPACING */
+        .month-simple-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 15px !important;
+            /* GOOD SPACING HERE */
             flex-shrink: 0;
+            cursor: pointer;
         }
 
-        #months-container .form-check-label {
-            font-size: 16px !important;
-            font-weight: 500 !important;
-            color: #333 !important;
-            white-space: nowrap !important;
-            overflow: visible !important;
-            text-overflow: clip !important;
-            padding-left: 0 !important;
-            margin-left: 0 !important;
-            flex-grow: 1;
-            display: block !important;
+        /* Label with proper text wrapping */
+        .month-simple-item label {
+            margin: 0 !important;
+            font-size: 14px !important;
+            color: #333;
+            cursor: pointer;
+            white-space: normal !important;
+            /* Allows text to wrap */
+            word-break: break-word;
+            line-height: 1.4;
+            flex: 1;
         }
 
-        /* Ensure no text truncation */
-        #months-container * {
-            white-space: nowrap !important;
-            overflow: visible !important;
-            text-overflow: clip !important;
+        /* Simple checked state */
+        .month-simple-item.checked {
+            background: #e7f3ff;
+            border-color: #007bff;
         }
 
-        /* Force full visibility */
-        #months-container label {
-            max-width: none !important;
-            width: auto !important;
-            display: inline-block !important;
-        }
+        /* Remove all the complex grid, hover effects, etc */
 
         /* Container should not cut off content */
         #mode-meses-fields {
             overflow: visible !important;
         }
 
-        #months-container .row {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-        }
-
-        #months-container .col-12 {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-        }
-
         /* EMERGENCY OVERRIDE - Force everything visible */
         #adelantadasModal * {
             white-space: normal !important;
@@ -1629,18 +1788,6 @@ $this->params['breadcrumbs'][] = $this->title;
             text-overflow: clip !important;
             max-width: none !important;
             min-width: auto !important;
-        }
-
-        #months-container,
-        #months-container *,
-        #months-container label,
-        #months-container span {
-            white-space: nowrap !important;
-            overflow: visible !important;
-            text-overflow: clip !important;
-            display: inline-block !important;
-            width: auto !important;
-            max-width: none !important;
         }
 
         /* Remove any text truncation */
@@ -1661,17 +1808,7 @@ $this->params['breadcrumbs'][] = $this->title;
             min-width: auto !important;
         }
 
-        #months-container,
-        #months-container *,
-        #months-container label,
-        #months-container span {
-            white-space: nowrap !important;
-            overflow: visible !important;
-            text-overflow: clip !important;
-            display: inline-block !important;
-            width: auto !important;
-            max-width: none !important;
-        }
+
 
         /* Remove any text truncation */
         .text-truncate,
@@ -1682,31 +1819,7 @@ $this->params['breadcrumbs'][] = $this->title;
             text-overflow: clip !important;
         }
 
-        /* MONTHS SELECTION - MINIMAL FIXES */
-        #months-container .list-group-item {
-            border-top: 1px solid #dee2e6;
-            border-bottom: 1px solid #dee2e6;
-        }
 
-        #months-container .list-group-item:first-child {
-            border-top-left-radius: 0.375rem;
-            border-top-right-radius: 0.375rem;
-        }
-
-        #months-container .list-group-item:last-child {
-            border-bottom-left-radius: 0.375rem;
-            border-bottom-right-radius: 0.375rem;
-        }
-
-        /* Remove any inherited weirdness */
-        #months-container * {
-            box-sizing: border-box;
-        }
-
-        /* Ensure checkboxes and labels are properly aligned */
-        #months-container .form-check-input {
-            margin-top: 0;
-        }
 
         /* FINAL WORKING MODAL CSS */
         #adelantadasModal {
@@ -1733,72 +1846,8 @@ $this->params['breadcrumbs'][] = $this->title;
             padding-right: 0 !important;
         }
 
-        /* Months selection styling */
-        #months-container {
-            background: white;
-            border-radius: 5px;
-            padding: 15px !important;
-        }
 
-        #months-container .form-check {
-            display: flex;
-            align-items: center;
-            padding: 8px 5px;
-            margin: 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
 
-        #months-container .form-check:last-child {
-            border-bottom: none;
-        }
-
-        #months-container .form-check-input {
-            width: 20px;
-            height: 20px;
-            min-width: 20px;
-            margin-right: 12px;
-            margin-top: 0;
-        }
-
-        #months-container .form-check-label {
-            font-size: 15px;
-            color: #333;
-            white-space: normal !important;
-            word-wrap: break-word;
-            flex: 1;
-        }
-
-        /* Ensure no horizontal overflow */
-        #mode-meses-fields {
-            overflow: visible !important;
-        }
-
-        #months-container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #months-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        #months-container::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        #months-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        /* 1. Reset the parent container */
-        #months-container {
-            width: 100% !important;
-            overflow-x: hidden !important;
-            padding: 10px !important;
-            display: block !important;
-            /* Kill any flexbox from AdminLTE */
-        }
 
         /* 2. Create the rigid 3-column grid */
         .months-grid-enforcer {
@@ -1832,11 +1881,6 @@ $this->params['breadcrumbs'][] = $this->title;
             width: 100%;
         }
 
-        /* 5. Checkbox alignment */
-        #months-container .custom-control-input {
-            cursor: pointer;
-        }
-
         /* 6. Responsive: Drop to 2 columns on small tablets, 1 on mobile */
         @media (max-width: 768px) {
             .months-grid-enforcer {
@@ -1850,18 +1894,6 @@ $this->params['breadcrumbs'][] = $this->title;
             }
         }
 
-        /* FORCE THE GRID - Override everything else */
-        #months-container {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            /* EXACTLY 3 columns */
-            gap: 10px !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 15px !important;
-            overflow-x: hidden !important;
-            background: #fff;
-        }
 
         /* Individual Item Container */
         .month-selector-item {
@@ -1898,18 +1930,390 @@ $this->params['breadcrumbs'][] = $this->title;
             flex: 1;
         }
 
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            #months-container {
+
+
+
+
+
+        /* 1. Header Information Box */
+        .month-limit-box {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .month-limit-box p {
+            margin: 0;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+
+        /* 2. Select All Section */
+        .select-all-wrapper {
+            padding: 10px 5px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 15px;
+        }
+
+        /* 3. THE GRID ENFORCER (The Fix) */
+        .months-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            /* Forces 3 columns */
+            gap: 12px !important;
+            width: 100% !important;
+        }
+
+        /* 4. Month Item "Card" */
+        .month-item-card {
+            display: flex !important;
+            align-items: flex-start !important;
+            padding: 10px !important;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .month-item-card:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+
+        .month-item-card input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 3px;
+            margin-right: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .month-item-card label {
+            margin: 0 !important;
+            font-size: 2.88rem !important;
+            font-weight: 500 !important;
+            color: #444;
+            cursor: pointer;
+            white-space: normal !important;
+            /* Fixes truncation */
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        /* Responsive: 2 cols on tablet, 1 on phone */
+        @media (max-width: 991px) {
+            .months-grid {
                 grid-template-columns: repeat(2, 1fr) !important;
-                /* 2 columns on tablets */
             }
         }
 
-        @media (max-width: 480px) {
-            #months-container {
+        @media (max-width: 575px) {
+            .months-grid {
                 grid-template-columns: 1fr !important;
-                /* 1 column on phones */
             }
+        }
+
+
+        /* 1. Header Information Box */
+        .month-limit-box {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .month-limit-box p {
+            margin: 0;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+
+        /* 2. Select All Section */
+        .select-all-wrapper {
+            padding: 10px 5px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 15px;
+        }
+
+        /* 3. THE GRID ENFORCER (The Fix) */
+        .months-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            /* Forces 3 columns */
+            gap: 12px !important;
+            width: 100% !important;
+        }
+
+        /* 4. Month Item "Card" */
+        .month-item-card {
+            display: flex !important;
+            align-items: flex-start !important;
+            padding: 10px !important;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .month-item-card:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+
+        .month-item-card input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 3px;
+            margin-right: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .month-item-card label {
+            margin: 0 !important;
+            font-size: 0.88rem !important;
+            font-weight: 500 !important;
+            color: #444;
+            cursor: pointer;
+            white-space: normal !important;
+            /* Fixes truncation */
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        /* Responsive: 2 cols on tablet, 1 on phone */
+        @media (max-width: 991px) {
+            .months-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .months-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* 1. Header Information Box */
+        .month-limit-box {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .month-limit-box p {
+            margin: 0;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+
+        /* 2. Select All Section */
+        .select-all-wrapper {
+            padding: 10px 5px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 15px;
+        }
+
+        /* 3. THE GRID ENFORCER (The Fix) */
+        .months-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            /* Forces 3 columns */
+            gap: 15px !important;
+            /* Increased gap for more space */
+            width: 100% !important;
+        }
+
+        /* 4. Month Item "Card" - IMPROVED SPACING */
+        .month-item-card {
+            display: flex !important;
+            align-items: flex-start !important;
+            padding: 12px 15px !important;
+            /* More padding inside cards */
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            /* Slightly larger border radius */
+            transition: all 0.2s ease;
+            cursor: pointer;
+            min-height: 60px;
+            /* Ensure consistent height */
+        }
+
+        .month-item-card:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+            transform: translateY(-2px);
+            /* Subtle lift on hover */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 5. CHECKBOX - MORE SPACING */
+        .month-item-card input[type="checkbox"] {
+            width: 20px !important;
+            /* Slightly larger */
+            height: 20px !important;
+            margin-top: 4px !important;
+            margin-right: 15px !important;
+            /* INCREASED SPACING: 10px to 15px */
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .month-item-card input[type="checkbox"]:checked {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        /* 6. LABEL - MORE SPACING AND BETTER TYPOGRAPHY */
+        .month-item-card label {
+            margin: 0 !important;
+            font-size: 0.95rem !important;
+            /* Slightly larger */
+            font-weight: 500 !important;
+            color: #444;
+            cursor: pointer;
+            white-space: normal !important;
+            word-break: break-word;
+            line-height: 1.4 !important;
+            /* Better line spacing */
+            padding-left: 0;
+            /* Ensure no extra padding */
+            flex: 1;
+            display: flex;
+            align-items: center;
+            min-height: 40px;
+            /* Ensure label has enough height */
+        }
+
+        /* 7. ADD VISUAL SEPARATION FOR CHECKED ITEMS */
+        .month-item-card.checked {
+            background: #f0f9ff;
+            border-color: #007bff;
+            border-left: 4px solid #007bff;
+        }
+
+        /* 8. Responsive: 2 cols on tablet, 1 on phone */
+        @media (max-width: 991px) {
+            .months-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px !important;
+            }
+
+            .month-item-card {
+                padding: 10px 12px !important;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .months-grid {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+
+            .month-item-card {
+                padding: 8px 10px !important;
+            }
+
+            .month-item-card input[type="checkbox"] {
+                margin-right: 12px !important;
+                /* Slightly less on mobile */
+            }
+        }
+
+        /* 9. ADD CUSTOM CHECKBOX STYLING FOR BETTER VISIBILITY */
+        .month-item-card input[type="checkbox"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #adb5bd;
+            border-radius: 4px;
+            background-color: white;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .month-item-card input[type="checkbox"]:checked {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .month-item-card input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .month-item-card input[type="checkbox"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        /* Modified Grid for 4 Columns */
+        .months-grid-wrapper {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            /* EXACTLY 4 columns */
+            gap: 8px !important;
+            /* Slightly smaller gap for 4 cols */
+            width: 100% !important;
+        }
+
+        /* Adjusting font size slightly to fit 4 columns better */
+        .month-item-card label {
+            font-size: 1.5rem !important;
+            white-space: normal !important;
+            line-height: 1.1 !important;
+        }
+
+        /* Responsive: 2 cols on tablet, 1 on phone */
+        @media (max-width: 991px) {
+            .months-grid-wrapper {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .months-grid-wrapper {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Professional spacing for the modal action area */
+        .modal-footer {
+            padding: 3.5rem !important;
+            /* Increases overall footer size */
+            border-top: 1px solid #ebebeb !important;
+            gap: 10px;
+            /* Adds space between buttons automatically */
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        /* Optional: Make the footer buttons slightly larger to match the new padding */
+        .modal-footer .btn {
+            padding: 8px 20px;
+            font-weight: 500;
         }
     </style>

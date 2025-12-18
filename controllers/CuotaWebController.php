@@ -885,7 +885,7 @@ class CuotaWebController extends Controller
                         $output .= "   👥 Usuario: {$user->nombres} {$user->apellidos}\n";
                     }
 
-                    $output .= "   📅 Fecha inicio: {$contrato->fecha_inicio}\n";
+                    $output .= "   📅 Fecha inicio: {$contrato->fecha_ini}\n";
                     $output .= "   💰 Monto: {$contrato->monto}\n";
                     $output .= "   🏷️  Servicio: {$contrato->servicio}\n\n";
                 }
@@ -926,7 +926,7 @@ class CuotaWebController extends Controller
             foreach ($contratosEnEspera as $contrato) {
                 $output .= "📋 Contrato #{$contrato->id}\n";
                 $output .= "   👤 User ID: {$contrato->user_id}\n";
-                $output .= "   📅 Fecha inicio: {$contrato->fecha_inicio}\n";
+                $output .= "   📅 Fecha inicio: {$contrato->fecha_ini}\n";
                 $output .= "   💰 Monto: {$contrato->monto}\n\n";
             }
 
@@ -953,77 +953,7 @@ class CuotaWebController extends Controller
     // ===============================================================
 
     /**
-     * Generate advance cuotas for a specific affiliate
-     */
-    public function actionGenerarAdelantadas()
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-
-        try {
-            $user_id = Yii::$app->request->post('user_id');
-            $contrato_id = Yii::$app->request->post('contrato_id');
-            $num_cuotas = Yii::$app->request->post('num_cuotas');
-            $modo = Yii::$app->request->post('modo', 'cantidad'); // 'cantidad' or 'meses'
-            $meses = Yii::$app->request->post('meses', '');
-            $fecha_inicio = Yii::$app->request->post('fecha_inicio');
-
-            // Validate inputs
-            if (empty($contrato_id)) {
-                throw new \Exception("Debe seleccionar un contrato");
-            }
-
-            if (empty($num_cuotas) && $modo === 'cantidad') {
-                throw new \Exception("Debe especificar el número de cuotas");
-            }
-
-            if (empty($meses) && $modo === 'meses') {
-                throw new \Exception("Debe especificar los meses");
-            }
-
-            // If mode is 'meses', calculate number of cuotas
-            if ($modo === 'meses') {
-                $mesesArray = explode(',', $meses);
-                $num_cuotas = count($mesesArray);
-                // We'll handle custom months differently
-            }
-
-            // Generate cuotas
-            $result = Cuotas::generarCuotasAdelantadas(
-                $contrato_id,
-                $num_cuotas,
-                $fecha_inicio
-            );
-
-            if ($result['success']) {
-                // Get user info for response
-                $contrato = Contratos::findOne($contrato_id);
-                $user = $contrato ? $contrato->user : null;
-
-                return [
-                    'success' => true,
-                    'output' => "✅ Se generaron {$result['generated']} cuotas adelantadas exitosamente.\n" .
-                        "👤 Afiliado: " . ($user ? $user->nombres . ' ' . $user->apellidos : 'N/A') . "\n" .
-                        "📋 Contrato: {$contrato->nrocontrato}\n" .
-                        "💰 Cuotas generadas: {$result['generated']} de {$num_cuotas} solicitadas",
-                    'message' => "Cuotas adelantadas generadas exitosamente",
-                    'returnCode' => 0,
-                    'generated' => $result['generated']
-                ];
-            } else {
-                throw new \Exception($result['error']);
-            }
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'output' => "❌ Error: " . $e->getMessage(),
-                'message' => 'Error generando cuotas adelantadas',
-                'returnCode' => -1
-            ];
-        }
-    }
-
-    /**
-     * Preview advance cuotas before generation
+     * Preview advance cuotas before generation with 1-year limit
      */
     public function actionPreviewAdelantadas()
     {
@@ -1041,15 +971,29 @@ class CuotaWebController extends Controller
                 throw new \Exception("Parámetros incompletos. contrato_id: {$contrato_id}, num_cuotas: {$num_cuotas}");
             }
 
-            // If meses is provided, it's "por meses específicos" mode
+            // Obtener información del contrato para validar límite de 1 año
+            $contrato = Contratos::findOne($contrato_id);
+            if (!$contrato) {
+                throw new \Exception("Contrato no encontrado");
+            }
+
+            // Validar límite de 1 año
+            $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
+            $fechaLimite = clone $fechaInicioContrato;
+            $fechaLimite->modify('+1 year'); // Límite: 1 año desde fecha inicio del contrato
+
+            \Yii::info("Límite de cuotas: Hasta " . $fechaLimite->format('Y-m-d'), 'cuotas');
+
+            // Si se proporcionan meses, es modo "por meses específicos"
             $modo = !empty($meses) ? 'meses' : 'cantidad';
 
             $result = Cuotas::previewCuotasAdelantadas(
                 $contrato_id,
                 $num_cuotas,
                 $fecha_inicio,
-                $meses, // Pass meses parameter
-                $modo   // Pass mode
+                $meses,
+                $modo,
+                $fechaLimite->format('Y-m-d') // Pasar fecha límite
             );
 
             return $result;
@@ -1058,6 +1002,106 @@ class CuotaWebController extends Controller
             return [
                 'success' => false,
                 'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate advance cuotas for a specific affiliate with 1-year limit
+     */
+    public function actionGenerarAdelantadas()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $user_id = Yii::$app->request->post('user_id');
+            $contrato_id = Yii::$app->request->post('contrato_id');
+            $num_cuotas = Yii::$app->request->post('num_cuotas');
+            $modo = Yii::$app->request->post('modo', 'cantidad');
+            $meses = Yii::$app->request->post('meses', '');
+            $fecha_inicio = Yii::$app->request->post('fecha_inicio');
+
+            // Validate inputs
+            if (empty($contrato_id)) {
+                throw new \Exception("Debe seleccionar un contrato");
+            }
+
+            // Obtener contrato para validar límite
+            $contrato = Contratos::findOne($contrato_id);
+            if (!$contrato) {
+                throw new \Exception("Contrato no encontrado");
+            }
+
+            // Calcular fecha límite (1 año desde inicio del contrato)
+            $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
+            $fechaLimite = clone $fechaInicioContrato;
+            $fechaLimite->modify('+1 year');
+
+            \Yii::info("Generación adelantada - Fecha límite: " . $fechaLimite->format('Y-m-d'), 'cuotas');
+
+            if (empty($num_cuotas) && $modo === 'cantidad') {
+                throw new \Exception("Debe especificar el número de cuotas");
+            }
+
+            if (empty($meses) && $modo === 'meses') {
+                throw new \Exception("Debe especificar los meses");
+            }
+
+            // If mode is 'meses', calculate number of cuotas and validate dates
+            if ($modo === 'meses') {
+                $mesesArray = explode(',', $meses);
+                $num_cuotas = count($mesesArray);
+
+                // Validar que ningún mes exceda el límite de 1 año
+                foreach ($mesesArray as $mes) {
+                    $fechaMes = new \DateTime($mes . '-01'); // Primer día del mes
+                    if ($fechaMes > $fechaLimite) {
+                        throw new \Exception("No se pueden generar cuotas después de " . $fechaLimite->format('m/Y') .
+                            " (límite de 1 año desde inicio del contrato)");
+                    }
+                }
+            } else {
+                // Modo cantidad: validar que no exceda 12 cuotas máximo
+                if ($num_cuotas > 12) {
+                    throw new \Exception("Máximo 12 cuotas (1 año) desde inicio del contrato");
+                }
+            }
+
+            // Generate cuotas con fecha límite
+            $result = Cuotas::generarCuotasAdelantadas(
+                $contrato_id,
+                $num_cuotas,
+                $fecha_inicio,
+                $meses,
+                $fechaLimite->format('Y-m-d')
+            );
+
+            if ($result['success']) {
+                // Get user info for response
+                $contrato = Contratos::findOne($contrato_id);
+                $user = $contrato ? $contrato->user : null;
+
+                return [
+                    'success' => true,
+                    'output' => "✅ Se generaron {$result['generated']} cuotas adelantadas exitosamente.\n" .
+                        "👤 Afiliado: " . ($user ? $user->nombres . ' ' . $user->apellidos : 'N/A') . "\n" .
+                        "📋 Contrato: {$contrato->nrocontrato}\n" .
+                        "📅 Fecha inicio contrato: {$contrato->fecha_ini}\n" .
+                        "⏰ Límite: 1 año desde inicio (" . $fechaLimite->format('Y-m-d') . ")\n" .
+                        "💰 Cuotas generadas: {$result['generated']} de {$num_cuotas} solicitadas",
+                    'message' => "Cuotas adelantadas generadas exitosamente",
+                    'returnCode' => 0,
+                    'generated' => $result['generated']
+                ];
+            } else {
+                throw new \Exception($result['error']);
+            }
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "❌ Error: " . $e->getMessage(),
+                'message' => 'Error generando cuotas adelantadas',
+                'returnCode' => -1
             ];
         }
     }
@@ -1090,6 +1134,7 @@ class CuotaWebController extends Controller
                 'nrocontrato' => $contrato->nrocontrato,
                 'estatus' => $contrato->estatus,
                 'monto' => $contrato->monto,
+                'fecha_ini' => $contrato->fecha_ini, // AÑADIR ESTO
                 'last_cuota' => $lastCuota ? [
                     'fecha' => $lastCuota->fecha_vencimiento,
                     'estatus' => $lastCuota->estatus
