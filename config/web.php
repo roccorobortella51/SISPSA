@@ -1,5 +1,4 @@
 <?php
-// config/web.php
 
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
@@ -17,35 +16,41 @@ $config = [
     ],
     'modules' => $modules,
     'components' => [
-        
-         'assetManager' => [
+
+        'assetManager' => [
             'bundles' => [
-                'dmstr\\web\\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
+                'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
                     //'css' => [], // Comentado para no vaciar la lista de CSS originales de AdminLTE
                     'depends' => [ // Mantener dependencias
-                        'yii\\web\\YiiAsset',
-                        'yii\\bootstrap4\\BootstrapAsset', // Cambiado a Bootstrap 4
-                        //'rmrevin\\yii\\fontawesome\\AssetBundle', // Comentado FontAwesome para evitar error
+                        'yii\web\YiiAsset',
+                        'yii\bootstrap4\BootstrapAsset', // Cambiado a Bootstrap 4
+                        //'rmrevin\yii\fontawesome\AssetBundle', // Comentado FontAwesome para evitar error
                     ],
                 ],
             ],
         ],
         'formatter' => [
-            'defaultTimeZone' => 'America/Caracas', // ¡Zona horaria correcta!
-            'dateFormat' => 'php:d-m-Y',
-            'datetimeFormat' => 'php:d-m-Y H:i:s',
-            'timeFormat' => 'php:H:i:s',
+            'defaultTimeZone' => 'America/Caracas', // ¡Esta es la línea clave!
+            // Opcional: Puedes también configurar el locale si lo necesitas
+            'locale' => 'es-VE',
         ],
-        'request' => [
-            // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-            'cookieValidationKey' => 'SECRET_KEY_HERE',
-        ],
-        'cache' => [
-            'class' => 'yii\caching\FileCache',
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
+            // Puedes configurar un valor de caché si lo necesitas para entornos de producción:
+            // 'cache' => 'cache',
         ],
         'user' => [
             'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true,
+            'enableAutoLogin' => true, // Habilitado para recordar al usuario
+            'authTimeout' => 3600 * 24 * 30, // Tiempo de duración de la sesión (ej. 30 días si enableAutoLogin es true)
+            // 'enableSession' => false, // Descomentar si usas token de autenticación sin sesión
+        ],
+        'request' => [
+            // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
+            'cookieValidationKey' => 'oqoctAFA1HZuDUMmYC4NcfCiL_X_NFph',
+        ],
+        'cache' => [
+            'class' => 'yii\caching\FileCache',
         ],
         'errorHandler' => [
             'errorAction' => 'site/error',
@@ -62,72 +67,79 @@ $config = [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
+                    'logFile' => '@runtime/logs/app.log', // Ruta donde se guardará el "reporte"
+                    'maxFileSize' => 1024 * 2, // Tamaño máximo del archivo en KB
+                    'maxLogFiles' => 5, // Número de archivos de log a mantener
                 ],
             ],
         ],
         'db' => $db,
-        
-        // ⭐ SOLUCIÓN CLAVE: Falta el componente authManager para RBAC
-        'authManager' => [
-            'class' => 'yii\rbac\DbManager',
-            // Opcional: Define los roles predeterminados si los usa
-            // 'defaultRoles' => ['guest'], 
-        ],
-        
-        // ⭐ SOLUCIÓN PARA EL ERROR kvgrid: Agregar configuración i18n
-        'i18n' => [
-            'translations' => [
-                'kvbase' => [
-                    'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
-                    'forceTranslation' => true,
-                ],
-                'kvgrid' => [
-                    'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
-                    'forceTranslation' => true,
-                ],
-                'kvdetail' => [
-                    'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
-                    'forceTranslation' => true,
-                ],
-                'kvexport' => [
-                    'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@vendor/kartik-v/yii2-grid/messages',
-                    'forceTranslation' => true,
-                ],
-                'app*' => [
-                    'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@app/messages',
-                    'fileMap' => [
-                        'app' => 'app.php',
-                        'app/error' => 'error.php',
-                    ],
-                ],
-            ],
-        ],
-        
+
         'urlManager' => [
             'enablePrettyUrl' => true,
-            'showScriptName' => false, // Requiere .htaccess correcto
+            'showScriptName' => false,
             'rules' => [
-                // Agregue sus reglas personalizadas aquí
+                // Cuota Web Controller Routes
+                'v2/cuota/generar' => 'cuota-web/generar',
+                'v2/cuota/generar-mensual' => 'cuota-web/generar-mensual',
+                'v2/cuota/verificar-diario' => 'cuota-web/verificar-diario',
+                'v2/cuota/verificar-vencidas' => 'cuota-web/verificar-vencidas',
+                'v2/cuota/resumen-proximos-vencer' => 'cuota-web/resumen-proximos-vencer',
+                'v2/cuota/resumen-atrasadas' => 'cuota-web/resumen-atrasadas',
+                'v2/cuota/verificar-contratos-vencidos' => 'cuota-web/verificar-contratos-vencidos',
+                'v2/cuota/verificar-espera' => 'cuota-web/verificar-espera',
+
+                // Puedes añadir tus reglas de URL aquí si necesitas URLs más amigables para tus propias rutas.
             ],
         ],
-        
+
+        // BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
+        'i18n' => [
+            'translations' => [
+                'kvgrid' => [ // Categoría para los mensajes de Kartik GridView
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@kvgrid/messages', // Ubicación de los archivos de traducción de Kartik
+                    'forceTranslation' => true, // Opcional, pero recomendado para asegurar que se traduzca
+                ],
+                // Si en el futuro tienes errores con 'kvdrange' o 'kvsfmsg',
+                // también los añadirías aquí siguiendo el mismo patrón:
+                // 'kvdrange' => [
+                //     'class' => 'yii\i18n\PhpMessageSource',
+                //     'basePath' => '@kvdrange/messages',
+                //     'forceTranslation' => true,
+                // ],
+            ],
+        ],
+        'mpdf' => [
+            'class' => 'kartik\mpdf\Pdf',
+            'format' => \kartik\mpdf\Pdf::FORMAT_A4,
+            'orientation' => \kartik\mpdf\Pdf::ORIENT_PORTRAIT,
+            'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
+        ],
+        // FIN BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
+
     ],
-    
-    // BLOQUE RBAC DE mdm\admin (Exclusión de cuota-web/* para evitar el error anterior)
+    // 'as access' debe ir aquí, fuera de 'components'
     'as access' => [
         'class' => 'mdm\admin\components\AccessControl',
         'allowActions' => [
-            // Permite el acceso a todas las acciones en el controlador cuota-web
-            'cuota-web/*', 
-            
-            // Otras rutas que son siempre permitidas (ejemplos)
-            'site/*',
+            //'gii/*',
+            'site/login',
+            'site/logout',
+            'site/error',
+            'site/tabs-data', // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
+            'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
+
             'reportes/*',
+            // TEMPORARY: Add cuota web actions for testing (remove in production for security)
+            'cuota-web/generar',
+            'cuota-web/generar-mensual',
+            'cuota-web/verificar-diario',
+            'cuota-web/verificar-vencidas',
+            'cuota-web/resumen-proximos-vencer',
+            'cuota-web/resumen-atrasadas',
+            'cuota-web/verificar-contratos-vencidos',
+            'cuota-web/verificar-espera',
         ]
     ],
     'params' => $params,
@@ -138,13 +150,20 @@ if (YII_ENV_DEV) {
     $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
         'class' => 'yii\debug\Module',
-        // 'allowedIPs' => ['127.0.0.1', '::1'], 
+        // uncomment the following to add your IP if you are not connecting from localhost.
+        // 'allowedIPs' => ['127.0.0.1', '::1'], // DESCOMENTA Y AJUSTA SI ES NECESARIO
     ];
 
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [
         'class' => 'yii\gii\Module',
-        'generators' => [ // here...
+        'generators' => [ // here
+            'crud' => [ // generator name
+                'class' => 'yii\gii\generators\crud\Generator', // generator class
+                'templates' => [ // setting for our templates
+                    'yii2-adminlte3' => '@vendor/hail812/yii2-adminlte3/src/gii/generators/crud/default' // template name => path to template
+                ]
+            ]
         ]
     ];
 }
