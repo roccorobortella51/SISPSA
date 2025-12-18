@@ -962,7 +962,7 @@ class CorporativoController extends Controller
         ];
         
         $sampleData = [
-            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'M', '04121234567', 
+            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'Masculino', '04121234567', 
             'juan.pablo@yopmail.com', 'CALLE SOL #123', '2', '2', 'MIRANDA', // ESTADO (NOMBRE)
             
             // Datos de muestra para nuevos campos
