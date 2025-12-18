@@ -1,10 +1,22 @@
 <?php
 /* @var $this \yii\web\View */
 /* @var $content string */
+
 use app\assets\MedboardAsset;
 use app\assets\AppAsset;
 use kartik\spinner\Spinner;
 use yii\helpers\Html;
+
+// Force clear asset cache by appending timestamp
+Yii::$app->assetManager->appendTimestamp = true;
+
+// Clear any cached asset bundles
+if (YII_ENV_PROD) {
+    Yii::$app->assetManager->hashCallback = function ($path) {
+        return hash('md5', $path . filemtime($path));
+    };
+}
+
 
 AppAsset::register($this);
 
@@ -222,36 +234,39 @@ $this->registerCss($customCss);
 
 $assetDir = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/adminlte/dist');
 $publishedRes = Yii::$app->assetManager->publish('@vendor/hail812/yii2-adminlte3/src/web/js');
-$this->registerJsFile($publishedRes[1].'/control_sidebar.js', ['depends' => '\hail812\adminlte3\assets\AdminLteAsset']);
+$this->registerJsFile($publishedRes[1] . '/control_sidebar.js', ['depends' => '\hail812\adminlte3\assets\AdminLteAsset']);
 
 $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
 <html lang="<?= Yii::$app->language ?>">
+
 <head>
     <meta charset="<?= Yii::$app->charset ?>">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <?php $this->registerCsrfMetaTags() ?>
     <title><?= Html::encode($this->title) ?></title>
-    
-    <link rel="icon" href=<?= $logo_pestana?> sizes="32x32" />
-    <link rel="icon" href=<?= $logo_pestana?> sizes="192x192" />
-    <link rel="apple-touch-icon" href=<?= $logo_pestana?> />
-    <meta name="msapplication-TileImage" content=<?= $logo_pestana?> />
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="icon" href=<?= $logo_pestana ?> sizes="32x32" />
+    <link rel="icon" href=<?= $logo_pestana ?> sizes="192x192" />
+    <link rel="apple-touch-icon" href=<?= $logo_pestana ?> />
+    <meta name="msapplication-TileImage" content=<?= $logo_pestana ?> />
+    <meta name="csrf-token" content="<?= Yii::$app->request->getCsrfToken() ?>">
+
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+-->
     <?php $this->head() ?>
     <style>
         body.sidebar-collapse .hide-on-sidebar-collapse {
-            display: none!important;
+            display: none !important;
         }
-        
+
         /* Estilos para el spinner */
         #global-page-spinner {
             position: fixed;
@@ -267,90 +282,94 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
             align-items: center;
             transition: opacity 0.3s ease;
         }
+
         .spinner-text {
             font-size: 1.2rem;
             color: #555;
             margin-top: 15px;
         }
-        
+
         /* Ensure modals appear above everything */
         .modal {
             z-index: 1060;
         }
+
         .modal-backdrop {
             z-index: 1050;
         }
     </style>
 </head>
+
 <body class="hold-transition sidebar-mini">
 
-<?php $this->beginBody() ?>
+    <?php $this->beginBody() ?>
 
-<div id="global-page-spinner" role="status" aria-live="polite">
-    <?= Spinner::widget([
-        'id' => 'main-spinner',
-        'preset' => 'large',
-        'color' => '#3c8dbc',
-        'pluginOptions' => [
-            'lines' => 13,
-            'length' => 20,
-            'width' => 8,
-            'radius' => 30,
-            'speed' => 1.2,
-            'trail' => 60,
-            'shadow' => false
-        ],
-        'options' => [
-            'style' => 'margin-bottom: 20px;'
-        ]
-    ]) ?>
-    <div class="spinner-text">Cargando, por favor espere...</div>
-</div>
+    <div id="global-page-spinner" role="status" aria-live="polite">
+        <?= Spinner::widget([
+            'id' => 'main-spinner',
+            'preset' => 'large',
+            'color' => '#3c8dbc',
+            'pluginOptions' => [
+                'lines' => 13,
+                'length' => 20,
+                'width' => 8,
+                'radius' => 30,
+                'speed' => 1.2,
+                'trail' => 60,
+                'shadow' => false
+            ],
+            'options' => [
+                'style' => 'margin-bottom: 20px;'
+            ]
+        ]) ?>
+        <div class="spinner-text">Cargando, por favor espere...</div>
+    </div>
 
-<div class="wrapper">
-    <?= $this->render('navbar', ['assetDir' => $assetDir]) ?>
-    <?= $this->render('sidebar', ['assetDir' => $assetDir]) ?>
-    <?= $this->render('content', ['content' => $content, 'assetDir' => $assetDir]) ?>
-    <?= $this->render('control-sidebar') ?>
-    <?= $this->render('footer') ?>
-</div>
+    <div class="wrapper">
+        <?= $this->render('navbar', ['assetDir' => $assetDir]) ?>
+        <?= $this->render('sidebar', ['assetDir' => $assetDir]) ?>
+        <?= $this->render('content', ['content' => $content, 'assetDir' => $assetDir]) ?>
+        <?= $this->render('control-sidebar') ?>
+        <?= $this->render('footer') ?>
+    </div>
 
-<?php $this->endBody() ?>
+    <?php $this->endBody() ?>
 
-<script>
-// Debug and ensure modals work
-console.log('Page loaded - testing Bootstrap functionality');
-console.log('jQuery version:', jQuery.fn.jquery);
-console.log('Bootstrap modal available:', jQuery.fn.modal ? 'YES' : 'NO');
+    <script>
+        // Debug and ensure modals work
+        console.log('Page loaded - testing Bootstrap functionality');
+        console.log('jQuery version:', jQuery.fn.jquery);
+        console.log('Bootstrap modal available:', jQuery.fn.modal ? 'YES' : 'NO');
 
-jQuery(document).ready(function($) {
-    console.log('Document ready - modal functionality initialized');
-    
-    // Debug modal events
-    $('[data-toggle="modal"]').on('click', function(e) {
-        e.preventDefault();
-        var target = $(this).data('target');
-        console.log('Modal link clicked:', target);
-        console.log('Target exists:', $(target).length > 0);
-    });
-    
-    // Test modal events
-    $('#testModal').on('show.bs.modal', function () {
-        console.log('Test modal is about to show');
-    });
-    
-    $('#testModal').on('shown.bs.modal', function () {
-        console.log('Test modal is now visible');
-    });
-    
-    // Force show test modal after 2 seconds for testing
-    setTimeout(function() {
-        console.log('Attempting to show test modal programmatically');
-        $('#testModal').modal('show');
-    }, 2000);
-});
-</script>
+        jQuery(document).ready(function($) {
+            console.log('Document ready - modal functionality initialized');
+
+            // Debug modal events
+            $('[data-toggle="modal"]').on('click', function(e) {
+                e.preventDefault();
+                var target = $(this).data('target');
+                console.log('Modal link clicked:', target);
+                console.log('Target exists:', $(target).length > 0);
+            });
+
+            // Test modal events
+            $('#testModal').on('show.bs.modal', function() {
+                console.log('Test modal is about to show');
+            });
+
+            $('#testModal').on('shown.bs.modal', function() {
+                console.log('Test modal is now visible');
+            });
+
+            // Force show test modal after 2 seconds for testing
+            setTimeout(function() {
+                console.log('Attempting to show test modal programmatically');
+                $('#testModal').modal('show');
+            }, 2000);
+        });
+    </script>
 
 </body>
+
 </html>
 <?php $this->endPage() ?>
