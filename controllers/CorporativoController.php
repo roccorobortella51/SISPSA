@@ -536,12 +536,7 @@ class CorporativoController extends Controller
                 $filePath = $model->masivoFile->tempName;
                 $corporativoId = $model->corporativo_id;
                 
-                $resultados = $this->procesarCSV(
-                    $filePath,
-                    $corporativoId,
-                    $model->fecha_ini,
-                    $model->fecha_ven
-                );
+                $resultados = $this->procesarCSV($filePath, $corporativoId);
                 
                 // 3. Mostrar el resumen del proceso
                 $errorCount = count($resultados['errors']);
@@ -587,7 +582,7 @@ class CorporativoController extends Controller
      * @param int $corporativoId ID del corporativo destino.
      * @return array Array con el conteo de éxitos y los errores encontrados.
      */
-    private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal)
+    private function procesarCSV($filePath, $corporativoId)
     {
         $handle = fopen($filePath, "r");
         if ($handle === false) {
@@ -852,8 +847,22 @@ class CorporativoController extends Controller
                 $modelContrato->clinica_id = $afiliado->clinica_id; 
                 $modelContrato->plan_id = $afiliado->plan_id; 
                 $modelContrato->monto = $plan ? $plan->precio : 0;
-                $modelContrato->fecha_ini = $fechaIniGlobal; // formato Y-m-d validado en el form
-                $modelContrato->fecha_ven = $fechaVenGlobal; // formato Y-m-d validado en el form
+                
+                $modelContrato->fecha_ini = date('Y-m-d'); 
+                if (isset($headerMap['fecha_inicio_contrato'])) {
+                    $fechaInicioContratoString = trim($data[$headerMap['fecha_inicio_contrato']] ?? '');
+                    if (!empty($fechaInicioContratoString) && strtotime($fechaInicioContratoString) !== false) {
+                        $modelContrato->fecha_ini = date('Y-m-d', strtotime($fechaInicioContratoString));
+                    }
+                }
+                
+                $modelContrato->fecha_ven = null; 
+                if (isset($headerMap['fecha_vencimiento_contrato'])) {
+                    $fechaFinContratoString = trim($data[$headerMap['fecha_vencimiento_contrato']] ?? '');
+                    if (!empty($fechaFinContratoString) && strtotime($fechaFinContratoString) !== false) {
+                        $modelContrato->fecha_ven = date('Y-m-d', strtotime($fechaFinContratoString));
+                    }
+                }
                 
                 if (!$modelContrato->save()) {
                     Yii::error(['Error_Contrato' => $modelContrato->getErrors()], __METHOD__);
@@ -889,11 +898,6 @@ class CorporativoController extends Controller
                 if (!empty($asesorIdData)) {
                     $corporativoUser->asesor_id = (int) $asesorIdData;
                 } 
-
-                $rolEnCorporativo = isset($headerMap['rol_en_corporativo']) ? trim($data[$headerMap['rol_en_corporativo']] ?? '') : null;
-                if (!empty($rolEnCorporativo)) {
-                    $corporativoUser->rol_en_corporativo = $rolEnCorporativo;
-                }
 
                 if (!$corporativoUser->save()) {
                     Yii::error(['Error_CorporativoUser' => $corporativoUser->getErrors()], __METHOD__);
@@ -941,14 +945,19 @@ class CorporativoController extends Controller
         $headers = [
             'tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 'telefono', 
             'email', 'direccion', 'plan_id', 'clinica_id', 'estado', 
+            
+            // Nuevos campos
             'nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
             'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
-            'direccion_cobro', 'telefono_residencia', 'asesor_id',
-            'direccion_oficina', 'telefono_oficina', 'tipo_sangre', 'rol_en_corporativo' 
+            'direccion_cobro', 'telefono_residencia',
+
+            // Campos opcionales existentes
+            'asesor_id', 'fecha_inicio_contrato', 'fecha_vencimiento_contrato', 
+            'direccion_oficina', 'telefono_oficina', 'tipo_sangre'
         ];
         
         $sampleData = [
-            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'Masculino', '04121234567', 
+            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'M', '04121234567', 
             'juan.pablo@yopmail.com', 'CALLE SOL #123', '2', '2', 'MIRANDA', // ESTADO (NOMBRE)
             
             // Datos de muestra para nuevos campos
@@ -957,7 +966,8 @@ class CorporativoController extends Controller
             'DIRECCION PARA ENVIAR ESTADOS DE CUENTA', '02125551234',
 
             // Datos de muestra para campos opcionales existentes
-            'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+', 'Afiliado' 
+            '', '2025-12-01', '2026-12-01', 
+            'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+'
         ];
 
         $output = fopen('php://temp', 'r+'); 
