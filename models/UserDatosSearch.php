@@ -7,6 +7,7 @@ use yii\data\ActiveDataProvider;
 use app\models\UserDatos;
 use Yii;
 use app\components\UserHelper;
+use DateTime;
 
 /**
  * UserDatosSearch represents the model behind the search form of `app\models\UserDatos`.
@@ -155,11 +156,28 @@ class UserDatosSearch extends UserDatos
             'user_datos.afiliado_corporativo_id' => $this->afiliado_corporativo_id,
         ]);
 
-        if (isset($this->created_at) && !empty($this->created_at)) {
+        /*if (isset($this->created_at) && !empty($this->created_at)) {
             $dates = explode("-", $this->created_at);
             $query->andFilterWhere(['between', 'user_datos.created_at', $dates[0] . ' 00:00:00', $dates[1] . ' 23:59:59']);
-        }
+        }*/
 
+        if (isset($this->created_at) && !empty($this->created_at)) {
+            // 1. Separar por la palabra " a " en lugar de "/"
+            $dates = explode(" a ", $this->created_at);
+
+            if (count($dates) == 2) {
+                // 2. Convertir formato DD/MM/YYYY a YYYY-MM-DD usando DateTime
+                $d1 = DateTime::createFromFormat('d/m/Y', trim($dates[0]));
+                $d2 = DateTime::createFromFormat('d/m/Y', trim($dates[1]));
+
+                if ($d1 && $d2) {
+                    $date1 = $d1->format('Y-m-d') . ' 00:00:00';
+                    $date2 = $d2->format('Y-m-d') . ' 23:59:59';
+
+                    $query->andFilterWhere(['between', 'user_datos.created_at', $date1, $date2]);
+                }
+            }
+        }
         if (isset($this->fechanac) && !empty($this->fechanac)) {
             $dates = explode("-", $this->fechanac);
             $query->andFilterWhere(['between', 'user_datos.fechanac', $dates[0] . ' 00:00:00', $dates[1] . ' 23:59:59']);
