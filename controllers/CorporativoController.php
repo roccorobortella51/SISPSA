@@ -536,7 +536,12 @@ class CorporativoController extends Controller
                 $filePath = $model->masivoFile->tempName;
                 $corporativoId = $model->corporativo_id;
                 
-                $resultados = $this->procesarCSV($filePath, $corporativoId);
+                $resultados = $this->procesarCSV(
+                    $filePath,
+                    $corporativoId,
+                    $model->fecha_ini,
+                    $model->fecha_ven
+                );
                 
                 // 3. Mostrar el resumen del proceso
                 $errorCount = count($resultados['errors']);
@@ -582,7 +587,7 @@ class CorporativoController extends Controller
      * @param int $corporativoId ID del corporativo destino.
      * @return array Array con el conteo de éxitos y los errores encontrados.
      */
-    private function procesarCSV($filePath, $corporativoId)
+    private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal)
     {
         $handle = fopen($filePath, "r");
         if ($handle === false) {
@@ -848,21 +853,8 @@ class CorporativoController extends Controller
                 $modelContrato->plan_id = $afiliado->plan_id; 
                 $modelContrato->monto = $plan ? $plan->precio : 0;
                 
-                $modelContrato->fecha_ini = date('Y-m-d'); 
-                if (isset($headerMap['fecha_inicio_contrato'])) {
-                    $fechaInicioContratoString = trim($data[$headerMap['fecha_inicio_contrato']] ?? '');
-                    if (!empty($fechaInicioContratoString) && strtotime($fechaInicioContratoString) !== false) {
-                        $modelContrato->fecha_ini = date('Y-m-d', strtotime($fechaInicioContratoString));
-                    }
-                }
-                
-                $modelContrato->fecha_ven = null; 
-                if (isset($headerMap['fecha_vencimiento_contrato'])) {
-                    $fechaFinContratoString = trim($data[$headerMap['fecha_vencimiento_contrato']] ?? '');
-                    if (!empty($fechaFinContratoString) && strtotime($fechaFinContratoString) !== false) {
-                        $modelContrato->fecha_ven = date('Y-m-d', strtotime($fechaFinContratoString));
-                    }
-                }
+                $modelContrato->fecha_ini = $fechaIniGlobal; // formato Y-m-d del formulario
+                $modelContrato->fecha_ven = $fechaVenGlobal; // formato Y-m-d del formulario
                 
                 if (!$modelContrato->save()) {
                     Yii::error(['Error_Contrato' => $modelContrato->getErrors()], __METHOD__);
@@ -952,12 +944,11 @@ class CorporativoController extends Controller
             'direccion_cobro', 'telefono_residencia',
 
             // Campos opcionales existentes
-            'asesor_id', 'fecha_inicio_contrato', 'fecha_vencimiento_contrato', 
-            'direccion_oficina', 'telefono_oficina', 'tipo_sangre'
+            'asesor_id','direccion_oficina', 'telefono_oficina', 'tipo_sangre'
         ];
         
         $sampleData = [
-            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'M', '04121234567', 
+            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'Masculino', '04121234567', 
             'juan.pablo@yopmail.com', 'CALLE SOL #123', '2', '2', 'MIRANDA', // ESTADO (NOMBRE)
             
             // Datos de muestra para nuevos campos
@@ -966,8 +957,7 @@ class CorporativoController extends Controller
             'DIRECCION PARA ENVIAR ESTADOS DE CUENTA', '02125551234',
 
             // Datos de muestra para campos opcionales existentes
-            '', '2025-12-01', '2026-12-01', 
-            'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+'
+            '', 'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+'
         ];
 
         $output = fopen('php://temp', 'r+'); 
