@@ -11,10 +11,6 @@ use yii\filters\VerbFilter;
 use app\models\Pagos;
 use app\models\PagosReporteSearch;
 use kartik\mpdf\Pdf; // IMPORTANTE: Asegúrate de incluir esta dependencia
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Font;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class ReportesController extends Controller
 {
@@ -73,22 +69,6 @@ class ReportesController extends Controller
 
     public function actionGetPagosDetail()
     {
-        // TEMPORARY DEBUG - Check if user is authenticated
-        if (Yii::$app->user->isGuest) {
-            return [
-                'success' => false,
-                'message' => 'User is guest. Not authenticated.',
-                'identity' => null
-            ];
-        }
-
-        // TEMPORARY DEBUG - Check user roles
-        $user = Yii::$app->user->identity;
-        $roles = Yii::$app->authManager->getRolesByUser($user->id);
-
-        Yii::error('User roles: ' . json_encode(array_keys($roles)));
-        Yii::error('User ID: ' . $user->id);
-
         Yii::$app->response->format = Response::FORMAT_JSON;
         $request = Yii::$app->request;
 
@@ -102,30 +82,22 @@ class ReportesController extends Controller
         $endDate = date('Y-m-d');
         $title = "Detalle de Pagos de Hoy";
 
-            // Lógica de rango de fechas
-            if ($customRange && $dateFrom && $dateTo) {
-                // Rango personalizado
-                $startDate = $dateFrom;
-                $endDate = $dateTo;
-                $title = "Detalle de Pagos del " . Yii::$app->formatter->asDate($dateFrom, 'long') .
-                    " al " . Yii::$app->formatter->asDate($dateTo, 'long');
-            } else {
-                // Rangos predefinidos
-                switch ($range) {
-                    case 'week':
-                        $startDate = date('Y-m-d', strtotime('last Monday'));
-                        $title = "Detalle de Pagos Semanales";
-                        break;
-                    case 'month':
-                        $startDate = date('Y-m-01');
-                        $title = "Detalle de Pagos Mensuales";
-                        break;
-                    case 'last-month':
-                        $startDate = date('Y-m-01', strtotime('first day of last month'));
-                        $endDate = date('Y-m-t', strtotime('last month'));
-                        $title = "Detalle de Pagos del Mes Anterior";
-                        break;
-                }
+        // 1. Lógica de rango de fechas (CON NUEVO CASO PARA MES ANTERIOR)
+        switch ($range) {
+            case 'week':
+                $startDate = date('Y-m-d', strtotime('last Monday'));
+                $title = "Detalle de Pagos Semanales";
+                break;
+            case 'month':
+                $startDate = date('Y-m-01');
+                $title = "Detalle de Pagos Mensuales";
+                break;
+            case 'last-month':
+                $startDate = date('Y-m-01', strtotime('first day of last month'));
+                $endDate = date('Y-m-t', strtotime('last month'));
+                $title = "Detalle de Pagos del Mes Anterior";
+                break;
+        }
 
         if ($specificDate && $specificDate !== 'Invalid date') {
             $startDate = $specificDate;
@@ -196,65 +168,72 @@ class ReportesController extends Controller
     {
         $request = Yii::$app->request;
 
-        // Obtener el estado del pago del parámetro GET
+        // Obtener todos los parámetros
         $status = $request->get('status', 'Por Conciliar');
-
-        // Obtener clínicas del parámetro GET (puede ser string separada por comas)
+        $customRange = $request->get('custom_range', false);
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
         $clinicasParam = $request->get('clinicas', '');
-        $clinicasArray = [];
 
+        // Procesar clínicas
+        $clinicasArray = [];
         if (!empty($clinicasParam)) {
             if (is_array($clinicasParam)) {
                 $clinicasArray = $clinicasParam;
-            }
-            // Si es un string separado por comas
-            else if (strpos($clinicasParam, ',') !== false) {
+            } else if (strpos($clinicasParam, ',') !== false) {
                 $clinicasArray = explode(',', $clinicasParam);
             } else {
                 $clinicasArray = [$clinicasParam];
             }
         }
 
+        // Inicializar fechas
         $startDate = date('Y-m-d');
         $endDate = date('Y-m-d');
-        $title = "Detalle de Pagos de Hoy";
 
-        // 1. Lógica de rango de fechas
-        switch ($range) {
-            case 'week':
-                $startDate = date('Y-m-d', strtotime('last Monday'));
-                $title = "Detalle de Pagos Semanales";
-                break;
-            case 'month':
-                $startDate = date('Y-m-01');
-                $title = "Detalle de Pagos Mensuales";
-                break;
-            case 'last-month':
-                $startDate = date('Y-m-01', strtotime('first day of last month'));
-                $endDate = date('Y-m-t', strtotime('last month'));
-                $title = "Detalle de Pagos del Mes Anterior";
-                break;
-        }
+        // Crear título profesional
+        $title = "REPORTE DE PAGOS - SISTEMA SISPSA";
+        $subtitle = "";
 
-        // Check for custom date range
+        // Lógica de rango de fechas
         if ($customRange && $dateFrom && $dateTo) {
             $startDate = $dateFrom;
             $endDate = $dateTo;
-            $title = "Detalle de Pagos del " . Yii::$app->formatter->asDate($dateFrom, 'long') .
-                " al " . Yii::$app->formatter->asDate($dateTo, 'long');
+            $subtitle = "Período Personalizado: " . Yii::$app->formatter->asDate($dateFrom, 'long') . " al " . Yii::$app->formatter->asDate($dateTo, 'long');
         } else if ($specific_date && $specific_date !== 'Invalid date') {
             $startDate = $specific_date;
             $endDate = $specific_date;
-            $title = "Detalle de Pagos para el día: " . Yii::$app->formatter->asDate($specific_date, 'long');
+            $subtitle = "Fecha Específica: " . Yii::$app->formatter->asDate($specific_date, 'long');
+        } else {
+            switch ($range) {
+                case 'week':
+                    $startDate = date('Y-m-d', strtotime('last Monday'));
+                    $endDate = date('Y-m-d');
+                    $subtitle = "Reporte Semanal";
+                    break;
+                case 'month':
+                    $startDate = date('Y-m-01');
+                    $endDate = date('Y-m-d');
+                    $subtitle = "Reporte Mensual";
+                    break;
+                case 'last-month':
+                    $startDate = date('Y-m-01', strtotime('first day of last month'));
+                    $endDate = date('Y-m-t', strtotime('last month'));
+                    $subtitle = "Reporte del Mes Anterior";
+                    break;
+                case 'day':
+                default:
+                    $subtitle = "Reporte del Día";
+                    break;
+            }
         }
 
-        // Modificar título para reflejar el estado seleccionado
+        // Agregar estado
         $statusLabel = $status === 'todos' ? 'Todos los Estados' : ($status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar');
-        $title .= " ({$statusLabel})";
+        $subtitle .= " - " . $statusLabel;
 
-        // Agregar información de clínicas filtradas al título si aplica
+        // Agregar información de clínicas
         if (!empty($clinicasArray) && !in_array('todas', $clinicasArray)) {
-            // Obtener nombres de las clínicas seleccionadas
             $clinicasNombres = [];
             foreach ($clinicasArray as $clinicaId) {
                 $clinica = \app\models\RmClinica::findOne($clinicaId);
@@ -262,21 +241,21 @@ class ReportesController extends Controller
                     $clinicasNombres[] = $clinica->nombre;
                 }
             }
-
             if (!empty($clinicasNombres)) {
-                $clinicasStr = implode(', ', $clinicasNombres);
-                $title .= " - Clínicas: " . (count($clinicasNombres) > 3 ?
-                    count($clinicasNombres) . ' clínicas seleccionadas' : $clinicasStr);
+                $clinicasCount = count($clinicasNombres);
+                $subtitle .= $clinicasCount > 3 ?
+                    " - {$clinicasCount} clínicas" :
+                    " - " . implode(', ', array_slice($clinicasNombres, 0, 3));
             }
         }
 
-        // 2. Crear y configurar el modelo de búsqueda
+        // Crear y configurar el modelo de búsqueda
         $searchModel = new PagosReporteSearch();
 
-        // 3. Obtener el resumen general
+        // Obtener el resumen general
         $summary = $searchModel->obtenerResumenGeneral($startDate, $endDate, $status, $clinicasArray);
 
-        // 4. Obtener el resumen por clínica
+        // Obtener el resumen por clínica
         $summaryPorClinica = [];
         if (!empty($clinicasArray)) {
             if (in_array('todas', $clinicasArray)) {
@@ -288,46 +267,257 @@ class ReportesController extends Controller
             $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, []);
         }
 
-        // 5. Crear y configurar el dataProvider para el GridView
+        // Crear y configurar el dataProvider
         $params = $request->get();
-
-        // Usar searchConClinicas si hay filtro de clínicas específicas, de lo contrario usar search normal
         if (!empty($clinicasArray) && !in_array('todas', $clinicasArray)) {
             $dataProvider = $searchModel->searchConClinicas($params, $startDate, $endDate, $status, $clinicasArray);
         } else {
             $dataProvider = $searchModel->search($params, $startDate, $endDate, $status, $clinicasArray);
         }
 
-        // In actionGeneratePdf(), replace the content rendering part:
-        $content = $this->renderPartial('_pagos-pdf', [
+        // Desactivar paginación para obtener todos los datos
+        $dataProvider->pagination = false;
+
+        // Generar contenido HTML para el PDF
+        $content = $this->renderPartial('_pagos-pdf-simple', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'title' => $title,
+            'subtitle' => $subtitle,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'summary' => $summary,
             'summaryPorClinica' => $summaryPorClinica,
             'clinicasSeleccionadas' => $clinicasArray,
+            'generatedAt' => date('d/m/Y H:i:s'),
+            'statusLabel' => $statusLabel,
         ]);
 
-        // Simplify the PDF configuration
+        // CSS SIMPLIFICADO que SÍ funciona con MPDF
+        $simpleCss = '
+        /* Estilos básicos que funcionan con MPDF */
+        body { 
+            font-family: DejaVu Sans, Arial, sans-serif; 
+            font-size: 10pt; 
+            line-height: 1.3; 
+            color: #000000; 
+            margin: 0; 
+            padding: 0; 
+        }
+        
+        /* Título principal */
+        .main-title { 
+            font-size: 20pt; 
+            font-weight: bold; 
+            color: #2c3e50; 
+            text-align: center; 
+            margin: 0 0 5px 0; 
+            padding: 0; 
+        }
+        
+        /* Subtítulo */
+        .subtitle { 
+            font-size: 12pt; 
+            color: #0078d4; 
+            text-align: center; 
+            margin: 0 0 20px 0; 
+            padding: 0; 
+            font-weight: bold; 
+        }
+        
+        /* Información del reporte */
+        .report-info { 
+            background-color: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            padding: 10px; 
+            margin: 0 0 20px 0; 
+            border-radius: 5px; 
+        }
+        
+        .info-grid { 
+            display: table; 
+            width: 100%; 
+        }
+        
+        .info-row { 
+            display: table-row; 
+        }
+        
+        .info-label { 
+            display: table-cell; 
+            font-weight: bold; 
+            color: #2c3e50; 
+            padding: 5px 10px 5px 0; 
+            width: 150px; 
+        }
+        
+        .info-value { 
+            display: table-cell; 
+            color: #333333; 
+            padding: 5px 0; 
+        }
+        
+        /* Tablas */
+        .pdf-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            font-size: 9pt; 
+        }
+        
+        .pdf-table th { 
+            background-color: #2c3e50; 
+            color: white; 
+            font-weight: bold; 
+            padding: 8px; 
+            text-align: center; 
+            border: 1px solid #1a2530; 
+        }
+        
+        .pdf-table td { 
+            padding: 6px; 
+            border: 1px solid #dddddd; 
+            text-align: center; 
+        }
+        
+        .pdf-table td.text-left { 
+            text-align: left; 
+        }
+        
+        .pdf-table td.text-right { 
+            text-align: right; 
+        }
+        
+        .pdf-table tr:nth-child(even) { 
+            background-color: #f8f9fa; 
+        }
+        
+        /* Badges */
+        .badge { 
+            display: inline-block; 
+            padding: 3px 8px; 
+            border-radius: 3px; 
+            font-size: 8pt; 
+            font-weight: bold; 
+        }
+        
+        .badge-success { 
+            background-color: #dff6dd; 
+            color: #107c10; 
+        }
+        
+        .badge-warning { 
+            background-color: #fff4ce; 
+            color: #7a5c00; 
+        }
+        
+        /* Total General DESTACADO */
+        .final-total-container { 
+            text-align: center; 
+            margin: 40px 0; 
+            page-break-inside: avoid; 
+        }
+        
+        .final-total-box { 
+            display: inline-block; 
+            background-color: #2c3e50; 
+            border: 3px solid #0078d4; 
+            border-radius: 10px; 
+            padding: 25px 40px; 
+            min-width: 400px; 
+        }
+        
+        .final-total-label { 
+            font-size: 16pt; 
+            font-weight: bold; 
+            color: #ffffff; 
+            margin: 0 0 10px 0; 
+            text-transform: uppercase; 
+        }
+        
+        .final-total-value { 
+            font-size: 24pt; 
+            font-weight: bold; 
+            color: #4cd964; 
+            margin: 0; 
+            font-family: "Courier New", monospace; 
+        }
+        
+        .final-total-info { 
+            font-size: 10pt; 
+            color: #cccccc; 
+            margin: 10px 0 0 0; 
+            font-weight: bold; 
+        }
+        
+        /* Footer */
+        .report-footer { 
+            margin-top: 30px; 
+            padding-top: 15px; 
+            border-top: 1px solid #dddddd; 
+            text-align: center; 
+            font-size: 8pt; 
+            color: #666666; 
+        }
+        
+        /* Clases de utilidad */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .mb-20 { margin-bottom: 20px; }
+        .mt-20 { margin-top: 20px; }
+        .mt-30 { margin-top: 30px; }
+    ';
+
+        // Configuración del PDF
         $pdf = new Pdf([
+            // Configuración básica
             'mode' => Pdf::MODE_UTF8,
             'format' => Pdf::FORMAT_A4,
             'orientation' => Pdf::ORIENT_LANDSCAPE,
             'destination' => Pdf::DEST_DOWNLOAD,
             'content' => $content,
+
+            // Opciones
             'options' => [
                 'title' => $title,
             ],
+
+            // Márgenes
+            'marginLeft' => 10,
+            'marginRight' => 10,
+            'marginTop' => 20,
+            'marginBottom' => 20,
+            'marginHeader' => 5,
+            'marginFooter' => 10,
+
+            // CSS SIMPLIFICADO que SÍ funciona
+            'cssInline' => $simpleCss,
+
+            // Encabezado y pie de página
             'methods' => [
-                'SetHeader' => [$title . '||Generado: ' . date('d/m/Y H:i:s')],
-                'SetFooter' => ['|Página {PAGENO}|'],
-            ]
+                'SetHeader' => ['Sistema Sips - Reporte de Pagos||Página {PAGENO} de {nb}'],
+                'SetFooter' => ['Generado el ' . date('d/m/Y H:i:s') . '||'],
+            ],
+
+            // Fuente por defecto
+            'defaultFont' => 'dejavusans',
         ]);
 
-        return $pdf->render();
+        // Nombre del archivo
+        $filename = 'Reporte_Pagos_' . date('Ymd_His') . '.pdf';
+        $pdf->filename = $filename;
+
+        try {
+            return $pdf->render();
+        } catch (\Exception $e) {
+            Yii::error('Error generando PDF: ' . $e->getMessage());
+            Yii::$app->session->setFlash('error', 'Error al generar el PDF: ' . $e->getMessage());
+            return $this->redirect(['index']);
+        }
     }
+
     /**
      * Exporta el reporte a Excel usando PHPSpreadsheet
      */
@@ -337,11 +527,6 @@ class ReportesController extends Controller
 
         // Obtener parámetros
         $status = $request->get('status', 'Por Conciliar');
-        $customRange = $request->get('custom_range', false);
-        $dateFrom = $request->get('date_from');
-        $dateTo = $request->get('date_to');
-
-        // Procesar clínicas
         $clinicasParam = $request->get('clinicas', '');
         $clinicasArray = [];
 
@@ -382,6 +567,26 @@ class ReportesController extends Controller
         $searchModel = new PagosReporteSearch();
         $params = $request->get();
 
+        // =============================================
+        // NEW: Get summary data (MISSING PART)
+        // =============================================
+
+        // 1. Get general summary
+        $summary = $searchModel->obtenerResumenGeneral($startDate, $endDate, $status, $clinicasArray);
+
+        // 2. Get summary by clinic
+        $summaryPorClinica = [];
+        if (!empty($clinicasArray)) {
+            if (in_array('todas', $clinicasArray)) {
+                $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, []);
+            } else {
+                $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, $clinicasArray);
+            }
+        } else {
+            $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, []);
+        }
+
+        // 3. Get detailed data for the main sheet
         if (!empty($clinicasArray) && !in_array('todas', $clinicasArray)) {
             $dataProvider = $searchModel->searchConClinicas($params, $startDate, $endDate, $status, $clinicasArray);
         } else {
@@ -392,16 +597,16 @@ class ReportesController extends Controller
         $dataProvider->pagination = false;
         $models = $dataProvider->getModels();
 
-        // Crear título del archivo
+        // Create filename
         $statusLabel = $status === 'todos' ? 'Todos los Estados' : ($status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar');
 
         $fileName = 'Reporte_Pagos_' . $startDate . '_al_' . $endDate . '_' . preg_replace('/[^a-zA-Z0-9]/', '_', $statusLabel) . '_' . date('Y-m-d_H-i-s') . '.xlsx';
 
-        // Limpiar buffer de salida
+        // Clean output buffer
         ob_clean();
         ob_start();
 
-        // Crear nuevo Spreadsheet
+        // Create new Spreadsheet
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
         // Propiedades del documento
@@ -497,75 +702,58 @@ class ReportesController extends Controller
         } else {
             foreach ($models as $model) {
                 $col = 1; // Empezar en columna A (índice 1)
+                $colLetter = 'A'; // Columna inicial como letra
 
                 // ID Pago
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $model->id);
+                $sheet->setCellValue($colLetter . $dataRow, $model->id);
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Nombres
                 $nombres = $model->userDatos ? $model->userDatos->nombres : 'N/A';
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $nombres);
+                $sheet->setCellValue($colLetter . $dataRow, $nombres);
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Apellidos
                 $apellidos = $model->userDatos ? $model->userDatos->apellidos : 'N/A';
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $apellidos);
+                $sheet->setCellValue($colLetter . $dataRow, $apellidos);
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Cédula
                 $cedula = $model->userDatos ? $model->userDatos->cedula : 'N/A';
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $cedula);
+                $sheet->setCellValue($colLetter . $dataRow, $cedula);
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Monto
-                $monto = $model->monto_usd ?: 0;
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $monto);
-                $totalMonto += $monto;
+                $sheet->setCellValue($colLetter . $dataRow, $model->monto_usd);
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Fecha Pago
-                $fecha = $model->fecha_pago ? date('d/m/Y', strtotime($model->fecha_pago)) : 'N/A';
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $fecha);
+                $fechaPago = $model->fecha_pago ? Yii::$app->formatter->asDate($model->fecha_pago, 'php:d/m/Y') : 'N/A';
+                $sheet->setCellValue($colLetter . $dataRow, $fechaPago);
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Método de Pago
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $model->metodo_pago ?: 'N/A');
+                $sheet->setCellValue($colLetter . $dataRow, $model->metodo_pago ?: 'N/A');
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
-                // Estado
-                $estado = $model->estatus === 'Conciliado' ? 'Conciliado' : 'Por Conciliar';
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $estado);
+                // Estatus
+                $sheet->setCellValue($colLetter . $dataRow, $model->estatus ?: 'N/A');
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
 
                 // Clínica
-                $clinica = 'Sin Clínica';
+                $clinicaNombre = 'Sin Clínica';
                 if ($model->contratos && count($model->contratos) > 0) {
                     foreach ($model->contratos as $contrato) {
                         if ($contrato->clinica) {
-                            $clinica = $contrato->clinica->nombre;
+                            $clinicaNombre = $contrato->clinica->nombre;
                             break;
                         }
                     }
                 }
-                $sheet->setCellValueByColumnAndRow($col++, $dataRow, $clinica);
+                $sheet->setCellValue($colLetter . $dataRow, $clinicaNombre);
 
                 $dataRow++;
             }
-
-            // Totales
-            $totalRow = $dataRow + 1;
-
-            $sheet->setCellValue('A' . $totalRow, 'TOTAL GENERAL:');
-            $sheet->mergeCells('A' . $totalRow . ':D' . $totalRow);
-            $sheet->getStyle('A' . $totalRow)->getFont()->setBold(true);
-            $sheet->getStyle('A' . $totalRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
-
-            $sheet->setCellValue('E' . $totalRow, $totalMonto);
-            $sheet->getStyle('E' . $totalRow)->getFont()->setBold(true);
-            $sheet->getStyle('E' . $totalRow)->getNumberFormat()->setFormatCode('#,##0.00');
-
-            $sheet->setCellValue('F' . $totalRow, count($models) . ' pagos');
-            $sheet->mergeCells('F' . $totalRow . ':I' . $totalRow);
-            $sheet->getStyle('F' . $totalRow)->getFont()->setBold(true);
-            $sheet->getStyle('F' . $totalRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-
-            // Estilo para totales
-            $totalStyle = $sheet->getStyle('A' . $totalRow . ':I' . $totalRow);
-            $totalStyle->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-            $totalStyle->getFill()->getStartColor()->setARGB('FFE6F3FF');
-            $totalStyle->getBorders()->getTop()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DOUBLE);
         }
 
         // Autoajustar ancho de columnas
@@ -588,85 +776,104 @@ class ReportesController extends Controller
         // =============================================
         // HOJA 2: RESUMEN POR CLÍNICA
         // =============================================
-        if (!empty($models)) {
-            $sheet2 = $spreadsheet->createSheet();
-            $sheet2->setTitle('Resumen por Clínica');
+        // Crear segunda hoja para resumen
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Resumen por Clínica');
 
-            // Obtener resumen por clínica
-            $searchModel = new PagosReporteSearch();
-            $clinicasParaResumen = in_array('todas', $clinicasArray) ? [] : $clinicasArray;
-            $resumenClinicas = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, $clinicasParaResumen);
+        // Título del resumen
+        $sheet2->setCellValue('A1', 'RESUMEN DE PAGOS POR CLÍNICA');
+        $sheet2->mergeCells('A1:F1');
+        $sheet2->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet2->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-            // Encabezado
-            $sheet2->setCellValue('A1', 'RESUMEN DE PAGOS POR CLÍNICA');
-            $sheet2->mergeCells('A1:F1');
-            $sheet2->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-            $sheet2->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        // Encabezados de resumen
+        $resumenHeaders = ['Clínica', 'RIF', 'Total Pagos', 'Conciliados', 'Pendientes', 'Total (Bs.)'];
+        $col = 1;
+        foreach ($resumenHeaders as $header) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet2->setCellValue($colLetter . '3', $header);
+            $col++;
+        }
 
-            // Encabezados de resumen
-            $resumenHeaders = ['Clínica', 'RIF', 'Total Pagos', 'Conciliados', 'Pendientes', 'Total (Bs.)'];
-            $col = 1;
-            foreach ($resumenHeaders as $header) {
-                $sheet2->setCellValueByColumnAndRow($col++, 3, $header);
-            }
+        // Estilo para encabezados del resumen
+        $headerRangeResumen = 'A3:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($resumenHeaders)) . '3';
+        $sheet2->getStyle($headerRangeResumen)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '107C10']
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+        ]);
 
-            // Estilo encabezados resumen
-            $sheet2->getStyle('A3:F3')->getFont()->setBold(true);
-            $sheet2->getStyle('A3:F3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-            $sheet2->getStyle('A3:F3')->getFill()->getStartColor()->setARGB('FFCCCCCC');
-            $sheet2->getStyle('A3:F3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-
-            // Datos de resumen
-            $resumenRow = 4;
-            $granTotal = 0;
-            $granTotalPagos = 0;
-
-            foreach ($resumenClinicas as $resumen) {
+        // Escribir datos del resumen
+        $resumenRow = 4;
+        if (!empty($summaryPorClinica)) {
+            foreach ($summaryPorClinica as $resumen) {
                 $col = 1;
-                $sheet2->setCellValueByColumnAndRow($col++, $resumenRow, $resumen['clinica_nombre'] ?? 'N/A');
-                $sheet2->setCellValueByColumnAndRow($col++, $resumenRow, $resumen['clinica_rif'] ?? 'N/A');
-                $sheet2->setCellValueByColumnAndRow($col++, $resumenRow, $resumen['total_pagos'] ?? 0);
-                $sheet2->setCellValueByColumnAndRow($col++, $resumenRow, $resumen['conciliados'] ?? 0);
-                $sheet2->setCellValueByColumnAndRow($col++, $resumenRow, $resumen['pendientes'] ?? 0);
 
-                $totalClinica = $resumen['total_monto'] ?? 0;
-                $sheet2->setCellValueByColumnAndRow($col++, $resumenRow, $totalClinica);
+                // Clínica
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['clinica_nombre'] ?? 'N/A');
+                $col++;
 
-                $granTotal += $totalClinica;
-                $granTotalPagos += ($resumen['total_pagos'] ?? 0);
+                // RIF
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['clinica_rif'] ?? 'N/A');
+                $col++;
+
+                // Total Pagos
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['total_pagos'] ?? 0);
+                $col++;
+
+                // Conciliados
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['conciliados'] ?? 0);
+                $col++;
+
+                // Pendientes
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['pendientes'] ?? 0);
+                $col++;
+
+                // Total (Bs.)
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['total_monto'] ?? 0);
+
                 $resumenRow++;
             }
 
-            // Totales del resumen
-            $sheet2->setCellValue('A' . ($resumenRow + 1), 'TOTAL GENERAL');
-            $sheet2->mergeCells('A' . ($resumenRow + 1) . ':B' . ($resumenRow + 1));
-            $sheet2->getStyle('A' . ($resumenRow + 1))->getFont()->setBold(true);
-            $sheet2->getStyle('A' . ($resumenRow + 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            // Autoajustar columnas
+            foreach (range('A', \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($resumenHeaders))) as $column) {
+                $sheet2->getColumnDimension($column)->setAutoSize(true);
+            }
 
-            $sheet2->setCellValue('C' . ($resumenRow + 1), $granTotalPagos);
-            $sheet2->setCellValue('F' . ($resumenRow + 1), $granTotal);
+            // Agregar total general
+            $totalRow = $resumenRow + 1;
+            $sheet2->setCellValue('A' . $totalRow, 'TOTAL GENERAL');
+            $sheet2->getStyle('A' . $totalRow)->getFont()->setBold(true);
 
-            // Estilo para totales del resumen
-            $totalResumenStyle = $sheet2->getStyle('A' . ($resumenRow + 1) . ':F' . ($resumenRow + 1));
-            $totalResumenStyle->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-            $totalResumenStyle->getFill()->getStartColor()->setARGB('FFE6F3FF');
-            $totalResumenStyle->getFont()->setBold(true);
+            // Calcular totales
+            $granTotalPagos = array_sum(array_column($summaryPorClinica, 'total_pagos'));
+            $granTotalConciliados = array_sum(array_column($summaryPorClinica, 'conciliados'));
+            $granTotalPendientes = array_sum(array_column($summaryPorClinica, 'pendientes'));
+            $granTotalMonto = array_sum(array_column($summaryPorClinica, 'total_monto'));
 
-            // Formato de moneda para totales
-            $sheet2->getStyle('F4:F' . ($resumenRow + 1))
+            $sheet2->setCellValue('C' . $totalRow, $granTotalPagos);
+            $sheet2->setCellValue('D' . $totalRow, $granTotalConciliados);
+            $sheet2->setCellValue('E' . $totalRow, $granTotalPendientes);
+            $sheet2->setCellValue('F' . $totalRow, $granTotalMonto);
+
+            // Formato de moneda para columna de total
+            $sheet2->getStyle('F4:F' . $totalRow)
                 ->getNumberFormat()
                 ->setFormatCode('#,##0.00');
-
-            // Autoajustar columnas
-            for ($i = 1; $i <= 6; $i++) {
-                $sheet2->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
-            }
-
-            // Bordes para datos del resumen
-            if (!empty($resumenClinicas)) {
-                $resumenDataStyle = $sheet2->getStyle('A3:F' . ($resumenRow - 1));
-                $resumenDataStyle->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-            }
+        } else {
+            $sheet2->setCellValue('A4', 'No hay datos de resumen disponibles');
+            $sheet2->mergeCells('A4:F4');
+            $sheet2->getStyle('A4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle('A4')->getFont()->setItalic(true);
         }
 
         // Regresar a la primera hoja

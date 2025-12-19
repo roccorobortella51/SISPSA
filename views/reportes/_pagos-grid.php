@@ -165,7 +165,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                     <i class="fas fa-file-pdf me-2" style="font-size: 1.3rem;"></i>Exportar PDF
                                 </a>
                                 <a href="#" id="btn-export-excel" class="ms-btn ms-btn-success px-3 py-2 shadow"
-                                    style="font-size: 1.3rem !important;" onclick="exportToExcel()">
+                                    style="font-size: 1.3rem !important;">
                                     <i class="fas fa-file-excel me-2" style="font-size: 1.3rem;"></i>Exportar Excel
                                 </a>
                             </div>
