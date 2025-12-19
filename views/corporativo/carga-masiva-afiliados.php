@@ -9,7 +9,7 @@ use yii\web\View;
 /* @var $model app\models\MasivoAfiliadosForm */
 /* @var $corporativos array Lista de corporativos activos */
 
-$this->title = 'Gestión: Carga Masiva de Afiliados Corporativos';
+$this->title = 'Carga Masiva de Afiliados Corporativos';
 $this->params['breadcrumbs'][] = $this->title;
 
 // Registramos el script de JavaScript para manejar la funcionalidad de las clínicas y planes.
@@ -109,9 +109,9 @@ $this->registerJs(
 
     <!-- Encabezado y Acción de Descarga -->
     <div class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
-        <h1 class="text-primary font-weight-bold"><i class="fas fa-layer-group me-2"></i> <?= Html::encode($this->title) ?></h1>
+        <h1 class="font-weight-bold"><i class="fas fa-layer-group me-2"></i> <?= Html::encode($this->title) ?></h1>
         <?= Html::a(
-            '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejmplo',
+            '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejemplo',
             ['/corporativo/descargar-plantilla'], 
             [
                 'class' => 'btn btn-success fw-bold py-3 px-5 shadow-xl', // Botón principal de descarga
@@ -166,8 +166,6 @@ $this->registerJs(
                         <td colspan="3">CAMPOS OPCIONALES (Para información de contrato y oficina)</td>
                     </tr>
                     <tr><td>`asesor_id`</td><td>Número</td><td>ID del asesor (si aplica).</td></tr>
-                    <tr><td>`fecha_inicio_contrato`</td><td>Fecha</td><td>Fecha de inicio de vigencia del Contrato. Si está vacío, usa la fecha de hoy. Formato: YYYY-MM-DD.</td></tr>
-                    <tr><td>`fecha_vencimiento_contrato`</td><td>Fecha</td><td>Fecha de vencimiento del Contrato. Si está vacío, puede quedar nulo en el sistema. Formato: YYYY-MM-DD.</td></tr>
                     <tr><td>`direccion_oficina`</td><td>Texto</td><td>Dirección de la oficina del afiliado.</td></tr>
                     <tr><td>`telefono_oficina`</td><td>Texto</td><td>Teléfono de la oficina del afiliado.</td></tr>
                     <tr><td>`tipo_sangre`</td><td>Texto</td><td>Tipo de sangre (ej: A+, O-).</td></tr>
@@ -212,33 +210,103 @@ $this->registerJs(
         'id' => 'carga-masiva-form'
     ]); ?>
 
-    <div class="card shadow-lg border-success">
-        <div class="card-header bg-success text-white">
-            <h4 class="mb-0"><i class="fas fa-cloud-upload-alt me-2"></i> Proceso de Carga</h4>
-        </div>
-        <div class="card-body">
-            
-            <!-- 1. Campo de Selección de Corporativo -->
-            <?= $form->field($model, 'corporativo_id')->dropDownList(
-                $corporativos,
-                ['prompt' => '--- Seleccione el Corporativo Destino para los afiliados ---', 'class' => 'form-control form-select-lg']
-            )->label('<span class="fw-bold text-dark"><i class="fas fa-building me-2"></i> 1. Corporativo Destino</span>') ?>
-            
-            <!-- 2. Campo de Subida de Archivo -->
-            <?= $form->field($model, 'masivoFile')->fileInput([
-                'class' => 'form-control form-control-lg'
-            ])->label('<span class="fw-bold text-dark"><i class="fas fa-file-csv me-2"></i> 2. Seleccionar Archivo CSV</span>')->hint('El archivo debe ser CSV y no debe superar los 5MB de tamaño.') ?>
+   <div class="card shadow-lg border-success">
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0"><i class="fas fa-cloud-upload-alt me-2"></i> Proceso de Carga</h4>
+    </div>
+    
+    <div class="card-body">
+        
+        <?= $form->field($model, 'corporativo_id')->dropDownList(
+            $corporativos,
+            ['prompt' => '--- Seleccione el Corporativo Destino para los afiliados ---', 'class' => 'form-control form-select-lg']
+        )->label('<i class="fas fa-building me-2"></i> 1. Corporativo Destino', [
+            'class' => 'fw-bold text-dark mb-2',
+            'style' => 'padding-left: 8px;', // Alineación manual solicitada
+            'encode' => false
+        ]) ?>
 
-            <div class="form-group pt-4 text-center">
-                <?= Html::submitButton('<i class="fas fa-paper-plane me-2"></i> Procesar Carga', [
-                    'class' => 'btn btn-primary btn-xl shadow-sm', // Botón de acción principal
-                    'data-confirm' => 'ADVERTENCIA: ¿Está seguro de que desea iniciar la carga masiva? Esto creará nuevos usuarios, contratos y cuotas en el sistema.'
+        <div class="row">
+            <div class="col-md-6">
+                <?= $form->field($model, 'fecha_ini')->textInput([
+                    'class' => 'form-control form-control-lg fecha-ini-field',
+                    'type' => 'date',
+                    'required' => true,
+                ])->label('<i class="fas fa-calendar-alt me-2"></i> 2. Fecha de Inicio de contratos', [
+                    'class' => 'fw-bold text-dark mb-2',
+                    'style' => 'padding-left: 0px!important;', // Alineación manual solicitada
+                    'encode' => false
                 ]) ?>
             </div>
+            <div class="col-md-6 fecha-ven-container" style="display: none;">
+                <?= $form->field($model, 'fecha_ven')->textInput([
+                    'class' => 'form-control form-control-lg fecha-ven-field',
+                    'type' => 'date',
+                    'required' => true,
+                ])->label('<i class="fas fa-calendar-check me-2"></i> 2.1. Fecha de Vencimiento de contratos', [
+                    'class' => 'fw-bold text-dark mb-2',
+                    'style' => 'padding-left: 8px;', // Alineación manual solicitada
+                    'encode' => false
+                ]) ?>
+            </div>
+        </div>
+        
+        <?= $form->field($model, 'masivoFile')->fileInput([
+            'class' => 'form-control form-control-lg'
+        ])->label('<i class="fas fa-file-csv me-2"></i> 3. Seleccionar Archivo CSV', [
+            'class' => 'fw-bold text-dark mb-2',
+            'style' => 'padding-left: 8px;', // Alineación manual solicitada
+            'encode' => false
+        ])->hint('El archivo debe ser CSV y no debe superar los 5MB de tamaño.') ?>
 
+        <div class="form-group pt-4 text-center">
+            <?= Html::submitButton('<i class="fas fa-paper-plane me-2"></i> Procesar Carga', [
+                'class' => 'btn btn-primary btn-xl shadow-sm',
+                'data-confirm' => 'ADVERTENCIA: ¿Está seguro de que desea iniciar la carga masiva? Esto creará nuevos usuarios, contratos y cuotas en el sistema.'
+            ]) ?>
         </div>
     </div>
+</div>
 
     <?php ActiveForm::end(); ?>
 
 </div>
+
+<?php
+$this->registerJs(<<<JS
+function calcularFechaVencimiento(fechaIni) {
+  if (fechaIni) {
+    var parts = fechaIni.split('-');
+    var year = parseInt(parts[0]);
+    var month = parseInt(parts[1]) - 1;
+    var day = parseInt(parts[2]);
+    var fecha = new Date(year, month, day);
+    fecha.setFullYear(fecha.getFullYear() + 1);
+    var newYear = fecha.getFullYear();
+    var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
+    var newDay = String(fecha.getDate()).padStart(2, '0');
+    return newYear + '-' + newMonth + '-' + newDay;
+  }
+  return '';
+}
+function toggleFechaVen() {
+  var fechaIni = $('.fecha-ini-field').val();
+  var fechaVenContainer = $('.fecha-ven-container');
+  if (fechaIni) {
+    fechaVenContainer.show();
+    var fechaVen = calcularFechaVencimiento(fechaIni);
+    $('.fecha-ven-field').val(fechaVen);
+  } else {
+    fechaVenContainer.hide();
+    $('.fecha-ven-field').val('');
+  }
+}
+$(function() {
+  toggleFechaVen();
+  $('.fecha-ini-field').on('change', function() {
+    toggleFechaVen();
+  });
+});
+JS
+, View::POS_END);
+?>
