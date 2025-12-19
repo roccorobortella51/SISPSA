@@ -169,7 +169,6 @@ $this->registerJs(
                     <tr><td>`direccion_oficina`</td><td>Texto</td><td>Dirección de la oficina del afiliado.</td></tr>
                     <tr><td>`telefono_oficina`</td><td>Texto</td><td>Teléfono de la oficina del afiliado.</td></tr>
                     <tr><td>`tipo_sangre`</td><td>Texto</td><td>Tipo de sangre (ej: A+, O-).</td></tr>
-                    <tr><td>`rol_en-corporativo`</td><td>Texto</td><td>Posición o rol del afiliado dentro de la empresa.</td></tr>
                     <tr><td>`nacionalidad`</td><td>Texto</td><td>Nacionalidad de origen  (ej: Venezolano o Extranjero).</td></tr>
                     <tr><td>`estado_civil`</td><td>Texto</td><td>Soltero, Casado, Divorciado o Viudo</td></tr>
                     <tr><td>`Lugar_nacimiento`</td><td>Texto</td><td>Escriba un estado por ejemplo</td></tr>
