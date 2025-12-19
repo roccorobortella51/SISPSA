@@ -788,7 +788,8 @@ $this->registerCss(
 CSS
 );
 
-// JavaScript corregido - con URLs correctas
+// Remove the problematic second registerJs call and merge everything
+
 $this->registerJs(
     <<<JS
     // =============================================
@@ -868,45 +869,7 @@ $this->registerJs(
             '</div>'
         );
     }
-    // =============================================
-// FUNCIÓN PARA EXPORTAR RESUMEN PDF
-// =============================================
-function generarResumenPDF() {
-    // Obtener parámetros actuales
-    const status = $(config.selectors.status).val();
-    const clinicasSeleccionadas = $(config.selectors.clinica).val();
-    const dateRange = $(config.selectors.dateRange).val();
-    const dateFrom = $(config.selectors.dateFrom).val();
-    const dateTo = $(config.selectors.dateTo).val();
     
-    // Construir URL para resumen PDF
-    let pdfParams = {
-        range: dateRange,
-        status: status,
-        clinicas: clinicasSeleccionadas ? clinicasSeleccionadas.join(',') : 'todas',
-        resumen_only: 'true' // Parámetro especial para solo el resumen
-    };
-    
-    // Agregar fechas personalizadas si aplica
-    if (dateRange === 'custom' && dateFrom && dateTo) {
-        pdfParams.date_from = dateFrom;
-        pdfParams.date_to = dateTo;
-        pdfParams.custom_range = 'true';
-    }
-    
-    const pdfUrl = config.pdfUrl + '?' + new URLSearchParams(pdfParams).toString();
-    
-    // Abrir en nueva pestaña
-    window.open(pdfUrl, '_blank');
-}
-
-// =============================================
-// MANEJADOR PARA BOTÓN RESUMEN PDF
-// =============================================
-$(document).on('click', '#btn-resumen-pdf', function() {
-    generarResumenPDF();
-});
-
     function showError(message) {
         \$(config.selectors.results).html(
             '<div class="col-12">' +
@@ -937,7 +900,7 @@ $(document).on('click', '#btn-resumen-pdf', function() {
     }
     
     // =============================================
-    // FUNCIÓN PRINCIPAL - CARGAR REPORTE (VERSIÓN SIMPLIFICADA)
+    // FUNCIÓN PRINCIPAL - CARGAR REPORTE
     // =============================================
     async function cargarReporte(params = {}) {
         try {
@@ -1045,8 +1008,7 @@ $(document).on('click', '#btn-resumen-pdf', function() {
                 \$(config.selectors.dateTo).val(formatDate(endDate));
                 return;
             case 'custom':
-                \$(config.selectors.customDatesContainer)
-                    .slideDown(200);
+                \$(config.selectors.customDatesContainer).slideDown(200);
                 return;
         }
         
@@ -1058,26 +1020,90 @@ $(document).on('click', '#btn-resumen-pdf', function() {
         return date.toISOString().split('T')[0];
     }
     
-    function exportToExcel() {
+    // =============================================
+    // EXCEL EXPORT FUNCTIONALITY
+    // =============================================
+    
+    /**
+     * Performs the Excel export with current filters
+     */
+    function performExcelExport() {
+        console.log('Starting Excel export process...');
+        
+        // 1. Gather all current filter values
         const status = \$(config.selectors.status).val();
         const clinicasSeleccionadas = \$(config.selectors.clinica).val();
         const dateRange = \$(config.selectors.dateRange).val();
         const dateFrom = \$(config.selectors.dateFrom).val();
         const dateTo = \$(config.selectors.dateTo).val();
         
+        // 2. Validate inputs (optional but recommended)
+        if (dateRange === 'custom' && (!dateFrom || !dateTo)) {
+            alert('Por favor seleccione ambas fechas para el rango personalizado.');
+            return;
+        }
+        
+        // 3. Construct the export URL
+        // Replace the AJAX endpoint from 'get-pagos-detail' to 'export-excel'
         let exportUrl = config.ajaxUrl.replace('get-pagos-detail', 'export-excel') + '?';
+        
+        // 4. Add all parameters as query string
         exportUrl += 'range=' + encodeURIComponent(dateRange);
         exportUrl += '&status=' + encodeURIComponent(status);
-        exportUrl += '&clinicas=' + (clinicasSeleccionadas ? clinicasSeleccionadas.join(',') : 'todas');
+        exportUrl += '&clinicas=' + (clinicasSeleccionadas ? 
+            clinicasSeleccionadas.join(',') : 'todas');
         
+        // 5. Add custom date parameters if applicable
         if (dateRange === 'custom' && dateFrom && dateTo) {
             exportUrl += '&date_from=' + encodeURIComponent(dateFrom);
             exportUrl += '&date_to=' + encodeURIComponent(dateTo);
             exportUrl += '&custom_range=true';
         }
         
-        console.log('Export URL:', exportUrl);
+        // 6. Add CSRF token for security
+        const csrfToken = \$('meta[name="csrf-token"]').attr('content');
+        if (csrfToken) {
+            exportUrl += '&_csrf=' + encodeURIComponent(csrfToken);
+        }
+        
+        console.log('Export URL constructed:', exportUrl);
+        
+        // 7. Open the export URL in a new window/tab
         window.open(exportUrl, '_blank');
+    }
+    
+    // =============================================
+    // MANEJADORES DE EVENTOS
+    // =============================================
+    function setupEventHandlers() {
+        // Cambio en selector de rango de fechas
+        \$(config.selectors.dateRange).on('change', function() {
+            const range = \$(this).val();
+            
+            if (range !== 'custom') {
+                \$(config.selectors.customDatesContainer).slideUp(200);
+                updateDateInputsByRange(range);
+            } else {
+                updateDateInputsByRange(range);
+            }
+        });
+        
+        // Botón principal de generar reporte
+        \$(config.selectors.aplicarBtn).on('click', function() {
+            generateReport();
+        });
+        
+        // Excel export handler - Event delegation
+        \$(document).on('click', '#btn-export-excel', function(e) {
+            console.log('Excel export button clicked');
+            e.preventDefault();
+            performExcelExport();
+        });
+        
+        // Permitir Enter en campos de fecha
+        \$(config.selectors.dateFrom).add(config.selectors.dateTo).on('keypress', function(e) {
+            if (e.which === 13) generateReport();
+        });
     }
     
     // =============================================
@@ -1120,100 +1146,6 @@ $(document).on('click', '#btn-resumen-pdf', function() {
     }
     
     // =============================================
-    // MANEJADORES DE EVENTOS
-    // =============================================
-    function setupEventHandlers() {
-        // Cambio en selector de rango de fechas
-        \$(config.selectors.dateRange).on('change', function() {
-            const range = \$(this).val();
-            
-            if (range !== 'custom') {
-                \$(config.selectors.customDatesContainer).slideUp(200);
-                updateDateInputsByRange(range);
-            } else {
-                updateDateInputsByRange(range);
-            }
-        });
-        
-        // Botón principal de generar reporte
-        \$(config.selectors.aplicarBtn).on('click', function() {
-            generateReport();
-        });
-        
-        // Permitir Enter en campos de fecha
-        \$(config.selectors.dateFrom).add(config.selectors.dateTo).on('keypress', function(e) {
-            if (e.which === 13) generateReport();
-        });
-    }
-    
-    function mostrarAnalisisGrafico() {
-    // Obtener parámetros actuales
-    const params = {
-        range: $(config.selectors.dateRange).val(),
-        date_from: $(config.selectors.dateFrom).val(),
-        date_to: $(config.selectors.dateTo).val(),
-        custom_range: $(config.selectors.dateRange).val() === 'custom',
-        status: $(config.selectors.status).val(),
-        clinicas: $(config.selectors.clinica).val() || [],
-        _csrf: $('meta[name="csrf-token"]').attr('content')
-    };
-    
-    // Mostrar loading
-    $(config.selectors.results).html(`
-        <div class="col-12">
-            <div class="card border-0 shadow">
-                <div class="card-body text-center py-5">
-                    <div class="loading-pulse">
-                        <div class="mb-4">
-                            <i class="fas fa-chart-bar fa-5x text-primary"></i>
-                        </div>
-                        <h3 class="text-primary mb-3">Cargando Análisis Gráfico</h3>
-                        <p class="text-muted fs-5">Preparando visualizaciones y estadísticas...</p>
-                        <div class="mt-5">
-                            <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `);
-    
-    // Cargar vista de análisis
-    $.ajax({
-        url: '/reportes/get-analytics-view',
-        type: 'POST',
-        data: params,
-        success: function(response) {
-            $(config.selectors.results).html(response);
-            
-            // Load chart data after view is rendered
-            setTimeout(() => {
-                if (typeof loadChartData === 'function') {
-                    loadChartData();
-                }
-            }, 100);
-            
-            // Scroll suave a la sección de análisis
-            $('html, body').animate({
-                scrollTop: $('#analytics-section').offset().top - 100
-            }, 500);
-        },
-        error: function(xhr, status, error) {
-            console.error('Error loading analytics:', error);
-            showError('Error al cargar el análisis gráfico: ' + error);
-        }
-    });
-}
-
-// Add this event listener for the analytics button
-$(document).on('click', '.btn-analytics', function(e) {
-    e.preventDefault();
-    mostrarAnalisisGrafico();
-});
-
-    // =============================================
     // INICIALIZACIÓN DE LA PÁGINA
     // =============================================
     \$(document).ready(function() {
@@ -1223,6 +1155,9 @@ $(document).on('click', '.btn-analytics', function(e) {
         initComponents();
         setupEventHandlers();
         updateDateInputsByRange('day');
+        
+        console.log('All handlers initialized');
     });
 JS
 );
+?>
