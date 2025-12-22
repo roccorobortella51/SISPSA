@@ -140,6 +140,42 @@ $css = <<<CSS
     background-color: rgba(23, 162, 184, 0.03);
     border-left: 2px solid rgba(23, 162, 184, 0.2);
 }
+/* Affiliate styling - Amber/Gold color */
+.affiliate-badge-pro {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 1px 3px rgba(255, 193, 7, 0.2);
+}
+
+.affiliate-payer-cell {
+    background-color: rgba(255, 193, 7, 0.03);
+    border-left: 2px solid rgba(255, 193, 7, 0.3);
+}
+
+.affiliate-cedula {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: #e0a800;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 193, 7, 0.2);
+    font-size: 0.9em;
+    display: inline-block;
+}
+
+.affiliate-tipo-cell {
+    background-color: rgba(255, 193, 7, 0.05);
+    border: 1px solid rgba(255, 193, 7, 0.1);
+    border-radius: 4px;
+}
 CSS;
 
 $this->registerCss($css);
@@ -162,41 +198,44 @@ $this->registerCss($css);
             [
                 'attribute' => 'nombreUsuario',
                 'value' => function ($model) {
-                    if ($model->tipo_pago === 'corporativo' || $model->corporativo_id) {
+                    // Si es un pago corporativo principal
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
                         if ($model->corporativo && $model->corporativo->nombre) {
                             return '<div class="corporate-name-pro">
-                                        <i class="fas fa-building corporate-icon"></i>
-                                        ' . $model->corporativo->nombre . '
-                                    </div>';
-                        } else {
-                            return '<div class="corporate-name-pro">
-                                        <i class="fas fa-building corporate-icon"></i>
-                                        Corporativo
-                                    </div>';
+                                <i class="fas fa-building corporate-icon"></i>
+                                ' . $model->corporativo->nombre . ' (Corporación)
+                            </div>';
                         }
-                    } else {
+                    }
+                    // Si es un pago de afiliado (tiene pago_corporativo_id)
+                    elseif ($model->pago_corporativo_id) {
+                        if ($model->userDatos) {
+                            return '<div class="individual-name-pro">
+                                <i class="fas fa-user individual-icon"></i>
+                                ' . $model->userDatos->nombres . ' ' . $model->userDatos->apellidos . ' (Afiliado)
+                            </div>';
+                        }
+                    }
+                    // Si es pago individual normal
+                    else {
                         return $model->userDatos ?
                             '<div class="individual-name-pro">
-                                <i class="fas fa-user individual-icon"></i>
-                                ' . $model->userDatos->nombres . ' ' . $model->userDatos->apellidos . '
-                            </div>' : 'N/A';
+                        <i class="fas fa-user individual-icon"></i>
+                        ' . $model->userDatos->nombres . ' ' . $model->userDatos->apellidos . '
+                    </div>' : 'N/A';
                     }
+
+                    return 'N/A';
                 },
-                'label' => 'PAGADOR',
+                'label' => 'PAGADOR/AFILIADO',
                 'format' => 'raw',
                 'contentOptions' => function ($model) {
-                    $isCorporate = ($model->tipo_pago === 'corporativo' || $model->corporativo_id);
-
-                    if ($isCorporate) {
-                        return [
-                            'class' => 'corporate-payer-cell',
-                            'style' => 'vertical-align: middle;'
-                        ];
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
+                        return ['class' => 'corporate-payer-cell', 'style' => 'vertical-align: middle;'];
+                    } elseif ($model->pago_corporativo_id) {
+                        return ['class' => 'affiliate-payer-cell', 'style' => 'vertical-align: middle;'];
                     } else {
-                        return [
-                            'class' => 'individual-payer-cell',
-                            'style' => 'vertical-align: middle;'
-                        ];
+                        return ['class' => 'individual-payer-cell', 'style' => 'vertical-align: middle;'];
                     }
                 }
             ],
@@ -204,65 +243,81 @@ $this->registerCss($css);
             [
                 'attribute' => 'cedulaUsuario',
                 'value' => function ($model) {
-                    if ($model->tipo_pago === 'corporativo' || $model->corporativo_id) {
+                    // Si es pago corporativo principal
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
                         if ($model->corporativo && $model->corporativo->rif) {
                             return '<span class="corporate-rif">' . $model->corporativo->rif . '</span>';
-                        } else {
-                            return '<span class="corporate-rif">N/A</span>';
                         }
-                    } else {
+                    }
+                    // Si es pago de afiliado
+                    elseif ($model->pago_corporativo_id) {
+                        if ($model->userDatos) {
+                            $cedula = $model->userDatos->cedula;
+                            $tipoCedula = $model->userDatos->tipo_cedula;
+                            $formatted = $tipoCedula && $cedula ? $tipoCedula . '-' . $cedula : ($cedula ?? 'N/A');
+                            return '<span class="affiliate-cedula">' . $formatted . '</span>';
+                        }
+                    }
+                    // Si es pago individual normal
+                    else {
                         if ($model->userDatos) {
                             $cedula = $model->userDatos->cedula;
                             $tipoCedula = $model->userDatos->tipo_cedula;
                             $formatted = $tipoCedula && $cedula ? $tipoCedula . '-' . $cedula : ($cedula ?? 'N/A');
                             return '<span class="individual-cedula">' . $formatted . '</span>';
                         }
-                        return 'N/A';
                     }
+
+                    return 'N/A';
                 },
                 'label' => 'IDENTIFICACIÓN',
                 'format' => 'raw',
                 'headerOptions' => ['style' => 'text-align: center;'],
                 'contentOptions' => function ($model) {
-                    $isCorporate = ($model->tipo_pago === 'corporativo' || $model->corporativo_id);
-
-                    if ($isCorporate) {
-                        return [
-                            'style' => 'text-align: center; vertical-align: middle; background-color: rgba(102, 16, 242, 0.03);'
-                        ];
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
+                        return ['style' => 'text-align: center; vertical-align: middle; background-color: rgba(102, 16, 242, 0.03);'];
+                    } elseif ($model->pago_corporativo_id) {
+                        return ['style' => 'text-align: center; vertical-align: middle; background-color: rgba(255, 193, 7, 0.03);'];
                     } else {
-                        return [
-                            'style' => 'text-align: center; vertical-align: middle; background-color: rgba(23, 162, 184, 0.03);'
-                        ];
+                        return ['style' => 'text-align: center; vertical-align: middle; background-color: rgba(23, 162, 184, 0.03);'];
                     }
                 },
             ],
 
             // Add a type column for clarity
             [
-                'label' => 'TIPO PAGO',
+                'label' => 'TIPO',
                 'value' => function ($model) {
-                    $isCorporate = ($model->tipo_pago === 'corporativo' || $model->corporativo_id);
-
-                    if ($isCorporate) {
+                    // Pago corporativo principal
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
                         return '<span class="corporate-badge-pro">
-                                    <i class="fas fa-building"></i>
-                                    CORPORATIVO
-                                </span>';
-                    } else {
+                            <i class="fas fa-building"></i>
+                            CORPORACIÓN
+                        </span>';
+                    }
+                    // Pago de afiliado corporativo
+                    elseif ($model->pago_corporativo_id) {
+                        return '<span class="affiliate-badge-pro">
+                            <i class="fas fa-users"></i>
+                            AFILIADO
+                        </span>';
+                    }
+                    // Pago individual normal
+                    else {
                         return '<span class="individual-badge-pro">
-                                    <i class="fas fa-user"></i>
-                                    INDIVIDUAL
-                                </span>';
+                            <i class="fas fa-user"></i>
+                            INDIVIDUAL
+                        </span>';
                     }
                 },
                 'format' => 'raw',
                 'contentOptions' => function ($model) {
-                    $isCorporate = ($model->tipo_pago === 'corporativo' || $model->corporativo_id);
                     $options = ['style' => 'text-align: center; vertical-align: middle;'];
 
-                    if ($isCorporate) {
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
                         $options['class'] = 'corporate-tipo-cell';
+                    } elseif ($model->pago_corporativo_id) {
+                        $options['class'] = 'affiliate-tipo-cell';
                     } else {
                         $options['class'] = 'individual-tipo-cell';
                     }
@@ -272,7 +327,8 @@ $this->registerCss($css);
                 'headerOptions' => ['style' => 'text-align: center;'],
                 'filter' => [
                     'individual' => 'Individual',
-                    'corporativo' => 'Corporativo'
+                    'corporativo' => 'Corporación',
+                    'afiliado' => 'Afiliado Corporativo'
                 ],
                 'filterType' => GridView::FILTER_SELECT2,
                 'filterWidgetOptions' => [
@@ -280,7 +336,20 @@ $this->registerCss($css);
                     'pluginOptions' => ['allowClear' => true],
                 ],
             ],
-
+            [
+                'label' => 'PAGO CORP.',
+                'value' => function ($model) {
+                    if ($model->pago_corporativo_id && $model->pagoCorporativo) {
+                        return '<small>Ref: ' . ($model->pagoCorporativo->numero_referencia_pago ?? 'N/A') . '</small>';
+                    } elseif ($model->tipo_pago === 'corporativo') {
+                        return '<small class="text-success"><i class="fas fa-crown"></i> Pago Principal</small>';
+                    }
+                    return '-';
+                },
+                'format' => 'raw',
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
+                'headerOptions' => ['style' => 'text-align: center;'],
+            ],
             // Solvente Column - CONTENT CENTERED
             [
                 'label' => 'SOLVENTE',
