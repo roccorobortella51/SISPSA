@@ -497,7 +497,7 @@ class ReportesController extends Controller
 
             // Encabezado y pie de página
             'methods' => [
-                'SetHeader' => ['Sistema Sips - Reporte de Pagos||Página {PAGENO} de {nb}'],
+                'SetHeader' => ['Sistema SISPSA - Reporte de Pagos||Página {PAGENO} de {nb}'],
                 'SetFooter' => ['Generado el ' . date('d/m/Y H:i:s') . '||'],
             ],
 
