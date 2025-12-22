@@ -46,8 +46,10 @@ class PagosSearch extends Pagos
     public function search($params)
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
-        $query = Pagos::find()->alias('t')->joinWith(['userDatos']);
-        
+        $query = Pagos::find()->alias('t')
+            ->joinWith(['userDatos'])
+            ->joinWith(['corporativo']); // Add this line;
+
         // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView y el filtro/sort
         // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna' para evitar el error de tabla indefinida.
         $query->select([
@@ -60,7 +62,10 @@ class PagosSearch extends Pagos
             't.metodo_pago',
             't.fecha_conciliacion',
             't.nombre_conciliador',
-            't.observacion', 
+            't.observacion',
+            't.corporativo_id',
+            't.tipo_pago',
+            't.pago_corporativo_id',
             // CORREGIDO: Usar el nombre de tabla real 'user_datos'
             'user_datos.nombres',
             'user_datos.apellidos',
@@ -69,8 +74,8 @@ class PagosSearch extends Pagos
             // Claves foráneas y campos de control necesarios para filtros exactos y ordenamiento
             't.user_id',
             't.conciliador_id',
-            't.recibo_id', 
-            't.conciliado', 
+            't.recibo_id',
+            't.conciliado',
             't.created_at',
         ]);
         // -------------------------
@@ -78,7 +83,7 @@ class PagosSearch extends Pagos
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC], 
+                'defaultOrder' => ['id' => SORT_DESC],
                 'attributes' => [
                     'id',
                     'created_at',
@@ -131,12 +136,13 @@ class PagosSearch extends Pagos
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
             ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
             ->andFilterWhere(['ilike', 't.observacion', $this->observacion]);
-        
+
         // Los filtros ya usaban correctamente 'user_datos'
-        $query->andFilterWhere(['or',
-                ['ilike', 'user_datos.nombres', $this->nombreUsuario],
-                ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
-            ])
+        $query->andFilterWhere([
+            'or',
+            ['ilike', 'user_datos.nombres', $this->nombreUsuario],
+            ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
+        ])
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
 
         return $dataProvider;
@@ -155,14 +161,14 @@ class PagosSearch extends Pagos
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
         $query = Pagos::find()->alias('t');
-        
+
         // Unir Pagos -> UserDatos -> Contratos (con filtro de clinica_id)
-        $query->joinWith(['userDatos' => function($q) use ($clinica_id) {
-            $q->joinWith(['contratos' => function($q_c) use ($clinica_id) {
+        $query->joinWith(['userDatos' => function ($q) use ($clinica_id) {
+            $q->joinWith(['contratos' => function ($q_c) use ($clinica_id) {
                 $q_c->andWhere(['contratos.clinica_id' => $clinica_id]);
-            }], true, 'INNER JOIN'); 
+            }], true, 'INNER JOIN');
         }], true, 'INNER JOIN');
-        
+
         // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView
         // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna'
         $query->select([
@@ -242,7 +248,8 @@ class PagosSearch extends Pagos
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
             ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
             ->andFilterWhere(['ilike', 't.observacion', $this->observacion])
-            ->andFilterWhere(['or',
+            ->andFilterWhere([
+                'or',
                 ['ilike', 'user_datos.nombres', $this->nombreUsuario],
                 ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
             ])
@@ -263,7 +270,7 @@ class PagosSearch extends Pagos
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
         $query = Pagos::find()->alias('t');
-        
+
         $query->where(['t.user_id' => $user_id]);
 
         // 2. Proyección de columnas: Solo necesitamos las de Pagos
@@ -289,7 +296,7 @@ class PagosSearch extends Pagos
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC], 
+                'defaultOrder' => ['id' => SORT_DESC],
                 'attributes' => [
                     'id',
                     'created_at',
