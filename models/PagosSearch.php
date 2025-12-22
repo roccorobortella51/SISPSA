@@ -43,13 +43,19 @@ class PagosSearch extends Pagos
      *
      * @return ActiveDataProvider
      */
+    /**
+     * Creates data provider instance with search query applied
+     *
+     * @param array $params
+     *
+     * @return ActiveDataProvider
+     */
     public function search($params)
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
         $query = Pagos::find()->alias('t')->joinWith(['userDatos']);
-        
-        // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView y el filtro/sort
-        // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna' para evitar el error de tabla indefinida.
+
+        // 2. Proyección de columnas
         $query->select([
             't.id',
             't.fecha_pago',
@@ -60,47 +66,25 @@ class PagosSearch extends Pagos
             't.metodo_pago',
             't.fecha_conciliacion',
             't.nombre_conciliador',
-            't.observacion', 
-            // CORREGIDO: Usar el nombre de tabla real 'user_datos'
+            't.observacion',
             'user_datos.nombres',
             'user_datos.apellidos',
             'user_datos.cedula',
             'user_datos.estatus_solvente',
-            // Claves foráneas y campos de control necesarios para filtros exactos y ordenamiento
             't.user_id',
             't.conciliador_id',
-            't.recibo_id', 
-            't.conciliado', 
+            't.recibo_id',
+            't.conciliado',
             't.created_at',
+            // Campos críticos para ordenamiento
+            't.tipo_pago',
+            't.corporativo_id',
+            't.pago_corporativo_id',
         ]);
-        // -------------------------
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC], 
-                'attributes' => [
-                    'id',
-                    'created_at',
-                    'fecha_pago',
-                    'monto_pagado',
-                    'monto_usd',
-                    'estatus',
-                    'numero_referencia_pago',
-                    'observacion',
-                    'metodo_pago',
-                    'fecha_conciliacion',
-                    'nombre_conciliador',
-                    'nombreUsuario' => [
-                        'asc' => ['user_datos.nombres' => SORT_ASC, 'user_datos.apellidos' => SORT_ASC],
-                        'desc' => ['user_datos.nombres' => SORT_DESC, 'user_datos.apellidos' => SORT_DESC],
-                    ],
-                    'cedulaUsuario' => [
-                        'asc' => ['user_datos.cedula' => SORT_ASC],
-                        'desc' => ['user_datos.cedula' => SORT_DESC],
-                    ],
-                ],
-            ],
+            'sort' => false, // Desactivamos ordenamiento automático
             'pagination' => [
                 'pageSize' => 20,
             ],
@@ -112,7 +96,7 @@ class PagosSearch extends Pagos
             return $dataProvider;
         }
 
-        // grid filtering conditions (usamos el alias 't' o el nombre de tabla 'pagos' cuando es necesario)
+        // Filtros existentes...
         $query->andFilterWhere([
             't.id' => $this->id,
             'recibo_id' => $this->recibo_id,
@@ -130,14 +114,45 @@ class PagosSearch extends Pagos
             ->andFilterWhere(['ilike', 'nombre_conciliador', $this->nombre_conciliador])
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
             ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
-            ->andFilterWhere(['ilike', 't.observacion', $this->observacion]);
-        
-        // Los filtros ya usaban correctamente 'user_datos'
-        $query->andFilterWhere(['or',
+            ->andFilterWhere(['ilike', 't.observacion', $this->observacion])
+            ->andFilterWhere([
+                'or',
                 ['ilike', 'user_datos.nombres', $this->nombreUsuario],
                 ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
             ])
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
+
+        // ===========================================================================
+        // ORDENAMIENTO JERÁRQUICO QUE MANTIENE EL ORDEN CRONOLÓGICO
+        // ===========================================================================
+
+        // Necesitamos: 1) Orden cronológico general, 2) Agrupación jerárquica
+
+        $query->orderBy(new \yii\db\Expression("
+        -- NIVEL 1: Ordenar por la FECHA/HORA del GRUPO PADRE (más importante)
+        -- Para pagos corporativos: usar su propio created_at
+        -- Para afiliados: usar el created_at de su pago corporativo padre
+        (
+            SELECT COALESCE(padre.created_at, t.created_at)
+            FROM pagos AS padre
+            WHERE padre.id = COALESCE(t.pago_corporativo_id, t.id)
+        ) DESC,
+        
+        -- NIVEL 2: Agrupar por 'padre' para mantener juntos los afiliados con su corporación
+        COALESCE(t.pago_corporativo_id, t.id) ASC,
+        
+        -- NIVEL 3: Dentro de cada grupo, el pago corporativo primero
+        CASE 
+            WHEN t.tipo_pago = 'corporativo' AND t.corporativo_id IS NOT NULL THEN 1
+            ELSE 2
+        END ASC,
+        
+        -- NIVEL 4: Dentro de cada subgrupo, ordenar por fecha de creación (más reciente primero)
+        t.created_at DESC,
+        
+        -- NIVEL 5: Por ID como último desempate
+        t.id DESC
+    "));
 
         return $dataProvider;
     }
@@ -155,14 +170,14 @@ class PagosSearch extends Pagos
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
         $query = Pagos::find()->alias('t');
-        
+
         // Unir Pagos -> UserDatos -> Contratos (con filtro de clinica_id)
-        $query->joinWith(['userDatos' => function($q) use ($clinica_id) {
-            $q->joinWith(['contratos' => function($q_c) use ($clinica_id) {
+        $query->joinWith(['userDatos' => function ($q) use ($clinica_id) {
+            $q->joinWith(['contratos' => function ($q_c) use ($clinica_id) {
                 $q_c->andWhere(['contratos.clinica_id' => $clinica_id]);
-            }], true, 'INNER JOIN'); 
+            }], true, 'INNER JOIN');
         }], true, 'INNER JOIN');
-        
+
         // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView
         // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna'
         $query->select([
@@ -242,7 +257,8 @@ class PagosSearch extends Pagos
             ->andFilterWhere(['ilike', 'fecha_conciliacion', $this->fecha_conciliacion])
             ->andFilterWhere(['ilike', 'fecha_registro', $this->fecha_registro])
             ->andFilterWhere(['ilike', 't.observacion', $this->observacion])
-            ->andFilterWhere(['or',
+            ->andFilterWhere([
+                'or',
                 ['ilike', 'user_datos.nombres', $this->nombreUsuario],
                 ['ilike', 'user_datos.apellidos', $this->nombreUsuario]
             ])
@@ -263,7 +279,7 @@ class PagosSearch extends Pagos
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
         $query = Pagos::find()->alias('t');
-        
+
         $query->where(['t.user_id' => $user_id]);
 
         // 2. Proyección de columnas: Solo necesitamos las de Pagos
@@ -289,7 +305,7 @@ class PagosSearch extends Pagos
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC], 
+                'defaultOrder' => ['id' => SORT_DESC],
                 'attributes' => [
                     'id',
                     'created_at',
