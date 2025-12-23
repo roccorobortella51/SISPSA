@@ -584,7 +584,7 @@ $this->registerCss($css);
             // Columna REFERENCIA con conexión visual
             [
                 'attribute' => 'numero_referencia_pago',
-                'header' => 'REFERENCIA<br>CONEXIÓN',
+                'header' => 'REFERENCIA PAGO /<br>CONEXIÓN',
                 'value' => function ($model) {
                     $ref = $model->numero_referencia_pago ?? 'N/A';
 
@@ -633,35 +633,6 @@ $this->registerCss($css);
                 'format' => 'raw',
                 'contentOptions' => ['style' => 'text-align: center;'],
                 'filter' => ['SI' => 'SI', 'No' => 'No'],
-            ],
-
-            // Payment Method Column - CONTENT CENTERED
-            [
-                'attribute' => 'metodo_pago',
-                'header' => 'MÉTODO<br>PAGO',
-                'format' => 'raw',
-                'headerOptions' => ['style' => 'width: 60px;'],
-                'contentOptions' => ['style' => 'width: 60px; text-align: center;'],
-                'filter' => $metodoPagoList,
-                'filterType' => GridView::FILTER_SELECT2,
-                'filterWidgetOptions' => [
-                    'options' => ['placeholder' => 'MÉTODO'],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ],
-            ],
-
-            // Payment Reference Column - CONTENT CENTERED
-            [
-                'attribute' => 'numero_referencia_pago',
-                'header' => 'REFERENCIA<br>PAGO',
-                'format' => 'raw',
-                'filter' => true,
-                'headerOptions' => [
-                    'style' => 'width: 100px; text-align: center;',
-                ],
-                'contentOptions' => ['style' => 'text-align: center; white-space: normal;'],
             ],
 
             // Columna de Fecha de Pago
