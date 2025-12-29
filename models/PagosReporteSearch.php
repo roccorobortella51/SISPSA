@@ -7,6 +7,8 @@ use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Pagos;
 use yii\db\Expression;
+use yii\log\Logger;
+use Yii;
 
 /**
  * PagosReporteSearch representa el modelo detrás del formulario de búsqueda para Pagos.
@@ -29,7 +31,7 @@ class PagosReporteSearch extends Pagos
             // Asegurarse de que 'estatus' esté en las reglas
             [['fecha_pago', 'metodo_pago', 'estatus', 'numero_referencia_pago'], 'safe'],
             [['monto_usd'], 'number'],
-            
+
             // Reglas para los atributos virtuales de UserDatos (Nombres, Apellidos, Cédula)
             [['nombres', 'apellidos', 'cedula'], 'safe'],
         ];
@@ -58,7 +60,7 @@ class PagosReporteSearch extends Pagos
     {
         // 1. Inicializar la consulta básica - SOLO con JOIN necesario para nombres, apellidos, cédula
         $query = Pagos::find()->joinWith(['userDatos']);
-        
+
         // 2. Configurar el proveedor de datos
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -99,25 +101,25 @@ class PagosReporteSearch extends Pagos
             // $query->where('0=1');
             return $dataProvider;
         }
-        
+
         // 4. Aplicar Filtros Específicos del Reporte
-        
+
         // Filtro de Estatus: Usar el parámetro $status (si no es 'todos')
         if ($status !== 'todos') {
             $query->andWhere(['pagos.estatus' => $status]);
         }
-        
+
         // Filtro de Rango de Fecha (provee el controlador)
         if ($startDate && $endDate) {
             // Ajustar el end date para incluir el día completo (hasta el inicio del día siguiente)
             $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
-            
+
             // Usar COALESCE para intentar con fecha_pago o fecha_conciliacion si una es nula
             $query->andWhere(['between', new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), $startDate, $adjustedEndDate]);
         }
-        
+
         // 5. Aplicar Filtros del GridView
-        
+
         // Filtros por igualdad (IDs y Monto)
         $query->andFilterWhere([
             'pagos.id' => $this->id,
@@ -125,7 +127,7 @@ class PagosReporteSearch extends Pagos
             'pagos.user_id' => $this->user_id,
             // 'pagos.monto_usd' => $this->monto_usd, // Descomentar si quiere filtrar por monto exacto
         ]);
-        
+
         // Filtros de texto (LIKE) en la tabla Pagos
         $query->andFilterWhere(['ilike', 'pagos.metodo_pago', $this->metodo_pago])
             ->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago])
@@ -154,7 +156,7 @@ class PagosReporteSearch extends Pagos
     {
         // 1. Inicializar la consulta básica
         $query = Pagos::find()->joinWith(['userDatos']);
-        
+
         // 2. Si hay filtro de clínicas, aplicar subconsulta
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
             // Subconsulta para obtener user_ids que tienen contratos con las clínicas seleccionadas
@@ -162,11 +164,11 @@ class PagosReporteSearch extends Pagos
                 ->select(['user_id'])
                 ->where(['clinica_id' => $clinicas])
                 ->distinct();
-            
+
             // Aplicar el filtro a la consulta principal
             $query->andWhere(['pagos.user_id' => $subQuery]);
         }
-        
+
         // 3. Configurar el proveedor de datos (igual que en search())
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -202,31 +204,32 @@ class PagosReporteSearch extends Pagos
         if (!$this->validate()) {
             return $dataProvider;
         }
-        
+
         // 4. Aplicar Filtros Específicos del Reporte
-        
+
         // Filtro de Estatus
         if ($status !== 'todos') {
             $query->andWhere(['pagos.estatus' => $status]);
         }
-        
+
         // Filtro de Rango de Fecha
         if ($startDate && $endDate) {
             $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
-            $query->andWhere(['between', 
-                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
-                $startDate, 
+            $query->andWhere([
+                'between',
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'),
+                $startDate,
                 $adjustedEndDate
             ]);
         }
-        
+
         // 5. Aplicar Filtros del GridView
         $query->andFilterWhere([
             'pagos.id' => $this->id,
             'pagos.recibo_id' => $this->recibo_id,
             'pagos.user_id' => $this->user_id,
         ]);
-        
+
         $query->andFilterWhere(['ilike', 'pagos.metodo_pago', $this->metodo_pago])
             ->andFilterWhere(['ilike', 'pagos.numero_referencia_pago', $this->numero_referencia_pago])
             ->andFilterWhere(['ilike', 'pagos.estatus', $this->estatus])
@@ -249,42 +252,43 @@ class PagosReporteSearch extends Pagos
     public function obtenerResumenPorClinica($startDate, $endDate, $status = 'todos', $clinicas = [])
     {
         $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
-        
+
         // Construir consulta base para pagos
         $query = Pagos::find()
             ->joinWith(['userDatos.contratos.clinica'])
-            ->where(['between', 
-                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
-                $startDate, 
+            ->where([
+                'between',
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'),
+                $startDate,
                 $adjustedEndDate
             ]);
-        
+
         // Filtrar por estado si no es "todos"
         if ($status !== 'todos') {
             $query->andWhere(['pagos.estatus' => $status]);
         }
-        
+
         // Filtrar por clínicas si se especifican
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
             $query->andWhere(['rm_clinica.id' => $clinicas]);
         }
-        
+
         // Agrupar por clínica y obtener resumen - CORREGIDO: usar comillas simples para strings
         $result = $query->select([
-                'clinica_id' => 'rm_clinica.id',
-                'clinica_nombre' => 'rm_clinica.nombre',
-                'clinica_rif' => 'rm_clinica.rif',
-                'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
-                'total_pagos' => 'COUNT(DISTINCT pagos.id)',
-                // CORRECCIÓN: Usar comillas simples para valores de string
-                'conciliados' => new Expression("SUM(CASE WHEN pagos.estatus = 'Conciliado' THEN 1 ELSE 0 END)"),
-                'pendientes' => new Expression("SUM(CASE WHEN pagos.estatus = 'Por Conciliar' THEN 1 ELSE 0 END)")
-            ])
+            'clinica_id' => 'rm_clinica.id',
+            'clinica_nombre' => 'rm_clinica.nombre',
+            'clinica_rif' => 'rm_clinica.rif',
+            'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
+            'total_pagos' => 'COUNT(DISTINCT pagos.id)',
+            // CORRECCIÓN: Usar comillas simples para valores de string
+            'conciliados' => new Expression("SUM(CASE WHEN pagos.estatus = 'Conciliado' THEN 1 ELSE 0 END)"),
+            'pendientes' => new Expression("SUM(CASE WHEN pagos.estatus = 'Por Conciliar' THEN 1 ELSE 0 END)")
+        ])
             ->groupBy(['rm_clinica.id', 'rm_clinica.nombre', 'rm_clinica.rif'])
             ->orderBy(['total_monto' => SORT_DESC])
             ->asArray()
             ->all();
-        
+
         return $result ?: [];
     }
 
@@ -300,32 +304,33 @@ class PagosReporteSearch extends Pagos
     public function obtenerEstadisticasEstatus($startDate, $endDate, $clinicas = [])
     {
         $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
-        
+
         $query = Pagos::find()
-            ->where(['between', 
-                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
-                $startDate, 
+            ->where([
+                'between',
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'),
+                $startDate,
                 $adjustedEndDate
             ]);
-        
+
         // Si hay filtro de clínicas, usar subconsulta
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
             $subQuery = Contratos::find()
                 ->select(['user_id'])
                 ->where(['clinica_id' => $clinicas])
                 ->distinct();
-            
+
             $query->andWhere(['pagos.user_id' => $subQuery]);
         }
-        
+
         $result = $query->select([
-                'conciliados' => 'SUM(CASE WHEN pagos.estatus = "Conciliado" THEN 1 ELSE 0 END)',
-                'pendientes' => 'SUM(CASE WHEN pagos.estatus = "Por Conciliar" THEN 1 ELSE 0 END)',
-                'total' => 'COUNT(*)'
-            ])
+            'conciliados' => 'SUM(CASE WHEN pagos.estatus = "Conciliado" THEN 1 ELSE 0 END)',
+            'pendientes' => 'SUM(CASE WHEN pagos.estatus = "Por Conciliar" THEN 1 ELSE 0 END)',
+            'total' => 'COUNT(*)'
+        ])
             ->asArray()
             ->one();
-        
+
         return [
             'conciliados' => $result['conciliados'] ?? 0,
             'pendientes' => $result['pendientes'] ?? 0,
@@ -345,81 +350,83 @@ class PagosReporteSearch extends Pagos
     public function obtenerResumenPorMetodoPago($startDate, $endDate, $status = 'todos', $clinicas = [])
     {
         $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
-        
+
         $query = Pagos::find()
-            ->where(['between', 
-                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
-                $startDate, 
+            ->where([
+                'between',
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'),
+                $startDate,
                 $adjustedEndDate
             ]);
-        
+
         // Filtrar por estado si no es "todos"
         if ($status !== 'todos') {
             $query->andWhere(['pagos.estatus' => $status]);
         }
-        
+
         // Si hay filtro de clínicas, usar subconsulta
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
             $subQuery = Contratos::find()
                 ->select(['user_id'])
                 ->where(['clinica_id' => $clinicas])
                 ->distinct();
-            
+
             $query->andWhere(['pagos.user_id' => $subQuery]);
         }
-        
+
         $result = $query->select([
-                'metodo_pago',
-                'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
-                'total_pagos' => 'COUNT(*)'
-            ])
+            'metodo_pago',
+            'total_monto' => 'COALESCE(SUM(pagos.monto_usd), 0)',
+            'total_pagos' => 'COUNT(*)'
+        ])
             ->groupBy(['pagos.metodo_pago'])
             ->orderBy(['total_monto' => SORT_DESC])
             ->asArray()
             ->all();
-        
+
         return $result ?: [];
     }
 
     public function obtenerResumenGeneral($startDate, $endDate, $status = 'todos', $clinicas = [])
     {
         $adjustedEndDate = (new \DateTime($endDate))->modify('+1 day')->format('Y-m-d');
-        
+
         $query = Pagos::find()
-            ->where(['between', 
-                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'), 
-                $startDate, 
+            ->where([
+                'between',
+                new Expression('COALESCE(pagos.fecha_pago, pagos.fecha_conciliacion)'),
+                $startDate,
                 $adjustedEndDate
             ]);
-        
+
         // Filtrar por estado si no es "todos"
         if ($status !== 'todos') {
             $query->andWhere(['pagos.estatus' => $status]);
         }
-        
+
         // Si hay filtro de clínicas, usar subconsulta
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
             $subQuery = Contratos::find()
                 ->select(['user_id'])
                 ->where(['clinica_id' => $clinicas])
                 ->distinct();
-            
+
             $query->andWhere(['pagos.user_id' => $subQuery]);
         }
-        
+
         // Obtener total monto y count
         $totalMonto = $query->sum('pagos.monto_usd');
         $totalCount = $query->count();
-        
+
         // Obtener conteos por estado
         $conciliadosCount = 0;
         $pendientesCount = 0;
-        
+
         if ($status === 'todos') {
             // Si estamos viendo todos los estados, contar separadamente
             $queryConciliados = clone $query;
             $queryPendientes = clone $query;
-            
+
             $conciliadosCount = $queryConciliados->andWhere(['pagos.estatus' => 'Conciliado'])->count();
             $pendientesCount = $queryPendientes->andWhere(['pagos.estatus' => 'Por Conciliar'])->count();
         } else {
@@ -432,7 +439,7 @@ class PagosReporteSearch extends Pagos
                 $pendientesCount = $totalCount;
             }
         }
-        
+
         // Always return valid array
         return [
             'total_monto' => $totalMonto ? (float)$totalMonto : 0,
@@ -440,5 +447,102 @@ class PagosReporteSearch extends Pagos
             'conciliados' => $conciliadosCount,
             'pendientes' => $pendientesCount
         ];
+    }
+    // app/models/PagosReporteSearch.php - Add this method
+    public function searchComisiones($params)
+    {
+        Yii::debug("=== searchComisiones DEBUG ===", 'application');
+        Yii::debug("Params received: " . print_r($params, true), 'application');
+
+        $query = Pagos::find()
+            ->alias('p')
+            ->joinWith(['userDatos ud', 'contratos c'])
+            ->andWhere(['p.estatus' => ['Conciliado', 'Por Conciliar']])
+            ->orderBy(['p.fecha_pago' => SORT_DESC]);
+
+        // DEBUG: Count before filters
+        $countBefore = $query->count();
+        Yii::debug("Count before filters: " . $countBefore, 'application');
+
+        // Apply filters
+        if (!empty($params['status']) && $params['status'] !== 'todos') {
+            Yii::debug("Applying status filter: " . $params['status'], 'application');
+
+            $query->andWhere(['p.estatus' => $params['status']]);
+        }
+
+        if (!empty($params['clinicas']) && is_array($params['clinicas'])) {
+            Yii::debug("Clinicas filter: " . print_r($params['clinicas'], true), 'application');
+            // Check if 'todas' is not in the array
+            if (!in_array('todas', $params['clinicas'])) {
+                $query->andWhere(['c.clinica_id' => $params['clinicas']]);
+                Yii::debug("Applied clinic filter (excluding 'todas')", 'application');
+            } else {
+                Yii::debug("'todas' selected, no clinic filter applied", 'application');
+            }
+        } else {
+            Yii::debug("No clinic filter or not an array", 'application');
+        }
+
+        // Date range filter
+        if (!empty($params['range']) && $params['range'] !== 'custom') {
+            Yii::debug("Applying date range filter: " . $params['range'], 'application');
+            $this->applyDateRange($query, $params['range']);
+        } elseif (!empty($params['custom_range']) && !empty($params['date_from']) && !empty($params['date_to'])) {
+            Yii::debug("Applying custom date range: " . $params['date_from'] . " to " . $params['date_to'], 'application');
+            $query->andWhere(['between', 'p.fecha_pago', $params['date_from'], $params['date_to']]);
+        } else {
+            Yii::debug("No date range filter applied", 'application');
+        }
+
+        // DEBUG: Count after filters
+        $countAfter = $query->count();
+        Yii::debug("Count after filters: " . $countAfter, 'application');
+
+        // DEBUG: Get raw SQL
+        Yii::debug("Final SQL: " . $query->createCommand()->rawSql, 'application');
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => 20,
+            ],
+            'sort' => false,
+        ]);
+
+        return $dataProvider;
+    }
+
+    private function applyDateRange($query, $range)
+    {
+        $today = date('Y-m-d');
+        Yii::debug("applyDateRange called with range: " . $range, 'application');
+
+        switch ($range) {
+            case 'day':
+                Yii::debug("Filtering for today: " . $today, 'application');
+                $query->andWhere(['DATE(p.fecha_pago)' => $today]);
+                break;
+            case 'week':
+                $weekAgo = date('Y-m-d', strtotime('-7 days'));
+                Yii::debug("Filtering for week: " . $weekAgo . " to " . $today, 'application');
+                $query->andWhere(['between', 'DATE(p.fecha_pago)', $weekAgo, $today]);
+                break;
+            case 'month':
+                $monthStart = date('Y-m-01');
+                Yii::debug("Filtering for month: " . $monthStart . " to " . $today, 'application');
+                $query->andWhere(['between', 'DATE(p.fecha_pago)', $monthStart, $today]);
+                break;
+            case 'last-month':
+                $lastMonthStart = date('Y-m-01', strtotime('-1 month'));
+                $lastMonthEnd = date('Y-m-t', strtotime('-1 month'));
+                Yii::debug("Filtering for last month: " . $lastMonthStart . " to " . $lastMonthEnd, 'application');
+                $query->andWhere(['between', 'DATE(p.fecha_pago)', $lastMonthStart, $lastMonthEnd]);
+                break;
+            default:
+                Yii::debug("Unknown range: " . $range . ", using today", 'application');
+                $query->andWhere(['DATE(p.fecha_pago)' => $today]);
+                break;
+        }
     }
 }
