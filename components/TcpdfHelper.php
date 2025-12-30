@@ -3,6 +3,8 @@
 namespace app\components;
 
 use Yii;
+// Load TCPDF BEFORE the class definition
+require_once Yii::getAlias('@vendor/tecnickcom/tcpdf/tcpdf.php');
 
 class TcpdfHelper extends \TCPDF
 {
