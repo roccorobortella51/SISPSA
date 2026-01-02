@@ -17,6 +17,7 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use yii\web\UploadedFile;
 use Yii;
+use yii\helpers\Html;
 
 /**
  * SisSiniestroController implements the CRUD actions for SisSiniestro model.
@@ -38,89 +39,89 @@ class SisSiniestroController extends Controller
         ];
     }
 
- /**
- * Lists all SisSiniestro models, filtered by user_id and 'modo' (siniestro/cita).
- * @param integer $user_id El ID del usuario
- * @return mixed
- */
-public function actionIndex($user_id)
-{
-    // 1. CAPTURAR EL MODO
-    // Obtener el modo de la URL, por defecto es 'siniestro'
-    $modo = Yii::$app->request->get('modo', 'siniestro'); 
-    
-    // Determinar el valor binario de es_cita para el filtro de la base de datos
-    $esCitaValue = ($modo === 'cita') ? 1 : 0; // 0 para siniestro, 1 para cita
+    /**
+     * Lists all SisSiniestro models, filtered by user_id and 'modo' (siniestro/cita).
+     * @param integer $user_id El ID del usuario
+     * @return mixed
+     */
+    public function actionIndex($user_id)
+    {
+        // 1. CAPTURAR EL MODO
+        // Obtener el modo de la URL, por defecto es 'siniestro'
+        $modo = Yii::$app->request->get('modo', 'siniestro');
 
-    $searchModel = new SisSiniestroSearch();
-    $searchModel->iduser = $user_id;
-    
-    // Cargar los datos del afiliado
-    $afiliado = UserDatos::findOne($user_id);
+        // Determinar el valor binario de es_cita para el filtro de la base de datos
+        $esCitaValue = ($modo === 'cita') ? 1 : 0; // 0 para siniestro, 1 para cita
 
-    if ($afiliado === null) {
-        throw new \yii\web\NotFoundHttpException('El usuario afiliado no existe.');
-    }
-    
-    // Configurar el dataProvider
-    $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-    
-    // 2. APLICAR FILTRO es_cita
-    $dataProvider->query->andWhere(['es_cita' => $esCitaValue]);
-    // Nota: El filtro iduser ya está implícito en $searchModel->iduser = $user_id;
-    // Si la búsqueda no lo usa, se puede aplicar explícitamente:
-    // $dataProvider->query->andWhere(['iduser' => $user_id]); 
-    
-    
-    // Depurar la consulta principal (manteniendo tu código de debug)
-    $query = $dataProvider->query;
-    $sql = $query->createCommand()->rawSql;
-    Yii::info('CONSULTA PRINCIPAL: ' . $sql, 'app');
-    
-    // 3. CARGA MANUAL DE BAREMOS (MANTENIDO)
-    // Cargar todos los siniestros con sus baremos en una sola consulta
-    $models = $dataProvider->getModels();
-    $siniestroIds = [];
-    
-    // Obtener todos los IDs de siniestros
-    foreach ($models as $model) {
-        $siniestroIds[] = $model->id;
-    }
-    
-    // Cargar todos los baremos para estos siniestros en una sola consulta
-    $baremosPorSiniestro = [];
-    if (!empty($siniestroIds)) {
-        $baremos = (new \yii\db\Query())
-            ->select(['sb.siniestro_id', 'b.*'])
-            ->from(['sb' => 'sis_siniestro_baremo'])
-            ->leftJoin(['b' => 'baremo'], 'sb.baremo_id = b.id')
-            ->where(['sb.siniestro_id' => $siniestroIds])
-            ->all();
-        
-        // Organizar los baremos por siniestro_id
-        foreach ($baremos as $baremo) {
-            $baremosPorSiniestro[$baremo['siniestro_id']][] = $baremo;
+        $searchModel = new SisSiniestroSearch();
+        $searchModel->iduser = $user_id;
+
+        // Cargar los datos del afiliado
+        $afiliado = UserDatos::findOne($user_id);
+
+        if ($afiliado === null) {
+            throw new \yii\web\NotFoundHttpException('El usuario afiliado no existe.');
         }
-    }
-    
-    // Asignar los baremos a cada modelo
-    foreach ($models as $model) {
-        $baremos = isset($baremosPorSiniestro[$model->id]) ? $baremosPorSiniestro[$model->id] : [];
-        $model->populateRelation('baremos', $baremos);
-    }
-    
-    $dataProvider->setModels($models);
-    
 
-    // 4. RETORNAR VISTA CON EL MODO
-    return $this->render('index', [
-        'searchModel' => $searchModel,
-        'dataProvider' => $dataProvider,
-        'user_id' => $user_id,
-        'afiliado' => $afiliado,
-        'modo' => $modo, // <-- PASAR EL MODO A LA VISTA
-    ]);
-}
+        // Configurar el dataProvider
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        // 2. APLICAR FILTRO es_cita
+        $dataProvider->query->andWhere(['es_cita' => $esCitaValue]);
+        // Nota: El filtro iduser ya está implícito en $searchModel->iduser = $user_id;
+        // Si la búsqueda no lo usa, se puede aplicar explícitamente:
+        // $dataProvider->query->andWhere(['iduser' => $user_id]); 
+
+
+        // Depurar la consulta principal (manteniendo tu código de debug)
+        $query = $dataProvider->query;
+        $sql = Yii::$app->db->getQueryBuilder()->build($query)[0];
+        Yii::info('CONSULTA PRINCIPAL: ' . $sql, 'app');
+
+        // 3. CARGA MANUAL DE BAREMOS (MANTENIDO)
+        // Cargar todos los siniestros con sus baremos en una sola consulta
+        $models = $dataProvider->getModels();
+        $siniestroIds = [];
+
+        // Obtener todos los IDs de siniestros
+        foreach ($models as $model) {
+            $siniestroIds[] = $model->id;
+        }
+
+        // Cargar todos los baremos para estos siniestros en una sola consulta
+        $baremosPorSiniestro = [];
+        if (!empty($siniestroIds)) {
+            $baremos = (new \yii\db\Query())
+                ->select(['sb.siniestro_id', 'b.*'])
+                ->from(['sb' => 'sis_siniestro_baremo'])
+                ->leftJoin(['b' => 'baremo'], 'sb.baremo_id = b.id')
+                ->where(['sb.siniestro_id' => $siniestroIds])
+                ->all();
+
+            // Organizar los baremos por siniestro_id
+            foreach ($baremos as $baremo) {
+                $baremosPorSiniestro[$baremo['siniestro_id']][] = $baremo;
+            }
+        }
+
+        // Asignar los baremos a cada modelo
+        foreach ($models as $model) {
+            $baremos = isset($baremosPorSiniestro[$model->id]) ? $baremosPorSiniestro[$model->id] : [];
+            $model->populateRelation('baremos', $baremos);
+        }
+
+        $dataProvider->setModels($models);
+
+
+        // 4. RETORNAR VISTA CON EL MODO
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'user_id' => $user_id,
+            'afiliado' => $afiliado,
+            'modo' => $modo, // <-- PASAR EL MODO A LA VISTA
+        ]);
+    }
 
     /**
      * Displays a single SisSiniestro model.
@@ -132,7 +133,7 @@ public function actionIndex($user_id)
     {
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
-        
+
         // Cargar los baremos a través de la relación muchos a muchos
         $baremos = $model->baremos;
 
@@ -149,59 +150,96 @@ public function actionIndex($user_id)
      * @param integer $user_id El ID del usuario
      * @return mixed
      */
-public function actionCreate($user_id, $es_cita = 0)
-{
-    $model = new SisSiniestro();
-    $model->iduser = $user_id;
-    $model->fecha = date('Y-m-d');
-    $model->hora = date('H:i:s');
-    
-    // 1. ASIGNAR VALOR DE es_cita AL MODELO
-    $model->es_cita = (int) $es_cita;
-    
-    $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+    public function actionCreate($user_id, $es_cita = 0)
+    {
+        // 1. CHECK CONTRACT STATUS BEFORE PROCEEDING
+        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
 
-    if ($model->load($this->request->post())) {
-        $transaction = Yii::$app->db->beginTransaction();
-        try {
-            
-            // VALIDAR BAREMOS ANTES DE GUARDAR
-            $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
-            if (!is_array($baremoIds)) {
-                $baremoIds = [];
-            }
-            
-            // 2. PASAR es_cita A LA FUNCIÓN DE VALIDACIÓN DEL MODELO
-            // DEBES ASEGURARTE DE QUE SisSiniestro::validarBaremosConPlan ACEPTE ESTE TERCER PARÁMETRO
-            $validacion = SisSiniestro::validarBaremosConPlan($baremoIds, $user_id, $model->es_cita, $model);
-            
-            if (!$validacion['valid']) {
-                $transaction->rollBack();
-                foreach ($validacion['errors'] as $error) {
-                    Yii::$app->session->setFlash('error', $error);
+        if (!$afiliado) {
+            throw new \yii\web\NotFoundHttpException('El usuario afiliado no existe.');
+        }
+
+        // Check for active contract with "suspendido" status
+        $contratoSuspendido = Contratos::find()
+            ->where(['user_id' => $user_id])
+            ->andWhere(['estatus' => 'suspendido'])
+            ->andWhere(['<=', 'fecha_ini', date('Y-m-d')])
+            ->andWhere(['>=', 'fecha_ven', date('Y-m-d')])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->one();
+
+        // If there's a suspended contract in the current date range
+        if ($contratoSuspendido) {
+            Yii::$app->session->setFlash(
+                'error',
+                '<span class="attention-alert">¡ATENCIÓN!</span>' . "\n" .
+                    'No se puede crear una nueva atención para el afiliado ' .
+                    Html::encode($afiliado->nombres . ' ' . $afiliado->apellidos) . '.' . "\n" .
+                    'Motivo: <span class="contract-alert">Contrato SUSPENDIDO</span> (#' . ($contratoSuspendido->nrocontrato ?: $contratoSuspendido->id) . ')' . "\n" .
+                    'Período: ' . Yii::$app->formatter->asDate($contratoSuspendido->fecha_ini) . ' al ' .
+                    Yii::$app->formatter->asDate($contratoSuspendido->fecha_ven) . "\n" .
+                    'Contacte al departamento administrativo para regularizar la situación.'
+            );
+
+            // Store the flash message and redirect
+            Yii::$app->session->set('flashContractMessage', true);
+
+            // Redirect back to the index view with the appropriate mode
+            $modo = ($es_cita == 1) ? 'cita' : 'siniestro';
+            return $this->redirect(['index', 'user_id' => $user_id, 'modo' => $modo]);
+        }
+
+        $model = new SisSiniestro();
+        $model->iduser = $user_id;
+        $model->fecha = date('Y-m-d');
+        $model->hora = date('H:i:s');
+
+        // 1. ASIGNAR VALOR DE es_cita AL MODELO
+        $model->es_cita = (int) $es_cita;
+
+        $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
+
+        if ($model->load($this->request->post())) {
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+
+                // VALIDAR BAREMOS ANTES DE GUARDAR
+                $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+                if (!is_array($baremoIds)) {
+                    $baremoIds = [];
                 }
-                // 3. PASAR es_cita A LA VISTA EN CASO DE ERROR DE VALIDACIÓN
-                return $this->render('create', [
-                    'model' => $model,
-                    'afiliado' => $afiliado,
-                    'user_id' => $user_id,
-                    'es_cita' => $model->es_cita, 
-                ]);
-            }
-    
-            // Guardar el modelo, incluyendo las URLs de las imágenes
-            // ... (Toda la lógica de guardado y subida de archivos sigue igual) ...
-            if ($model->save()) { 
-                
-                // ... Lógica de subida de archivos (imagenRecipeFile, imagenInformeFile) ...
-                
-                // --- Bloque de Subida de Recibo ---
-                // Nota: Tu código usa $model->save(false) dentro de los IF de subida.
-                // Esto está bien para mantener la coherencia con tu implementación original.
-                // ...
-                
-                // Subir el recibo si existe
-                if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
+
+                // 2. PASAR es_cita A LA FUNCIÓN DE VALIDACIÓN DEL MODELO
+                // DEBES ASEGURARTE DE QUE SisSiniestro::validarBaremosConPlan ACEPTE ESTE TERCER PARÁMETRO
+                $validacion = SisSiniestro::validarBaremosConPlan($baremoIds, $user_id, $model->es_cita, $model);
+
+                if (!$validacion['valid']) {
+                    $transaction->rollBack();
+                    foreach ($validacion['errors'] as $error) {
+                        Yii::$app->session->setFlash('error', $error);
+                    }
+                    // 3. PASAR es_cita A LA VISTA EN CASO DE ERROR DE VALIDACIÓN
+                    return $this->render('create', [
+                        'model' => $model,
+                        'afiliado' => $afiliado,
+                        'user_id' => $user_id,
+                        'es_cita' => $model->es_cita,
+                    ]);
+                }
+
+                // Guardar el modelo, incluyendo las URLs de las imágenes
+                // ... (Toda la lógica de guardado y subida de archivos sigue igual) ...
+                if ($model->save()) {
+
+                    // ... Lógica de subida de archivos (imagenRecipeFile, imagenInformeFile) ...
+
+                    // --- Bloque de Subida de Recibo ---
+                    // Nota: Tu código usa $model->save(false) dentro de los IF de subida.
+                    // Esto está bien para mantener la coherencia con tu implementación original.
+                    // ...
+
+                    // Subir el recibo si existe
+                    if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
                         $folder = 'documentos';
                         $fileName = uniqid('imagen_recipe') . '.' . $model->imagenRecipeFile->extension;
                         $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
@@ -236,7 +274,7 @@ public function actionCreate($user_id, $es_cita = 0)
                             Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
                         }
                     }
-                    
+
                     // --- Bloque de Subida de Informe ---
                     if (!empty($imagenInformeFile) && $imagenInformeFile[0]->size > 0) {
                         $folder = 'documentos';
@@ -272,38 +310,38 @@ public function actionCreate($user_id, $es_cita = 0)
                             Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
                         }
                     }
-                // ... (Fin de la lógica de subida) ...
+                    // ... (Fin de la lógica de subida) ...
 
 
-                // Guardar la relación muchos a muchos
-                $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
-                if (!is_array($baremoIds)) {
-                    $baremoIds = [];
+                    // Guardar la relación muchos a muchos
+                    $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
+                    if (!is_array($baremoIds)) {
+                        $baremoIds = [];
+                    }
+                    if (!$model->saveBaremos($baremoIds)) {
+                        throw new \Exception('Error al guardar los baremos');
+                    }
+                    $transaction->commit();
+                    Yii::$app->session->setFlash('success', 'Atención creada correctamente.');
+                    return $this->redirect(['view', 'id' => $model->id]);
+                } else {
+                    throw new \Exception('Error al guardar los datos principales de la atención.');
                 }
-                if (!$model->saveBaremos($baremoIds)) {
-                    throw new \Exception('Error al guardar los baremos');
-                }
-                $transaction->commit();
-                Yii::$app->session->setFlash('success', 'Atención creada correctamente.');
-                return $this->redirect(['view', 'id' => $model->id]);
-            } else {
-                throw new \Exception('Error al guardar los datos principales de la atención.');
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', $e->getMessage());
+                Yii::error('Error al crear siniestro/cita: ' . $e->getMessage(), __METHOD__);
             }
-        } catch (\Exception $e) {
-            $transaction->rollBack();
-            Yii::$app->session->setFlash('error', $e->getMessage());
-            Yii::error('Error al crear siniestro/cita: ' . $e->getMessage(), __METHOD__);
         }
-    }
 
-    // 4. PASAR es_cita A LA VISTA EN EL RENDERIZADO INICIAL
-    return $this->render('create', [
-        'model' => $model,
-        'afiliado' => $afiliado,
-        'user_id' => $user_id,
-        'es_cita' => (int) $es_cita,
-    ]);
-}
+        // 4. PASAR es_cita A LA VISTA EN EL RENDERIZADO INICIAL
+        return $this->render('create', [
+            'model' => $model,
+            'afiliado' => $afiliado,
+            'user_id' => $user_id,
+            'es_cita' => (int) $es_cita,
+        ]);
+    }
 
     /**
      * Updates an existing SisSiniestro model.
@@ -316,63 +354,63 @@ public function actionCreate($user_id, $es_cita = 0)
     {
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
-        
+
         // Obtener el modo (cita o siniestro) de la URL o del modelo
         $esCita = (int)Yii::$app->request->get('es_cita', $model->es_cita);
-        
+
         // Actualizar el modelo con el valor de es_cita si se proporcionó en la URL
         if (Yii::$app->request->get('es_cita') !== null) {
             $model->es_cita = $esCita;
         }
-        
+
         // Obtener los baremos actuales del modelo
         $baremosActuales = $model->getBaremoIds();
         $baremos = $model->baremos; // Asegurarse de cargar la relación de baremos
-    
+
         if ($model->load(Yii::$app->request->post())) {
             $transaction = Yii::$app->db->beginTransaction();
-            
+
             try {
                 // Obtener los baremos del formulario
                 $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
-                
+
                 // Si no se seleccionó ningún baremo, mantener los existentes
                 if (empty($baremoIds)) {
                     $baremoIds = $baremosActuales;
                 }
-                
+
                 // Si aún no hay baremos, mostrar error
                 if (empty($baremoIds)) {
                     Yii::$app->session->setFlash('error', 'Debe seleccionar al menos un baremo.');
                     return $this->refresh();
                 }
-                
+
                 // Establecer el primer baremo como idbaremo para compatibilidad
                 $model->idbaremo = is_array($baremoIds) ? reset($baremoIds) : $baremoIds;
-    
+
                 if ($model->save(false)) {
                     // Actualizar la relación con los baremos
                     if (!$model->saveBaremos($baremoIds)) {
                         throw new \Exception('Error al actualizar los baremos');
                     }
-    
+
                     $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
                     $imagenInformeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenInformeFile]');
-    
+
                     $model->imagenRecipeFile = !empty($imagenRecipeFile) ? reset($imagenRecipeFile) : null;
                     $model->imagenInformeFile = !empty($imagenInformeFile) ? reset($imagenInformeFile) : null;
-    
+
                     // Subir el recibo si existe
                     if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
                         $folder = 'documentos';
                         $fileName = uniqid('imagen_recipe') . '.' . $model->imagenRecipeFile->extension;
                         $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                        
+
                         if ($model->imagenRecipeFile->saveAs($tempFilePath)) {
                             Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
-    
+
                             $fileKeyInBucket = $fileName;
-    
+
                             Yii::info("Subiendo archivo a Supabase Storage: " . $fileName, __METHOD__);
                             $publicUrl = UserHelper::uploadFileToSupabaseApi(
                                 $tempFilePath,
@@ -380,12 +418,12 @@ public function actionCreate($user_id, $es_cita = 0)
                                 $fileKeyInBucket,
                                 $folder
                             );
-    
+
                             if (file_exists($tempFilePath)) {
                                 unlink($tempFilePath);
                                 Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
                             }
-    
+
                             if ($publicUrl) {
                                 $model->imagen_recipe = $publicUrl;
                                 if (!$model->save(false)) {
@@ -398,30 +436,30 @@ public function actionCreate($user_id, $es_cita = 0)
                             throw new \Exception('Error al guardar el archivo temporal de la receta');
                         }
                     }
-    
+
                     // Subir informe médico si existe
                     if (!empty($imagenInformeFile) && $imagenInformeFile[0]->size > 0) {
                         $folder = 'documentos';
                         $fileName = uniqid('selfie_') . '.' . $model->imagenInformeFile->extension;
                         $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                        
+
                         if ($model->imagenInformeFile->saveAs($tempFilePath)) {
                             Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
-    
+
                             $fileKeyInBucket = $fileName;
-    
+
                             $publicUrl = UserHelper::uploadFileToSupabaseApi(
                                 $tempFilePath,
                                 $model->imagenInformeFile->type,
                                 $fileKeyInBucket,
                                 $folder
                             );
-    
+
                             if (file_exists($tempFilePath)) {
                                 unlink($tempFilePath);
                                 Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
                             }
-    
+
                             if ($publicUrl) {
                                 $model->imagen_informe = $publicUrl;
                                 if (!$model->save(false)) {
@@ -434,7 +472,7 @@ public function actionCreate($user_id, $es_cita = 0)
                             throw new \Exception('Error al guardar el archivo temporal del informe');
                         }
                     }
-    
+
                     $transaction->commit();
                     Yii::$app->session->setFlash('success', 'Siniestro actualizado correctamente.');
                     return $this->redirect(['view', 'id' => $model->id]);
@@ -445,7 +483,7 @@ public function actionCreate($user_id, $es_cita = 0)
                 $transaction->rollBack();
                 Yii::error('Error al actualizar siniestro: ' . $e->getMessage(), __METHOD__);
                 Yii::$app->session->setFlash('error', 'Error al actualizar el siniestro: ' . $e->getMessage());
-                
+
                 // En caso de error, volver a cargar la vista con los datos actuales
                 return $this->render('update', [
                     'model' => $model,
@@ -456,7 +494,7 @@ public function actionCreate($user_id, $es_cita = 0)
                 ]);
             }
         }
-        
+
         // Cargar la vista con los datos del modelo
         return $this->render('update', [
             'model' => $model,
@@ -465,49 +503,48 @@ public function actionCreate($user_id, $es_cita = 0)
             'baremosActuales' => $baremosActuales,
             'es_cita' => $esCita,
         ]);
-    
     }
 
-/**
- * Obtiene el tamaño de un archivo en una URL.
- * @param string $url La URL del archivo.
- * @return string El tamaño del archivo formateado.
- */
-public function getFileSize($url)
-{
-    // Usa cURL para obtener el tamaño del archivo de la cabecera Content-Length
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_HEADER, TRUE);
-    curl_setopt($ch, CURLOPT_NOBODY, TRUE);
-    $data = curl_exec($ch);
-    $size = 0;
-    if ($data) {
-        $matches = [];
-        preg_match('/Content-Length: (\d+)/', $data, $matches);
-        if (isset($matches[1])) {
-            $size = (int)$matches[1];
+    /**
+     * Obtiene el tamaño de un archivo en una URL.
+     * @param string $url La URL del archivo.
+     * @return string El tamaño del archivo formateado.
+     */
+    public function getFileSize($url)
+    {
+        // Usa cURL para obtener el tamaño del archivo de la cabecera Content-Length
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_HEADER, TRUE);
+        curl_setopt($ch, CURLOPT_NOBODY, TRUE);
+        $data = curl_exec($ch);
+        $size = 0;
+        if ($data) {
+            $matches = [];
+            preg_match('/Content-Length: (\d+)/', $data, $matches);
+            if (isset($matches[1])) {
+                $size = (int)$matches[1];
+            }
         }
-    }
-    curl_close($ch);
-    
-    // Si no se pudo obtener el tamaño con cURL, intenta con el sistema de archivos local
-    if ($size === 0 && strpos($url, Yii::getAlias('@web')) !== false) {
-        $path = Yii::getAlias('@webroot') . str_replace(Yii::getAlias('@web'), '', $url);
-        if (file_exists($path)) {
-            $size = filesize($path);
-        }
-    }
+        curl_close($ch);
 
-    // Formatear el tamaño en KB o MB
-    if ($size < 1024) {
-        return $size . ' B';
-    } elseif ($size < 1048576) {
-        return round($size / 1024, 2) . ' KB';
-    } else {
-        return round($size / 1048576, 2) . ' MB';
+        // Si no se pudo obtener el tamaño con cURL, intenta con el sistema de archivos local
+        if ($size === 0 && strpos($url, Yii::getAlias('@web')) !== false) {
+            $path = Yii::getAlias('@webroot') . str_replace(Yii::getAlias('@web'), '', $url);
+            if (file_exists($path)) {
+                $size = filesize($path);
+            }
+        }
+
+        // Formatear el tamaño en KB o MB
+        if ($size < 1024) {
+            return $size . ' B';
+        } elseif ($size < 1048576) {
+            return round($size / 1024, 2) . ' KB';
+        } else {
+            return round($size / 1048576, 2) . ' MB';
+        }
     }
-}
     /**
      * Deletes an existing SisSiniestro model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
@@ -565,21 +602,20 @@ public function getFileSize($url)
     public function actionCalcularTotal()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        
+
         try {
             $baremosIds = Yii::$app->request->post('baremos', []);
-            
+
             if (empty($baremosIds)) {
                 return ['success' => true, 'total' => 0];
             }
-            
+
             // Calcular la suma de los precios de los baremos seleccionados
             $total = \app\models\Baremo::find()
                 ->where(['id' => $baremosIds])
                 ->sum('precio');
-            
+
             return ['success' => true, 'total' => $total ?: 0];
-            
         } catch (\Exception $e) {
             Yii::error("Error al calcular total: " . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
@@ -587,28 +623,28 @@ public function getFileSize($url)
     }
 
     /**
- * Muestra siniestros por clínica con gráficos
+     * Muestra siniestros por clínica con gráficos
      */
     public function actionPorClinica($clinica_id = null)
     {
         $searchModel = new SisSiniestroSearch();
-        
+
         // Si se proporciona un ID de clínica, filtrar por esa clínica
         if ($clinica_id) {
             $searchModel->idclinica = $clinica_id;
         }
-        
+
         $dataProvider = $searchModel->searchClinica(Yii::$app->request->queryParams);
-        
+
         // Obtener estadísticas para el gráfico
         $estadisticas = $this->obtenerEstadisticasSiniestros($clinica_id);
-        
+
         // Obtener lista de clínicas para el filtro
         $clinicas = \app\models\RmClinica::find()
             ->where(['estatus' => 'Activo'])
             ->orderBy('nombre')
             ->all();
-        
+
         return $this->render('por-clinica', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -624,20 +660,20 @@ public function getFileSize($url)
     private function obtenerEstadisticasSiniestros($clinica_id = null)
     {
         $query = SisSiniestro::find();
-        
+
         if ($clinica_id) {
             $query->andWhere(['idclinica' => $clinica_id]);
         }
-        
+
         // Contar total de siniestros
         $totalSiniestros = $query->count();
-        
+
         // Contar siniestros atendidos
         $atendidos = (clone $query)->andWhere(['atendido' => 1])->count();
-        
+
         // Contar siniestros no atendidos
         $noAtendidos = (clone $query)->andWhere(['atendido' => 0])->orWhere(['atendido' => null])->count();
-        
+
         // Obtener datos por clínica (si no se filtró por una clínica específica)
         $porClinica = [];
         if (!$clinica_id) {
@@ -655,16 +691,16 @@ public function getFileSize($url)
                 ->asArray()
                 ->all();
         }
-        
+
         return [
             'total' => $totalSiniestros,
             'atendidos' => $atendidos,
             'no_atendidos' => $noAtendidos,
             'por_clinica' => $porClinica,
         ];
-}
+    }
 
-/**
+    /**
      * Sube un archivo a Supabase Storage y retorna la URL pública.
      * @param \yii\web\UploadedFile $uploadedFile El objeto de archivo subido.
      * @param string $folder La carpeta de destino en Supabase.
@@ -699,5 +735,4 @@ public function getFileSize($url)
 
         return null;
     }
-
 }
