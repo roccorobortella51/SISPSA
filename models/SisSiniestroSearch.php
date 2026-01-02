@@ -14,7 +14,7 @@ class SisSiniestroSearch extends SisSiniestro
     public $iduser;
     public $afiliado_nombre;
     public $afiliado_cedula;
-    
+
     /**
      * {@inheritdoc}
      */
@@ -50,10 +50,10 @@ class SisSiniestroSearch extends SisSiniestro
             ->joinWith(['sisSiniestroBaremos sb'])
             ->with(['baremos'])
             ->groupBy('sis_siniestro.id');
-        
+
         // Aplicamos las condiciones de búsqueda
         $this->load($params);
-        
+
         // Configuramos el data provider
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -76,12 +76,12 @@ class SisSiniestroSearch extends SisSiniestro
             'sis_siniestro.atendido' => $this->atendido,
             'sis_siniestro.iduser' => $this->iduser,
         ]);
-        
+
         // Condiciones de fecha
         if ($this->fecha) {
             $query->andFilterWhere(['>=', 'sis_siniestro.fecha', $this->fecha]);
         }
-        
+
         // Filtro por baremo si se especifica
         if ($this->idbaremo) {
             $query->andFilterWhere(['sb.baremo_id' => $this->idbaremo]);
@@ -91,7 +91,7 @@ class SisSiniestroSearch extends SisSiniestro
         $query->andFilterWhere(['ilike', 'sis_siniestro.hora', $this->hora])
             ->andFilterWhere(['ilike', 'sis_siniestro.hora_atencion', $this->hora_atencion])
             ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion]);
-            
+
         // Filtros de fecha adicionales
         $query->andFilterWhere(['>=', 'sis_siniestro.fecha_atencion', $this->fecha_atencion])
             ->andFilterWhere(['>=', 'sis_siniestro.created_at', $this->created_at])
@@ -106,7 +106,7 @@ class SisSiniestroSearch extends SisSiniestro
         $query = SisSiniestro::find()->joinWith(['clinica', 'afiliado']);
 
         $this->load($params);
-        
+
         // Configuramos el data provider
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -129,26 +129,28 @@ class SisSiniestroSearch extends SisSiniestro
             'sis_siniestro.atendido' => $this->atendido,
             'sis_siniestro.iduser' => $this->iduser,
         ]);
-        
+
         // Condiciones de fecha
         if ($this->fecha) {
             $query->andFilterWhere(['>=', 'sis_siniestro.fecha', $this->fecha]);
         }
-        
+
         // Filtro por baremo si se especifica
         if ($this->idbaremo) {
             $query->andFilterWhere(['sb.baremo_id' => $this->idbaremo]);
         }
 
         if (!empty($this->afiliado_nombre)) {
-            $query->andFilterWhere(['or',
+            $query->andFilterWhere([
+                'or',
                 ['like', 'user_datos.nombres', $this->afiliado_nombre],
                 ['like', 'user_datos.apellidos', $this->afiliado_nombre]
             ]);
         }
 
         if (!empty($this->afiliado_cedula)) {
-            $query->andFilterWhere(['or',
+            $query->andFilterWhere([
+                'or',
                 ['like', 'user_datos.cedula', $this->afiliado_cedula],
                 ['like', 'user_datos.tipo_cedula', $this->afiliado_cedula]
             ]);
@@ -158,7 +160,7 @@ class SisSiniestroSearch extends SisSiniestro
         $query->andFilterWhere(['ilike', 'sis_siniestro.hora', $this->hora])
             ->andFilterWhere(['ilike', 'sis_siniestro.hora_atencion', $this->hora_atencion])
             ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion]);
-            
+
         // Filtros de fecha adicionales
         $query->andFilterWhere(['>=', 'sis_siniestro.fecha_atencion', $this->fecha_atencion])
             ->andFilterWhere(['>=', 'sis_siniestro.created_at', $this->created_at])
@@ -166,7 +168,6 @@ class SisSiniestroSearch extends SisSiniestro
             ->andFilterWhere(['>=', 'sis_siniestro.deleted_at', $this->deleted_at]);
 
         return $dataProvider;
-
     }
 
     public function getBaremo()
