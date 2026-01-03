@@ -170,6 +170,10 @@ class SisSiniestroController extends Controller
 
         // If there's a suspended contract in the current date range
         if ($contratoSuspendido) {
+            // Ensure session is open
+            if (!Yii::$app->session->isActive) {
+                Yii::$app->session->open();
+            }
             Yii::$app->session->setFlash(
                 'error',
                 '<span class="attention-alert">¡ATENCIÓN!</span>' . "\n" .
@@ -181,8 +185,8 @@ class SisSiniestroController extends Controller
                     'Contacte al departamento administrativo para regularizar la situación.'
             );
 
-            // Store the flash message and redirect
-            Yii::$app->session->set('flashContractMessage', true);
+            // Force session save
+            Yii::$app->session->close();
 
             // Redirect back to the index view with the appropriate mode
             $modo = ($es_cita == 1) ? 'cita' : 'siniestro';
