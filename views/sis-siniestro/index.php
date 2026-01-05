@@ -4,7 +4,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
 use app\components\UserHelper;
-
+use yii\bootstrap4\Alert;
 
 /**
  * @var yii\web\View $this
@@ -12,7 +12,7 @@ use app\components\UserHelper;
  * @var yii\data\ActiveDataProvider $dataProvider
  * @var app\models\UserDatos $afiliado
  * @var int $user_id
- * @var string $modo 'siniestro' o 'cita' <-- ASUMIMOS QUE ESTO SE PASA DESDE EL CONTROLADOR
+ * @var string $modo 'siniestro' o 'cita'
  */
 
 // ----------------------------------------------------------------------
@@ -35,12 +35,18 @@ $this->title = $tituloModo . ' para ' . Html::encode($afiliado->nombres . " " . 
 // 2. DETECTAR SI HAY MENSAJE DE CONTRATO SUSPENDIDO
 // ----------------------------------------------------------------------
 $contratoSuspendido = false;
-$flashMessages = Yii::$app->session->getAllFlashes();
-foreach ($flashMessages as $type => $messages) {
+$allFlashMessages = Yii::$app->session->getAllFlashes(); // Store in variable
+// Force session save to remove flash messages immediately
+Yii::$app->session->close();
+Yii::$app->session->open();
+// Create a copy for display (to prevent duplicate display)
+$flashMessagesToDisplay = $allFlashMessages;
+
+// Check for suspended contract message
+foreach ($allFlashMessages as $type => $messages) {
     foreach ((array)$messages as $message) {
         if (stripos($message, 'SUSPENDIDO') !== false) {
             $contratoSuspendido = true;
-            break 2; // Salir de ambos bucles
         }
     }
 }
@@ -51,284 +57,363 @@ $volverBtnIcon = $contratoSuspendido ? 'fas fa-exclamation-triangle' : 'fas fa-u
 $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver a la lista de afiliados';
 // ----------------------------------------------------------------------
 ?>
-
 <div class="row" style="margin:3px !important;">
-    <!-- ULTRA NUCLEAR SOLUTION -->
-    <?php $flashMessages = Yii::$app->session->getAllFlashes(); ?>
-    <?php if (!empty($flashMessages)): ?>
-        <div style="
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        width: 100vw !important;
-        position: relative !important;
-        left: 50% !important;
-        right: 50% !important;
-        margin-left: -50vw !important;
-        margin-right: -50vw !important;
-        padding: 0 !important;
-        margin-bottom: 20px !important;
-    ">
-            <div style="
-            width: 100% !important;
-            max-width: 800px !important;
-            margin: 0 auto !important;
-            padding: 0 15px !important;
-        ">
-                <?php foreach ($flashMessages as $type => $messages): ?>
-                    <?php foreach ((array)$messages as $message): ?>
-                        <div style="
-                        display: block !important;
-                        width: 100% !important;
-                        margin: 0 auto !important;
-                        padding: 20px !important;
-                        border-radius: 5px !important;
-                        border-left: 4px solid <?= $type === 'error' ? '#dc3545' : ($type === 'success' ? '#28a745' : '#ffc107') ?> !important;
-                        background-color: <?= $type === 'error' ? '#f8d7da' : ($type === 'success' ? '#d4edda' : ($type === 'warning' ? '#fff3cd' : '#d1ecf1')) ?> !important;
-                        color: <?= $type === 'error' ? '#721c24' : ($type === 'success' ? '#155724' : ($type === 'warning' ? '#856404' : '#0c5460')) ?> !important;
-                        text-align: center !important;
-                        position: relative !important;
+    <!-- PROFESSIONAL FLASH MESSAGES DISPLAY -->
+    <?php if (!empty($flashMessagesToDisplay)): ?>
+        <div class="col-12">
+            <?php foreach ($flashMessagesToDisplay as $type => $messages): ?>
+                <?php foreach ((array)$messages as $message): ?>
+                    <div class="alert alert-<?= $type ?> alert-elevated" role="alert" style="
+                        border-radius: 10px;
+                        border: 2px solid <?= $type === 'error' ? '#f5c6cb' : ($type === 'success' ? '#c3e6cb' : '#ffeaa7') ?>;
+                        border-left: 6px solid <?= $type === 'error' ? '#dc3545' : ($type === 'success' ? '#28a745' : '#ffc107') ?>;
+                        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+                        margin: 25px auto;
+                        max-width: 900px;
+                        padding: 25px 30px;
+                        position: relative;
+                        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
                     ">
-                            <h5 style="
-                            text-align: center !important;
-                            margin: 0 auto 15px auto !important;
-                            color: <?= $type === 'error' ? '#721c24' : ($type === 'success' ? '#155724' : ($type === 'warning' ? '#856404' : '#0c5460')) ?> !important;
-                            display: block !important;
-                            width: 100% !important;
-                        ">
-                                <i class="fas fa-ban mr-2"></i>¡ATENCIÓN!
-                            </h5>
+                        <div class="d-flex align-items-start">
+                            <div class="mr-4" style="font-size: 2.2rem; margin-top: 5px;">
+                                <?php if ($type === 'error'): ?>
+                                    <i class="fas fa-exclamation-circle text-danger"></i>
+                                <?php elseif ($type === 'success'): ?>
+                                    <i class="fas fa-check-circle text-success"></i>
+                                <?php elseif ($type === 'warning'): ?>
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                <?php else: ?>
+                                    <i class="fas fa-info-circle text-info"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex-grow-1" style="font-size: 1.05rem;">
+                                <?php if ($type === 'error' && stripos($message, 'SUSPENDIDO') !== false): ?>
+                                    <!-- Special styling for suspended contract messages -->
+                                    <div class="contract-alert-header mb-3 p-3">
+                                        <h4 class="alert-title mb-2" style="color: #721c24; font-weight: 700; font-size: 1.4rem; letter-spacing: 0.5px;">
+                                            <i class="fas fa-ban mr-2"></i>¡ATENCIÓN IMPORTANTE!
+                                        </h4>
+                                        <div class="alert-subtitle text-muted" style="font-size: 1rem; font-weight: 500;">
+                                            <i class="fas fa-calendar-times mr-2"></i> Restricción de Contrato - Acción Bloqueada
+                                        </div>
+                                    </div>
 
-                            <?php
-                            $lines = explode("\n", $message);
-                            foreach ($lines as $index => $line):
-                                $trimmedLine = trim($line);
-                                if (!empty($trimmedLine)):
-                                    if (strpos($trimmedLine, 'Motivo:') === 0): ?>
-                                        <div style="text-align: center !important; margin-bottom: 10px !important;">
-                                            <strong style="color: #dc3545 !important;">Motivo:</strong>
-                                            <span style="margin-left: 8px !important;"><?= Html::encode(substr($trimmedLine, 7)) ?></span>
-                                        </div>
-                                    <?php elseif (strpos($trimmedLine, 'Período:') === 0): ?>
-                                        <div style="text-align: center !important; margin-bottom: 10px !important;">
-                                            <strong>Período:</strong>
-                                            <span style="margin-left: 8px !important;"><?= Html::encode(substr($trimmedLine, 8)) ?></span>
-                                        </div>
-                                    <?php elseif (strpos($trimmedLine, 'Contacte') === 0): ?>
-                                        <div style="text-align: center !important; margin-top: 15px !important; padding-top: 15px !important; border-top: 1px solid rgba(0,0,0,0.1) !important;">
-                                            <p style="margin: 0 !important; font-style: italic !important;">
-                                                <i class="fas fa-headset mr-2"></i>
-                                                <?= Html::encode($trimmedLine) ?>
-                                            </p>
-                                        </div>
-                                    <?php else: ?>
-                                        <p style="
-                                        text-align: center !important;
-                                        margin: 0 auto <?= ($index === count($lines) - 1 && strpos($trimmedLine, 'Contacte') === false) ? '0' : '10px' ?> auto !important;
-                                        max-width: 100% !important;
-                                        display: block !important;
-                                    ">
-                                            <?= Html::encode($trimmedLine) ?>
-                                        </p>
-                            <?php endif;
-                                endif;
-                            endforeach; ?>
+                                    <?php
+                                    // Clean HTML tags from the message for parsing
+                                    $cleanMessage = strip_tags($message);
 
-                            <button type="button" onclick="this.parentElement.style.display='none'"
+                                    // Parse and format the suspended contract message nicely
+                                    $lines = explode("\n", $cleanMessage);
+                                    $formattedLines = [];
+
+                                    foreach ($lines as $line) {
+                                        $trimmedLine = trim($line);
+                                        if (!empty($trimmedLine)) {
+                                            $formattedLines[] = $trimmedLine;
+                                        }
+                                    }
+
+                                    // Display formatted message
+                                    foreach ($formattedLines as $index => $formattedLine):
+                                        if (strpos($formattedLine, '¡ATENCIÓN!') === 0):
+                                            // Skip the header as we already have our own
+                                            continue;
+                                        elseif (strpos($formattedLine, 'No se puede crear una nueva atención para el afiliado') === 0):
+                                            // Extract afiliado name
+                                            $afiliadoText = str_replace('No se puede crear una nueva atención para el afiliado ', '', $formattedLine);
+                                    ?>
+                                            <div class="mb-3 p-3" style="
+                                                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                                                border-radius: 8px;
+                                                border-left: 4px solid #6c757d;
+                                            ">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-user-times mr-3" style="color: #dc3545; font-size: 1.3rem;"></i>
+                                                    <h5 style="color: #495057; font-weight: 600; font-size: 1.2rem; margin: 0;">
+                                                        Restricción de Acceso
+                                                    </h5>
+                                                </div>
+                                                <p style="color: #495057; line-height: 1.6; font-size: 1.1rem; margin-left: 3rem;">
+                                                    No se puede crear una nueva atención para el afiliado<br>
+                                                    <strong style="color: #212529; font-size: 1.15rem;"><?= Html::encode($afiliadoText) ?></strong>
+                                                </p>
+                                            </div>
+                                        <?php elseif (strpos($formattedLine, 'Motivo:') === 0):
+                                            $motivoText = trim(str_replace('Motivo:', '', $formattedLine));
+                                        ?>
+                                            <div class="contract-suspended-box p-4 mb-3" style="
+                                                background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+                                                border-radius: 8px;
+                                                border: 2px solid #ffcdd2;
+                                            ">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <i class="fas fa-file-contract mr-3" style="color: #dc3545; font-size: 1.4rem;"></i>
+                                                    <h5 style="color: #dc3545; font-weight: 700; font-size: 1.25rem; margin: 0;">
+                                                        Estado del Contrato
+                                                    </h5>
+                                                </div>
+                                                <div class="ml-4 pl-1">
+                                                    <span class="badge badge-danger px-4 py-3" style="
+                                                        font-size: 1.1rem;
+                                                        font-weight: 600;
+                                                        letter-spacing: 0.5px;
+                                                        background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+                                                        box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+                                                        border-radius: 6px;
+                                                    ">
+                                                        <i class="fas fa-pause-circle mr-2"></i>
+                                                        <?= Html::encode($motivoText) ?>
+                                                    </span>
+                                                    <p class="mt-3 mb-0" style="color: #721c24; font-size: 1rem; line-height: 1.5;">
+                                                        <i class="fas fa-info-circle mr-2"></i>
+                                                        El contrato se encuentra en estado de suspensión temporal
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        <?php elseif (strpos($formattedLine, 'Período:') === 0):
+                                            $periodoText = trim(str_replace('Período:', '', $formattedLine));
+                                        ?>
+                                            <div class="d-flex align-items-center mb-3 p-3" style="
+                                                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                                                border-radius: 8px;
+                                            ">
+                                                <i class="fas fa-calendar-alt mr-3" style="color: #6c757d; font-size: 1.4rem;"></i>
+                                                <div>
+                                                    <h6 style="color: #495057; font-weight: 600; font-size: 1.15rem; margin-bottom: 5px;">
+                                                        Vigencia de la Suspensión
+                                                    </h6>
+                                                    <span style="color: #6c757d; font-size: 1.1rem; font-weight: 500;">
+                                                        <?= Html::encode($periodoText) ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        <?php elseif (strpos($formattedLine, 'Contacte') === 0): ?>
+                                            <div class="alert-footer mt-4 pt-4" style="
+                                                border-top: 2px solid #dee2e6;
+                                                color: #495057;
+                                                font-size: 1.05rem;
+                                            ">
+                                                <div class="d-flex align-items-start">
+                                                    <i class="fas fa-headset mr-3 mt-1" style="font-size: 1.4rem; color: #0c5460;"></i>
+                                                    <div>
+                                                        <h6 style="color: #0c5460; font-weight: 700; font-size: 1.2rem; margin-bottom: 8px;">
+                                                            <i class="fas fa-exclamation-circle mr-2"></i>Acción Requerida
+                                                        </h6>
+                                                        <p style="color: #495057; line-height: 1.6; font-size: 1.1rem; margin: 0;">
+                                                            <?= Html::encode($formattedLine) ?>
+                                                        </p>
+                                                        <div class="mt-3 pt-2" style="border-top: 1px dashed #adb5bd;">
+                                                            <small style="color: #6c757d; font-size: 0.95rem;">
+                                                                <i class="fas fa-lightbulb mr-2"></i>Para reactivar el servicio, regularice la situación contractual con el departamento administrativo.
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="mb-2 p-2" style="background-color: rgba(0,0,0,0.02); border-radius: 6px;">
+                                                <p style="color: #495057; line-height: 1.6; font-size: 1.1rem; margin: 0;">
+                                                    <i class="fas fa-circle mr-2" style="font-size: 0.6rem; color: #adb5bd;"></i>
+                                                    <?= Html::encode($formattedLine) ?>
+                                                </p>
+                                            </div>
+                                    <?php endif;
+                                    endforeach;
+                                else: ?>
+                                    <!-- Regular flash messages - strip HTML tags first, then display -->
+                                    <?php $cleanMessage = strip_tags($message); ?>
+                                    <div class="mb-3">
+                                        <h4 class="alert-title mb-3" style="
+                                            color: <?= $type === 'error' ? '#721c24' : ($type === 'success' ? '#155724' : '#856404') ?>;
+                                            font-weight: 700;
+                                            font-size: 1.4rem;
+                                            letter-spacing: 0.3px;
+                                        ">
+                                            <?php if ($type === 'error'): ?>
+                                                <i class="fas fa-exclamation-circle mr-2"></i>Alerta Importante
+                                            <?php elseif ($type === 'success'): ?>
+                                                <i class="fas fa-check-circle mr-2"></i>Operación Exitosa
+                                            <?php elseif ($type === 'warning'): ?>
+                                                <i class="fas fa-exclamation-triangle mr-2"></i>Advertencia del Sistema
+                                            <?php else: ?>
+                                                <i class="fas fa-info-circle mr-2"></i>Notificación del Sistema
+                                            <?php endif; ?>
+                                        </h4>
+                                        <div class="alert-message p-3" style="
+                                            color: #495057; 
+                                            line-height: 1.7; 
+                                            font-size: 1.15rem;
+                                            background-color: rgba(0,0,0,0.02);
+                                            border-radius: 8px;
+                                            border-left: 4px solid <?= $type === 'error' ? '#dc3545' : ($type === 'success' ? '#28a745' : '#ffc107') ?>;
+                                        ">
+                                            <?= nl2br(Html::encode($cleanMessage)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <button type="button" class="close" onclick="this.parentElement.parentElement.style.display='none'"
                                 style="
-                                    position: absolute !important;
-                                    top: 10px !important;
-                                    right: 15px !important;
-                                    background: none !important;
-                                    border: none !important;
-                                    font-size: 1.5rem !important;
-                                    cursor: pointer !important;
-                                    color: #000 !important;
-                                    opacity: 0.5 !important;
-                                ">
-                                &times;
+                                    position: absolute;
+                                    top: 20px;
+                                    right: 20px;
+                                    background: none;
+                                    border: none;
+                                    font-size: 1.5rem;
+                                    cursor: pointer;
+                                    color: rgba(0,0,0,0.4);
+                                    transition: all 0.2s;
+                                    padding: 5px;
+                                    border-radius: 4px;
+                                    width: 40px;
+                                    height: 40px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                "
+                                onmouseover="this.style.color='rgba(0,0,0,0.8)'; this.style.backgroundColor='rgba(0,0,0,0.05)'"
+                                onmouseout="this.style.color='rgba(0,0,0,0.4)'; this.style.backgroundColor='transparent'">
+                                <span aria-hidden="true" style="font-size: 1.8rem;">&times;</span>
                             </button>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
                 <?php endforeach; ?>
-            </div>
+            <?php endforeach; ?>
         </div>
-        <!-- ENHANCED PROFESSIONAL ALERT STYLES -->
+
         <style>
+            .contract-alert-header {
+                background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+                padding: 18px 20px;
+                border-radius: 10px;
+                border-left: 5px solid #dc3545;
+                margin-bottom: 20px;
+                box-shadow: 0 4px 8px rgba(220, 53, 69, 0.1);
+            }
+
+            .alert-elevated {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .alert-elevated:hover {
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+                transform: translateY(-2px);
+            }
+
+            .contract-suspended-box {
+                transition: all 0.3s ease;
+            }
+
+            .contract-suspended-box:hover {
+                box-shadow: 0 6px 20px rgba(211, 47, 47, 0.2);
+                transform: translateY(-1px);
+            }
+
+            .badge-danger {
+                animation: pulse 1.5s infinite;
+                transition: all 0.3s ease;
+            }
+
+            .badge-danger:hover {
+                transform: scale(1.02);
+                box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
+            }
+
+            @keyframes pulse {
+                0% {
+                    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+                }
+
+                50% {
+                    box-shadow: 0 4px 18px rgba(211, 47, 47, 0.5);
+                }
+
+                100% {
+                    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+                }
+            }
+
+            .alert-footer {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                padding: 20px;
+                border-radius: 10px;
+                border: 1px solid #dee2e6;
+            }
+
+            /* Typography enhancements */
+            .alert-title {
+                font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+                letter-spacing: 0.3px;
+            }
+
+            .alert-message {
+                font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+                letter-spacing: 0.1px;
+            }
+
+            /* Add the original attention-alert and contract-alert styles */
             .attention-alert {
                 animation: attention-pulse 1.2s infinite alternate ease-in-out;
                 color: #d32f2f !important;
-                font-weight: 700 !important;
-                font-size: 1.3em !important;
+                font-weight: 800 !important;
+                font-size: 1.4em !important;
                 display: inline-block;
-                padding: 4px 12px;
-                margin: 0 3px;
-                border-radius: 4px;
+                padding: 8px 16px;
+                margin: 0 5px;
+                border-radius: 6px;
                 background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-                box-shadow: 0 3px 12px rgba(211, 47, 47, 0.3);
-                border: 2px solid #ff8a80;
+                box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+                border: 3px solid #ff8a80;
                 position: relative;
                 overflow: hidden;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
                 text-transform: uppercase;
-            }
-
-            .attention-alert::before {
-                content: '⚠';
-                margin-right: 6px;
-                font-size: 1em;
-                animation: icon-pulse 1s infinite alternate;
-            }
-
-            .attention-alert::after {
-                content: '';
-                position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
-                background: linear-gradient(to right,
-                        transparent 20%,
-                        rgba(255, 255, 255, 0.4) 50%,
-                        transparent 80%);
-                transform: rotate(30deg);
-                animation: light-sweep 2.5s infinite linear;
             }
 
             .contract-alert {
                 animation: contract-warning 1s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
                 color: #ffffff !important;
-                font-weight: 600 !important;
-                font-size: 1.2em !important;
+                font-weight: 700 !important;
+                font-size: 1.3em !important;
                 display: inline-block;
-                padding: 5px 14px;
-                margin: 0 4px;
-                border-radius: 4px;
+                padding: 8px 18px;
+                margin: 0 5px;
+                border-radius: 6px;
                 background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
-                box-shadow:
-                    0 4px 15px rgba(211, 47, 47, 0.4),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                 position: relative;
                 overflow: hidden;
                 text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-
-            .contract-alert::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(90deg,
-                        transparent 30%,
-                        rgba(255, 255, 255, 0.2) 50%,
-                        transparent 70%);
-                animation: shimmer 2s infinite;
-            }
-
-            .contract-alert::after {
-                content: '';
-                position: absolute;
-                top: -2px;
-                left: -2px;
-                right: -2px;
-                bottom: -2px;
-                border-radius: 6px;
-                background: linear-gradient(45deg, #ff5252, #ff8a80, #ff5252);
-                z-index: -1;
-                animation: border-glow 1.5s infinite alternate;
-                opacity: 0.7;
+                letter-spacing: 1.2px;
             }
 
             @keyframes attention-pulse {
                 0% {
                     transform: scale(1) translateY(0);
-                    box-shadow: 0 3px 12px rgba(211, 47, 47, 0.3);
+                    box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
                     border-color: #ff8a80;
                 }
 
                 100% {
-                    transform: scale(1.05) translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5);
+                    transform: scale(1.05) translateY(-3px);
+                    box-shadow: 0 8px 25px rgba(211, 47, 47, 0.5);
                     border-color: #ff5252;
-                }
-            }
-
-            @keyframes icon-pulse {
-                0% {
-                    transform: scale(1);
-                    opacity: 0.8;
-                }
-
-                100% {
-                    transform: scale(1.2);
-                    opacity: 1;
-                }
-            }
-
-            @keyframes light-sweep {
-                0% {
-                    transform: translateX(-100%) translateY(-100%) rotate(30deg);
-                }
-
-                100% {
-                    transform: translateX(100%) translateY(100%) rotate(30deg);
                 }
             }
 
             @keyframes contract-warning {
                 0% {
                     transform: scale(1) translateY(0);
-                    box-shadow:
-                        0 4px 15px rgba(211, 47, 47, 0.4),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                    box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
                     background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
                 }
 
                 100% {
-                    transform: scale(1.03) translateY(-2px);
-                    box-shadow:
-                        0 8px 25px rgba(211, 47, 47, 0.6),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+                    transform: scale(1.05) translateY(-2px);
+                    box-shadow: 0 10px 30px rgba(211, 47, 47, 0.7), inset 0 2px 0 rgba(255, 255, 255, 0.5);
                     background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
                 }
-            }
-
-            @keyframes shimmer {
-                0% {
-                    transform: translateX(-100%);
-                }
-
-                100% {
-                    transform: translateX(100%);
-                }
-            }
-
-            @keyframes border-glow {
-                0% {
-                    opacity: 0.5;
-                    filter: blur(4px);
-                }
-
-                100% {
-                    opacity: 0.8;
-                    filter: blur(6px);
-                }
-            }
-
-            /* Alert container enhancements */
-            .alert-danger {
-                border: 1px solid rgba(211, 47, 47, 0.2);
-                border-left: 4px solid #d32f2f;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-            }
-
-            .alert-danger:hover {
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
-                transition: box-shadow 0.3s ease;
             }
         </style>
     <?php endif; ?>
@@ -338,15 +423,15 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
     <div class="col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1><?= $this->title ?></h1>
+                <h1 style="font-size: 1.8rem; font-weight: 600; letter-spacing: 0.3px;"><?= $this->title ?></h1>
                 <div class="d-flex gap-3"> <?php
                                             // BOTÓN DE CREACIÓN DINÁMICO
                                             if ($permisos) {
                                                 echo Html::a(
-                                                    '<i class="fas fa-plus"></i> ' . $textoBoton,
+                                                    '<i class="fas fa-plus mr-2"></i>' . $textoBoton,
                                                     // Enlace a actionCreate, pasando user_id y el valor binario es_cita (0 o 1)
                                                     ['create', 'user_id' => $user_id, 'es_cita' => $esCita],
-                                                    ['class' => 'btn btn-outline-primary btn-lg']
+                                                    ['class' => 'btn btn-outline-primary btn-lg', 'style' => 'font-size: 1.05rem; padding: 10px 20px;']
                                                 );
                                             }
                                             ?>
@@ -354,9 +439,10 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                         '<i class="' . $volverBtnIcon . ' mr-2"></i> Volver',
                         ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id],
                         [
-                            'class' => 'btn btn-lg ' . $volverBtnClass,
+                            'class' => 'btn btn-lg ' . $volverBtnIcon,
                             'title' => $volverBtnTitle,
                             'data' => ['pjax' => 0],
+                            'style' => 'font-size: 1.05rem; padding: 10px 20px;'
                         ]
                     ) ?>
                 </div>
@@ -383,16 +469,18 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                 'attribute' => 'id',
                                 'value' => 'id',
                                 'label' => 'ID',
+                                'contentOptions' => ['style' => 'font-size: 1rem;'],
                             ],
                             [
                                 'attribute' => 'idclinica',
                                 'value' => 'clinica.nombre',
                                 'label' => 'Clínica',
+                                'contentOptions' => ['style' => 'font-size: 1rem;'],
                             ],
                             [
                                 'attribute' => 'fecha',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
                                 'value' => function ($model) {
                                     return Yii::$app->formatter->asDate($model->fecha);
                                 },
@@ -400,7 +488,7 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                             [
                                 'attribute' => 'hora',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
                                 'value' => function ($model) {
                                     return Yii::$app->formatter->asTime($model->hora);
                                 },
@@ -410,20 +498,20 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                 'label' => 'Tipo',
                                 'attribute' => 'es_cita',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
                                 'value' => function ($model) {
-                                    return $model->es_cita == 1 ? '<span class="status-badge active bg-success">Cita</span>' : '<span class="status-badge inactive bg-primary">Siniestro</span>';
+                                    return $model->es_cita == 1 ? '<span class="status-badge active bg-success" style="font-size: 0.95rem; padding: 6px 12px;">Cita</span>' : '<span class="status-badge inactive bg-primary" style="font-size: 0.95rem; padding: 6px 12px;">Siniestro</span>';
                                 },
                                 'filter' => [0 => 'Siniestro', 1 => 'Cita'],
                             ],
                             [
                                 'attribute' => 'baremos',
                                 'format' => 'raw',
-                                'contentOptions' => ['style' => 'max-width: 250px; white-space: normal;'],
+                                'contentOptions' => ['style' => 'max-width: 250px; white-space: normal; font-size: 1rem;'],
                                 'value' => function ($model) {
                                     $baremos = $model->baremos;
                                     if (empty($baremos)) {
-                                        return '<span class="text-muted">No hay baremos</span>';
+                                        return '<span class="text-muted" style="font-size: 1rem;">No hay baremos</span>';
                                     }
 
                                     $items = [];
@@ -432,25 +520,25 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                             $items[] = Html::tag(
                                                 'div',
                                                 Html::encode($baremo['nombre_servicio']),
-                                                ['class' => 'mb-1']
+                                                ['class' => 'mb-1', 'style' => 'font-size: 1rem;']
                                             );
                                         } elseif (is_object($baremo) && property_exists($baremo, 'nombre_servicio')) {
                                             $items[] = Html::tag(
                                                 'div',
                                                 Html::encode($baremo->nombre_servicio),
-                                                ['class' => 'mb-1']
+                                                ['class' => 'mb-1', 'style' => 'font-size: 1rem;']
                                             );
                                         }
                                     }
 
-                                    return !empty($items) ? implode('', $items) : '<span class="text-muted">No hay baremos</span>';
+                                    return !empty($items) ? implode('', $items) : '<span class="text-muted" style="font-size: 1rem;">No hay baremos</span>';
                                 },
                                 'label' => 'Baremos',
                             ],
                             [
                                 'attribute' => 'fecha_atencion',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
                                 'value' => function ($model) {
                                     return Yii::$app->formatter->asDate($model->fecha_atencion);
                                 },
@@ -458,7 +546,7 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                             [
                                 'attribute' => 'hora_atencion',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
                                 'value' => function ($model) {
                                     return Yii::$app->formatter->asTime($model->hora_atencion);
                                 },
@@ -467,17 +555,17 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                             [
                                 'attribute' => 'costo_total',
                                 'format' => ['currency', 'USD'],
-                                'contentOptions' => ['style' => 'text-align: right;'],
+                                'contentOptions' => ['style' => 'text-align: right; font-size: 1rem;'],
                                 'filter' => false
                             ],
 
                             [
                                 'attribute' => 'atendido',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
                                 'value' => function ($model) {
                                     $isTrue = $model->atendido;
-                                    return $isTrue == 1 ? '<p class="status-badge active">Sí</p>' : '<p class="status-badge inactive">No</p>';
+                                    return $isTrue == 1 ? '<p class="status-badge active" style="font-size: 1rem; padding: 6px 12px;">Sí</p>' : '<p class="status-badge inactive" style="font-size: 1rem; padding: 6px 12px;">No</p>';
                                 },
                                 'filter' => [0 => 'No', 1 => 'Sí'],
                             ],
@@ -488,7 +576,7 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                 'header' => 'ACCIONES',
                                 'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
                                 'options' => ['class' => 'action-buttons'],
-                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'headerOptions' => ['style' => 'color: white!important; font-size: 1.1rem;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) {
@@ -497,7 +585,8 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                             Url::to(['view', 'id' => $model->id, 'user_id' => $model->iduser]),
                                             [
                                                 'title' => 'Detalle de la atención',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn-action view',
+                                                'style' => 'font-size: 1.1rem;'
                                             ]
                                         );
                                     },
@@ -513,7 +602,8 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                                 ]),
                                                 [
                                                     'title' => 'Editar',
-                                                    'class' => 'btn-action edit'
+                                                    'class' => 'btn-action edit',
+                                                    'style' => 'font-size: 1.1rem;'
                                                 ]
                                             );
                                         }
