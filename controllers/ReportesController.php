@@ -73,41 +73,71 @@ class ReportesController extends Controller
         $request = Yii::$app->request;
 
         // Parámetros de la vista
-        $range = $request->post('range', 'day'); // 'day', 'week', 'month', 'last-month'
+        $range = $request->post('range', 'day');
         $specificDate = $request->post('specific_date');
         $status = $request->post('status', 'Por Conciliar');
-        $clinicas = $request->post('clinicas', []); // Nuevo: array de IDs de clínicas
+        $clinicas = $request->post('clinicas', []);
+
+        // NUEVO: Parámetros para rango personalizado
+        $customRange = $request->post('custom_range', false);
+        $dateFrom = $request->post('date_from');
+        $dateTo = $request->post('date_to');
 
         $startDate = date('Y-m-d');
         $endDate = date('Y-m-d');
         $title = "Detalle de Pagos de Hoy";
 
-        // 1. Lógica de rango de fechas (CON NUEVO CASO PARA MES ANTERIOR)
-        switch ($range) {
-            case 'week':
-                $startDate = date('Y-m-d', strtotime('last Monday'));
-                $title = "Detalle de Pagos Semanales";
-                break;
-            case 'month':
-                $startDate = date('Y-m-01');
-                $title = "Detalle de Pagos Mensuales";
-                break;
-            case 'last-month':
-                $startDate = date('Y-m-01', strtotime('first day of last month'));
-                $endDate = date('Y-m-t', strtotime('last month'));
-                $title = "Detalle de Pagos del Mes Anterior";
-                break;
-        }
+        // =============================================
+        // LÓGICA ACTUALIZADA PARA RANGO DE FECHAS
+        // =============================================
 
-        if ($specificDate && $specificDate !== 'Invalid date') {
+        if ($customRange && $dateFrom && $dateTo) {
+            // 1. PRIMERO: Verificar si es rango personalizado
+            $startDate = $dateFrom;
+            $endDate = $dateTo;
+            $title = "Detalle de Pagos para el período personalizado";
+        } else if ($specificDate && $specificDate !== 'Invalid date') {
+            // 2. Fecha específica (existente)
             $startDate = $specificDate;
             $endDate = $specificDate;
             $title = "Detalle de Pagos para el día: " . Yii::$app->formatter->asDate($specificDate, 'long');
+        } else {
+            // 3. Rangos predefinidos
+            switch ($range) {
+                case 'week':
+                    $startDate = date('Y-m-d', strtotime('last Monday'));
+                    $title = "Detalle de Pagos Semanales";
+                    break;
+                case 'month':
+                    $startDate = date('Y-m-01');
+                    $title = "Detalle de Pagos Mensuales";
+                    break;
+                case 'last-month':
+                    $startDate = date('Y-m-01', strtotime('first day of last month'));
+                    $endDate = date('Y-m-t', strtotime('last month'));
+                    $title = "Detalle de Pagos del Mes Anterior";
+                    break;
+                case 'day':
+                default:
+                    // Ya tiene valores por defecto
+                    break;
+            }
         }
 
         // Modificar título para reflejar el estado seleccionado
         $statusLabel = $status === 'todos' ? 'Todos los Estados' : ($status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar');
         $title .= " ({$statusLabel})";
+
+        // =============================================
+        // LOGGING PARA DEBUG (OPCIONAL)
+        // =============================================
+        Yii::debug("Report parameters:", 'application');
+        Yii::debug("Range: {$range}", 'application');
+        Yii::debug("Custom Range: " . ($customRange ? 'true' : 'false'), 'application');
+        Yii::debug("Date From: {$dateFrom}", 'application');
+        Yii::debug("Date To: {$dateTo}", 'application');
+        Yii::debug("Start Date: {$startDate}", 'application');
+        Yii::debug("End Date: {$endDate}", 'application');
 
         // 2. Crear y configurar el modelo de búsqueda
         $searchModel = new PagosReporteSearch();
@@ -115,22 +145,19 @@ class ReportesController extends Controller
         // 3. Obtener el resumen general
         $summary = $searchModel->obtenerResumenGeneral($startDate, $endDate, $status, $clinicas);
 
-        // 4. Obtener el resumen por clínica (si hay filtro de clínicas)
+        // 4. Obtener el resumen por clínica
         $summaryPorClinica = [];
         if (!empty($clinicas)) {
             if (in_array('todas', $clinicas)) {
-                // Cuando se selecciona "todas", obtener todas las clínicas con pagos
                 $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, []);
             } else {
-                // Cuando se seleccionan clínicas específicas
                 $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, $clinicas);
             }
         } else {
-            // Por defecto, mostrar todas las clínicas
             $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, []);
         }
 
-        // 5. Obtener el dataProvider para el GridView
+        // 5. Obtener el dataProvider
         $params = $request->post();
 
         // Usar searchConClinicas si hay filtro de clínicas, de lo contrario usar search normal
@@ -153,6 +180,15 @@ class ReportesController extends Controller
                 'summaryPorClinica' => $summaryPorClinica,
                 'clinicasSeleccionadas' => $clinicas,
             ]),
+            // Agregar debug info si es necesario
+            'debug' => [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'range' => $range,
+                'customRange' => $customRange,
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo
+            ]
         ];
     }
 
