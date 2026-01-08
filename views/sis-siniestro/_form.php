@@ -535,7 +535,9 @@ if ($contrato && $contrato->estatus === 'Activo') {
         ]);
     } else {
         // Modo Siniestro: Mostrar solo servicios SIN restricciones
-        $query->andWhere([
+
+        $query->andWhere(['planes_items_cobertura.plazo_espera' => 0]);
+        /*$query->andWhere([
             'and',
             ['or',
                 ['planes_items_cobertura.plazo_espera' => null],
@@ -545,7 +547,7 @@ if ($contrato && $contrato->estatus === 'Activo') {
                 ['planes_items_cobertura.cantidad_limite' => null],
                 ['planes_items_cobertura.cantidad_limite' => 0]
             ]
-        ]);
+        ]);*/
     }
     
     $planesItemsCobertura = $query->all();

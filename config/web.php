@@ -88,6 +88,8 @@ $config = [
                 'v2/cuota/resumen-atrasadas' => 'cuota-web/resumen-atrasadas',
                 'v2/cuota/verificar-contratos-vencidos' => 'cuota-web/verificar-contratos-vencidos',
                 'v2/cuota/verificar-espera' => 'cuota-web/verificar-espera',
+                'reportes/comisiones' => 'reportes/comisiones',
+                'reportes/get-comisiones-detail' => 'reportes/get-comisiones-detail',
 
                 // Puedes añadir tus reglas de URL aquí si necesitas URLs más amigables para tus propias rutas.
             ],
