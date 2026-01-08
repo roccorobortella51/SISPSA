@@ -38,6 +38,8 @@ class CorporativoController extends Controller
      * @var array
      */
     private $estadoNameToIdMap = [];
+    private $estadoNormToCanonicalName = [];
+    private $estadoCanonicalNamesText = '';
     /**
      * @inheritDoc
      */
@@ -626,14 +628,18 @@ class CorporativoController extends Controller
             ];
         }
         
-        // Pre-carga y mapeo de estados para validación
+        // Pre-carga y mapeo de estados para validación y mensajes de ayuda
         if (empty($this->estadoNameToIdMap)) {
             $allEstados = RmEstado::find()->select(['id', 'nombre'])->asArray()->all();
+            $canonicos = [];
             foreach ($allEstados as $estado) {
                 // Normalizamos para búsqueda sin acentos/case-sensitive
                 $normalizedName = strtolower($this->_normalizeString($estado['nombre']));
                 $this->estadoNameToIdMap[$normalizedName] = $estado['id'];
+                $this->estadoNormToCanonicalName[$normalizedName] = $estado['nombre'];
+                $canonicos[] = $estado['nombre'];
             }
+            $this->estadoCanonicalNamesText = implode(', ', $canonicos);
         }
 
         // Definición de rangos de valores válidos para nuevos campos
@@ -703,17 +709,17 @@ class CorporativoController extends Controller
 
                 // Validación de Estado (Nombre a ID)
                 if (empty($estadoNameCsv)) {
-                    throw new \Exception("El campo 'estado' está vacío.");
+                    throw new \Exception("El campo 'estado' está vacío. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
                 }
 
                 $normalizedCsvName = strtolower($this->_normalizeString($estadoNameCsv));
 
                 if (!isset($this->estadoNameToIdMap[$normalizedCsvName])) {
-                    throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado en el catálogo. Verifique la ortografía.");
+                    throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
                 }
                 
-                // Nombre del estado para asignación a UserDatos
-                $estadoNombreParaUserDatos = $estadoNameCsv;
+                // Nombre del estado para asignación a UserDatos (canónico desde rm_estado)
+                $estadoNombreParaUserDatos = $this->estadoNormToCanonicalName[$normalizedCsvName] ?? $estadoNameCsv;
 
                 // 2. Validar relaciones y existencia de Plan
                 if (!CorporativoClinica::find()->where(['corporativo_id' => $corporativoId])->andWhere(['clinica_id' => $clinicaId])->exists()) {
@@ -973,6 +979,42 @@ class CorporativoController extends Controller
         return Yii::$app->response->sendContentAsFile($content, 'plantilla_afiliados_corporativos.csv', [
             'mimeType' => 'text/csv; charset=UTF-8',
             'inline' => false 
+        ]);
+    }
+
+    public function actionDescargarCatalogoEstados()
+    {
+        $estados = RmEstado::find()->select(['id', 'nombre'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
+        $output = fopen('php://temp', 'r+');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['id', 'nombre'], ',');
+        foreach ($estados as $e) {
+            fputcsv($output, [$e['id'], $e['nombre']], ',');
+        }
+        rewind($output);
+        $content = stream_get_contents($output);
+        fclose($output);
+        return Yii::$app->response->sendContentAsFile($content, 'catalogo_estados.csv', [
+            'mimeType' => 'text/csv; charset=UTF-8',
+            'inline' => false
+        ]);
+    }
+
+    public function actionDescargarCatalogoAsesores()
+    {
+        $map = UserHelper::getAgenteFuerzaList(); // id => name
+        $output = fopen('php://temp', 'r+');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['id', 'name'], ',');
+        foreach ($map as $id => $name) {
+            fputcsv($output, [$id, $name], ',');
+        }
+        rewind($output);
+        $content = stream_get_contents($output);
+        fclose($output);
+        return Yii::$app->response->sendContentAsFile($content, 'catalogo_asesores.csv', [
+            'mimeType' => 'text/csv; charset=UTF-8',
+            'inline' => false
         ]);
     }
 

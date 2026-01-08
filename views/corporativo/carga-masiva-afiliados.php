@@ -110,14 +110,32 @@ $this->registerJs(
     <!-- Encabezado y Acción de Descarga -->
     <div class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
         <h1 class="font-weight-bold"><i class="fas fa-layer-group me-2"></i> <?= Html::encode($this->title) ?></h1>
-        <?= Html::a(
-            '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejemplo',
-            ['/corporativo/descargar-plantilla'], 
-            [
-                'class' => 'btn btn-success fw-bold py-3 px-5 shadow-xl', // Botón principal de descarga
-                'title' => 'Descarga el formato CSV con todas las columnas'
-            ]
-        ) ?>
+        <div class="d-flex gap-2">
+            <?= Html::a(
+                '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejemplo',
+                ['/corporativo/descargar-plantilla'], 
+                [
+                    'class' => 'btn btn-success fw-bold py-3 px-4 shadow-xl me-2',
+                    'title' => 'Descarga el formato CSV con todas las columnas'
+                ]
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-list-ul me-2"></i> Descargar Catálogo de Estados',
+                ['/corporativo/descargar-catalogo-estados'],
+                [
+                    'class' => 'btn btn-outline-primary fw-bold py-3 px-4 shadow-sm',
+                    'title' => 'Descarga un CSV con la lista de estados válidos (referencia)'
+                ]
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-user-tie me-2"></i> Descargar Catálogo de Asesores',
+                ['/corporativo/descargar-catalogo-asesores'],
+                [
+                    'class' => 'btn btn-outline-secondary fw-bold py-3 px-4 shadow-sm',
+                    'title' => 'Descarga un CSV con la lista de asesores (id y nombre)'
+                ]
+            ) ?>
+        </div>
     </div>
 
     <!-- Guía de Instrucciones (Tarjeta Azul) -->
