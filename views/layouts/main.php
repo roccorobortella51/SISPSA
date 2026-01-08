@@ -261,6 +261,9 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 -->
+    <!-- Load Chart.js for charts and graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+
     <?php $this->head() ?>
     <style>
         body.sidebar-collapse .hide-on-sidebar-collapse {
