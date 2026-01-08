@@ -114,13 +114,15 @@ class SisSiniestroReporteSearch extends Model
                 'c.nombre as clinic_name',
                 'c.estatus as clinic_status',
                 'COUNT(s.id) as total_attentions',
-                'SUM(CASE WHEN s.atendido = 1 THEN 1 ELSE 0 END) as attended_count',
-                'SUM(CASE WHEN s.atendido = 0 OR s.atendido IS NULL THEN 1 ELSE 0 END) as pending_count',
+                // PostgreSQL-compatible using explicit boolean to integer casting
+                'SUM(CASE WHEN s.atendido::integer = 1 THEN 1 ELSE 0 END) as attended_count',
+                'SUM(CASE WHEN s.atendido::integer = 0 OR s.atendido IS NULL THEN 1 ELSE 0 END) as pending_count',
                 'COUNT(DISTINCT s.iduser) as unique_patients',
                 'AVG(s.costo_total) as avg_cost',
                 'SUM(s.costo_total) as total_cost',
-                'COUNT(CASE WHEN s.es_cita = 1 THEN 1 END) as appointments_count',
-                'COUNT(CASE WHEN s.es_cita = 0 THEN 1 END) as emergencies_count',
+                // PostgreSQL-compatible using explicit boolean to integer casting
+                'COUNT(CASE WHEN s.es_cita::integer = 1 THEN 1 END) as appointments_count',
+                'COUNT(CASE WHEN s.es_cita::integer = 0 THEN 1 END) as emergencies_count',
             ])
             ->from(['c' => RmClinica::tableName()])
             ->leftJoin(['s' => SisSiniestro::tableName()], 'c.id = s.idclinica')
@@ -216,7 +218,8 @@ class SisSiniestroReporteSearch extends Model
             ->select([
                 's.fecha as date',
                 'COUNT(s.id) as attentions_count',
-                'SUM(CASE WHEN s.atendido = 1 THEN 1 ELSE 0 END) as attended_count',
+                // PostgreSQL-compatible using explicit boolean to integer casting
+                'SUM(CASE WHEN s.atendido::integer = 1 THEN 1 ELSE 0 END) as attended_count',
                 'SUM(s.costo_total) as daily_cost',
                 'COUNT(DISTINCT s.iduser) as daily_patients',
             ])
