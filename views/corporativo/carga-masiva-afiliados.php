@@ -105,38 +105,45 @@ $this->registerJs(
 );
 ?>
 
-<div class="corporativo-carga-masiva-form p-4">
+
 
     <!-- Encabezado y Acción de Descarga -->
-    <div class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
-        <h1 class="font-weight-bold"><i class="fas fa-layer-group me-2"></i> <?= Html::encode($this->title) ?></h1>
-        <div class="d-flex gap-2">
-            <?= Html::a(
-                '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejemplo',
-                ['/corporativo/descargar-plantilla'], 
-                [
-                    'class' => 'btn btn-success fw-bold py-3 px-4 shadow-xl me-2',
-                    'title' => 'Descarga el formato CSV con todas las columnas'
-                ]
-            ) ?>
-            <?= Html::a(
-                '<i class="fas fa-list-ul me-2"></i> Descargar Catálogo de Estados',
-                ['/corporativo/descargar-catalogo-estados'],
-                [
-                    'class' => 'btn btn-outline-primary fw-bold py-3 px-4 shadow-sm',
-                    'title' => 'Descarga un CSV con la lista de estados válidos (referencia)'
-                ]
-            ) ?>
-            <?= Html::a(
-                '<i class="fas fa-user-tie me-2"></i> Descargar Catálogo de Asesores',
-                ['/corporativo/descargar-catalogo-asesores'],
-                [
-                    'class' => 'btn btn-outline-secondary fw-bold py-3 px-4 shadow-sm',
-                    'title' => 'Descarga un CSV con la lista de asesores (id y nombre)'
-                ]
-            ) ?>
-        </div>
+<div class="d-flex flex-column mb-5 border-bottom pb-4" style="margin-left: 60px;">
+    
+    <h1 class="display-4 font-weight-bold mb-5">
+        <i class="fas fa-layer-group me-2"></i> <?= Html::encode($this->title) ?>
+    </h1>
+
+    <div class="d-flex flex-wrap">
+        <?= Html::a(
+            '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejemplo',
+            ['/corporativo/descargar-plantilla'], 
+            [
+                'class' => 'btn btn-success btn-lg fw-bold shadow-lg',
+                'style' => 'font-size: 1.4rem; padding: 20px 30px; margin-right: 30px; margin-bottom: 20px;', 
+                'title' => 'Descarga el formato CSV con todas las columnas'
+            ]
+        ) ?>
+        <?= Html::a(
+            '<i class="fas fa-list-ul me-2"></i> Descargar Catálogo de Estados',
+            ['/corporativo/descargar-catalogo-estados'],
+            [
+                'class' => 'btn btn-outline-primary btn-lg fw-bold shadow-sm',
+                'style' => 'font-size: 1.4rem; padding: 20px 30px; margin-right: 30px; margin-bottom: 20px;',
+                'title' => 'Descarga un CSV con la lista de estados válidos'
+            ]
+        ) ?>
+        <?= Html::a(
+            '<i class="fas fa-user-tie me-2"></i> Descargar Catálogo de Asesores',
+            ['/corporativo/descargar-catalogo-asesores'],
+            [
+                'class' => 'btn btn-outline-secondary btn-lg fw-bold shadow-sm',
+                'style' => 'font-size: 1.4rem; padding: 20px 30px; margin-bottom: 20px;',
+                'title' => 'Descarga un CSV con la lista de asesores'
+            ]
+        ) ?>
     </div>
+</div>
 
     <!-- Guía de Instrucciones (Tarjeta Azul) -->
     <div class="card bg-light border-primary mb-5 shadow-sm">
@@ -165,25 +172,26 @@ $this->registerJs(
                     <tr><td>`nombres`</td><td>Texto</td><td>Nombres completos del afiliado.</td></tr>
                     <tr><td>`apellidos`</td><td>Texto</td><td>Apellidos completos del afiliado.</td></tr>
                     <tr><td>`fechanac`</td><td>Fecha</td><td>Fecha de nacimiento. Formato estricto: YYYY-MM-DD (ej: 1990-05-15 / año/mes/dia).</td></tr>
-                    <tr><td>`sexo`</td><td>Texto</td><td>Género (M o F).</td></tr>
+                    <tr><td>`sexo`</td><td>Texto</td><td>Género (Masculino o Femenino).</td></tr>
                     <tr><td>`telefono`</td><td>Texto</td><td>Teléfono de contacto (residencia o móvil).</td></tr>
                     <tr><td>`email`</td><td>Texto</td><td>Correo electrónico. (Debe ser único en el sistema)</td></tr>
                     <tr><td>`direccion`</td><td>Texto</td><td>Dirección de residencia o cobro.</td></tr>
                     <tr class="table-danger">
                         <td>`plan_id`</td>
                         <td>Número</td>
-                        <td>ID del Plan al que se afiliará. **(Debe ser un plan listado en la sección de guía)**</td>
+                        <td>ID del Plan al que se afiliará. (Debe ser un plan listado en la sección de guía)</td>
                     </tr>
                     <tr class="table-danger">
                         <td>`clinica_id`</td>
                         <td>Número</td>
-                        <td>ID de la Clínica a la que se vinculará el contrato. **(Debe ser una clínica listada en la sección de guía)**</td>
+                        <td>ID de la Clínica a la que se vinculará el contrato.(Debe ser una clínica listada en la sección de guía)</td>
                     </tr>
                     
                     <tr class="table-secondary fw-bold">
                         <td colspan="3">CAMPOS OPCIONALES (Para información de contrato y oficina)</td>
                     </tr>
-                    <tr><td>`asesor_id`</td><td>Número</td><td>ID del asesor (si aplica).</td></tr>
+                    <tr><td>`asesor_id`</td><td>Número</td><td>ID del asesor (si aplica y podra descargarse en el boton de descarga).</td></tr>
+                     <tr><td>`Estado`</td><td>Texto</td><td>Estado de afiliacion (podra descargarse en el boton de descarga).</td></tr>
                     <tr><td>`direccion_oficina`</td><td>Texto</td><td>Dirección de la oficina del afiliado.</td></tr>
                     <tr><td>`telefono_oficina`</td><td>Texto</td><td>Teléfono de la oficina del afiliado.</td></tr>
                     <tr><td>`tipo_sangre`</td><td>Texto</td><td>Tipo de sangre (ej: A+, O-).</td></tr>
@@ -287,7 +295,6 @@ $this->registerJs(
 
     <?php ActiveForm::end(); ?>
 
-</div>
 
 <?php
 $this->registerJs(<<<JS
