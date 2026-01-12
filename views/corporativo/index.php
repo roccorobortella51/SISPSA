@@ -28,22 +28,31 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
 
-            <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1><?= Html::encode($this->title); ?></h1>
+<div class="ms-panel-header d-flex justify-content-between align-items-center p-4">
+    <h1 class="font-weight-bold" style="font-size: 2.5rem; margin: 0; line-height: 1;">
+        <?= Html::encode($this->title); ?>
+    </h1>
 
-                <div>
-                   <?= Html::a(
-                        '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE CORPORATIVOS',
-                        ['corporativo/carga-masiva-afiliados'], // <--- RUTA CORREGIDA AQUÍ
-                        ['class' => 'btn btn-outline-primary btn-lg me-3']
-                    ) ?>
-                    <?= Html::a(
-                        '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
-                        ['create'],
-                        ['class' => 'btn btn-outline-primary btn-lg']
-                    ) ?>
-                </div>
-            </div>
+    <div class="d-flex" style="gap: 15px;"> 
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
+            ['create'],
+            [
+                'class' => 'btn btn-outline-success',
+                'style' => 'font-size: 1.5rem; font-weight: bold; padding: 15px 25px; border-width: 3px; display: flex; align-items: center; gap: 10px;'
+            ]
+        ) ?>
+
+        <?= Html::a(
+            '<i class="fas fa-file-excel"></i> CARGAR MASIVOS',
+            ['corporativo/carga-masiva-afiliados'],
+            [
+                'class' => 'btn btn-outline-primary',
+                'style' => 'font-size: 1.5rem; font-weight: bold; padding: 15px 25px; border-width: 3px; display: flex; align-items: center; gap: 10px;'
+            ]
+        ) ?>
+    </div>
+</div>
 
 
             <div class="ms-panel-body">

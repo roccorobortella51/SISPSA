@@ -38,6 +38,8 @@ class CorporativoController extends Controller
      * @var array
      */
     private $estadoNameToIdMap = [];
+    private $estadoNormToCanonicalName = [];
+    private $estadoCanonicalNamesText = '';
     /**
      * @inheritDoc
      */
@@ -536,7 +538,12 @@ class CorporativoController extends Controller
                 $filePath = $model->masivoFile->tempName;
                 $corporativoId = $model->corporativo_id;
                 
-                $resultados = $this->procesarCSV($filePath, $corporativoId);
+                $resultados = $this->procesarCSV(
+                    $filePath,
+                    $corporativoId,
+                    $model->fecha_ini,
+                    $model->fecha_ven
+                );
                 
                 // 3. Mostrar el resumen del proceso
                 $errorCount = count($resultados['errors']);
@@ -582,7 +589,7 @@ class CorporativoController extends Controller
      * @param int $corporativoId ID del corporativo destino.
      * @return array Array con el conteo de éxitos y los errores encontrados.
      */
-    private function procesarCSV($filePath, $corporativoId)
+    private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal)
     {
         $handle = fopen($filePath, "r");
         if ($handle === false) {
@@ -621,14 +628,18 @@ class CorporativoController extends Controller
             ];
         }
         
-        // Pre-carga y mapeo de estados para validación
+        // Pre-carga y mapeo de estados para validación y mensajes de ayuda
         if (empty($this->estadoNameToIdMap)) {
             $allEstados = RmEstado::find()->select(['id', 'nombre'])->asArray()->all();
+            $canonicos = [];
             foreach ($allEstados as $estado) {
                 // Normalizamos para búsqueda sin acentos/case-sensitive
                 $normalizedName = strtolower($this->_normalizeString($estado['nombre']));
                 $this->estadoNameToIdMap[$normalizedName] = $estado['id'];
+                $this->estadoNormToCanonicalName[$normalizedName] = $estado['nombre'];
+                $canonicos[] = $estado['nombre'];
             }
+            $this->estadoCanonicalNamesText = implode(', ', $canonicos);
         }
 
         // Definición de rangos de valores válidos para nuevos campos
@@ -698,17 +709,17 @@ class CorporativoController extends Controller
 
                 // Validación de Estado (Nombre a ID)
                 if (empty($estadoNameCsv)) {
-                    throw new \Exception("El campo 'estado' está vacío.");
+                    throw new \Exception("El campo 'estado' está vacío. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
                 }
 
                 $normalizedCsvName = strtolower($this->_normalizeString($estadoNameCsv));
 
                 if (!isset($this->estadoNameToIdMap[$normalizedCsvName])) {
-                    throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado en el catálogo. Verifique la ortografía.");
+                    throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
                 }
                 
-                // Nombre del estado para asignación a UserDatos
-                $estadoNombreParaUserDatos = $estadoNameCsv;
+                // Nombre del estado para asignación a UserDatos (canónico desde rm_estado)
+                $estadoNombreParaUserDatos = $this->estadoNormToCanonicalName[$normalizedCsvName] ?? $estadoNameCsv;
 
                 // 2. Validar relaciones y existencia de Plan
                 if (!CorporativoClinica::find()->where(['corporativo_id' => $corporativoId])->andWhere(['clinica_id' => $clinicaId])->exists()) {
@@ -848,21 +859,8 @@ class CorporativoController extends Controller
                 $modelContrato->plan_id = $afiliado->plan_id; 
                 $modelContrato->monto = $plan ? $plan->precio : 0;
                 
-                $modelContrato->fecha_ini = date('Y-m-d'); 
-                if (isset($headerMap['fecha_inicio_contrato'])) {
-                    $fechaInicioContratoString = trim($data[$headerMap['fecha_inicio_contrato']] ?? '');
-                    if (!empty($fechaInicioContratoString) && strtotime($fechaInicioContratoString) !== false) {
-                        $modelContrato->fecha_ini = date('Y-m-d', strtotime($fechaInicioContratoString));
-                    }
-                }
-                
-                $modelContrato->fecha_ven = null; 
-                if (isset($headerMap['fecha_vencimiento_contrato'])) {
-                    $fechaFinContratoString = trim($data[$headerMap['fecha_vencimiento_contrato']] ?? '');
-                    if (!empty($fechaFinContratoString) && strtotime($fechaFinContratoString) !== false) {
-                        $modelContrato->fecha_ven = date('Y-m-d', strtotime($fechaFinContratoString));
-                    }
-                }
+                $modelContrato->fecha_ini = $fechaIniGlobal; // formato Y-m-d del formulario
+                $modelContrato->fecha_ven = $fechaVenGlobal; // formato Y-m-d del formulario
                 
                 if (!$modelContrato->save()) {
                     Yii::error(['Error_Contrato' => $modelContrato->getErrors()], __METHOD__);
@@ -898,11 +896,6 @@ class CorporativoController extends Controller
                 if (!empty($asesorIdData)) {
                     $corporativoUser->asesor_id = (int) $asesorIdData;
                 } 
-
-                $rolEnCorporativo = isset($headerMap['rol_en_corporativo']) ? trim($data[$headerMap['rol_en_corporativo']] ?? '') : null;
-                if (!empty($rolEnCorporativo)) {
-                    $corporativoUser->rol_en_corporativo = $rolEnCorporativo;
-                }
 
                 if (!$corporativoUser->save()) {
                     Yii::error(['Error_CorporativoUser' => $corporativoUser->getErrors()], __METHOD__);
@@ -957,12 +950,11 @@ class CorporativoController extends Controller
             'direccion_cobro', 'telefono_residencia',
 
             // Campos opcionales existentes
-            'asesor_id', 'fecha_inicio_contrato', 'fecha_vencimiento_contrato', 
-            'direccion_oficina', 'telefono_oficina', 'tipo_sangre', 'rol_en_corporativo' 
+            'asesor_id','direccion_oficina', 'telefono_oficina', 'tipo_sangre'
         ];
         
         $sampleData = [
-            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'M', '04121234567', 
+            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'Masculino', '04121234567', 
             'juan.pablo@yopmail.com', 'CALLE SOL #123', '2', '2', 'MIRANDA', // ESTADO (NOMBRE)
             
             // Datos de muestra para nuevos campos
@@ -971,8 +963,7 @@ class CorporativoController extends Controller
             'DIRECCION PARA ENVIAR ESTADOS DE CUENTA', '02125551234',
 
             // Datos de muestra para campos opcionales existentes
-            '', '2025-12-01', '2026-12-01', 
-            'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+', 'Afiliado' 
+            '', 'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+'
         ];
 
         $output = fopen('php://temp', 'r+'); 
@@ -988,6 +979,42 @@ class CorporativoController extends Controller
         return Yii::$app->response->sendContentAsFile($content, 'plantilla_afiliados_corporativos.csv', [
             'mimeType' => 'text/csv; charset=UTF-8',
             'inline' => false 
+        ]);
+    }
+
+    public function actionDescargarCatalogoEstados()
+    {
+        $estados = RmEstado::find()->select(['id', 'nombre'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
+        $output = fopen('php://temp', 'r+');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['id', 'nombre'], ',');
+        foreach ($estados as $e) {
+            fputcsv($output, [$e['id'], $e['nombre']], ',');
+        }
+        rewind($output);
+        $content = stream_get_contents($output);
+        fclose($output);
+        return Yii::$app->response->sendContentAsFile($content, 'catalogo_estados.csv', [
+            'mimeType' => 'text/csv; charset=UTF-8',
+            'inline' => false
+        ]);
+    }
+
+    public function actionDescargarCatalogoAsesores()
+    {
+        $map = UserHelper::getAgenteFuerzaList(); // id => name
+        $output = fopen('php://temp', 'r+');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['id', 'name'], ',');
+        foreach ($map as $id => $name) {
+            fputcsv($output, [$id, $name], ',');
+        }
+        rewind($output);
+        $content = stream_get_contents($output);
+        fclose($output);
+        return Yii::$app->response->sendContentAsFile($content, 'catalogo_asesores.csv', [
+            'mimeType' => 'text/csv; charset=UTF-8',
+            'inline' => false
         ]);
     }
 
