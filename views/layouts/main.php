@@ -51,8 +51,8 @@ $customCss = '
 
 /* Level 2: First-level sub-menu items */
 .nav-sidebar .nav-treeview .nav-link:hover {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important; /* RESTORED: Green */
-    color: #ffffff !important;
+    background: linear-gradient(135deg, #f1f8e9 0%, #81c784 100%) !important;
+    color: #1b5e20 !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
@@ -75,7 +75,7 @@ $customCss = '
 
 /* First-level sub-menu icons */
 .nav-sidebar .nav-treeview .nav-link:hover > .nav-icon {
-    color: #ffffff !important;
+    color: #333333 !important;  /* Cambiado a negro para que coincida con el texto */
     transform: scale(1.1) !important;
 }
 
