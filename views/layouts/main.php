@@ -106,7 +106,12 @@ $customCss = '
 
 /* First-level sub-menu active state */
 .nav-sidebar .nav-treeview .nav-link.active {
-    background: linear-gradient(135deg, #1e7e34 0%, #28a745 100%) !important;
+    background: #f1f8e9 !important;
+    color: #1b5e20 !important;
+    font-weight: 600 !important;
+    border-left: none !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Second-level sub-menu active state */
