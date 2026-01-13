@@ -114,68 +114,87 @@ $this->registerJs($js);
 <style>
     /* Estilo para centrar el caption del FileInput */
     .file-input .file-caption {
-        width: 100% !important; /* Ajustar al 100% dentro de su columna */
+        width: 100% !important;
+        /* Ajustar al 100% dentro de su columna */
         margin: 0 auto;
         box-sizing: border-box;
     }
+
     /* Estilo adicional para los campos de formulario */
     .pagos-form .form-group {
-        margin-bottom: 1rem; /* Espacio entre campos */
+        margin-bottom: 1rem;
+        /* Espacio entre campos */
     }
+
     .pagos-form .form-label {
         font-weight: bold;
-        color: #007bff; /* Color de texto para las etiquetas */
+        color: #007bff;
+        /* Color de texto para las etiquetas */
     }
+
     .pagos-form .form-control.rounded-pill {
-        border-radius: 50rem !important; /* Bordes más redondeados para inputs */
+        border-radius: 50rem !important;
+        /* Bordes más redondeados para inputs */
     }
+
     .file-preview {
-        max-width: 200px; /* Tamaño máximo para la vista previa de la imagen */
+        max-width: 200px;
+        /* Tamaño máximo para la vista previa de la imagen */
         margin: 0 auto;
     }
 
     /* Regla CSS para forzar el botón "Examinar" a ser blanco */
     /* Apunta a la clase `btn-file` que Kartik FileInput usa para el botón "Examinar" */
     .file-input .btn-file {
-        background-color: white !important; /* Fondo blanco forzado */
-        color: #333 !important; /* Texto oscuro para contraste */
-        border: 1px solid #ced4da !important; /* Borde sutil */
+        background-color: white !important;
+        /* Fondo blanco forzado */
+        color: #333 !important;
+        /* Texto oscuro para contraste */
+        border: 1px solid #ced4da !important;
+        /* Borde sutil */
     }
+
     /* Asegurar que los íconos y texto dentro del botón "Examinar" también tengan el color oscuro */
-    .file-input .btn-file i, .file-input .btn-file span {
+    .file-input .btn-file i,
+    .file-input .btn-file span {
         color: #333 !important;
     }
 
     /* ADDED: Custom CSS for larger error messages */
     .field-pagos-imagen_prueba_file .help-block {
-        font-size: 1.8rem !important; /* Larger font size for error message */
+        font-size: 1.8rem !important;
+        /* Larger font size for error message */
         font-weight: bold !important;
-        color: #dc3545 !important; /* Red color for error */
+        color: #dc3545 !important;
+        /* Red color for error */
         margin-top: 10px !important;
         padding: 10px !important;
-        background-color: #ffe6e6 !important; /* Light red background */
+        background-color: #ffe6e6 !important;
+        /* Light red background */
         border-radius: 8px !important;
         border-left: 4px solid #dc3545 !important;
     }
-    
+
     .field-pagos-numero_referencia_pago .help-block {
-        font-size: 1.8rem !important; /* Larger font size for error message */
+        font-size: 1.8rem !important;
+        /* Larger font size for error message */
         font-weight: bold !important;
-        color: #dc3545 !important; /* Red color for error */
+        color: #dc3545 !important;
+        /* Red color for error */
         margin-top: 10px !important;
         padding: 10px !important;
-        background-color: #ffe6e6 !important; /* Light red background */
+        background-color: #ffe6e6 !important;
+        /* Light red background */
         border-radius: 8px !important;
         border-left: 4px solid #dc3545 !important;
     }
-    
+
     /* Style for the required field indicator */
     .required-field::after {
         content: " *";
         color: #dc3545;
         font-size: 1.5rem;
     }
-
 </style>
 
 <div class="pagos-form p-4 rounded-3 shadow-sm bg-light">
@@ -230,11 +249,11 @@ $this->registerJs($js);
                 'id' => 'fecha-pago', // ID único
             ])->label('Fecha de Pago' . '<span class="required-field"></span>') ?>
         </div>
-    </div>  
+    </div>
     <div class="row mb-4">
         <div class="col-md-12">
             <h5 class="form-label has-star" style="font-size: 1.5rem !important;">Cuotas Pendientes</h5>
-            <?php 
+            <?php
             // DEBUG: Check what we're receiving
             Yii::info("=== FORM DEBUG ===");
             Yii::info("Cuotas variable type: " . gettype($cuotas));
@@ -246,15 +265,15 @@ $this->registerJs($js);
                 }
             }
             Yii::info("=== END DEBUG ===");
-            
+
             $total = 0;
             $i = 0;
-            if (!empty($cuotas)): 
+            if (!empty($cuotas)):
             ?>
                 <ul class="list-group">
                     <?php foreach ($cuotas as $cuota): ?>
-                        <?php 
-                        $i++; 
+                        <?php
+                        $i++;
                         // Use monto_usd if available, otherwise fall back to monto
                         $monto = !empty($cuota->monto_usd) ? $cuota->monto_usd : $cuota->monto;
                         $total += (float)$monto;
@@ -262,9 +281,9 @@ $this->registerJs($js);
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center gap-3">
                                 <?= Html::checkbox('selected_cuotas[]', false, [
-                                    'value' => $cuota->id, 
-                                    'id' => 'cuota-' . $cuota->id, 
-                                    'class' => 'cuota-checkbox mr-4', 
+                                    'value' => $cuota->id,
+                                    'id' => 'cuota-' . $cuota->id,
+                                    'class' => 'cuota-checkbox mr-4',
                                     'data-monto' => $monto
                                 ]) ?>
                                 <label for="cuota-<?= $cuota->id ?>" style="margin:0;">
@@ -389,18 +408,18 @@ $this->registerJs($js);
     </div>
 
     <?php if (!$disabled): ?>
-    <div class="form-group mt-4 d-flex justify-content-center gap-3"> <!-- Cambiado a justify-content-center y añadido gap-3 -->
-        <!-- Botón "Guardar Pago" con el tamaño original deseado -->
-        <?php if (!empty($cuotas)): ?> 
-            <?= Html::submitButton('<i class="fas fa-save me-2"></i> Guardar Pago', [
-                'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
+        <div class="form-group mt-4 d-flex justify-content-center gap-3"> <!-- Cambiado a justify-content-center y añadido gap-3 -->
+            <!-- Botón "Guardar Pago" con el tamaño original deseado -->
+            <?php if (!empty($cuotas)): ?>
+                <?= Html::submitButton('<i class="fas fa-save me-2"></i> Guardar Pago', [
+                    'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
+                ]) ?>
+            <?php endif; ?>
+            <!-- Botón "Volver" con el tamaño original deseado -->
+            <?= Html::a('<i class="fas fa-undo me-2"></i> Volver', ['contratos/index', 'user_id' => $model->user_id], [
+                'class' => 'btn btn-secondary btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
             ]) ?>
-         <?php endif; ?>
-        <!-- Botón "Volver" con el tamaño original deseado -->
-        <?= Html::a('<i class="fas fa-undo me-2"></i> Volver', ['contratos/index', 'user_id' => $model->user_id], [
-            'class' => 'btn btn-secondary btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
-        ]) ?>
-    </div>
+        </div>
     <?php endif; ?>
 
     <?php ActiveForm::end(); ?>

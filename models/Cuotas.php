@@ -97,30 +97,31 @@ class Cuotas extends \yii\db\ActiveRecord
             return [];
         }
 
-        // Find all contracts for this user (including suspended ones as they might have pending cuotas)
+        // Find only NON-ANULLED contracts for this user
         $contratos = Contratos::find()
             ->where(['user_id' => $user_id])
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO]) // Exclude anulled contracts
             ->all();
 
         if (empty($contratos)) {
-            Yii::info("No contracts found for user_id: " . $user_id);
+            Yii::info("No active contracts found for user_id: " . $user_id);
             return [];
         }
 
         $contratoIds = [];
         foreach ($contratos as $contrato) {
             $contratoIds[] = $contrato->id;
-            Yii::info("Found contract ID: " . $contrato->id . " for user_id: " . $user_id);
+            Yii::info("Found active contract ID: " . $contrato->id . " with status: " . $contrato->estatus . " for user_id: " . $user_id);
         }
 
-        // Find pending cuotas for these contracts
+        // Find pending cuotas only from these active contracts
         $cuotas = self::find()
             ->where(['IN', 'contrato_id', $contratoIds])
             ->andWhere(['estatus' => 'pendiente'])
             ->orderBy(['fecha_vencimiento' => SORT_ASC])
             ->all();
 
-        Yii::info("Found " . count($cuotas) . " pending cuotas for user_id: " . $user_id . " with contract IDs: " . implode(', ', $contratoIds));
+        Yii::info("Found " . count($cuotas) . " pending cuotas from active contracts for user_id: " . $user_id . " with contract IDs: " . implode(', ', $contratoIds));
 
         foreach ($cuotas as $cuota) {
             // Use rounded values for logging
