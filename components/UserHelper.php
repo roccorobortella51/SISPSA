@@ -1,5 +1,7 @@
 <?php
+
 namespace app\components;
+
 use app\components\DateUtils;
 use Yii;
 use yii\web\Request;
@@ -14,8 +16,8 @@ use app\models\RmClinica;
 use app\models\Agente;
 use app\models\Asesores;
 use app\models\User;
-use app\models\Planes; 
-use app\models\Contratos; 
+use app\models\Planes;
+use app\models\Contratos;
 use app\models\AuthItem;
 use yii\helpers\ArrayHelper;
 use yii\rbac\DbManager;
@@ -23,7 +25,7 @@ use app\models\AuthAssignment;
 use app\models\UserDatos;
 use app\models\Corporativo;
 use app\models\AgenteFuerza;
-use yii\httpclient\Client; 
+use yii\httpclient\Client;
 use yii\helpers\FileHelper;
 
 
@@ -52,7 +54,8 @@ class UserHelper
         return self::$instance;
     }
 
-     public static function getLayoutIndex(){
+    public static function getLayoutIndex()
+    {
 
         return '{items}
                     <div class="row">
@@ -67,27 +70,28 @@ class UserHelper
                     <div class="col-md-4 col-sm-3 text-right">
                     <div class="dataTables_paginate paging_simple_numbers">
                         <div class="pull-right" style="padding-top: 10px;">';
-                            
     }
 
-    public static function getLayoutIndex2(){
-                    return '</div>
+    public static function getLayoutIndex2()
+    {
+        return '</div>
                     <div class="pull-right text-muted" style="padding-top: 15px;">Registros por página:</div>
                 </div>
             </div>
         </div>';
     }
 
-    public static function getPager(){
+    public static function getPager()
+    {
 
         return [
-                'options' => ['class' => 'pagination justify-content-center'],
-                'firstPageLabel' => '<',
-                'lastPageLabel' => '>',
-                'maxButtonCount' => 3, // Esto limita el número de botones visibles a 3
-                'linkContainerOptions' => ['class' => 'page-item'],
-                'linkOptions' => ['class' => 'page-link'],
-            ];
+            'options' => ['class' => 'pagination justify-content-center'],
+            'firstPageLabel' => '<',
+            'lastPageLabel' => '>',
+            'maxButtonCount' => 3, // Esto limita el número de botones visibles a 3
+            'linkContainerOptions' => ['class' => 'page-item'],
+            'linkOptions' => ['class' => 'page-link'],
+        ];
     }
 
     public static function getAreaList()
@@ -151,10 +155,10 @@ class UserHelper
     public static function getClinicasList()
     {
         return \yii\helpers\ArrayHelper::map(
-                RmClinica::find()->select(['id', 'nombre as name'])->asArray()->all(),
-                'id',
-                'name'
-            );        
+            RmClinica::find()->select(['id', 'nombre as name'])->asArray()->all(),
+            'id',
+            'name'
+        );
     }
 
     public static function getClinicasByIds($ids)
@@ -203,7 +207,8 @@ class UserHelper
         );
     }
 
-    public static function generarCodigoValidacion($longitud = 6) {
+    public static function generarCodigoValidacion($longitud = 6)
+    {
         $caracteres = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
         $codigo = '';
         for ($i = 0; $i < $longitud; $i++) {
@@ -214,7 +219,7 @@ class UserHelper
 
     public static function getRolesAllRoles()
     {
-        if(self::getMyRol() == "Administrador"){
+        if (self::getMyRol() == "Administrador") {
             return \yii\helpers\ArrayHelper::map(
                 AuthItem::find()->select(['name', 'name'])->andWhere(['type' => 1])->asArray()->all(),
                 'name',
@@ -222,10 +227,10 @@ class UserHelper
             );
         }
 
-        if(self::getMyRol() == "DIRECTOR-COMERCIALIZACIÓN"){
+        if (self::getMyRol() == "DIRECTOR-COMERCIALIZACIÓN") {
 
             //listar agente y asesor
-           return \yii\helpers\ArrayHelper::map(
+            return \yii\helpers\ArrayHelper::map(
                 AuthItem::find()
                     ->select(['name', 'name'])
                     ->andWhere(['type' => 1])
@@ -251,9 +256,9 @@ class UserHelper
         // 1. Obtener los agentes reales de la base de datos
         $agentes = User::find()
             ->select([
-                    new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
-                    'user_datos.id AS id'
-                ])   
+                new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                'user_datos.id AS id'
+            ])
             ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->leftJoin('user_datos', '"user"."id" = "user_datos"."user_login_id"')
             ->where(['auth_assignment.item_name' => "Agente"])
@@ -279,7 +284,7 @@ class UserHelper
                 ->select([
                     new \yii\db\Expression("CONCAT(nombres, ' ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
                     'user_datos.id AS id'
-                ])                
+                ])
                 ->joinWith('userDatos')
                 ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
                 ->where(['auth_assignment.item_name' => "Asesor"])
@@ -290,9 +295,9 @@ class UserHelper
         );
     }
 
-     public static function getAgenteFuerzaList()
+    public static function getAgenteFuerzaList()
     {
-       return \yii\helpers\ArrayHelper::map(
+        return \yii\helpers\ArrayHelper::map(
             User::find()
                 ->select([
                     new \yii\db\Expression("CONCAT('N° de Vendedor/Asesor: ', agente_fuerza.id, ' - ' , nombres, '  ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
@@ -310,7 +315,7 @@ class UserHelper
         );
     }
 
-     /**
+    /**
      * Obtiene la información de contacto (rif, email, telefono, direccion)
      * de los UserDatos del propietario de una agencia.
      *
@@ -362,41 +367,41 @@ class UserHelper
 
     public static function getAfiliadosList()
     {
-    $query = User::find()
-        ->leftJoin(AuthAssignment::tableName(), '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-        ->leftJoin(UserDatos::tableName(), '"user"."id" = "user_datos"."user_login_id"')
-        ->select([
-            'user_datos.id AS id',
-            new \yii\db\Expression("CONCAT(user_datos.nombres, ' ', user_datos.apellidos) AS name")
-        ])
-        // Asegúrate que el rol es 'afiliado' (en minúsculas, como confirmaste)
-        ->where(['auth_assignment.item_name' => 'afiliado'])
-        ->andWhere(['user.status' => User::STATUS_ACTIVE])
-        ->orderBy('user_datos.nombres, user_datos.apellidos')
-        ->asArray();
+        $query = User::find()
+            ->leftJoin(AuthAssignment::tableName(), '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+            ->leftJoin(UserDatos::tableName(), '"user"."id" = "user_datos"."user_login_id"')
+            ->select([
+                'user_datos.id AS id',
+                new \yii\db\Expression("CONCAT(user_datos.nombres, ' ', user_datos.apellidos) AS name")
+            ])
+            // Asegúrate que el rol es 'afiliado' (en minúsculas, como confirmaste)
+            ->where(['auth_assignment.item_name' => 'afiliado'])
+            ->andWhere(['user.status' => User::STATUS_ACTIVE])
+            ->orderBy('user_datos.nombres, user_datos.apellidos')
+            ->asArray();
 
-    // --- INICIO DE DEPURACIÓN ---
-    // Descomenta las siguientes líneas para ver el SQL y los resultados
-    // Esto DETENDRÁ la ejecución de la página y mostrará la información.
+        // --- INICIO DE DEPURACIÓN ---
+        // Descomenta las siguientes líneas para ver el SQL y los resultados
+        // Esto DETENDRÁ la ejecución de la página y mostrará la información.
 
-    // Imprime la consulta SQL generada
-    // \Yii::warning("SQL for getAfiliadosList: " . $query->createCommand()->rawSql);
-    // var_dump($query->createCommand()->rawSql);
-    // die(); // Detiene la ejecución aquí para ver el SQL
+        // Imprime la consulta SQL generada
+        // \Yii::warning("SQL for getAfiliadosList: " . $query->createCommand()->rawSql);
+        // var_dump($query->createCommand()->rawSql);
+        // die(); // Detiene la ejecución aquí para ver el SQL
 
-    // Imprime el resultado real de la consulta antes de mapearlo
-    $afiliados = $query->all();
-    // \Yii::warning("Afiliados data: " . json_encode($afiliados));
-    // var_dump($afiliados);
-    // die(); // Detiene la ejecución aquí para ver los datos
+        // Imprime el resultado real de la consulta antes de mapearlo
+        $afiliados = $query->all();
+        // \Yii::warning("Afiliados data: " . json_encode($afiliados));
+        // var_dump($afiliados);
+        // die(); // Detiene la ejecución aquí para ver los datos
 
-    // --- FIN DE DEPURACIÓN ---
+        // --- FIN DE DEPURACIÓN ---
 
 
-    $list = ArrayHelper::map($afiliados, 'id', 'name');
+        $list = ArrayHelper::map($afiliados, 'id', 'name');
 
-    return $list;
-}
+        return $list;
+    }
 
     public static function generateUniqueUsername($baseUsername)
     {
@@ -410,15 +415,16 @@ class UserHelper
         return $username;
     }
 
-    public static function getMyRol(){
+    public static function getMyRol()
+    {
 
         $userId = Yii::$app->user->id;
         $auth = Yii::$app->authManager;
-        $roles = $auth->getRolesByUser($userId); 
+        $roles = $auth->getRolesByUser($userId);
 
-        $roleName = null; 
+        $roleName = null;
         if (!empty($roles)) {
-            $firstRole = reset($roles); 
+            $firstRole = reset($roles);
             $roleName = $firstRole->name;
         }
 
@@ -434,20 +440,20 @@ class UserHelper
     public static function getRolNameByUserId($userId)
     {
         if (empty($userId)) {
-            return "N/A"; 
+            return "N/A";
         }
 
         $auth = Yii::$app->authManager;
-        
+
         if (!$auth instanceof DbManager) {
-            
+
             return "Error de Configuración Auth";
         }
 
         $roles = $auth->getRolesByUser($userId);
 
         if (!empty($roles)) {
-            
+
             $firstRole = reset($roles);
             return $firstRole->name;
         } else {
@@ -518,104 +524,103 @@ class UserHelper
     }*/
 
     public static function uploadFileToSupabaseSiniestro(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
-{
-    try {
+    {
+        try {
+            $supabaseConfig = Yii::$app->params['supabase'];
+            $supabaseUrl = $supabaseConfig['url'];
+            $supabaseAnonKey = $supabaseConfig['anon_key'];
+            $bucketName = $supabaseConfig['bucket_name'];
+
+            $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}/{$fileKeyInBucket}";
+            $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/{$fileKeyInBucket}";
+
+            Yii::info("Supabase Upload URL: " . $uploadUrl, __METHOD__);
+
+            $client = new Client();
+            $response = $client->createRequest()
+                ->setMethod('POST')
+                ->setUrl($uploadUrl)
+                ->addHeaders([
+                    'Authorization' => "Bearer {$supabaseAnonKey}",
+                    'Content-Type' => $mimeType,
+                    'x-upsert' => 'true',
+                ])
+                ->setContent(file_get_contents($localFilePath))
+                ->send();
+
+            if ($response->isOk) {
+                Yii::info("Archivo subido exitosamente a Supabase. Retornando URL pública.", __METHOD__);
+                return $publicUrl;
+            } else {
+                $errorContent = $response->getContent();
+                Yii::error("Error al subir a Supabase. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
+                Yii::$app->session->setFlash('error', "Error al subir archivo a Supabase: " . ($errorContent ?: "Desconocido"));
+                return null;
+            }
+        } catch (\Throwable $e) {
+            Yii::error("Excepción al subir a Supabase: " . $e->getMessage(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Elimina un archivo de Supabase Storage.
+     *
+     * @param string $fileUrl La URL pública completa del archivo.
+     * @param string|null $folder El nombre de la carpeta.
+     * @return bool True si la eliminación fue exitosa, false en caso contrario.
+     */
+    public static function deleteFileFromSupabaseSiniestro(string $fileUrl, string $folder = null): bool
+    {
         $supabaseConfig = Yii::$app->params['supabase'];
         $supabaseUrl = $supabaseConfig['url'];
         $supabaseAnonKey = $supabaseConfig['anon_key'];
         $bucketName = $supabaseConfig['bucket_name'];
 
-        $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}/{$fileKeyInBucket}";
-        $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/{$fileKeyInBucket}";
-
-        Yii::info("Supabase Upload URL: " . $uploadUrl, __METHOD__);
-
-        $client = new Client();
-        $response = $client->createRequest()
-            ->setMethod('POST')
-            ->setUrl($uploadUrl)
-            ->addHeaders([
-                'Authorization' => "Bearer {$supabaseAnonKey}",
-                'Content-Type' => $mimeType,
-                'x-upsert' => 'true',
-            ])
-            ->setContent(file_get_contents($localFilePath))
-            ->send();
-
-        if ($response->isOk) {
-            Yii::info("Archivo subido exitosamente a Supabase. Retornando URL pública.", __METHOD__);
-            return $publicUrl;
+        // Extraer la clave del archivo de la URL pública
+        $prefix = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/";
+        if (strpos($fileUrl, $prefix) === 0) {
+            $fileKeyToDelete = substr($fileUrl, strlen($prefix));
         } else {
-            $errorContent = $response->getContent();
-            Yii::error("Error al subir a Supabase. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
-            Yii::$app->session->setFlash('error', "Error al subir archivo a Supabase: " . ($errorContent ?: "Desconocido"));
-            return null;
-        }
-
-    } catch (\Throwable $e) {
-        Yii::error("Excepción al subir a Supabase: " . $e->getMessage(), __METHOD__);
-        Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
-        return null;
-    }
-}
-
-/**
- * Elimina un archivo de Supabase Storage.
- *
- * @param string $fileUrl La URL pública completa del archivo.
- * @param string|null $folder El nombre de la carpeta.
- * @return bool True si la eliminación fue exitosa, false en caso contrario.
- */
-public static function deleteFileFromSupabaseSiniestro(string $fileUrl, string $folder = null): bool
-{
-    $supabaseConfig = Yii::$app->params['supabase'];
-    $supabaseUrl = $supabaseConfig['url'];
-    $supabaseAnonKey = $supabaseConfig['anon_key'];
-    $bucketName = $supabaseConfig['bucket_name'];
-
-    // Extraer la clave del archivo de la URL pública
-    $prefix = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/";
-    if (strpos($fileUrl, $prefix) === 0) {
-        $fileKeyToDelete = substr($fileUrl, strlen($prefix));
-    } else {
-        Yii::warning("No se pudo extraer la clave del archivo de la URL para eliminar: {$fileUrl}", __METHOD__);
-        return false;
-    }
-
-    $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}";
-
-    try {
-        $client = new Client();
-        $response = $client->createRequest()
-            ->setMethod('DELETE')
-            ->setUrl($deleteUrl)
-            ->addHeaders([
-                'Authorization' => "Bearer {$supabaseAnonKey}",
-                'Content-Type' => 'application/json',
-            ])
-            ->setContent(json_encode(['prefixes' => [$fileKeyToDelete]]))
-            ->send();
-
-        if ($response->isOk) {
-            Yii::info("Archivo eliminado exitosamente de Supabase Storage. Respuesta: " . $response->getContent(), __METHOD__);
-            return true;
-        } else {
-            $errorContent = $response->getContent();
-            Yii::error("Error al eliminar de Supabase. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
-            Yii::$app->session->setFlash('error', "Error al eliminar archivo de Supabase: " . ($errorContent ?: "Desconocido"));
+            Yii::warning("No se pudo extraer la clave del archivo de la URL para eliminar: {$fileUrl}", __METHOD__);
             return false;
         }
-    } catch (\Throwable $e) {
-        Yii::error("Excepción al eliminar de Supabase: " . $e->getMessage(), __METHOD__);
-        Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al eliminar archivo: " . $e->getMessage());
-        return false;
+
+        $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}";
+
+        try {
+            $client = new Client();
+            $response = $client->createRequest()
+                ->setMethod('DELETE')
+                ->setUrl($deleteUrl)
+                ->addHeaders([
+                    'Authorization' => "Bearer {$supabaseAnonKey}",
+                    'Content-Type' => 'application/json',
+                ])
+                ->setContent(json_encode(['prefixes' => [$fileKeyToDelete]]))
+                ->send();
+
+            if ($response->isOk) {
+                Yii::info("Archivo eliminado exitosamente de Supabase Storage. Respuesta: " . $response->getContent(), __METHOD__);
+                return true;
+            } else {
+                $errorContent = $response->getContent();
+                Yii::error("Error al eliminar de Supabase. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
+                Yii::$app->session->setFlash('error', "Error al eliminar archivo de Supabase: " . ($errorContent ?: "Desconocido"));
+                return false;
+            }
+        } catch (\Throwable $e) {
+            Yii::error("Excepción al eliminar de Supabase: " . $e->getMessage(), __METHOD__);
+            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al eliminar archivo: " . $e->getMessage());
+            return false;
+        }
     }
-}
-    
+
 
     public static function uploadFileToSupabaseApi(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
     {
-        
+
         // 1. Intentar subir a Supabase
         $supabaseUrl = null;
         try {
@@ -650,7 +655,6 @@ public static function deleteFileFromSupabaseSiniestro(string $fileUrl, string $
                 Yii::$app->session->setFlash('error', "Error al subir archivo a Supabase Storage: " . ($errorContent ?: "Desconocido"));
                 // El error de Supabase no es crítico, continuar al siguiente paso (guardado local)
             }
-
         } catch (\yii\httpclient\Exception $e) {
             Yii::error("Excepción del cliente HTTP al subir a Supabase: " . $e->getMessage(), __METHOD__);
             Yii::$app->session->setFlash('error', "Error de conexión al subir archivo: " . $e->getMessage());
@@ -773,44 +777,44 @@ public static function deleteFileFromSupabaseSiniestro(string $fileUrl, string $
     public static function getMyClinicaId()
     {
         $allowedRoles = [
-        "Administrador-clinica",
-        "CONTROL DE CITAS", 
-        "ADMISIÓN",
-        "ATENCIÓN",
-        "COORDINADOR-CLINICA"
+            "Administrador-clinica",
+            "CONTROL DE CITAS",
+            "ADMISIÓN",
+            "ATENCIÓN",
+            "COORDINADOR-CLINICA"
         ];
-        
+
         $rol = self::getMyRol();
-        
+
         if (in_array($rol, $allowedRoles)) {
             $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
             if ($userdatos) {
                 return $userdatos->clinica_id;
             }
-        } 
-        
+        }
+
         return ''; // Return empty string if no clinic found
     }
 
     public static function getMyClinicaName()
     {
         $allowedRoles = [
-        "Administrador-clinica",
-        "CONTROL DE CITAS", 
-        "ADMISIÓN",
-        "ATENCIÓN", 
-        "COORDINADOR-CLINICA"
+            "Administrador-clinica",
+            "CONTROL DE CITAS",
+            "ADMISIÓN",
+            "ATENCIÓN",
+            "COORDINADOR-CLINICA"
         ];
-        
+
         $rol = self::getMyRol();
-        
+
         if (in_array($rol, $allowedRoles)) {
             $userdatos = UserDatos::find()->where(['user_login_id' => Yii::$app->user->id])->one();
             if ($userdatos && $userdatos->clinica) {
                 return $userdatos->clinica->nombre;
             }
         }
-        
+
         return '';
     }
 
@@ -846,5 +850,4 @@ public static function deleteFileFromSupabaseSiniestro(string $fileUrl, string $
             return $agencia->id;
         }
     }
-      
 }

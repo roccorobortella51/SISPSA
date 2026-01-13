@@ -48,13 +48,13 @@ $this->params['breadcrumbs'][] = $this->title;
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Afiliado:</strong>
-                        <p class="mb-0 fs-5"><?= $model->userDatos->nombres . ' ' . $model->userDatos->apellidos ." ". $model->userDatos->tipo_cedula  . ' ' . $model->userDatos->cedula ?> </p>
+                        <p class="mb-0 fs-5"><?= $model->userDatos->nombres . ' ' . $model->userDatos->apellidos . " " . $model->userDatos->tipo_cedula  . ' ' . $model->userDatos->cedula ?> </p>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Solvente:</strong>
-                        <p class="mb-0 fs-5"><?= $model->userDatos->estatus_solvente?> </p>
+                        <p class="mb-0 fs-5"><?= $model->userDatos->estatus_solvente ?> </p>
                     </div>
                 </div>
             </div>
@@ -88,7 +88,7 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
 
             <h4 class="mt-5 mb-3 text-info border-bottom pb-2"><i class="fas fa-calendar-alt me-2"></i> Fechas Relevantes</h4>
-           <div class="row g-3">
+            <div class="row g-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">Fecha de Pago:</strong>
@@ -156,27 +156,19 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
 
             <?php if ($model->imagen_prueba): ?>
-            <h4 class="mt-5 mb-3 text-info border-bottom pb-2"><i class="fas fa-image me-2"></i> Comprobante de Pago</h4>
-            <div class="row g-3">
-                <div class="col-12">
-                    <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm">
-                        <strong class="text-primary d-block mb-3">Imagen de Prueba:</strong>
-                        <div class="d-flex align-items-center gap-4">
-                            <div class="image-preview">
-                                <img src="<?= Url::to(['/pagos/view-image', 'id' => $model->id]) ?>" 
-                                    alt="Comprobante de pago" 
-                                    style="max-width: 200px; max-height: 150px; border-radius: 8px;"
-                                    class="img-thumbnail">
-                            </div>
-                            <div>
-                                <?= Html::a('<i class="fas fa-expand me-2"></i> Ver comprobante completo', 
-                                    Url::to(['/pagos/view-image', 'id' => $model->id]), 
-                                    ['target' => '_blank', 'class' => 'btn btn-primary rounded-pill']) ?>
-                            </div>
+                <h4 class="mt-5 mb-3 text-info border-bottom pb-2"><i class="fas fa-image me-2"></i> Comprobante de Pago</h4>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm">
+                            <strong class="text-primary d-block mb-3">Imagen de Prueba:</strong>
+                            <?= Html::a('<i class="fas fa-external-link-alt me-2"></i> Ver comprobante', $model->imagen_prueba, [
+                                'target' => '_blank',
+                                'class' => 'btn rounded-pill px-4 shadow-sm',
+                                'style' => 'background-color: #0d6efd !important; color: white !important; font-weight: 500; border: none;'
+                            ]) ?>
                         </div>
                     </div>
                 </div>
-            </div>
             <?php endif; ?>
         </div>
     </div>
