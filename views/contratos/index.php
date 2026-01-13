@@ -53,9 +53,11 @@ $this->title = 'Contratos';
                         ],
                     ],
                     [
-                        'label' => 'Nro de contrato',
+                        'label' => '#. Contrato',
                         'attribute' => 'id',
-                        'headerOptions' => ['style' => 'width:10px'],
+                        'headerOptions' => ['style' => 'width:20px; text-align: center; vertical-align: middle;'],
+                        // Centers the actual ID values
+                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'filter' => false, // REMOVED FILTER
                     ],
                     [
@@ -83,13 +85,16 @@ $this->title = 'Contratos';
                         'filter' => false, // REMOVED FILTER
                     ],
                     [
-                        'label' => 'clinica',
+                        'label' => 'clínica',
                         'value' => function ($model) {
                             if ($model->clinica) {
                                 return $model->clinica->nombre;
                             }
                             return '';
                         },
+                        'headerOptions' => ['style' => 'width:20px; text-align: center; vertical-align: middle;'],
+                        // Centers the actual ID values
+                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'filter' => false, // REMOVED FILTER (if you don't want filtering on clinic either)
                     ],
                     [
@@ -100,12 +105,15 @@ $this->title = 'Contratos';
                             }
                             return '';
                         },
+                        'headerOptions' => ['style' => 'width:160px; text-align: center; vertical-align: middle;'],
+                        // Centers the actual ID values
+                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                         'filter' => false, // REMOVED FILTER (if you don't want filtering on plan either)
                     ],
                     [
                         'attribute' => 'cobertura del plan USD',
                         'format' => 'html',
-                        'contentOptions' => ['style' => 'text-align: right;'],
+                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
                         'value' => function ($model) {
                             if ($model->plan) {
                                 return  Yii::$app->formatter->asDecimal($model->plan->cobertura, 2);
@@ -118,7 +126,7 @@ $this->title = 'Contratos';
                     [
                         'attribute' => 'precio USD',
                         'format' => 'html',
-                        'contentOptions' => ['style' => 'text-align: right;'],
+                        'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
                         'value' => function ($model) {
                             if ($model->plan) {
                                 return  Yii::$app->formatter->asDecimal($model->plan->precio, 2);

@@ -45,6 +45,7 @@ if (!empty($pagosDelContrato)) {
                 'attribute' => 'fecha_pago',
                 'format' => ['date', 'php:d/m/Y'],
                 'label' => 'Fecha de Pago',
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
             ],
             [
                 'attribute' => 'monto_pagado',
@@ -52,7 +53,7 @@ if (!empty($pagosDelContrato)) {
                     return Yii::$app->formatter->asDecimal($model->monto_pagado, 2) . ' USD';
                 },
                 'label' => 'Monto Pagado (USD)',
-                'contentOptions' => ['style' => 'text-align: right;'],
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
             ],
             [
                 'attribute' => 'monto_usd',
@@ -60,15 +61,17 @@ if (!empty($pagosDelContrato)) {
                     return Yii::$app->formatter->asDecimal($model->monto_usd, 2) . ' Bs';
                 },
                 'label' => 'Monto en Bs',
-                'contentOptions' => ['style' => 'text-align: right;'],
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
             ],
             [
                 'attribute' => 'metodo_pago',
                 'label' => 'Método',
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
             ],
             [
                 'attribute' => 'numero_referencia_pago',
                 'label' => 'Referencia',
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
             ],
             [
                 'attribute' => 'tasa',
@@ -76,7 +79,7 @@ if (!empty($pagosDelContrato)) {
                     return $model->tasa ? Yii::$app->formatter->asDecimal($model->tasa, 2) : 'N/A';
                 },
                 'label' => 'Tasa',
-                'contentOptions' => ['style' => 'text-align: center;'],
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle'],
             ],
             [
                 'attribute' => 'imagen_prueba',
