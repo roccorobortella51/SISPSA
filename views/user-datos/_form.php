@@ -19,93 +19,52 @@ $currentRoute = Yii::$app->controller->getRoute();
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
-
-<?php
-$getPlanMontoUrl = Url::to(['/site/planmonto']);
-$js = <<<JS
-// [El código JavaScript permanece igual]
-JS;
-$this->registerJs($js);
-?>
-
 <div class="user-datos-form">
-<?php $form = ActiveForm::begin([
-    'id' => 'user-datos-form',
-    'options' => ['enctype' => 'multipart/form-data', 'class' => 'enhanced-form']
+    <?php $form = ActiveForm::begin([
+        'id' => 'user-datos-form',
+        'options' => ['enctype' => 'multipart/form-data', 'class' => 'enhanced-form']
     ]); ?>
 
-<?php
-$jsValidation = <<<JS
-$(document).ready(function() {
-    // 1. Obtener los IDs de los elementos
-    var \$checkbox = $('#userdatos-tiene_contratante_diferente');
-    var \$tipoCedulaField = $('.field-userdatos-tipo_cedula');
-    var \$cedulaField = $('.field-userdatos-cedula');
-    var \$contratanteSection = $('#contratante-section'); // Añadido para controlar la sección
+    <?php if (!$model->isNewRecord) { ?>
+        <div class="row row-cols-1 row-cols-md-4 justify-content-center g-3 mb-4">
+            <div class="col"> <?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
+                                    'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
+                                ]) ?>
+            </div>
 
-    // Función para manejar el estado de los campos del afiliado y la sección
-    function toggleAfiliadoRequiredAndSection() {
-        if (\$checkbox.is(':checked')) {
-            // Checkbox marcado (el contratante es diferente): Hacemos los campos opcionales
-            \$tipoCedulaField.removeClass('required');
-            \$cedulaField.removeClass('required');
-            \$contratanteSection.show(); // Muestra la sección del contratante
-        } else {
-            // Checkbox desmarcado (el afiliado es el contratante): Hacemos los campos requeridos
-            \$tipoCedulaField.addClass('required');
-            \$cedulaField.addClass('required');
-            \$contratanteSection.hide(); // Oculta la sección del contratante
-        }
-    }
+            <div class="col"> <?= Html::a('<i class="fas fa-phone-alt"></i> Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [
+                                    'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
+                                    'data-pjax' => '0'
+                                ]) ?>
+            </div>
 
-    // 2. Ejecutar la función al cargar la página (para el estado inicial)
-    toggleAfiliadoRequiredAndSection();
+            <div class="col"> <?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
+                                    'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
+                                    'data-pjax' => '0'
+                                ]) ?>
+            </div>
 
-    // 3. Ejecutar la función cada vez que el checkbox cambie
-    \$checkbox.on('change', function() {
-        toggleAfiliadoRequiredAndSection();
-    });
-});
-JS;
-$this->registerJs($jsValidation);
-?>
+            <div class="col"> <?= Html::a('<i class="fas fa-id-card"></i> Afiliación', Url::to(['contratos/index', 'user_id' => $model->id]), [
+                                    'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
+                                    'data-pjax' => '0'
+                                ]) ?>
+            </div>
+        </div>
+    <?php } ?>
 
-<?php if (!$model->isNewRecord) { ?>
-<div class="row row-cols-1 row-cols-md-4 justify-content-center g-3 mb-4">
-    <div class="col"> <?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
-        ]) ?>
-    </div>
-
-    <div class="col"> <?= Html::a('<i class="fas fa-phone-alt"></i> Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
-            'data-pjax' => '0'
-        ]) ?>
-    </div>
-
-    <div class="col"> <?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
-            'data-pjax' => '0'
-        ]) ?>
-    </div>
-
-    <div class="col"> <?= Html::a('<i class="fas fa-id-card"></i> Afiliación', Url::to(['contratos/index','user_id' => $model->id]), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
-            'data-pjax' => '0'
-        ]) ?>
-    </div>
-</div>
-<?php } ?>
+    <?php if (!$model->isNewRecord) : ?>
+        <?= $form->field($model, 'id')->hiddenInput(['id' => 'userdatos-id'])->label(false) ?>
+    <?php endif; ?>
 
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="tab13">
-            
+
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-info-circle"></i> Información Básica y Datos del Contrato
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'user_datos_type_id')->widget(Select2::class, [
@@ -136,21 +95,21 @@ $this->registerJs($jsValidation);
                             ])->label('Afiliado Corporativo <span class="text-danger conditional-asterisk">*</span>') ?>
                         </div>
 
-                         <div class="col-md-6">
+                        <div class="col-md-6">
                             <?= $form->field($model, 'clinica_id')->widget(DepDrop::classname(), [
                                 'type' => DepDrop::TYPE_SELECT2,
-                                'options'=>[
-                                    'id'=>'clinica_id',
+                                'options' => [
+                                    'id' => 'clinica_id',
                                     'placeholder' => 'Seleccione la Clínica',
                                     'class' => 'form-control  form-control-lg conditional-required',
                                     'allowClear' => true,
                                 ],
-                                'pluginOptions'=>[
-                                    'depends'=>['user_datos_type_id_field', 'corporativo_id',],
-                                    'url'=>Url::to(['clinicas']),
+                                'pluginOptions' => [
+                                    'depends' => ['user_datos_type_id_field', 'corporativo_id',],
+                                    'url' => Url::to(['clinicas']),
                                     'initialize' => true,
-                                    ]
-                                ])->label('Clínica <span class="text-danger conditional-asterisk">*</span>');
+                                ]
+                            ])->label('Clínica <span class="text-danger conditional-asterisk">*</span>');
                             ?>
                         </div>
                         <div class="col-md-6">
@@ -167,7 +126,6 @@ $this->registerJs($jsValidation);
                                     'url' => Url::to(['/site/planes']),
                                     'initialize' => true,
                                 ],
-                                // Aquí es donde agregas el evento de Select2
                                 'pluginEvents' => [
                                     "change" => "function(e) {
                                         datosplan($(this).val());
@@ -178,24 +136,24 @@ $this->registerJs($jsValidation);
 
                         <div class="col-md-6">
                             <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
-                                    'data' => UserHelper::getAgenteFuerzaList(),
-                                    'options' => [
-                                        'placeholder' => 'Seleccione el Agente ...',
-                                        'class' => 'form-control form-control-lg',
-                                    ],
-                                    'pluginOptions' => [
-                                        'allowClear' => false,
-                                    ],
+                                'data' => UserHelper::getAgenteFuerzaList(),
+                                'options' => [
+                                    'placeholder' => 'Seleccione el Agente ...',
+                                    'class' => 'form-control form-control-lg',
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => false,
+                                ],
                             ])->label('NOMBRE DEL AGENTE (Vendedor)');
                             ?>
                         </div>
-                       
+
                     </div>
 
                     <div class="row">
-                       
+
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($modelContrato, 'fecha_ini')->textInput([
                                 'class' => 'form-control form-control-lg fecha-ini-field',
                                 'type' => 'date',
@@ -205,7 +163,7 @@ $this->registerJs($jsValidation);
                         </div>
 
                         <div class="col-md-6 field-with-icon fecha-ven-container" style="display: none;">
-                            
+
                             <?= $form->field($modelContrato, 'fecha_ven')->textInput([
                                 'class' => 'form-control form-control-lg fecha-ven-field',
                                 'type' => 'date',
@@ -214,23 +172,23 @@ $this->registerJs($jsValidation);
                             ])->label('Fecha de Vencimiento') ?>
                         </div>
                         <div class="col-md-4 field-with-icon" style="display:none;">
-                            
+
                             <?= $form->field($modelContrato, 'monto')->textInput([
-                                'class' => 'form-control  form-control-lg', 
+                                'class' => 'form-control  form-control-lg',
                                 'type' => 'number',
                                 'placeholder' => '0.00'
                             ]) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
 
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'email')->textInput(['class' => 'form-control form-control-lg',]) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'telefono')->widget(MaskedInput::class, [
                                 'mask' =>  '99999999999',
                                 'options' => [
@@ -239,8 +197,8 @@ $this->registerJs($jsValidation);
                                     'maxlength' => true,
                                 ],
                                 'clientOptions' => [
-                                'clearIncomplete' => true,
-                                'unmaskAsSubmit' => true,
+                                    'clearIncomplete' => true,
+                                    'unmaskAsSubmit' => true,
                                 ]
                             ]) ?>
                         </div>
@@ -248,56 +206,144 @@ $this->registerJs($jsValidation);
                         <div class="col-md-6">
                             <?= $form->field($model, 'tiene_contratante_diferente')->checkbox([
                                 'class' => 'form-control-lg',
-                                'uncheck' => 0, // Fuerza 0 si no se marca
-                                'value' => 1,   // Fuerza 1 si se marca (necesario si la columna es BOOLEAN)
-                                'checked' => (bool)$model->tiene_contratante_diferente, // Asegura que se lea el estado inicial
+                                'uncheck' => 0,
+                                'value' => 1,
+                                'checked' => (bool)$model->tiene_contratante_diferente,
                             ]) ?>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group field-userdatos-tiene_dependientes">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="hidden" name="UserDatos[tiene_dependientes]" value="0">
+                                    <input type="checkbox" id="tiene_dependientes" name="UserDatos[tiene_dependientes]"
+                                        value="1" class="custom-control-input"
+                                        <?= (!$model->isNewRecord && \app\models\Dependientes::isTitular($model->id)) ? 'checked' : '' ?>>
+                                    <label class="custom-control-label" for="tiene_dependientes">¿Tiene Dependientes?</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-             <div class="card mb-4">
+            <div class="card mb-4" id="dependientes-section" style="display: none;">
+                <div class="card-body">
+                    <div class="section-title">
+                        <i class="fas fa-family"></i> Gestión de Dependientes
+                        <span class="badge badge-info badge-pill ml-2" id="dependientes-count">0</span>
+                    </div>
+
+                    <?php if ($model->isNewRecord): ?>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Para agregar dependientes, primero debe <strong>Guardar</strong> el registro de este titular.
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Busque un afiliado existente para agregarlo como dependiente.
+                        </div>
+
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-9">
+                                <?= Select2::widget([
+                                    'name' => 'searchDependiente',
+                                    'id' => 'search-dependiente',
+                                    'options' => [
+                                        'placeholder' => 'Buscar afiliado por nombre, cédula o email...',
+                                        'class' => 'form-control',
+                                    ],
+                                    'pluginOptions' => [
+                                        'allowClear' => true,
+                                        'minimumInputLength' => 3,
+                                        'ajax' => [
+                                            'url' => Url::to(['/user-datos/search-afiliados']),
+                                            'dataType' => 'json',
+                                            'delay' => 250,
+                                            'data' => new \yii\web\JsExpression('function(params) { 
+                                                return {
+                                                    q: params.term,
+                                                    current_user: ' . ($model->id ? $model->id : 0) . ',
+                                                    _csrf: yii.getCsrfToken()
+                                                }; 
+                                            }'),
+                                            'processResults' => new \yii\web\JsExpression('function(data) { 
+                                                return { results: data.results };
+                                            }'),
+                                            'cache' => true
+                                        ],
+                                        'escapeMarkup' => new \yii\web\JsExpression('function (markup) { return markup; }'),
+                                        'templateResult' => new \yii\web\JsExpression('function(repo) { 
+                                            if (repo.loading) return repo.text;
+                                            return "<div class=\'select2-result-repository clearfix\'>" +
+                                                   "<div class=\'select2-result-repository__meta\'>" +
+                                                   "<div class=\'select2-result-repository__title\'><b>" + repo.nombre_completo + "</b></div>" +
+                                                   "<div class=\'select2-result-repository__description\'><i class=\'fas fa-id-card\'></i> " + repo.cedula + "</div>" +
+                                                   "</div></div>";
+                                        }'),
+                                        'templateSelection' => new \yii\web\JsExpression('function (repo) { 
+                                            return repo.nombre_completo || repo.text; 
+                                        }'),
+                                    ],
+                                ]) ?>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="btn-add-dependiente" class="btn btn-primary btn-block">
+                                    <i class="fas fa-plus"></i> Agregar
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <div id="dependientes-list" class="mt-4">
+                        <div class="text-center py-4" id="no-dependientes">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay dependientes asociados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-file-contract"></i> Datos del Plan Solicitado
                     </div>
-                    
+
                     <div class="row">
-                         <div class="col-md-4 field-with-icon">
-                            
+                        <div class="col-md-4 field-with-icon">
+
                             <?= $form->field($model, 'moneda')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
+
                             <?= $form->field($model, 'deducible')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
+
                             <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg', 'readonly' => true]) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12">
                             <?= $form->field($model, 'cobertura_maternidad')->checkbox(['class' => 'form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'deducible_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'limite_cobertura_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-            
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
@@ -312,13 +358,19 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-1">
                             <?= $form->field($model, 'tipo_cedula')->widget(Select2::class, [
-                                'data' => ['V' => 'V', 'E' => 'E', 'J' => 'J', 'P' => 'P', 'N' => 'N', 'M' => 'M'],
-                                'options' => ['placeholder' => 'Tipo', 'class' => 'form-control form-control-lg'],
-                                'pluginOptions' => ['allowClear' => true],
+                                'data' => ['V' => 'V', 'E' => 'E', 'J' => 'J', 'P' => 'P', 'N' => 'N', 'M' => 'M', 'Menor Sin Cédula' => 'Menor Sin Cédula'],
+                                'options' => [
+                                    'placeholder' => 'Tipo',
+                                    'class' => 'form-control form-control-lg',
+                                    'id' => 'userdatos-tipo_cedula'
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
                             ])->label('Tipo') ?>
                         </div>
 
@@ -326,8 +378,29 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'cedula')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ejemplo: 12345678',
-                                //'readonly' => !$model->isNewRecord, // Only readonly when editing existing record
-                            ])->label('Cédula de Identidad') ?>
+                                'id' => 'userdatos-cedula'
+                            ])->label('Cédula de Identidad <span class="text-danger conditional-asterisk">*</span>') ?>
+                        </div>
+
+                        <div class="col-md-3" id="consecutivo-container" style="display: none;">
+                            <div class="form-group field-userdatos-consecutivo_menor">
+                                <label class="control-label" for="userdatos-consecutivo_menor">Consecutivo del Menor</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">-</span>
+                                    </div>
+                                    <?= $form->field($model, 'consecutivo_menor')->textInput([
+                                        'class' => 'form-control form-control-lg',
+                                        'type' => 'number',
+                                        'min' => 1,
+                                        'max' => 20,
+                                        'placeholder' => '1-20',
+                                        'id' => 'userdatos-consecutivo_menor'
+                                    ])->label(false) ?>
+                                </div>
+                                <small class="form-text text-muted">Número consecutivo para identificar al menor</small>
+                                <div class="help-block"></div>
+                            </div>
                         </div>
 
                         <div class="col-md-3 field-with-icon">
@@ -345,15 +418,8 @@ $this->registerJs($jsValidation);
                                 'pluginOptions' => ['allowClear' => true],
                             ]) ?>
                         </div>
-                        
-                        <div class="col-md-3">
-                            <?= $form->field($model, 'tipo_sangre')->widget(Select2::class, [
-                                'data' => ['A+' => 'A+', 'A-' => 'A-', 'B+' => 'B+', 'B-' => 'B-', 'AB+' => 'AB+', 'AB-' => 'AB-', 'O+' => 'O+', 'O-' => 'O-'],
-                                'options' => ['placeholder' => 'Seleccione el tipo de sangre...'],
-                                'pluginOptions' => ['allowClear' => true],
-                            ]) ?>
-                        </div>
-                    </div> <div class="row">
+                    </div>
+                    <div class="row">
                         <div class="col-md-4 field-with-icon">
                             <?= $form->field($model, 'nacionalidad')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
@@ -368,7 +434,7 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'lugar_nacimiento')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
                             <?= $form->field($model, 'profesion')->textInput(['class' => 'form-control form-control-lg']) ?>
@@ -377,7 +443,7 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'ocupacion')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'actividad_economica')->widget(Select2::class, [
@@ -390,7 +456,7 @@ $this->registerJs($jsValidation);
                             <?= $form->field($model, 'ramo_comercial')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'descripcion_actividad')->widget(Select2::class, [
@@ -477,7 +543,7 @@ $this->registerJs($jsValidation);
                             ])->label('Dirección de Residencia') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
                             <?= $form->field($model, 'direccion_oficina')->textInput([
@@ -495,7 +561,7 @@ $this->registerJs($jsValidation);
                             ])->label('Dirección de Cobro') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
                             <?= $form->field($model, 'telefono_residencia')->textInput([
@@ -519,24 +585,23 @@ $this->registerJs($jsValidation);
                 </div>
             </div>
 
-
             <div class="card mb-4" id="contratante-section" style="display: none;">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-user-tie"></i> Datos del Contratante
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'nombre_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                           
+
                             <?= $form->field($model, 'apellido_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-2">
                             <?= $form->field($model, 'tipo_cedula_contratante')->widget(Select2::class, [
@@ -555,18 +620,18 @@ $this->registerJs($jsValidation);
                                 'pluginOptions' => [
                                     'allowClear' => true,
                                 ],
-                                ])->label('Tipo Cédula')
+                            ])->label('Tipo Cédula')
                             ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
+
                             <?= $form->field($model, 'cedula_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ejemplo: 12345678'
                             ])->label('Cédula de Identidad') ?>
                         </div>
                         <div class="col-md-3 field-with-icon">
-                        
+
                             <?= $form->field($model, 'fecha_nacimiento_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
@@ -587,10 +652,10 @@ $this->registerJs($jsValidation);
                             ])->label('Sexo') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                    
+
                             <?= $form->field($model, 'nacionalidad_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-4">
@@ -608,22 +673,22 @@ $this->registerJs($jsValidation);
                             ])->label('Estado Civil') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                        
+
                             <?= $form->field($model, 'lugar_nacimiento_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'profesion_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                        
+
                             <?= $form->field($model, 'ocupacion_contratante')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <?= $form->field($model, 'actividad_economica_contratante')->widget(Select2::class, [
@@ -653,7 +718,7 @@ $this->registerJs($jsValidation);
                             ])->label('Descripción de la Actividad') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12">
                             <?= $form->field($model, 'ingreso_anual_contratante')->widget(Select2::class, [
@@ -670,64 +735,64 @@ $this->registerJs($jsValidation);
                             ])->label('Ingreso Anual Bs') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            
+
                             <?= $form->field($model, 'direccion_residencia_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de residencia'
                             ])->label('Dirección de Residencia') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            
+
                             <?= $form->field($model, 'direccion_oficina_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de oficina'
                             ])->label('Dirección de Oficina') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                        
+
                             <?= $form->field($model, 'direccion_cobro_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Ingrese la dirección de cobro'
                             ])->label('Dirección de Cobro') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4 field-with-icon">
-                            
+
                             <?= $form->field($model, 'telefono_residencia_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono residencia'
                             ])->label('Teléfono Residencia') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
+
                             <?= $form->field($model, 'telefono_oficina_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono oficina'
                             ])->label('Teléfono Oficina') ?>
                         </div>
                         <div class="col-md-4 field-with-icon">
-                            
+
                             <?= $form->field($model, 'telefono_celular_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Teléfono celular'
                             ])->label('Teléfono Celular') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12 field-with-icon">
-                            
+
                             <?= $form->field($model, 'email_contratante')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Correo electrónico',
@@ -737,14 +802,13 @@ $this->registerJs($jsValidation);
                     </div>
                 </div>
             </div>
-            
-            
+
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-users"></i> Grupo Familiar
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12">
                             <div id="grupo-familiar-container">
@@ -813,108 +877,44 @@ $this->registerJs($jsValidation);
                     </div>
                 </div>
             </div>
-            
-            <!--<div class="card mb-4">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-user-tag"></i> Datos del Beneficiario
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 field-with-icon">
-                            
-                            <?= $form->field($model, 'nombre_beneficiario')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                        <div class="col-md-6 field-with-icon">
-                            
-                            <?= $form->field($model, 'cedula_beneficiario')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <?= $form->field($model, 'parentesco_beneficiario')->widget(Select2::class, [
-                                'data' => [
-                                    'Padre' => 'Padre',
-                                    'Madre' => 'Madre',
-                                    'Hijo' => 'Hijo',
-                                    'Hija' => 'Hija',
-                                    'Hermano' => 'Hermano',
-                                    'Hermana' => 'Hermana',
-                                    'Cónyuge' => 'Cónyuge',
-                                    'Otro' => 'Otro',
-                                ],
-                                'options' => ['placeholder' => 'Seleccione el parentesco...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ])->label('Parentesco') ?>
-                        </div>
-                        <div class="col-md-6">
-                            <?= $form->field($model, 'sexo_beneficiario')->widget(Select2::class, [
-                                'data' => [
-                                    'Masculino' => 'Masculino',
-                                    'Femenino' => 'Femenino',
-                                    'Otro' => 'Otro',
-                                ],
-                                'options' => ['placeholder' => 'Seleccione el sexo...'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ])->label('Sexo') ?>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-12 field-with-icon">
-                            
-                            <?= $form->field($model, 'fecha_nacimiento_beneficiario')->textInput([
-                                'class' => 'form-control form-control-lg',
-                                'type' => 'date',
-                                'placeholder' => 'Seleccione la fecha de nacimiento'
-                            ])->label('Fecha de Nacimiento') ?>
-                        </div>
-                    </div>
-                </div>
-            </div>--->
-            
+
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-money-check-alt"></i> Datos Bancarios
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                        
+
                             <?= $form->field($model, 'nombre_titular')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'cedula_titular')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'numero_cuenta')->textInput(['class' => 'form-control form-control-lg']) ?>
                         </div>
                         <div class="col-md-6 field-with-icon">
-                            
+
                             <?= $form->field($model, 'banco_id')->widget(Select2::class, [
-                                    'data' => \yii\helpers\ArrayHelper::map(\app\models\Banco::find()->where(['estatus' => 'Activo'])->all(), 'id', 'nombre'),
-                                    'options' => [
-                                        'placeholder' => 'Seleccione un banco...',
-                                        'class' => 'form-control form-control-lg',
-                                    ],
-                                    'pluginOptions' => [
-                                        'allowClear' => true,
-                                    ],
-                                ])->label('Banco') ?>
+                                'data' => \yii\helpers\ArrayHelper::map(\app\models\Banco::find()->where(['estatus' => 'Activo'])->all(), 'id', 'nombre'),
+                                'options' => [
+                                    'placeholder' => 'Seleccione un banco...',
+                                    'class' => 'form-control form-control-lg',
+                                ],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                ],
+                            ])->label('Banco') ?>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12">
                             <?= $form->field($model, 'tipo_cuenta')->widget(Select2::class, [
@@ -933,19 +933,16 @@ $this->registerJs($jsValidation);
                     </div>
                 </div>
             </div>
-            
 
-            
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-camera"></i> Imágenes
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
-                            <?= $form->field($model, 'selfieFile')->widget(FileInput::classname(),[
-                                // No sobreescribir el name; ActiveForm lo asigna correctamente como UserDatos[selfieFile]
+                            <?= $form->field($model, 'selfieFile')->widget(FileInput::classname(), [
                                 'options' => [
                                     'accept' => 'image/*',
                                 ],
@@ -958,7 +955,7 @@ $this->registerJs($jsValidation);
                                     'showCancel' => false,
                                     'showCaption' => false,
                                     'previewFileType' => 'image',
-                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                    'allowedFileExtensions' => ['jpg', 'jpeg', 'png'],
                                     'maxFileSize' => 2048,
                                     'dropZoneEnabled' => false,
                                     'showClose' => false,
@@ -976,12 +973,11 @@ $this->registerJs($jsValidation);
                                         'main2' => "{preview}{browse}{remove}",
                                     ],
                                 ],
-                                ])->label('Foto del usuario');
-                            ?>    
+                            ])->label('Foto del usuario');
+                            ?>
                         </div>
                         <div class="col-md-6">
-                            <?= $form->field($model, 'imagenIdentificacionFile')->widget(FileInput::classname(),[
-                                // No sobreescribir el name; ActiveForm lo asigna correctamente como UserDatos[imagenIdentificacionFile]
+                            <?= $form->field($model, 'imagenIdentificacionFile')->widget(FileInput::classname(), [
                                 'options' => [
                                     'accept' => 'image/*',
                                 ],
@@ -994,7 +990,7 @@ $this->registerJs($jsValidation);
                                     'showUpload' => false,
                                     'showCancel' => false,
                                     'showCaption' => false,
-                                    'allowedFileExtensions' => ['jpg','jpeg','png'],
+                                    'allowedFileExtensions' => ['jpg', 'jpeg', 'png'],
                                     'maxFileSize' => 5120,
                                     'dropZoneEnabled' => false,
                                     'showClose' => false,
@@ -1012,25 +1008,24 @@ $this->registerJs($jsValidation);
                                         'main2' => "{preview}{browse}{remove}",
                                     ],
                                 ],
-                                ])->label('Imagen de identificación');
-                            ?>    
+                            ])->label('Imagen de identificación');
+                            ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-
             <div class="row mt-4">
                 <div class="col-12 d-flex justify-content-start gap-3">
                     <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg']) ?>
-                    
+
                     <?= Html::a(
-                        '<i class="fas fa-undo mr-2"></i> Volver', 
+                        '<i class="fas fa-undo mr-2"></i> Volver',
                         '#',
                         [
-                            'class' => 'btn btn-secondary btn-lg', 
-                            'onclick' => 'window.history.back(); return false;', 
-                            'title' => 'Volver a la página anterior', 
+                            'class' => 'btn btn-secondary btn-lg',
+                            'onclick' => 'window.history.back(); return false;',
+                            'title' => 'Volver a la página anterior',
                         ]
                     ) ?>
 
@@ -1048,330 +1043,583 @@ $this->registerJs($jsValidation);
     <?php ActiveForm::end(); ?>
 </div>
 
-<?php
+<div class="modal fade" id="editDependienteModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-edit"></i> Datos del Dependiente</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-dependiente-form">
+                    <input type="hidden" id="edit-dependiente-id" name="id">
+                    <input type="hidden" id="edit-dependiente-user-id" name="user_id">
 
-$urlGetClinicasByCorporativo = \yii\helpers\Url::to(['/user/get-clinicas-by-corporativo']);
-$urlGetAllClinicas = \yii\helpers\Url::to(['/user/get-all-clinicas']);
+                    <div class="form-group">
+                        <label>Afiliado</label>
+                        <input type="text" id="display-nombre-dependiente" class="form-control" readonly>
+                    </div>
 
-$this->registerJs(<<<'JS'
-// Refuerzo de clic y diagnóstico para FileInput en este formulario
-$(function(){
-  var root = $('#user-datos-form');
-  // Asegurar click habilitado
-  root.find('.file-input .btn-file').css({'pointer-events':'auto'});
-  root.find('.file-input .btn-file input[type="file"]').css({'pointer-events':'auto'});
+                    <div class="form-group">
+                        <label for="edit-parentesco">Parentesco <span class="text-danger">*</span></label>
+                        <select id="edit-parentesco" class="form-control">
+                            <option value="">Seleccione...</option>
+                            <option value="Hijo">Hijo</option>
+                            <option value="Hija">Hija</option>
+                            <option value="Cónyuge">Cónyuge</option>
+                            <option value="Madre">Madre</option>
+                            <option value="Padre">Padre</option>
+                            <option value="Hermano">Hermano</option>
+                            <option value="Hermana">Hermana</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
 
-  // Log de eventos para diagnóstico
-  root.on('click', '.file-input .btn-file', function(e){
-    console.log('[FileInput] btn-file click', e.target);
-  });
-  root.on('change', '.file-input input[type="file"]', function(e){
-    console.log('[FileInput] input change -> files:', this.files);
-  });
+                    <div class="form-group">
+                        <label for="edit-porcentaje">Porcentaje de Pago (%)</label>
+                        <input type="number" id="edit-porcentaje" class="form-control" value="100" min="0" max="100">
+                    </div>
 
-  // Fallback: si por alguna razón el input no recibe el click, forzarlo
-  root.on('click', '.file-input .fileinput-browse', function(){
-    var $grp = $(this).closest('.file-input');
-    var $inp = $grp.find('.btn-file input[type="file"]').first();
-    if ($inp.length) { $inp.trigger('click'); }
-  });
-  
-  // Function to toggle required attributes based on affiliation type
-  function toggleConditionalRequired() {
-      var tipoAfiliado = $('#user_datos_type_id_field').val();
-      var clinicaField = $('#clinica_id');
-      var planField = $('#plan_id');
-      var corporativoField = $('#corporativo_id');
-      
-      if (tipoAfiliado == '1') {
-          // Individual - make clinica and plan required
-          clinicaField.attr('required', true);
-          planField.attr('required', true);
-          $('.conditional-asterisk').show();
-          $('.field-userdatos-clinica_id, .field-contratos-plan_id').addClass('required-field');
-          
-          // Remove required from corporativo
-          corporativoField.removeAttr('required');
-          $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
-      } else if (tipoAfiliado == '2') {
-          // Corporativo - remove required from clinica and plan
-          clinicaField.removeAttr('required');
-          planField.removeAttr('required');
-          $('.conditional-asterisk').hide();
-          $('.field-userdatos-clinica_id, .field-contratos-plan_id').removeClass('required-field');
-          
-          // Make corporativo required
-          corporativoField.attr('required', true);
-          $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
-      } else {
-          // No type selected - remove all conditional requirements
-          clinicaField.removeAttr('required');
-          planField.removeAttr('required');
-          corporativoField.removeAttr('required');
-          $('.conditional-asterisk').hide();
-          $('.field-userdatos-clinica_id, .field-contratos-plan_id, .field-userdatos-afiliado_corporativo_id').removeClass('required-field');
-      }
-  }
-
-  // Enhanced form validation
-  $('#user-datos-form').on('beforeValidate', function() {
-      toggleConditionalRequired();
-      return true;
-  });
-
-  // Mostrar/ocultar sección de contratante
-  function toggleContratanteSection() {
-    if ($('#userdatos-tiene_contratante_diferente').is(':checked')) {
-      $('#contratante-section').show();
-    } else {
-      $('#contratante-section').hide();
-    }
-  }
-  
-  // Inicializar estado al cargar la página
-  toggleContratanteSection();
-  toggleConditionalRequired();
-  
-  // Cambiar estado cuando se marca/desmarca el checkbox
-  $('#userdatos-tiene_contratante_diferente').on('change', function() {
-    toggleContratanteSection();
-  });
- 
-  // Funcionalidad para el grupo familiar
-  var miembroIndex = 0;
- 
-  // Función para agregar un nuevo miembro al grupo familiar
-  function agregarMiembro() {
-    var newIndex = Date.now();
-    var miembroHtml = `
-    <div class="card mb-3 miembro-familiar" data-index="${newIndex}">
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-12">
-            <h5>Miembro #${newIndex} <button type="button" class="btn btn-danger btn-sm float-right eliminar-miembro" data-index="${newIndex}"><i class="fas fa-trash"></i></button></h5>
-          </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="edit-activo" checked>
+                            <label class="custom-control-label" for="edit-activo">Activo</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-save-dependiente">Guardar</button>
+            </div>
         </div>
-        <div class="row">
-          <div class="col-md-6 field-with-icon">
-            <i class="fas fa-signature"></i>
-            <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][nombre]" placeholder="Nombre completo">
-          </div>
-          <div class="col-md-6 field-with-icon">
-            <i class="fas fa-id-card"></i>
-            <input type="text" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][cedula]" placeholder="Cédula de identidad">
-          </div>
-        </div>
-        <div class="row mt-2">
-          <div class="col-md-6">
-            <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][parentesco]">
-              <option value="">Seleccione el parentesco</option>
-              <option value="Padre">Padre</option>
-              <option value="Madre">Madre</option>
-              <option value="Hijo">Hijo</option>
-              <option value="Hija">Hija</option>
-              <option value="Hermano">Hermano</option>
-              <option value="Hermana">Hermana</option>
-              <option value="Cónyuge">Cónyuge</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-          <div class="col-md-6">
-            <select class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][sexo]">
-              <option value="">Seleccione el sexo</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Femenino">Femenino</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-        </div>
-        <div class="row mt-2">
-          <div class="col-md-12 field-with-icon">
-            <i class="fas fa-birthday-cake"></i>
-            <input type="date" class="form-control form-control-lg" name="UserDatos[grupo_familiar][${newIndex}][fecha_nacimiento]" placeholder="Fecha de nacimiento">
-          </div>
-        </div>
-      </div>
     </div>
-  `;
-  $('#grupo-familiar-container').append(miembroHtml);
-  }
- 
-  // Función para eliminar un miembro del grupo familiar
-  function eliminarMiembro(index) {
-   $('.miembro-familiar[data-index="' + index + '"]').remove();
-  }
- 
-  // Evento para agregar miembro
-  $('#agregar-miembro').on('click', function() {
-   agregarMiembro();
-  });
- 
-  // Evento para eliminar miembro (usando delegación de eventos)
-  $('#grupo-familiar-container').on('click', '.eliminar-miembro', function() {
-   var index = $(this).data('index');
-   eliminarMiembro(index);
-  });
- 
-  // Mostrar/ocultar sección de afiliado corporativo
-  function toggleAfiliadoCorporativo() {
-   if ($('#user_datos_type_id_field').val() == '2') {
-     $('#afiliado_corporativo_container').show();
-   } else {
-     $('#afiliado_corporativo_container').hide();
-   }
-  }
+</div>
 
-  // Inicializar estado al cargar la página
-  toggleAfiliadoCorporativo();
+<script type="text/template" id="dependiente-template">
+    <div class="card mb-2 dependiente-card border-left-primary shadow-sm" data-id="{id}">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6 class="m-0 font-weight-bold text-primary">{nombre_completo}</h6>
+                    <small class="text-muted">
+                        <i class="fas fa-id-card"></i> {cedula} &nbsp;|&nbsp; 
+                        <span class="badge badge-info">{parentesco}</span>
+                        {porcentaje_badge}
+                    </small>
+                </div>
+                <div class="col-md-4 text-right">
+                    <button type="button" class="btn btn-sm btn-info edit-dependiente" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                    <button type="button" class="btn btn-sm btn-danger remove-dependiente" title="Desvincular"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
 
-  // Cambiar estado cuando se selecciona un tipo de afiliado
-  $('#user_datos_type_id_field').on('change', function() {
-   toggleAfiliadoCorporativo();
-   toggleConditionalRequired();
-  });
-
-  // Lógica para la visualización de las clínicas y el corporativo
-  var urlGetClinicasByCorporativo = '{$urlGetClinicasByCorporativo}';
-  var urlGetAllClinicas = '{$urlGetAllClinicas}';
-
-  // Function to calculate and set fecha_ven
-  function calcularFechaVencimiento(fechaIni) {
-    if (fechaIni) {
-        // Parse the date string manually to avoid timezone issues
-        var parts = fechaIni.split('-');
-        var year = parseInt(parts[0]);
-        var month = parseInt(parts[1]) - 1; // Months are 0-indexed in JavaScript
-        var day = parseInt(parts[2]);
-        
-        // Create date in local timezone
-        var fecha = new Date(year, month, day);
-        fecha.setFullYear(fecha.getFullYear() + 1);
-        
-        // Format to YYYY-MM-DD for date input
-        var newYear = fecha.getFullYear();
-        var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
-        var newDay = String(fecha.getDate()).padStart(2, '0');
-        
-        return newYear + '-' + newMonth + '-' + newDay;
-    }
-    return '';
-  }
-
-  // Show/hide fecha_ven based on fecha_ini
-  function toggleFechaVen() {
-    var fechaIni = $('.fecha-ini-field').val();
-    var fechaVenContainer = $('.fecha-ven-container');
+<?php
+$this->registerJs(
+    <<<'JS'
+$(document).ready(function() {
     
-    if (fechaIni) {
-        fechaVenContainer.show();
-        // Auto-calculate fecha_ven
-        var fechaVen = calcularFechaVencimiento(fechaIni);
-        $('.fecha-ven-field').val(fechaVen);
-    } else {
-        fechaVenContainer.hide();
-        $('.fecha-ven-field').val('');
-    }
-  }
-
-  // Initialize on page load
-  toggleFechaVen();
-
-  // Add event listener for fecha_ini changes
-  $('.fecha-ini-field').on('change', function() {
-    toggleFechaVen();
-  });
-
+    $(document).on('click', '#btn-add-dependiente', function(e) {
+    e.preventDefault();
+    console.log('=== DEBUG MODAL SHOW ===');
+    
+    // Get modal element
+    var modal = $('#editDependienteModal')[0];
+    console.log('1. Modal element:', modal);
+    console.log('2. Modal class list:', modal.className);
+    console.log('3. Modal display style:', $(modal).css('display'));
+    console.log('4. Modal visibility:', $(modal).css('visibility'));
+    console.log('5. Modal opacity:', $(modal).css('opacity'));
+    console.log('6. Modal z-index:', $(modal).css('z-index'));
+    
+    // Check if modal-backdrop exists
+    console.log('7. Modal backdrop exists:', $('.modal-backdrop').length);
+    
+    // Force show with explicit options
+    $('#editDependienteModal').modal({
+        backdrop: 'static',
+        keyboard: false,
+        show: true
+    });
+    
+    // Check again after show
+    setTimeout(function() {
+        console.log('=== AFTER MODAL SHOW ===');
+        console.log('8. Modal class list after:', modal.className);
+        console.log('9. Modal display after:', $(modal).css('display'));
+        console.log('10. Body classes:', document.body.className);
+        console.log('11. Modal backdrop after:', $('.modal-backdrop').length);
+        
+        // Manually inspect DOM
+        console.log('12. Modal HTML:', modal.outerHTML);
+    }, 500);
 });
-JS);
-?>
-<script>
-    function datosplan(plan_id) {
+    
+    // 1. VARIABLE DEFINITIONS & SCOPE
+    var dependientesList = [];
+    var $dependientesContainer = $('#dependientes-list');
+    var $modal = $('#editDependienteModal');
+    var currentUserId = $('#userdatos-id').val();
+    
+    // Form fields vars
+    var $checkboxContratante = $('#userdatos-tiene_contratante_diferente');
+    var $tipoCedulaField = $('.field-userdatos-tipo_cedula');
+    var $cedulaField = $('.field-userdatos-cedula');
+    var $contratanteSection = $('#contratante-section');
 
+    // 2. CORE FUNCTIONS
+    window.loadDependientes = function() {
+    if (!currentUserId) return;
+    
+        $.ajax({
+            url: '/sipsa/web/user-datos/get-dependientes',   // <-- This might be the issue
+            type: 'GET',
+            data: { id: currentUserId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    dependientesList = response.data;
+                    renderDependientes();
+                }
+            },
+            error: function(err) { console.error('Error loading dependientes', err); }
+        });
+    };
+
+    function renderDependientes() {
+        var template = $('#dependiente-template').html();
+        var html = '';
+        
+        if (dependientesList.length === 0) {
+            $dependientesContainer.html('<div class="text-center text-muted p-3">No hay dependientes registrados.</div>');
+            $('#dependientes-count').text('0');
+            return;
+        }
+
+        dependientesList.forEach(function(dep) {
+            var pctBadge = dep.porcentaje_pago < 100 ? 
+                '<span class="badge badge-warning">' + dep.porcentaje_pago + '% Pago</span>' : '';
+            
+            var itemHtml = template
+                .replace(/{id}/g, dep.id)
+                .replace('{nombre_completo}', dep.nombre_completo)
+                .replace('{cedula}', dep.cedula)
+                .replace('{parentesco}', dep.parentesco)
+                .replace('{porcentaje_badge}', pctBadge);
+                
+            html += itemHtml;
+        });
+
+        $dependientesContainer.html(html);
+        $('#dependientes-count').text(dependientesList.length);
+        
+        // Re-initialize tooltips if bootstrap is available
+        if(typeof $.fn.tooltip !== 'undefined') {
+            $('[data-toggle="tooltip"]').tooltip();
+        }
+    }
+
+    function toggleContratanteSectionAndRequired() {
+        if ($checkboxContratante.is(':checked')) {
+            $tipoCedulaField.removeClass('required');
+            $cedulaField.removeClass('required');
+            $contratanteSection.show();
+        } else {
+            $tipoCedulaField.addClass('required');
+            $cedulaField.addClass('required');
+            $contratanteSection.hide();
+        }
+    }
+
+    function toggleConditionalRequired() {
+        var tipoAfiliado = $('#user_datos_type_id_field').val();
+        var clinicaField = $('#clinica_id');
+        var planField = $('#plan_id');
+        var corporativoField = $('#corporativo_id');
+        
+        if (tipoAfiliado == '1') {
+            // Individual - make clinica and plan required
+            clinicaField.attr('required', true);
+            planField.attr('required', true);
+            $('.conditional-asterisk').show();
+            $('.field-userdatos-clinica_id, .field-contratos-plan_id').addClass('required-field');
+            
+            // Remove required from corporativo
+            corporativoField.removeAttr('required');
+            $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
+        } else if (tipoAfiliado == '2') {
+            // Corporativo - remove required from clinica and plan
+            clinicaField.removeAttr('required');
+            planField.removeAttr('required');
+            $('.conditional-asterisk').hide();
+            $('.field-userdatos-clinica_id, .field-contratos-plan_id').removeClass('required-field');
+            
+            // Make corporativo required
+            corporativoField.attr('required', true);
+            $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
+        } else {
+            // No type selected - remove all conditional requirements
+            clinicaField.removeAttr('required');
+            planField.removeAttr('required');
+            corporativoField.removeAttr('required');
+            $('.conditional-asterisk').hide();
+            $('.field-userdatos-clinica_id, .field-contratos-plan_id, .field-userdatos-afiliado_corporativo_id').removeClass('required-field');
+        }
+    }
+
+    function toggleAfiliadoCorporativo() {
+        if ($('#user_datos_type_id_field').val() == '2') {
+            $('#afiliado_corporativo_container').show();
+        } else {
+            $('#afiliado_corporativo_container').hide();
+        }
+    }
+
+    // Function to toggle cédula/consecutivo fields
+function toggleCedulaFields() {
+    var tipoCedula = $('#userdatos-tipo_cedula').val();
+    var consecutivoContainer = $('#consecutivo-container');
+    var cedulaField = $('#userdatos-cedula');
+    var cedulaLabel = $('label[for="userdatos-cedula"]');
+    var consecutivoField = $('#userdatos-consecutivo_menor');
+    
+    if (tipoCedula === 'Menor Sin Cédula') {
+        // Show consecutivo field
+        consecutivoContainer.show();
+        
+        // Update cedula field placeholder and label
+        cedulaField.attr('placeholder', 'Cédula del padre/madre/tutor');
+        cedulaLabel.html('Cédula del Padre/Madre/Tutor <span class="text-danger">*</span>');
+        
+        // Make consecutivo required
+        consecutivoField.attr('required', true);
+        
+        // Update form validation attributes
+        $('.field-userdatos-consecutivo_menor').addClass('required');
+        
+        // Update validation messages dynamically
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: true
+        });
+    } else {
+        // Hide consecutivo field
+        consecutivoContainer.hide();
+        
+        // Restore original cedula field placeholder and label
+        cedulaField.attr('placeholder', 'Ejemplo: 12345678');
+        cedulaLabel.html('Cédula de Identidad <span class="text-danger conditional-asterisk">*</span>');
+        
+        // Clear and disable consecutivo field validation
+        consecutivoField.val('').removeAttr('required');
+        $('.field-userdatos-consecutivo_menor').removeClass('required');
+        
+        // Update validation
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    }
+}
+
+// Initial call on page load
+toggleCedulaFields();
+
+// Listen for changes on tipo_cedula dropdown
+$('#userdatos-tipo_cedula').on('change', toggleCedulaFields);
+
+// Handle form validation dynamically
+$('#user-datos-form').on('beforeValidate', function() {
+    toggleCedulaFields();
+    return true;
+});
+
+    // Handle form validation dynamically
+    $('#user-datos-form').on('beforeValidate', function() {
+        var tipoCedula = $('#userdatos-tipo_cedula').val();
+        var cedulaField = $('#userdatos-cedula');
+        var consecutivoField = $('#userdatos-consecutivo_menor');
+        
+        if (tipoCedula === 'Menor Sin Cédula') {
+            // For "Menor Sin Cédula", cedula is not required
+            cedulaField.removeAttr('required');
+            consecutivoField.attr('required', true);
+            
+            // Also update the Yii2 validation dynamically
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+                required: false
+            });
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+                required: true
+            });
+        } else {
+            // For regular ID types, restore normal validation
+            var tieneContratante = $('#userdatos-tiene_contratante_diferente').is(':checked');
+            if (!tieneContratante) {
+                cedulaField.attr('required', true);
+                $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+                    required: true
+                });
+            }
+            consecutivoField.removeAttr('required');
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+                required: false
+            });
+        }
+        
+        return true;
+    });
+
+    function calcularFechaVencimiento(fechaIni) {
+        if (fechaIni) {
+            var parts = fechaIni.split('-');
+            var year = parseInt(parts[0]);
+            var month = parseInt(parts[1]) - 1;
+            var day = parseInt(parts[2]);
+            
+            var fecha = new Date(year, month, day);
+            fecha.setFullYear(fecha.getFullYear() + 1);
+            
+            var newYear = fecha.getFullYear();
+            var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
+            var newDay = String(fecha.getDate()).padStart(2, '0');
+            
+            return newYear + '-' + newMonth + '-' + newDay;
+        }
+        return '';
+    }
+
+    function toggleFechaVen() {
+        var fechaIni = $('.fecha-ini-field').val();
+        var fechaVenContainer = $('.fecha-ven-container');
+        
+        if (fechaIni) {
+            fechaVenContainer.show();
+            var fechaVen = calcularFechaVencimiento(fechaIni);
+            $('.fecha-ven-field').val(fechaVen);
+        } else {
+            fechaVenContainer.hide();
+            $('.fecha-ven-field').val('');
+        }
+    }
+    
+    // Function to calculate plan details
+    window.datosplan = function(plan_id) {
         const planIdElement = document.getElementById('plan_id');
 
-        // Verifica si su valor no es una cadena vacía ni nulo
         if (planIdElement.value !== '' && planIdElement.value !== null) {
+            let csrfToken = $('meta[name="csrf-token"]').attr("content");
+            var parametros = {
+                id: plan_id,
+                "_csrf": csrfToken,
+            };
 
-                  let csrfToken = $('#csrf-token').val();
-                  var parametros = {
-                    id: plan_id,
-                    "_csrf" : csrfToken,
-                  };
-
-                  $.ajax({
-                    url: "datosdelplan",
-                    type: "post",
-                    dataType: "json",
-                    data: parametros,
-                    success: function (data) {
-                      console.log(data);
-
-
-                    const comision = data.data.comision;
-                    const limite_cobertura = data.data.limite_cobertura;
-                    const moneda = data.data.moneda;
-
-                    console.log(comision);
-                    console.log(limite_cobertura);
-                    console.log(moneda);
-
-                    document.getElementById('userdatos-moneda').value = moneda;
-                    document.getElementById('userdatos-deducible').value = 0;
-                    document.getElementById('userdatos-limite_cobertura').value = limite_cobertura;
-
-                
+            $.ajax({
+                url: "datosdelplan",
+                type: "post",
+                dataType: "json",
+                data: parametros,
+                success: function(data) {
+                    if(data && data.data) {
+                        const limite_cobertura = data.data.limite_cobertura;
+                        const moneda = data.data.moneda;
+                        $('#userdatos-moneda').val(moneda);
+                        $('#userdatos-deducible').val(0);
+                        $('#userdatos-limite_cobertura').val(limite_cobertura);
+                    }
                 },
             });
         }
+    };
+
+    // 3. EVENT LISTENERS INITIALIZATION
+    
+    // Initial calls
+    toggleContratanteSectionAndRequired();
+    toggleConditionalRequired();
+    toggleAfiliadoCorporativo();
+    toggleFechaVen();
+    
+    // Dependents Section Logic
+    $('#tiene_dependientes').on('change', function() {
+        if($(this).is(':checked')) {
+            $('#dependientes-section').slideDown();
+            loadDependientes();
+        } else {
+            $('#dependientes-section').slideUp();
+        }
+    });
+
+    // Check on load
+    if($('#tiene_dependientes').is(':checked')) {
+        $('#dependientes-section').show();
+        loadDependientes();
     }
 
-    /*$("#plan_id").on("change", function() {
-        var planId = $(this).val();
-        if (planId) { // Asegura que el valor no esté vacío
-            datosplan(planId);
+    // Modal: Open to Add
+    $('#btn-add-dependiente').on('click', function(e) {
+        e.preventDefault();
+        
+        // Get data from Select2
+        var data = $('#search-dependiente').select2('data')[0];
+        
+        if (!data || !data.id) {
+            alert('Por favor, busque y seleccione un afiliado primero.');
+            return;
         }
-    });*/
-</script>
+
+        // Reset form
+        $('#edit-dependiente-id').val(''); // Empty for new
+        $('#edit-dependiente-user-id').val(data.id);
+        $('#display-nombre-dependiente').val(data.text);
+        $('#edit-parentesco').val('').trigger('change');
+        $('#edit-porcentaje').val('100');
+        
+        $modal.modal('show');
+    });
+
+    // Modal: Save Button
+    $('#btn-save-dependiente').on('click', function() {
+        var id = $('#edit-dependiente-id').val();
+        var action = id ? 'update?id=' + id : 'create';
+        
+        var payload = {
+            dependiente_id: $('#edit-dependiente-user-id').val(),
+            titular_id: currentUserId,
+            parentesco: $('#edit-parentesco').val(),
+            porcentaje_pago: $('#edit-porcentaje').val(),
+            activo: $('#edit-activo').is(':checked') ? 1 : 0
+        };
+
+        if(!payload.parentesco) {
+            alert('Debe seleccionar el parentesco');
+            return;
+        }
+
+        $.ajax({
+            url: '/dependientes/' + action,
+            type: 'POST',
+            data: payload,
+            success: function(response) {
+                if (response.success) {
+                    $modal.modal('hide');
+                    $('#search-dependiente').val(null).trigger('change'); // Clear search
+                    loadDependientes(); // Reload list
+                } else {
+                    alert('Error: ' + JSON.stringify(response.errors || response.message));
+                }
+            },
+            error: function() { alert('Error del servidor'); }
+        });
+    });
+
+    // Edit Button Click (Delegated)
+    $(document).on('click', '.edit-dependiente', function() {
+        var id = $(this).closest('.dependiente-card').data('id');
+        var dep = dependientesList.find(function(d) { return d.id == id; });
+        
+        if(dep) {
+            $('#edit-dependiente-id').val(dep.id);
+            $('#edit-dependiente-user-id').val(dep.dependiente_id);
+            $('#display-nombre-dependiente').val(dep.nombre_completo);
+            $('#edit-parentesco').val(dep.parentesco).trigger('change');
+            $('#edit-porcentaje').val(dep.porcentaje_pago);
+            $('#edit-activo').prop('checked', dep.activo);
+            $modal.modal('show');
+        }
+    });
+
+    // Remove Button Click (Delegated)
+    $(document).on('click', '.remove-dependiente', function() {
+        if(!confirm('¿Seguro que desea desvincular este dependiente?')) return;
+        
+        var id = $(this).closest('.dependiente-card').data('id');
+        $.post('/dependientes/delete?id=' + id, function(response) {
+            if(response.success) loadDependientes();
+            else alert('No se pudo eliminar');
+        });
+    });
+
+    // Standard Form Listeners
+    $checkboxContratante.on('change', toggleContratanteSectionAndRequired);
+    
+    $('#user_datos_type_id_field').on('change', function() {
+        toggleAfiliadoCorporativo();
+        toggleConditionalRequired();
+    });
+    
+    $('.fecha-ini-field').on('change', toggleFechaVen);
+    
+    // Enhanced form validation
+    $('#user-datos-form').on('beforeValidate', function() {
+        toggleConditionalRequired();
+        return true;
+    });
+});
+JS
+);
+?>
+
 <style>
-/* * FOCUSED REINFORCED STYLES FOR WHITE TEXT ON KARTIK FILEINPUT BROWSE BUTTONS ONLY.
- * Targets the 'Seleccionar' button (btn-primary) text/icon color to white.
- */
+    #consecutivo-container .input-group-prepend .input-group-text {
+        background-color: #f8f9fa;
+        border-right: 0;
+    }
 
-/* Force the main button text/icon color to white (Primary/Browse button) */
-.file-input .btn.btn-primary,
-.file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
-.file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
-.file-input .btn.btn-primary span,
-.file-input .btn.btn-primary i,
-.file-input .btn.btn-primary svg {
-    color: #fff !important;
-    fill: #fff !important; /* Ensures SVG icons are also white */
-}
+    #consecutivo-container .form-control {
+        border-left: 0;
+    }
 
-/* Ensure the file name/caption text is also white, as it's often next to the button */
-.file-caption-name {
-    color: #fff !important;
-}
+    /* Fix modal z-index to be above Select2 */
+    .modal {
+        z-index: 99999 !important;
+    }
 
-/* Remove text shadow interference */
-.file-input .btn.btn-primary {
-    text-shadow: none !important; 
-}
+    .modal-backdrop {
+        z-index: 99998 !important;
+    }
 
-/* Required field styling */
-.required-field label:after {
-    content: " *";
-    color: #dc3545;
-}
-.text-danger {
-    color: #dc3545;
-}
+    /* Fix Select2 inside modal */
+    .select2-container {
+        z-index: 100000 !important;
+    }
 
-/* Conditional asterisk styling */
-.conditional-asterisk {
-    display: inline;
-}
+    /* Ensure modal is fully opaque */
+    .modal.show {
+        opacity: 1 !important;
+    }
 
-/* NOTE: The 'Quitar' button (.btn-secondary) is explicitly *not* targeted, 
-   so it will retain its theme's default color. */
+    .file-input .btn.btn-primary,
+    .file-input .btn.btn-primary:not(:disabled):not(.disabled):active,
+    .file-input .btn.btn-primary:not(:disabled):not(.disabled):hover,
+    .file-input .btn.btn-primary span,
+    .file-input .btn.btn-primary i,
+    .file-input .btn.btn-primary svg {
+        color: #fff !important;
+        fill: #fff !important;
+    }
+
+    .file-caption-name {
+        color: #fff !important;
+    }
+
+    .file-input .btn.btn-primary {
+        text-shadow: none !important;
+    }
+
+    .required-field label:after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    .text-danger {
+        color: #dc3545;
+    }
+
+    .conditional-asterisk {
+        display: inline;
+    }
 </style>
