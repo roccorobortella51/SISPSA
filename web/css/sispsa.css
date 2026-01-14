@@ -11154,3 +11154,57 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
         font-size: 1em;
     }
 }
+
+/* botones de corporativos */
+
+ .btn-fixed-success {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-success:hover, .btn-fixed-success:focus, .btn-fixed-success:active {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-primary {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+        .btn-fixed-primary:hover, .btn-fixed-primary:focus, .btn-fixed-primary:active {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+
+.btn-fixed-success {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-success:hover, .btn-fixed-success:focus, .btn-fixed-success:active {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-primary {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+        .btn-fixed-primary:hover, .btn-fixed-primary:focus, .btn-fixed-primary:active {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+        .btn-fixed-secondary {
+            background: #6c757d !important;
+            color: #fff !important;
+            border-color: #6c757d !important;
+        }
+        .btn-fixed-secondary:hover, .btn-fixed-secondary:focus, .btn-fixed-secondary:active {
+            background: #6c757d !important;
+            color: #fff !important;
+            border-color: #6c757d !important;
+        }

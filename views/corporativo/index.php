@@ -33,22 +33,22 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
         <?= Html::encode($this->title); ?>
     </h1>
 
-    <div class="d-flex" style="gap: 15px;"> 
+    <div class="d-flex" style="gap: 20px !important;"> 
         <?= Html::a(
             '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
             ['create'],
             [
-                'class' => 'btn btn-outline-success',
-                'style' => 'font-size: 1.5rem; font-weight: bold; padding: 15px 25px; border-width: 3px; display: flex; align-items: center; gap: 10px;'
+                'class' => 'btn btn-outline-success btn-fixed-success',
+                'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
             ]
         ) ?>
 
         <?= Html::a(
-            '<i class="fas fa-file-excel"></i> CARGAR MASIVOS',
+            '<i class="fas fa-file-excel"></i> CARGAR DE FORMA MASIVA',
             ['corporativo/carga-masiva-afiliados'],
             [
-                'class' => 'btn btn-outline-primary',
-                'style' => 'font-size: 1.5rem; font-weight: bold; padding: 15px 25px; border-width: 3px; display: flex; align-items: center; gap: 10px;'
+                'class' => 'btn btn-outline-primary btn-fixed-primary',
+                'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
             ]
         ) ?>
     </div>
