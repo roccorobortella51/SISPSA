@@ -9,6 +9,7 @@ use kartik\widgets\SwitchInput;
 use kartik\widgets\DatePicker;
 use kartik\widgets\FileInput;
 use yii\helpers\Url;
+use yii\web\JsExpression;
 
 /** @var yii\web\View $this */
 /** @var app\models\Pagos $model */
@@ -16,99 +17,100 @@ use yii\helpers\Url;
 
 $user_id = isset($user_id) ? $user_id : ($model->user_id ?? null);
 
-$js = <<<JS
-    $(document).ready(function() {
-        // Función para buscar la tasa de cambio
-        $('#fecha-pago').on('change', function() {
-            var fechaSeleccionada = $(this).val();
+// Add debug info at the bottom of the form
+echo '<div style="display: none; background: #f0f0f0; padding: 10px; margin-top: 20px;">';
+echo '<h4>Debug Info:</h4>';
+echo 'Model isNewRecord: ' . ($model->isNewRecord ? 'Yes' : 'No') . '<br>';
+echo 'Model scenario: ' . $model->scenario . '<br>';
+echo 'User ID: ' . $user_id . '<br>';
+echo 'Cuotas count: ' . (is_array($cuotas) ? count($cuotas) : 0) . '<br>';
+echo '</div>';
+
+// Main JavaScript for form functionality - BULLETPROOF VERSION
+$this->registerJs(
+    <<<'JS'
+$(function() {
+    console.log('Pagos form JavaScript loaded');
+    
+    // Function to update Bs amount
+    function updateMontoBs() {
+        var montoUsd = parseFloat($('#pagos-monto_pagado').val()) || 0;
+        var tasa = parseFloat($('#pagos-tasa').val()) || 0;
+        var montoBs = montoUsd * tasa;
+        $('#pagos-monto_usd').val(montoBs.toFixed(4));
+    }
+    
+    // Function to update field visibility
+    function updateFieldsVisibility() {
+        var metodo = $('#pagos-metodo_pago').val();
+        var isCashDollar = (metodo === 'Efectivo - Dólar ($)');
+        
+        if (isCashDollar) {
+            // Hide fields for cash dollar
+            $('.field-pagos-numero_referencia_pago').hide();
+            $('.field-pagos-imagen_prueba_file').hide();
+            $('#comprobante-title').hide();
             
-            if (fechaSeleccionada) {
- 
-                
-                // Hacer llamada AJAX
-                $.ajax({
-                    url: '../site/tasacambio', // Ruta a tu acción
-                    type: 'post',
-                    data: { fecha: fechaSeleccionada },
-                    success: function(response) {
-                        if (response) {
-                            tasa = parseFloat(response)
-                            $('#pagos-tasa').val(tasa.toFixed(2));
-                            updateMontoUsd();
-                        } else {
-                            $('#pagos-tasa').val('');
-                            alert('No se encontró tasa para esta fecha');
-                        }
-                    },
-                    error: function() {
-                        $('#pagos-tasa').val('');
-                        alert('Error al buscar la tasa');
+            // Clear the values so they don't fail validation
+            $('#pagos-numero_referencia_pago').val('');
+            $('#pagos-imagen_prueba_file').val('');
+        } else {
+            // Show fields for other payment methods
+            $('.field-pagos-numero_referencia_pago').show();
+            $('.field-pagos-imagen_prueba_file').show();
+            $('#comprobante-title').show();
+        }
+    }
+    
+    // Calculate selected cuotas total
+    function updateMontoSelected() {
+        var sum = 0;
+        $('.cuota-checkbox:checked').each(function() {
+            sum += parseFloat($(this).data('monto')) || 0;
+        });
+        $('#pagos-monto_pagado').val(sum.toFixed(2));
+        updateMontoBs();
+    }
+    
+    // Event handlers
+    $('#fecha-pago').on('change', function() {
+        var fecha = $(this).val();
+        if (fecha) {
+            $.ajax({
+                url: '../site/tasacambio',
+                type: 'post',
+                data: { fecha: fecha },
+                success: function(response) {
+                    if (response) {
+                        $('#pagos-tasa').val(parseFloat(response).toFixed(2));
+                        updateMontoBs();
                     }
-                });
-            }
-        });
-        // Función para actualizar el monto en USD
-        function updateMontoUsd() {
-            var monto_pagado = parseFloat($('#pagos-monto_pagado').val()) || 0;
-            var tasa = parseFloat($('#pagos-tasa').val()) || 0;
-            var metodo_pago = $('#pagos-metodo_pago').val();
-            
-            var monto_usd_calculated = 0;
-            if (metodo_pago === 'Zelle') {
-                monto_usd_calculated = monto_pagado;
-            } else {
-                monto_usd_calculated = monto_pagado * tasa;
-            }
-            $('#pagos-monto_usd').val(monto_usd_calculated.toFixed(4)); // Formatear a 4 decimales
-            console.log(tasa)
-        }
-
-        // Función para sumar las cuotas seleccionadas y asignar al campo monto_pagado
-        function updateMontoSelected() {
-            var sum = 0;
-            $('.cuota-checkbox:checked').each(function() {
-                var m = parseFloat($(this).data('monto')) || 0;
-                sum += m;
+                }
             });
-            // Si no hay checkboxes marcados valor será 0
-            $('#pagos-monto_pagado').val(sum.toFixed(2));
-            // Recalcular monto en Bs
-            updateMontoUsd();
         }
-
-        // Listener para cambio en monto pagado o tasa
-        $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', function(){
-            updateMontoUsd();
-        });
-
-        // Listener para checkboxes de cuotas: actualizar suma cuando cambian
-        $(document).on('change', '.cuota-checkbox', function() {
-            updateMontoSelected();
-        });
-
-        // Al cargar la página, inicializar el monto según checkboxes (o 0 si ninguno)
-        updateMontoSelected();
-
-        // Listener para cambio en método de pago
-        $('#pagos-metodo_pago').on('change', function(){
-            // Resetear los campos al cambiar el método de pago
-            //$('#pagos-monto_usd').val(0);
-            //$('#pagos-monto_pagado').val(0);
-            
-            if ($(this).val() == 'Zelle'){
-                $('.field-pagos-tasa').hide(); // Ocultar campo de tasa para Zelle
-            } else {
-                $('.field-pagos-tasa').show(); // Mostrar campo de tasa para otros métodos
-            }
-            updateMontoUsd(); // Recalcular al cambiar el método de pago
-        });
-
-        // Asegurarse de que el estado inicial sea correcto al cargar la página
-        // Simular un cambio inicial para ajustar la visibilidad de la tasa
-        $('#pagos-metodo_pago').trigger('change');
     });
-JS;
-$this->registerJs($js);
+    
+    $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', updateMontoBs);
+    $('#pagos-metodo_pago').on('change', updateFieldsVisibility);
+    $(document).on('change', '.cuota-checkbox', updateMontoSelected);
+    
+    // Initialize
+    updateMontoSelected();
+    updateFieldsVisibility();
+    updateMontoBs();
+    
+    // Disable form submit button while processing to prevent double submission
+    $('#pago-form').on('submit', function() {
+        var submitBtn = $('#submit-btn');
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Guardando...');
+        console.log('Form submitted');
+    });
+});
+JS
+);
+
+?>
+
 
 ?>
 <style>
@@ -195,23 +197,81 @@ $this->registerJs($js);
         color: #dc3545;
         font-size: 1.5rem;
     }
+
+    /* BULLET-PROOF SELECT2 STYLES - SIMPLIFIED */
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #5897fb !important;
+        color: white !important;
+    }
+
+    .select2-container--default .select2-results__option--highlighted[aria-selected] * {
+        color: white !important;
+    }
+
+    /* Force white on hover for all children */
+    .select2-container--default .select2-results__option--highlighted[aria-selected],
+    .select2-container--default .select2-results__option--highlighted[aria-selected] i,
+    .select2-container--default .select2-results__option--highlighted[aria-selected] span,
+    .select2-container--default .select2-results__option--highlighted[aria-selected] span i {
+        color: white !important;
+    }
+
+    /* Normal state for dollar icon */
+    .select2-results__option i.fas.fa-dollar-sign {
+        color: #28a745;
+        margin-right: 8px;
+    }
+
+    /* Style for the selected option with dollar icon (in the input field) */
+    .select2-selection__rendered i.fas.fa-dollar-sign {
+        color: #28a745;
+        margin-right: 8px;
+    }
+
+    /* Style for disabled submit button */
+    button[type="submit"]:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* Loading spinner animation */
+    .fa-spinner {
+        animation: fa-spin 1s infinite linear;
+    }
+
+    @keyframes fa-spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
 </style>
 
 <div class="pagos-form p-4 rounded-3 shadow-sm bg-light">
 
     <?php $form = ActiveForm::begin([
-        'options' => ['enctype' => 'multipart/form-data'],
-        'type' => ActiveForm::TYPE_VERTICAL, // Formulario vertical
+        'options' => [
+            'enctype' => 'multipart/form-data',
+            'id' => 'pago-form',
+        ],
+        'type' => ActiveForm::TYPE_VERTICAL,
         'formConfig' => [
-            'labelSpan' => 12, // Etiqueta ocupa todo el ancho de la columna
+            'labelSpan' => 12,
             'deviceSize' => ActiveForm::SIZE_MEDIUM,
         ],
         'fieldConfig' => [
             'errorOptions' => [
-                'class' => 'text-danger', // ADDED: Custom error class
-                'style' => 'font-size: 1.8rem; font-weight: bold; padding: 10px;', // ADDED: Bigger font for errors
+                'class' => 'text-danger',
+                'style' => 'font-size: 1.8rem; font-weight: bold; padding: 10px;',
             ],
         ],
+        // BULLETPROOF: Disable client-side validation to prevent blocking submission
+        'enableClientValidation' => false,
+        'enableAjaxValidation' => false,
+        'validateOnSubmit' => false,
     ]); ?>
 
     <?php
@@ -225,18 +285,46 @@ $this->registerJs($js);
         <div class="col-md-6">
             <?= $form->field($model, 'metodo_pago')->widget(Select2::classname(), [
                 'data' => [
-                    'Pago Móvil' => 'Pago Movil',
+                    'Efectivo - Dólar ($)' => 'Efectivo - Dólar ($)',
+                    'Pago Móvil' => 'Pago Móvil',
                     'Punto de Venta' => 'Punto de Venta',
                     'Transferencia Bancaria' => 'Transferencia Bancaria',
                     'Zelle' => 'Zelle'
                 ],
                 'options' => [
                     'placeholder' => 'Seleccione el método de pago...',
-                    'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
+                    'class' => 'form-control rounded-pill',
                     'disabled' => $disabled,
                 ],
                 'pluginOptions' => [
                     'allowClear' => false,
+                    'templateResult' => new JsExpression('
+                        function(data) {
+                            if (!data.id) {
+                                return data.text;
+                            }
+                            var span = $("<span></span>");
+                            if (data.id === "Efectivo - Dólar ($)") {
+                                span.append("<i class=\'fas fa-dollar-sign text-success mr-2\'></i>");
+                            }
+                            span.append(document.createTextNode(data.text));
+                            return span;
+                        }
+                    '),
+                    'templateSelection' => new JsExpression('
+                        function(data) {
+                            if (!data.id) {
+                                return data.text;
+                            }
+                            var span = $("<span></span>");
+                            if (data.id === "Efectivo - Dólar ($)") {
+                                span.append("<i class=\'fas fa-dollar-sign text-success mr-2\'></i>");
+                            }
+                            span.append(document.createTextNode(data.text));
+                            return span;
+                        }
+                    '),
+                    'escapeMarkup' => new JsExpression('function(markup) { return markup; }'),
                 ],
             ])->label('Método de Pago' . '<span class="required-field"></span>') ?>
         </div>
@@ -323,6 +411,7 @@ $this->registerJs($js);
             <?= $form->field($model, 'monto_pagado')->textInput([
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'placeholder' => 'Ingrese el monto pagado',
+                'id' => 'pagos-monto_pagado',
             ])->label('Monto a Pagar en USD' . '<span class="required-field"></span>') ?>
         </div>
         <div class="col-md-4">
@@ -339,6 +428,7 @@ $this->registerJs($js);
                 'class' => 'form-control rounded-pill', // Aplicar estilo redondeado
                 'readonly' => true, // Siempre solo lectura
                 'placeholder' => 'Monto en Bs (calculado)',
+                'id' => 'pagos-monto_usd',
             ])->label('Monto en Bs' . '<span class="required-field"></span>') ?>
         </div>
     </div>
@@ -350,11 +440,13 @@ $this->registerJs($js);
                 'type' => 'text',
                 'placeholder' => 'Ingrese el número de referencia del pago',
                 'disabled' => $disabled,
+                'id' => 'pagos-numero_referencia_pago',
             ])->label('Número de Referencia' . '<span class="required-field"></span>') ?>
         </div>
     </div>
 
-    <h4 class="mt-4 mb-4 text-info border-bottom pb-2"><i class="fas fa-file-upload me-2"></i> Comprobante de Pago</h4>
+    <!-- Added ID to the Comprobante de Pago title for easy hiding -->
+    <h4 id="comprobante-title" class="mt-4 mb-4 text-info border-bottom pb-2"><i class="fas fa-file-upload me-2"></i> Comprobante de Pago</h4>
 
     <div class="row">
         <div class="col-md-12">
@@ -376,6 +468,7 @@ $this->registerJs($js);
                 'options' => [
                     'accept' => 'image/*', // Solo acepta imágenes
                     'disabled' => $disabled,
+                    'id' => 'pagos-imagen_prueba_file',
                 ],
                 'pluginOptions' => [
                     'theme' => 'fa5', // Utiliza el tema de Font Awesome 5
@@ -412,7 +505,8 @@ $this->registerJs($js);
             <!-- Botón "Guardar Pago" con el tamaño original deseado -->
             <?php if (!empty($cuotas)): ?>
                 <?= Html::submitButton('<i class="fas fa-save me-2"></i> Guardar Pago', [
-                    'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm' // Vuelve a btn-lg y px-7
+                    'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm',
+                    'id' => 'submit-btn', // Added ID for JavaScript
                 ]) ?>
             <?php endif; ?>
             <!-- Botón "Volver" con el tamaño original deseado -->
