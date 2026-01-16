@@ -51,27 +51,37 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
 <div class="main-container"> <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
 
-    <div class="header-section">
-        <h1><?= Html::encode($this->title) ?></h1>
-        <div class="header-buttons-group">
+    <div class="ms-panel-header d-flex justify-content-between align-items-center p-4">
+        <h1 class="font-weight-bold" style="font-size: 2.5rem; margin: 0; line-height: 1;">
+            <?= Html::encode($this->title); ?>
+        </h1>
+
+        <div class="d-flex" style="gap: 20px !important;">
             <?php if ($permisos) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS',
-                    ['masivo'],
-                    ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
+                    '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA',
+                    ['create'],
+                    [
+                        'class' => 'btn btn-outline-success btn-fixed-success',
+                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+                    ]
                 ) ?>
                 <?= Html::a(
-                    '<i class="fas fa-plus mr-2"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA',
-                    ['create'],
-                    ['class' => 'btn-base btn-blue'] // Usando clases de sipsa.css
+                    '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS',
+                    ['masivo'],
+                    [
+                        'class' => 'btn btn-outline-primary btn-fixed-primary',
+                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+                    ]
                 ) ?>
             <?php endif; ?>
             <?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-undo mr-2"></i> Volver a Clínica',
+                    '<i class="fas fa-undo"></i> Volver a Clínica',
                     ['/rm-clinica/view', 'id' => $clinica->id],
                     [
-                        'class' => 'btn-base btn-gray',
+                        'class' => 'btn btn-outline-secondary',
+                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;',
                         'title' => 'Volver a los detalles de la clínica',
                     ]
                 ) ?>

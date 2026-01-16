@@ -45,6 +45,82 @@ use app\models\AgenteFuerza;
 class UserDatosController extends Controller
 {
     /**
+     * Descarga un archivo Excel con los IDs y nombres de estados, municipios, parroquias y ciudades
+     */
+    public function actionDownloadLocationIds()
+    {
+        // Obtener datos
+        $estados = \app\models\RmEstado::find()->select(['id', 'codigo', 'nombre'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
+        $municipios = \app\models\RmMunicipio::find()->select(['id', 'codigo_muni', 'nombre', 'estado_codigo'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
+        $parroquias = \app\models\RmParroquia::find()->select(['id', 'codigo_parro', 'nombre', 'muni_codigo'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
+        $ciudades = \app\models\RmCiudad::find()->select(['id', 'codigo_ciudad', 'nombre', 'estado_codigo'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
+
+        // Crear hoja Excel
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+            // Si hubo errores en el guardado de algún registro, mostrar el reporte de validación
+            if (!empty($allErrors)) {
+                $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
+                Yii::$app->session->setFlash('error', $validationReport);
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                return $this->render('masivo', [
+                    'model' => $model,
+                    'modelContrato' => $modelContrato,
+                ]);
+            }
+            Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
+            return $this->redirect(['index']);
+
+        // Parroquias
+        $spreadsheet->createSheet();
+        $sheet3 = $spreadsheet->setActiveSheetIndex(2);
+        $sheet3->setTitle('Parroquias');
+        $sheet3->setCellValue('A1', 'ID');
+        $sheet3->setCellValue('B1', 'Código');
+        $sheet3->setCellValue('C1', 'Nombre');
+        $sheet3->setCellValue('D1', 'Municipio Código');
+        $row = 2;
+        foreach ($parroquias as $parro) {
+            $sheet3->setCellValue('A'.$row, $parro['id']);
+            $sheet3->setCellValue('B'.$row, $parro['codigo_parro']);
+            $sheet3->setCellValue('C'.$row, $parro['nombre']);
+            $sheet3->setCellValue('D'.$row, $parro['muni_codigo']);
+            $row++;
+        }
+
+        // Ciudades
+        $spreadsheet->createSheet();
+        $sheet4 = $spreadsheet->setActiveSheetIndex(3);
+        $sheet4->setTitle('Ciudades');
+        $sheet4->setCellValue('A1', 'ID');
+        $sheet4->setCellValue('B1', 'Código');
+        $sheet4->setCellValue('C1', 'Nombre');
+        $sheet4->setCellValue('D1', 'Estado Código');
+        $row = 2;
+        foreach ($ciudades as $ciudad) {
+            $sheet4->setCellValue('A'.$row, $ciudad['id']);
+            $sheet4->setCellValue('B'.$row, $ciudad['codigo_ciudad']);
+            $sheet4->setCellValue('C'.$row, $ciudad['nombre']);
+            $sheet4->setCellValue('D'.$row, $ciudad['estado_codigo']);
+            $row++;
+        }
+
+        // Volver a la primera hoja
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Descargar el archivo
+        $filename = 'IDs_Ubicacion.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="'.$filename.'"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
      * @inheritDoc
      */
     public function behaviors()
@@ -490,7 +566,11 @@ public function actionMasivo()
         }
 
         $uploadedFile = $masivoFiles[0];
-        $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $uploadedFile->baseName . '.' . $uploadedFile->extension);
+        $uploadDir = Yii::getAlias('@app/web/uploads/masivoFiles');
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0775, true);
+        }
+        $filePath = $uploadDir . '/' . $uploadedFile->baseName . '.' . $uploadedFile->extension;
 
         if (!$uploadedFile->saveAs($filePath)) {
             Yii::$app->session->setFlash('error', 'Error al guardar el archivo subido.');
@@ -594,7 +674,8 @@ public function actionMasivo()
             }
 
             // Si no hay errores de validación, proceder con el procesamiento
-            foreach ($filteredData as $row) {
+            foreach ($filteredData as $idx => $row) {
+                $rowNumber = $idx + 2; // +2 porque la primera fila es encabezado
                 $contrato = new Contratos();
                 $contrato->clinica_id = $clinica_id;
                 $contrato->plan_id = $plan_id;
@@ -603,48 +684,51 @@ public function actionMasivo()
                 $contrato->fecha_ven = $fecha_ven;
                 $contrato->created_at = $fechaCreacion;
                 $contrato->estatus = 'Creado';
-                $guardadoContrato = $contrato->save();
-                if ($guardadoContrato) {
-                    Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
-                } else {
-                    Yii::$app->session->setFlash('error', 'Error al guardar el contrato.');
-                    print_r($contrato->getErrors());
-                    exit;
-                }
-                
-                // IMPORTANTE: Reiniciar el modelo de afiliado para cada fila
+
                 $model = new UserDatos(); 
-                
                 $model->role = 'afiliado';
                 $model->estatus = 'Creado';
                 $model->user_datos_type_id = 1;
                 $model->email = $row['A'];
-                $model->telefono = $row['B'];
+                $telefonoLimpio = preg_replace('/[\s\-\(\)]/', '', $row['B']);
+                if (preg_match('/^[42]\d{9}$/', $telefonoLimpio)) {
+                    $telefonoLimpio = '0' . $telefonoLimpio;
+                }
+                $model->telefono = $telefonoLimpio;
                 $model->nombres = $row['C'];
                 $model->apellidos = $row['D'];
                 $model->tipo_cedula = $row['E'];
                 $model->cedula = $row['F'];
                 $fechaNacimiento = DateTime::createFromFormat('d/m/Y', $row['G']);
-                $model->fechanac = $fechaNacimiento->format('Y-m-d');
-                $model->sexo = $row['H'];
+                $model->fechanac = $fechaNacimiento ? $fechaNacimiento->format('Y-m-d') : null;
+                $sexoRaw = strtoupper(trim($row['H']));
+                if ($sexoRaw === 'M' || $sexoRaw === 'MASCULINO') {
+                    $model->sexo = 'Masculino';
+                } elseif ($sexoRaw === 'F' || $sexoRaw === 'FEMENINO') {
+                    $model->sexo = 'Femenino';
+                } elseif ($sexoRaw === 'OTRO') {
+                    $model->sexo = 'Otro';
+                } else {
+                    $model->sexo = $row['H'];
+                }
                 $model->tipo_sangre = $row['I'];
                 $explodeEstado = explode(' - ', $row['J']);
-                $model->estado = $explodeEstado[0];
-                $model->municipio = $explodeEstado[1];
-                $model->parroquia = $explodeEstado[2];
+                $model->estado = $explodeEstado[0] ?? null;
+                $model->municipio = $explodeEstado[1] ?? null;
+                $model->parroquia = $explodeEstado[2] ?? null;
                 $explodeCiudad = explode(' - ', $row['K']);
-                $model->ciudad = $explodeCiudad[1];
+                $model->ciudad = isset($explodeCiudad[1]) ? $explodeCiudad[1] : ($explodeCiudad[0] ?? null);
                 $model->direccion = $row['L'];
-                $model->contrato_id = $contrato->id;
+                $model->contrato_id = null; // Solo guardar contrato si el usuario es válido
                 $model->clinica_id = $clinica_id;
-                $model->plan_id = $plan_id; // Se asigna el plan_id global a cada nuevo UserDatos
+                $model->plan_id = $plan_id;
                 $model->created_at = $fechaCreacion;
                 $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
-                $guardo = $model->save();
+
+                $guardo = $model->validate() && $model->save();
                 if ($guardo) {
                     $contrato->user_id = $model->id;
                     $contrato->save(false);
-                    Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
                     $pass = 'sispsa'.$model->cedula;
                     $modelUser = new User();
                     $modelUser->username = $model->email;
@@ -654,7 +738,6 @@ public function actionMasivo()
                     $modelUser->status = 1;
                     $guardadoUser = $modelUser->save();
                     if ($guardadoUser) {
-                        Yii::$app->session->setFlash('success', 'Usuario guardado correctamente.');
                         $auth = Yii::$app->authManager;
                         $roleName = 'afiliado';
                         $role = $auth->getRole($roleName);
@@ -665,28 +748,47 @@ public function actionMasivo()
                                 Yii::$app->cache->flush();
                                 $model->user_login_id = $modelUser->id;
                                 $model->save();
-                                
                             } catch (\Exception $e) {
                                 Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
                             }
                         } else {
-                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
-                            print_r($modelUser->getErrors());
-                            exit;
+                            $allErrors[] = [
+                                'row' => $rowNumber,
+                                'errors' => $modelUser->getFirstErrors(),
+                                'data' => $row
+                            ];
+                            continue;
                         }
                     } else {
-                        Yii::$app->session->setFlash('error', 'Error al guardar el usuario.');
-                        print_r($modelUser->getErrors());
-                        exit;
+                        $allErrors[] = [
+                            'row' => $rowNumber,
+                            'errors' => $modelUser->getFirstErrors(),
+                            'data' => $row
+                        ];
+                        continue;
                     }
                 } else {
-                    Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
-                    print_r($model->getErrors());
-                    exit;
+                    $allErrors[] = [
+                        'row' => $rowNumber,
+                        'errors' => $model->getFirstErrors(),
+                        'data' => $row
+                    ];
+                    continue;
                 }
             }
-            Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
-            return $this->redirect(['index']);
+
+            // Si hubo errores en el guardado de algún registro, mostrar el reporte de validación
+            if (!empty($allErrors)) {
+                $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
+                Yii::$app->session->setFlash('error', $validationReport);
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                return $this->render('masivo', [
+                    'model' => $model,
+                    'modelContrato' => $modelContrato,
+                ]);
+            }
 
         } catch (Exception $e) {
             Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
@@ -695,18 +797,21 @@ public function actionMasivo()
             if (file_exists($filePath)) {
                 unlink($filePath);
             }
+            return $this->render('masivo', [
+                'model' => $model,
+                'modelContrato' => $modelContrato,
+            ]);
         } catch (\Exception $e) { // Captura otras excepciones generales
             Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
             Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
             if (file_exists($filePath)) {
                 unlink($filePath);
             }
+            return $this->render('masivo', [
+                'model' => $model,
+                'modelContrato' => $modelContrato,
+            ]);
         }
-
-        return $this->render('masivo', [
-            'model' => $model,
-            'modelContrato' => $modelContrato,
-        ]);
     }
 
     return $this->render('masivo', [

@@ -1,4 +1,10 @@
 <?php
+// Mostrar errores de validación de carga masiva si existen
+if (Yii::$app->session->hasFlash('error')) {
+    echo '<div class="mt-4 mb-4">';
+    echo Yii::$app->session->getFlash('error');
+    echo '</div>';
+}
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
