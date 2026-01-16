@@ -215,14 +215,102 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'label' => 'Cédula de Identidad',
                             'attribute' => 'cedula',
                             'value' => function ($model) {
-                                return ($model->tipo_cedula ?? '') . ' ' . ($model->cedula ?? '');
+                                // Inicializar variables
+                                $tipoCedula = $model->tipo_cedula ?? '';
+                                $numeroCedula = $model->cedula ?? '';
+                                $idAfiliado = $model->id ?? '';
+
+                                // DEBUG
+                                echo "<script>console.log('ID: $idAfiliado | Tipo: \"$tipoCedula\" | Cédula: $numeroCedula | Consecutivo: " . ($model->consecutivo_menor ?? 'NULL') . "');</script>";
+
+                                // Obtener consecutivo
+                                $consecutivo = '';
+                                if (isset($model->consecutivo_menor) && $model->consecutivo_menor !== null && $model->consecutivo_menor !== '') {
+                                    $consecutivo = str_pad((int)$model->consecutivo_menor, 2, '0', STR_PAD_LEFT);
+                                }
+
+                                // ======================= CASO ESPECIAL: "Menor Sin Cédula" =======================
+                                if ($tipoCedula === 'Menor Sin Cédula') {
+
+
+                                    if (!empty($consecutivo)) {
+                                        return '
+                                <div class="cedula-grande-container menor-sin-cedula">
+                                    <div class="cedula-grande-text">
+                                    SIN CÉDULA-' . $numeroCedula . '-<span class="consecutivo-grande">' . $consecutivo . '</span>
+                                    </div>
+                                </div>';
+                                    } else {
+                                        return '
+                                <div class="cedula-grande-container menor-sin-cedula">
+                                    <div class="cedula-grande-text">
+                                    SIN CÉDULA-' . $numeroCedula . '
+                                    </div>
+                                </div>';
+                                    }
+                                }
+
+                                // ======================= CASO 2: CÉDULA NORMAL (V, E, J, P, N, G, M) =======================
+                                if (!empty($numeroCedula) && !empty($tipoCedula) && $tipoCedula !== 'Menor Sin Cédula') {
+                                    // Determinar si es menor de edad
+                                    $esMenorEdad = false;
+                                    $edad = null;
+                                    if (!empty($model->fechanac)) {
+                                        try {
+                                            $fechaNac = new DateTime($model->fechanac);
+                                            $hoy = new DateTime();
+                                            $edad = $fechaNac->diff($hoy)->y;
+                                            $esMenorEdad = ($edad < 18);
+                                        } catch (\Exception $e) {
+                                        }
+                                    }
+
+                                    return '
+                                <div class="cedula-grande-container cedula-normal">
+                                    <div class="cedula-grande-text">
+                                        ' . $tipoCedula . '-' . $numeroCedula . '
+                                    </div>
+                                    ' . ($esMenorEdad ? '<div class="edad-etiqueta">MENOR (' . $edad . ' años)</div>' : '') . '
+                                </div>';
+                                }
+
+                                // ======================= CASO 3: TIPO SIN NÚMERO =======================
+                                if (!empty($tipoCedula) && empty($numeroCedula) && $tipoCedula !== 'Menor Sin Cédula') {
+                                    return '
+                                <div class="cedula-grande-container cedula-pendiente">
+                                    <div class="cedula-grande-text">
+                                        ' . $tipoCedula . '
+                                    </div>
+                                    <div class="estado-etiqueta">PENDIENTE DE NÚMERO</div>
+                                </div>';
+                                }
+
+                                // ======================= CASO 4: SIN INFORMACIÓN =======================
+                                return '
+                            <div class="cedula-grande-container sin-cedula">
+                                <div class="cedula-grande-text">
+                                    SIN REGISTRO
+                                </div>
+                            </div>';
                             },
-                            'format' => 'ntext',
+                            'format' => 'raw',
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'options' => ['style' => 'width: 200px;'],
-                            'contentOptions' => ['class' => 'text-center'],
+                            'options' => ['style' => 'width: 280px; min-width: 280px;'],
+                            'contentOptions' => function ($model) {
+                                $tipo = $model->tipo_cedula ?? '';
+
+                                if ($tipo === 'Menor Sin Cédula') {
+                                    return ['class' => 'text-center bg-menor-sin-cedula'];
+                                }
+
+                                if (!empty($model->cedula)) {
+                                    return ['class' => 'text-center bg-cedula-normal'];
+                                }
+
+                                return ['class' => 'text-center'];
+                            },
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar por cédula',
+                                'placeholder' => 'Buscar por cédula o tipo',
                                 'class' => 'form-control text-center',
                             ],
                         ],
@@ -316,7 +404,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 },
                                 // BOTÓN DE ATENCION
                                 'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
-                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
+                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA' || $rol == 'CONTROL DE CITAS') && $model->clinica_id) {
 
                                         // URLs para pasar a la función JS
                                         $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
@@ -435,3 +523,158 @@ JS;
 
 $this->registerJs($js, View::POS_READY);
 ?>
+<style>
+    /* ESTILOS PARA CÉDULAS - BOOTSTRAP 4 */
+    /* Contenedor principal para todas las cédulas */
+    .cedula-grande-container {
+        text-align: center;
+        padding: 10px 5px;
+        margin: 0;
+    }
+
+    /* Texto principal de cédula - FUENTE GRANDE PARA TODOS */
+    .cedula-grande-text {
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 1.2rem !important;
+        /* 20% más grande que el tamaño base */
+        font-weight: 600;
+        line-height: 1.3;
+        margin-bottom: 4px;
+        letter-spacing: 0.3px;
+    }
+
+    /* Especial: Menor sin cédula - aún más grande */
+    .menor-sin-cedula .cedula-grande-text {
+        font-size: 1.3rem !important;
+        /* 30% más grande */
+        font-weight: 700;
+        color: #e67e22;
+        font-family: 'Courier New', Consolas, monospace;
+        background-color: rgba(255, 152, 0, 0.1);
+        border: 2px solid rgba(255, 152, 0, 0.2);
+        border-radius: 8px;
+        padding: 10px 15px;
+        display: inline-block;
+    }
+
+    /* Consecutivo dentro de menor sin cédula - MUY GRANDE */
+    .menor-sin-cedula .consecutivo-grande {
+        font-size: 1.4rem !important;
+        font-weight: 900;
+        color: #e74c3c;
+        background-color: rgba(231, 76, 60, 0.15);
+        padding: 0 6px;
+        border-radius: 5px;
+        margin: 0 3px;
+    }
+
+    /* Menor con cédula */
+    .menor-con-cedula .cedula-grande-text {
+        color: #f39c12;
+        background-color: rgba(243, 156, 18, 0.1);
+        border: 2px solid rgba(243, 156, 18, 0.2);
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: inline-block;
+    }
+
+    /* Cédula normal (V, E, J, P, N, G) */
+    .cedula-normal .cedula-grande-text {
+        color: #2c3e50;
+        background-color: rgba(52, 152, 219, 0.1);
+        border: 2px solid rgba(52, 152, 219, 0.2);
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: inline-block;
+    }
+
+    /* Cédula pendiente */
+    .cedula-pendiente .cedula-grande-text {
+        color: #7f8c8d;
+        background-color: rgba(127, 140, 141, 0.1);
+        border: 2px dashed rgba(127, 140, 141, 0.3);
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: inline-block;
+    }
+
+    /* Sin cédula */
+    .sin-cedula .cedula-grande-text {
+        color: #e74c3c;
+        background-color: rgba(231, 76, 60, 0.1);
+        border: 2px solid rgba(231, 76, 60, 0.2);
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: inline-block;
+    }
+
+    /* Etiquetas de edad y estado */
+    .edad-etiqueta,
+    .estado-etiqueta {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        background-color: rgba(127, 140, 141, 0.1);
+        padding: 4px 10px;
+        border-radius: 12px;
+        display: inline-block;
+        margin-top: 5px;
+        font-style: italic;
+    }
+
+    /* Fondos para celdas de la tabla */
+    .bg-menor-sin-cedula {
+        background-color: rgba(255, 193, 7, 0.08) !important;
+    }
+
+    .bg-menor-con-cedula {
+        background-color: rgba(243, 156, 18, 0.05) !important;
+    }
+
+    .bg-cedula-normal {
+        background-color: rgba(52, 152, 219, 0.03) !important;
+    }
+
+    /* Efectos hover */
+    tbody tr:hover .bg-menor-sin-cedula {
+        background-color: rgba(255, 193, 7, 0.12) !important;
+    }
+
+    tbody tr:hover .bg-menor-con-cedula {
+        background-color: rgba(243, 156, 18, 0.08) !important;
+    }
+
+    tbody tr:hover .bg-cedula-normal {
+        background-color: rgba(52, 152, 219, 0.06) !important;
+    }
+
+    /* Asegurar que los textos sean visibles */
+    .cedula-grande-text {
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Responsive para pantallas más pequeñas */
+    @media (max-width: 768px) {
+        .cedula-grande-text {
+            font-size: 1.1rem !important;
+        }
+
+        .menor-sin-cedula .cedula-grande-text {
+            font-size: 1.2rem !important;
+            padding: 8px 10px;
+        }
+
+        .menor-sin-cedula .consecutivo-grande {
+            font-size: 1.3rem !important;
+        }
+    }
+
+    /* Para impresión */
+    @media print {
+        .cedula-grande-text {
+            font-size: 11pt !important;
+            color: #000 !important;
+            background-color: transparent !important;
+            border: 1px solid #ccc !important;
+        }
+    }
+</style>

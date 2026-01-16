@@ -15,10 +15,12 @@ use DateTime;
 class UserDatosSearch extends UserDatos
 {
 
-    public $user_datos_type_id; 
+    public $user_datos_type_id;
     public $afiliado_corporativo_id;
     // ADDED: Property to handle the search term for the clinic's name
     public $clinica_nombre;
+    public $consecutivo_menor; // <-- AÑADIR ESTO
+
 
     /**
      * {@inheritdoc}
@@ -27,7 +29,7 @@ class UserDatosSearch extends UserDatos
     {
         return [
             // CORRECCIÓN 1: estatus_solvente debe estar en 'safe' ya que es TEXTO
-            [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
+            [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id', 'consecutivo_menor'], 'integer'],
             // ADDED: 'clinica_nombre' added to the 'safe' array for validation
             [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'clinica_nombre'], 'safe'],
             [['paso'], 'number'],
@@ -73,14 +75,16 @@ class UserDatosSearch extends UserDatos
             'user_datos.clinica_id',
             'user_datos.asesor_id',
             'user_datos.deleted_at',
-            
+            'user_datos.consecutivo_menor', // <-- AGREGAR ESTA LÍNEA
+
+
             // Usar el nombre de la tabla en la DB: 'user_datos_type'
-            'user_datos_type.nombre as userDatosTypeNombre', 
-            
+            'user_datos_type.nombre as userDatosTypeNombre',
+
             // Usar el nombre de la tabla en la DB: 'rm_clinica'
             // (Asumiendo que el modelo de la relación 'clinica' se llama 'RmClinica' y su tabla 'rm_clinica')
-            'rm_clinica.nombre as clinicaNombre', 
-            
+            'rm_clinica.nombre as clinicaNombre',
+
             // Columnas del ASESOR (este ya estaba bien)
             'ud_asesor.nombres as asesorNombres',
             'ud_asesor.apellidos as asesorApellidos',
@@ -100,8 +104,8 @@ class UserDatosSearch extends UserDatos
             'corporativo' // ADDED: Eager load corporativo relation for proper display
         ]);
 
-        if($rol == "Asesor"){
-        $query->where(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
+        if ($rol == "Asesor") {
+            $query->where(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
         }
 
         if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
@@ -114,9 +118,9 @@ class UserDatosSearch extends UserDatos
             'query' => $query,
             'sort' => [
                 'defaultOrder' => [
-                    'id' => SORT_DESC, 
+                    'id' => SORT_DESC,
                 ],
-               
+
             ],
         ]);
 
@@ -152,8 +156,10 @@ class UserDatosSearch extends UserDatos
             'user_datos.asesor_id' => $this->asesor_id,
             'updated_at' => $this->updated_at,
             'user_datos.user_login_id' => $this->user_login_id,
-            'user_datos.user_datos_type_id' => $this->user_datos_type_id, 
+            'user_datos.user_datos_type_id' => $this->user_datos_type_id,
             'user_datos.afiliado_corporativo_id' => $this->afiliado_corporativo_id,
+            'user_datos.consecutivo_menor' => $this->consecutivo_menor, // <-- AGREGAR ESTO
+
         ]);
 
         /*if (isset($this->created_at) && !empty($this->created_at)) {
