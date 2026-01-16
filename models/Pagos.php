@@ -49,16 +49,37 @@ class Pagos extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
-    // En Pagos.php, actualiza la regla para el archivo:
     public function rules()
     {
         return [
             // --- MANDATORY FIELDS ---
-            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago'], 'required'],
-            // ---------------------------------
+            [['metodo_pago', 'fecha_pago', 'monto_pagado'], 'required'],
 
-            // Para nuevos registros, requerir O imagen_prueba_file O imagen_prueba (ya subida)
-            [['imagen_prueba'], 'required', 'on' => 'create', 'message' => 'Comprobante de Pago no puede estar vacío'],
+            // monto_usd is conditionally required - handled in load() and beforeValidate()
+            // For cash dollar, it will be auto-set; for others it will be calculated
+            ['monto_usd', 'required', 'message' => 'El monto en USD es requerido'],
+
+            // For non-cash dollar payments, require tasa
+            ['tasa', 'required', 'when' => function ($model) {
+                return !in_array($model->metodo_pago, ['Zelle', 'Efectivo - Dólar ($)']);
+            }, 'message' => 'La tasa de cambio es requerida para este método de pago'],
+
+            // For non-cash dollar payments, require numero_referencia_pago
+            ['numero_referencia_pago', 'required', 'when' => function ($model) {
+                return $model->metodo_pago !== 'Efectivo - Dólar ($)';
+            }, 'message' => 'El número de referencia es requerido para este método de pago'],
+
+            // For non-cash dollar payments, require comprobante
+            [
+                ['imagen_prueba'],
+                'required',
+                'when' => function ($model) {
+                    return $model->metodo_pago !== 'Efectivo - Dólar ($)';
+                },
+                'on' => 'create',
+                'message' => 'Comprobante de Pago no puede estar vacío'
+            ],
+            // ---------------------------------
 
             [['corporativo_id', 'pago_corporativo_id'], 'integer'],
             [['tipo_pago'], 'string', 'max' => 50],
@@ -189,14 +210,65 @@ class Pagos extends \yii\db\ActiveRecord
     }
 
     /**
+     * Before validate event - CRITICAL for fixing cash dollar payment saves
+     */
+    public function beforeValidate()
+    {
+        if (parent::beforeValidate()) {
+            // For cash dollar payments, ensure values are set BEFORE validation
+            if ($this->metodo_pago === 'Efectivo - Dólar ($)') {
+                // Set tasa to 1 for cash dollar payments
+                if (empty($this->tasa)) {
+                    $this->tasa = 1;
+                    Yii::info("beforeValidate: Set tasa=1 for Efectivo - Dólar ($)");
+                }
+
+                // Set monto_usd = monto_pagado for cash dollar payments
+                if (empty($this->monto_usd) && !empty($this->monto_pagado)) {
+                    $this->monto_usd = $this->monto_pagado;
+                    Yii::info("beforeValidate: Set monto_usd={$this->monto_usd} for Efectivo - Dólar ($)");
+                }
+
+                // Clear fields that shouldn't be required for cash dollar
+                $this->numero_referencia_pago = null;
+                $this->imagen_prueba = null;
+                Yii::info("beforeValidate: Cleared numero_referencia_pago and imagen_prueba for Efectivo - Dólar ($)");
+            } else {
+                // For other payment methods, calculate monto_usd from monto_pagado and tasa
+                if (empty($this->monto_usd) && !empty($this->monto_pagado) && !empty($this->tasa) && $this->tasa > 0) {
+                    $this->monto_usd = round($this->monto_pagado / $this->tasa, 4);
+                    Yii::info("beforeValidate: Calculated monto_usd={$this->monto_usd} for {$this->metodo_pago}");
+                }
+            }
+
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Before save event
      */
     public function beforeSave($insert)
     {
         if (parent::beforeSave($insert)) {
-            // Calcular monto_usd automáticamente si no está establecido
-            if (empty($this->monto_usd) && $this->monto_pagado && $this->tasa) {
-                $this->monto_usd = $this->calcularMontoUsd();
+            // For cash dollar, ensure tasa=1 (double check)
+            if ($this->metodo_pago === 'Efectivo - Dólar ($)') {
+                $this->tasa = 1;
+                // Ensure monto_usd = monto_pagado for cash dollar
+                if (empty($this->monto_usd) || $this->monto_usd != $this->monto_pagado) {
+                    $this->monto_usd = $this->monto_pagado;
+                }
+                Yii::info("beforeSave: Ensured monto_usd={$this->monto_usd}, tasa=1 for Efectivo - Dólar ($)");
+            } else {
+                // For other payment methods, recalculate if needed
+                if (empty($this->monto_usd) && $this->monto_pagado) {
+                    if (in_array($this->metodo_pago, ['Zelle']) && !empty($this->tasa)) {
+                        $this->monto_usd = $this->monto_pagado;
+                    } elseif (!empty($this->tasa) && $this->tasa > 0) {
+                        $this->monto_usd = round($this->monto_pagado / $this->tasa, 4);
+                    }
+                }
             }
 
             // Establecer fecha de registro si es nuevo
@@ -253,6 +325,7 @@ class Pagos extends \yii\db\ActiveRecord
 
         return $estados[$this->estatus] ?? $this->estatus;
     }
+
     /**
      * Obtiene el resumen de pagos para un rango de fechas y estado específico
      * 
@@ -289,6 +362,7 @@ class Pagos extends \yii\db\ActiveRecord
             'total_count' => $result['total_count'] ?? 0
         ];
     }
+
     // Add relations
     public function getCorporativo()
     {
@@ -316,6 +390,7 @@ class Pagos extends \yii\db\ActiveRecord
         $scenarios['update'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'estatus', 'observacion'];
         return $scenarios;
     }
+    
     // In Pagos.php model:
 
     /**
