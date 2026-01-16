@@ -404,7 +404,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 },
                                 // BOTÓN DE ATENCION
                                 'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
-                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA') && $model->clinica_id) {
+                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA' || $rol == 'CONTROL DE CITAS') && $model->clinica_id) {
 
                                         // URLs para pasar a la función JS
                                         $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
