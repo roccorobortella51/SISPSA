@@ -114,13 +114,14 @@ $this->registerJs(
         <i class="fas fa-layer-group me-2"></i> <?= Html::encode($this->title) ?>
     </h1>
 
+
     <div class="d-flex flex-wrap">
         <?= Html::a(
             '<i class="fas fa-file-download me-2"></i> Descargar Plantilla CSV de Ejemplo',
             ['/corporativo/descargar-plantilla'], 
             [
-                'class' => 'btn btn-success btn-lg fw-bold shadow-lg',
-                'style' => 'font-size: 1.4rem; padding: 20px 30px; margin-right: 30px; margin-bottom: 20px;', 
+                'class' => 'btn btn-success btn-lg fw-bold shadow-lg btn-fixed-success',
+                'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;', 
                 'title' => 'Descarga el formato CSV con todas las columnas'
             ]
         ) ?>
@@ -128,8 +129,8 @@ $this->registerJs(
             '<i class="fas fa-list-ul me-2"></i> Descargar Catálogo de Estados',
             ['/corporativo/descargar-catalogo-estados'],
             [
-                'class' => 'btn btn-outline-primary btn-lg fw-bold shadow-sm',
-                'style' => 'font-size: 1.4rem; padding: 20px 30px; margin-right: 30px; margin-bottom: 20px;',
+                'class' => 'btn btn-outline-primary btn-lg fw-bold shadow-sm btn-fixed-primary',
+                'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
                 'title' => 'Descarga un CSV con la lista de estados válidos'
             ]
         ) ?>
@@ -137,8 +138,8 @@ $this->registerJs(
             '<i class="fas fa-user-tie me-2"></i> Descargar Catálogo de Asesores',
             ['/corporativo/descargar-catalogo-asesores'],
             [
-                'class' => 'btn btn-outline-secondary btn-lg fw-bold shadow-sm',
-                'style' => 'font-size: 1.4rem; padding: 20px 30px; margin-bottom: 20px;',
+                'class' => 'btn btn-outline-secondary btn-lg fw-bold shadow-sm btn-fixed-secondary',
+                'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
                 'title' => 'Descarga un CSV con la lista de asesores'
             ]
         ) ?>
@@ -286,7 +287,8 @@ $this->registerJs(
 
         <div class="form-group pt-4 text-center">
             <?= Html::submitButton('<i class="fas fa-paper-plane me-2"></i> Procesar Carga', [
-                'class' => 'btn btn-primary btn-xl shadow-sm',
+                'class' => 'btn btn-success btn-xl shadow-sm',
+                'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
                 'data-confirm' => 'ADVERTENCIA: ¿Está seguro de que desea iniciar la carga masiva? Esto creará nuevos usuarios, contratos y cuotas en el sistema.'
             ]) ?>
         </div>
