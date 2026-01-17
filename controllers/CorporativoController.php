@@ -1005,7 +1005,7 @@ class CorporativoController extends Controller
         $map = UserHelper::getAgenteFuerzaList(); // id => name
         $output = fopen('php://temp', 'r+');
         fwrite($output, "\xEF\xBB\xBF");
-        fputcsv($output, ['id', 'name'], ',');
+        fputcsv($output, ['id', 'Nombre'], ',');
         foreach ($map as $id => $name) {
             fputcsv($output, [$id, $name], ',');
         }
