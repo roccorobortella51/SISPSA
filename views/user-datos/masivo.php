@@ -228,14 +228,113 @@ $this->registerJs($validationJs);
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header d-flex justify-content-between align-items-center">
                 <h1><?= $this->title ;?></h1>
-                <div>
-                    <?= Html::a('<i class="fas fa-download"></i> Descargar Plantilla', ['download-template'], [
-                        'class' => 'btn btn-info btn-lg download-template-btn',
-                        'title' => 'Descargar plantilla Excel de ejemplo'
-                    ]) ?>
+                <div class="d-flex" style="gap: 20px !important;">
+                    <?= Html::a(
+                        '<i class="fas fa-download"></i> Descargar Plantilla de Ejemplo',
+                        ['download-template'],
+                        [
+                            'class' => 'btn btn-outline-success btn-fixed-success',
+                            'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
+                            'title' => 'Descargar plantilla Excel de ejemplo'
+                        ]
+                    ) ?>
+
+                    <?= Html::a(
+                        '<i class="fas fa-user-tie me-2"></i> Descargar Catálogo de Asesores',
+                        ['/corporativo/descargar-catalogo-asesores'],
+                        [
+                            'class' => 'btn btn-outline-secondary btn-lg fw-bold shadow-sm btn-fixed-secondary',
+                            'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
+                            'title' => 'Descarga un CSV con la lista de asesores'
+                        ]
+                    ) ?>
+                    <!--Html::a(
+                        '<i class="fas fa-download"></i> Descargar IDs de Ubicación',
+                        ['download-location-ids'],
+                        [
+                            'class' => 'btn btn-outline-primary btn-fixed-primary',
+                            'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;',
+                            'title' => 'Descargar Excel con IDs de estados, municipios, parroquias y ciudades'
+                        ]
+                    )-->
                 </div>
             </div>
             <div class="ms-panel-body">
+                <div class="alert mb-4" style="background: #e0f7fa; color: #166534; border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(22,101,52,0.07);">
+                    <h5><i class="fas fa-question-circle"></i> Ayuda para IDs de Ubicación</h5>
+                    <p>Utiliza los siguientes selectores para consultar los <b>IDs</b> de Estado, Municipio, Parroquia y Ciudad que debes colocar en la plantilla Excel de carga masiva. Selecciona un Estado para ver sus Municipios, luego un Municipio para ver sus Parroquias, y así sucesivamente. El número que aparece junto al nombre es el <b>ID</b> que debes usar.</p>
+                    <div class="row">
+<?php
+$estadosList = \app\components\UserHelper::getEstadosList();
+foreach ($estadosList as $id => $nombre) {
+    $estadosList[$id] = $nombre . ' (ID: ' . $id . ')';
+}
+?>
+<div class="col-md-3">
+    <?= \kartik\select2\Select2::widget([
+        'name' => 'estado_id_help',
+        'data' => $estadosList,
+        'options' => [
+            'id' => 'estado_id_help',
+            'placeholder' => 'Seleccione Estado',
+            'class' => 'form-control form-control-lg',
+        ],
+        'pluginOptions' => [
+            'allowClear' => true,
+        ],
+    ]) ?>
+</div>
+<div class="col-md-3">
+    <?= \kartik\depdrop\DepDrop::widget([
+        'name' => 'municipio_id_help',
+        'type' => \kartik\depdrop\DepDrop::TYPE_SELECT2,
+        'options' => [
+            'id' => 'municipio_id_help',
+            'placeholder' => 'Seleccione Municipio',
+            'class' => 'form-control form-control-lg',
+        ],
+        'pluginOptions' => [
+            'depends' => ['estado_id_help'],
+            'url' => \yii\helpers\Url::to(['/site/municipio-ids']),
+            'initialize' => false,
+        ],
+    ]) ?>
+</div>
+<div class="col-md-3">
+    <?= \kartik\depdrop\DepDrop::widget([
+        'name' => 'parroquia_id_help',
+        'type' => \kartik\depdrop\DepDrop::TYPE_SELECT2,
+        'options' => [
+            'id' => 'parroquia_id_help',
+            'placeholder' => 'Seleccione Parroquia',
+            'class' => 'form-control form-control-lg',
+        ],
+        'pluginOptions' => [
+            'depends' => ['municipio_id_help'],
+            'url' => \yii\helpers\Url::to(['/site/parroquia-ids']),
+            'initialize' => false,
+        ],
+    ]) ?>
+</div>
+<div class="col-md-3">
+    <?= \kartik\depdrop\DepDrop::widget([
+        'name' => 'ciudad_id_help',
+        'type' => \kartik\depdrop\DepDrop::TYPE_SELECT2,
+        'options' => [
+            'id' => 'ciudad_id_help',
+            'placeholder' => 'Seleccione Ciudad',
+            'class' => 'form-control form-control-lg',
+        ],
+        'pluginOptions' => [
+            'depends' => ['estado_id_help'],
+            'url' => \yii\helpers\Url::to(['/site/ciudad-ids']),
+            'initialize' => false,
+        ],
+    ]) ?>
+</div>
+                    </div>
+                    <small class="text-muted">El valor que aparece entre paréntesis o junto al nombre es el <b>ID</b> que debes colocar en la plantilla Excel.</small>
+                </div>
                 <?php
                 // Mostrar reporte de validación si existe
                 if (Yii::$app->session->hasFlash('error')) {
@@ -283,7 +382,7 @@ $this->registerJs($validationJs);
                             ])->label('Clinica'); ?>
                     </div>
                     <div class="col-md-6">
-                        <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [ // <-- ¡VERIFICA EL MODELO!
+                        <?= $form->field($modelContrato, 'plan_id')->widget(DepDrop::classname(), [
                             'type' => DepDrop::TYPE_SELECT2,
                             'options'=>[
                                 'id'=>'plan_id',
@@ -298,87 +397,140 @@ $this->registerJs($validationJs);
                             ])->label('Plan');
                             ?>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <?= $form->field($modelContrato, 'fecha_ini')->textInput([
-                                        'class' => 'form-control form-control-lg',
-                                        'type' => 'date',
-                                        'placeholder' => 'Seleccione su fecha de nacimiento'
-                                    ])->label('Fecha de Inicio') ?>
+                            'class' => 'form-control form-control-lg fecha-ini-field',
+                            'type' => 'date',
+                            'required' => true,
+                        ])->label('<i class="fas fa-calendar-alt me-2"></i> Fecha de Inicio de contratos', [
+                            'class' => 'fw-bold text-dark mb-2',
+                            'encode' => false
+                        ]) ?>
                     </div>
-                    <div class="col-md-4">
-                            <?= $form->field($modelContrato, 'fecha_ven')->textInput([
-                                        'class' => 'form-control form-control-lg',
-                                        'type' => 'date',
-                                        'placeholder' => 'Seleccione su fecha de nacimiento'
-                                    ])->label('Fecha de Vencimiento') ?>
-                    </div>
-                    <div class="col-md-4">
-                        <?= $form->field($modelContrato, 'monto')->textInput([
-                            'class' => 'form-control  form-control-lg', 
-                            'type' => 'number',
-                            'readonly' => true, // Monto se calcula automáticamente
-                            ]) ?>
+                    <div class="col-md-6 fecha-ven-container" style="display: none;">
+                        <?= $form->field($modelContrato, 'fecha_ven')->textInput([
+                            'class' => 'form-control form-control-lg fecha-ven-field',
+                            'type' => 'date',
+                            'required' => true,
+                        ])->label('<i class="fas fa-calendar-check me-2"></i> Fecha de Vencimiento de contratos', [
+                            'class' => 'fw-bold text-dark mb-2',
+                            'encode' => false
+                        ]) ?>
                     </div>
                 </div>
+                <?php
+                $this->registerJs(<<<JS
+                function calcularFechaVencimiento(fechaIni) {
+                    if (fechaIni) {
+                        var parts = fechaIni.split('-');
+                        var year = parseInt(parts[0]);
+                        var month = parseInt(parts[1]) - 1;
+                        var day = parseInt(parts[2]);
+                        var fecha = new Date(year, month, day);
+                        fecha.setFullYear(fecha.getFullYear() + 1);
+                        var newYear = fecha.getFullYear();
+                        var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
+                        var newDay = String(fecha.getDate()).padStart(2, '0');
+                        return newYear + '-' + newMonth + '-' + newDay;
+                    }
+                    return '';
+                }
+                function toggleFechaVen() {
+                    var fechaIni = $('.fecha-ini-field').val();
+                    var fechaVenContainer = $('.fecha-ven-container');
+                    if (fechaIni) {
+                        fechaVenContainer.show();
+                        var fechaVen = calcularFechaVencimiento(fechaIni);
+                        $('.fecha-ven-field').val(fechaVen);
+                    } else {
+                        fechaVenContainer.hide();
+                        $('.fecha-ven-field').val('');
+                    }
+                }
+                $(function() {
+                    toggleFechaVen();
+                    $('.fecha-ini-field').on('change', function() {
+                        toggleFechaVen();
+                    });
+                });
+                JS
+                );
+                ?>
                 <div class  = "row">
                     <div class="col-md-12">
                         <h1>Archivo de Datos del Afiliado</h1>
                     </div>
                 </div>
+                
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="alert alert-info">
-                            <h5><i class="fas fa-info-circle"></i> Información sobre el archivo Excel</h5>
-                            <p><strong>Formato requerido:</strong> El archivo debe tener las siguientes columnas:</p>
-                            <ul>
-                                <li><strong>A:</strong> Email (obligatorio, formato válido)</li>
-                                <li><strong>B:</strong> Teléfono (obligatorio, formato venezolano)</li>
-                                <li><strong>C:</strong> Nombres (obligatorio, mínimo 2 caracteres)</li>
-                                <li><strong>D:</strong> Apellidos (obligatorio, mínimo 2 caracteres)</li>
-                                <li><strong>E:</strong> Tipo Cédula (obligatorio: V, E, P, J)</li>
-                                <li><strong>F:</strong> Cédula (obligatorio, 6-10 dígitos numéricos)</li>
-                                <li><strong>G:</strong> Fecha Nacimiento (obligatorio, formato DD/MM/YYYY)</li>
-                                <li><strong>H:</strong> Sexo (obligatorio: M, F, Masculino, Femenino)</li>
-                                <li><strong>I:</strong> Tipo Sangre (opcional: A+, A-, B+, B-, AB+, AB-, O+, O-)</li>
-                                <li><strong>J:</strong> Estado ID (opcional, ID numérico)</li>
-                                <li><strong>K:</strong> Municipio ID (opcional, ID numérico)</li>
-                                <li><strong>L:</strong> Parroquia ID (opcional, ID numérico)</li>
-                                <li><strong>M:</strong> Ciudad ID (opcional, ID numérico)</li>
-                                <li><strong>N:</strong> Dirección (obligatorio, mínimo 10 caracteres)</li>
-                            </ul>
-                            <p><strong>Nota:</strong> La primera fila debe contener los encabezados. Descarga la plantilla de ejemplo para ver el formato correcto.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <?= $form->field($model, 'masivoFile')->widget(FileInput::classname(),[
-                                'name' => 'attachments',
-                                'pluginOptions' => [
-                                    'browseClass' => 'btn btn-primary',
-                                        'removeClass' => 'btn btn-secondary',
-                                        'removeIcon' => '<i class="fas fa-trash"></i> ',
-                                        'showUpload' => false,
-                                        'showCancel' => false,
-                                        'previewFileType' => 'image',
-                                        'maxFileSize' => 2800,
-                                        'previewSettings' => [
-                                            'image' => ['width' => '150px', 'height' => 'auto'],
-                                        ],
-                                        //'initialPreview' => $initialPreview,
-                                        //'initialPreviewAsData' => true,
-                                        //'initialPreviewConfig' => $initialPreviewConfig,
-                                        //'overwriteInitial' => true,
-                                        //'layoutTemplates' => [
-                                        //    'preview' => '<div class="file-preview {class}" style="width: 200px;"></div>',
-                                        //],
-                                    ],
-                                    'options' => [
-                                        //'disabled' => $disabled,
-                                    ],
-                                    ])->label(false);
-                            ?>    
-                    </div>
-                </div>
-                <div class="form-group text-end mt-4"> <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg me-2']) ?> <?= Html::a('Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-warning btn-lg']); ?>
+    <div class="col-md-6">
+        <div class="alert alert-info" style="font-size: 1.18rem; line-height: 1.7;">
+            <h5 style="font-size: 1.35rem;"><i class="fas fa-info-circle"></i> Instrucciones para llenar el archivo Excel</h5>
+            <ul style="font-size: 1.18rem;">
+                <li><b>Email:</b> Obligatorio. Debe ser un correo electrónico válido.</li>
+                <li><b>Teléfono:</b> Obligatorio. Solo números, puede incluir guiones.</li>
+                <li><b>Nombres y Apellidos:</b> Obligatorio. Mínimo 2 caracteres.</li>
+                <li><b>Tipo Cédula:</b> Obligatorio. Valores permitidos: V, E, P, J.</li>
+                <li><b>Cédula:</b> Obligatorio. Solo números, entre 6 y 10 dígitos.</li>
+                <li><b>Fecha Nacimiento:</b> Obligatorio. Formato DD/MM/AAAA.</li>
+                <li><b>Sexo:</b> Obligatorio. Valores permitidos: M, F, Masculino, Femenino.</li>
+                <li><b>Tipo Sangre:</b> Opcional. Valores: A+, A-, B+, B-, AB+, AB-, O+, O-.</li>
+                <li><b>Nacionalidad:</b> Obligatorio.</li>
+                <li><b>Estado Civil:</b> Obligatorio. Valores: Soltero, Casado, Divorciado, Viudo.</li>
+                <li><b>Estado, Municipio, Parroquia, Ciudad:</b> Obligatorio. Debe colocar el <b>ID</b> correspondiente (ver ayuda de IDs de ubicación).</li>
+                <li><b>Dirección:</b> Obligatorio. Mínimo 10 caracteres.</li>
+                <li><b>Profesión:</b> Opcional. Ejemplo: Ingeniero, Abogado, Médico.</li>
+                <li><b>Ocupación:</b> Opcional. Ejemplo: Empleado, Empresario, Independiente.</li>
+                <li><b>Actividad Económica:</b> Obligatorio. Valores permitidos: <b>Industrial</b>, <b>Comercial</b>, <b>Profesional</b>, <b>Gubernamental</b>.</li>
+                <li><b>Ramo Comercial:</b> Opcional. Ejemplo: Alimentos, Construcción, Tecnología.</li>
+                <li><b>Descripción Actividad:</b> Obligatorio. Valores permitidos: <b>Independiente</b>, <b>Dependiente</b>, <b>Societaria</b>.</li>
+                <li><b>Dirección Oficina:</b> Opcional. Dirección física de la oficina.</li>
+                <li><b>Dirección Cobro:</b> Opcional. Dirección donde se realiza el cobro.</li>
+                <li><b>Teléfono Residencia:</b> Opcional. Número de teléfono fijo de la residencia.</li>
+                <li><b>Teléfono Oficina:</b> Opcional. Número de teléfono fijo de la oficina.</li>
+                <li><b>Teléfono Celular:</b> Opcional. Número de teléfono móvil.</li>
+                <li><b>ID Asesor:</b> Obligatorio. Debe colocar el ID del agente/asesor (consulte la lista de asesores).</li>
+            </ul>
+            <p style="font-size: 1.15rem;"><b>Nota:</b> La primera fila debe contener los encabezados. Descargue la plantilla de ejemplo para ver el formato correcto y consulte la ayuda de IDs de ubicación para los campos de Estado, Municipio, Parroquia y Ciudad.</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <?= $form->field($model, 'masivoFile')->widget(FileInput::classname(),[
+                'name' => 'attachments',
+                'pluginOptions' => [
+                    'browseClass' => 'btn btn-lg',
+                    'browseIcon' => '<i class="fas fa-folder-open"></i> ',
+                    'browseLabel' => 'Examinar archivo',
+                    'browseStyle' => 'background: #b9fbc0; color: #166534; font-weight: bold; border-radius: 10px; box-shadow: 0 2px 12px rgba(22,101,52,0.12); padding: 22px 90px; border: none; font-size: 1.22rem; letter-spacing: 0.5px; min-width: 480px; max-width: 100%;',
+                    'removeClass' => 'btn btn-lg w-100',
+                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                    'removeLabel' => 'Quitar',
+                    'removeStyle' => 'background: #ffe5e5; color: #b91c1c; font-weight: bold; border-radius: 10px; box-shadow: 0 2px 8px rgba(185,28,28,0.08); padding: 16px 32px; border: none; font-size: 1.15rem; letter-spacing: 0.5px;',
+                    'showUpload' => false,
+                    'showCancel' => false,
+                    'previewFileType' => 'image',
+                    'maxFileSize' => 2800,
+                    'previewSettings' => [
+                        'image' => ['width' => '150px', 'height' => 'auto'],
+                    ],
+                ],
+                'options' => [
+                    //'disabled' => $disabled,
+                ],
+            ])->label(false);
+        ?>    
+    </div>
+</div>
+
+                <div class="form-group mt-4 d-flex justify-content-center" style="gap: 20px !important;">
+                    <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', [
+                        'class' => 'btn btn-outline-success btn-fixed-success',
+                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+                    ]) ?>
+                    <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'clinica_id' => $model->clinica_id], [
+                        'class' => 'btn btn-danger',
+                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+                    ]) ?>
                 </div>
                 <?php ActiveForm::end(); ?>
             </div>

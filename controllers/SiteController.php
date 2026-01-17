@@ -307,4 +307,62 @@ class SiteController extends Controller
     }
 }
 
+ /**
+     * Endpoint para municipios con nombre e ID para ayuda masivo
+     */
+    public function actionMunicipioIds() {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $parents = Yii::$app->request->post('depdrop_parents');
+        $out = [];
+        if ($parents && isset($parents[0])) {
+            $estado_id = $parents[0];
+            $municipios = \app\models\RmMunicipio::find()->orderBy(['nombre' => SORT_ASC])->where(['estado_codigo' => $estado_id])->all();
+            $out = [];
+            foreach ($municipios as $muni) {
+                $out[] = [
+                    'id' => $muni->codigo_muni,
+                    'name' => $muni->nombre . ' (ID: ' . $muni->id . ')'
+                ];
+            }
+        }
+        return ['output' => $out, 'selected' => ''];
+    }
+
+    /**
+     * Endpoint para parroquias con nombre e ID para ayuda masivo
+     */
+    public function actionParroquiaIds() {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $parents = Yii::$app->request->post('depdrop_parents');
+        $out = [];
+        if ($parents && isset($parents[0])) {
+            $municipio_codigo = $parents[0];
+            $parroquias = \app\models\RmParroquia::find()->where(['muni_codigo' => $municipio_codigo])->orderBy(['nombre' => SORT_ASC])->all();
+            foreach ($parroquias as $parro) {
+                $out[] = [
+                    'id' => $parro->id,
+                    'name' => $parro->nombre . ' (ID: ' . $parro->id . ')'
+                ];
+            }
+        }
+        return ['output' => $out, 'selected' => ''];
+    }
+
+    /**
+     * Endpoint para ciudades con nombre e ID para ayuda masivo
+     */
+    public function actionCiudadIds() {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $parents = Yii::$app->request->post('depdrop_parents');
+        $out = [];
+        if ($parents && isset($parents[0])) {
+            $estado_id = $parents[0];
+            $ciudades = \app\models\RmCiudad::find()->where(['estado_codigo' => $estado_id])->orderBy(['nombre' => SORT_ASC])->all();
+            foreach ($ciudades as $ciudad) {
+                $out[] = ['id' => $ciudad->id, 'name' => $ciudad->nombre . ' (ID: ' . $ciudad->id . ')'];
+            }
+        }
+        return ['output' => $out, 'selected' => ''];
+    }
+
 }
