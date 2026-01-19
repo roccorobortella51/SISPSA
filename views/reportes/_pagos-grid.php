@@ -177,7 +177,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
             <!-- Tabla de Detalle Ajustada -->
             <div class="ms-card border-0 shadow-lg p-0 ms-fade-in" style="animation-delay: 0.1s;">
                 <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="ms-table ms-table-striped mb-0" style="min-width: 1100px;">
+                    <table class="ms-table ms-table-striped mb-0" style="min-width: 1300px;">
                         <thead style="position: sticky; top: 0; z-index: 10;">
                             <tr style="background: linear-gradient(135deg, #2c3e50 0%, #4a6491 100%) !important;">
                                 <th class="text-center py-3" style="width: 50px; border-right: 2px solid rgba(255,255,255,0.2);">
@@ -207,6 +207,20 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-money-bill-wave me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Monto (Bs.)</span>
+                                    </div>
+                                </th>
+                                <!-- Nueva Columna: Monto en USD -->
+                                <th class="text-center py-3" style="width: 150px; border-right: 2px solid rgba(255,255,255,0.2);">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-dollar-sign me-2 text-white" style="font-size: 1.3rem;"></i>
+                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Monto ($)</span>
+                                    </div>
+                                </th>
+                                <!-- Nueva Columna: Tasa de Cambio -->
+                                <th class="text-center py-3" style="width: 140px; border-right: 2px solid rgba(255,255,255,0.2);">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-exchange-alt me-2 text-white" style="font-size: 1.3rem;"></i>
+                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Tasa Cambio</span>
                                     </div>
                                 </th>
                                 <th class="text-center py-3" style="width: 140px; border-right: 2px solid rgba(255,255,255,0.2);">
@@ -239,10 +253,17 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                             <?php
                             $models = $dataProvider->getModels();
                             $totalMonto = 0;
+                            $totalMontoUSD = 0;
                             $consecutivo = ($dataProvider->pagination ? ($dataProvider->pagination->page * $dataProvider->pagination->pageSize) : 0) + 1;
 
                             foreach ($models as $model):
                                 $totalMonto += $model->monto_usd;
+                                $totalMontoUSD += $model->monto_pagado;
+                                // Calcular tasa de cambio si ambos montos están disponibles
+                                $tasaCambio = 0;
+                                if ($model->monto_pagado > 0 && $model->monto_usd > 0) {
+                                    $tasaCambio = $model->monto_usd / $model->monto_pagado;
+                                }
                             ?>
                                 <tr class="ms-slide-in" style="animation-delay: <?= $consecutivo * 0.02 ?>s; border-bottom: 1px solid #f8f9fa;">
                                     <!-- Número Consecutivo -->
@@ -297,15 +318,39 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                         </div>
                                     </td>
 
-                                    <!-- Monto -->
+                                    <!-- Monto en Bs. -->
                                     <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
                                         <div class="d-flex flex-column align-items-center justify-content-center h-100">
                                             <span class="display-6 fw-bold text-success mb-1" style="font-size: 1.4rem !important;">
                                                 <?= Yii::$app->formatter->asCurrency($model->monto_usd, 'VES') ?>
                                             </span>
-                                            <small class="ms-body-sm text-muted" style="font-size: 1.1rem !important;">
-                                                <?= Yii::$app->formatter->asCurrency($model->monto_usd, 'USD') ?>
-                                            </small>
+                                        </div>
+                                    </td>
+
+                                    <!-- Nueva Columna: Monto en USD -->
+                                    <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
+                                        <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                                            <span class="display-6 fw-bold text-primary mb-1" style="font-size: 1.4rem !important;">
+                                                <?= Yii::$app->formatter->asCurrency($model->monto_pagado, 'USD') ?>
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    <!-- Nueva Columna: Tasa de Cambio -->
+                                    <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
+                                        <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                                            <?php if ($tasaCambio > 0): ?>
+                                                <span class="ms-body-lg fw-bold mb-1" style="font-size: 1.3rem !important; color: #6f42c1;">
+                                                    <?= number_format($tasaCambio, 2) ?> Bs./$
+                                                </span>
+                                                <small class="ms-body-sm text-muted" style="font-size: 1.1rem !important;">
+                                                    Tasa aplicada
+                                                </small>
+                                            <?php else: ?>
+                                                <span class="ms-body-lg fw-bold mb-1" style="font-size: 1.3rem !important; color: #6c757d;">
+                                                    N/A
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
 
@@ -426,17 +471,47 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="text-center py-3" colspan="2">
+                                    <!-- Total en Bolívares -->
+                                    <td class="text-center py-3">
                                         <div class="d-flex flex-column align-items-center">
                                             <h2 class="mb-1 fw-bold" style="color: #ffffff; font-size: 1.8rem !important;">
                                                 <?= Yii::$app->formatter->asCurrency($totalMonto, 'VES') ?>
                                             </h2>
                                             <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
-                                                Monto Total
+                                                Total Bs.
                                             </p>
                                         </div>
                                     </td>
-                                    <td class="text-center py-3" colspan="3">
+                                    <!-- Total en USD -->
+                                    <td class="text-center py-3">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <h2 class="mb-1 fw-bold" style="color: #ffffff; font-size: 1.8rem !important;">
+                                                <?= Yii::$app->formatter->asCurrency($totalMontoUSD, 'USD') ?>
+                                            </h2>
+                                            <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
+                                                Total USD
+                                            </p>
+                                        </div>
+                                    </td>
+                                    <!-- Promedio Tasa de Cambio -->
+                                    <td class="text-center py-3">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <?php
+                                            $promedioTasa = 0;
+                                            if ($totalMontoUSD > 0 && $totalMonto > 0) {
+                                                $promedioTasa = $totalMonto / $totalMontoUSD;
+                                            }
+                                            ?>
+                                            <h2 class="mb-1 fw-bold" style="color: #ffffff; font-size: 1.8rem !important;">
+                                                <?= number_format($promedioTasa, 2) ?> Bs./$
+                                            </h2>
+                                            <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
+                                                Tasa Promedio
+                                            </p>
+                                        </div>
+                                    </td>
+                                    <!-- Distribución por Estado -->
+                                    <td class="text-center py-3" colspan="4">
                                         <div class="d-flex justify-content-center align-items-center h-100">
                                             <div class="d-flex gap-4">
                                                 <div class="text-center">

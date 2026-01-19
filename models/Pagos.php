@@ -53,7 +53,7 @@ class Pagos extends \yii\db\ActiveRecord
     {
         return [
             // --- MANDATORY FIELDS ---
-            [['metodo_pago', 'fecha_pago', 'monto_pagado'], 'required'],
+            [['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa'], 'required'], // Added tasa to required fields
 
             // monto_usd is conditionally required - handled in load() and beforeValidate()
             // For cash dollar, it will be auto-set; for others it will be calculated
@@ -191,7 +191,7 @@ class Pagos extends \yii\db\ActiveRecord
     public function calcularMontoUsd()
     {
         if ($this->monto_pagado && $this->tasa && $this->tasa > 0) {
-            return $this->monto_pagado / $this->tasa;
+            return $this->monto_pagado * $this->tasa; // Changed from division to multiplication
         }
         return $this->monto_pagado;
     }
@@ -204,7 +204,7 @@ class Pagos extends \yii\db\ActiveRecord
     public function calcularMontoBs()
     {
         if ($this->monto_pagado && $this->tasa) {
-            return $this->monto_pagado * $this->tasa;
+            return $this->monto_pagado / $this->tasa; // Changed from multiplication to division
         }
         return $this->monto_pagado;
     }
@@ -215,30 +215,18 @@ class Pagos extends \yii\db\ActiveRecord
     public function beforeValidate()
     {
         if (parent::beforeValidate()) {
-            // For cash dollar payments, ensure values are set BEFORE validation
+            // For ALL payment methods including cash dollar, use the same logic
+            // Calculate monto_usd from monto_pagado and tasa
+            if (empty($this->monto_usd) && !empty($this->monto_pagado) && !empty($this->tasa) && $this->tasa > 0) {
+                $this->monto_usd = round($this->monto_pagado * $this->tasa, 4);
+                Yii::info("beforeValidate: Calculated monto_usd={$this->monto_usd} for {$this->metodo_pago}");
+            }
+
+            // Clear fields that shouldn't be required for cash dollar
             if ($this->metodo_pago === 'Efectivo - Dólar ($)') {
-                // Set tasa to 1 for cash dollar payments
-                if (empty($this->tasa)) {
-                    $this->tasa = 1;
-                    Yii::info("beforeValidate: Set tasa=1 for Efectivo - Dólar ($)");
-                }
-
-                // Set monto_usd = monto_pagado for cash dollar payments
-                if (empty($this->monto_usd) && !empty($this->monto_pagado)) {
-                    $this->monto_usd = $this->monto_pagado;
-                    Yii::info("beforeValidate: Set monto_usd={$this->monto_usd} for Efectivo - Dólar ($)");
-                }
-
-                // Clear fields that shouldn't be required for cash dollar
                 $this->numero_referencia_pago = null;
                 $this->imagen_prueba = null;
                 Yii::info("beforeValidate: Cleared numero_referencia_pago and imagen_prueba for Efectivo - Dólar ($)");
-            } else {
-                // For other payment methods, calculate monto_usd from monto_pagado and tasa
-                if (empty($this->monto_usd) && !empty($this->monto_pagado) && !empty($this->tasa) && $this->tasa > 0) {
-                    $this->monto_usd = round($this->monto_pagado / $this->tasa, 4);
-                    Yii::info("beforeValidate: Calculated monto_usd={$this->monto_usd} for {$this->metodo_pago}");
-                }
             }
 
             return true;
@@ -246,29 +234,14 @@ class Pagos extends \yii\db\ActiveRecord
         return false;
     }
 
-    /**
-     * Before save event
-     */
+    // Also update the beforeSave() method:
     public function beforeSave($insert)
     {
         if (parent::beforeSave($insert)) {
-            // For cash dollar, ensure tasa=1 (double check)
-            if ($this->metodo_pago === 'Efectivo - Dólar ($)') {
-                $this->tasa = 1;
-                // Ensure monto_usd = monto_pagado for cash dollar
-                if (empty($this->monto_usd) || $this->monto_usd != $this->monto_pagado) {
-                    $this->monto_usd = $this->monto_pagado;
-                }
-                Yii::info("beforeSave: Ensured monto_usd={$this->monto_usd}, tasa=1 for Efectivo - Dólar ($)");
-            } else {
-                // For other payment methods, recalculate if needed
-                if (empty($this->monto_usd) && $this->monto_pagado) {
-                    if (in_array($this->metodo_pago, ['Zelle']) && !empty($this->tasa)) {
-                        $this->monto_usd = $this->monto_pagado;
-                    } elseif (!empty($this->tasa) && $this->tasa > 0) {
-                        $this->monto_usd = round($this->monto_pagado / $this->tasa, 4);
-                    }
-                }
+            // For ALL payment methods, recalculate monto_usd if needed
+            if (empty($this->monto_usd) && $this->monto_pagado && !empty($this->tasa) && $this->tasa > 0) {
+                $this->monto_usd = round($this->monto_pagado * $this->tasa, 4);
+                Yii::info("beforeSave: Calculated monto_usd={$this->monto_usd} for {$this->metodo_pago} with tasa={$this->tasa}");
             }
 
             // Establecer fecha de registro si es nuevo

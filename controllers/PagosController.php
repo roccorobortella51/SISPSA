@@ -201,16 +201,11 @@ class PagosController extends Controller
                 Yii::info("=== MODEL LOADED FROM POST ===");
                 Yii::info("Model attributes after load: " . print_r($model->attributes, true));
 
-                // CRITICAL: Initialize values for Efectivo - Dólar ($) IMMEDIATELY after load()
-                // This is BEFORE validation to avoid "required" field errors
-                if ($model->metodo_pago === 'Efectivo - Dólar ($)') {
-                    $model->tasa = 1; // Set tasa to 1 for cash dollar
-
-                    // Set monto_usd = monto_pagado for cash dollar
-                    if (empty($model->monto_usd) && !empty($model->monto_pagado)) {
-                        $model->monto_usd = $model->monto_pagado;
-                    }
-                    Yii::info("Post-load init: Cash Dollar payment - tasa=1, monto_usd={$model->monto_usd}");
+                // For ALL payment methods, calculate monto_usd using the same formula
+                // monto_usd = monto_pagado × tasa
+                if (!empty($model->monto_pagado) && !empty($model->tasa) && $model->tasa > 0) {
+                    $model->monto_usd = round($model->monto_pagado * $model->tasa, 4);
+                    Yii::info("Post-load: Calculated monto_usd={$model->monto_usd} for {$model->metodo_pago} with tasa={$model->tasa}");
                 }
 
                 // --- ADDED POST HANDLING LOGIC: START ---
@@ -433,13 +428,20 @@ class PagosController extends Controller
         $model->scenario = 'update'; // SET THE UPDATE SCENARIO
         $model->tasa = number_format($tasa_completa, 2, '.', '');
 
+        // Calculate monto_usd based on the new formula for existing records
+        if (!empty($model->monto_pagado) && !empty($model->tasa)) {
+            $model->monto_usd = round($model->monto_pagado * $model->tasa, 4);
+        }
+
         $oldImagePath = $model->imagen_prueba;
         $tempFilePath = null;
 
         if ($this->request->isPost && $model->load($this->request->post())) {
-            // For cash dollar payments, set tasa to 1
-            if ($model->metodo_pago === 'Efectivo - Dólar ($)') {
-                $model->tasa = 1;
+            // For ALL payment methods, calculate monto_usd using the same formula
+            // monto_usd = monto_pagado × tasa
+            if (!empty($model->monto_pagado) && !empty($model->tasa) && $model->tasa > 0) {
+                $model->monto_usd = round($model->monto_pagado * $model->tasa, 4);
+                Yii::info("Update: Calculated monto_usd={$model->monto_usd} for {$model->metodo_pago} with tasa={$model->tasa}");
             }
 
             $folder = 'Pago';
