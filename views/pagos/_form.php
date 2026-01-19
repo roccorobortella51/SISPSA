@@ -36,7 +36,7 @@ $(function() {
     function updateMontoBs() {
         var montoUsd = parseFloat($('#pagos-monto_pagado').val()) || 0;
         var tasa = parseFloat($('#pagos-tasa').val()) || 0;
-        var montoBs = montoUsd * tasa;
+        var montoBs = montoUsd * tasa; // Multiplication, not division
         $('#pagos-monto_usd').val(montoBs.toFixed(4));
     }
     
