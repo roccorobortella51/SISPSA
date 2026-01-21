@@ -56,6 +56,16 @@ $currentRoute = Yii::$app->controller->getRoute();
         <?= $form->field($model, 'id')->hiddenInput(['id' => 'userdatos-id'])->label(false) ?>
     <?php endif; ?>
 
+    <!-- Hidden fields for plan data -->
+    <?= $form->field($model, 'moneda')->hiddenInput(['id' => 'userdatos-moneda'])->label(false) ?>
+    <?= $form->field($model, 'deducible')->hiddenInput(['id' => 'userdatos-deducible'])->label(false) ?>
+    <?= $form->field($model, 'limite_cobertura')->hiddenInput(['id' => 'userdatos-limite_cobertura_raw'])->label(false) ?>
+    <?= $form->field($model, 'cobertura_maternidad')->hiddenInput(['id' => 'userdatos-cobertura_maternidad'])->label(false) ?>
+
+    <!-- Hidden fields for maternity data (will be filled when plan provides or user enters) -->
+    <?= $form->field($model, 'deducible_maternidad')->hiddenInput(['id' => 'userdatos-deducible_maternidad'])->label(false) ?>
+    <?= $form->field($model, 'limite_cobertura_maternidad')->hiddenInput(['id' => 'userdatos-limite_cobertura_maternidad'])->label(false) ?>
+
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="tab13">
 
@@ -311,34 +321,70 @@ $currentRoute = Yii::$app->controller->getRoute();
                     </div>
 
                     <div class="row">
+                        <!-- Plan Name - Takes 1/3 of the row -->
                         <div class="col-md-4 field-with-icon">
-
-                            <?= $form->field($model, 'moneda')->textInput(['class' => 'form-control form-control-lg']) ?>
+                            <div class="form-group field-plan-name-display">
+                                <label class="control-label">Nombre del Plan</label>
+                                <input type="text" class="form-control form-control-lg bg-light"
+                                    id="plan_name_display"
+                                    value="<?=
+                                            // For existing records, show the plan name from the contract
+                                            (!$model->isNewRecord && $modelContrato && $modelContrato->plan) ?
+                                                htmlspecialchars($modelContrato->plan->nombre) :
+                                                'Seleccione un plan en la sección anterior'
+                                            ?>"
+                                    readonly>
+                                <small class="form-text text-muted">Este es el plan que se asignará al afiliado</small>
+                            </div>
                         </div>
-                        <div class="col-md-4 field-with-icon">
 
-                            <?= $form->field($model, 'deducible')->textInput(['class' => 'form-control form-control-lg']) ?>
+                        <!-- Coverage Limit - Takes 1/3 of the row -->
+                        <div class="col-md-4 field-with-icon">
+                            <div class="form-group field-userdatos-limite_cobertura">
+                                <label class="control-label" for="userdatos-limite_cobertura">Límite de Cobertura</label>
+                                <input type="text" id="userdatos-limite_cobertura" class="form-control form-control-lg"
+                                    value="<?= is_numeric($model->limite_cobertura) ? Yii::$app->formatter->asCurrency($model->limite_cobertura, 'USD') : '$0.00' ?>"
+                                    readonly>
+                                <div class="help-block"></div>
+                            </div>
                         </div>
-                        <div class="col-md-4 field-with-icon">
 
-                            <?= $form->field($model, 'limite_cobertura')->textInput(['class' => 'form-control form-control-lg', 'readonly' => true]) ?>
+                        <!-- Maternity Coverage Checkbox - Takes 1/3 of the row -->
+                        <div class="col-md-4">
+                            <div class="form-group" style="padding-top: 32px;"> <!-- Adjust padding to align with other fields -->
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" id="cobertura_maternidad_checkbox" class="custom-control-input"
+                                        name="UserDatos[cobertura_maternidad]"
+                                        value="1"
+                                        <?= $model->cobertura_maternidad ? 'checked' : '' ?>>
+                                    <label class="custom-control-label" for="cobertura_maternidad_checkbox">¿Cubre Maternidad?</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-12">
-                            <?= $form->field($model, 'cobertura_maternidad')->checkbox(['class' => 'form-control-lg']) ?>
-                        </div>
-                    </div>
+                    <!-- Maternity fields - initially hidden unless checkbox is checked -->
+                    <div id="maternidad_fields" style="display: <?= $model->cobertura_maternidad ? 'block' : 'none' ?>;">
+                        <div class="row mt-3">
+                            <div class="col-md-4 offset-md-4 field-with-icon">
+                                <div class="form-group field-userdatos-deducible_maternidad">
+                                    <label class="control-label" for="userdatos-deducible_maternidad_display">Deducible Maternidad</label>
+                                    <input type="text" id="userdatos-deducible_maternidad_display" class="form-control form-control-lg"
+                                        value="<?= is_numeric($model->deducible_maternidad) ? Yii::$app->formatter->asCurrency($model->deducible_maternidad, 'USD') : '$0.00' ?>"
+                                        readonly>
+                                    <div class="help-block"></div>
+                                </div>
+                            </div>
 
-                    <div class="row">
-                        <div class="col-md-6 field-with-icon">
-
-                            <?= $form->field($model, 'deducible_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
-                        </div>
-                        <div class="col-md-6 field-with-icon">
-
-                            <?= $form->field($model, 'limite_cobertura_maternidad')->textInput(['class' => 'form-control form-control-lg']) ?>
+                            <div class="col-md-4 field-with-icon">
+                                <div class="form-group field-userdatos-limite_cobertura_maternidad">
+                                    <label class="control-label" for="userdatos-limite_cobertura_maternidad_display">Límite Cobertura Maternidad</label>
+                                    <input type="text" id="userdatos-limite_cobertura_maternidad_display" class="form-control form-control-lg"
+                                        value="<?= is_numeric($model->limite_cobertura_maternidad) ? Yii::$app->formatter->asCurrency($model->limite_cobertura_maternidad, 'USD') : '$0.00' ?>"
+                                        readonly>
+                                    <div class="help-block"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1120,46 +1166,52 @@ $currentRoute = Yii::$app->controller->getRoute();
 </script>
 
 <?php
+
 $this->registerJs(
     <<<'JS'
 $(document).ready(function() {
+    console.log('=== PAGE LOAD DEBUG ===');
+    console.log('CSRF meta on load:', $('meta[name="csrf-token"]').attr('content'));
+    console.log('Yii global on load:', typeof yii);
+    // Add this function at the beginning of your $(document).ready()
+
+
+function initializePage() {
+    console.log('Initializing page...');
     
-    $(document).on('click', '#btn-add-dependiente', function(e) {
-    e.preventDefault();
-    console.log('=== DEBUG MODAL SHOW ===');
+    // Get current user ID
+    currentUserId = $('#userdatos-id').val();
     
-    // Get modal element
-    var modal = $('#editDependienteModal')[0];
-    console.log('1. Modal element:', modal);
-    console.log('2. Modal class list:', modal.className);
-    console.log('3. Modal display style:', $(modal).css('display'));
-    console.log('4. Modal visibility:', $(modal).css('visibility'));
-    console.log('5. Modal opacity:', $(modal).css('opacity'));
-    console.log('6. Modal z-index:', $(modal).css('z-index'));
+    // Initialize variables
+    dependientesList = [];
+    $dependientesContainer = $('#dependientes-list');
+    $modal = $('#editDependienteModal');
     
-    // Check if modal-backdrop exists
-    console.log('7. Modal backdrop exists:', $('.modal-backdrop').length);
+    // Check if tiene_dependientes is checked
+    if($('#tiene_dependientes').is(':checked')) {
+        $('#dependientes-section').show();
+        loadDependientes();
+    }
     
-    // Force show with explicit options
-    $('#editDependienteModal').modal({
-        backdrop: 'static',
-        keyboard: false,
-        show: true
+    // Initialize other form elements
+    toggleContratanteSectionAndRequired();
+    toggleConditionalRequired();
+    toggleAfiliadoCorporativo();
+    toggleFechaVen();
+    toggleCedulaFields();
+    
+    console.log('Page initialized for user ID:', currentUserId);
+}
+
+// Call it on document ready
+$(document).ready(function() {
+    initializePage();
+    
+    // Also reinitialize when the page is shown again (for browser back/forward)
+    $(window).on('pageshow', function() {
+        setTimeout(initializePage, 100);
     });
-    
-    // Check again after show
-    setTimeout(function() {
-        console.log('=== AFTER MODAL SHOW ===');
-        console.log('8. Modal class list after:', modal.className);
-        console.log('9. Modal display after:', $(modal).css('display'));
-        console.log('10. Body classes:', document.body.className);
-        console.log('11. Modal backdrop after:', $('.modal-backdrop').length);
-        
-        // Manually inspect DOM
-        console.log('12. Modal HTML:', modal.outerHTML);
-    }, 500);
 });
-    
     // 1. VARIABLE DEFINITIONS & SCOPE
     var dependientesList = [];
     var $dependientesContainer = $('#dependientes-list');
@@ -1174,10 +1226,10 @@ $(document).ready(function() {
 
     // 2. CORE FUNCTIONS
     window.loadDependientes = function() {
-    if (!currentUserId) return;
-    
+        if (!currentUserId) return;
+        
         $.ajax({
-            url: '/sipsa/web/user-datos/get-dependientes',   // <-- This might be the issue
+            url: '/sipsa/web/user-datos/get-dependientes',
             type: 'GET',
             data: { id: currentUserId },
             dataType: 'json',
@@ -1185,9 +1237,15 @@ $(document).ready(function() {
                 if (response.success) {
                     dependientesList = response.data;
                     renderDependientes();
+                } else {
+                    console.error('Error in response:', response);
                 }
             },
-            error: function(err) { console.error('Error loading dependientes', err); }
+            error: function(err) { 
+                console.error('Error loading dependientes', err); 
+                // Show a user-friendly message
+                alert('Error al cargar dependientes. Por favor, recargue la página.');
+            }
         });
     };
 
@@ -1281,61 +1339,61 @@ $(document).ready(function() {
     }
 
     // Function to toggle cédula/consecutivo fields
-function toggleCedulaFields() {
-    var tipoCedula = $('#userdatos-tipo_cedula').val();
-    var consecutivoContainer = $('#consecutivo-container');
-    var cedulaField = $('#userdatos-cedula');
-    var cedulaLabel = $('label[for="userdatos-cedula"]');
-    var consecutivoField = $('#userdatos-consecutivo_menor');
-    
-    if (tipoCedula === 'Menor Sin Cédula') {
-        // Show consecutivo field
-        consecutivoContainer.show();
+    function toggleCedulaFields() {
+        var tipoCedula = $('#userdatos-tipo_cedula').val();
+        var consecutivoContainer = $('#consecutivo-container');
+        var cedulaField = $('#userdatos-cedula');
+        var cedulaLabel = $('label[for="userdatos-cedula"]');
+        var consecutivoField = $('#userdatos-consecutivo_menor');
         
-        // Update cedula field placeholder and label
-        cedulaField.attr('placeholder', 'Cédula del padre/madre/tutor');
-        cedulaLabel.html('Cédula del Padre/Madre/Tutor <span class="text-danger">*</span>');
-        
-        // Make consecutivo required
-        consecutivoField.attr('required', true);
-        
-        // Update form validation attributes
-        $('.field-userdatos-consecutivo_menor').addClass('required');
-        
-        // Update validation messages dynamically
-        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
-            required: true
-        });
-    } else {
-        // Hide consecutivo field
-        consecutivoContainer.hide();
-        
-        // Restore original cedula field placeholder and label
-        cedulaField.attr('placeholder', 'Ejemplo: 12345678');
-        cedulaLabel.html('Cédula de Identidad <span class="text-danger conditional-asterisk">*</span>');
-        
-        // Clear and disable consecutivo field validation
-        consecutivoField.val('').removeAttr('required');
-        $('.field-userdatos-consecutivo_menor').removeClass('required');
-        
-        // Update validation
-        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
-            required: false
-        });
+        if (tipoCedula === 'Menor Sin Cédula') {
+            // Show consecutivo field
+            consecutivoContainer.show();
+            
+            // Update cedula field placeholder and label
+            cedulaField.attr('placeholder', 'Cédula del padre/madre/tutor');
+            cedulaLabel.html('Cédula del Tutor <span class="text-danger"></span>');
+            
+            // Make consecutivo required
+            consecutivoField.attr('required', true);
+            
+            // Update form validation attributes
+            $('.field-userdatos-consecutivo_menor').addClass('required');
+            
+            // Update validation messages dynamically
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+                required: true
+            });
+        } else {
+            // Hide consecutivo field
+            consecutivoContainer.hide();
+            
+            // Restore original cedula field placeholder and label
+            cedulaField.attr('placeholder', 'Ejemplo: 12345678');
+            cedulaLabel.html('Cédula de Identidad <span class="text-danger conditional-asterisk"></span>');
+            
+            // Clear and disable consecutivo field validation
+            consecutivoField.val('').removeAttr('required');
+            $('.field-userdatos-consecutivo_menor').removeClass('required');
+            
+            // Update validation
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+                required: false
+            });
+        }
     }
-}
 
-// Initial call on page load
-toggleCedulaFields();
-
-// Listen for changes on tipo_cedula dropdown
-$('#userdatos-tipo_cedula').on('change', toggleCedulaFields);
-
-// Handle form validation dynamically
-$('#user-datos-form').on('beforeValidate', function() {
+    // Initial call on page load
     toggleCedulaFields();
-    return true;
-});
+
+    // Listen for changes on tipo_cedula dropdown
+    $('#userdatos-tipo_cedula').on('change', toggleCedulaFields);
+
+    // Handle form validation dynamically
+    $('#user-datos-form').on('beforeValidate', function() {
+        toggleCedulaFields();
+        return true;
+    });
 
     // Handle form validation dynamically
     $('#user-datos-form').on('beforeValidate', function() {
@@ -1406,34 +1464,186 @@ $('#user-datos-form').on('beforeValidate', function() {
         }
     }
     
-    // Function to calculate plan details
-    window.datosplan = function(plan_id) {
-        const planIdElement = document.getElementById('plan_id');
-
-        if (planIdElement.value !== '' && planIdElement.value !== null) {
-            let csrfToken = $('meta[name="csrf-token"]').attr("content");
-            var parametros = {
-                id: plan_id,
-                "_csrf": csrfToken,
-            };
-
-            $.ajax({
-                url: "datosdelplan",
-                type: "post",
-                dataType: "json",
-                data: parametros,
-                success: function(data) {
-                    if(data && data.data) {
-                        const limite_cobertura = data.data.limite_cobertura;
-                        const moneda = data.data.moneda;
-                        $('#userdatos-moneda').val(moneda);
-                        $('#userdatos-deducible').val(0);
-                        $('#userdatos-limite_cobertura').val(limite_cobertura);
-                    }
-                },
-            });
+    // Toggle maternity fields visibility
+    $('#cobertura_maternidad_checkbox').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#maternidad_fields').slideDown();
+            $('#userdatos-cobertura_maternidad').val(1);
+            
+            // If maternity fields are empty, set default values
+            if (!$('#userdatos-deducible_maternidad').val()) {
+                $('#userdatos-deducible_maternidad').val('0');
+                $('#userdatos-deducible_maternidad_display').val('$0.00');
+            }
+            if (!$('#userdatos-limite_cobertura_maternidad').val()) {
+                $('#userdatos-limite_cobertura_maternidad').val('0');
+                $('#userdatos-limite_cobertura_maternidad_display').val('$0.00');
+            }
+        } else {
+            $('#maternidad_fields').slideUp();
+            $('#userdatos-cobertura_maternidad').val(0);
         }
-    };
+    });
+    
+    // Update the datosplan function to handle maternity coverage
+    // Function to calculate plan details and update plan name
+window.datosplan = function(plan_id) {
+    const planIdElement = document.getElementById('plan_id');
+
+    if (planIdElement.value !== '' && planIdElement.value !== null) {
+        let csrfToken = $('meta[name="csrf-token"]').attr("content");
+        var parametros = {
+            id: plan_id,
+            "_csrf": csrfToken,
+        };
+
+        $.ajax({
+            url: "datosdelplan",
+            type: "post",
+            dataType: "json",
+            data: parametros,
+            success: function(data) {
+                if(data && data.data) {
+                    const limite_cobertura = data.data.limite_cobertura;
+                    const moneda = data.data.moneda;
+                    
+                    // Format as currency for display
+                    const formatter = new Intl.NumberFormat('es-VE', {
+                        style: 'currency',
+                        currency: moneda
+                    });
+                    
+                    // Display formatted values (readonly)
+                    $('#userdatos-limite_cobertura').val(formatter.format(limite_cobertura));
+                    
+                    // Store raw values in hidden fields for the database
+                    $('#userdatos-moneda').val(moneda);
+                    $('#userdatos-deducible').val(0);
+                    $('#userdatos-limite_cobertura_raw').val(limite_cobertura);
+                    
+                    // Update plan name display with the selected option text
+                    var selectedOption = $('#plan_id option:selected');
+                    var planName = selectedOption.text().replace('Seleccione el Plan...', '').trim();
+                    if (planName) {
+                        $('#plan_name_display').val(planName);
+                    }
+                    
+                    // Check if plan includes maternity coverage
+                    // For now, we'll keep it unchecked by default
+                    $('#cobertura_maternidad_checkbox').prop('checked', false);
+                    $('#userdatos-cobertura_maternidad').val(0);
+                    
+                    // Clear maternity fields
+                    $('#userdatos-deducible_maternidad').val('');
+                    $('#userdatos-limite_cobertura_maternidad').val('');
+                    $('#userdatos-deducible_maternidad_display').val('');
+                    $('#userdatos-limite_cobertura_maternidad_display').val('');
+                    
+                    // Hide maternity fields
+                    $('#maternidad_fields').hide();
+                    
+                    // Show/hide based on checkbox state
+                    if ($('#cobertura_maternidad_checkbox').is(':checked')) {
+                        $('#maternidad_fields').show();
+                    }
+                }
+            },
+            error: function() {
+                // Clear all fields on error
+                $('#userdatos-limite_cobertura').val('$0.00');
+                $('#userdatos-moneda').val('');
+                $('#userdatos-deducible').val('');
+                $('#userdatos-limite_cobertura_raw').val('');
+                
+                // Clear plan name
+                $('#plan_name_display').val('Seleccione un plan en la sección anterior');
+                
+                // Clear maternity fields
+                $('#userdatos-deducible_maternidad').val('');
+                $('#userdatos-limite_cobertura_maternidad').val('');
+                $('#userdatos-deducible_maternidad_display').val('$0.00');
+                $('#userdatos-limite_cobertura_maternidad_display').val('$0.00');
+                
+                // Uncheck maternity checkbox
+                $('#cobertura_maternidad_checkbox').prop('checked', false);
+                $('#userdatos-cobertura_maternidad').val(0);
+                $('#maternidad_fields').hide();
+            }
+        });
+    } else {
+        // Clear all fields if no plan selected
+        $('#userdatos-limite_cobertura').val('$0.00');
+        $('#userdatos-moneda').val('');
+        $('#userdatos-deducible').val('');
+        $('#userdatos-limite_cobertura_raw').val('');
+        
+        // Clear plan name
+        $('#plan_name_display').val('Seleccione un plan en la sección anterior');
+        
+        // Clear maternity fields
+        $('#userdatos-deducible_maternidad').val('');
+        $('#userdatos-limite_cobertura_maternidad').val('');
+        $('#userdatos-deducible_maternidad_display').val('$0.00');
+        $('#userdatos-limite_cobertura_maternidad_display').val('$0.00');
+        
+        // Uncheck maternity checkbox
+        $('#cobertura_maternidad_checkbox').prop('checked', false);
+        $('#userdatos-cobertura_maternidad').val(0);
+        $('#maternidad_fields').hide();
+    }
+};
+
+// Also update plan name when user manually selects a different option
+$('#plan_id').on('change', function() {
+    var selectedOption = $(this).find('option:selected');
+    var planName = selectedOption.text().replace('Seleccione el Plan...', '').trim();
+    
+    if (planName) {
+        $('#plan_name_display').val(planName);
+    } else {
+        $('#plan_name_display').val('Seleccione un plan en la sección anterior');
+    }
+    
+    // Also trigger the datosplan function if a valid plan is selected
+    if ($(this).val()) {
+        datosplan($(this).val());
+    }
+});
+
+// Initialize on page load if there's already a selected plan
+$(document).ready(function() {
+    var initialPlanId = $('#plan_id').val();
+    if (initialPlanId) {
+        // Update plan name display
+        var selectedOption = $('#plan_id option:selected');
+        var planName = selectedOption.text().replace('Seleccione el Plan...', '').trim();
+        if (planName) {
+            $('#plan_name_display').val(planName);
+        }
+        
+        // Also trigger datosplan to update coverage limit
+        datosplan(initialPlanId);
+    }
+});
+    // Add ability to manually enter maternity values if needed
+    $(document).on('dblclick', '#userdatos-deducible_maternidad_display, #userdatos-limite_cobertura_maternidad_display', function() {
+        var currentId = $(this).attr('id');
+        var hiddenFieldId = currentId.replace('_display', '');
+        var currentValue = $('#' + hiddenFieldId).val() || '0';
+        
+        var newValue = prompt('Ingrese el nuevo valor (solo números):', currentValue);
+        if (newValue !== null && !isNaN(newValue) && newValue.trim() !== '') {
+            var numericValue = parseFloat(newValue);
+            $('#' + hiddenFieldId).val(numericValue);
+            
+            // Format for display
+            const formatter = new Intl.NumberFormat('es-VE', {
+                style: 'currency',
+                currency: 'USD'
+            });
+            $(this).val(formatter.format(numericValue));
+        }
+    });
 
     // 3. EVENT LISTENERS INITIALIZATION
     
@@ -1459,11 +1669,14 @@ $('#user-datos-form').on('beforeValidate', function() {
         loadDependientes();
     }
 
-    // Modal: Open to Add
-    $('#btn-add-dependiente').on('click', function(e) {
+    // ============================================
+    // FIXED EVENT HANDLERS WITH DELEGATION
+    // ============================================
+
+    // 1. Open Modal - Use delegation for dynamic buttons
+    $(document).on('click', '#btn-add-dependiente', function(e) {
         e.preventDefault();
         
-        // Get data from Select2
         var data = $('#search-dependiente').select2('data')[0];
         
         if (!data || !data.id) {
@@ -1471,78 +1684,212 @@ $('#user-datos-form').on('beforeValidate', function() {
             return;
         }
 
+        // Check if already dependent
+        var alreadyDependent = dependientesList.find(function(dep) {
+            return dep.dependiente_id == data.id;
+        });
+        
+        if (alreadyDependent) {
+            alert('Este afiliado ya está registrado como dependiente.');
+            return;
+        }
+
+        // Close Select2
+        $('.select2-container--open').select2('close');
+        
         // Reset form
-        $('#edit-dependiente-id').val(''); // Empty for new
+        $('#edit-dependiente-id').val('');
         $('#edit-dependiente-user-id').val(data.id);
         $('#display-nombre-dependiente').val(data.text);
         $('#edit-parentesco').val('').trigger('change');
         $('#edit-porcentaje').val('100');
+        $('#edit-activo').prop('checked', true);
         
-        $modal.modal('show');
-    });
-
-    // Modal: Save Button
-    $('#btn-save-dependiente').on('click', function() {
-        var id = $('#edit-dependiente-id').val();
-        var action = id ? 'update?id=' + id : 'create';
-        
-        var payload = {
-            dependiente_id: $('#edit-dependiente-user-id').val(),
-            titular_id: currentUserId,
-            parentesco: $('#edit-parentesco').val(),
-            porcentaje_pago: $('#edit-porcentaje').val(),
-            activo: $('#edit-activo').is(':checked') ? 1 : 0
-        };
-
-        if(!payload.parentesco) {
-            alert('Debe seleccionar el parentesco');
-            return;
-        }
-
-        $.ajax({
-            url: '/dependientes/' + action,
-            type: 'POST',
-            data: payload,
-            success: function(response) {
-                if (response.success) {
-                    $modal.modal('hide');
-                    $('#search-dependiente').val(null).trigger('change'); // Clear search
-                    loadDependientes(); // Reload list
-                } else {
-                    alert('Error: ' + JSON.stringify(response.errors || response.message));
-                }
-            },
-            error: function() { alert('Error del servidor'); }
+        // Show modal using Bootstrap
+        $('#editDependienteModal').modal({
+            backdrop: 'static',
+            keyboard: false
         });
     });
 
-    // Edit Button Click (Delegated)
+    $(document).on('click', '#btn-save-dependiente', function() {
+    var id = $('#edit-dependiente-id').val();
+    var action = id ? 'update' : 'create';
+    var url = '/sipsa/web/dependientes/' + action;
+    
+    if (action === 'update' && id) {
+        url += '?id=' + id;
+    }
+    
+    // ============================================
+    // DEBUG & GET CSRF TOKEN
+    // ============================================
+    console.log('=== DEBUG CSRF TOKEN ===');
+    console.log('1. Meta tag exists:', $('meta[name="csrf-token"]').length);
+    console.log('2. Meta tag content:', $('meta[name="csrf-token"]').attr('content'));
+    console.log('3. Yii global exists:', typeof yii !== 'undefined');
+    console.log('4. Yii CSRF function:', typeof yii !== 'undefined' ? typeof yii.getCsrfToken : 'n/a');
+    console.log('5. CSRF input exists:', $('input[name="_csrf"]').length);
+    console.log('6. CSRF input value:', $('input[name="_csrf"]').val());
+    
+    // Get CSRF token with multiple fallbacks
+    var csrfToken = '';
+    
+    // Try meta tag first
+    if ($('meta[name="csrf-token"]').length) {
+        csrfToken = $('meta[name="csrf-token"]').attr('content');
+        console.log('Using CSRF from meta tag:', csrfToken);
+    }
+    // Try Yii global
+    else if (typeof yii !== 'undefined' && yii.getCsrfToken) {
+        csrfToken = yii.getCsrfToken();
+        console.log('Using CSRF from Yii global:', csrfToken);
+    }
+    // Try hidden input
+    else if ($('input[name="_csrf"]').length) {
+        csrfToken = $('input[name="_csrf"]').val();
+        console.log('Using CSRF from hidden input:', csrfToken);
+    }
+    // Last resort: check all meta tags
+    else {
+        console.log('Checking all meta tags:');
+        $('meta').each(function() {
+            var name = $(this).attr('name');
+            var content = $(this).attr('content');
+            if (name && name.includes('csrf')) {
+                console.log('Found CSRF meta:', name, content);
+                csrfToken = content;
+            }
+        });
+    }
+    
+    if (!csrfToken) {
+        console.error('NO CSRF TOKEN FOUND!');
+        alert('Error de seguridad: No se encontró token CSRF.\nPor favor, recargue la página.');
+        return;
+    }
+    
+    console.log('Final CSRF token:', csrfToken);
+    // ============================================
+    // END DEBUG
+    // ============================================
+    
+    var payload = {
+        dependiente_id: $('#edit-dependiente-user-id').val(),
+        titular_id: currentUserId,
+        parentesco: $('#edit-parentesco').val(),
+        porcentaje_pago: $('#edit-porcentaje').val(),
+        activo: $('#edit-activo').is(':checked') ? 1 : 0,
+        _csrf: csrfToken
+    };
+
+    if(!payload.parentesco) {
+        alert('Debe seleccionar el parentesco');
+        return;
+    }
+
+    console.log('=== AJAX REQUEST ===');
+    console.log('URL:', url);
+    console.log('Payload:', payload);
+    console.log('Current user ID:', currentUserId);
+
+    $.ajax({
+        url: url,
+        type: 'POST',
+        data: payload,
+        dataType: 'json',
+        success: function(response) {
+            console.log('=== AJAX SUCCESS ===');
+            console.log('Response:', response);
+            
+            if (response.success) {
+                $('#editDependienteModal').modal('hide');
+                $('#search-dependiente').val(null).trigger('change');
+                loadDependientes();
+                alert(response.message || 'Dependiente guardado exitosamente');
+            } else {
+                var errorMsg = response.message || 'Error al guardar';
+                if (response.errors) {
+                    var errorDetails = [];
+                    $.each(response.errors, function(field, errors) {
+                        errorDetails.push(field + ': ' + errors.join(', '));
+                    });
+                    errorMsg += '\n\n' + errorDetails.join('\n');
+                }
+                alert(errorMsg);
+            }
+        },
+        error: function(xhr, status, error) { 
+            console.error('=== AJAX ERROR ===');
+            console.error('Status:', xhr.status);
+            console.error('Status text:', xhr.statusText);
+            console.error('Response:', xhr.responseText);
+            console.error('Ready state:', xhr.readyState);
+            
+            if (xhr.status === 403) {
+                alert('ERROR 403 - ACCESO DENEGADO\n\n' +
+                      'Posibles causas:\n' +
+                      '1. Token CSRF inválido o faltante\n' +
+                      '2. Sesión de usuario expirada\n' +
+                      '3. No tiene permisos para esta acción\n\n' +
+                      'Token CSRF usado: ' + (csrfToken ? csrfToken.substring(0, 20) + '...' : 'Ninguno') + '\n' +
+                      'Por favor, recargue la página e intente nuevamente.');
+            } else {
+                alert('Error del servidor: ' + error + '\nStatus: ' + xhr.status);
+            }
+        }
+    });
+});
+
+    // 3. Edit Button - Already delegated, keep as is
     $(document).on('click', '.edit-dependiente', function() {
         var id = $(this).closest('.dependiente-card').data('id');
         var dep = dependientesList.find(function(d) { return d.id == id; });
         
         if(dep) {
+            $('.select2-container--open').select2('close');
+            
             $('#edit-dependiente-id').val(dep.id);
             $('#edit-dependiente-user-id').val(dep.dependiente_id);
             $('#display-nombre-dependiente').val(dep.nombre_completo);
             $('#edit-parentesco').val(dep.parentesco).trigger('change');
             $('#edit-porcentaje').val(dep.porcentaje_pago);
             $('#edit-activo').prop('checked', dep.activo);
-            $modal.modal('show');
+            
+            $('#editDependienteModal').modal({
+                backdrop: 'static',
+                keyboard: false
+            });
         }
     });
 
-    // Remove Button Click (Delegated)
+    // 4. Remove Button - Make sure it's delegated
     $(document).on('click', '.remove-dependiente', function() {
         if(!confirm('¿Seguro que desea desvincular este dependiente?')) return;
         
         var id = $(this).closest('.dependiente-card').data('id');
-        $.post('/dependientes/delete?id=' + id, function(response) {
-            if(response.success) loadDependientes();
-            else alert('No se pudo eliminar');
+        $.ajax({
+            url: '/sipsa/web/dependientes/delete?id=' + id,
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                if(response.success) {
+                    loadDependientes();
+                    alert('Dependiente eliminado exitosamente');
+                } else {
+                    alert('No se pudo eliminar: ' + (response.message || 'Error desconocido'));
+                }
+            },
+            error: function() { 
+                alert('Error del servidor al eliminar'); 
+            }
         });
     });
 
+    // ============================================
+    // STANDARD FORM LISTENERS (KEEP THESE)
+    // ============================================
+    
     // Standard Form Listeners
     $checkboxContratante.on('change', toggleContratanteSectionAndRequired);
     
@@ -1573,23 +1920,61 @@ JS
         border-left: 0;
     }
 
-    /* Fix modal z-index to be above Select2 */
-    .modal {
-        z-index: 99999 !important;
-    }
+    /* ============================================
+       FIXED MODAL CSS - SIMPLIFIED
+       ============================================ */
 
-    .modal-backdrop {
-        z-index: 99998 !important;
-    }
-
-    /* Fix Select2 inside modal */
-    .select2-container {
-        z-index: 100000 !important;
-    }
-
-    /* Ensure modal is fully opaque */
-    .modal.show {
+    /* 1. Ensure modal is visible when shown */
+    #editDependienteModal.modal.show {
+        display: block !important;
         opacity: 1 !important;
+        z-index: 1050 !important;
+    }
+
+    /* 2. Modal backdrop - ensure it's below modal */
+    .modal-backdrop.show {
+        z-index: 1040 !important;
+    }
+
+    /* 3. Prevent Bootstrap from shifting your page layout */
+    body.modal-open {
+        padding-right: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* 4. SELECT2 FIX - Hide dropdowns when modal is open */
+    body.modal-open .select2-container--open .select2-dropdown {
+        display: none !important;
+        z-index: 1039 !important;
+    }
+
+    /* 5. Ensure modal dialog is centered */
+    #editDependienteModal .modal-dialog {
+        z-index: 1051 !important;
+        position: relative;
+        margin: 1.75rem auto;
+    }
+
+    /* 6. Ensure modal content is above backdrop */
+    #editDependienteModal .modal-content {
+        z-index: 1052 !important;
+        position: relative;
+    }
+
+    /* 7. Emergency override - if modal still not visible */
+    .modal.in {
+        display: block !important;
+    }
+
+    /* 8. Fix for any parent elements that might hide modal */
+    #editDependienteModal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
     }
 
     .file-input .btn.btn-primary,
