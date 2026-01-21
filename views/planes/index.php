@@ -32,17 +32,17 @@ if (!isset($clinica)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin'); 
+$permisos = ($rol == 'superadmin' || $rol == 'COORDINADOR-CLINICA');
 
-if($permisos == true){
-$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
+if ($permisos == true) {
+    $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
 }
-if ($clinica->id !== null) { 
+if ($clinica->id !== null) {
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
 }
-$this->params['breadcrumbs'][] = 'PLANES'; 
+$this->params['breadcrumbs'][] = 'PLANES';
 
-$this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre); 
+$this->title = 'Gestión de Planes de ' . Html::encode($clinica->nombre);
 
 // DEFINE URLS FOR JAVASCRIPT
 $importUrl = Url::to(['planes/import']);
@@ -54,9 +54,9 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
 
 ?>
 
-<div class="main-container"> 
+<div class="main-container">
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
-    
+
     <div class="alert alert-danger alert-dismissible fade show" id="import-error-alert" style="display: none;">
         <h5><i class="fas fa-exclamation-triangle mr-2"></i> Error en Importación</h5>
         <div id="error-main-message" class="font-weight-bold mb-2"></div>
@@ -73,46 +73,46 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
             <pre id="error-stack-trace" class="bg-light p-2 rounded"></pre>
         </div>
     </div>
-    
-    <div class="header-section d-flex align-items-center justify-content-between"> 
+
+    <div class="header-section d-flex align-items-center justify-content-between">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group d-flex align-items-center flex-grow-1">
             <?php if ($permisos) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-plus mr-2"></i> AGREGAR PLAN', 
-                    ['create', 'clinica_id' => $clinica->id], 
-                    ['class' => 'btn btn-primary btn-sm me-2'] 
+                    '<i class="fas fa-plus mr-2"></i> AGREGAR PLAN',
+                    ['create', 'clinica_id' => $clinica->id],
+                    ['class' => 'btn btn-primary btn-sm me-2']
                 ) ?>
                 <?= Html::a(
-                '<i class="fas fa-download mr-2"></i> Descargar Plantilla',
-                ['download-template', 'clinica_id' => $clinica->id],
-                [
-                    'class' => 'btn btn-info btn-sm me-2',
-                    'title' => 'Descargar plantilla Excel para Carga Masiva de Planes y Coberturas',
-                ]
+                    '<i class="fas fa-download mr-2"></i> Descargar Plantilla',
+                    ['download-template', 'clinica_id' => $clinica->id],
+                    [
+                        'class' => 'btn btn-info btn-sm me-2',
+                        'title' => 'Descargar plantilla Excel para Carga Masiva de Planes y Coberturas',
+                    ]
                 ) ?>
                 <?= Html::button(
-                    '<i class="fas fa-upload mr-2"></i> IMPORTAR PLANES', 
+                    '<i class="fas fa-upload mr-2"></i> IMPORTAR PLANES',
                     [
                         'class' => 'btn btn-success me-2',
                         'id' => 'import-plans-btn',
                         'data-toggle' => 'modal',
                         'data-target' => '#importModal'
-                    ] 
+                    ]
                 ) ?>
             <?php endif; ?>
             <div class="flex-grow-1"></div>
             <?php if ($clinica->id !== null) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-undo mr-2"></i> Volver', 
-                    ['/rm-clinica/view', 'id' => $clinica->id], 
+                    '<i class="fas fa-undo mr-2"></i> Volver',
+                    ['/rm-clinica/view', 'id' => $clinica->id],
                     [
                         'class' => 'btn btn-secondary btn-sm ms-5', // ms-5 adds noticeable left margin
                         'title' => 'Volver a los detalles de la clínica',
                         'style' => 'margin-left:40px;'
                     ]
                 ) ?>
-                
+
             <?php endif; ?>
         </div>
     </div>
@@ -123,13 +123,13 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
         'options' => ['tabindex' => false],
         'size' => Modal::SIZE_LARGE,
     ]); ?>
-    
+
     <?php $form = ActiveForm::begin([
         'id' => 'import-form',
         'action' => ['planes/import'], // CORRECTED: Using 'planes' instead of 'plan'
         'options' => ['enctype' => 'multipart/form-data'],
     ]); ?>
-    
+
     <div class="modal-body">
         <div class="alert alert-info">
             <strong><i class="fas fa-info-circle"></i> Instrucciones:</strong><br>
@@ -138,7 +138,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
             - Asegúrese de que el formato de datos sea correcto.<br>
             - El archivo debe estar en formato .xlsx o .xls
         </div>
-        
+
         <div class="form-group">
             <label for="excel-file" class="font-weight-bold">Seleccionar archivo Excel</label>
             <?= Html::fileInput('excelFile', null, [
@@ -149,11 +149,11 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
             ]) ?>
             <small class="form-text text-muted">Formatos soportados: .xlsx, .xls (Tamaño máximo: 10MB)</small>
         </div>
-        
+
         <div class="form-group">
             <?= Html::hiddenInput('clinica_id', $clinica->id) ?>
         </div>
-        
+
         <!-- Enhanced Progress Section -->
         <div class="import-progress" style="display: none;">
             <div class="progress mb-3">
@@ -175,10 +175,10 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
         ]) ?>
     </div>
     <?php ActiveForm::end(); ?>
-    
+
     <?php Modal::end(); ?>
 
-    <div class="ms-panel ms-panel-fh border-indigo"> 
+    <div class="ms-panel ms-panel-fh border-indigo">
         <div class="ms-panel-header">
             <h3 class="section-title text-start" style="text-align:left;">
                 <i class="fas fa-list-alt mr-3 text-indigo-600"></i> Listado de Planes de <?= Html::encode($clinica->nombre) ?>
@@ -187,7 +187,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
         <div class="ms-panel-body">
             <div class="table-responsive">
                 <?= GridView::widget([
-                    'id' => 'planes-grid', 
+                    'id' => 'planes-grid',
                     'dataProvider' => $dataProvider,
                     'filterModel' => $searchModel,
                     'layout' => "{items}\n{pager}",
@@ -238,15 +238,15 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                             'attribute' => 'comision',
                             // Divide the attribute value by 100 before applying the format
                             'value' => function ($model) {
-                                return $model->comision / 100; 
+                                return $model->comision / 100;
                             },
-                            'format' => ['percent',2],
+                            'format' => ['percent', 2],
                             'contentOptions' => ['style' => 'text-align: center;'],
                             'filter' => false
                         ],
                         // Edades
-                        [   
-                            'attribute' => 'edad_minima', 
+                        [
+                            'attribute' => 'edad_minima',
                             'contentOptions' => ['class' => 'text-center'],
                             'label' => Yii::t('app', 'Edades'),
                             'value' => function ($model) {
@@ -263,9 +263,9 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                             'contentOptions' => ['class' => 'text-center'],
                             'value' => function ($model) {
                                 $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
-                                
+
                                 return SwitchInput::widget([
-                                    'name' => 'status_'.$model->id,
+                                    'name' => 'status_' . $model->id,
                                     'value' => $isActive,
                                     'pluginEvents' => [
                                         'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
@@ -278,7 +278,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                                         'state' => $isActive
                                     ],
                                     'options' => [
-                                        'id' => 'status-switch-'.$model->id
+                                        'id' => 'status-switch-' . $model->id
                                     ],
                                     'labelOptions' => ['style' => 'font-size: 12px;'],
                                 ]);
@@ -311,7 +311,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                                     );
                                 },
                                 'update' => function ($url, $model, $key) use ($permisos, $clinica) {
-                                    if($permisos == true){
+                                    if ($permisos == true) {
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt"></i>', // Removed "Editar" text
                                             Url::to(['update', 'id' => $model->id, 'clinica_id' => $clinica->id]),
