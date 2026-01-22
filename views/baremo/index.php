@@ -8,6 +8,7 @@ use yii\widgets\ActiveForm;
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
 use kartik\select2\Select2;
+use app\models\Baremo;
 
 /**
  * @var yii\web\View $this
@@ -148,6 +149,65 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             </h3>
         </div>
         <div class="ms-panel-body">
+            <!-- Service Statistics Section -->
+            <div class="service-stats-container mb-4">
+                <div class="row">
+                    <?php
+                    // Calculate active/inactive counts
+                    $activeCount = Baremo::find()
+                        ->where(['clinica_id' => $clinica->id, 'estatus' => 'Activo'])
+                        ->count();
+                    $inactiveCount = Baremo::find()
+                        ->where(['clinica_id' => $clinica->id, 'estatus' => 'Inactivo'])
+                        ->count();
+                    $totalCount = $activeCount + $inactiveCount;
+                    ?>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon active">
+                                <i class="fas fa-check-circle text-white"></i>
+                            </div>
+                            <div class="stat-number text-success"><?= number_format($activeCount, 0) ?></div>
+                            <div class="stat-label">Servicios Activos</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon inactive">
+                                <i class="fas fa-pause-circle text-white"></i>
+                            </div>
+                            <div class="stat-number text-secondary"><?= number_format($inactiveCount, 0) ?></div>
+                            <div class="stat-label">Servicios Inactivos</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="service-counter-card">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="service-counter-icon bg-primary rounded-circle">
+                                            <i class="fas fa-clipboard-list text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total de Servicios
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?= number_format($totalCount, 0) ?>
+                                            <span class="text-sm text-muted">servicios</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End Service Statistics Section -->
             <div class="table-responsive">
                 <?= GridView::widget([
                     'id' => 'baremo-grid',
@@ -760,5 +820,95 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             margin-left: 0 !important;
             margin-top: 10px;
         }
+    }
+
+    /* Service Counter Styles */
+    .service-counter-card {
+        border-left: 4px solid #4e73df !important;
+        border-radius: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .service-counter-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .service-counter-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .text-xs {
+        font-size: 0.8rem;
+    }
+
+    .h5 {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .text-sm {
+        font-size: 0.875rem;
+    }
+
+    /* If you want to show Active/Inactive counts as well, you can add this: */
+    .service-stats-container {
+        margin-bottom: 20px;
+    }
+
+    .service-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e1e5e9;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+
+    .stat-icon.active {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    }
+
+    .stat-icon.inactive {
+        background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
     }
 </style>
