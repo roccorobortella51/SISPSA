@@ -8,6 +8,7 @@ use yii\widgets\ActiveForm;
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
 use kartik\select2\Select2;
+use app\models\Baremo;
 
 /**
  * @var yii\web\View $this
@@ -148,6 +149,117 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             </h3>
         </div>
         <div class="ms-panel-body">
+            <!-- Service Statistics Section - Microsoft Style -->
+            <div class="service-stats-container mb-5">
+                <div class="row">
+                    <?php
+                    // Calculate active/inactive counts
+                    $activeCount = Baremo::find()
+                        ->where(['clinica_id' => $clinica->id, 'estatus' => 'Activo'])
+                        ->count();
+                    $inactiveCount = Baremo::find()
+                        ->where(['clinica_id' => $clinica->id, 'estatus' => 'Inactivo'])
+                        ->count();
+                    $totalCount = $activeCount + $inactiveCount;
+                    ?>
+
+                    <!-- Active Services Card -->
+                    <div class="col-md-4 mb-4">
+                        <div class="ms-stat-card ms-stat-active">
+                            <div class="ms-stat-header">
+                                <div class="ms-stat-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="ms-stat-title">Servicios Activos</div>
+                            </div>
+                            <div class="ms-stat-body">
+                                <div class="ms-stat-number"><?= number_format($activeCount, 0) ?></div>
+                                <div class="ms-stat-percentage">
+                                    <?php if ($totalCount > 0): ?>
+                                        <span class="ms-stat-badge ms-stat-badge-success">
+                                            <?= number_format(($activeCount / $totalCount) * 100, 1) ?>%
+                                        </span>
+                                        <span class="ms-stat-label">del total</span>
+                                    <?php else: ?>
+                                        <span class="ms-stat-badge ms-stat-badge-secondary">0%</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="ms-stat-footer">
+                                <div class="ms-stat-trend">
+                                    <i class="fas fa-arrow-up text-success mr-1"></i>
+                                    <span class="ms-stat-trend-text">Operacional</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inactive Services Card -->
+                    <div class="col-md-4 mb-4">
+                        <div class="ms-stat-card ms-stat-inactive">
+                            <div class="ms-stat-header">
+                                <div class="ms-stat-icon">
+                                    <i class="fas fa-pause-circle"></i>
+                                </div>
+                                <div class="ms-stat-title">Servicios Inactivos</div>
+                            </div>
+                            <div class="ms-stat-body">
+                                <div class="ms-stat-number"><?= number_format($inactiveCount, 0) ?></div>
+                                <div class="ms-stat-percentage">
+                                    <?php if ($totalCount > 0): ?>
+                                        <span class="ms-stat-badge ms-stat-badge-secondary">
+                                            <?= number_format(($inactiveCount / $totalCount) * 100, 1) ?>%
+                                        </span>
+                                        <span class="ms-stat-label">del total</span>
+                                    <?php else: ?>
+                                        <span class="ms-stat-badge ms-stat-badge-secondary">0%</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="ms-stat-footer">
+                                <div class="ms-stat-trend">
+                                    <i class="fas fa-minus text-secondary mr-1"></i>
+                                    <span class="ms-stat-trend-text">No disponibles</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Services Card -->
+                    <div class="col-md-4 mb-4">
+                        <div class="ms-stat-card ms-stat-total">
+                            <div class="ms-stat-header">
+                                <div class="ms-stat-icon">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                <div class="ms-stat-title">Total de Servicios</div>
+                            </div>
+                            <div class="ms-stat-body">
+                                <div class="ms-stat-number"><?= number_format($totalCount, 0) ?></div>
+                                <div class="ms-stat-meta">
+                                    <div class="ms-stat-meta-item">
+                                        <i class="fas fa-layer-group mr-1 text-primary"></i>
+                                        <span class="ms-stat-meta-label">
+                                            <?= $dataProvider->pagination ? number_format(ceil($totalCount / $dataProvider->pagination->pageSize)) : '1' ?> páginas
+                                        </span>
+                                    </div>
+                                    <div class="ms-stat-meta-item">
+                                        <i class="fas fa-database mr-1 text-primary"></i>
+                                        <span class="ms-stat-meta-label">Registros en BD</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ms-stat-footer">
+                                <div class="ms-stat-trend">
+                                    <i class="fas fa-chart-line text-primary mr-1"></i>
+                                    <span class="ms-stat-trend-text">Carga total del sistema</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End Service Statistics Section -->
             <div class="table-responsive">
                 <?= GridView::widget([
                     'id' => 'baremo-grid',
@@ -760,5 +872,314 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             margin-left: 0 !important;
             margin-top: 10px;
         }
+    }
+
+    /* Service Counter Styles */
+    .service-counter-card {
+        border-left: 4px solid #4e73df !important;
+        border-radius: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .service-counter-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .service-counter-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .text-xs {
+        font-size: 0.8rem;
+    }
+
+    .h5 {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .text-sm {
+        font-size: 0.875rem;
+    }
+
+    /* If you want to show Active/Inactive counts as well, you can add this: */
+    .service-stats-container {
+        margin-bottom: 20px;
+    }
+
+    .service-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e1e5e9;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+
+    .stat-icon.active {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    }
+
+    .stat-icon.inactive {
+        background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    /* Microsoft Style Statistics Cards */
+    .ms-stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e5e9;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .ms-stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        border-color: #c7e0f4;
+    }
+
+    .ms-stat-active {
+        border-top: 4px solid #107c10;
+    }
+
+    .ms-stat-inactive {
+        border-top: 4px solid #605e5c;
+    }
+
+    .ms-stat-total {
+        border-top: 4px solid #0078d4;
+    }
+
+    .ms-stat-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .ms-stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 16px;
+        font-size: 20px;
+    }
+
+    .ms-stat-active .ms-stat-icon {
+        background-color: #dff6dd;
+        color: #107c10;
+    }
+
+    .ms-stat-inactive .ms-stat-icon {
+        background-color: #f3f2f1;
+        color: #605e5c;
+    }
+
+    .ms-stat-total .ms-stat-icon {
+        background-color: #deecf9;
+        color: #0078d4;
+    }
+
+    .ms-stat-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #323130;
+        letter-spacing: 0.3px;
+    }
+
+    .ms-stat-body {
+        flex: 1;
+        margin-bottom: 20px;
+    }
+
+    .ms-stat-number {
+        font-size: 42px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 12px;
+        color: #323130;
+        font-family: 'Segoe UI Semibold', 'Segoe UI', sans-serif;
+    }
+
+    .ms-stat-active .ms-stat-number {
+        color: #107c10;
+    }
+
+    .ms-stat-inactive .ms-stat-number {
+        color: #605e5c;
+    }
+
+    .ms-stat-total .ms-stat-number {
+        color: #0078d4;
+    }
+
+    .ms-stat-percentage {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ms-stat-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+
+    .ms-stat-badge-success {
+        background-color: #dff6dd;
+        color: #107c10;
+    }
+
+    .ms-stat-badge-secondary {
+        background-color: #f3f2f1;
+        color: #605e5c;
+    }
+
+    .ms-stat-label {
+        font-size: 13px;
+        color: #605e5c;
+        font-weight: 500;
+    }
+
+    .ms-stat-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .ms-stat-meta-item {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: #605e5c;
+    }
+
+    .ms-stat-meta-label {
+        margin-left: 6px;
+        font-weight: 500;
+    }
+
+    .ms-stat-footer {
+        border-top: 1px solid #edebe9;
+        padding-top: 16px;
+    }
+
+    .ms-stat-trend {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .ms-stat-trend-text {
+        color: #605e5c;
+        letter-spacing: 0.2px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 992px) {
+        .ms-stat-card {
+            padding: 20px;
+        }
+
+        .ms-stat-number {
+            font-size: 36px;
+        }
+
+        .ms-stat-icon {
+            width: 44px;
+            height: 44px;
+            font-size: 18px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .ms-stat-card {
+            margin-bottom: 16px;
+        }
+
+        .ms-stat-number {
+            font-size: 32px;
+        }
+
+        .ms-stat-header {
+            margin-bottom: 16px;
+        }
+    }
+
+    /* Animation for number counting (optional) */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .ms-stat-card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .ms-stat-card:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .ms-stat-card:nth-child(3) {
+        animation-delay: 0.2s;
     }
 </style>
