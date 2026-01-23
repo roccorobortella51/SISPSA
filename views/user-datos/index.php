@@ -56,32 +56,32 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
             <?= Html::encode($this->title); ?>
         </h1>
 
-        <div class="d-flex" style="gap: 20px !important;">
+        <div class="d-flex flex-wrap gap-4 align-items-center justify-content-end user-datos-btn-group">
             <?php if ($permisos) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-plus"></i> CREAR NUEVO AFILIADO DEL SÍSTEMA',
+                    '<i class="fas fa-plus fa-lg me-3"></i> <span class="btn-label">CREAR NUEVO AFILIADO DEL SÍSTEMA</span>',
                     ['create'],
                     [
-                        'class' => 'btn btn-outline-success btn-fixed-success',
-                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+                        'class' => 'btn btn-success btn-lg fw-bold shadow user-datos-btn',
+                        'style' => 'font-size:1.35rem; padding: 20px 32px; border-radius: 1.5rem; letter-spacing:0.5px; display:flex; align-items:center; gap:18px; min-width:340px;'
                     ]
                 ) ?>
                 <?= Html::a(
-                    '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE AFILIADOS',
+                    '<i class="fas fa-file-excel fa-lg me-3"></i> <span class="btn-label">CARGAR MASIVOS DE AFILIADOS</span>',
                     ['masivo'],
                     [
-                        'class' => 'btn btn-outline-primary btn-fixed-primary',
-                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+                        'class' => 'btn btn-primary btn-lg fw-bold shadow user-datos-btn',
+                        'style' => 'font-size:1.35rem; padding: 20px 32px; border-radius: 1.5rem; letter-spacing:0.5px; display:flex; align-items:center; gap:18px; min-width:340px;'
                     ]
                 ) ?>
             <?php endif; ?>
             <?php if ($clinica && $clinica->id !== null) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-undo"></i> Volver a Clínica',
+                    '<i class="fas fa-undo fa-lg me-3"></i> <span class="btn-label">Volver a Clínica</span>',
                     ['/rm-clinica/view', 'id' => $clinica->id],
                     [
-                        'class' => 'btn btn-outline-secondary',
-                        'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;',
+                        'class' => 'btn btn-secondary btn-lg fw-bold shadow user-datos-btn',
+                        'style' => 'font-size:1.35rem; padding: 20px 32px; border-radius: 1.5rem; letter-spacing:0.5px; display:flex; align-items:center; gap:18px; min-width:280px;',
                         'title' => 'Volver a los detalles de la clínica',
                     ]
                 ) ?>
