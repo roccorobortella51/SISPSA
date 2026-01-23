@@ -31,6 +31,7 @@ use DateTime;
 use app\models\Cuotas;
 use app\models\TasaCambio;
 use app\models\AgenteFuerza;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 
 
@@ -143,6 +144,8 @@ class UserDatosController extends Controller
      * @param array $data Los datos del archivo Excel
      * @return array Array con errores encontrados
      */
+
+
     private function validateExcelData($data)
     {
         $errors = [];
@@ -237,25 +240,67 @@ class UserDatosController extends Controller
                 }
             }
 
-            // Validar estado - municipio - parroquia (columna J) 
+            // Validar nacionalidad (columna J)
             if (empty($row['J'])) {
-                $rowErrors[] = 'Estado - municipio - parroquia es obligatorio';
-            } elseif (strlen($row['J']) < 2) {
-                $rowErrors[] = 'Estado - municipio - parroquia debe tener al menos 2 caracteres';
+                $rowErrors[] = 'Nacionalidad es obligatoria';
             }
 
-            // Validar municipio (columna K) - opcional pero si se proporciona debe ser numérico
+            // Validar estado civil (columna K)
+            $estadosCivilesValidos = ['Soltero', 'Casado', 'Divorciado', 'Viudo'];
             if (empty($row['K'])) {
-                $rowErrors[] = 'Ciudad es obligatorio';
-            } elseif (strlen($row['K']) < 2) {
-                $rowErrors[] = 'Ciudad debe tener al menos 2 caracteres';
+                $rowErrors[] = 'Estado civil es obligatorio';
+            } elseif (!in_array(ucfirst(strtolower(trim($row['K']))), $estadosCivilesValidos)) {
+                $rowErrors[] = 'Estado civil debe ser: Soltero, Casado, Divorciado o Viudo';
             }
 
-            // Validar dirección (columna N)
+            // Validar estado (columna L)
             if (empty($row['L'])) {
+                $rowErrors[] = 'Estado es obligatorio';
+            }
+
+            // Validar municipio (columna M)
+            if (empty($row['M'])) {
+                $rowErrors[] = 'Municipio es obligatorio';
+            }
+
+            // Validar parroquia (columna N)
+            if (empty($row['N'])) {
+                $rowErrors[] = 'Parroquia es obligatoria';
+            }
+
+            // Validar ciudad (columna O)
+            if (empty($row['O'])) {
+                $rowErrors[] = 'Ciudad es obligatoria';
+            }
+
+            // Validar dirección (columna P)
+            if (empty($row['P'])) {
                 $rowErrors[] = 'Dirección es obligatoria';
-            } elseif (strlen($row['L']) < 1) {
+            } elseif (strlen($row['P']) < 10) {
                 $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
+            }
+
+            // Validar actividad económica (columna S)
+            $actividadesValidas = ['Industrial', 'Comercial', 'Profesional', 'Gubernamental'];
+            if (empty($row['S'])) {
+                $rowErrors[] = 'Actividad económica es obligatoria';
+            } elseif (!in_array(ucfirst(strtolower(trim($row['S']))), $actividadesValidas)) {
+                $rowErrors[] = 'Actividad económica debe ser: Industrial, Comercial, Profesional o Gubernamental';
+            }
+
+            // Validar descripción de actividad (columna U)
+            $descripcionesValidas = ['Independiente', 'Dependiente', 'Societaria'];
+            if (empty($row['U'])) {
+                $rowErrors[] = 'Descripción de actividad es obligatoria';
+            } elseif (!in_array(ucfirst(strtolower(trim($row['U']))), $descripcionesValidas)) {
+                $rowErrors[] = 'Descripción de actividad debe ser: Independiente, Dependiente o Societaria';
+            }
+
+            // Validar ID Asesor (columna AA)
+            if (empty($row['AA'])) {
+                $rowErrors[] = 'ID Asesor es obligatorio';
+            } elseif (!is_numeric($row['AA']) || !UserHelper::isAgenteFuerzaIdValido($row['AA'])) {
+                $rowErrors[] = 'ID Asesor no es válido';
             }
 
             // Si hay errores en esta fila, agregarlos al array de errores
@@ -460,92 +505,123 @@ class UserDatosController extends Controller
      * Genera y descarga una plantilla Excel de ejemplo
      * @return \yii\web\Response
      */
-    public function actionDownloadTemplate()
-    {
-        // Crear un nuevo objeto Spreadsheet
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+public function actionDownloadTemplate()
+{
+    // Crear un nuevo objeto Spreadsheet
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
 
-        // Definir los encabezados
-        $headers = [
-            'A1' => 'Email',
-            'B1' => 'Teléfono',
-            'C1' => 'Nombres',
-            'D1' => 'Apellidos',
-            'E1' => 'Tipo Cédula',
-            'F1' => 'Cédula',
-            'G1' => 'Fecha Nacimiento',
-            'H1' => 'Sexo',
-            'I1' => 'Tipo Sangre',
-            'J1' => 'Estado ID',
-            'K1' => 'Municipio ID',
-            'L1' => 'Parroquia ID',
-            'M1' => 'Ciudad ID',
-            'N1' => 'Dirección'
-        ];
+    // Definir los encabezados (cada campo en su columna)
+    $headers = [
+        'A1' => 'Email',
+        'B1' => 'Teléfono',
+        'C1' => 'Nombres',
+        'D1' => 'Apellidos',
+        'E1' => 'Tipo Cédula',
+        'F1' => 'Cédula',
+        'G1' => 'Fecha Nacimiento',
+        'H1' => 'Sexo',
+        'I1' => 'Tipo Sangre',
+        'J1' => 'Nacionalidad',
+        'K1' => 'Estado Civil',
+        'L1' => 'Estado',
+        'M1' => 'Municipio',
+        'N1' => 'Parroquia',
+        'O1' => 'Ciudad',
+        'P1' => 'Dirección',
+        'Q1' => 'Profesión',                
+        'R1' => 'Ocupación',                
+        'S1' => 'Actividad Económica',      
+        'T1' => 'Ramo Comercial',           
+        'U1' => 'Descripción Actividad',    
+        'V1' => 'Dirección Oficina',        
+        'W1' => 'Dirección Cobro',          
+        'X1' => 'Teléfono Residencia',      
+        'Y1' => 'Teléfono Oficina',         
+        'Z1' => 'Teléfono Celular',
+        'AA1' => 'ID Asesor',
+    ];
 
-        // Aplicar encabezados
-        foreach ($headers as $cell => $value) {
-            $sheet->setCellValue($cell, $value);
-        }
-
-        // Agregar datos de ejemplo
-        $exampleData = [
-            'A2' => 'ejemplo@email.com',
-            'B2' => '0412-1234567',
-            'C2' => 'Juan',
-            'D2' => 'Pérez',
-            'E2' => 'V',
-            'F2' => '12345678',
-            'G2' => '15/03/1990',
-            'H2' => 'M',
-            'I2' => 'O+',
-            'J2' => '1',
-            'K2' => '1',
-            'L2' => '1',
-            'M2' => '1',
-            'N2' => 'Av. Principal, Casa #123'
-        ];
-
-        foreach ($exampleData as $cell => $value) {
-            $sheet->setCellValue($cell, $value);
-        }
-
-        // Aplicar formato a los encabezados
-        $headerStyle = [
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
-            ],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '4472C4'],
-            ],
-        ];
-
-        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
-
-        // Autoajustar columnas
-        foreach (range('A', 'N') as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-        }
-
-        // Crear el archivo temporal
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $tempFile = Yii::getAlias('@runtime/template_afiliados.xlsx');
-        $writer->save($tempFile);
-
-        // Enviar el archivo al navegador
-        return Yii::$app->response->sendFile($tempFile, 'plantilla_afiliados.xlsx', [
-            'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'inline' => false
-        ])->on(\yii\web\Response::EVENT_AFTER_SEND, function($event) use ($tempFile) {
-            // Eliminar el archivo temporal después de enviarlo
-            if (file_exists($tempFile)) {
-                unlink($tempFile);
-            }
-        });
+    // Aplicar encabezados
+    foreach ($headers as $cell => $value) {
+        $sheet->setCellValue($cell, $value);
     }
+
+    // Agregar datos de ejemplo
+    $exampleData = [
+        'A2' => 'ejemplo@email.com',
+        'B2' => '0412-1234567',
+        'C2' => 'Juan',
+        'D2' => 'Pérez',
+        'E2' => 'V',
+        'F2' => '12345678',
+        'G2' => '15/03/1990',
+        'H2' => 'M',
+        'I2' => 'O+',
+        'J2' => 'Venezolano',
+        'K2' => 'Soltero',
+        'L2' => '1',
+        'M2' => '1',
+        'N2' => '1',
+        'O2' => '1',
+        'P2' => 'Av. Principal, Casa #123',
+        'Q2' => 'Ingeniero',                
+        'R2' => 'Empleado',                 
+        'S2' => 'Comercial',                // (Industrial, Comercial, Profesional, Gubernamental)
+        'T2' => 'Alimentos',                
+        'U2' => 'Independiente',            // (Independiente, Dependiente, Societaria)
+        'V2' => 'Oficina Principal',        
+        'W2' => 'Sucursal Centro',          
+        'X2' => '0212-1234567',             
+        'Y2' => '0212-7654321',             
+        'Z2' => '0414-9876543',
+        'AA2' => '5',
+    ];
+
+    foreach ($exampleData as $cell => $value) {
+        if ($cell === 'G2') {
+            $sheet->setCellValueExplicit($cell, $value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+        } else {
+            $sheet->setCellValue($cell, $value);
+        }
+    }
+
+    // Aplicar formato a los encabezados
+    $headerStyle = [
+        'font' => [
+            'bold' => true,
+            'color' => ['rgb' => 'FFFFFF'],
+        ],
+        'fill' => [
+            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+            'startColor' => ['rgb' => '4472C4'],
+        ],
+    ];
+
+    $sheet->getStyle('A1:AA1')->applyFromArray($headerStyle);
+
+    // Autoajustar columnas
+    foreach (range('A', 'Z') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+    $sheet->getColumnDimension('AA')->setAutoSize(true);
+
+    // Crear el archivo temporal
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $tempFile = Yii::getAlias('@runtime/template_afiliados.xlsx');
+    $writer->save($tempFile);
+
+    // Enviar el archivo al navegador
+    return Yii::$app->response->sendFile($tempFile, 'plantilla_afiliados.xlsx', [
+        'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'inline' => false
+    ])->on(\yii\web\Response::EVENT_AFTER_SEND, function($event) use ($tempFile) {
+        // Eliminar el archivo temporal después de enviarlo
+        if (file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+    });
+}
 
 public function actionMasivo()
 {
@@ -557,7 +633,6 @@ public function actionMasivo()
         $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
 
         if (empty($masivoFiles) || !$masivoFiles[0]->tempName) {
-            // Si no se subió ningún archivo o el archivo está vacío
             Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o el archivo está corrupto.');
             return $this->render('masivo', [
                 'model' => $model,
@@ -582,16 +657,10 @@ public function actionMasivo()
         
         $clinica_id = $model->clinica_id;
         $plan_id = $modelContrato->plan_id;
-        
-        // ******* CORRECCIÓN CLAVE DE RELACIÓN *******
-        // Asignar el plan_id al modelo UserDatos *antes* de intentar usar la relación.
         $model->plan_id = $plan_id; 
         
-        // --- Validar la relación 'plan' antes de acceder a la propiedad 'precio' ---
         if ($model->plan === null) {
-            // Mensaje de error mejorado para mostrar el ID que falló
             Yii::$app->session->setFlash('error', 'Error de datos: No se pudo cargar el precio porque el Plan ID ('.$plan_id.') asociado al modelo principal no existe. Verifique que el ID del Plan seleccionado sea válido en la tabla "planes".');
-            // Eliminar el archivo subido
             if (file_exists($filePath)) {
                 unlink($filePath);
             }
@@ -601,39 +670,30 @@ public function actionMasivo()
             ]);
         }
         
-        $monto = $model->plan->precio; // Ahora es seguro acceder a 'precio'
-        // --- FIN DE LA CORRECCIÓN DE RELACIÓN ---
-        
+        $monto = $model->plan->precio;
         $fecha_ini = $modelContrato->fecha_ini;
         $fecha_ven = $modelContrato->fecha_ven;
         $fechaCreacion = date('Y-m-d H:i:s');   
         try {
-            // Leer archivo .xlsx
-            // *** ESTA LÍNEA NECESITA EL 'use PhpOffice\PhpSpreadsheet\IOFactory;' ***
             $spreadsheet = IOFactory::load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
 
-            // Establecer el rango de columnas a leer (de A a L)
-            // Usamos getHighestRow() para encontrar la última fila con datos
-            $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
-            $range = 'A1:L' . $highestRow; // Rango de A1 hasta la columna L de la última fila con datos
+            $highestRow = $sheet->getHighestDataRow();
+            $range = 'A1:AA' . $highestRow;
 
-            // Obtener los datos del rango especificado
             $sheetData = $sheet->rangeToArray(
-                $range,     // El rango de celdas a leer
-                null,       // No aplicar pre-casteo de valores
-                true,       // Formatear celdas (por ejemplo, fechas)
-                true,       // Incluir celdas nulas (vacías en el rango)
-                true        // Incluir las columnas como claves si TRUE (A, B, C...)
+                $range,
+                null,
+                true,
+                true,
+                true
             );
 
-            // Filtrar filas vacías (todas las columnas de A a N están vacías)
+            // Filtrar filas vacías
             $filteredData = [];
             foreach ($sheetData as $row) {
-                // Revisa si TODAS las celdas en el rango A-N de la fila están vacías
                 $isEmptyRow = true;
                 foreach ($row as $cellValue) {
-                    // Si encuentra cualquier valor no nulo o no una cadena vacía, la fila no está vacía
                     if ($cellValue !== null && $cellValue !== '') {
                         $isEmptyRow = false;
                         break;
@@ -644,36 +704,27 @@ public function actionMasivo()
                 }
             }
 
-            // Si la primera fila es un encabezado, la dejamos fuera del array principal de datos
+            // Quitar encabezado
             if (!empty($filteredData)) {
-                $headers = array_shift($filteredData); // Si la primera fila es el encabezado
+                $headers = array_shift($filteredData);
             }
 
-            // Validar los datos antes de procesarlos
             $validationErrors = $this->validateExcelData($filteredData);
             $duplicateErrors = $this->validateDuplicates($filteredData);
-            
             $allErrors = array_merge($validationErrors, $duplicateErrors);
             
             if (!empty($allErrors)) {
-                // Si hay errores de validación, mostrar el reporte HTML y no procesar
                 $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
-                
-                // Guardar el reporte en la sesión para mostrarlo en la vista
                 Yii::$app->session->setFlash('error', $validationReport);
-                
-                // Eliminar el archivo subido
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
-                
                 return $this->render('masivo', [
                     'model' => $model,
                     'modelContrato' => $modelContrato,
                 ]);
             }
 
-            // Si no hay errores de validación, proceder con el procesamiento
             foreach ($filteredData as $idx => $row) {
                 $rowNumber = $idx + 2; // +2 porque la primera fila es encabezado
                 $contrato = new Contratos();
@@ -712,14 +763,25 @@ public function actionMasivo()
                     $model->sexo = $row['H'];
                 }
                 $model->tipo_sangre = $row['I'];
-                $explodeEstado = explode(' - ', $row['J']);
-                $model->estado = $explodeEstado[0] ?? null;
-                $model->municipio = $explodeEstado[1] ?? null;
-                $model->parroquia = $explodeEstado[2] ?? null;
-                $explodeCiudad = explode(' - ', $row['K']);
-                $model->ciudad = isset($explodeCiudad[1]) ? $explodeCiudad[1] : ($explodeCiudad[0] ?? null);
-                $model->direccion = $row['L'];
-                $model->contrato_id = null; // Solo guardar contrato si el usuario es válido
+                $model->nacionalidad = $row['J'] ?? null;
+                $model->estado_civil = $row['K'] ?? null;
+                $model->estado = $row['L'] ?? null;
+                $model->municipio = $row['M'] ?? null;
+                $model->parroquia = $row['N'] ?? null;
+                $model->ciudad = $row['O'] ?? null;
+                $model->direccion = $row['P'] ?? null;
+                $model->profesion = $row['Q'] ?? null;
+                $model->ocupacion = $row['R'] ?? null;
+                $model->actividad_economica = $row['S'] ?? null;
+                $model->ramo_comercial = $row['T'] ?? null;
+                $model->descripcion_actividad = $row['U'] ?? null;
+                $model->direccion_oficina = $row['V'] ?? null;
+                $model->direccion_cobro = $row['W'] ?? null;
+                $model->telefono_residencia = $row['X'] ?? null;
+                $model->telefono_oficina = $row['Y'] ?? null;
+                $model->telefono_celular = $row['Z'] ?? null;
+                $model->asesor_id = $row['AA'] ?? null;
+                $model->contrato_id = null;
                 $model->clinica_id = $clinica_id;
                 $model->plan_id = $plan_id;
                 $model->created_at = $fechaCreacion;
@@ -729,6 +791,17 @@ public function actionMasivo()
                 if ($guardo) {
                     $contrato->user_id = $model->id;
                     $contrato->save(false);
+
+                    // Generar y guardar el número de contrato igual que en el create
+                    if ($contrato->id && $model->id) {
+                        $anio_actual = date('Y');
+                        $contrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $contrato->id;
+                        $contrato->save(false);
+
+                        $model->contrato_id = $contrato->id;
+                        $model->save(false);
+                    }
+
                     $pass = 'sispsa'.$model->cedula;
                     $modelUser = new User();
                     $modelUser->username = $model->email;
@@ -777,7 +850,6 @@ public function actionMasivo()
                 }
             }
 
-            // Si hubo errores en el guardado de algún registro, mostrar el reporte de validación
             if (!empty($allErrors)) {
                 $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
                 Yii::$app->session->setFlash('error', $validationReport);
@@ -790,10 +862,12 @@ public function actionMasivo()
                 ]);
             }
 
+            Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
+            return $this->redirect(['index']);
+
         } catch (Exception $e) {
             Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
             Yii::$app->session->setFlash('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
-            // Asegúrate de eliminar el archivo subido si hubo un error al leerlo
             if (file_exists($filePath)) {
                 unlink($filePath);
             }
@@ -801,7 +875,7 @@ public function actionMasivo()
                 'model' => $model,
                 'modelContrato' => $modelContrato,
             ]);
-        } catch (\Exception $e) { // Captura otras excepciones generales
+        } catch (\Exception $e) {
             Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
             Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
             if (file_exists($filePath)) {

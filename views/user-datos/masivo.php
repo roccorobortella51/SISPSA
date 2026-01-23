@@ -230,12 +230,22 @@ $this->registerJs($validationJs);
                 <h1><?= $this->title ;?></h1>
                 <div class="d-flex" style="gap: 20px !important;">
                     <?= Html::a(
-                        '<i class="fas fa-download"></i> Descargar Plantilla',
+                        '<i class="fas fa-download"></i> Descargar Plantilla de Ejemplo',
                         ['download-template'],
                         [
                             'class' => 'btn btn-outline-success btn-fixed-success',
-                            'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;',
+                            'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
                             'title' => 'Descargar plantilla Excel de ejemplo'
+                        ]
+                    ) ?>
+
+                    <?= Html::a(
+                        '<i class="fas fa-user-tie me-2"></i> Descargar Catálogo de Asesores',
+                        ['/corporativo/descargar-catalogo-asesores'],
+                        [
+                            'class' => 'btn btn-outline-secondary btn-lg fw-bold shadow-sm btn-fixed-secondary',
+                            'style' => 'font-size: 1.2rem !important; padding: 12px 20px !important; margin-right: 30px; margin-bottom: 20px;',
+                            'title' => 'Descarga un CSV con la lista de asesores'
                         ]
                     ) ?>
                     <!--Html::a(
@@ -451,57 +461,67 @@ foreach ($estadosList as $id => $nombre) {
                         <h1>Archivo de Datos del Afiliado</h1>
                     </div>
                 </div>
+                
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="alert alert-info">
-                            <h5><i class="fas fa-info-circle"></i> Información sobre el archivo Excel</h5>
-                            <p><strong>Formato requerido:</strong> El archivo debe tener las siguientes columnas:</p>
-                            <ul>
-                                <li><strong>A:</strong> Email (obligatorio, formato válido)</li>
-                                <li><strong>B:</strong> Teléfono (obligatorio, formato venezolano)</li>
-                                <li><strong>C:</strong> Nombres (obligatorio, mínimo 2 caracteres)</li>
-                                <li><strong>D:</strong> Apellidos (obligatorio, mínimo 2 caracteres)</li>
-                                <li><strong>E:</strong> Tipo Cédula (obligatorio: V, E, P, J)</li>
-                                <li><strong>F:</strong> Cédula (obligatorio, 6-10 dígitos numéricos)</li>
-                                <li><strong>G:</strong> Fecha Nacimiento (obligatorio, formato DD/MM/YYYY)</li>
-                                <li><strong>H:</strong> Sexo (obligatorio: M, F, Masculino, Femenino)</li>
-                                <li><strong>I:</strong> Tipo Sangre (opcional: A+, A-, B+, B-, AB+, AB-, O+, O-)</li>
-                                <li><strong>J:</strong> Estado ID (opcional, ID numérico)</li>
-                                <li><strong>K:</strong> Municipio ID (opcional, ID numérico)</li>
-                                <li><strong>L:</strong> Parroquia ID (opcional, ID numérico)</li>
-                                <li><strong>M:</strong> Ciudad ID (opcional, ID numérico)</li>
-                                <li><strong>N:</strong> Dirección (obligatorio, mínimo 10 caracteres)</li>
-                            </ul>
-                            <p><strong>Nota:</strong> La primera fila debe contener los encabezados. Descarga la plantilla de ejemplo para ver el formato correcto.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <?= $form->field($model, 'masivoFile')->widget(FileInput::classname(),[
-                                'name' => 'attachments',
-                                'pluginOptions' => [
-                                    'browseClass' => 'btn btn-lg',
-                                    'browseIcon' => '<i class="fas fa-folder-open"></i> ',
-                                    'browseLabel' => 'Examinar archivo',
-                                    'browseStyle' => 'background: #b9fbc0; color: #166534; font-weight: bold; border-radius: 10px; box-shadow: 0 2px 12px rgba(22,101,52,0.12); padding: 22px 90px; border: none; font-size: 1.22rem; letter-spacing: 0.5px; min-width: 480px; max-width: 100%;',
-                                    'removeClass' => 'btn btn-lg w-100',
-                                    'removeIcon' => '<i class="fas fa-trash"></i> ',
-                                    'removeLabel' => 'Quitar',
-                                    'removeStyle' => 'background: #ffe5e5; color: #b91c1c; font-weight: bold; border-radius: 10px; box-shadow: 0 2px 8px rgba(185,28,28,0.08); padding: 16px 32px; border: none; font-size: 1.15rem; letter-spacing: 0.5px;',
-                                    'showUpload' => false,
-                                    'showCancel' => false,
-                                    'previewFileType' => 'image',
-                                    'maxFileSize' => 2800,
-                                    'previewSettings' => [
-                                        'image' => ['width' => '150px', 'height' => 'auto'],
-                                    ],
-                                ],
-                                'options' => [
-                                    //'disabled' => $disabled,
-                                ],
-                            ])->label(false);
-                        ?>    
-                    </div>
-                </div>
+    <div class="col-md-6">
+        <div class="alert alert-info" style="font-size: 1.18rem; line-height: 1.7;">
+            <h5 style="font-size: 1.35rem;"><i class="fas fa-info-circle"></i> Instrucciones para llenar el archivo Excel</h5>
+            <ul style="font-size: 1.18rem;">
+                <li><b>Email:</b> Obligatorio. Debe ser un correo electrónico válido.</li>
+                <li><b>Teléfono:</b> Obligatorio. Solo números, puede incluir guiones.</li>
+                <li><b>Nombres y Apellidos:</b> Obligatorio. Mínimo 2 caracteres.</li>
+                <li><b>Tipo Cédula:</b> Obligatorio. Valores permitidos: V, E, P, J.</li>
+                <li><b>Cédula:</b> Obligatorio. Solo números, entre 6 y 10 dígitos.</li>
+                <li><b>Fecha Nacimiento:</b> Obligatorio. Formato DD/MM/AAAA.</li>
+                <li><b>Sexo:</b> Obligatorio. Valores permitidos: M, F, Masculino, Femenino.</li>
+                <li><b>Tipo Sangre:</b> Opcional. Valores: A+, A-, B+, B-, AB+, AB-, O+, O-.</li>
+                <li><b>Nacionalidad:</b> Obligatorio.</li>
+                <li><b>Estado Civil:</b> Obligatorio. Valores: Soltero, Casado, Divorciado, Viudo.</li>
+                <li><b>Estado, Municipio, Parroquia, Ciudad:</b> Obligatorio. Debe colocar el <b>ID</b> correspondiente (ver ayuda de IDs de ubicación).</li>
+                <li><b>Dirección:</b> Obligatorio. Mínimo 10 caracteres.</li>
+                <li><b>Profesión:</b> Opcional. Ejemplo: Ingeniero, Abogado, Médico.</li>
+                <li><b>Ocupación:</b> Opcional. Ejemplo: Empleado, Empresario, Independiente.</li>
+                <li><b>Actividad Económica:</b> Obligatorio. Valores permitidos: <b>Industrial</b>, <b>Comercial</b>, <b>Profesional</b>, <b>Gubernamental</b>.</li>
+                <li><b>Ramo Comercial:</b> Opcional. Ejemplo: Alimentos, Construcción, Tecnología.</li>
+                <li><b>Descripción Actividad:</b> Obligatorio. Valores permitidos: <b>Independiente</b>, <b>Dependiente</b>, <b>Societaria</b>.</li>
+                <li><b>Dirección Oficina:</b> Opcional. Dirección física de la oficina.</li>
+                <li><b>Dirección Cobro:</b> Opcional. Dirección donde se realiza el cobro.</li>
+                <li><b>Teléfono Residencia:</b> Opcional. Número de teléfono fijo de la residencia.</li>
+                <li><b>Teléfono Oficina:</b> Opcional. Número de teléfono fijo de la oficina.</li>
+                <li><b>Teléfono Celular:</b> Opcional. Número de teléfono móvil.</li>
+                <li><b>ID Asesor:</b> Obligatorio. Debe colocar el ID del agente/asesor (consulte la lista de asesores).</li>
+            </ul>
+            <p style="font-size: 1.15rem;"><b>Nota:</b> La primera fila debe contener los encabezados. Descargue la plantilla de ejemplo para ver el formato correcto y consulte la ayuda de IDs de ubicación para los campos de Estado, Municipio, Parroquia y Ciudad.</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <?= $form->field($model, 'masivoFile')->widget(FileInput::classname(),[
+                'name' => 'attachments',
+                'pluginOptions' => [
+                    'browseClass' => 'btn btn-lg',
+                    'browseIcon' => '<i class="fas fa-folder-open"></i> ',
+                    'browseLabel' => 'Examinar archivo',
+                    'browseStyle' => 'background: #b9fbc0; color: #166534; font-weight: bold; border-radius: 10px; box-shadow: 0 2px 12px rgba(22,101,52,0.12); padding: 22px 90px; border: none; font-size: 1.22rem; letter-spacing: 0.5px; min-width: 480px; max-width: 100%;',
+                    'removeClass' => 'btn btn-lg w-100',
+                    'removeIcon' => '<i class="fas fa-trash"></i> ',
+                    'removeLabel' => 'Quitar',
+                    'removeStyle' => 'background: #ffe5e5; color: #b91c1c; font-weight: bold; border-radius: 10px; box-shadow: 0 2px 8px rgba(185,28,28,0.08); padding: 16px 32px; border: none; font-size: 1.15rem; letter-spacing: 0.5px;',
+                    'showUpload' => false,
+                    'showCancel' => false,
+                    'previewFileType' => 'image',
+                    'maxFileSize' => 2800,
+                    'previewSettings' => [
+                        'image' => ['width' => '150px', 'height' => 'auto'],
+                    ],
+                ],
+                'options' => [
+                    //'disabled' => $disabled,
+                ],
+            ])->label(false);
+        ?>    
+    </div>
+</div>
+
                 <div class="form-group mt-4 d-flex justify-content-center" style="gap: 20px !important;">
                     <?= Html::submitButton('<i class="fas fa-save"></i> Guardar', [
                         'class' => 'btn btn-outline-success btn-fixed-success',
