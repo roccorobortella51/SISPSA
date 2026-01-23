@@ -359,8 +359,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'value' => function ($model) {
                                 $value = $model->estatus_solvente;
-                                // Handle different possible values (uppercase, lowercase, boolean, numeric)
-                                if (strtoupper($value) === "SI" || $value === 1 || $value === true || $value === "Sí") {
+                                if ($value !== null && (strtoupper((string)$value) === "SI" || $value === 1 || $value === true || $value === "Sí")) {
                                     return '<p class="status-badge active">Sí</p>';
                                 } else {
                                     return '<p class="status-badge inactive">No</p>';
