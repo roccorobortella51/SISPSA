@@ -693,10 +693,10 @@ console.log('debugModal available:', typeof debugModal === 'function');
 // QUICK TEST - Add debug button
 // ============================================
 
-/ Create debug button dynamically
-/*setTimeout(function() {
+/* Create debug button dynamically
+setTimeout(function() {
     var debugBtn = document.createElement('button');
-   // debugBtn.innerHTML = 'DEBUG MODAL';
+    debugBtn.innerHTML = 'DEBUG MODAL';
     debugBtn.style.position = 'fixed';
     debugBtn.style.bottom = '10px';
     debugBtn.style.right = '10px';
@@ -715,40 +715,28 @@ JS;
 
 $this->registerJs($bulletproofJs, \yii\web\View::POS_END);
 
+// Import progress JavaScript (kept separate)
 $importJs = <<<JS
 
 let progressPoller = null;
 let currentTaskId = null;
-let importCompleted = false;
 
 // Function to poll for import progress
 function pollProgress(taskId) {
-    if (importCompleted) {
-        console.log('Import already completed, stopping polling');
-        return;
-    }
-    
     $.ajax({
         url: IMPORT_STATUS_URL,
         type: 'GET',
         data: { taskId: taskId },
         success: function(response) {
-            if (!response) {
-                console.warn('No response received from progress polling');
-                return;
-            }
+            if (!response) return;
 
-            console.log('Progress update:', response.progress + '%', response.message);
-            
             const progressBar = $('.progress-bar');
             const progressText = $('.progress-text');
             const progressDetails = $('#progress-details-text');
             
-            // Update progress bar and text
             progressBar.css('width', response.progress + '%').text(response.progress + '%');
             progressText.text(response.message);
             
-            // Update progress details if available
             if (response.details) {
                 let detailsHtml = '';
                 if (response.details.plans_total > 0) {
@@ -764,7 +752,6 @@ function pollProgress(taskId) {
                 progressDetails.html(detailsHtml);
             }
             
-            // Change progress bar color based on progress
             if (response.progress < 30) {
                 progressBar.css('background', '#dc3545');
             } else if (response.progress < 70) {
@@ -773,100 +760,67 @@ function pollProgress(taskId) {
                 progressBar.css('background', '#28a745');
             }
 
-            // Check if the process is finished
             if (response.finished) {
-                console.log('Import finished, stopping polling. Result:', response.result);
-                clearProgressPolling();
+                clearInterval(progressPoller);
                 handleImportResult(response.result);
             }
         },
-        error: function(xhr, status, error) {
-            console.error('Progress polling error:', status, error);
-            clearProgressPolling();
-            showImportError('Error de conexión', 'No se pudo obtener el estado de la importación del servidor.');
+        error: function() {
+            clearInterval(progressPoller);
+            showImportError('Connection Error', 'Could not get import status from the server.');
             resetImportForm();
         }
     });
 }
 
-function clearProgressPolling() {
-    if (progressPoller) {
-        clearInterval(progressPoller);
-        progressPoller = null;
-    }
-    importCompleted = true;
-}
-
 function handleImportResult(result) {
-    console.log('Handling import result:', result);
     const submitBtn = $('#submit-import');
     
-    if (result && result.success) {
-        // Show 100% progress
+    if (result.success) {
         $('.progress-bar').css('width', '100%').text('100%').css('background', '#28a745');
-        $('.progress-text').text('¡Importación completada exitosamente!');
+        $('.progress-text').text('Importación completada!');
         
-        // Stop any animation and show final state
-        $('.progress-bar').css('transition', 'none');
-        
-        // Small delay before showing success message
         setTimeout(function() {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'success',
                     title: '¡Importación Exitosa!',
-                    html: result.message || 'La importación se completó correctamente.',
-                    confirmButtonText: 'Aceptar',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false
+                    html: result.message,
+                    confirmButtonText: 'Aceptar'
                 }).then(() => {
                     hideImportModal();
                     location.reload();
                 });
             } else {
-                alert('¡Importación exitosa! ' + (result.message || 'La importación se completó correctamente.'));
+                alert('¡Importación exitosa! ' + result.message);
                 hideImportModal();
                 location.reload();
             }
-        }, 500);
+        }, 1000);
     } else {
-        // Handle failure
-        const errorMessage = result ? result.message : 'Error desconocido durante la importación.';
-        const detailedError = result ? result.detailed_error : 'No hay detalles disponibles.';
-        showImportError(errorMessage, detailedError);
+        showImportError(result.message, result.detailed_error);
         resetImportForm();
     }
 }
 
 function resetImportForm() {
-    console.log('Resetting import form');
     $('#submit-import').prop('disabled', false).html('<i class="fas fa-upload mr-2"></i> Iniciar Importación');
     $('.import-progress').hide();
-    $('.progress-bar').css('width', '0%').text('').css('background', '#dc3545').css('transition', 'width 0.5s ease-in-out');
+    $('.progress-bar').css('width', '0%').text('');
     $('#progress-details-text').empty();
-    clearProgressPolling();
-    importCompleted = false;
 }
 
 // Main import form submission handler
 $('#import-form').on('beforeSubmit', function(e) {
     e.preventDefault();
     
-    console.log('Starting import process...');
-    
     var formData = new FormData(this);
     var submitBtn = $('#submit-import');
     
-    // Reset states
-    importCompleted = false;
-    currentTaskId = null;
-    
-    // Hide previous errors and show loading state
     $('#import-error-alert').hide();
-    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Procesando...');
     $('.import-progress').show();
     
-    // Show immediate progress feedback
     $('.progress-bar').css('width', '5%').text('5%').css('background', '#dc3545');
     $('.progress-text').text('Iniciando importación...');
     $('#progress-details-text').html('Preparando archivo...');
@@ -878,7 +832,6 @@ $('#import-form').on('beforeSubmit', function(e) {
         data: formData,
         processData: false,
         contentType: false,
-        timeout: 30000, // 30 second timeout
         xhr: function() {
             var xhr = new window.XMLHttpRequest();
             
@@ -896,35 +849,28 @@ $('#import-form').on('beforeSubmit', function(e) {
             return xhr;
         },
         success: function(response) {
-            console.log('Import initiated successfully:', response);
-            
             if (response.success && response.taskId) {
                 // Successfully started, now begin polling for status
                 currentTaskId = response.taskId;
                 $('.progress-text').text('Archivo subido. Procesando...');
                 $('.progress-bar').css('width', '10%').text('10%');
                 
-                // Start polling for progress
+                // Start polling for progress IMMEDIATELY
                 progressPoller = setInterval(function() {
-                    if (currentTaskId && !importCompleted) {
-                        pollProgress(currentTaskId);
-                    }
-                }, 1500); // Poll every 1.5 seconds
+                    pollProgress(currentTaskId);
+                }, 800); // Poll every 800ms for more responsive updates
             } else {
                 // Failed to start the import process
-                showImportError(response.message || 'No se pudo iniciar la importación.', 'El servidor no proporcionó un ID de tarea.');
+                showImportError(response.message || 'Failed to start import.', 'The server did not provide a task ID.');
                 resetImportForm();
             }
         },
-        error: function(xhr, status, error) {
-            console.error('Import initiation error:', status, error);
-            var errorMessage = 'Error al iniciar la importación.';
-            if (xhr.status === 0) {
-                errorMessage = 'Error de conexión. Verifique su conexión a internet.';
-            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+        error: function(xhr) {
+            var errorMessage = 'Error iniciando la importación.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMessage = xhr.responseJSON.message;
             }
-            showImportError(errorMessage, xhr.responseText || error);
+            showImportError(errorMessage, xhr.responseText);
             resetImportForm();
         }
     });
@@ -932,9 +878,8 @@ $('#import-form').on('beforeSubmit', function(e) {
     return false;
 });
 
+// Enhanced error display functions
 function showImportError(mainMessage, detailedMessage) {
-    console.error('Import error:', mainMessage, detailedMessage);
-    
     $('#error-main-message').text(mainMessage);
     $('#error-detailed-message').text(detailedMessage || 'No hay detalles adicionales disponibles.');
     $('#error-stack-trace').text(detailedMessage || 'No hay detalles técnicos disponibles.');
@@ -947,10 +892,8 @@ function showImportError(mainMessage, detailedMessage) {
             scrollTop: modalBody.scrollTop() + $('#import-error-alert').position().top - 20
         }, 500);
     }
-    
-    // Reset form
-    resetImportForm();
 }
+
 
 function copyErrorToClipboard() {
     var errorText = 'Error: ' + $('#error-main-message').text() + '\\n' +
@@ -1018,26 +961,6 @@ function updatestatus(planId) {
     });
 }
 
-// Reset form when modal is closed
-$('#importModal').on('hide.bs.modal', function() {
-    resetImportForm();
-});
-
-// Also reset when our custom hide function is called
-window.hideImportModal = function() {
-    console.log('Hiding modal and resetting form');
-    resetImportForm();
-    
-    var modal = document.getElementById('importModal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('active');
-    }
-    
-    // Restore body scrolling
-    document.body.style.overflow = '';
-}
-
 // Initialize
 $(document).ready(function() {
     console.log('Import functionality loaded');
@@ -1046,11 +969,6 @@ $(document).ready(function() {
     if ($.fn.tooltip) {
         $('[data-toggle="tooltip"]').tooltip();
     }
-    
-    // Add safety check to stop polling if page is left
-    $(window).on('beforeunload', function() {
-        clearProgressPolling();
-    });
 });
 JS;
 
