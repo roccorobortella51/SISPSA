@@ -661,14 +661,14 @@ class ReportesController extends Controller
             ->setCategory("Reporte");
 
         // =============================================
-        // HOJA 1: DETALLE DE PAGOS
+        // HOJA 1: DETALLE DE PAGOS - UPDATED WITH NEW COLUMN ORDER AND CENTERED VALUES
         // =============================================
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Detalle de Pagos');
 
         // Encabezado principal
-        $sheet->setCellValue('A1', 'REPORTE DE PAGOS DE AFILIADOS');
-        $sheet->mergeCells('A1:I1');
+        $sheet->setCellValue('A1', 'Reporte de Operaciones en Efectivo y Transacciones con Activos Virtuales (SUDEASEG-002)');
+        $sheet->mergeCells('A1:H1'); // 8 columns total
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
@@ -702,18 +702,17 @@ class ReportesController extends Controller
         $sheet->setCellValue('A5', 'Generado:');
         $sheet->setCellValue('B5', date('d/m/Y H:i:s'));
 
-        // Encabezados de columnas
+        // Encabezados de columnas - NEW ORDER AS SPECIFIED
         $headerRow = 7;
         $headers = [
-            'ID Pago',
-            'Nombres',
-            'Apellidos',
-            'Cédula',
-            'Monto (Bs.)',
-            'Fecha Pago',
+            'Fecha de Operación',
+            'Nombre o Razón Social',
+            'Nº de Identificación',
+            'Tipo de Cliente',
+            'Ubicación Geográfica',
             'Método de Pago',
-            'Estado',
-            'Clínica'
+            'Tipo de Moneda',
+            'Monto'
         ];
 
         $col = 1; // Columna A = 1
@@ -731,9 +730,8 @@ class ReportesController extends Controller
         $headerStyle->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $headerStyle->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
-        // Datos de pagos
+        // Datos de pagos - CORRECTED VERSION WITH ALL ADJUSTMENTS
         $dataRow = $headerRow + 1;
-        $totalMonto = 0;
 
         if (empty($models)) {
             $sheet->setCellValue('A' . $dataRow, 'No hay datos para el período seleccionado');
@@ -741,57 +739,71 @@ class ReportesController extends Controller
             $sheet->getStyle('A' . $dataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle('A' . $dataRow)->getFont()->setItalic(true);
         } else {
+            // Pre-load all state data for better performance
+            $states = \app\models\RmEstado::find()->indexBy('id')->all();
+
             foreach ($models as $model) {
-                $col = 1; // Empezar en columna A (índice 1)
-                $colLetter = 'A'; // Columna inicial como letra
-
-                // ID Pago
-                $sheet->setCellValue($colLetter . $dataRow, $model->id);
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Nombres
-                $nombres = $model->userDatos ? $model->userDatos->nombres : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $nombres);
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Apellidos
-                $apellidos = $model->userDatos ? $model->userDatos->apellidos : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $apellidos);
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Cédula
-                $cedula = $model->userDatos ? $model->userDatos->cedula : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $cedula);
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Monto
-                $sheet->setCellValue($colLetter . $dataRow, $model->monto_usd);
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Fecha Pago
-                $fechaPago = $model->fecha_pago ? Yii::$app->formatter->asDate($model->fecha_pago, 'php:d/m/Y') : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $fechaPago);
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Método de Pago
-                $sheet->setCellValue($colLetter . $dataRow, $model->metodo_pago ?: 'N/A');
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Estatus
-                $sheet->setCellValue($colLetter . $dataRow, $model->estatus ?: 'N/A');
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col++);
-
-                // Clínica
-                $clinicaNombre = 'Sin Clínica';
-                if ($model->contratos && count($model->contratos) > 0) {
-                    foreach ($model->contratos as $contrato) {
-                        if ($contrato->clinica) {
-                            $clinicaNombre = $contrato->clinica->nombre;
-                            break;
-                        }
+                // 1. Fecha de Operación (Column A) - DD-MM-YYYY format
+                $fechaPago = 'N/A';
+                if ($model->fecha_pago) {
+                    try {
+                        $date = new \DateTime($model->fecha_pago);
+                        $fechaPago = $date->format('d-m-Y'); // DD-MM-YYYY format
+                    } catch (\Exception $e) {
+                        $fechaPago = 'N/A';
                     }
                 }
-                $sheet->setCellValue($colLetter . $dataRow, $clinicaNombre);
+                $sheet->setCellValue('A' . $dataRow, $fechaPago);
+
+                // 2. Nombre o Razón Social (Column B) - Nombres + Apellidos in UPPERCASE
+                $nombreCompleto = 'N/A';
+                if ($model->userDatos) {
+                    $nombres = $model->userDatos->nombres ?: '';
+                    $apellidos = $model->userDatos->apellidos ?: '';
+                    $nombreCompleto = trim($nombres . ' ' . $apellidos);
+                    if (!empty($nombreCompleto)) {
+                        $nombreCompleto = strtoupper($nombreCompleto);
+                    }
+                }
+                $sheet->setCellValue('B' . $dataRow, $nombreCompleto);
+
+                // 3. Nº de Identificación (Column C) - cedula
+                $cedula = $model->userDatos ? $model->userDatos->cedula : 'N/A';
+                $sheet->setCellValue('C' . $dataRow, $cedula);
+
+                // 4. Tipo de Cliente (Column D) - tipo_cedula
+                $tipoCedula = $model->userDatos ? $model->userDatos->tipo_cedula : 'N/A';
+                $sheet->setCellValue('D' . $dataRow, $tipoCedula);
+
+                // 5. Ubicación Geográfica (Column E) - estado name in UPPERCASE
+                $estadoNombre = 'N/A';
+                if ($model->userDatos && $model->userDatos->estado) {
+                    // Check if estado is numeric (ID) or already a string
+                    if (is_numeric($model->userDatos->estado) && isset($states[$model->userDatos->estado])) {
+                        $estadoNombre = strtoupper($states[$model->userDatos->estado]->nombre);
+                    } else {
+                        // If it's already a string, use it as is
+                        $estadoNombre = strtoupper($model->userDatos->estado);
+                    }
+                }
+                $sheet->setCellValue('E' . $dataRow, $estadoNombre);
+
+                // 6. Método de Pago (Column F) - UPPERCASE
+                $metodoPago = $model->metodo_pago ? strtoupper($model->metodo_pago) : 'N/A';
+                $sheet->setCellValue('F' . $dataRow, $metodoPago);
+
+                // 7. Tipo de Moneda (Column G)
+                // Determine currency based on metodo_pago (use original for detection)
+                $tipoMoneda = 'USD';
+                if (strpos($model->metodo_pago, 'Bolívar') !== false || strpos($model->metodo_pago, 'Bs') !== false) {
+                    $tipoMoneda = 'Bs.';
+                }
+                $sheet->setCellValue('G' . $dataRow, $tipoMoneda);
+
+                // 8. Monto (Column H)
+                // Display amount based on currency type
+                $monto = $tipoMoneda === 'Bs.' ? $model->monto_usd : $model->monto_pagado;
+                $sheet->setCellValue('H' . $dataRow, $monto);
 
                 $dataRow++;
             }
@@ -802,11 +814,24 @@ class ReportesController extends Controller
             $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
         }
 
-        // Formato de moneda para columna de monto
+        // Formato de moneda para columna de Monto (Column H) y centrado
         $lastDataRow = empty($models) ? $dataRow : $dataRow - 1;
-        $sheet->getStyle('E' . ($headerRow + 1) . ':E' . $lastDataRow)
+
+        // Apply centered alignment to ALL data columns
+        $dataRange = 'A' . ($headerRow + 1) . ':H' . $lastDataRow;
+        $sheet->getStyle($dataRange)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Apply vertical centering for better appearance
+        $sheet->getStyle($dataRange)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+
+        // Apply number format to Monto column (H) after centering
+        $sheet->getStyle('H' . ($headerRow + 1) . ':H' . $lastDataRow)
             ->getNumberFormat()
             ->setFormatCode('#,##0.00');
+
+        // Optional: Wrap text for columns that might have longer content (like Nombre o Razón Social)
+        $sheet->getStyle('B' . ($headerRow + 1) . ':B' . $lastDataRow)
+            ->getAlignment()->setWrapText(true);
 
         // Also debug the data count
         Yii::debug("Total models found: " . count($models), 'application');
@@ -815,7 +840,7 @@ class ReportesController extends Controller
         if (!empty($models)) {
             $sample = $models[0];
             Yii::debug("Sample model - monto_usd: {$sample->monto_usd}, monto_pagado: {$sample->monto_pagado}", 'application');
-            $dataStyle = $sheet->getStyle('A' . $headerRow . ':I' . $lastDataRow);
+            $dataStyle = $sheet->getStyle('A' . $headerRow . ':H' . $lastDataRow);
             $dataStyle->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
         }
 
