@@ -187,8 +187,8 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                 </th>
                                 <th class="text-center py-3" style="width: 100px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
-                                        <i class="fas fa-fingerprint me-2 text-white" style="font-size: 1.3rem;"></i>
-                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">ID Pago</span>
+                                        <i class="fas fa-receipt me-2 text-white" style="font-size: 1.3rem;"></i>
+                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Referencia</span>
                                     </div>
                                 </th>
                                 <th class="py-3 ps-3" style="min-width: 220px; border-right: 2px solid rgba(255,255,255,0.2);">
@@ -276,12 +276,12 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                         </div>
                                     </td>
 
-                                    <!-- ID Pago -->
+                                    <!-- número de referencia -->
                                     <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
                                         <div class="d-flex flex-column align-items-center justify-content-center">
                                             <span class="ms-badge ms-badge-info shadow-sm"
                                                 style="font-size: 1.3rem !important; padding: 0.5rem 0.75rem;">
-                                                #<?= $model->id ?>
+                                                <?= $model->numero_referencia_pago ?>
                                             </span>
                                         </div>
                                     </td>
