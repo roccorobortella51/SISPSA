@@ -38,8 +38,8 @@ $this->title = 'DETALLES DEL PLAN: ' . Html::encode($model->nombre);
 $rol = UserHelper::getMyRol();
 $canManage = ($rol == 'superadmin');
 
-if($canManage == true){
-$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
+if ($canManage == true) {
+    $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
 }
 
 if ($clinica->id !== null) {
@@ -52,8 +52,9 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombre);
 
 \yii\web\YiiAsset::register($this);
 
-if (!function_exists('formatDateTime')) { 
-    function formatDateTime($value) {
+if (!function_exists('formatDateTime')) {
+    function formatDateTime($value)
+    {
         return $value ? Yii::$app->formatter->asDatetime($value, 'medium') : 'N/A';
     }
 }
@@ -62,22 +63,22 @@ if (!function_exists('formatDateTime')) {
 ?>
 
 <div class="main-container"> <!-- Contenedor principal de la vista -->
-   
+
     <!-- Encabezado y Botones de Acción Principal -->
-    <div class="header-section"> 
+    <div class="header-section">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
             <?php if ($canManage) : ?>
                 <?= Html::a(
                     '<i class="fas fa-edit mr-2"></i> Actualizar',
-                    ['update', 'id' => $model->id, 'clinica_id' => $clinica->id], 
-                    ['class' => 'btn-base btn-blue'] 
+                    ['update', 'id' => $model->id, 'clinica_id' => $clinica->id],
+                    ['class' => 'btn-base btn-blue']
                 ) ?>
                 <?= Html::a(
                     '<i class="fas fa-trash-alt mr-2"></i> Eliminar',
-                    ['delete', 'id' => $model->id, 'clinica_id' => $clinica->id], 
+                    ['delete', 'id' => $model->id, 'clinica_id' => $clinica->id],
                     [
-                        'class' => 'btn-base btn-red', 
+                        'class' => 'btn-base btn-red',
                         'data' => [
                             'confirm' => '¿Estás seguro de que quieres eliminar este plan?',
                             'method' => 'post',
@@ -87,10 +88,10 @@ if (!function_exists('formatDateTime')) {
             <?php endif; ?>
             <?php if ($clinica->id !== null) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-undo mr-2"></i> Volver', 
-                    ['index', 'clinica_id' => $clinica->id], 
+                    '<i class="fas fa-undo mr-2"></i> Volver',
+                    ['index', 'clinica_id' => $clinica->id],
                     [
-                        'class' => 'btn-base btn-gray', 
+                        'class' => 'btn-base btn-gray',
                         'title' => 'Volver a la lista de planes de esta clínica',
                     ]
                 ) ?>
@@ -98,33 +99,33 @@ if (!function_exists('formatDateTime')) {
         </div>
     </div>
 
-    <div class="row g-3"> 
+    <div class="row g-3">
         <div class="col-lg-6">
-            <div class="ms-panel border-blue"> 
-                <div class="ms-panel-body"> 
+            <div class="ms-panel border-blue">
+                <div class="ms-panel-body">
                     <h3 class="section-title">
                         <i class="fas fa-info-circle text-blue-600 mr-3"></i> Información General del Plan
                     </h3>
-                    <div class="info-grid"> 
+                    <div class="info-grid">
                         <div>
                             <h5><strong>Nombre del Plan:</strong> <?= Html::encode($model->nombre) ?></h5>
                             <h5><strong>Precio:</strong> <?= Yii::$app->formatter->asCurrency($model->precio, 'USD') ?></h5>
                             <h5><strong>Comisión:</strong> <?= $model->comision ? Html::encode(Yii::$app->formatter->asPercent((float)$model->comision / 100)) : 'N/A' ?></h5>
                         </div>
                         <div>
-                            <h5><strong>Estatus:</strong> 
+                            <h5><strong>Estatus:</strong>
                                 <span class="status-badge <?= $model->estatus == 'Activo' || $model->estatus == "Activo" ? 'active' : 'inactive' ?>">
                                     <?= strtoupper($model->estatus == "Activo" ? 'Activo' : 'Inactivo') ?>
                                 </span>
                             </h5>
-                            <h5><strong>Rango de Edad:</strong> 
-                                <?= Html::encode($model->edad_minima) ?> - 
+                            <h5><strong>Rango de Edad:</strong>
+                                <?= Html::encode($model->edad_minima) ?> -
                                 <?= Html::encode($model->edad_limite ? $model->edad_limite . ' años' : 'Sin límite') ?>
                             </h5>
                             <h5><strong>Clínica:</strong> <?= Html::encode($model->clinica ? $model->clinica->nombre : 'N/A') ?></h5>
                         </div>
                     </div>
-                    
+
                     <div class="border-top-section mt-4 pt-4">
                         <h3 class="section-title">
                             <i class="fas fa-align-left text-gray-600 mr-3"></i> Descripción del Plan
@@ -148,11 +149,11 @@ if (!function_exists('formatDateTime')) {
         <!-- Columna derecha - Coberturas -->
         <div class="col-lg-6">
             <!-- Tarjeta de coberturas incluidas -->
-            <div class="ms-panel border-indigo mb-4"> 
+            <div class="ms-panel border-indigo mb-4">
                 <div class="ms-panel-body">
                     <h3 class="section-title">
                         <i class="fas fa-shield-alt text-indigo-600 mr-3"></i> Coberturas Incluidas
-                        <span class="status-badge active float-end"> 
+                        <span class="status-badge active float-end">
                             <?= count($itemsCobertura) ?> servicios
                         </span>
                     </h3>
@@ -161,10 +162,10 @@ if (!function_exists('formatDateTime')) {
                             <thead class="thead-light">
                                 <tr>
                                     <th><span class="text-white">Servicio (Baremos)</span></th>
-                                    <th class="text-center"><span class="text-white">Espera</span></th>
                                     <th class="text-center"><span class="text-white">Límite</span></th>
+                                    <th class="text-center"><span class="text-white">Plazo</span></th>
                                     <?php if ($canManage) : ?>
-                                        <th class="text-center"><span class="text-white">Acciones</span></th> 
+                                        <th class="text-center"><span class="text-white">Acciones</span></th>
                                     <?php endif; ?>
                                 </tr>
                             </thead>
@@ -183,15 +184,16 @@ if (!function_exists('formatDateTime')) {
                                                 <strong><?= Html::encode($item->baremo->descripcion) ?></strong>
                                             </td>
                                             <td class="text-center">
-                                                   <?= $item->plazo_espera ?: 'N/A' ?>
+                                                <?= $item->cantidad_limite ?: 'N/A' ?>
                                             </td>
                                             <td class="text-center">
-                                                   <?= $item->cantidad_limite ?: 'N/A' ?>
+                                                <?= $item->plazo_espera ?: 'N/A' ?>
                                             </td>
+
                                             <?php if ($canManage) : ?>
                                                 <td class="text-center">
                                                     <?= Html::a(
-                                                        '<i class="far fa-trash-alt"></i>', 
+                                                        '<i class="far fa-trash-alt"></i>',
                                                         ['remove-cobertura', 'id' => $item->id, 'plan_id' => $model->id, 'clinica_id' => $clinica->id],
                                                         [
                                                             'title' => 'Eliminar cobertura',
@@ -215,25 +217,25 @@ if (!function_exists('formatDateTime')) {
 
             <!-- Tarjeta de servicios disponibles para agregar -->
             <?php if (!empty($baremosFaltantes)): ?>
-                <div class="ms-panel border-yellow"> 
+                <div class="ms-panel border-yellow">
                     <div class="ms-panel-body">
                         <h3 class="section-title">
                             <i class="fas fa-plus-circle text-yellow-600 mr-3"></i> Servicios Disponibles
-                            <span class="status-badge active float-end"> 
+                            <span class="status-badge active float-end">
                                 <?= count($baremosFaltantes) ?> disponibles
                             </span>
                         </h3>
-                        <div class="divide-y"> 
+                        <div class="divide-y">
                             <?php foreach ($baremosFaltantes as $baremo): ?>
-                                <div class="py-3 flex justify-between items-center"> 
+                                <div class="py-3 flex justify-between items-center">
                                     <div>
                                         <h5 class="font-medium mb-0"><?= Html::encode($baremo->nombre_servicio) ?></h5>
                                         <small class="text-muted block sm:inline"><?= Html::encode($baremo->descripcion) ?></small>
                                     </div>
                                     <?= Html::a(
-                                        '<i class="fas fa-plus mr-2"></i> Agregar', 
-                                        ['add-cobertura', 'plan_id' => $model->id, 'baremo_id' => $baremo->id, 'clinica_id' => $clinica->id], 
-                                        ['class' => 'btn-base btn-blue btn-sm'] 
+                                        '<i class="fas fa-plus mr-2"></i> Agregar',
+                                        ['add-cobertura', 'plan_id' => $model->id, 'baremo_id' => $baremo->id, 'clinica_id' => $clinica->id],
+                                        ['class' => 'btn-base btn-blue btn-sm']
                                     ) ?>
                                 </div>
                             <?php endforeach; ?>
