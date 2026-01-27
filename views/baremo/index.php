@@ -22,7 +22,7 @@ if (!isset($clinica)) {
     $clinica = (object)['id' => null, 'nombre' => 'Clínica Desconocida'];
 }
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin');
+$permisos = ($rol == 'superadmin' || $rol == 'COORDINADOR-CLINICA');
 
 // --- BREADCRUMBS ---
 if ($permisos == true) {
