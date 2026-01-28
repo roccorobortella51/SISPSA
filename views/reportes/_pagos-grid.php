@@ -188,7 +188,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                 <th class="text-center py-3" style="width: 100px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-receipt me-2 text-white" style="font-size: 1.3rem;"></i>
-                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Referencia</span>
+                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Referencia Bancaria</span>
                                     </div>
                                 </th>
                                 <th class="py-3 ps-3" style="min-width: 220px; border-right: 2px solid rgba(255,255,255,0.2);">
