@@ -240,6 +240,31 @@ use yii\grid\GridView;
                     }
                 ],
                 [
+                    'attribute' => 'numero_referencia_pago',
+                    'label' => 'REFERENCIA BANCARIA',
+                    'headerOptions' => ['style' => 'background: #2c3e50; color: white; padding: 10px; text-align: center; border: 1px solid #1a2530;'],
+                    'contentOptions' => ['style' => 'padding: 8px; text-align: center; border: 1px solid #e0e0e0; font-family: monospace;'],
+                    'value' => function ($model) {
+                        $ref = $model->numero_referencia_pago;
+                        if (empty($ref)) {
+                            return '<span style="color: #999; font-style: italic;">N/A</span>';
+                        }
+
+                        // Format reference number based on payment method
+                        $formattedRef = strtoupper($ref);
+
+                        // For cash payments, show "EFECTIVO"
+                        if (stripos($model->metodo_pago, 'efectivo') !== false) {
+                            return '<span style="background: #e9ecef; padding: 4px 8px; border-radius: 3px; color: #6c757d; font-weight: bold;">EFECTIVO</span>';
+                        }
+
+                        // For other payments, show the reference
+                        return '<span style="background: #e8f4fd; padding: 4px 8px; border-radius: 3px; color: #005a9e; font-weight: bold; font-family: monospace;">' .
+                            Html::encode($formattedRef) . '</span>';
+                    },
+                    'format' => 'raw',
+                ],
+                [
                     'label' => 'AFILIADO',
                     'headerOptions' => ['style' => 'background: #2c3e50; color: white; padding: 10px; text-align: left; border: 1px solid #1a2530;'],
                     'contentOptions' => ['style' => 'padding: 8px; text-align: left; border: 1px solid #e0e0e0;'],
