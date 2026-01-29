@@ -272,6 +272,11 @@ class Contratos extends \yii\db\ActiveRecord
             return; // Don't update if already annulled
         }
 
+        // NEW: Don't update if already suspended
+        if ($this->estatus === self::STATUS_SUSPENDIDO) {
+            return; // Keep suspended status - only payment system should change this
+        }
+
         $today = date('Y-m-d');
 
         // Check if contract is expired
@@ -280,7 +285,12 @@ class Contratos extends \yii\db\ActiveRecord
         }
         // Check if contract is active (start date has passed)
         elseif ($this->fecha_ini && $today >= $this->fecha_ini) {
-            $this->estatus = self::STATUS_ACTIVO;
+            // Only set to ACTIVE if currently REGISTERED
+            if ($this->estatus === self::STATUS_REGISTRADO) {
+                $this->estatus = self::STATUS_ACTIVO;
+            }
+            // If already ACTIVE, keep it active
+            // If any other status (except suspended), keep it
         }
         // Check if contract is registered but not yet started
         elseif ($this->fecha_ini && $today < $this->fecha_ini) {
