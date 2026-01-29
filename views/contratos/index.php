@@ -350,11 +350,13 @@ $this->title = 'Contratos';
                                         <div class="col-md-3 mb-3">
                                             <div class="card bg-light h-100 border-0 shadow-sm">
                                                 <div class="card-body text-center py-4">
-                                                    <h6 class="card-title text-muted mb-1">Promedio</h6>
-                                                    <h5 class="text-warning">
+                                                    <h6 class="card-title text-dark fw-bold mb-1">Promedio</h6>
+
+                                                    <h5 class="text-dark fw-bold">
                                                         <?= $totalPagos > 0 ? Yii::$app->formatter->asCurrency($totalPagado / $totalPagos, 'USD') : 'N/A' ?>
                                                     </h5>
-                                                    <small class="text-muted">por pago</small>
+
+                                                    <small class="text-dark">por pago</small>
                                                 </div>
                                             </div>
                                         </div>
