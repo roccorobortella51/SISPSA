@@ -850,4 +850,9 @@ class UserHelper
             return $agencia->id;
         }
     }
+
+    public static function isAgenteFuerzaIdValido($id)
+    {
+        return \app\models\AgenteFuerza::find()->where(['id' => $id])->exists();
+    }
 }

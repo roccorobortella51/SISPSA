@@ -20,6 +20,9 @@ class MasivoAfiliadosForm extends Model
      */
     public $masivoFile;
 
+    public $fecha_ini;
+    public $fecha_ven;
+
     /**
      * Define las reglas de validación para los atributos del formulario.
      */
@@ -49,7 +52,13 @@ class MasivoAfiliadosForm extends Model
             
             // Desactivamos la verificación estricta del MIME type si la extensión es correcta.
             'checkExtensionByMimeType' => false, 
+
+        
         ],
+
+        // Nuevas reglas para fechas
+        [['fecha_ini', 'fecha_ven'], 'required', 'message' => 'Este campo es obligatorio.'],
+        [['fecha_ini', 'fecha_ven'], 'date', 'format' => 'php:Y-m-d'],
     ];
 }
     

@@ -28,22 +28,31 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
 
-            <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1><?= Html::encode($this->title); ?></h1>
+<div class="ms-panel-header d-flex justify-content-between align-items-center p-4">
+    <h1 class="font-weight-bold" style="font-size: 2.5rem; margin: 0; line-height: 1;">
+        <?= Html::encode($this->title); ?>
+    </h1>
 
-                <div>
-                   <?= Html::a(
-                        '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE CORPORATIVOS',
-                        ['corporativo/carga-masiva-afiliados'], // <--- RUTA CORREGIDA AQUÍ
-                        ['class' => 'btn btn-outline-primary btn-lg me-3']
-                    ) ?>
-                    <?= Html::a(
-                        '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
-                        ['create'],
-                        ['class' => 'btn btn-outline-primary btn-lg']
-                    ) ?>
-                </div>
-            </div>
+    <div class="d-flex" style="gap: 20px !important;"> 
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
+            ['create'],
+            [
+                'class' => 'btn btn-outline-success btn-fixed-success',
+                'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+            ]
+        ) ?>
+
+        <?= Html::a(
+            '<i class="fas fa-file-excel"></i> CARGAR DE FORMA MASIVA',
+            ['corporativo/carga-masiva-afiliados'],
+            [
+                'class' => 'btn btn-outline-primary btn-fixed-primary',
+                'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+            ]
+        ) ?>
+    </div>
+</div>
 
 
             <div class="ms-panel-body">

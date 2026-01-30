@@ -57,6 +57,22 @@ class ReportesController extends Controller
 
         return parent::beforeAction($action);
     }
+    
+    public function actionTestAccess()
+{
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    
+    return [
+        'isGuest' => Yii::$app->user->isGuest,
+        'userId' => Yii::$app->user->id,
+        'identity' => Yii::$app->user->identity ? Yii::$app->user->identity->username : null,
+        'roles' => array_keys(Yii::$app->authManager->getRolesByUser(Yii::$app->user->id)),
+        'canAccess' => Yii::$app->user->can('superadmin') || Yii::$app->user->can('FINANZAS'),
+        'sessionId' => session_id(),
+        'csrfToken' => Yii::$app->request->csrfToken,
+    ];
+}
+
 
     /**
      * Muestra la vista principal del reporte (Grid y filtros).
@@ -75,14 +91,16 @@ class ReportesController extends Controller
         // Parámetros de la vista
         $range = $request->post('range', 'day');
         $specificDate = $request->post('specific_date');
-        $status = $request->post('status', 'Por Conciliar');
+        $customRange = $request->post('custom_range', false);
+        $dateFrom = $request->post('date_from');
+        $dateTo = $request->post('date_to');
+        $status = $request->post('status', 'Por Conciliar');        
         $clinicas = $request->post('clinicas', []);
 
         // NUEVO: Parámetros para rango personalizado
         $customRange = $request->post('custom_range', false);
         $dateFrom = $request->post('date_from');
         $dateTo = $request->post('date_to');
-
         $startDate = date('Y-m-d');
         $endDate = date('Y-m-d');
         $title = "Detalle de Pagos de Hoy";

@@ -261,6 +261,76 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                         </div>
                     </div>
                 </div>
+
+                
+                <!-- Columna 2: Rango de Fechas Personalizado -->
+                <div class="col-lg-6">
+                    <div class="filter-card">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-calendar-range text-danger me-2 fs-5"></i>
+                            <h5 class="mb-0 fw-bold">Rango de Fechas Personalizado</h5>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-day text-primary"></i>
+                                    </span>
+                                    <input type="date" id="date-from" class="form-control border-primary" 
+                                           placeholder="Desde">
+                                </div>
+                                <small class="text-muted mt-1 d-block">Fecha inicial</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-calendar-day text-primary"></i>
+                                    </span>
+                                    <input type="date" id="date-to" class="form-control border-primary" 
+                                           placeholder="Hasta">
+                                </div>
+                                <small class="text-muted mt-1 d-block">Fecha final</small>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <?= Html::button('<i class="fas fa-search me-2"></i> Consultar Rango', [
+                                'id' => 'btn-custom-range',
+                                'class' => 'btn btn-primary w-100'
+                            ]) ?>
+                        </div>
+                        <small class="text-muted mt-2 d-block">Seleccione un rango personalizado para el reporte</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botón de Acción Principal -->
+            <div class="text-center mt-5 pt-3 border-top">
+                <?= Html::button('<i class="fas fa-rocket me-2"></i> Generar Reporte', [
+                    'id' => 'btn-aplicar-filtros',
+                    'class' => 'btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm'
+                ]) ?>
+                <p class="text-muted mt-3 mb-0">
+                    <i class="fas fa-info-circle me-1"></i> 
+                    Los filtros se aplican automáticamente al cambiar cualquier opción
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer del Card -->
+        <div class="card-footer bg-light py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-database text-primary me-2"></i>
+                        <small class="text-muted">Datos en tiempo real • Actualización automática</small>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <small class="text-muted">
+                        <i class="fas fa-file-pdf me-1 text-danger"></i>
+                        Exportable a PDF con un solo clic
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -829,22 +899,21 @@ $this->registerJs(
             });
         }
         
-        // Inicializar tooltips
-        \$('[data-bs-toggle="tooltip"]').tooltip();
-        
-        // Set default dates for range inputs
+        // Set default dates for range inputs (today and yesterday)
         const today = new Date().toISOString().split('T')[0];
-        \$(config.selectors.dateFrom).val(today);
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        
+        \$(config.selectors.dateFrom).val(yesterday);
         \$(config.selectors.dateTo).val(today);
         
-        // Set default range selector to "Hoy"
-        \$(config.selectors.dateRange).val('day');
-    }
+        // Marcar botón inicial como activo
+        \$('.btn-range[data-range="day"]').addClass('active');
     
     // =============================================
     // FUNCIONES UTILITARIAS
     // =============================================
     function showLoading() {
+
         \$(config.selectors.results).html(
             '<div class="col-12">' +
                 '<div class="card border-0 shadow">' +
@@ -890,6 +959,7 @@ $this->registerJs(
     function validateDateRange(dateFrom, dateTo) {
         if (!dateFrom || !dateTo) {
             return { valid: false, message: 'Por favor seleccione ambas fechas.' };
+>>>>>>> 99fe86e83a048865e60b4e1dced25854568a58b2
         }
         
         if (dateFrom > dateTo) {
@@ -918,7 +988,6 @@ $this->registerJs(
         
             console.log('Enviando request data:', requestData);
             console.log('URL:', config.ajaxUrl);
-            
             const response = await \$.ajax({
                 url: config.ajaxUrl,
                 type: 'POST',
