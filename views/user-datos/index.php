@@ -8,25 +8,7 @@ use kartik\grid\GridView;
 use kartik\select2\Select2;
 use app\components\UserHelper;
 use app\models\RmClinica; // Importar el modelo de la clínica
-use app\models\Contratos;
-use app\components\ContractHelper;
 use yii\web\View; // <--- AÑADIDO: Importación para el registro de scripts en el DOM
-
-// Helper function for contract status classes
-function getContractStatusClass($status)
-{
-    $status = strtolower($status);
-    $classes = [
-        'registrado' => 'badge badge-primary',
-        'activo' => 'badge badge-success',
-        'anulado' => 'badge badge-danger',
-        'vencido' => 'badge badge-warning',
-        'pendiente' => 'badge badge-info',
-        'suspendido' => 'badge badge-secondary',
-    ];
-
-    return $classes[$status] ?? 'badge badge-light';
-}
 
 /** @var yii\web\View $this */
 /** @var app\models\UserSearch $searchModel */
@@ -160,7 +142,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'model' => $searchModel,
                                 'attribute' => 'user_datos_type_id',
                                 'data' => app\models\UserDatosType::getList(),
-                                'options' => ['placeholder' => 'Filtrar'],
+                                'options' => ['placeholder' => 'Seleccionar tipo'],
                                 'pluginOptions' => [
                                     'allowClear' => true
                                 ],
@@ -182,7 +164,7 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                     'id',
                                     'nombre'
                                 ),
-                                'options' => ['placeholder' => 'Filtrar por Clínica'],
+                                'options' => ['placeholder' => 'Seleccionar clínica'],
                                 'pluginOptions' => [
                                     'allowClear' => true
                                 ],
@@ -368,44 +350,25 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'visible' => $isAdmin, // Only show for admin roles
                         ],
+                        // REMOVED: Duplicate "Clínica" column that was next to "Asesor"
+                        // This column was showing the clinic name again without filter
 
-                        // CORRECTED COLUMN: Contract Status with Detailed Tooltips
-                        // CORRECTED COLUMN: Contract Status with Detailed Tooltips and Filter
                         [
-                            'label' => 'Estatus Contrato',
-                            'format' => 'raw',
+                            'attribute' => 'estatus_solvente',
+                            'format' => 'Html',
+                            'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'value' => function ($model) {
-                                return ContractHelper::generateContractStatusBadge($model);
+
+                                $value = $model->estatus_solvente;
+                                if ($value !== null && (strtoupper((string)$value) === "SI" || $value === 1 || $value === true || $value === "Sí")) {
+                                    return '<p class="status-badge active">Sí</p>';
+                                } else {
+                                    return '<p class="status-badge inactive">No</p>';
+                                }
                             },
-                            'attribute' => 'contrato_estatus', // Add this line for filtering
-                            'filter' => \kartik\select2\Select2::widget([
-                                'model' => $searchModel,
-                                'attribute' => 'contrato_estatus',
-                                'data' => array_merge(
-                                    Contratos::getStatusOptions(),
-                                    ['sin_contrato' => 'Sin Contrato']
-                                ),
-                                'options' => [
-                                    'placeholder' => 'Filtrar por estatus',
-                                    'class' => 'form-control'
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ]),
-                            'contentOptions' => function ($model) {
-                                return ContractHelper::getContractStatusCellClasses($model);
-                            },
-                            'headerOptions' => [
-                                'style' => 'color: white!important;',
-                                'title' => 'Estado actual del contrato del afiliado. Pase el cursor sobre cada estado para más detalles.',
-                                'data-toggle' => 'tooltip',
-                                'data-placement' => 'top'
-                            ],
-                            'filterInputOptions' => [
-                                'class' => 'form-control',
-                                'prompt' => 'Todos'
-                            ],
+
+                            /** 'filter' => [0 => 'No', 1 => 'Sí'],**/
+                            'filter' => ['Si' => 'Sí', 'No' => 'No']
                         ],
 
                         [
@@ -518,8 +481,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 </div>
 
 <?php
-$js = <<<'JS'
-// 1. EVENTO PARA ABRIR EL MODAL (keep this as-is)
+$js = <<<JS
+// 1. EVENTO PARA ABRIR EL MODAL
 $(document).on('click', '.atencion-btn', function(e) {
     e.preventDefault(); 
     
@@ -537,6 +500,8 @@ $(document).on('click', '.atencion-btn', function(e) {
             '</a>' +
         '</div>';
 
+    // AQUI ESTA LA CLAVE: 
+    // No usamos onclick. Usamos una clase especifica: 'btn-cerrar-swal'
     var footerHtml = 
         '<button type="button" class="btn-base btn-gray btn-lg mt-4 btn-cerrar-swal">' +
             'CERRAR' +
@@ -557,152 +522,12 @@ $(document).on('click', '.atencion-btn', function(e) {
     });
 });
 
-// 2. EVENTO GLOBAL PARA CERRAR EL MODAL (keep this as-is)
+// 2. EVENTO GLOBAL PARA CERRAR EL MODAL
+// Este código escucha clics en cualquier elemento con la clase 'btn-cerrar-swal'
+// incluso si el elemento se creó dinámicamente.
 $(document).on('click', '.btn-cerrar-swal', function(e) {
-    e.preventDefault();
-    Swal.close();
-});
-
-// 3. FIX 1: ROBUST TOOLTIP MANAGEMENT SYSTEM
-$(document).ready(function() {
-    
-    // Function to initialize all tooltips
-    function initAllTooltips() {
-        // Dispose all existing tooltips first
-        $('[data-toggle="tooltip"]').tooltip('dispose');
-        
-        // Find all elements that need tooltips
-        var tooltipElements = $('[data-toggle="tooltip"]');
-        console.log('Found ' + tooltipElements.length + ' elements requiring tooltips');
-        
-        // Initialize with error handling
-        try {
-            tooltipElements.tooltip({
-                trigger: 'hover',
-                delay: { "show": 100, "hide": 100 },
-                container: 'body',
-                boundary: 'window',
-                html: true // Important for HTML tooltips
-            });
-            console.log('✓ Successfully initialized ' + tooltipElements.length + ' tooltips');
-        } catch (error) {
-            console.error('✗ Error initializing tooltips:', error);
-        }
-        
-        // Debug: Log first few tooltips
-        tooltipElements.slice(0, 5).each(function(index) {
-            var title = $(this).attr('title');
-            console.log('Tooltip ' + (index + 1) + ': ' + (title ? 'Has title (' + title.length + ' chars)' : 'NO TITLE'));
-        });
-    }
-    
-    // Initialize on page load
-    console.log('Page loaded - initializing tooltips');
-    initAllTooltips();
-    
-    // Re-initialize on PJAX complete (for GridView pagination/filtering)
-    $(document).on('pjax:complete', function(event, xhr, options) {
-        console.log('PJAX complete - reinitializing tooltips');
-        setTimeout(initAllTooltips, 100); // Small delay to ensure DOM is ready
-    });
-    
-    // Also re-initialize when GridView updates (alternative event)
-    $(document).on('yiiGridViewUpdated', function(event) {
-        console.log('GridView updated - reinitializing tooltips');
-        setTimeout(initAllTooltips, 100);
-    });
-    
-    // Re-initialize on window resize (sometimes helps)
-    $(window).on('resize', function() {
-        // Only reinit if tooltips seem broken
-        var brokenTooltips = $('[data-toggle="tooltip"]').filter(function() {
-            return $(this).data('bs.tooltip') === undefined;
-        });
-        if (brokenTooltips.length > 0) {
-            console.log('Found ' + brokenTooltips.length + ' broken tooltips after resize');
-            initAllTooltips();
-        }
-    });
-    
-    // Add click-to-copy for contract numbers in tooltips
-    $(document).on('click', '.contract-tooltip strong', function(e) {
-        e.stopPropagation();
-        
-        var text = $(this).text();
-        if (text.includes('Contrato #') || text.includes('Número:')) {
-            // Extract contract number
-            var contractNum = text.replace('Contrato #', '').replace('Número: ', '').trim();
-            
-            // Copy to clipboard
-            navigator.clipboard.writeText(contractNum).then(function() {
-                // Show copied notification
-                var badgeElement = $(e.target).closest('[data-toggle="tooltip"]');
-                var originalText = badgeElement.text();
-                var originalTitle = badgeElement.attr('title');
-                
-                badgeElement.text('✓ Copiado!');
-                badgeElement.attr('title', 'Número de contrato copiado: ' + contractNum);
-                badgeElement.tooltip('update').tooltip('show');
-                
-                setTimeout(function() {
-                    badgeElement.text(originalText);
-                    badgeElement.attr('title', originalTitle);
-                    badgeElement.tooltip('update');
-                }, 1500);
-            });
-        }
-    });
-    
-    // Highlight important statuses (optional visual enhancement)
-    function highlightImportantStatuses() {
-        $('.badge-danger, .badge-warning, .badge-secondary').each(function() {
-            if (!$(this).hasClass('highlighted')) {
-                $(this).addClass('highlighted');
-                $(this).css({
-                    'animation': 'pulse 2s infinite',
-                    'border': '2px solid rgba(255,255,255,0.3)'
-                });
-            }
-        });
-    }
-    
-    // Initial highlight
-    highlightImportantStatuses();
-    
-    // Re-highlight after grid updates
-    $(document).on('pjax:complete', function() {
-        setTimeout(highlightImportantStatuses, 150);
-    });
-    
-    $(document).on('yiiGridViewUpdated', function() {
-        setTimeout(highlightImportantStatuses, 150);
-    });
-    
-    // Force tooltip check every 2 seconds (fallback for missed events)
-    setInterval(function() {
-        var elementsWithoutTooltips = $('[data-toggle="tooltip"]').filter(function() {
-            return $(this).data('bs.tooltip') === undefined;
-        });
-        
-        if (elementsWithoutTooltips.length > 0) {
-            console.log('Fallback: Found ' + elementsWithoutTooltips.length + ' elements without initialized tooltips');
-            initAllTooltips();
-        }
-    }, 2000);
-});
-
-// 4. Add status explanation modal on badge click (optional - keep if you want this feature)
-$(document).on('click', '[data-toggle="tooltip"].badge', function(e) {
-    if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        var title = $(this).attr('title');
-        
-        // Remove HTML tags for modal display
-        var plainText = title.replace(/<[^>]*>/g, '');
-        
-        // Show in console for debugging
-        console.log('Contract Status Details:', plainText);
-    }
+    e.preventDefault(); // Previene comportamientos extraños
+    Swal.close();       // Cierra el modal limpiamente
 });
 JS;
 
@@ -860,389 +685,6 @@ $this->registerJs($js, View::POS_READY);
             color: #000 !important;
             background-color: transparent !important;
             border: 1px solid #ccc !important;
-        }
-    }
-
-    /* ESTILOS PARA BADGES DE ESTATUS DE CONTRATO */
-    .badge {
-        display: inline-block;
-        padding: 0.35em 0.65em;
-        font-size: 0.85em;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: 0.375rem;
-        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
-            border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    }
-
-    .badge-primary {
-        color: #fff;
-        background-color: #007bff;
-    }
-
-    .badge-success {
-        color: #fff;
-        background-color: #28a745;
-    }
-
-    .badge-danger {
-        color: #fff;
-        background-color: #dc3545;
-    }
-
-    .badge-warning {
-        color: #212529;
-        background-color: #ffc107;
-    }
-
-    .badge-info {
-        color: #fff;
-        background-color: #17a2b8;
-    }
-
-    .badge-secondary {
-        color: #fff;
-        background-color: #6c757d;
-    }
-
-    .badge-light {
-        color: #212529;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-    }
-
-    /* Estilos para badges en hover */
-    .badge:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Animación sutil para cambios de estado */
-    @keyframes statusChange {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.05);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .badge.badge-success,
-    .badge.badge-primary {
-        animation: statusChange 0.5s ease-in-out;
-    }
-
-    /* Tooltip para badges */
-    .badge[title]:hover:after {
-        content: attr(title);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #333;
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 1000;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .badge {
-            font-size: 0.75em;
-            padding: 0.25em 0.5em;
-        }
-    }
-
-    /* Enhanced Contract Status Column */
-    .contract-status-cell {
-        font-weight: 600;
-    }
-
-    .contract-status-cell.activo {
-        background-color: rgba(40, 167, 69, 0.05) !important;
-    }
-
-    .contract-status-cell.vencido,
-    .contract-status-cell.suspendido,
-    .contract-status-cell.anulado {
-        background-color: rgba(220, 53, 69, 0.05) !important;
-    }
-
-    .contract-status-cell.registrado {
-        background-color: rgba(0, 123, 255, 0.05) !important;
-    }
-
-    .contract-status-cell.pendiente {
-        background-color: rgba(23, 162, 184, 0.05) !important;
-    }
-
-    /* Highlight active contracts */
-    tbody tr:hover .contract-status-cell.activo {
-        background-color: rgba(40, 167, 69, 0.1) !important;
-    }
-
-    /* Professional badge styling */
-    .badge {
-        min-width: 80px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border: 1px solid transparent;
-    }
-
-    .badge-success {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border-color: #1e7e34;
-    }
-
-    .badge-danger {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        border-color: #bd2130;
-    }
-
-    .badge-warning {
-        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-        border-color: #d39e00;
-    }
-
-    .badge-primary {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        border-color: #0062cc;
-    }
-
-    .badge-info {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        border-color: #117a8b;
-    }
-
-    .badge-secondary {
-        background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
-        border-color: #4e555b;
-    }
-
-    /* Status indicators */
-    .status-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-    }
-
-    .status-active {
-        background-color: #28a745;
-    }
-
-    .status-inactive {
-        background-color: #dc3545;
-    }
-
-    .status-pending {
-        background-color: #ffc107;
-    }
-
-    /* Enhanced Tooltip Styling */
-    .contract-tooltip {
-        max-width: 300px;
-        text-align: left;
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    }
-
-    .tooltip {
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    }
-
-    .tooltip-inner {
-        max-width: 350px;
-        padding: 12px;
-        background-color: #fff;
-        color: #333;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        text-align: left;
-        font-size: 13px;
-        line-height: 1.5;
-    }
-
-    .tooltip.bs-tooltip-top .arrow::before {
-        border-top-color: #ddd;
-    }
-
-    .tooltip.bs-tooltip-bottom .arrow::before {
-        border-bottom-color: #ddd;
-    }
-
-    .tooltip.bs-tooltip-left .arrow::before {
-        border-left-color: #ddd;
-    }
-
-    .tooltip.bs-tooltip-right .arrow::before {
-        border-right-color: #ddd;
-    }
-
-    /* Badge with tooltip enhancement */
-    .badge[data-toggle="tooltip"] {
-        transition: all 0.2s ease;
-        position: relative;
-    }
-
-    .badge[data-toggle="tooltip"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Status-specific hover effects */
-    .badge-success[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #28a745 0%, #218838 100%) !important;
-    }
-
-    .badge-danger[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-    }
-
-    .badge-warning[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
-    }
-
-    .badge-primary[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
-    }
-
-    .badge-info[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
-    }
-
-    .badge-secondary[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
-    }
-
-    /* Animation for status changes */
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.05);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .badge[data-toggle="tooltip"]:hover {
-        animation: pulse 0.6s ease-in-out;
-    }
-
-    /* Status icons in badges */
-    .badge .status-icon {
-        font-size: 0.9em;
-        margin-right: 4px;
-        vertical-align: middle;
-    }
-
-    /* Special styling for "Sin Contrato" */
-    .badge-light[data-toggle="tooltip"] {
-        border: 1px dashed #ccc;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        color: #6c757d;
-    }
-
-    .badge-light[data-toggle="tooltip"]:hover {
-        background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-        border-color: #adb5bd;
-    }
-
-    /* Status indicator dots */
-    .status-indicator-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-        animation: pulse-dot 2s infinite;
-    }
-
-    @keyframes pulse-dot {
-        0% {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        50% {
-            transform: scale(1.2);
-            opacity: 0.8;
-        }
-
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .status-dot-active {
-        background-color: #28a745;
-    }
-
-    .status-dot-inactive {
-        background-color: #dc3545;
-    }
-
-    .status-dot-pending {
-        background-color: #ffc107;
-    }
-
-    .status-dot-warning {
-        background-color: #fd7e14;
-    }
-
-    .status-dot-info {
-        background-color: #17a2b8;
-    }
-
-    /* Quick action buttons in tooltip (optional) */
-    .tooltip-quick-actions {
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px dashed #dee2e6;
-    }
-
-    .tooltip-quick-actions button {
-        font-size: 11px;
-        padding: 2px 6px;
-        margin: 2px;
-        border-radius: 3px;
-    }
-
-    /* Responsive adjustments for tooltips */
-    @media (max-width: 768px) {
-        .tooltip-inner {
-            max-width: 280px;
-            font-size: 12px;
-            padding: 8px;
-        }
-
-        .badge {
-            font-size: 0.7em;
-            padding: 0.2em 0.4em;
-            min-width: 70px;
         }
     }
 </style>
