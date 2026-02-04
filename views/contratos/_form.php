@@ -110,8 +110,8 @@ use yii\helpers\Url; // Necesario para el botón de "Volver"
             ])->hint('Podría ser un DropdownList con estatus predefinidos.') ?>
         </div>
         <div class="col-md-6">
-            <?= $form->field($model, 'PDF')->textInput([ // Cambiado a textInput, podría ser fileInput
-                'placeholder' => 'URL o ruta del PDF',
+            <?= $form->field($model, 'pdf')->textInput([ // Cambiado a textInput, podría ser fileInput
+                'placeholder' => 'URL o ruta del pdf',
                 'class' => 'form-control rounded-pill'
             ])->hint('Si es una subida de archivo, cambiar a fileInput y configurar la subida.') ?>
         </div>

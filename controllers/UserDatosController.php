@@ -1264,6 +1264,8 @@ class UserDatosController extends Controller
                         $modelContrato->monto = 0;
                     }
 
+                    $modelContrato->pdf = NULL;
+
 
                     if ($modelContrato->save()) {
                         $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();

@@ -18,7 +18,7 @@ class ContratosSearch extends Contratos
     {
         return [
             [['id', 'plan_id', 'ente_id', 'clinica_id', 'anulado_por', 'user_id'], 'integer'],
-            [['created_at', 'fecha_ini', 'fecha_ven', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_fecha', 'anulado_motivo', 'PDF'], 'safe'],
+            [['created_at', 'fecha_ini', 'fecha_ven', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_fecha', 'anulado_motivo', 'pdf'], 'safe'],
             [['monto'], 'number'],
         ];
     }
@@ -80,7 +80,7 @@ class ContratosSearch extends Contratos
             ->andFilterWhere(['ilike', 'sucursal', $this->sucursal])
             ->andFilterWhere(['ilike', 'moneda', $this->moneda])
             ->andFilterWhere(['ilike', 'anulado_motivo', $this->anulado_motivo])
-            ->andFilterWhere(['ilike', 'PDF', $this->PDF]);
+            ->andFilterWhere(['ilike', 'pdf', $this->pdf]);
 
         return $dataProvider;
     }
