@@ -116,81 +116,101 @@ class SiteController extends Controller
 
 
 
-    public function actionMunicipio(){
+    public function actionMunicipio()
+    {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $out = [];
         if (isset($_POST['depdrop_parents'])) {
-        $parents = $_POST['depdrop_parents'];
-        if ($parents != null) {
-            $est_id = $parents[0];
-            if($est_id == ''){return ['output'=>'', 'selected'=>''];}
-            $out = RmMunicipio::find()->select(['codigo_muni as id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all(); 
-            return ['output'=>$out, 'selected'=>''];
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null) {
+                $est_id = $parents[0];
+                if ($est_id == '') {
+                    return ['output' => '', 'selected' => ''];
+                }
+                $out = RmMunicipio::find()->select(['codigo_muni as id', 'nombre as name'])->where(['estado_codigo' => $est_id])->asArray()->all();
+                return ['output' => $out, 'selected' => ''];
+            }
         }
-        }
-        return ['output'=>'', 'selected'=>''];
+        return ['output' => '', 'selected' => ''];
     }
 
-    public function actionParroquia(){
+    public function actionParroquia()
+    {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $out = [];
         if (isset($_POST['depdrop_parents'])) {
-        $parents = $_POST['depdrop_parents'];
-        if ($parents != null) {
-            $mun_id = $parents[0];
-            if($mun_id == ''){return ['output'=>'', 'selected'=>''];}
-            $out = RmParroquia::find()->select(['id', 'nombre as name'])->where(['muni_codigo'=>$mun_id])->asArray()->all(); 
-            return ['output'=>$out, 'selected'=>''];
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null && isset($parents[0])) {
+                $municipio_id = $parents[0];
+
+                // Critical check for PostgreSQL numeric columns
+                if (!empty($municipio_id) && is_numeric($municipio_id)) {
+                    $out = \app\models\RmParroquia::find()
+                        ->where(['id_municipio' => (int)$municipio_id])
+                        ->select(['id', 'parroquia as name']) // Verify column name is 'parroquia'
+                        ->asArray()
+                        ->all();
+
+                    return ['output' => $out, 'selected' => ''];
+                }
+            }
         }
-        }
-        return ['output'=>'', 'selected'=>''];
+        return ['output' => [], 'selected' => ''];
     }
 
-    public function actionCiudad(){
+    public function actionCiudad()
+    {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $out = [];
         $selected = isset($_POST['depdrop_selected']) ? $_POST['depdrop_selected'] : '';
         if (isset($_POST['depdrop_parents'])) {
-        $parents = $_POST['depdrop_parents'];
-        if ($parents != null) {
-            $est_id = $parents[0];
-            if($est_id == ''){return ['output'=>'', 'selected'=>$selected];}
-            $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo'=>$est_id])->asArray()->all();
-            return ['output'=>$out, 'selected'=>$selected];
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null) {
+                $est_id = $parents[0];
+                if ($est_id == '') {
+                    return ['output' => '', 'selected' => $selected];
+                }
+                $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo' => $est_id])->asArray()->all();
+                return ['output' => $out, 'selected' => $selected];
+            }
         }
-        }
-        return ['output'=>'', 'selected'=>$selected];
+        return ['output' => '', 'selected' => $selected];
     }
 
 
 
-    
-    public function actionPlanes(){
+
+    public function actionPlanes()
+    {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $out = [];
         if (isset($_POST['depdrop_parents'])) {
-        $parents = $_POST['depdrop_parents'];
-            if ($parents != null) {
-                $cli_id = $parents[0];
-                if($cli_id == ''){return ['output'=>'', 'selected'=>''];}
-                $planes = Planes::find()->where(['clinica_id'=>$cli_id])->all(); 
-                foreach ($planes as $plan) {
-                    // ¡IMPORTANTE! Añade el monto a la salida
-                    $out[] = [
-                        'id' => $plan->id, 
-                        'name' => $plan->nombre, 
-                        'monto' => $plan->precio // Asegúrate de que tu modelo Plan tenga un atributo 'monto'
-                    ]; 
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null && isset($parents[0])) {
+                $clinica_id = $parents[0];
+
+                // IMPORTANT: Only query if it is a valid numeric ID to prevent Postgres 500 errors
+                if (!empty($clinica_id) && is_numeric($clinica_id)) {
+                    $out = \app\models\Planes::find()
+                        ->where(['clinica_id' => (int)$clinica_id]) // Force integer cast for Postgres
+                        ->select(['id', 'nombre as name'])
+                        ->asArray()
+                        ->all();
+
+                    return ['output' => $out, 'selected' => ''];
                 }
-                return ['output' => $out, 'selected' => ''];
             }
         }
-        return ['output'=>'', 'selected'=>''];
+        // Return empty array instead of empty string for 'output'
+        return ['output' => [], 'selected' => ''];
     }
 
-    public function actionPlanmonto($id){
+    public function actionPlanmonto($id)
+    {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON; // Establece el formato de respuesta a JSON
-        if(!is_numeric($id)){return ['output'=>'', 'selected'=>''];}
+        if (!is_numeric($id)) {
+            return ['output' => '', 'selected' => ''];
+        }
         $plan = Planes::findOne($id);
 
         if ($plan) {
@@ -200,16 +220,17 @@ class SiteController extends Controller
         }
     }
 
-    public function actionTasacambio($fecha=null){
+    public function actionTasacambio($fecha = null)
+    {
         $fecha = Yii::$app->request->post('fecha');
 
-        if($fecha == null){
+        if ($fecha == null) {
             $fecha = date('Y-m-d');
         }
 
         $tasacambio = Tasacambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
 
-        if($tasacambio == null){
+        if ($tasacambio == null) {
             $tasacambio = new Tasacambio();
             $tasacambio->fecha = $fecha;
             $tasacambio->tasa_cambio = $this->explorartasabcv();
@@ -217,94 +238,92 @@ class SiteController extends Controller
         }
         $tasacambio = TasaCambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
         return $tasacambio->tasa_cambio;
-
-
     }
 
-    private function explorartasabcv() {
-    $url = "https://www.bcv.org.ve/";
-    
-    // Add timeout context
-    $context = stream_context_create([
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false,
-        ],
-        'http' => [
-            'timeout' => 30, // Increase timeout to 30 seconds
-        ]
-    ]);
-    
-    // Use @ to suppress warnings and add error handling
-    $html = @file_get_contents($url, false, $context);
-    
-    // Check if fetch failed
-    if ($html === false) {
-        // Log the error for debugging
-        Yii::warning("Failed to fetch BCV data. Error: " . 
-                     (error_get_last()['message'] ?? 'Unknown error'));
-        
-        // Return a default value instead of breaking the page
-        return $this->getDefaultExchangeRate();
-    }
-    
-    $dom = new \DOMDocument();
-    libxml_use_internal_errors(true);
-    $dom->loadHTML($html);
-    $xpath = new \DOMXPath($dom);
-    $tasa_bcv = $xpath->query("//*[@id='dolar']/div/div/div/strong");
-    
-    // Check if element was found
-    if ($tasa_bcv->length > 0) {
-        $valor = str_replace(',', '.', trim($tasa_bcv->item(0)->textContent));
-        return (float) $valor;
-    } else {
-        Yii::warning("Could not find exchange rate element on BCV page");
-        return $this->getDefaultExchangeRate();
-    }
+    private function explorartasabcv()
+    {
+        $url = "https://www.bcv.org.ve/";
+
+        // Add timeout context
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+            ],
+            'http' => [
+                'timeout' => 30, // Increase timeout to 30 seconds
+            ]
+        ]);
+
+        // Use @ to suppress warnings and add error handling
+        $html = @file_get_contents($url, false, $context);
+
+        // Check if fetch failed
+        if ($html === false) {
+            // Log the error for debugging
+            Yii::warning("Failed to fetch BCV data. Error: " .
+                (error_get_last()['message'] ?? 'Unknown error'));
+
+            // Return a default value instead of breaking the page
+            return $this->getDefaultExchangeRate();
+        }
+
+        $dom = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+        $tasa_bcv = $xpath->query("//*[@id='dolar']/div/div/div/strong");
+
+        // Check if element was found
+        if ($tasa_bcv->length > 0) {
+            $valor = str_replace(',', '.', trim($tasa_bcv->item(0)->textContent));
+            return (float) $valor;
+        } else {
+            Yii::warning("Could not find exchange rate element on BCV page");
+            return $this->getDefaultExchangeRate();
+        }
     }
 
     // Add this helper function to provide a default value
-    private function getDefaultExchangeRate() {
+    private function getDefaultExchangeRate()
+    {
         // Try to get the latest rate from your database
         $latestRate = TasaCambio::find()
             ->select(['tasa_cambio'])
             ->orderBy(['fecha' => SORT_DESC])
             ->limit(1)
             ->scalar();
-        
+
         // If no rate in database, use a reasonable default
         return $latestRate ?: 36.00;
     }
 
     public function actionCuotaGenerar()
-{
-    // Disable CSRF validation
-    $this->enableCsrfValidation = false;
-    
-    try {
-        $cuotaController = new \app\commands\CuotaController('cuota', Yii::$app);
-        ob_start();
-        $exitCode = $cuotaController->actionGenerar();
-        $output = ob_get_clean();
-        
-        $formattedOutput = nl2br(htmlspecialchars($output));
-        
-        echo "<h1>Generación de Cuotas</h1>";
-        echo "<div style='background: #f5f5f5; padding: 15px; font-family: monospace;'>";
-        echo $formattedOutput;
-        echo "</div>";
-        
-        if ($exitCode === 0) {
-            echo "<p style='color: green;'><strong>✅ Proceso completado exitosamente</strong></p>";
-        } else {
-            echo "<p style='color: red;'><strong>❌ Error en el proceso</strong></p>";
-        }
-        
-    } catch (\Exception $e) {
-        echo "<h1>Error del Sistema</h1>";
-        echo "<p style='color: red;'>Error: " . $e->getMessage() . "</p>";
-    }
-}
+    {
+        // Disable CSRF validation
+        $this->enableCsrfValidation = false;
 
+        try {
+            $cuotaController = new \app\commands\CuotaController('cuota', Yii::$app);
+            ob_start();
+            $exitCode = $cuotaController->actionGenerar();
+            $output = ob_get_clean();
+
+            $formattedOutput = nl2br(htmlspecialchars($output));
+
+            echo "<h1>Generación de Cuotas</h1>";
+            echo "<div style='background: #f5f5f5; padding: 15px; font-family: monospace;'>";
+            echo $formattedOutput;
+            echo "</div>";
+
+            if ($exitCode === 0) {
+                echo "<p style='color: green;'><strong>✅ Proceso completado exitosamente</strong></p>";
+            } else {
+                echo "<p style='color: red;'><strong>❌ Error en el proceso</strong></p>";
+            }
+        } catch (\Exception $e) {
+            echo "<h1>Error del Sistema</h1>";
+            echo "<p style='color: red;'>Error: " . $e->getMessage() . "</p>";
+        }
+    }
 }
