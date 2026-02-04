@@ -94,7 +94,7 @@ $this->title = 'Contratos';
                 </h4>
                 <small class="text-muted">
                     <i class="fas fa-info-circle mr-1"></i>
-                    Haga clic en cualquier contrato para ver los detalles
+                    Haga clic en cualquier contrato para ver los detalles del mismo
                 </small>
             </div>
         </div>
