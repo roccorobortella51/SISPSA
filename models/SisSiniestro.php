@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\web\UploadedFile;
 
 /**
  * This is the model class for table "sis_siniestro".
@@ -11,22 +12,31 @@ use Yii;
  * @property int $idclinica
  * @property string $fecha
  * @property string $hora
- * @property int $idbaremo
+ * @property string $idbaremo
  * @property int $atendido
  * @property string|null $fecha_atencion
  * @property string|null $hora_atencion
  * @property int $iduser
  * @property string|null $descripcion
+ * @property int $es_cita (0=Siniestro, 1=Cita)
+ * @property float|null $costo_total
+ * @property string|null $imagen_recipe
+ * @property string|null $imagen_informe
  * @property string $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
  *
- * @property Baremo $idbaremo0
- * @property RmClinica $idclinica0
+ * @property RmClinica $clinica
+ * @property UserDatos $afiliado
+ * @property Baremo[] $baremos
+ * @property SisSiniestroBaremo[] $sisSiniestroBaremos
  * @property SisConsulta[] $sisConsultas
  */
 class SisSiniestro extends \yii\db\ActiveRecord
 {
+
+    public $imagenRecipeFile;
+    public $imagenInformeFile;
 
 
     /**
@@ -44,17 +54,22 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         return [
             [['fecha_atencion', 'hora_atencion', 'descripcion', 'updated_at', 'deleted_at'], 'default', 'value' => null],
-            [['atendido'], 'default', 'value' => 0],
-            [['idclinica', 'fecha', 'hora', 'idbaremo', 'iduser', 'descripcion'], 'required'],
+            [['atendido', 'es_cita'], 'default', 'value' => 0],
+            [['idclinica', 'fecha', 'hora', 'iduser', 'descripcion'], 'required'],
             [['costo_total'], 'number'],
-            [['idclinica', 'atendido', 'iduser'], 'default', 'value' => null],
+            [['idclinica', 'atendido', 'iduser', 'es_cita'], 'default', 'value' => null],
             [['idbaremo'], 'default', 'value' => ''],
-            [['idclinica', 'atendido', 'iduser'], 'integer'],
+            [['idclinica', 'atendido', 'iduser', 'es_cita'], 'integer'],
             [['idbaremo'], 'safe'], // Aceptamos cualquier valor y lo manejamos en beforeValidate
             [['fecha', 'fecha_atencion', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
             [['descripcion'], 'string'],
             [['hora', 'hora_atencion'], 'string', 'max' => 10],
             [['idclinica'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['idclinica' => 'id']],
+
+            [['imagen_recipe', 'imagen_informe'], 'string', 'max' => 255],
+            // ADD THESE FILE VALIDATION RULES:
+            [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'El archivo no debe exceder 10MB.'],
+            [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'La imagen no debe exceder 10MB.'],
         ];
     }
 
@@ -85,18 +100,22 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'idclinica' => 'Idclinica',
+            'idclinica' => 'Clínica',
             'fecha' => 'Fecha',
             'hora' => 'Hora',
-            'idbaremo' => 'Baremo',
+            'idbaremo' => 'Baremo(s)',
             'atendido' => 'Atendido',
-            'fecha_atencion' => 'Fecha Atencion',
-            'hora_atencion' => 'Hora Atencion',
-            'iduser' => 'Iduser',
-            'descripcion' => 'Descripcion',
-            'created_at' => 'Created At',
-            'updated_at' => 'Updated At',
-            'deleted_at' => 'Deleted At',
+            'fecha_atencion' => 'Fecha Atención',
+            'hora_atencion' => 'Hora Atención',
+            'iduser' => 'ID Usuario',
+            'descripcion' => 'Descripción',
+            'es_cita' => 'Es Cita',
+            'costo_total' => 'Costo Total',
+            'imagen_recipe' => 'URL Receta Médica',
+            'imagen_informe' => 'URL Informe Médico',
+            'created_at' => 'Creado El',
+            'updated_at' => 'Actualizado El',
+            'deleted_at' => 'Eliminado El',
         ];
     }
 
@@ -170,32 +189,260 @@ class SisSiniestro extends \yii\db\ActiveRecord
      * @return bool
      */
     public function saveBaremos($baremoIds)
-    {
-        if (!is_array($baremoIds)) {
-            $baremoIds = [];
+{
+    if (!is_array($baremoIds)) {
+        $baremoIds = [];
+    }
+    
+    // 1. Eliminar las relaciones existentes
+    SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
+    
+    // 2. Agregar las nuevas relaciones
+    foreach ($baremoIds as $baremoId) {
+        if (empty($baremoId)) {
+            continue;
+        }
+
+        // Es más eficiente usar scalar() si solo necesitas un campo
+        $baremocosto = Baremo::find()->select('precio')->where(['id' => $baremoId])->scalar();
+
+        if ($baremocosto === null) {
+            // Manejar caso donde el Baremo no existe
+            continue;
+        }
+
+        $relacion = new SisSiniestroBaremo([
+            'siniestro_id' => $this->id,
+            'baremo_id' => $baremoId,
+            'costo' => $baremocosto // El precio del baremo
+        ]);
+        
+        if (!$relacion->save()) {
+            // Retorna false si falla la inserción de una relación
+            return false; 
         }
         
-        // Eliminar las relaciones existentes
-        SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
-        
-        // Agregar las nuevas relaciones
-        foreach ($baremoIds as $baremoId) {
-
-            $baremocosto = Baremo::find()->where(['id' => $baremoId])->one()->precio;
-
-            if (!empty($baremoId)) {
-                $relacion = new SisSiniestroBaremo([
-                    'siniestro_id' => $this->id,
-                    'baremo_id' => $baremoId,
-                    'costo' => $baremocosto
-                ]);
+        // ============ ADD THIS NEW CODE: Decrement cantidad_limite ============
+        // Only decrement for Siniestros (not Citas)
+        if ($this->es_cita == 0) {
+            // Find the PlanesItemsCobertura record for this baremo and plan
+            $planItemCobertura = PlanesItemsCobertura::findOne([
+                'plan_id' => $this->afiliado->plan_id,
+                'baremo_id' => $baremoId
+            ]);
+            
+            if ($planItemCobertura && $planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
+                // Decrement the limit
+                $planItemCobertura->cantidad_limite -= 1;
                 
-                if (!$relacion->save()) {
-                    return false;
+                // Ensure it doesn't go below 0
+                if ($planItemCobertura->cantidad_limite < 0) {
+                    $planItemCobertura->cantidad_limite = 0;
+                }
+                
+                // Save the updated limit
+                if (!$planItemCobertura->save()) {
+                    Yii::error("Failed to decrement cantidad_limite for baremo {$baremoId}. Errors: " . print_r($planItemCobertura->errors, true));
+                    // Don't return false here - the siniestro should still save even if limit update fails
+                } else {
+                    Yii::info("Decremented cantidad_limite for baremo {$baremoId} from plan {$this->afiliado->plan_id}. New limit: {$planItemCobertura->cantidad_limite}");
                 }
             }
         }
+        // ============ END NEW CODE ============
+    }
+
+    // ====================================================================
+    // 3. Lógica para actualizar el costo_total en SisSiniestro
+    // ====================================================================
+
+    // a) Calcular la suma total de los costos de los baremos para este siniestro
+    $totalCosto = SisSiniestroBaremo::find()
+        ->where(['siniestro_id' => $this->id])
+        ->sum('costo');
+
+    // b) Asignar el total al campo costo_total del modelo actual ($this es SisSiniestro)
+    // Se usa (float) para asegurar que el valor sea numérico (sum() puede devolver NULL o un string)
+    $this->costo_total = (float) $totalCosto;
+    
+    // c) Guardar el modelo SisSiniestro
+    if (!$this->save(false)) { // Usamos save(false) para omitir la validación de otros campos del SisSiniestro
+        // Retorna false si falla la actualización del costo_total
+        return false;
+    }
+
+    // ====================================================================
+
+    return true;
+}
+    
+    /**
+     * Valida los baremos seleccionados contra las restricciones del plan
+     * @param array $baremoIds Array de IDs de baremos a validar
+     * @param int $userId ID del usuario/afiliado
+     * @param int $esCita 0=Siniestro, 1=Cita (Permite omitir ciertas validaciones)
+     * @return array ['valid' => bool, 'errors' => array]
+     */
+    public static function validarBaremosConPlan($baremoIds, $userId, $esCita = 0, $model = null)
+    {
+        $errors = [];
         
-        return true;
+        if (empty($baremoIds) || !is_array($baremoIds)) {
+            return ['valid' => true, 'errors' => []];
+        }
+        
+        // Obtener datos del afiliado
+        $afiliado = UserDatos::findOne($userId);
+        if (!$afiliado || !$afiliado->plan_id) {
+            $errors[] = 'No se pudo obtener la información del plan del afiliado.';
+            return ['valid' => false, 'errors' => $errors];
+        }
+        
+        // Obtener el contrato del afiliado para la fecha de inicio
+        $contrato = Contratos::find()
+            ->where(['user_id' => $userId])
+            ->andWhere(['estatus' => 'Activo'])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->one();
+        
+        if (!$contrato) {
+            // Nota: Podrías relajar esta validación si una Cita puede hacerse sin contrato activo, 
+            // pero por ahora, la mantenemos como crítica.
+            $errors[] = 'No se encontró un contrato activo para el afiliado.';
+            return ['valid' => false, 'errors' => $errors];
+        }
+        
+        $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
+        $fechaActual = new \DateTime();
+        
+        // Validar cada baremo
+        foreach ($baremoIds as $baremoId) {
+            if (empty($baremoId)) continue;
+            
+            // Obtener la configuración del baremo en el plan
+            $planItemCobertura = PlanesItemsCobertura::find()
+                ->where(['plan_id' => $afiliado->plan_id, 'baremo_id' => $baremoId])
+                ->one();
+            
+            if (!$planItemCobertura) {
+                $baremo = Baremo::findOne($baremoId);
+                $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
+                $errors[] = "El baremo '$nombreBaremo' no está configurado en el plan del afiliado.";
+                continue;
+            }
+            
+            $baremo = Baremo::findOne($baremoId);
+            $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
+            
+            // ----------------------------------------------------------------------------------
+            // APLICACIÓN DEL MODO CITA
+            // Si el registro es una Cita (es_cita = 1), omitimos todas las validaciones de 
+            // Plazo y Límite de uso. El propósito de la cita es reservar el servicio.
+            // ----------------------------------------------------------------------------------
+            if ($esCita == 1) {
+                // Validar plazo de espera
+                if (!empty($planItemCobertura->plazo_espera) && $planItemCobertura->plazo_espera > 0) {
+                    $diff = $fechaInicioContrato->diff($fechaActual);
+                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                    
+                    if ($mesesTranscurridos < $planItemCobertura->plazo_espera) {
+                        $errors[] = "No se puede agendar la cita para '$nombreBaremo'. Aún no ha cumplido el plazo de espera de {$planItemCobertura->plazo_espera} meses desde la fecha de inicio del contrato.";
+                        continue;
+                    }
+                }
+            
+                // Validar límite de uso para citas
+                if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
+                    $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
+                    list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
+                    
+                    // Contar usos en el período actual (excluyendo la cita actual si es una actualización)
+                    $siniestrosUsados = self::find()
+                        ->alias('s')
+                        ->innerJoin('sis_siniestro_baremo sb', 'sb.siniestro_id = s.id')
+                        ->where(['s.iduser' => $afiliado->id])
+                        ->andWhere(['sb.baremo_id' => $baremoId])
+                        ->andWhere(['>=', 's.fecha', $inicioAnioVigencia->format('Y-m-d')])
+                        ->andWhere(['<=', 's.fecha', $finAnioVigencia->format('Y-m-d')]);
+                    
+                        if ($model && !$model->isNewRecord) {
+                            $siniestrosUsados->andWhere(['<>', 's.id', $model->id]);
+                        }
+                    
+                    $vecesUsado = $siniestrosUsados->count();
+                    
+                    // Verificar si excede el límite
+                    if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
+                        $errors[] = "No se puede agendar la cita para '$nombreBaremo'. "
+                                  . "Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos en el período actual. "
+                                  . "Ya se ha utilizado $vecesUsado veces.";
+                        continue;
+                    }
+                }
+                
+                continue; // Continuar con el siguiente baremo
+            }
+            
+            // ----------------------------------------------------------------------------------
+            // LÓGICA DE VALIDACIÓN EXISTENTE (SOLO PARA SINIESTRO: es_cita = 0)
+            // ----------------------------------------------------------------------------------
+
+            continue; // Continuar con el siguiente baremo sin validaciones adicionales
+        }
+        
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors
+        ];
+    }
+    
+    /**
+     * Parsea el plazo de espera en formato texto a número de meses
+     * @param string $plazoEspera Ej: "4 meses", "1 mes", "6 months"
+     * @return int Número de meses
+     */
+    private static function parsePlazoEspera($plazoEspera)
+    {
+        if (empty($plazoEspera)) {
+            return 0;
+        }
+        
+        // Extraer el número del texto
+        preg_match('/\d+/', $plazoEspera, $matches);
+        
+        if (!empty($matches)) {
+            return (int)$matches[0];
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Calcula en qué año de vigencia se encuentra el afiliado
+     * @param \DateTime $fechaInicio Fecha de inicio del contrato
+     * @param \DateTime $fechaActual Fecha actual
+     * @return int Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     */
+    private static function calcularAnioVigencia($fechaInicio, $fechaActual)
+    {
+        $diferencia = $fechaInicio->diff($fechaActual);
+        return $diferencia->y; // Retorna el número de años completos
+    }
+
+        /**
+     * Calcula el período de vigencia (fecha de inicio y fin) para un año específico
+     * @param \DateTime $fechaInicio Fecha de inicio del contrato
+     * @param int $anioVigencia Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     * @return array [DateTime $inicio, DateTime $fin]
+     */
+    private static function calcularPeriodoVigencia($fechaInicio, $anioVigencia)
+    {
+        $inicio = clone $fechaInicio;
+        $inicio->modify("+{$anioVigencia} years");
+        
+        $fin = clone $inicio;
+        $fin->modify('+1 year -1 day');
+        
+        return [$inicio, $fin];
     }
 }

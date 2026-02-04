@@ -5,10 +5,16 @@ namespace app\controllers;
 use app\models\Baremo;
 use app\models\BaremoSearch;
 use app\models\RmClinica;
+use app\models\Area; 
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\web\UploadedFile; 
+use yii\web\BadRequestHttpException; 
+use PhpOffice\PhpSpreadsheet\IOFactory; 
 use Yii;
+use PhpOffice\PhpSpreadsheet\Spreadsheet; 
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx; 
 
 /**
  * BaremoController implements the CRUD actions for Baremo model.
@@ -27,6 +33,7 @@ class BaremoController extends Controller
                     'class' => VerbFilter::className(),
                     'actions' => [
                         'delete' => ['POST'],
+                        'delete-all' => ['POST'],
                     ],
                 ],
             ]
@@ -46,19 +53,19 @@ class BaremoController extends Controller
         $dataProvider->query->andFilterWhere(['=', 'clinica_id', $clinica_id]);
         $model = new Baremo();
 
-            if ($model->load($this->request->post())) {
+        if ($model->load($this->request->post())) {
 
-                $model->clinica_id = $clinica_id;
-                $model->estatus = "Activo";
-                if($model->save()){
-                }else{
-                    Yii::$app->session->setFlash('error', 'Error al crear el baremo');
-                return $this->redirect(['index', 'clinica_id' => $clinica->id]);
-                };
-                Yii::$app->session->setFlash('success', 'Baremo creado correctamente');
-                return $this->redirect(['index', 'clinica_id' => $clinica->id]);
-            }
-       
+            $model->clinica_id = $clinica_id;
+            $model->estatus = "Activo";
+            if($model->save()){
+            }else{
+                Yii::$app->session->setFlash('error', 'Error al crear el baremo');
+            return $this->redirect(['index', 'clinica_id' => $clinica->id]);
+            };
+            Yii::$app->session->setFlash('success', 'Baremo created successfully');
+            return $this->redirect(['index', 'clinica_id' => $clinica->id]);
+        }
+        
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -81,12 +88,83 @@ class BaremoController extends Controller
         ]);
     }
 
-    /**
-     * Creates a new Baremo model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
-   
+/**
+ * Genera y descarga la plantilla de Excel para la carga masiva de baremos.
+ * * @param string $clinica_id El ID de la clínica (se pasa como parámetro de ruta).
+ * @return yii\web\Response
+ */
+public function actionDownloadTemplate($clinica_id)
+{
+    // Crear un nuevo objeto Spreadsheet
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Baremo Template');
+
+    // 1. Definir los encabezados (Área, Nombre del Servicio, Descripción, Costo, Precio)
+    $headers = [
+        'A1' => 'Área',
+        'B1' => 'Nombre del Servicio',
+        'C1' => 'Descripción',
+        'D1' => 'Costo',
+        'E1' => 'Precio',
+    ];
+
+    // 2. Agregar datos de ejemplo (tomado de Baremo.xlsx - Individual.csv)
+    $exampleData = [
+        'A2' => 'CIRUGÍA',
+        'B2' => 'Cirugías de Electivas',
+        'C2' => 'Hemorroidectomía',
+        'D2' => '1507.88', // Usar formato de texto para mantener la precisión
+        'E2' => '1794.93', // Usar formato de texto para mantener la precisión
+    ];
+    
+    // Aplicar encabezados
+    foreach ($headers as $cell => $value) {
+        $sheet->setCellValue($cell, $value);
+    }
+    
+    // Aplicar datos de ejemplo
+    foreach ($exampleData as $cell => $value) {
+        $sheet->setCellValue($cell, $value);
+    }
+
+    // 3. Aplicar formato y auto-ajuste (hasta la columna E)
+    $headerStyle = [
+        'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']], // Fuente blanca
+        'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF3498DB']], // Fondo azul
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+    ];
+    // Rango A1:E1
+    $sheet->getStyle('A1:E1')->applyFromArray($headerStyle); 
+
+    // Autoajustar columnas A a E
+    foreach (range('A', 'E') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+    
+    // Forzar formato de texto en Costo y Precio para evitar pérdida de decimales o notación científica
+    $sheet->getStyle('D:E')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
+    // 4. Guardar, Transmitir y Limpiar
+    $writer = new Xlsx($spreadsheet);
+    // Crear archivo temporal con nombre único
+    $tempFile = Yii::getAlias('@runtime/plantilla_baremo_' . time() . '.xlsx'); 
+    $writer->save($tempFile);
+
+    $fileName = 'plantilla_baremo.xlsx';
+
+    // Transmitir el archivo y configurar la limpieza
+    return Yii::$app->response->sendFile($tempFile, $fileName, [
+        'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'inline' => false // Forzar la descarga
+    ])
+    ->on(\yii\web\Response::EVENT_AFTER_SEND, function($event) use ($tempFile) { 
+        // Eliminar el archivo temporal después de enviarlo
+        if (file_exists($tempFile)) { 
+            unlink($tempFile); 
+        } 
+    });
+}
 
     /**
      * Updates an existing Baremo model.
@@ -123,6 +201,53 @@ class BaremoController extends Controller
     }
 
     /**
+     * Deletes ALL Baremo models for a specific clinic.
+     * @param int $clinica_id
+     * @return \yii\web\Response
+     */
+    public function actionDeleteAll($clinica_id)
+    {
+        // Verify the clinic exists
+        $clinica = RmClinica::findOne($clinica_id);
+        if (!$clinica) {
+            Yii::$app->session->setFlash('error', 'Clínica no encontrada.');
+            return $this->redirect(['index']);
+        }
+
+        // Only proceed if it's a POST request
+        if (!Yii::$app->request->isPost) {
+            Yii::$app->session->setFlash('error', 'Método no permitido.');
+            return $this->redirect(['index', 'clinica_id' => $clinica_id]);
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            // Count how many baremos will be deleted
+            $count = Baremo::find()->where(['clinica_id' => $clinica_id])->count();
+            
+            if ($count === 0) {
+                Yii::$app->session->setFlash('info', "No hay baremos para eliminar en la clínica {$clinica->nombre}.");
+                $transaction->rollBack();
+                return $this->redirect(['index', 'clinica_id' => $clinica_id]);
+            }
+            
+            // Delete all baremos for this clinic
+            $deleted = Baremo::deleteAll(['clinica_id' => $clinica_id]);
+            
+            $transaction->commit();
+            
+            Yii::$app->session->setFlash('success', "✅ Se eliminaron {$deleted} baremos de la clínica {$clinica->nombre}.");
+            
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', '❌ Error al eliminar los baremos: ' . $e->getMessage());
+            Yii::error('Error deleting all baremos for clinic ' . $clinica_id . ': ' . $e->getMessage(), __METHOD__);
+        }
+        
+        return $this->redirect(['index', 'clinica_id' => $clinica_id]);
+    }
+
+    /**
      * Finds the Baremo model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
      * @param int $id ID
@@ -154,49 +279,220 @@ class BaremoController extends Controller
         }
     }
 
-   
-        public function actionExportExcel()
-        {
-            // Obtén los datos del dataProvider. Aquí asumo que tienes una forma de obtener el dataProvider
-            // con los filtros aplicados. Esto es un ejemplo.
-            $searchModel = new \app\models\BaremoSearch(); // O el nombre de tu SearchModel
-            $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-            $dataProvider->pagination = false; // Desactivar la paginación para obtener todos los registros
+    public function actionExportExcel()
+    {
+        $searchModel = new \app\models\BaremoSearch(); 
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider->pagination = false; 
 
-            // Nombres de las columnas para el archivo CSV
-            $headers = [
-                'Area',
-                'Nombre del Servicio',
-                'Descripción',
-                'Costo',
-                'Precio',
-                'Estatus'
+        $headers = [
+            'Area',
+            'Nombre del Servicio',
+            'Descripción',
+            'Costo',
+            'Precio',
+            'Estatus'
+        ];
+
+        $fileName = 'baremo-export-' . date('Y-m-d') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+
+        $out = fopen('php://output', 'w');
+        fputs($out, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF))); 
+        fputcsv($out, $headers);
+
+        foreach ($dataProvider->getModels() as $model) {
+            $areaName = $model->area ? $model->area->nombre : "";
+            $row = [
+                $areaName,
+                $model->nombre_servicio,
+                $model->descripcion,
+                $model->costo,
+                $model->precio,
+                $model->estatus === 1 ? 'Activo' : 'Inactivo',
             ];
-
-            // Abre un stream de memoria para escribir el archivo CSV
-            $fileName = 'baremo-export-' . date('Y-m-d') . '.csv';
-            header('Content-Type: text/csv; charset=utf-8');
-            header('Content-Disposition: attachment; filename="' . $fileName . '"');
-
-            $out = fopen('php://output', 'w');
-            fputs($out, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF))); // Agregar BOM para compatibilidad con Excel
-            fputcsv($out, $headers);
-
-            // Iterar sobre los datos y escribir en el archivo
-            foreach ($dataProvider->getModels() as $model) {
-                $areaName = $model->area ? $model->area->nombre : "";
-                $row = [
-                    $areaName,
-                    $model->nombre_servicio,
-                    $model->descripcion,
-                    $model->costo,
-                    $model->precio,
-                    $model->estatus === 1 ? 'Activo' : 'Inactivo',
-                ];
-                fputcsv($out, $row);
-            }
-            
-            fclose($out);
-            exit();
+            fputcsv($out, $row);
         }
+        
+        fclose($out);
+        exit();
+    }
+
+  /**
+ * Handles the upload and processing of the Excel file.
+ * @param int $clinica_id
+ * @return mixed
+ */
+/**
+ * Handles the upload and processing of the Excel file with duplicate prevention.
+ * @param int $clinica_id
+ * @return mixed
+ */
+public function actionImportExcel($clinica_id)
+{
+    if (Yii::$app->request->isPost) {
+        $file = UploadedFile::getInstanceByName('excelFile');
+        if ($file) {
+            // Start transaction to ensure data consistency
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                // --- 1. Area ID Lookup ---
+                $areaMap = Area::find()
+                    ->select(['id', 'nombre'])
+                    ->asArray()
+                    ->all();
+                
+                $areaIdLookup = [];
+                foreach ($areaMap as $area) {
+                    $areaIdLookup[strtoupper(trim($area['nombre']))] = $area['id'];
+                }
+                
+                // --- 2. Numeric Cleaning Helper Function ---
+                $cleanNumber = function ($value) {
+                    if (is_numeric($value)) {
+                        return (float)$value;
+                    }
+                    if (empty($value) || trim(strtoupper($value)) === 'NA') {
+                         return 0.00; 
+                    }
+                    
+                    // Remove currency symbols and spaces
+                    $clean = trim(str_replace(['$', ' ', '€', ','], '', $value));
+                    
+                    return is_numeric($clean) ? (float)$clean : 0.00;
+                };
+                
+                // --- 3. File Processing ---
+                $spreadsheet = IOFactory::load($file->tempName);
+                $sheet = $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray(null, true, true, true); 
+
+                $importedCount = 0;
+                $errorCount = 0;
+                $skippedCount = 0;
+                $errors = [];
+                
+                // Skip first row (header) - your data starts at row 1
+                $dataRows = array_slice($rows, 1); 
+                $rowNumber = 1; // Start counting from row 2
+
+                foreach ($dataRows as $row) {
+                    $rowNumber++; 
+
+                    // Convert to zero-indexed array
+                    $row = array_values($row ?? []);
+
+                    // Skip completely empty rows
+                    if (empty(array_filter($row))) {
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    // ⚡️ COLUMN MAPPING ⚡️
+                    $excelAreaName = strtoupper(trim($row[0] ?? '')); // Area from Column A
+                    $area_id = $areaIdLookup[$excelAreaName] ?? null;
+                    $serviceName = trim($row[1] ?? ''); // Service Name from Column B
+                    $description = trim($row[2] ?? ''); // Description (Category) from Column C
+                    $costo = $cleanNumber($row[3] ?? 0); // Costo from Column D
+                    $precio = $cleanNumber($row[4] ?? 0); // Precio from Column E
+
+                    // --- DUPLICATE CHECK: Check if record with the same service name and description already exists for this clinic ---
+                    $existingBaremo = Baremo::find()
+                        ->where([
+                            'clinica_id' => $clinica_id,
+                            'nombre_servicio' => $serviceName,
+                            'descripcion' => $description, // Now only checking Name and Description for uniqueness
+                        ])
+                        ->one();
+
+                    if ($existingBaremo) {
+                        $skippedCount++;
+                        $errors[] = "Fila {$rowNumber}: Ya existe un baremo idéntico ('{$serviceName}' - '{$description}'). Skipped.";
+                        continue; // Skip this row - duplicate found
+                    }
+
+                    $baremo = new Baremo();
+                    $baremo->clinica_id = $clinica_id; 
+                    $baremo->area_id = $area_id;
+                    $baremo->nombre_servicio = $serviceName;
+                    $baremo->descripcion = $description;
+                    $baremo->costo = $costo;
+                    $baremo->precio = $precio;
+                    $baremo->estatus = 'Activo';
+
+                    // --- VALIDATION ---
+                    if ($baremo->area_id === null && !empty($excelAreaName)) {
+                         $baremo->addError('area_id', "El Área '{$excelAreaName}' no existe en la base de datos.");
+                    }
+                    
+                    if (empty($baremo->nombre_servicio)) {
+                        $baremo->addError('nombre_servicio', "El nombre del servicio está vacío.");
+                    }
+                    
+                    // Allow zero price for records with N/A
+                    if ($baremo->precio < 0) {
+                        $baremo->addError('precio', "El precio no puede ser negativo.");
+                    }
+                    
+                    if ($baremo->costo < 0) {
+                        $baremo->addError('costo', "El costo no puede ser negativo.");
+                    }
+
+                    if ($baremo->validate()) {
+                        if ($baremo->save(false)) { 
+                            $importedCount++;
+                        } else {
+                            $errorCount++;
+                            $errors[] = "Fila " . $rowNumber . ": Error al guardar. " . implode(", ", $baremo->getFirstErrors());
+                        }
+                    } else {
+                        $errorCount++;
+                        $errors[] = "Fila " . $rowNumber . ": " . implode(", ", $baremo->getFirstErrors());
+                    }
+                }
+                
+                // Commit transaction if everything went well
+                $transaction->commit();
+                
+                // --- Flash Messages ---
+                if ($importedCount > 0 && $errorCount === 0 && $skippedCount === 0) {
+                    Yii::$app->session->setFlash('success', "Se importaron correctamente {$importedCount} baremos. 🎉");
+                } elseif ($importedCount > 0) {
+                    $message = "Resultado de la importación:\n";
+                    $message .= "✅ {$importedCount} baremos importados\n";
+                    
+                    if ($skippedCount > 0) {
+                        $message .= "⚠️ {$skippedCount} baremos omitidos (duplicados)\n";
+                    }
+                    
+                    if ($errorCount > 0) {
+                        $message .= "❌ {$errorCount} errores encontrados\n";
+                    }
+                    
+                    // Show first 3 errors if any
+                    if ($errorCount > 0) {
+                        $truncatedErrors = array_slice($errors, 0, 3);
+                        $message .= "\nErrores principales:\n- " . implode("\n- ", $truncatedErrors);
+                    }
+                    
+                    Yii::$app->session->setFlash('info', $message);
+                } else {
+                    Yii::$app->session->setFlash('error', "No se pudo importar ningún baremo. " . 
+                        ($skippedCount > 0 ? "{$skippedCount} duplicados encontrados. " : "") .
+                        "Verifique el formato del archivo.");
+                }
+                
+            } catch (\Exception $e) {
+                // Rollback transaction on error
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', 'Error al procesar el archivo: ' . $e->getMessage());
+            }
+        } else {
+            Yii::$app->session->setFlash('error', 'No se pudo cargar el archivo.');
+        }
+        return $this->redirect(['index', 'clinica_id' => $clinica_id]);
+    }
+    throw new BadRequestHttpException('Petición inválida.');
+}
 }

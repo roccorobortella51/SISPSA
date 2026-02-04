@@ -8845,6 +8845,311 @@ body:not(.ms-settings-open) .ms-settings-toggle:hover {
 
 /* /End Calender css */
 
+/* ==========================================================================
+   User Datos Form Styles - Scoped to prevent conflicts
+   ========================================================================== */
+
+/* Estilos generales mejorados */
+.user-datos-form {
+    background-color: #f8f9fa;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.form-control-lg {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 12px 15px;
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+/* Mejoras para las pestañas */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 25px;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 600;
+    padding: 12px 20px;
+    transition: all 0.3s;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: #adb5bd;
+    color: #495057;
+    background-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent !important;
+    color: #007bff !important;
+    border-color: #007bff #007bff #fff !important;
+    border-bottom: 3px solid #007bff !important;
+}
+
+/* Estilo para campos con iconos */
+.field-with-icon {
+    position: relative;
+}
+
+.field-with-icon .form-control {
+    padding-left: 40px;
+}
+
+.field-with-icon i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 5;
+}
+
+/* Botones mejorados */
+.btn {
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-datos-form .btn {
+    display: inline-block !important;
+}
+
+.btn i {
+    margin-right: 8px;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Mejoras para los select2 */
+.select2-container--krajee .select2-selection--single {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 8px 15px;
+    height: auto;
+}
+
+/* Mejoras para file inputs */
+.file-input {
+    width: 100% !important;
+}
+
+.file-input .file-preview {
+    width: 100% !important;
+    max-width: none;
+    margin: 0 auto;
+    box-sizing: border-box;
+    display: block;
+    float: none;
+}
+
+.file-input .file-caption {
+    width: 100% !important;
+    box-sizing: border-box;
+    border-radius: 8px;
+}
+
+/* Hacer que el contenedor de input-group del FileInput envuelva correctamente */
+.file-input .input-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* EXCEPCIÓN: No usar flex en los botones dentro del widget FileInput */
+.file-input .btn,
+.file-input .btn-file {
+    display: inline-block !important;
+    align-items: initial !important;
+    justify-content: initial !important;
+}
+
+/* Asegurar que el input file posicionado encima sea clickeable */
+.file-input .btn-file {
+    position: relative;
+    overflow: hidden;
+    z-index: 10;
+}
+.file-input .btn-file input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+/* Evitar distorsión en previsualización de imágenes (kartik FileInput) */
+.file-input .kv-file-content img,
+.file-input .file-preview-image {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+}
+
+.file-input .file-preview-frame {
+    max-width: 220px;
+}
+
+/* Thumbnails en varias filas sin desbordar */
+.file-input .file-preview-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Evitar que el preview se superponga a los controles */
+.file-input .file-preview,
+.file-input .file-preview-thumbnails,
+.file-input .file-preview-frame {
+    z-index: 1;
+}
+
+/* Evitar que las acciones se salgan de la tarjeta */
+.file-input .file-actions,
+.file-input .file-footer-buttons,
+.file-input .file-preview-status,
+.file-input .fileinput-remove,
+.file-input .fileinput-upload {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Alinear correctamente la barra de botones */
+.file-input .btn-file,
+.file-input .fileinput-remove-button,
+.file-input .fileinput-upload-button {
+    margin-top: 8px;
+}
+
+/* Títulos de sección */
+h1 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin: 30px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eaecef;
+}
+
+/* Tarjetas para agrupar campos */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.section-title {
+    font-size: 18px;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.section-title i {
+    margin-right: 10px;
+    color: #007bff;
+}
+
+/* Mejoras responsivas */
+@media (max-width: 768px) {
+    .user-datos-form {
+        padding: 15px;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .d-flex.justify-content-start.gap-3 {
+        flex-direction: column;
+    }
+}
+
+/* Animaciones suaves */
+.form-control, .btn, .nav-link {
+    transition: all 0.3s ease;
+}
+
+/* Focus states mejorados */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Estilo para campos requeridos */
+.required label:after {
+    content: " *";
+    color: #dc3545;
+}
+
 
 @media(max-width:991px) {
   .ms-modal-content-width{
@@ -9698,11 +10003,12 @@ body {
     border-top: 3px solid #2563eb !important;
     transition: all 0.25s ease-in-out !important;
 }
-/* Esto es lo que pasa cuando pones el ratón encima de una tarjeta. */
+/* Esto es lo que pasa cuando pones el ratón encima de una tarjeta. 
 .ms-panel:hover {
-    transform: translateY(-4px) !important;
+    transform: none !important; /* Cancela el movimiento 
     box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.08) !important;
 }
+*/
 /*
  * Estas clases cambian el color de la línea de arriba de las tarjetas 'ms-panel'.
  * Así puedes hacer que cada tarjeta tenga un color distinto según su tipo de información.
@@ -10848,3 +11154,57 @@ th.kv-expand-header-cell div.kv-expand-header-icon {
         font-size: 1em;
     }
 }
+
+/* botones de corporativos */
+
+ .btn-fixed-success {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-success:hover, .btn-fixed-success:focus, .btn-fixed-success:active {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-primary {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+        .btn-fixed-primary:hover, .btn-fixed-primary:focus, .btn-fixed-primary:active {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+
+.btn-fixed-success {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-success:hover, .btn-fixed-success:focus, .btn-fixed-success:active {
+            background: #28a745 !important;
+            color: #fff !important;
+            border-color: #28a745 !important;
+        }
+        .btn-fixed-primary {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+        .btn-fixed-primary:hover, .btn-fixed-primary:focus, .btn-fixed-primary:active {
+            background: #007bff !important;
+            color: #fff !important;
+            border-color: #007bff !important;
+        }
+        .btn-fixed-secondary {
+            background: #6c757d !important;
+            color: #fff !important;
+            border-color: #6c757d !important;
+        }
+        .btn-fixed-secondary:hover, .btn-fixed-secondary:focus, .btn-fixed-secondary:active {
+            background: #6c757d !important;
+            color: #fff !important;
+            border-color: #6c757d !important;
+        }

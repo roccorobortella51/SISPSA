@@ -17,7 +17,7 @@ use app\components\SaldoHelper; // Importar el helper
 
 // --- Detección y Carga de Clínica (para contexto) ---
 $clinica = null;
-$clinica_id_from_url = Yii::$app->request->get('clinica_id'); 
+$clinica_id_from_url = Yii::$app->request->get('clinica_id');
 
 if (!empty($clinica_id_from_url)) {
     $clinica = RmClinica::findOne((int)$clinica_id_from_url);
@@ -27,21 +27,21 @@ if (!empty($clinica_id_from_url)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION' || $rol == 'Asesor');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'COORDINADOR-CLINICA');
 
 // --- Título y BREADCRUMBS CONDICIONALES ---
-$titulo = 'PERFIL DEL AFILIADO: '. 
-$model->nombres . ' ' . $model->apellidos ;
+$titulo = 'PERFIL DEL AFILIADO: ' .
+    $model->nombres . ' ' . $model->apellidos;
 
 $asesor = AgenteFuerza::find()->where(['id' => $model->asesor_id])->one();
 
 $titulo2 = "";
-if($asesor){
-$titulo2 = 'ASESOR: ' . 
-$asesor->id . ' - ' . 
-$asesor->userDatos->nombres . " " . 
-$asesor->userDatos->apellidos .
- " (" . $asesor->userDatos->user->username . ")";
+if ($asesor) {
+    $titulo2 = 'ASESOR: ' .
+        $asesor->id . ' - ' .
+        $asesor->userDatos->nombres . " " .
+        $asesor->userDatos->apellidos .
+        " (" . $asesor->userDatos->user->username . ")";
 }
 
 $this->title = $titulo;
@@ -61,7 +61,8 @@ $this->params['breadcrumbs'][] = Html::encode($model->nombres . ' ' . $model->ap
 \yii\web\YiiAsset::register($this);
 
 if (!function_exists('formatDateTime')) {
-    function formatDateTime($value) {
+    function formatDateTime($value)
+    {
         return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
     }
 }
@@ -79,7 +80,8 @@ $baseCalculo = $datosSaldo['base_calculo'];
 $historialSiniestros = SaldoHelper::obtenerHistorialSiniestros($model->id);
 
 // Función auxiliar para mostrar Sí/No con íconos y clases de CSS
-function formatBooleanIcon($value) {
+function formatBooleanIcon($value)
+{
     if ($value) {
         return '<span class="text-green-600 mr-1"><i class="fas fa-check-circle"></i></span> Sí';
     } else {
@@ -90,27 +92,31 @@ $currentRoute = Yii::$app->controller->getRoute();
 ?>
 
 <div class="row row-cols-1 row-cols-md-4 justify-content-center g-3 mb-4">
-    <div class="col"> <h4><?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
-        ]) ?></h4>
+    <div class="col">
+        <h4><?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
+                'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
+            ]) ?></h4>
     </div>
 
-    <div class="col"> <h4><?= Html::a('<i class="fas fa-phone-alt"></i> Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
-            'data-pjax' => '0'
-        ]) ?></h4>
+    <div class="col">
+        <h4><?= Html::a('<i class="fas fa-phone-alt"></i> Contactos de Emergencia', Url::to(['contactos-emergencia/index', 'user_id' => $model->id]), [
+                'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'contactos-emergencia/index' ? 'active' : ''),
+                'data-pjax' => '0'
+            ]) ?></h4>
     </div>
 
-    <div class="col"> <h4><?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
-            'data-pjax' => '0'
-        ]) ?></h4>
+    <div class="col">
+        <h4><?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
+                'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
+                'data-pjax' => '0'
+            ]) ?></h4>
     </div>
-    
-    <div class="col"> <h4><?= Html::a('<i class="fas fa-file-medical"></i> Siniestros', Url::to(['sis-siniestro/index', 'user_id' => $model->id]), [
-            'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'sis-siniestro/index' ? 'active' : ''),
-            'data-pjax' => '0'
-        ]) ?></h4>
+
+    <div class="col">
+        <h4><?= Html::a('<i class="fas fa-file-medical"></i> Siniestros', Url::to(['sis-siniestro/index', 'user_id' => $model->id]), [
+                'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'sis-siniestro/index' ? 'active' : ''),
+                'data-pjax' => '0'
+            ]) ?></h4>
     </div>
 </div>
 
@@ -137,19 +143,19 @@ $currentRoute = Yii::$app->controller->getRoute();
                 ) ?>
                 <?php if (!empty($clinica_id_from_url)) : ?>
                     <?= Html::a(
-                        '<i class="fas fa-undo mr-2"></i> Volver a Afiliados', 
+                        '<i class="fas fa-undo mr-2"></i> Volver a Afiliados',
                         ['index-clinicas', 'clinica_id' => $clinica->id],
                         [
-                            'class' => 'btn-base btn-gray', 
+                            'class' => 'btn-base btn-gray',
                             'title' => 'Volver a la lista de afiliados de esta clínica',
                         ]
                     ) ?>
                 <?php else: ?>
                     <?= Html::a(
-                        '<i class="fas fa-undo mr-2"></i> Volver a Afiliados', 
+                        '<i class="fas fa-undo mr-2"></i> Volver a Afiliados',
                         ['index'],
                         [
-                            'class' => 'btn-base btn-gray', 
+                            'class' => 'btn-base btn-gray',
                             'title' => 'Volver a la lista general de afiliados',
                         ]
                     ) ?>
@@ -159,21 +165,21 @@ $currentRoute = Yii::$app->controller->getRoute();
     </div>
 
     <div class="balance-available">
-                <i class="fas fa-piggy-bank text-blue-600"></i>
-                <h4>Saldo Disponible</h4>
-                <p class="h5 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></h5>
+        <i class="fas fa-piggy-bank text-blue-600"></i>
+        <h4>Saldo Disponible</h4>
+        <p class="h5 font-weight-bold text-blue-600"><?= Yii::$app->formatter->asCurrency($saldoDisponible, 'USD') ?></h5>
     </div>
 
-     <hr class="my-4">
+    <hr class="my-4">
 
-            
 
-            <div class="progress-bar-container mt-4">
-                <div class="progress-bar" style="width: <?= $porcentajeConsumido ?>%; background-color: <?= $porcentajeConsumido > 80 ? '#dc3545' : ($porcentajeConsumido > 50 ? '#ffc107' : '#28a745') ?>;"></div>
-            </div>
-            <p class="text-sm text-center text-muted mt-2">
-                <?= $porcentajeConsumido ?>% del plan consumido.
-            </h5>
+
+    <div class="progress-bar-container mt-4">
+        <div class="progress-bar" style="width: <?= $porcentajeConsumido ?>%; background-color: <?= $porcentajeConsumido > 80 ? '#dc3545' : ($porcentajeConsumido > 50 ? '#ffc107' : '#28a745') ?>;"></div>
+    </div>
+    <p class="text-sm text-center text-muted mt-2">
+        <?= $porcentajeConsumido ?>% del plan consumido.
+        </h5>
 
     <div class="ms-panel border-blue">
         <div class="ms-panel-body">
@@ -182,7 +188,7 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <div style="text-align: center; display: flex; flex-direction: column; align-items: center; padding: 2.5rem 0;">
                         <h5>Foto de Perfil</h5>
                         <?php if ($model->selfie): ?>
-                            <?= Html::img( $model->selfie, [
+                            <?= Html::img($model->selfie, [
                                 'alt' => 'Foto de Perfil',
                                 'class' => 'profile-img rounded-full w-32 h-32 object-cover border-2 border-blue-400 shadow-md'
                             ]) ?>
@@ -205,32 +211,76 @@ $currentRoute = Yii::$app->controller->getRoute();
                     </div>
                 </div>
             </div>
-            
+
             <h5 class="section-title justify-center">
                 <i class="fas fa-address-card text-blue-600 mr-3"></i> Datos Personales
             </h5>
             <div class="info-grid text-left">
                 <div>
                     <h5><strong>Nombres:</strong> <?= Html::encode($model->nombres ?? 'N/A') ?></h5>
-                    <h5><strong>Cédula de Identidad:</strong> <?= Html::encode(($model->tipo_cedula ? $model->tipo_cedula . '-' : '') . ($model->cedula ?? 'N/A')) ?></h5>
+                    <h5><strong>Cédula de Identidad:</strong>
+                        <?php
+                        if ($model->tipo_cedula === 'Menor Sin Cédula') {
+                            if ($model->consecutivo_menor) {
+                                echo 'Menor Sin Cédula - ' . Html::encode($model->consecutivo_menor);
+                                if ($model->cedula) {
+                                    echo '<br><small class="text-muted">(Cédula del tutor: ' . Html::encode($model->cedula) . ')</small>';
+                                }
+                            } else {
+                                echo 'Menor Sin Cédula';
+                                if ($model->cedula) {
+                                    echo '<br><small class="text-muted">(Cédula del tutor: ' . Html::encode($model->cedula) . ')</small>';
+                                }
+                            }
+                        } else {
+                            echo Html::encode(($model->tipo_cedula ? $model->tipo_cedula . '-' : '') . ($model->cedula ?? 'N/A'));
+                        }
+                        ?>
+                    </h5>
                     <h5><strong>Sexo:</strong> <?= Html::encode($model->sexo ?? 'N/A') ?></h5>
                     <h5><strong>Correo Electrónico:</strong> <?= !empty($model->email) ? Html::a(Html::encode($model->email), 'mailto:' . Html::encode($model->email), ['class' => 'text-blue-500']) : 'N/A' ?></h5>
                 </div>
                 <div>
-                    <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellidos ?? 'N/A') ?></h5>
+                    <h5><strong>Apellidos:</strong> <?= Html::encode(!empty($model->apellidos) ? $model->apellidos : 'N/A') ?></h5>
                     <h5><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></h5>
-                    <h5><strong>Teléfono:</strong> <?= Html::encode($model->telefono ?? 'N/A') ?></h5>
+                    <h5><strong>Teléfono:</strong> <?= Html::encode(!empty($model->telefono) ? $model->telefono : 'N/A') ?></h5>
                 </div>
             </div>
         </div>
     </div>
+
+    <?php if ($model->tiene_contratante_diferente): ?>
+        <div class="ms-panel border-blue">
+            <div class="ms-panel-body">
+                <h5 class="section-title">
+                    <i class="fas fa-user-tie text-blue-600 mr-3"></i> Información del Contratante
+                </h5>
+                <div class="info-grid text-left">
+                    <div>
+                        <h5><strong>Nombres:</strong> <?= Html::encode($model->nombre_contratante ?? 'N/A') ?></h5>
+                        <h5><strong>Apellidos:</strong> <?= Html::encode($model->apellido_contratante ?? 'N/A') ?></h5>
+                        <h5><strong>Cédula:</strong> <?= Html::encode(($model->tipo_cedula_contratante ? $model->tipo_cedula_contratante . '-' : '') . ($model->cedula_contratante ?? 'N/A')) ?></h5>
+                        <h5><strong>Fecha de Nacimiento:</strong> <?= Html::encode(Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'd-m-Y') ?? 'N/A') ?></h5>
+                        <h5><strong>Email:</strong> <?= Html::a(Html::encode($model->email_contratante), 'mailto:' . Html::encode($model->email_contratante), ['class' => 'text-blue-500']) ?? 'N/A' ?></h5>
+                    </div>
+                    <div>
+                        <h5><strong>Sexo:</strong> <?= Html::encode(!empty($model->sexo_contratante) ? $model->sexo_contratante : 'N/A') ?></h5>
+                        <h5><strong>Nacionalidad:</strong> <?= Html::encode(!empty($model->nacionalidad_contratante) ? $model->nacionalidad_contratante : 'N/A') ?></h5>
+                        <h5><strong>Estado Civil:</strong> <?= Html::encode(!empty($model->estado_civil_contratante) ? $model->estado_civil_contratante : 'N/A') ?></h5>
+                        <h5><strong>Ocupación:</strong> <?= Html::encode(!empty($model->ocupacion_contratante) ? $model->ocupacion_contratante : 'N/A') ?></h5>
+                        <h5><strong>Teléfono Celular:</strong> <?= Html::encode(!empty($model->telefono_celular_contratante) ? $model->telefono_celular_contratante : 'N/A') ?></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <div class="ms-panel border-purple">
         <div class="ms-panel-body">
             <h5 class="section-title text-center">
                 <i class="fas fa-hand-holding-usd text-purple-600 mr-3"></i> Detalles del Plan
             </h5>
-            
+
             <div class="info-grid-2x2">
                 <div class="info-card-body">
                     <h5>Plan</h5>
@@ -254,38 +304,38 @@ $currentRoute = Yii::$app->controller->getRoute();
                 </div>
             </div>
 
-           
-            
+
+
             <!-- Historial de Siniestros (Opcional) -->
             <?php if (!empty($historialSiniestros)): ?>
-            <div class="mt-4">
-                <h6 class="text-center"><strong>Últimos siniestros registrados:</strong></h6>
-                <div class="table-responsive">
-                    <table class="table  table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Descripción</th>
-                                <th>Costo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach (array_slice($historialSiniestros, 0, 3) as $siniestro): ?>
-                            <tr>
-                                <td><?= Yii::$app->formatter->asDate($siniestro->fecha) ?></td>
-                                <td><?= Html::encode(mb_substr($siniestro->descripcion, 0, 30) . (mb_strlen($siniestro->descripcion) > 30 ? '...' : '')) ?></td>
-                                <td class="text-right"><?= Yii::$app->formatter->asCurrency($siniestro->costo_total, 'USD') ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <div class="mt-4">
+                    <h6 class="text-center"><strong>Últimos siniestros registrados:</strong></h6>
+                    <div class="table-responsive">
+                        <table class="table  table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripción</th>
+                                    <th>Costo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($historialSiniestros, 0, 3) as $siniestro): ?>
+                                    <tr>
+                                        <td><?= Yii::$app->formatter->asDate($siniestro->fecha) ?></td>
+                                        <td><?= Html::encode(mb_substr($siniestro->descripcion, 0, 30) . (mb_strlen($siniestro->descripcion) > 30 ? '...' : '')) ?></td>
+                                        <td class="text-right"><?= Yii::$app->formatter->asCurrency($siniestro->costo_total, 'USD') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (count($historialSiniestros) > 3): ?>
+                        <p class="text-center">
+                            <small><?= count($historialSiniestros) - 3 ?> siniestros más...</small>
+                        </p>
+                    <?php endif; ?>
                 </div>
-                <?php if (count($historialSiniestros) > 3): ?>
-                <p class="text-center">
-                    <small><?= count($historialSiniestros) - 3 ?> siniestros más...</small>
-                </p>
-                <?php endif; ?>
-            </div>
             <?php endif; ?>
         </div>
     </div>
@@ -324,13 +374,96 @@ $currentRoute = Yii::$app->controller->getRoute();
                 <div>
                     <h5><strong>Plan:</strong> <?= Html::encode($model->plan ? $model->plan->nombre : 'No asignado') ?></h5>
                     <?php
-                        $estatusText = $model->estatus ?? 'N/A';
-                        $estatusClass = 'inactive';
-                        if ($estatusText === 'Activo' || $estatusText === 'Registrado') {
-                            $estatusClass = 'active';
-                        }
+                    $estatusText = $model->estatus ?? 'N/A';
+                    $estatusClass = 'inactive';
+                    if ($estatusText === 'Activo' || $estatusText === 'Registrado') {
+                        $estatusClass = 'active';
+                    }
                     ?>
                     <h5><strong>Estatus:</strong> <span class="status-badge <?= $estatusClass ?>"><?= Html::encode($estatusText) ?></span></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ms-panel border-green">
+        <div class="ms-panel-body">
+            <h5 class="section-title">
+                <i class="fas fa-file-alt text-green-600 mr-3"></i> Información Sociodemográfica y Económica
+            </h5>
+            <div class="info-grid text-left">
+                <div>
+                    <h5><strong>Nacionalidad:</strong> <?= Html::encode($model->nacionalidad ?? 'N/A') ?></h5>
+                    <h5><strong>Estado Civil:</strong> <?= Html::encode($model->estado_civil ?? 'N/A') ?></h5>
+                    <h5><strong>Lugar de Nacimiento:</strong> <?= Html::encode($model->lugar_nacimiento ?? 'N/A') ?></h5>
+                    <h5><strong>Profesión:</strong> <?= Html::encode($model->profesion ?? 'N/A') ?></h5>
+                    <h5><strong>Ocupación:</strong> <?= Html::encode($model->ocupacion ?? 'N/A') ?></h5>
+                </div>
+                <div>
+                    <h5><strong>Actividad Económica:</strong> <?= Html::encode($model->actividad_economica ?? 'N/A') ?></h5>
+                    <h5><strong>Ramo Comercial:</strong> <?= Html::encode($model->ramo_comercial ?? 'N/A') ?></h5>
+                    <h5><strong>Descripción de Actividad:</strong> <?= Html::encode($model->descripcion_actividad ?? 'N/A') ?></h5>
+                    <h5><strong>Ingreso Anual:</strong> <?= Html::encode($model->ingreso_anual ?? 'N/A') ?></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if (!empty($model->telefono_residencia) || !empty($model->telefono_oficina) || !empty($model->direccion_residencia) || !empty($model->direccion_oficina)): ?>
+        <div class="ms-panel border-orange">
+            <div class="ms-panel-body">
+                <h5 class="section-title">
+                    <i class="fas fa-building text-orange-600 mr-3"></i> Información de Contacto y Domicilio Adicional
+                </h5>
+                <div class="info-grid text-left">
+                    <div>
+                        <h5><strong>Dirección de Cobro:</strong> <?= nl2br(Html::encode($model->direccion_cobro ?? 'N/A')) ?></h5>
+                        <h5><strong>Teléfono de Residencia:</strong> <?= Html::encode($model->telefono_residencia ?? 'N/A') ?></h5>
+                        <h5><strong>Teléfono Celular:</strong> <?= Html::encode($model->telefono_celular ?? 'N/A') ?></h5>
+                    </div>
+                    <div>
+                        <h5><strong>Dirección de Oficina:</strong> <?= nl2br(Html::encode($model->direccion_oficina ?? 'N/A')) ?></h5>
+                        <h5><strong>Teléfono de Oficina:</strong> <?= Html::encode($model->telefono_oficina ?? 'N/A') ?></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+
+
+    <div class="ms-panel border-red">
+        <div class="ms-panel-body">
+            <h5 class="section-title">
+                <i class="fas fa-credit-card text-red-600 mr-3"></i> Información Bancaria
+            </h5>
+            <div class="info-grid text-left">
+                <div>
+                    <h5><strong>Nombre del Titular:</strong> <?= Html::encode($model->nombre_titular ?? 'N/A') ?></h5>
+                    <h5><strong>Cédula del Titular:</strong> <?= Html::encode($model->cedula_titular ?? 'N/A') ?></h5>
+                    <h5><strong>Número de Cuenta:</strong> <?= Html::encode($model->numero_cuenta ?? 'N/A') ?></h5>
+                </div>
+                <div>
+                    <h5><strong>Banco:</strong> <?= Html::encode($model->banco ? $model->banco->nombre : 'N/A') ?></h5>
+                    <h5><strong>Tipo de Cuenta:</strong> <?= Html::encode($model->tipo_cuenta ?? 'N/A') ?></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ms-panel border-gray">
+        <div class="ms-panel-body">
+            <h5 class="section-title">
+                <i class="fas fa-user-friends text-gray-600 mr-3"></i> Detalles de la Póliza
+            </h5>
+            <div class="info-grid text-left">
+                <div>
+                    <h5><strong>¿Cubre Maternidad?:</strong> <?= formatBooleanIcon($model->cobertura_maternidad) ?></h5>
+                    <h5><strong>Deducible de Maternidad:</strong> <?= Yii::$app->formatter->asCurrency($model->deducible_maternidad ?? 0, 'USD') ?></h5>
+                    <h5><strong>Límite de Cobertura de Maternidad:</strong> <?= Yii::$app->formatter->asCurrency($model->limite_cobertura_maternidad ?? 0, 'USD') ?></h5>
+                </div>
+                <div>
+                    <h5><strong>Miembros del Grupo Familiar:</strong></h5>
+                    <pre class="p-2 bg-light rounded"><?= Html::encode($model->grupo_familiar ?? 'N/A') ?></pre>
                 </div>
             </div>
         </div>

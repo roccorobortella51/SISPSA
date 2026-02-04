@@ -28,22 +28,31 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
 
-            <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1><?= Html::encode($this->title); ?></h1>
+<div class="ms-panel-header d-flex justify-content-between align-items-center p-4">
+    <h1 class="font-weight-bold" style="font-size: 2.5rem; margin: 0; line-height: 1;">
+        <?= Html::encode($this->title); ?>
+    </h1>
 
-                <div>
-                    <?= Html::a(
-                        '<i class="fas fa-file-excel"></i> CARGAR MASIVOS DE CORPORATIVOS',
-                        ['#'], // Ajusta esta ruta si tienes una funcionalidad de carga masiva
-                        ['class' => 'btn btn-outline-primary btn-lg me-3']
-                    ) ?>
-                    <?= Html::a(
-                        '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
-                        ['create'],
-                        ['class' => 'btn btn-outline-primary btn-lg']
-                    ) ?>
-                </div>
-            </div>
+    <div class="d-flex" style="gap: 20px !important;"> 
+        <?= Html::a(
+            '<i class="fas fa-plus"></i> CREAR NUEVO CORPORATIVO',
+            ['create'],
+            [
+                'class' => 'btn btn-outline-success btn-fixed-success',
+                'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+            ]
+        ) ?>
+
+        <?= Html::a(
+            '<i class="fas fa-file-excel"></i> CARGAR DE FORMA MASIVA',
+            ['corporativo/carga-masiva-afiliados'],
+            [
+                'class' => 'btn btn-outline-primary btn-fixed-primary',
+                'style' => 'font-size: 1.1rem !important; font-weight: bold !important; padding: 12px 17px !important; border-width: 3px !important; display: flex !important; align-items: center !important; gap: 12px !important; line-height: 1.1 !important;'
+            ]
+        ) ?>
+    </div>
+</div>
 
 
             <div class="ms-panel-body">
@@ -101,12 +110,13 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                         'Inactivo' => 'Inactivo',
                                         'Pendiente' => 'Pendiente',
                                     ],
-                                    'options' => ['placeholder' => 'Filtrar por estatus...'],
+                                    'options' => ['placeholder' => 'Estatus...'],
                                     'pluginOptions' => [
                                         'allowClear' => true
                                     ],
                                 ]),
                                 'contentOptions' => ['style' => 'width: 150px;'],
+                                'contentOptions' => ['style' => 'text-align:center;'],
                             ],
                             // Columna para las clínicas asociadas (conteo y filtro)
                             [
@@ -135,18 +145,6 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                     $count = count($model->users);
                                     return Html::a($count . ' Empleado(s)', ['view', 'id' => $model->id], ['title' => 'Ver empleados asociados']);
                                 },
-                                'filterType' => GridView::FILTER_SELECT2,
-                                'filter' => ArrayHelper::map(
-                                    User::find()->joinWith('userDatos')->orderBy('user_datos.nombres')->all(),
-                                    'id',
-                                    function($user) {
-                                        return ($user->userDatos) ? $user->userDatos->nombres . ' ' . $user->userDatos->apellidos : $user->username;
-                                    }
-                                ),
-                                'filterWidgetOptions' => [
-                                    'pluginOptions' => ['allowClear' => true],
-                                ],
-                                'filterInputOptions' => ['placeholder' => 'Filtrar por empleados...'],
                                 'headerOptions' => ['style' => 'color: white!important; width:120px; text-align:center;'], // Asegura que el color y alineación del header sean consistentes
                                 'contentOptions' => ['style' => 'text-align:center;'],
                             ],
@@ -154,12 +152,12 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                             // COLUMNA DE ACCIONES - Ajustada
                             [
                                 'class' => 'yii\grid\ActionColumn',
-                                    'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
-                                    'options' => ['style' => 'width:55px; min-width:55px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                                    'buttons' => [
+                                'header' => 'ACCIONES',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{pay}{contracts}</div>', // Added {pay} here
+                                'options' => ['style' => 'width:100px; min-width:100px;'], // Increased width to accommodate the new button
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'buttons' => [
                                     'view' => function ($url, $model, $key) {
                                         return Html::a(
                                             '<i class="fa fa-eye"></i>',
@@ -180,7 +178,26 @@ $this->title = 'GESTION DE AFILIADOS CORPORATIVOS';
                                             ]
                                         );
                                     },
-                                 
+                                    'pay' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fas fa-credit-card"></i>',
+                                            Url::to(['deuda', 'id' => $model->id]), // Ajusta esta ruta según tu controlador
+                                            [
+                                                'title' => 'Pagar Corporativo',
+                                                'class' => 'btn-action pay'
+                                            ]
+                                        );
+                                    },
+                                    'contracts' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fas fa-file-contract"></i>',
+                                            Url::to(['contracts', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Ver Contratos',
+                                                'class' => 'btn-action contracts'
+                                            ]
+                                        );
+                                    },
                                 ],
                             ],
                         ],

@@ -60,30 +60,85 @@ use yii\db\ActiveRecord;
  * @property string|null $telefono_residencia
  * @property string|null $telefono_oficina
  * @property string|null $telefono_celular
- * @property string|null $fecha_nacimiento_contratante
- * @property string|null $fecha_nacimiento_representante_contratante
- * @property string|null $fecha_nacimiento_beneficiario
+ * @property string|null $razon_social
+ * @property string|null $rif
+ * @property string|null $registro_mercantil
+ * @property string|null $tomo
+ * @property string|null $fecha_registro
+ * @property string|null $actividad_economica_corp
+ * @property string|null $direccion_corporativa
+ * @property string|null $telefono_corporativo
+ * @property string|null $productos_servicios
+ * @property string|null $utilidad
+ * @property string|null $patrimonio
+ * @property string|null $plan_seleccionado
+ * @property string|null $moneda
+ * @property string|null $deducible
+ * @property string|null $limite_cobertura
  * @property bool|null $cobertura_maternidad
- * @property bool|null $tiene_contratante_diferente
- * @property int|null $cedula_contratante
- * @property int|null $cedula_representante_contratante
+ * @property string|null $deducible_maternidad
+ * @property string|null $limite_cobertura_maternidad
  * @property string|null $grupo_familiar
- * @property int|null $afiliado_corporativo_id
- * @property string|null $nombre_representante
- * @property string|null $apellido_representante
- * @property string|null $tipo_cedula_representante
- * @property string|null $nacionalidad_representante
- * @property string|null $estado_civil_representante
- * @property string|null $lugar_nacimiento_representante
- * @property string|null $fecha_nacimiento_representante
- * @property string|null $sexo_representante
- * @property string|null $profesion_representante
- * @property string|null $ocupacion_representante
- * @property string|null $descripcion_actividad_representante
- * @property string|null $direccion_representante
- * @property string|null $telefono_representante
+ * @property string|null $nombre_beneficiario
+ * @property string|null $cedula_beneficiario
+ * @property string|null $parentesco_beneficiario
+ * @property string|null $sexo_beneficiario
+ * @property string|null $fecha_nacimiento_beneficiario
+ * @property string|null $nombre_titular
+ * @property string|null $cedula_titular
+ * @property string|null $numero_cuenta
+ * @property int|null $banco_id
+ * @property string|null $tipo_cuenta
+ * @property string|null $nombre_declaracion_afiliado
+ * @property string|null $cedula_declaracion_afiliado
+ * @property string|null $nombre_declaracion_contratante
+ * @property string|null $cedula_declaracion_contratante
+ * @property string|null $tipo_afiliacion
+ * @property string|null $nombre_contratante
+ * @property string|null $apellido_contratante
+ * @property string|null $tipo_cedula_contratante
+ * @property int|null $cedula_contratante
+ * @property string|null $fecha_nacimiento_contratante
+ * @property string|null $sexo_contratante
+ * @property string|null $nacionalidad_contratante
+ * @property string|null $estado_civil_contratante
+ * @property string|null $lugar_nacimiento_contratante
+ * @property string|null $profesion_contratante
+ * @property string|null $ocupacion_contratante
+ * @property string|null $actividad_economica_contratante
+ * @property string|null $descripcion_actividad_contratante
+ * @property string|null $ingreso_anual_contratante
+ * @property string|null $direccion_residencia_contratante
+ * @property string|null $direccion_oficina_contratante
+ * @property string|null $direccion_cobro_contratante
+ * @property string|null $telefono_residencia_contratante
+ * @property string|null $telefono_oficina_contratante
+ * @property string|null $telefono_celular_contratante
+ * @property string|null $email_contratante
+ * @property string|null $nombre_representante_contratante
+ * @property string|null $apellido_representante_contratante
+ * @property string|null $tipo_cedula_representante_contratante
+ * @property int|null $cedula_representante_contratante
+ * @property string|null $nacionalidad_representante_contratante
+ * @property string|null $estado_civil_representante_contratante
+ * @property string|null $lugar_nacimiento_representante_contratante
+ * @property string|null $fecha_nacimiento_representante_contratante
+ * @property string|null $sexo_representante_contratante
+ * @property string|null $profesion_representante_contratante
+ * @property string|null $ocupacion_representante_contratante
+ * @property string|null $descripcion_actividad_representante_contratante
+ * @property string|null $direccion_representante_contratante
+ * @property string|null $telefono_representante_contratante
+ * @property string|null $nombre_titular_contratante
+ * @property string|null $cedula_titular_contratante
+ * @property string|null $numero_cuenta_contratante
+ * @property string|null $banco_contratante
+ * @property string|null $tipo_cuenta_contratante
+ * @property bool|null $tiene_contratante_diferente
  * @property string|null $direccion_cobro
- *
+ * @property int|null $afiliado_corporativo_id
+ * @property int|null $consecutivo_menor
+
  * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
  * @property UploadedFile $imagenIdentificacionFile
@@ -102,6 +157,11 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
+    //public $tiene_contratante_diferente;
+    public $cobertura_maternidad;
+    
+    // NOTA: Solo propiedades públicas para campos que NO están en la base de datos
+    // Todos los campos de la tabla están documentados en @property arriba
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -115,7 +175,7 @@ class UserDatos extends ActiveRecord
      */
     public static function tableName()
     {
-        return 'user_datos';
+        return 'public.user_datos';
     }
 
     /**
@@ -124,140 +184,362 @@ class UserDatos extends ActiveRecord
     public function rules()
     {
         return [
-            // 1. Campos obligatorios
-            
-            [['nombres', 'apellidos', 'fechanac', 'sexo',
-              'telefono', 'email', 'estado','direccion'], 'required', 'message' => 'Este campo es obligatorio.'],
+            // 1. Campos obligatorios - CÉDULA AHORA ES OBLIGATORIA
+            [[
+                'nombres',
+                'apellidos',
+                'fechanac',
+                'sexo',
+                'telefono',
+                'email',
+                'estado',
+                'direccion'
+            ], 'required', 'message' => 'Este campo es obligatorio.'],
 
-            // 2. Valores por defecto (se mantienen igual)
+            // 2. Campos obligatorios adicionales - NUEVOS CAMPOS REQUERIDOS
+            [
+                ['user_datos_type_id', 'clinica_id', 'plan_id'],
+                'required',
+                'when' => function ($model) {
+                    return $model->user_datos_type_id == 1;
+                },
+                'whenClient' => "function (attribute, value) {
+                    return $('#user_datos_type_id_field').val() == '1';
+                }",
+                'message' => 'Este campo es obligatorio para afiliados individuales.'
+            ],
+
+            // 3. Validación condicional para afiliado_corporativo_id
+            [
+                'afiliado_corporativo_id',
+                'required',
+                'when' => function ($model) {
+                    return $model->user_datos_type_id == 2;
+                },
+                'whenClient' => "function (attribute, value) {
+                    return $('#user_datos_type_id_field').val() == '2';
+                }",
+                'message' => 'El afiliado corporativo es obligatorio cuando el tipo es corporativo.'
+            ],
+
+            // 4. Valores por defecto (se mantienen igual)
             [['paso'], 'default', 'value' => 0.0],
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
             [['ver_cedula', 'ver_foto'], 'default', 'value' => '0'],
 
             [['user_id', 'session_id', 'estatus_solvente'], 'string'],
-            
-            // 3. Validación de tipos de datos y longitud
+
+            // 5. Validación de tipos de datos y longitud
             [['telefono'], 'string', 'max' => 15], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
-            [['telefono'], 'match',
-                'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
-                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
+            [
+                ['telefono'],
+                'match',
+                'pattern' => '/^(0416|0422|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
+                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'
+            ],
 
             [['nombres', 'apellidos', 'direccion', 'codigoValidacion', 'telefono', 'email', 'estatus'], 'string', 'max' => 255],
             [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'tipo_sangre'], 'string', 'max' => 255],
             [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
 
-        
-            [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
-           
-            
-            /*['cedula', 'unique', 'targetClass' => UserDatos::class, 'message' => 'Esta cédula ya está registrada.', 'when' => function($model) {
-                // Solo verifica la unicidad si es un nuevo registro O si el valor numérico de la cédula ha cambiado.
-                return $model->isNewRecord || $model->isAttributeDirty('cedula');
-            }],*/
-            
-            [['paso'], 'number'],
-            [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
 
-            // 4. Validaciones específicas de contenido (se mantienen igual)
+            [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
+
+            // 6. Validaciones específicas de contenido (se mantienen igual)
             [['email'], 'email'],
             [['email'], 'unique', 'targetClass' => UserDatos::class, 'message' => 'Este correo electrónico ya está registrado.'],
 
-            //[['fechanac'], 'date', 'format' => 'yyyy-MM-dd', 'message' => 'El formato de la fecha de nacimiento debe ser YYYY-MM-DD.'],
-            //[['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date', 'message' => 'La fecha de nacimiento no puede ser en el futuro.'],
+            [['paso'], 'number'],
+            [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
 
-            // Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
+            // 7. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
             [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
-            
+
             //validaciones para roles 
-            [['role'], 'in',
-            'range' => \yii\helpers\ArrayHelper::getColumn(
-                \Yii::$app->authManager->getRoles(), 'name'
-            ),
-            'message' => 'El rol seleccionado no es válido.'
+            [
+                ['role'],
+                'in',
+                'range' => \yii\helpers\ArrayHelper::getColumn(
+                    \Yii::$app->authManager->getRoles(),
+                    'name'
+                ),
+                'message' => 'El rol seleccionado no es válido.'
             ],
 
             [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
-            [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G'], 'message' => 'Tipo de cédula no válido.'], 
+            [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G', 'Menor Sin Cédula'], 'message' => 'Tipo de cédula no válido.'],
 
-        
-            // 6. Validaciones para carga de archivos (se mantienen igual)
+            // 8. Validaciones para carga de archivos (se mantienen igual)
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
             [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
             [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
 
-            // 7. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
+            // 9. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
             [['selfie', 'imagen_identificacion', 'video', 'qr'], 'string', 'max' => 255],
 
-            // 8. Campos seguros (timestamps)
-            // CAMBIO: 'cedula' se marca como 'safe'. Esto le dice a Yii que está bien si el valor de 'cedula'
-            // se modifica programáticamente (en 'beforeSave()') y no directamente desde un input del formulario.
-            [['created_at', 'updated_at', 'deleted_at', 'fechanac','clinica_id'], 'safe'],
-            
-            // Validación específica para cédula - debe ser numérica
+            // 10. Campos seguros (timestamps)
+            [['created_at', 'updated_at', 'deleted_at', 'fechanac', 'clinica_id'], 'safe'],
+
+            // 11. Validación específica para cédula - debe ser numérica y ahora es obligatoria
             [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
-            [['cedula'], 'string', 'max' => 10, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
+            [['cedula'], 'integer', 'max' => 9999999999, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
-            
-            // 9. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
+
+            // 12. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
-            /*[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => AgenteFuerza::class, 'targetAttribute' => ['asesor_id' => 'idusuario'], 'message' => 'El asesor seleccionado no existe.',
-                'when' => function ($model) {
-                    return $model->asesor_id !== null;
-                }   
-            ],*/
-            //[['asesor_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['asesor_id' => 'id'], 'message' => 'El asesor seleccionado no existe.'],
             [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
 
-            // *** LA REGLA CLAVE: No puede ser mayor a la fecha actual ***
+            [['banco_id'], 'integer'],
+            [['banco_id'], 'exist', 'skipOnError' => true, 'targetClass' => Banco::class, 'targetAttribute' => ['banco_id' => 'id'], 'message' => 'El banco seleccionado no existe.'],
+
+            // 13. Validaciones de fecha
             [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'], // Valida el formato de fecha
-            [['fechanac'], 'compare', 'compareValue' => date('Y-m-d'), 'operator' => '<=', 'type' => 'date',
-                'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'],
-            // *** REGLA DE VALIDACIÓN PERSONALIZADA PARA LA EDAD ***
-            //[['fechanac'], 'validateAge'],
+            [
+                ['fechanac'],
+                'compare',
+                'compareValue' => date('Y-m-d'),
+                'operator' => '<=',
+                'type' => 'date',
+                'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'
+            ],
 
-            // Validaciones para campos de texto (VARCHAR/TEXT)
-            [['nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
-              'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
-              'direccion_residencia', 'direccion_oficina', 'telefono_residencia', 'telefono_oficina',
-              'telefono_celular', 'plan_seleccionado', 'moneda', 'deducible', 'limite_cobertura',
-              'deducible_maternidad', 'limite_cobertura_maternidad', 'nombre_beneficiario',
-              'cedula_beneficiario', 'parentesco_beneficiario', 'sexo_beneficiario',
-              'nombre_titular', 'cedula_titular', 'numero_cuenta', 'banco', 'tipo_cuenta',
-              'nombre_declaracion_afiliado', 'cedula_declaracion_afiliado', 'nombre_declaracion_contratante',
-              'cedula_declaracion_contratante', 'tipo_afiliacion', 'nombre_contratante',
-              'apellido_contratante', 'tipo_cedula_contratante', 'sexo_contratante',
-              'nacionalidad_contratante', 'estado_civil_contratante', 'lugar_nacimiento_contratante',
-              'profesion_contratante', 'ocupacion_contratante', 'actividad_economica_contratante',
-              'descripcion_actividad_contratante', 'ingreso_anual_contratante', 'direccion_residencia_contratante',
-              'direccion_oficina_contratante', 'direccion_cobro_contratante', 'telefono_residencia_contratante',
-              'telefono_oficina_contratante', 'telefono_celular_contratante', 'email_contratante',
-              'nombre_representante_contratante', 'apellido_representante_contratante',
-              'tipo_cedula_representante_contratante', 'nacionalidad_representante_contratante',
-              'estado_civil_representante_contratante', 'lugar_nacimiento_representante_contratante',
-              'sexo_representante_contratante', 'profesion_representante_contratante',
-              'ocupacion_representante_contratante', 'descripcion_actividad_representante_contratante',
-              'direccion_representante_contratante', 'telefono_representante_contratante',
-              'nombre_titular_contratante', 'cedula_titular_contratante', 'numero_cuenta_contratante',
-              'banco_contratante', 'tipo_cuenta_contratante', 'direccion_cobro'], 'string', 'max' => 255],
+            // 14. Validaciones para campos de texto (VARCHAR/TEXT)
+            [[
+                'nacionalidad',
+                'estado_civil',
+                'lugar_nacimiento',
+                'profesion',
+                'ocupacion',
+                'actividad_economica',
+                'ramo_comercial',
+                'descripcion_actividad',
+                'ingreso_anual',
+                'direccion_residencia',
+                'direccion_oficina',
+                'telefono_residencia',
+                'telefono_oficina',
+                'telefono_celular',
+                'plan_seleccionado',
+                'moneda',
+                'deducible',
+                'limite_cobertura',
+                'deducible_maternidad',
+                'limite_cobertura_maternidad',
+                'nombre_beneficiario',
+                'cedula_beneficiario',
+                'parentesco_beneficiario',
+                'sexo_beneficiario',
+                'nombre_titular',
+                'cedula_titular',
+                'numero_cuenta',
+                'tipo_cuenta',
+                'nombre_declaracion_afiliado',
+                'cedula_declaracion_afiliado',
+                'nombre_declaracion_contratante',
+                'cedula_declaracion_contratante',
+                'tipo_afiliacion',
+                'nombre_contratante',
+                'apellido_contratante',
+                'tipo_cedula_contratante',
+                'sexo_contratante',
+                'nacionalidad_contratante',
+                'estado_civil_contratante',
+                'lugar_nacimiento_contratante',
+                'profesion_contratante',
+                'ocupacion_contratante',
+                'actividad_economica_contratante',
+                'descripcion_actividad_contratante',
+                'ingreso_anual_contratante',
+                'direccion_residencia_contratante',
+                'direccion_oficina_contratante',
+                'direccion_cobro_contratante',
+                'telefono_residencia_contratante',
+                'telefono_oficina_contratante',
+                'telefono_celular_contratante',
+                'email_contratante',
+                'nombre_representante_contratante',
+                'apellido_representante_contratante',
+                'tipo_cedula_representante_contratante',
+                'nacionalidad_representante_contratante',
+                'estado_civil_representante_contratante',
+                'lugar_nacimiento_representante_contratante',
+                'sexo_representante_contratante',
+                'profesion_representante_contratante',
+                'ocupacion_representante_contratante',
+                'descripcion_actividad_representante_contratante',
+                'direccion_representante_contratante',
+                'telefono_representante_contratante',
+                'nombre_titular_contratante',
+                'cedula_titular_contratante',
+                'numero_cuenta_contratante',
+                'banco_contratante',
+                'tipo_cuenta_contratante',
+                'direccion_cobro'
+            ], 'string', 'max' => 255],
 
-            // Validaciones para campos de fecha
-            [['fecha_nacimiento_contratante',
-              'fecha_nacimiento_representante_contratante',
-              'fecha_nacimiento_beneficiario'], 'date', 'format' => 'yyyy-MM-dd'],
+            // 15. Validaciones para campos de fecha
+            [[
+                'fecha_nacimiento_contratante',
+                'fecha_nacimiento_representante_contratante',
+                'fecha_nacimiento_beneficiario'
+            ], 'date', 'format' => 'yyyy-MM-dd'],
 
-            // Validaciones para campos booleanos
+            // 16. Validaciones para campos booleanos
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
+            [['cobertura_maternidad', 'tiene_contratante_diferente'], 'default', 'value' => false],
 
-            // Validaciones para campos enteros
+            // 17. Validaciones para campos enteros
             [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
 
-            // Validaciones para campos de texto largo (para JSON)
+            // 18. Validaciones para campos de texto largo (para JSON)
             [['grupo_familiar'], 'string'],
-        ];
+            [['grupo_familiar'], 'safe'],
 
+            [['tipo_cedula', 'cedula'], 'required', 'when' => function ($model) {
+                // Solo es requerido si 'tiene_contratante_diferente' es falso/no está marcado.
+                return !$model->tiene_contratante_diferente;
+            }, 'whenClient' => "function (attribute, value) {
+                return !$('#userdatos-tiene_contratante_diferente').is(':checked');
+            }"],
+            [
+                ['consecutivo_menor'],
+                'integer',
+                'min' => 1,
+                'max' => 20,
+                'when' => function ($model) {
+                    return $model->tipo_cedula === 'Menor Sin Cédula';
+                },
+                'whenClient' => "function (attribute, value) {
+                    return $('#userdatos-tipo_cedula').val() === 'Menor Sin Cédula';
+                }",
+                'message' => 'El consecutivo debe ser un número entre 1 y 20.'
+            ],
+
+            [
+                ['consecutivo_menor'],
+                'required',
+                'when' => function ($model) {
+                    return $model->tipo_cedula === 'Menor Sin Cédula';
+                },
+                'whenClient' => "function (attribute, value) {
+                    return $('#userdatos-tipo_cedula').val() === 'Menor Sin Cédula';
+                }",
+                'message' => 'El número consecutivo es obligatorio para menores sin cédula.'
+            ],
+        ];
+    }
+
+    /**
+     * Custom validator for corporativo field
+     */
+    public function validateCorporativoRequired($attribute, $params)
+    {
+        if ($this->user_datos_type_id == 2 && empty($this->$attribute)) {
+            $this->addError($attribute, 'El afiliado corporativo es obligatorio cuando el tipo es corporativo.');
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function attributes()
+    {
+        return array_merge(parent::attributes(), [
+            'nacionalidad',
+            'estado_civil',
+            'lugar_nacimiento',
+            'profesion',
+            'ocupacion',
+            'actividad_economica',
+            'ramo_comercial',
+            'descripcion_actividad',
+            'ingreso_anual',
+            'direccion_residencia',
+            'direccion_oficina',
+            'telefono_residencia',
+            'telefono_oficina',
+            'telefono_celular',
+            'razon_social',
+            'rif',
+            'registro_mercantil',
+            'tomo',
+            'fecha_registro',
+            'actividad_economica_corp',
+            'direccion_corporativa',
+            'telefono_corporativo',
+            'productos_servicios',
+            'utilidad',
+            'patrimonio',
+            'plan_seleccionado',
+            'moneda',
+            'deducible',
+            'limite_cobertura',
+            'cobertura_maternidad',
+            'deducible_maternidad',
+            'limite_cobertura_maternidad',
+            'grupo_familiar',
+            'nombre_beneficiario',
+            'cedula_beneficiario',
+            'parentesco_beneficiario',
+            'sexo_beneficiario',
+            'fecha_nacimiento_beneficiario',
+            'nombre_titular',
+            'cedula_titular',
+            'numero_cuenta',
+            'banco_id',
+            'tipo_cuenta',
+            'nombre_declaracion_afiliado',
+            'cedula_declaracion_afiliado',
+            'nombre_declaracion_contratante',
+            'cedula_declaracion_contratante',
+            'tipo_afiliacion',
+            'nombre_contratante',
+            'apellido_contratante',
+            'tipo_cedula_contratante',
+            'cedula_contratante',
+            'fecha_nacimiento_contratante',
+            'sexo_contratante',
+            'nacionalidad_contratante',
+            'estado_civil_contratante',
+            'lugar_nacimiento_contratante',
+            'profesion_contratante',
+            'ocupacion_contratante',
+            'actividad_economica_contratante',
+            'descripcion_actividad_contratante',
+            'ingreso_anual_contratante',
+            'direccion_residencia_contratante',
+            'direccion_oficina_contratante',
+            'direccion_cobro_contratante',
+            'telefono_residencia_contratante',
+            'telefono_oficina_contratante',
+            'telefono_celular_contratante',
+            'email_contratante',
+            'nombre_representante_contratante',
+            'apellido_representante_contratante',
+            'tipo_cedula_representante_contratante',
+            'cedula_representante_contratante',
+            'nacionalidad_representante_contratante',
+            'estado_civil_representante_contratante',
+            'lugar_nacimiento_representante_contratante',
+            'fecha_nacimiento_representante_contratante',
+            'sexo_representante_contratante',
+            'profesion_representante_contratante',
+            'ocupacion_representante_contratante',
+            'descripcion_actividad_representante_contratante',
+            'direccion_representante_contratante',
+            'telefono_representante_contratante',
+            'nombre_titular_contratante',
+            'cedula_titular_contratante',
+            'numero_cuenta_contratante',
+            'banco_contratante',
+            'tipo_cuenta_contratante',
+            'tiene_contratante_diferente',
+            'direccion_cobro',
+            'afiliado_corporativo_id',
+        ]);
     }
 
     /**
@@ -268,21 +550,15 @@ class UserDatos extends ActiveRecord
         return array_merge(parent::attributeLabels(), [
             'cedulaFormatted' => 'Cédula de Identidad',
             'direccion_cobro' => 'Dirección de Cobro',
-        
+            'user_datos_type_id' => 'Tipo de Afiliado',
+            'clinica_id' => 'Clínica',
+            'plan_id' => 'Plan',
+            'consecutivo_menor' => 'Número Consecutivo',
+            'afiliado_corporativo_id' => 'Afiliado Corporativo',
         ]);
     }
 
-    /**
-     * Este método se ejecuta AUTOMÁTICAMENTE después de que un registro del modelo
-     * es cargado desde la base de datos (por ejemplo, al editar un usuario).
-     *
-     * Su propósito es reconstruir el formato completo de la cédula (V-12345678)
-     * a partir del número entero ('cedula') y el prefijo ('tipo_cedula')
-     * que están almacenados en la base de datos.
-     * Esto es para que el formulario de edición muestre la cédula con el formato esperado.
-     */
-
-     // --- INICIO: Validador personalizado para el campo 'telefono' ---
+    // --- INICIO: Validador personalizado para el campo 'telefono' ---
     /**
      * Valida que el número de teléfono sea venezolano y tenga un prefijo válido.
      * Este método es llamado por la regla de validación definida en `rules()`.
@@ -302,9 +578,21 @@ class UserDatos extends ActiveRecord
 
         // Define los prefijos venezolanos válidos.
         $validPrefixes = [
-            '0416', '0426', '0414', '0424', '0412',
-            '0212', '0261', '0241', '0243', '0251',
-            '0274', '0276', '0286', '0291', '0293'
+            '0416',
+            '0426',
+            '0414',
+            '0424',
+            '0412',
+            '0212',
+            '0261',
+            '0241',
+            '0243',
+            '0251',
+            '0274',
+            '0276',
+            '0286',
+            '0291',
+            '0293'
         ];
 
         // 1. Valida la longitud total del número limpio.
@@ -323,7 +611,7 @@ class UserDatos extends ActiveRecord
 
         // 4. (Opcional pero recomendado) Valida que el resto del número sean solo dígitos.
         if (!preg_match('/^\d{11}$/', $cleanedPhone)) {
-             $this->addError($attribute, 'El número de teléfono debe contener solo dígitos.');
+            $this->addError($attribute, 'El número de teléfono debe contener solo dígitos.');
         }
     }
     // --- FIN: Validador personalizado para el campo 'telefono' ---
@@ -335,8 +623,7 @@ class UserDatos extends ActiveRecord
      * @param string $attribute el nombre del atributo a validar (ej. 'fechanac')
      * @param array $params parámetros adicionales (no usados aquí)
      */
-
-     public function validateAge($attribute, $params)
+    public function validateAge($attribute, $params)
     {
         // Solo valida si el campo tiene un valor. Las reglas 'required' y 'date'
         // ya deberían asegurar que el valor no esté vacío y tenga un formato de fecha.
@@ -360,97 +647,64 @@ class UserDatos extends ActiveRecord
         }
     }
 
-
-
-    /**public function afterFind()
-    {
-        parent::afterFind(); // Siempre llama al método padre.
-
-        // Si tenemos un número de cédula y un tipo de cédula en el modelo
-        // (lo que debería ser cierto si los datos provienen de la DB),
-        // los concatenamos y asignamos a la propiedad temporal 'cedulaFormatted'.
-        if ($this->cedula !== null && $this->tipo_cedula !== null) {
-            $this->cedulaFormatted = $this->tipo_cedula . '-' . $this->cedula;
-        }
-    }*/
-
-    /**
-     * Este método se ejecuta AUTOMÁTICAMENTE ANTES de que el modelo sea guardado
-     * en la base de datos (tanto para creación como para actualización).
-     *
-     * Su función principal es tomar el valor de 'cedulaFormatted' (ej. "V-12345678")
-     * que viene del formulario, y separarlo en sus dos componentes:
-     * 1. El prefijo (ej. "V") para la columna 'tipo_cedula' (TEXT).
-     * 2. El número (ej. "12345678") para la columna 'cedula' (INTEGER).
-     */
-    /*public function beforeSave($insert)
-    {
-        // Siempre llama al método padre. Si el padre retorna false, detenemos el guardado.
-        if (parent::beforeSave($insert)) {
-            // Solo procedemos si la propiedad 'cedulaFormatted' tiene un valor.
-            // Esto asegura que no intentamos procesar una cédula vacía o nula.
-            if ($this->cedulaFormatted !== null) {
-                // Paso 1: Extraer el prefijo (V, E, J, G) de 'cedulaFormatted'.
-                // 'preg_match' busca un patrón. '^([VEJG])' busca una de esas letras al inicio.
-                preg_match('/^([VEJG])/', $this->cedulaFormatted, $matches);
-                if (isset($matches[1])) {
-                    // Si se encuentra un prefijo, lo asignamos a la columna 'tipo_cedula' del modelo.
-                    $this->tipo_cedula = $matches[1];
-                } else {
-                    // Si no se encuentra un prefijo válido (aunque la validación 'match'
-                    // en rules() debería evitar esto), puedes establecer un valor por defecto
-                    // o manejar este error según tu lógica de negocio.
-                    $this->tipo_cedula = ''; // Valor por defecto si no se puede extraer.
-                }
-
-                // Paso 2: Extraer solo los números de 'cedulaFormatted' y convertirlos a entero.
-                // 'preg_replace('/[^0-9]/', '', $this->cedulaFormatted)' elimina todos los caracteres
-                // que NO sean dígitos (0-9). Por ejemplo, de "V-12345678", resultará "12345678".
-                // '(int)' convierte ese string de números en un valor de tipo entero, listo para la DB.
-                $this->cedula = (int)preg_replace('/[^0-9]/', '', $this->cedulaFormatted);
-            }
-            
-            // Retorna true para permitir que el proceso de guardado en la base de datos continúe.
-            return true;
-        }
-        // Si la validación o alguna condición en el método padre falla, retorna false
-        // para abortar el guardado.
-        return false;
-    }*/
-
     // --- RELACIONES (MÉTODOS GET) ---
-    // Estos métodos de relación no necesitan cambios y se mantienen tal cual.
-    public function getClinica() { return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']); }
-    public function getPlan() { return $this->hasOne(Planes::class, ['id' => 'plan_id']); }
-    public function getAsesor() { return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']); }
-    public function getContrato() { return $this->hasOne(Contratos::class, ['id' => 'contrato_id']); }
-    public function getUserLogin() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
-    public function getUserDatosType(){return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);}
-    public function getUser() { return $this->hasOne(User::class, ['id' => 'user_login_id']); }
-
-    public function afterSave($insert, $changedAttributes)
+    public function getClinica()
     {
-        parent::afterSave($insert, $changedAttributes);
-
-        // Si se seleccionó un corporativo o si el valor ha cambiado
-        if (!empty($this->afiliado_corporativo_id)) {
-            // Eliminar relaciones previas para evitar duplicados
-            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
-
-            // Crear y guardar la nueva relación en la tabla intermedia
-            $corporativoUser = new CorporativoUser();
-            $corporativoUser->corporativo_id = $this->afiliado_corporativo_id;
-            $corporativoUser->user_id = $this->user_login_id;
-            $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-            
-            if (!$corporativoUser->save()) {
-                Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
-            }
-
-        } else {
-            // Si el campo está vacío, eliminamos la relación existente
-            CorporativoUser::deleteAll(['user_id' => $this->user_login_id]);
-        }
+        return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']);
+    }
+    public function getPlan()
+    {
+        return $this->hasOne(Planes::class, ['id' => 'plan_id']);
+    }
+    public function getAsesor()
+    {
+        return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']);
+    }
+    public function getContrato()
+    {
+        return $this->hasOne(Contratos::class, ['id' => 'contrato_id']);
+    }
+    public function getContratos()
+    {
+        return $this->hasMany(Contratos::class, ['user_id' => 'id']);
+    }
+    public function getUserLogin()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_login_id']);
+    }
+    public function getUserDatosType()
+    {
+        return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);
+    }
+    public function getUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_login_id']);
+    }
+    public function getBanco()
+    {
+        return $this->hasOne(Banco::class, ['id' => 'banco_id']);
     }
 
+
+    public function getCorporativo()
+    {
+        return $this->hasOne(Corporativo::class, ['id' => 'afiliado_corporativo_id']);
+    }
+
+    public function beforeValidate()
+    {
+        if (!parent::beforeValidate()) {
+            return false;
+        }
+
+        // Solución de emergencia: Convertir el valor a booleano estricto.
+        // Esto es necesario para PostgreSQL cuando el campo es 'boolean'.
+        if ($this->hasAttribute('tiene_contratante_diferente')) {
+            // Si el valor es el entero 1 o 0 (que es lo que envían el controlador/form), 
+            // lo convertimos a TRUE o FALSE antes de la validación final.
+            $this->tiene_contratante_diferente = (bool)$this->tiene_contratante_diferente;
+        }
+
+        return true;
+    }
 }

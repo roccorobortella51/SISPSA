@@ -5,9 +5,9 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\RmClinica $model */
 
-$this->title = 'Actualizar Contacto: ' . $model->nombre;
+$this->title = 'Actualizar Contacto: ' . $model->id;
 $this->params['breadcrumbs'][] = ['label' => 'Contacto', 'url' => ['index', 'user_id' => $model->user_id]];
-$this->params['breadcrumbs'][] = ['label' => $model->nombre, 'url' => ['view', 'id' => $model->id]];
+$this->params['breadcrumbs'][] = ['label' => $model->id, 'url' => ['view', 'id' => $model->id]];
 $this->params['breadcrumbs'][] = 'Actualizar';
 ?>
 <div class="col-xl-12 col-md-12">

@@ -23,7 +23,7 @@ $this->params['breadcrumbs'][] = ['label' => 'Usuarios', 'url' => ['index']];
 $this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la página y breadcrumbs
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION'); 
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN'); 
 ?>
 
 <div class=row style="margin:3px !important;">
@@ -193,7 +193,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                         'buttons' => [
                                             'view' => function ($url, $model, $key)use($rol) {
 
-                                                 if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+                                                 if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente"){
 
                                                     $asesor_id =  $model->userDatos->asesor->id ?? '0';
 
@@ -225,7 +225,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
                                             },
                                             'update' => function ($url, $model, $key)use($rol) {
 
-                                               if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+                                               if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente"){
 
                                                     $asesor_id =  $model->userDatos->asesor->id ?? '0';
 

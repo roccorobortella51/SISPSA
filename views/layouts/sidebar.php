@@ -5,7 +5,16 @@ use app\components\UserHelper;
 
 $rol = UserHelper::getMyRol();
 $clinica = "";
-if($rol == "Administrador-clinica"){
+
+// Define which roles should show clinic name - easily customizable
+$rolesWithClinica = [
+    "Administrador-clinica", 
+    "COORDINADOR-CLINICA",
+    // Add more roles here as needed in the future
+    // "OTRO-ROL-CON-CLINICA",
+];
+
+if(in_array($rol, $rolesWithClinica)){
     $clinica = UserHelper::getMyClinicaName();
 }
 ?>
@@ -23,9 +32,22 @@ if($rol == "Administrador-clinica"){
                 <img src="<?= Yii::getAlias('@web/img/sispsa.png')?>" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info text-center">
-                <p><b><?= $clinica ?></b></p>
-                <p><b><?= $rol ?></b></p><br>
-                <b><a href="#" class="d-block" style="color: white !important;"><?= Yii::$app->user->identity->username ?? 'Usuario' ?></a></b>
+                <!-- Display clinic name if available -->
+                <?php if (!empty($clinica)): ?>
+                    <p class="mb-1" style="font-size: 14px; line-height: 1.2;">
+                        <b><?= $clinica ?></b>
+                    </p>
+                <?php endif; ?>
+                
+                <!-- Display role -->
+                <p class="mb-2" style="font-size: 13px; line-height: 1.2;">
+                    <b><?= $rol ?></b>
+                </p>
+                
+                <!-- Display username -->
+                <b><a href="#" class="d-block" style="color: white !important; font-size: 14px; line-height: 1.2;">
+                    <?= Yii::$app->user->identity->username ?? 'Usuario' ?>
+                </a></b>
             </div>
         </div>
 

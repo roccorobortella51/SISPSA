@@ -6,6 +6,7 @@ use app\models\RmEstado;
 use app\models\RmMunicipio;
 use app\models\RmParroquia; 
 use app\models\RmCiudad;
+use app\models\Planes;
 
 use Yii;
 
@@ -127,6 +128,7 @@ class RmClinica extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Planes::class, ['clinica_id' => 'id']);
     }
+    
 
     /**
      * Gets query for [[Qrs]].
@@ -152,5 +154,13 @@ class RmClinica extends \yii\db\ActiveRecord
     {
         return $this->hasOne(RmEstado::class, ['nombre' => 'estado']);
     }
+
+    public function getCorporativoClinicas()
+    {
+        // Esto le dice a Yii2 que RmClinica se relaciona con CorporativoClinica
+        return $this->hasMany(\app\models\CorporativoClinica::class, ['clinica_id' => 'id']);
+    }
+
+    
 
 }

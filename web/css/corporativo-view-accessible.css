@@ -1,0 +1,219 @@
+/* Mejoras de accesibilidad y legibilidad para corporativo/view */
+
+.corporativo-view-large-font {
+  font-size: 18px !important;
+}
+
+
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn,
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn * {
+  font-size: 13px !important;
+  padding: 0.38rem 0.8rem !important;
+  min-width: 80px !important;
+  border-radius: 0.28rem !important;
+  line-height: 1 !important;
+  height: auto !important;
+}
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn i {
+  font-size: 0.95em !important;
+  vertical-align: middle;
+  margin-right: 0.4em !important;
+  margin-left: 0 !important;
+}
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.3em !important;
+}
+
+/* Colores de alto contraste para los botones principales de corporativo/view */
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn.btn-primary {
+  background-color: #ff9800 !important; /* naranja fuerte */
+  border-color: #ff9800 !important;
+  color: #fff !important;
+}
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn.btn-primary:hover {
+  background-color: #e65100 !important;
+  border-color: #e65100 !important;
+}
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn.btn-info {
+  background-color: #43a047 !important; /* verde fuerte */
+  border-color: #43a047 !important;
+  color: #fff !important;
+}
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn.btn-info:hover {
+  background-color: #1b5e20 !important;
+  border-color: #1b5e20 !important;
+}
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn.btn-secondary {
+  background-color: #f44336 !important; /* rojo fuerte */
+  border-color: #f44336 !important;
+  color: #fff !important;
+}
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn.btn-secondary:hover {
+  background-color: #b71c1c !important;
+  border-color: #b71c1c !important;
+}
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn i {
+  font-size: 1.1em !important;
+  vertical-align: middle;
+}
+
+.ms-panel-header .button-group-spacing .btn.corporativo-view-btn i {
+  font-size: 1.5em !important;
+  vertical-align: middle;
+}
+
+.corporativo-view-section-title {
+  font-size: 2.2rem !important;
+}
+
+.corporativo-view-h1 {
+  font-size: 2.8rem !important;
+}
+
+.corporativo-view-h3 {
+  font-size: 1.7rem !important;
+}
+
+.corporativo-view-content-text {
+  font-size: 16px !important;
+}
+
+.corporativo-view-label {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+/* --- BOTONES USER-DATOS (AFILIADOS) --- */
+.user-datos-btn-group {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: flex-end;
+    align-items: center;
+}
+.user-datos-btn {
+    font-size: 1.35rem !important;
+    padding: 18px 24px !important;
+    border-radius: 2rem !important;
+    letter-spacing: 0.5px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+    min-width: 180px !important;
+    max-width: 340px !important;
+    box-shadow: 0 6px 32px -8px #0002, 0 2px 8px -2px #0001 !important;
+    transition: transform 0.13s cubic-bezier(.4,2,.6,1), box-shadow 0.13s;
+    font-weight: 700 !important;
+    border: none !important;
+    width: auto !important;
+}
+.user-datos-btn .fa-lg {
+    font-size: 2rem !important;
+}
+.user-datos-btn .btn-label {
+    font-size: 1.13em !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+}
+.user-datos-btn.btn-primary {
+    background: linear-gradient(90deg, #ff9800 0%, #ffb347 100%) !important;
+    color: #fff !important;
+}
+.user-datos-btn.btn-primary:hover {
+    background: linear-gradient(90deg, #ff9800 0%, #ff6f00 100%) !important;
+    color: #fff !important;
+    filter: brightness(1.07);
+}
+.user-datos-btn.btn-info {
+    background: linear-gradient(90deg, #43a047 0%, #66bb6a 100%) !important;
+    color: #fff !important;
+}
+.user-datos-btn.btn-info:hover {
+    background: linear-gradient(90deg, #388e3c 0%, #43a047 100%) !important;
+    color: #fff !important;
+    filter: brightness(1.07);
+}
+.user-datos-btn.btn-secondary {
+    background: linear-gradient(90deg, #f44336 0%, #e57373 100%) !important;
+    color: #fff !important;
+}
+.user-datos-btn.btn-secondary:hover {
+    background: linear-gradient(90deg, #b71c1c 0%, #f44336 100%) !important;
+    color: #fff !important;
+    filter: brightness(1.07);
+}
+.user-datos-btn:active {
+    filter: brightness(0.95);
+}
+.user-datos-btn:focus {
+    outline: 2px solid #1976d2 !important;
+    outline-offset: 2px;
+}
+.user-datos-btn:hover {
+    transform: translateY(-4px) scale(1.045);
+    box-shadow: 0 16px 40px -8px #0003, 0 2px 8px -2px #0002 !important;
+}
+@media (max-width: 1200px) {
+    .user-datos-btn {
+        font-size: 1.08rem !important;
+        padding: 12px 10px !important;
+        min-width: 120px !important;
+        max-width: 220px !important;
+    }
+    .user-datos-btn .fa-lg {
+        font-size: 1.3rem !important;
+    }
+}
+@media (max-width: 700px) {
+    .user-datos-btn {
+        font-size: 0.98rem !important;
+        padding: 8px 4px !important;
+        min-width: 90px !important;
+        max-width: 140px !important;
+    }
+    .user-datos-btn .fa-lg {
+        font-size: 1.1rem !important;
+    }
+}
+
+/* --- UNIFICAR TAMAÑO DE CARDS EN CORPORATIVO/VIEW --- */
+.corporativo-card-size {
+    min-width: 370px;
+    max-width: 700px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 2.2rem;
+    box-sizing: border-box;
+}
+@media (max-width: 900px) {
+    .corporativo-card-size {
+        min-width: 0;
+        max-width: 100%;
+        margin-bottom: 1.2rem;
+    }
+}
+
+/* --- UNIFICAR TAMAÑO DE FUENTE EN CORPORATIVO/VIEW (más pequeño) --- */
+.corporativo-view-large-font, .main-container.corporativo-view-large-font, .main-container.corporativo-view-large-font * {
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+}
+.corporativo-view-content-text, .main-container.corporativo-view-large-font .corporativo-view-content-text {
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+}
+.corporativo-view-label, .main-container.corporativo-view-large-font .corporativo-view-label {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}

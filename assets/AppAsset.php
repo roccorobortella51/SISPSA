@@ -40,6 +40,7 @@ class AppAsset extends AssetBundle
         'cssMedboard/css/toastr.min.css',
         'vendors/iconic-fonts/font-awesome/css/all.min.css',
         'css/iconos.css.map',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
         //'css/affiliation-pdf.css'
     ];
    public $js = [
@@ -49,7 +50,7 @@ class AppAsset extends AssetBundle
         'jsMedboard/js/moment.js',
         'jsMedboard/js/perfect-scrollbar.js',
         'jsMedboard/js/sweetalert2.min.js',
-        'jsMedboard/js/sweet-alerts.js',
+        //'jsMedboard/js/sweet-alerts.js',
         'jsMedboard/js/toastr.min.js',
         'jsMedboard/js/toast.js',
         'jsMedboard/js/slick.min.js',

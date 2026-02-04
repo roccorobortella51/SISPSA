@@ -57,7 +57,7 @@ class UserSearch extends User
         $query->innerJoinWith(['userDatos']);
 
 
-        if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+        if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente"){
             $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
         }
@@ -99,11 +99,11 @@ class UserSearch extends User
             'user.id' => $this->id,
         ]);
 
-        $query->andFilterWhere(['ilike', 'username', $this->username])
+        $query->andFilterWhere(['ilike', 'user.username', $this->username])
             ->andFilterWhere(['ilike', 'auth_key', $this->auth_key])
             ->andFilterWhere(['ilike', 'password_hash', $this->password_hash])
             ->andFilterWhere(['ilike', 'password_reset_token', $this->password_reset_token])
-            ->andFilterWhere(['ilike', 'email', $this->email])
+            ->andFilterWhere(['ilike', 'user.email', $this->email])
             ->andFilterWhere(['like', 'user_datos.role', $this->roleName]);
 
                 // Filtro para el nombre completo
@@ -127,7 +127,7 @@ class UserSearch extends User
         $query->joinWith(['userDatos.asesor.agente']);
 
 
-        if($rol == "GERENTE-COMERCIALIZACION" || $rol == "Agente"){
+        if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente" || $rol == "admin" || $rol == "superadmin"){
             $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
             ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
         }

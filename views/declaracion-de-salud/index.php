@@ -24,8 +24,7 @@ $this->params['breadcrumbs'][] = ['label' => 'AFILIADO', 'url' => ['/user-datos/
 $this->title = 'Gestión de Declaración de Salud del Afiliado'; // Este sigue siendo el título para la página y breadcrumbs
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
-
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN'|| $rol == 'GERENTE-VENTAS'|| $rol = 'Administrador-clinica');
 ?>
 
 <div class=row style="margin:3px !important;">

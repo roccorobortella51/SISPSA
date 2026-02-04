@@ -42,6 +42,21 @@ class RmClinicaController extends Controller
         );
     }
 
+    // Add this method to RmClinicaController.php
+    public function beforeAction($action)
+    {
+        if (!parent::beforeAction($action)) {
+            return false;
+        }
+
+        // For COORDINADOR-CLINICA role, redirect view action to view-clinica
+        if ($action->id === 'view' && UserHelper::getMyRol() === 'COORDINADOR-CLINICA') {
+            return $this->redirect(['view-clinica']);
+        }
+
+        return true;
+    }
+
     public function actionIndicator($id)
     {
         $totalAfiliados = UserDatos::find()->where(['clinica_id' => $id])->count();
@@ -164,8 +179,13 @@ class RmClinicaController extends Controller
     public function actionViewClinica()
     {
         $id = UserHelper::getMyClinicaId();
+        $userId = Yii::$app->user->id;
+        $rol = UserHelper::getMyRol();
+        
+        \Yii::error("User ID: $userId, Role: $rol, Clinica ID: " . ($id ?? 'NULL'));
         
         if ($id == null) {
+            Yii::$app->session->setFlash('error', 'No tiene una clínica asociada. Por favor, contacte al administrador.');
             return $this->redirect(['site/index']);
         }
         

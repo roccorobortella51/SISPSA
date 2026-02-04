@@ -16,7 +16,8 @@ $config = [
     ],
     'modules' => $modules,
     'components' => [
-         'assetManager' => [
+
+        'assetManager' => [
             'bundles' => [
                 'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
                     //'css' => [], // Comentado para no vaciar la lista de CSS originales de AdminLTE
@@ -78,6 +79,18 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                // Cuota Web Controller Routes
+                'v2/cuota/generar' => 'cuota-web/generar',
+                'v2/cuota/generar-mensual' => 'cuota-web/generar-mensual',
+                'v2/cuota/verificar-diario' => 'cuota-web/verificar-diario',
+                'v2/cuota/verificar-vencidas' => 'cuota-web/verificar-vencidas',
+                'v2/cuota/resumen-proximos-vencer' => 'cuota-web/resumen-proximos-vencer',
+                'v2/cuota/resumen-atrasadas' => 'cuota-web/resumen-atrasadas',
+                'v2/cuota/verificar-contratos-vencidos' => 'cuota-web/verificar-contratos-vencidos',
+                'v2/cuota/verificar-espera' => 'cuota-web/verificar-espera',
+                'reportes/comisiones' => 'reportes/comisiones',
+                'reportes/get-comisiones-detail' => 'reportes/get-comisiones-detail',
+
                 // Puedes añadir tus reglas de URL aquí si necesitas URLs más amigables para tus propias rutas.
             ],
         ],
@@ -115,11 +128,20 @@ $config = [
             //'gii/*',
             'site/login',
             'site/logout',
-            'site/error', 
-            'site/tabs-data',// Permite acceso público a todas las acciones de SiteController (login, error, etc.)
+            'site/error',
+            'site/tabs-data', // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
             'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
-            //'admin/*',             // Temporalmente permitir acceso a todas las rutas de admin
-            
+
+            'reportes/*',
+            // TEMPORARY: Add cuota web actions for testing (remove in production for security)
+            'cuota-web/generar',
+            'cuota-web/generar-mensual',
+            'cuota-web/verificar-diario',
+            'cuota-web/verificar-vencidas',
+            'cuota-web/resumen-proximos-vencer',
+            'cuota-web/resumen-atrasadas',
+            'cuota-web/verificar-contratos-vencidos',
+            'cuota-web/verificar-espera',
         ]
     ],
     'params' => $params,
@@ -146,7 +168,6 @@ if (YII_ENV_DEV) {
             ]
         ]
     ];
-
 }
 
 return $config;
