@@ -1,6 +1,6 @@
 <?php
 
-return [
+/*return [
     'class' => 'yii\db\Connection',
     'dsn' => 'pgsql:host=localhost;dbname=digitalw_sispsamarcos',
     'username' => 'digitalw_sispsaUser',
@@ -12,19 +12,21 @@ return [
     //'enableSchemaCache' => true,
     //'schemaCacheDuration' => 60,
     //'schemaCache' => 'cache',
-];
+];*/
 
-/*return [
+return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'pgsql:host=localhost;dbname=sispsa',
+    'dsn' => 'pgsql:host=localhost;dbname=postgres',
     'username' => 'postgres',
-    'password' => 'postgres',
+    'password' => '123456',
     'charset' => 'utf8',
 
     // Schema cache options (for production environment)
     //'enableSchemaCache' => true,
     //'schemaCacheDuration' => 60,
     //'schemaCache' => 'cache',*/
+
+];
 
 /*return [
     'class' => 'yii\db\Connection',
