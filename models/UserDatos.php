@@ -289,7 +289,7 @@ class UserDatos extends ActiveRecord
             // 12. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
-            [['contrato_id'], 'exist', 'skipOnError' => true, 'targetClass' => Contratos::class, 'targetAttribute' => ['contrato_id' => 'id'], 'message' => 'El contrato seleccionado no existe.'],
+            [['contrato_id'], 'validateContratoId', 'skipOnEmpty' => true, 'skipOnError' => true],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
 
             [['banco_id'], 'integer'],
@@ -706,5 +706,31 @@ class UserDatos extends ActiveRecord
         }
 
         return true;
+    }
+    /**
+     * Custom validator for contrato_id
+     * Only validates if the contrato_id is not empty AND we're not in update mode
+     */
+    public function validateContratoId($attribute, $params)
+    {
+        // Only validate if contrato_id is not empty/null
+        if (!empty($this->$attribute)) {
+            // Check if the contract exists
+            $contrato = Contratos::findOne($this->$attribute);
+            if ($contrato === null) {
+                // Contract doesn't exist
+                // BUT: If we're updating and the contract was deleted, we should allow it
+                // The controller will handle creating a new contract
+
+                // Only add error if this is a new record
+                if ($this->isNewRecord) {
+                    $this->addError($attribute, 'El contrato seleccionado no existe.');
+                } else {
+                    // For existing records, we'll allow this and let the controller handle it
+                    // Clear the invalid contrato_id so it can be set to a new one
+                    $this->$attribute = null;
+                }
+            }
+        }
     }
 }

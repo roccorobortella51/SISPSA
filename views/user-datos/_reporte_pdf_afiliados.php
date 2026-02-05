@@ -16,22 +16,22 @@ use yii\helpers\Html;
 </head>
 
 <body>
-<table style="width: 100%;">
-    <tr>
-        <td style="vertical-align: top; width: 100%; text-align: center;">
-            <img src="<?= Html::encode($logo) ?>" alt="Logo SISPSA" class="logo-superior-izquierda" style="width: 100px; display: block; margin: 0 auto;">
-            <div style="font-size: 10px; margin-top: 5px;">
-                <div>Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013</div>
-                <div>R.I.F.: J-50654922</div>
-            </div>
-        </td>
-    </tr>
-</table>
-<br>
+    <table style="width: 100%;">
+        <tr>
+            <td style="vertical-align: top; width: 100%; text-align: center;">
+                <img src="<?= Html::encode($logo) ?>" alt="Logo SISPSA" class="logo-superior-izquierda" style="width: 100px; display: block; margin: 0 auto;">
+                <div style="font-size: 10px; margin-top: 5px;">
+                    <div>Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013</div>
+                    <div>R.I.F.: J-50654922</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <br>
 
 
     <div class="header">
-        <div class="title">REPORTE DE AFILIADOS - SISPSA</div>
+        <div class="title">REPORTE DE AFILIADOS</div>
         <div class="subtitle">Listado de Afiliados por Clínica</div>
         <div class="date">Generado: <?= date('d/m/Y H:i:s') ?></div>
     </div>

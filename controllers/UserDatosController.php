@@ -1044,280 +1044,242 @@ class UserDatosController extends Controller
     function actionUpdate($id)
     {
         $model = $this->findModel($id);
-        $modelContrato = Contratos::find()->where(['user_id' => $id])->one();
-        if ($modelContrato === null) {
-            $modelContrato = new Contratos();
+
+        // CRITICAL: Clear invalid contrato_id BEFORE loading form data
+        if ($model->contrato_id) {
+            $existingContract = Contratos::findOne($model->contrato_id);
+            if (!$existingContract) {
+                Yii::info("Contrato ID {$model->contrato_id} no existe, limpiando referencia para usuario {$id}", __METHOD__);
+                $model->contrato_id = null; // Clear invalid reference immediately
+            }
         }
 
-        // Almacenamos el estado anterior antes de cargar los datos del formulario
+        // Try to find existing contract by user_id
+        $modelContrato = Contratos::find()->where(['user_id' => $id])->one();
+        $isNewContract = false;
+
+        if ($modelContrato === null) {
+            // No contract exists for this user
+            $modelContrato = new Contratos();
+            $isNewContract = true;
+
+            // Set default dates
+            $modelContrato->fecha_ini = date('Y-m-d');
+            $modelContrato->fecha_ven = date('Y-m-d', strtotime('+1 year'));
+            $modelContrato->estatus = 'Creado';
+        } else {
+            // We found a contract by user_id, update the model's contrato_id
+            $model->contrato_id = $modelContrato->id;
+        }
+
+        // Almacenamos el estado anterior
         $tipoUsuarioAnterior = $model->user_datos_type_id;
         $corporativoIdAnterior = $model->afiliado_corporativo_id;
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-            Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
+        if ($this->request->isPost) {
+            // Load model data
+            if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-            $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
+                // CRITICAL: Clear any validation errors for contrato_id
+                $model->clearErrors('contrato_id');
 
-            // Procesar grupo familiar
+                Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
 
+                $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
 
-
-            // --- ADD THIS CODE BLOCK HERE ---
-            // Normalize estatus_solvente to consistent format
-            if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
-                $model->estatus_solvente = "Si";
-            } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
-                $model->estatus_solvente = "No";
-            }
-            // --- END OF ADDED CODE ---
-
-            $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
-            if (!empty($grupoFamiliar)) {
-                $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
-            } else {
-                $model->grupo_familiar = null;
-            }
-
-            if (!$model->tiene_contratante_diferente) {
-                $model->nombre_contratante = null;
-                $model->apellido_contratante = null;
-                $model->tipo_cedula_contratante = null;
-                $model->cedula_contratante = null;
-                $model->fecha_nacimiento_contratante = null;
-                $model->sexo_contratante = null;
-                $model->nacionalidad_contratante = null;
-                $model->estado_civil_contratante = null;
-                $model->lugar_nacimiento_contratante = null;
-                $model->profesion_contratante = null;
-                $model->ocupacion_contratante = null;
-                $model->actividad_economica_contratante = null;
-                $model->descripcion_actividad_contratante = null;
-                $model->ingreso_anual_contratante = null;
-                $model->direccion_residencia_contratante = null;
-                $model->direccion_oficina_contratante = null;
-                $model->direccion_cobro_contratante = null;
-                $model->telefono_residencia_contratante = null;
-                $model->telefono_oficina_contratante = null;
-                $model->telefono_celular_contratante = null;
-                $model->email_contratante = null;
-            }
-
-            $model->plan_id = $modelContrato->plan_id;
-
-            if ($model->user_login_id == "" || $model->user_login_id == null) {
-                $modelUser = new User();
-                $modelUser->username = $model->email;
-                $pass = 'sispsa' . $model->cedula;
-                $modelUser->password_hash = User::setPassword($pass);
-                $modelUser->auth_key = User::generateAuthKey();
-                $modelUser->email = $model->email;
-                $modelUser->status = 1;
-                $modelUser->save();
-                $model->user_login_id = $modelUser->id;
-            } else {
-                $modelUser = User::findOne($model->user_login_id);
-            }
-
-            if ($model->estatus_solvente == "" || $model->estatus_solvente == null) {
-                $model->estatus_solvente = "No";
-            }
-
-            $model->role = 'afiliado';
-            $model->estatus = 'Registrado';
-            $model->updated_at = date('Y-m-d H:i:s');
-
-            // La lógica de limpieza anterior es ahora manejada por el nuevo bloque
-            // if ($model->user_datos_type_id == 1) {
-            //     $model->afiliado_corporativo_id = null;
-            // }
-
-            // --- INICIO DE LA NUEVA LÓGICA DE RELACIONES CON CORPORATIVO ---
-            $tipoUsuarioActual = (int)($this->request->post('UserDatos')['user_datos_type_id'] ?? 0);
-            $corporativoIdSeleccionado = (int)($this->request->post('UserDatos')['afiliado_corporativo_id'] ?? null);
-
-            // Caso 1: Si el usuario cambia de "Corporativo" (2) a "Simple" (1)
-            if ($tipoUsuarioAnterior == 2 && $tipoUsuarioActual == 1) {
-                // Eliminar la relación en la tabla intermedia si existía
-                if ($corporativoIdAnterior) {
-                    $relacion = CorporativoUser::findOne([
-                        'corporativo_id' => $corporativoIdAnterior,
-                        'user_id' => $model->id
-                    ]);
-                    if ($relacion) {
-                        $relacion->delete();
-                        Yii::info("Relación con corporativo eliminada para el usuario " . $model->id, __METHOD__);
-                    }
-                }
-                // Asegurar que el campo afiliado_corporativo_id esté vacío en el modelo
-                $model->afiliado_corporativo_id = null;
-            }
-            // Caso 2: Si el usuario se mantiene o cambia a "Corporativo" (2)
-            else if ($tipoUsuarioActual == 2) {
-                // Si el corporativo ha cambiado, borramos la relación anterior
-                if ($corporativoIdAnterior && $corporativoIdAnterior !== $corporativoIdSeleccionado) {
-                    $relacionAnterior = CorporativoUser::findOne([
-                        'corporativo_id' => $corporativoIdAnterior,
-                        'user_id' => $model->id
-                    ]);
-                    if ($relacionAnterior) {
-                        $relacionAnterior->delete();
-                        Yii::info("Relación anterior con corporativo eliminada para el usuario " . $model->id, __METHOD__);
-                    }
+                // Normalize estatus_solvente
+                if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
+                    $model->estatus_solvente = "Si";
+                } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
+                    $model->estatus_solvente = "No";
                 }
 
-                // Si se seleccionó un nuevo corporativo, creamos o actualizamos la relación
-                if ($corporativoIdSeleccionado) {
-                    $relacionExistente = CorporativoUser::findOne([
-                        'corporativo_id' => $corporativoIdSeleccionado,
-                        'user_id' => $model->id
-                    ]);
+                // Procesar grupo familiar
+                $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
+                if (!empty($grupoFamiliar)) {
+                    $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
+                } else {
+                    $model->grupo_familiar = null;
+                }
 
-                    if (!$relacionExistente) {
-                        echo "Creando nueva relación con corporativo...\n";
-                        $nuevaRelacion = new CorporativoUser();
-                        $nuevaRelacion->corporativo_id = $corporativoIdSeleccionado;
-                        $nuevaRelacion->user_id = $model->id;
-                        $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
-                        $nuevaRelacion->rol_en_corporativo = 'afiliado';
-                        $nuevaRelacion->save();
-                        Yii::info("Nueva relación con corporativo creada para el usuario " . $model->id, __METHOD__);
+                // Clear contratante fields if not needed
+                if (!$model->tiene_contratante_diferente) {
+                    $this->clearContratanteFields($model);
+                }
+
+                // Set plan_id from contract to user_datos
+                $model->plan_id = $modelContrato->plan_id;
+
+                // Set default values
+                if (empty($model->estatus_solvente)) {
+                    $model->estatus_solvente = "No";
+                }
+
+                $model->role = 'afiliado';
+                $model->estatus = 'Registrado';
+                $model->updated_at = date('Y-m-d H:i:s');
+
+                // Handle corporativo relations
+                $tipoUsuarioActual = (int)($this->request->post('UserDatos')['user_datos_type_id'] ?? 0);
+                $corporativoIdSeleccionado = (int)($this->request->post('UserDatos')['afiliado_corporativo_id'] ?? null);
+
+                if ($tipoUsuarioAnterior == 2 && $tipoUsuarioActual == 1) {
+                    if ($corporativoIdAnterior) {
+                        CorporativoUser::deleteAll(['corporativo_id' => $corporativoIdAnterior, 'user_id' => $model->id]);
+                    }
+                    $model->afiliado_corporativo_id = null;
+                } elseif ($tipoUsuarioActual == 2) {
+                    if ($corporativoIdAnterior && $corporativoIdAnterior !== $corporativoIdSeleccionado) {
+                        CorporativoUser::deleteAll(['corporativo_id' => $corporativoIdAnterior, 'user_id' => $model->id]);
                     }
 
-                    // Actualizar el campo en el modelo UserDatos
-                    $model->afiliado_corporativo_id = $corporativoIdSeleccionado;
-                }
-            } else {
-                // Este caso maneja si el usuario se mantiene como "simple" o no tenía un corporativo.
-                // Aseguramos que el campo afiliado_corporativo_id no tenga un valor
-                $model->afiliado_corporativo_id = null;
-            }
-            // --- FIN DE LA NUEVA LÓGICA DE RELACIONES CON CORPORATIVO ---
+                    if ($corporativoIdSeleccionado) {
+                        $relacionExistente = CorporativoUser::findOne([
+                            'corporativo_id' => $corporativoIdSeleccionado,
+                            'user_id' => $model->id
+                        ]);
 
-            if ($model->save()) {
-                Yii::info("UserDatos guardado exitosamente", __METHOD__);
-
-                $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
-                $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
-
-                $model->imagenIdentificacionFile = !empty($imagenIdentificacionFiles) ? reset($imagenIdentificacionFiles) : null;
-                $model->selfieFile = !empty($selfieFiles) ? reset($selfieFiles) : null;
-
-                if (!empty($imagenIdentificacionFiles) && $imagenIdentificacionFiles[0]->size > 0) {
-                    $folder = 'documentos';
-                    $fileName = uniqid('imagen_identificacion_') . '.' . $model->imagenIdentificacionFile->extension;
-                    $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                    if ($model->imagenIdentificacionFile->saveAs($tempFilePath)) {
-                        $fileKeyInBucket = $fileName;
-                        $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $model->imagenIdentificacionFile->type, $fileKeyInBucket, $folder);
-                        if (file_exists($tempFilePath)) {
-                            unlink($tempFilePath);
+                        if (!$relacionExistente) {
+                            $nuevaRelacion = new CorporativoUser();
+                            $nuevaRelacion->corporativo_id = $corporativoIdSeleccionado;
+                            $nuevaRelacion->user_id = $model->id;
+                            $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
+                            $nuevaRelacion->rol_en_corporativo = 'afiliado';
+                            $nuevaRelacion->save();
                         }
-                        if ($publicUrl) {
-                            $model->imagen_identificacion = $publicUrl;
-                            if ($model->save(false)) {
-                                Yii::$app->session->setFlash('success', 'Identificacion subido con éxito.');
-                            } else {
-                                Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
-                            }
-                        } else {
-                            Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
-                        }
-                    } else {
-                        Yii::error("Error al guardar el archivo temporal: " . $model->imagenIdentificacionFile->error, __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        $model->afiliado_corporativo_id = $corporativoIdSeleccionado;
                     }
-                }
-                if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
-                    $folder = 'FotoPerfil';
-                    $fileName = uniqid('selfie_') . '.' . $model->selfieFile->extension;
-                    $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-                    if ($model->selfieFile->saveAs($tempFilePath)) {
-                        $fileKeyInBucket = $fileName;
-                        $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $model->selfieFile->type, $fileKeyInBucket, $folder);
-                        if (file_exists($tempFilePath)) {
-                            unlink($tempFilePath);
-                        }
-                        if ($publicUrl) {
-                            $model->selfie = $publicUrl;
-                            if ($model->save(false)) {
-                                Yii::$app->session->setFlash('success', 'Selfie subido con éxito.');
-                            } else {
-                                Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
-                            }
-                        } else {
-                            Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
-                        }
-                    } else {
-                        Yii::error("Error al guardar el archivo temporal: " . $model->selfieFile->error, __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
-                    }
+                } else {
+                    $model->afiliado_corporativo_id = null;
                 }
 
-                // Se elimina el bloque de código anterior que manejaba la relación, ya que la nueva lógica lo reemplaza.
+                // ============================================
+                // SAVE USERDATOS (should pass validation now)
+                // ============================================
+                if ($model->save()) {
+                    Yii::info("UserDatos guardado exitosamente", __METHOD__);
 
-                if ($modelContrato->plan_id != null || $modelContrato->plan_id != "") {
+                    // Handle file uploads
+                    $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
+                    $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
 
+                    if (!empty($imagenIdentificacionFiles) && $imagenIdentificacionFiles[0]->size > 0) {
+                        $model->imagenIdentificacionFile = reset($imagenIdentificacionFiles);
+                        $this->uploadFile($model, 'imagenIdentificacionFile', 'documentos', 'imagen_identificacion', 'imagen_identificacion_');
+                    }
+
+                    if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
+                        $model->selfieFile = reset($selfieFiles);
+                        $this->uploadFile($model, 'selfieFile', 'FotoPerfil', 'selfie', 'selfie_');
+                    }
+
+                    // ============================================
+                    // CREATE/UPDATE CONTRACT
+                    // ============================================
                     $modelContrato->user_id = $id;
-                    $modelContrato->estatus = 'Creado';
                     $modelContrato->clinica_id = $model->clinica_id;
-                    $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
-                    if ($plan) {
-                        $modelContrato->monto = $plan->precio;
+
+                    // Set default status if not set
+                    if (empty($modelContrato->estatus)) {
+                        $modelContrato->estatus = 'Creado';
+                    }
+
+                    // Get plan price
+                    if ($modelContrato->plan_id) {
+                        $plan = Planes::findOne($modelContrato->plan_id);
+                        $modelContrato->monto = $plan ? $plan->precio : 0;
                     } else {
                         $modelContrato->monto = 0;
                     }
 
-                    $modelContrato->pdf = NULL;
-
+                    // Generate contract number for new contracts
+                    if ($isNewContract && empty($modelContrato->nrocontrato)) {
+                        $anio_actual = date('Y');
+                        // Use a temporary ID for the contract number
+                        $tempId = 'TEMP-' . time();
+                        $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $tempId;
+                    }
 
                     if ($modelContrato->save()) {
-                        $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
-                        if ($cuota) {
-                            $cuota->delete();
+                        // Update contract number with real ID
+                        if (strpos($modelContrato->nrocontrato, 'TEMP-') !== false) {
+                            $anio_actual = date('Y');
+                            $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
+                            $modelContrato->save(false);
                         }
-                        $modelCuota = new Cuotas();
-                        $modelCuota->contrato_id = $modelContrato->id;
-                        $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                        $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
-                        $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
-                        $modelCuota->estatus = 'pendiente';
-                        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
-                        $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1;
-                        $modelCuota->save();
 
-                        if (isset($modelUser) && $modelUser !== null) {
-                            $auth = Yii::$app->authManager;
-                            $roleName = 'afiliado';
-                            $role = $auth->getRole($roleName);
-                            if ($role) {
-                                try {
-                                    $auth->revokeAll($modelUser->id);
-                                    $auth->assign($role, $modelUser->id);
-                                    Yii::$app->cache->flush();
-                                    $model->user_login_id = $modelUser->id;
-                                    $model->save();
-                                } catch (\Exception $e) {
-                                    Yii::error("Error al asignar el rol: " . $e->getMessage(), __METHOD__);
+                        // Update user_datos with the new contract_id
+                        if ($model->contrato_id != $modelContrato->id) {
+                            $model->contrato_id = $modelContrato->id;
+                            $model->save(false);
+                        }
+
+                        // Handle cuota creation
+                        $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
+                        if (!$cuota) {
+                            $cuota = new Cuotas();
+                            $cuota->contrato_id = $modelContrato->id;
+                        }
+
+                        $cuota->fecha_vencimiento = $modelContrato->fecha_ini;
+                        $cuota->monto = $modelContrato->monto;
+                        $cuota->estatus = 'pendiente';
+
+                        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
+                        $cuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1;
+
+                        if (!$cuota->save()) {
+                            Yii::error("Error saving cuota: " . json_encode($cuota->getErrors()), __METHOD__);
+                        }
+
+                        // Handle user creation if needed
+                        if (empty($model->user_login_id)) {
+                            $modelUser = new User();
+                            $modelUser->username = $model->email;
+                            $pass = 'sispsa' . $model->cedula;
+                            $modelUser->password_hash = User::setPassword($pass);
+                            $modelUser->auth_key = User::generateAuthKey();
+                            $modelUser->email = $model->email;
+                            $modelUser->status = 1;
+
+                            if ($modelUser->save()) {
+                                $model->user_login_id = $modelUser->id;
+                                $model->save(false);
+
+                                // Assign role
+                                $auth = Yii::$app->authManager;
+                                $roleName = 'afiliado';
+                                $role = $auth->getRole($roleName);
+                                if ($role) {
+                                    try {
+                                        $auth->revokeAll($modelUser->id);
+                                        $auth->assign($role, $modelUser->id);
+                                        Yii::$app->cache->flush();
+                                    } catch (\Exception $e) {
+                                        Yii::error("Error assigning role: " . $e->getMessage(), __METHOD__);
+                                    }
                                 }
-                            } else {
-                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                            }
+                        } else {
+                            // Update existing user if needed
+                            $modelUser = User::findOne($model->user_login_id);
+                            if ($modelUser) {
+                                $modelUser->email = $model->email;
+                                $modelUser->save(false);
                             }
                         }
 
-                        Yii::$app->session->setFlash('success', 'El afiliado fue actualizado exitosamente.');
+                        Yii::$app->session->setFlash('success', 'El afiliado y su contrato fueron actualizados exitosamente.');
                         return $this->redirect(['view', 'id' => $model->id]);
                     } else {
-                        Yii::error("Error al guardar Contrato: " . json_encode($modelContrato->getErrors()), __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al actualizar el contrato: ' . implode(', ', array_map(function ($errors) {
-                            return implode(', ', $errors);
-                        }, $modelContrato->getErrors())));
+                        Yii::error("Error saving contract: " . json_encode($modelContrato->getErrors()), __METHOD__);
+                        Yii::$app->session->setFlash('error', 'Error al crear/actualizar el contrato: ' . implode(', ', $modelContrato->getErrorSummary(true)));
                     }
+                } else {
+                    Yii::error("Error saving UserDatos: " . json_encode($model->getErrors()), __METHOD__);
+                    $errorMessage = implode(', ', $model->getErrorSummary(true));
+                    Yii::$app->session->setFlash('error', 'Error al actualizar los datos del afiliado: ' . $errorMessage);
                 }
-            } else {
-                Yii::error("Error al guardar UserDatos: " . json_encode($model->getErrors()), __METHOD__);
-                Yii::$app->session->setFlash('error', 'Error al actualizar los datos del afiliado: ' . implode(', ', array_map(function ($errors) {
-                    return implode(', ', $errors);
-                }, $model->getErrors())));
             }
         }
 
@@ -1325,6 +1287,264 @@ class UserDatosController extends Controller
             'model' => $model,
             'modelContrato' => $modelContrato,
         ]);
+    }
+
+    
+// ============================================
+// HELPER METHODS
+// ============================================
+
+    /**
+     * Clear contratante fields
+     */
+    private function clearContratanteFields($model)
+    {
+        $fieldsToClear = [
+            'nombre_contratante',
+            'apellido_contratante',
+            'tipo_cedula_contratante',
+            'cedula_contratante',
+            'fecha_nacimiento_contratante',
+            'sexo_contratante',
+            'nacionalidad_contratante',
+            'estado_civil_contratante',
+            'lugar_nacimiento_contratante',
+            'profesion_contratante',
+            'ocupacion_contratante',
+            'actividad_economica_contratante',
+            'descripcion_actividad_contratante',
+            'ingreso_anual_contratante',
+            'direccion_residencia_contratante',
+            'direccion_oficina_contratante',
+            'direccion_cobro_contratante',
+            'telefono_residencia_contratante',
+            'telefono_oficina_contratante',
+            'telefono_celular_contratante',
+            'email_contratante'
+        ];
+
+        foreach ($fieldsToClear as $field) {
+            $model->$field = null;
+        }
+    }
+
+    /**
+     * Handle user creation/retrieval
+     */
+    private function handleUserCreation($model)
+    {
+        if (empty($model->user_login_id)) {
+            $modelUser = new User();
+            $modelUser->username = $model->email;
+            $pass = 'sispsa' . $model->cedula;
+            $modelUser->password_hash = User::setPassword($pass);
+            $modelUser->auth_key = User::generateAuthKey();
+            $modelUser->email = $model->email;
+            $modelUser->status = 1;
+
+            if ($modelUser->save()) {
+                $model->user_login_id = $modelUser->id;
+                return $modelUser;
+            } else {
+                Yii::error("Error creating user: " . json_encode($modelUser->getErrors()), __METHOD__);
+                Yii::$app->session->setFlash('error', 'Error al crear el usuario: ' . implode(', ', $modelUser->getErrorSummary(true)));
+                return false;
+            }
+        } else {
+            return User::findOne($model->user_login_id);
+        }
+    }
+
+    /**
+     * Handle corporativo relations
+     */
+    private function handleCorporativoRelations($model, $tipoUsuarioAnterior, $corporativoIdAnterior)
+    {
+        $tipoUsuarioActual = $model->user_datos_type_id;
+        $corporativoIdSeleccionado = $model->afiliado_corporativo_id;
+
+        // Caso 1: Si el usuario cambia de "Corporativo" (2) a "Simple" (1)
+        if ($tipoUsuarioAnterior == 2 && $tipoUsuarioActual == 1) {
+            if ($corporativoIdAnterior) {
+                CorporativoUser::deleteAll(['corporativo_id' => $corporativoIdAnterior, 'user_id' => $model->id]);
+                Yii::info("Relación con corporativo eliminada para el usuario " . $model->id, __METHOD__);
+            }
+            $model->afiliado_corporativo_id = null;
+        }
+        // Caso 2: Si el usuario se mantiene o cambia a "Corporativo" (2)
+        elseif ($tipoUsuarioActual == 2) {
+            if ($corporativoIdAnterior && $corporativoIdAnterior !== $corporativoIdSeleccionado) {
+                CorporativoUser::deleteAll(['corporativo_id' => $corporativoIdAnterior, 'user_id' => $model->id]);
+                Yii::info("Relación anterior con corporativo eliminada para el usuario " . $model->id, __METHOD__);
+            }
+
+            if ($corporativoIdSeleccionado) {
+                $relacionExistente = CorporativoUser::findOne([
+                    'corporativo_id' => $corporativoIdSeleccionado,
+                    'user_id' => $model->id
+                ]);
+
+                if (!$relacionExistente) {
+                    $nuevaRelacion = new CorporativoUser();
+                    $nuevaRelacion->corporativo_id = $corporativoIdSeleccionado;
+                    $nuevaRelacion->user_id = $model->id;
+                    $nuevaRelacion->fecha_vinculacion = date('Y-m-d H:i:s');
+                    $nuevaRelacion->rol_en_corporativo = 'afiliado';
+                    if (!$nuevaRelacion->save()) {
+                        Yii::error("Error creando relación corporativo: " . json_encode($nuevaRelacion->getErrors()), __METHOD__);
+                    }
+                }
+                $model->afiliado_corporativo_id = $corporativoIdSeleccionado;
+            }
+        } else {
+            $model->afiliado_corporativo_id = null;
+        }
+    }
+
+    /**
+     * Handle file uploads
+     */
+    private function handleFileUploads($model)
+    {
+        // Selfie upload
+        $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
+        if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
+            $model->selfieFile = reset($selfieFiles);
+            $this->uploadFile($model, 'selfieFile', 'FotoPerfil', 'selfie', 'selfie_');
+        }
+
+        // Identification image upload
+        $identificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
+        if (!empty($identificacionFiles) && $identificacionFiles[0]->size > 0) {
+            $model->imagenIdentificacionFile = reset($identificacionFiles);
+            $this->uploadFile($model, 'imagenIdentificacionFile', 'documentos', 'imagen_identificacion', 'imagen_identificacion_');
+        }
+    }
+
+    /**
+     * Upload file helper
+     */
+    private function uploadFile($model, $fileAttribute, $folder, $dbField, $prefix)
+    {
+        $tempFilePath = Yii::getAlias('@runtime') . '/' . uniqid($prefix) . '.' . $model->$fileAttribute->extension;
+
+        if ($model->$fileAttribute->saveAs($tempFilePath)) {
+            $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                $tempFilePath,
+                $model->$fileAttribute->type,
+                basename($tempFilePath),
+                $folder
+            );
+
+            if (file_exists($tempFilePath)) {
+                unlink($tempFilePath);
+            }
+
+            if ($publicUrl) {
+                $model->$dbField = $publicUrl;
+                $model->save(false);
+            }
+        }
+    }
+
+    /**
+     * Save contract
+     */
+    private function saveContract($userDatos, $contrato, $userId, $isNewContract)
+    {
+        $contrato->user_id = $userId;
+        $contrato->clinica_id = $userDatos->clinica_id;
+
+        // Set default status if not set
+        if (empty($contrato->estatus)) {
+            $contrato->estatus = 'Creado';
+        }
+
+        // Set default dates if not provided
+        if (empty($contrato->fecha_ini)) {
+            $contrato->fecha_ini = date('Y-m-d');
+        }
+        if (empty($contrato->fecha_ven)) {
+            $contrato->fecha_ven = date('Y-m-d', strtotime('+1 year'));
+        }
+
+        // Get plan price
+        if ($contrato->plan_id) {
+            $plan = Planes::findOne($contrato->plan_id);
+            $contrato->monto = $plan ? $plan->precio : 0;
+        } else {
+            $contrato->monto = 0;
+        }
+
+        // Generate contract number for new contracts
+        if ($isNewContract && empty($contrato->nrocontrato)) {
+            $anio_actual = date('Y');
+            $contrato->nrocontrato = $userDatos->cedula . '-' . $anio_actual . '-' . ($contrato->id ?: 'NEW');
+        }
+
+        if ($contrato->save()) {
+            Yii::info(($isNewContract ? 'Nuevo contrato creado' : 'Contrato actualizado') . ' ID: ' . $contrato->id, __METHOD__);
+            return true;
+        } else {
+            Yii::error("Error saving contract: " . json_encode($contrato->getErrors()), __METHOD__);
+            return false;
+        }
+    }
+
+    /**
+     * Handle cuota creation
+     */
+    private function handleCuotaCreation($contrato)
+    {
+        $cuota = Cuotas::find()->where(['contrato_id' => $contrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
+        if (!$cuota) {
+            $cuota = new Cuotas();
+            $cuota->contrato_id = $contrato->id;
+        }
+
+        $cuota->fecha_vencimiento = $contrato->fecha_ini;
+        $cuota->monto = $contrato->monto;
+        $cuota->estatus = 'pendiente';
+
+        $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
+        $cuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1;
+
+        if (!$cuota->save()) {
+            Yii::error("Error saving cuota: " . json_encode($cuota->getErrors()), __METHOD__);
+        }
+    }
+
+    /**
+     * Assign user role
+     */
+    private function assignUserRole($userModel)
+    {
+        if ($userModel) {
+            $auth = Yii::$app->authManager;
+            $roleName = 'afiliado';
+            $role = $auth->getRole($roleName);
+            if ($role) {
+                try {
+                    $auth->revokeAll($userModel->id);
+                    $auth->assign($role, $userModel->id);
+                    Yii::$app->cache->flush();
+                } catch (\Exception $e) {
+                    Yii::error("Error assigning role: " . $e->getMessage(), __METHOD__);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get model errors as string
+     */
+    private function getModelErrorsString($model)
+    {
+        $errors = [];
+        foreach ($model->getErrors() as $attributeErrors) {
+            $errors = array_merge($errors, $attributeErrors);
+        }
+        return implode(', ', $errors);
     }
 
     /* * Deletes an existing UserDatos model.
