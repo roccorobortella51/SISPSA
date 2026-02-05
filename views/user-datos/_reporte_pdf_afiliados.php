@@ -16,18 +16,18 @@ use yii\helpers\Html;
 </head>
 
 <body>
-    <table style="width: 100%;">
-        <tr>
-            <td style="vertical-align: top; width: 65%;">
-                <img src="<?= Html::encode($logo) ?>" alt="Logo SISPSA" class="logo-superior-izquierda" style="width: 100px;">
-                <div style="font-size: 10px;">
-                    <div>Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013</div>
-                    <div>R.I.F.: J-50654922</div>
-                </div>
-            </td>
-        </tr>
-    </table>
-    <br>
+<table style="width: 100%;">
+    <tr>
+        <td style="vertical-align: top; width: 100%; text-align: center;">
+            <img src="<?= Html::encode($logo) ?>" alt="Logo SISPSA" class="logo-superior-izquierda" style="width: 100px; display: block; margin: 0 auto;">
+            <div style="font-size: 10px; margin-top: 5px;">
+                <div>Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013</div>
+                <div>R.I.F.: J-50654922</div>
+            </div>
+        </td>
+    </tr>
+</table>
+<br>
 
 
     <div class="header">
