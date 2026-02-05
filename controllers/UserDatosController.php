@@ -31,6 +31,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
 use DateTime;
 use app\models\Cuotas;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use app\models\TasaCambio;
 use app\models\AgenteFuerza;
 use app\models\Dependientes;
