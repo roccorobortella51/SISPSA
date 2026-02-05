@@ -1264,6 +1264,8 @@ class UserDatosController extends Controller
                         $modelContrato->monto = 0;
                     }
 
+                    $modelContrato->pdf = NULL;
+
 
                     if ($modelContrato->save()) {
                         $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
@@ -2055,5 +2057,376 @@ class UserDatosController extends Controller
         Yii::info("SQL: " . $query->createCommand()->getRawSql(), 'dependientes');
 
         return ['success' => true, 'data' => $data];
+    }
+
+    /*public function actionClinicasJson()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $type = Yii::$app->request->get('type');
+        $corporativo_id = Yii::$app->request->get('corporativo');
+
+        if ($type == 2 && $corporativo_id) {
+            $clinicas = RmClinica::find()
+                ->select(['rm_clinica.id', 'rm_clinica.nombre'])
+                ->innerJoin('corporativo_clinica', 'rm_clinica.id = corporativo_clinica.clinica_id')
+                ->where(['corporativo_clinica.corporativo_id' => $corporativo_id])
+                ->asArray()
+                ->all();
+        } else {
+            $clinicas = RmClinica::find()
+                ->select(['id', 'nombre'])
+                ->asArray()
+                ->all();
+        }
+
+        $data = ArrayHelper::map($clinicas, 'id', 'nombre');
+
+        return Json::encode($data);
+    }*/
+
+    // REPORT ACTIONS - Only these should be at the end
+
+    /**
+     * Report of all affiliates
+     */
+    public function actionReporteAfiliados()
+    {
+        $searchModel = new AfiliadosReportSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        // Get clinics for filter dropdown
+        $clinicas = RmClinica::find()
+            ->select(['id', 'nombre'])
+            ->orderBy(['nombre' => SORT_ASC])
+            ->asArray()
+            ->all();
+        $clinicaList = \yii\helpers\ArrayHelper::map($clinicas, 'id', 'nombre');
+
+        // Get user types for filter dropdown
+        $tipoAfiliadoList = UserDatosType::getList();
+
+        // Status options
+        $estatusSolventeList = ['Si' => 'Si', 'No' => 'No'];
+
+        return $this->render('reporte-afiliados', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'clinicaList' => $clinicaList,
+            'tipoAfiliadoList' => $tipoAfiliadoList,
+            'estatusSolventeList' => $estatusSolventeList,
+        ]);
+    }
+
+    /**
+     * Export affiliates report to Excel
+     */
+    public function actionExportarExcelAfiliados()
+    {
+        $searchModel = new AfiliadosReportSearch();
+        $affiliates = $searchModel->getAllAffiliates(Yii::$app->request->queryParams);
+
+        // Calculate number of unique clinics
+        $clinicaIds = [];
+        foreach ($affiliates as $affiliate) {
+            if ($affiliate->clinica_id) {
+                $clinicaIds[$affiliate->clinica_id] = true;
+            }
+        }
+        $numeroClinicas = count($clinicaIds);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set document properties
+        $spreadsheet->getProperties()
+            ->setCreator("SISPSA")
+            ->setTitle("Reporte de Afiliados")
+            ->setSubject("Listado de Afiliados")
+            ->setDescription("Reporte de todos los afiliados del sistema");
+
+        // Add report header with statistics (rows 1-3)
+        $sheet->setCellValue('A1', 'REPORTE DE AFILIADOS - SISPSA');
+        $sheet->mergeCells('A1:D1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('A2', 'Generado: ' . date('d/m/Y H:i:s'));
+        $sheet->mergeCells('A2:D2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Add statistics row
+        $sheet->setCellValue('A3', 'Total Afiliados: ' . count($affiliates) . ' | Número de Clínicas: ' . $numeroClinicas);
+        $sheet->mergeCells('A3:D3');
+        $sheet->getStyle('A3')->getFont()->setBold(true);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFE8F4FD');
+
+        // Set headers - WITH NUMBERING COLUMN (start at row 5)
+        $headers = [
+            '#',
+            'Nombre Completo',
+            'Cédula de Identidad',
+            'Clínica'
+        ];
+
+        $column = 'A';
+        $headerRow = 5;
+        foreach ($headers as $header) {
+            $sheet->setCellValue($column . $headerRow, $header);
+            $sheet->getStyle($column . $headerRow)->getFont()->setBold(true);
+            $column++;
+        }
+
+        // Fill data - WITH NUMBERING (start at row 6)
+        $row = 6;
+        $counter = 1;
+        foreach ($affiliates as $affiliate) {
+            $sheet->setCellValue('A' . $row, $counter); // Number column
+            $sheet->setCellValue('B' . $row, $affiliate->nombres . ' ' . $affiliate->apellidos);
+            $sheet->setCellValue('C' . $row, $affiliate->tipo_cedula . '-' . $affiliate->cedula);
+            $sheet->setCellValue('D' . $row, $affiliate->clinica ? $affiliate->clinica->nombre : '');
+            $row++;
+            $counter++;
+        }
+
+        // Auto size columns (A through D)
+        foreach (range('A', 'D') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Add borders to all cells with data (from row 5 to last data row)
+        $styleArray = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['argb' => 'FF000000'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A5:D' . ($row - 1))->applyFromArray($styleArray);
+
+        // Set header style
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4472C4'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ];
+        $sheet->getStyle('A5:D5')->applyFromArray($headerStyle);
+
+        // Set alternate row colors for better readability
+        for ($i = 6; $i < $row; $i++) {
+            if ($i % 2 == 0) {
+                $sheet->getStyle('A' . $i . ':D' . $i)
+                    ->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()
+                    ->setARGB('FFF2F2F2');
+            }
+        }
+
+        // Center align the number column
+        $sheet->getStyle('A6:A' . ($row - 1))
+            ->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Add summary at the end
+        $summaryRow = $row + 1;
+        $sheet->setCellValue('A' . $summaryRow, 'RESUMEN:');
+        $sheet->mergeCells('A' . $summaryRow . ':D' . $summaryRow);
+        $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+
+        $sheet->setCellValue('A' . ($summaryRow + 1), 'Total de Afiliados: ' . count($affiliates));
+        $sheet->setCellValue('B' . ($summaryRow + 1), 'Número de Clínicas: ' . $numeroClinicas);
+        $sheet->mergeCells('B' . ($summaryRow + 1) . ':D' . ($summaryRow + 1));
+
+        $sheet->getStyle('A' . $summaryRow . ':A' . ($summaryRow + 1))->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE8F4FD');
+
+        // Set filename with timestamp
+        $filename = 'Reporte_Afiliados_' . date('Y-m-d_His') . '.xlsx';
+
+        // Redirect output to a client's web browser
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Cache-Control: max-age=1'); // For IE9
+        header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+        header('Cache-Control: cache, must-revalidate');
+        header('Pragma: public');
+
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Export affiliates report to PDF
+     */
+    public function actionExportarPdfAfiliados()
+    {
+        $searchModel = new \app\models\AfiliadosReportSearch();
+        $affiliates = $searchModel->getAllAffiliates(Yii::$app->request->queryParams);
+
+        // Get filter values for report header (REMOVED estatus_solvente)
+        $filtros = [];
+        if (!empty(Yii::$app->request->get('AfiliadosReportSearch')['clinica_id'])) {
+            $clinica = RmClinica::findOne(Yii::$app->request->get('AfiliadosReportSearch')['clinica_id']);
+            $filtros[] = 'Clínica: ' . ($clinica ? $clinica->nombre : '');
+        }
+        if (!empty(Yii::$app->request->get('AfiliadosReportSearch')['user_datos_type_id'])) {
+            $tipo = UserDatosType::findOne(Yii::$app->request->get('AfiliadosReportSearch')['user_datos_type_id']);
+            $filtros[] = 'Tipo: ' . ($tipo ? $tipo->nombre : '');
+        }
+        // REMOVED: estatus_solvente filter
+
+        // Calculate number of unique clinics
+        $clinicaIds = [];
+        foreach ($affiliates as $affiliate) {
+            if ($affiliate->clinica_id) {
+                $clinicaIds[$affiliate->clinica_id] = true;
+            }
+        }
+        $numeroClinicas = count($clinicaIds);
+
+        // Render HTML content WITHOUT layout
+        $content = $this->renderPartial('_reporte_pdf_afiliados', [
+            'affiliates' => $affiliates,
+            'filtros' => $filtros,
+            'total' => count($affiliates),
+            'numeroClinicas' => $numeroClinicas,
+        ]);
+
+        // Setup PDF - Use mPDF's built-in CSS support
+        $pdf = new \kartik\mpdf\Pdf([
+            'mode' => \kartik\mpdf\Pdf::MODE_UTF8,
+            'format' => \kartik\mpdf\Pdf::FORMAT_A4,
+            'orientation' => \kartik\mpdf\Pdf::ORIENT_PORTRAIT,
+            'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
+            'content' => $content,
+            'cssInline' => '
+            body {
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+                margin: 0;
+                padding: 15px;
+                color: #333;
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #2c3e50;
+            }
+            .title {
+                font-size: 16pt;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #2c3e50;
+            }
+            .subtitle {
+                font-size: 12pt;
+                margin-bottom: 5px;
+                color: #7f8c8d;
+            }
+            .date {
+                font-size: 10pt;
+                color: #95a5a6;
+                margin-bottom: 10px;
+            }
+            .filters {
+                margin-bottom: 15px;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                font-size: 9pt;
+            }
+            .filters strong {
+                color: #2c3e50;
+            }
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                font-size: 9pt;
+            }
+            .table th {
+                background-color: #2c3e50;
+                color: white;
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+                font-weight: bold;
+            }
+            .table td {
+                border: 1px solid #ddd;
+                padding: 6px;
+            }
+            .table tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .summary {
+                margin-top: 20px;
+                padding: 10px;
+                background-color: #e8f4fd;
+                border: 1px solid #b6d4fe;
+                border-radius: 4px;
+                font-size: 10pt;
+            }
+            .summary strong {
+                color: #0d6efd;
+            }
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+            }
+            .summary-item {
+                flex: 1;
+            }
+            .footer {
+                margin-top: 20px;
+                text-align: center;
+                font-size: 9pt;
+                color: #6c757d;
+                border-top: 1px solid #dee2e6;
+                padding-top: 10px;
+            }
+            .col-num {
+                width: 5%;
+                text-align: center;
+            }
+            .col-nombre {
+                width: 35%;
+            }
+            .col-cedula {
+                width: 20%;
+            }
+            .col-clinica {
+                width: 40%;
+            }
+        ',
+            'options' => [
+                'title' => 'Reporte de Afiliados - SISPSA',
+            ],
+            'methods' => [
+                'SetHeader' => ['SISPSA - Reporte de Afiliados|{DATE j-m-Y}|'],
+                'SetFooter' => ['|Página {PAGENO} de {nbpg}|'],
+            ]
+        ]);
+
+        return $pdf->render();
     }
 }
