@@ -27,7 +27,7 @@ use yii\helpers\Html; // ADD THIS IMPORT
  * @property string|null $anulado_fecha
  * @property string|null $anulado_motivo
  * @property int|null $user_id
- * @property string|null $PDF
+ * @property string|null $pdf
  *
  * @property RmClinica $clinica
  * @property Planes $plan
@@ -60,12 +60,12 @@ class Contratos extends \yii\db\ActiveRecord
     {
         return [
             [['fecha_ini', 'fecha_ven'], 'required', 'message' => 'Este campo es obligatorio.'],
-            [['plan_id', 'ente_id', 'clinica_id', 'fecha_ini', 'fecha_ven', 'monto', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_por', 'anulado_fecha', 'anulado_motivo', 'user_id', 'PDF'], 'default', 'value' => null],
+            [['plan_id', 'ente_id', 'clinica_id', 'fecha_ini', 'fecha_ven', 'monto', 'estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'updated_at', 'deleted_at', 'anulado_por', 'anulado_fecha', 'anulado_motivo', 'user_id', 'pdf'], 'default', 'value' => null],
             [['created_at', 'fecha_ini', 'fecha_ven', 'updated_at', 'deleted_at', 'anulado_fecha'], 'safe'],
             [['plan_id', 'ente_id', 'clinica_id', 'anulado_por', 'user_id'], 'default', 'value' => null],
             [['plan_id', 'ente_id', 'clinica_id', 'anulado_por', 'user_id'], 'integer'],
             [['monto'], 'number'],
-            [['estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'anulado_motivo', 'PDF'], 'string'],
+            [['estatus', 'nrocontrato', 'frecuencia_pago', 'sucursal', 'moneda', 'anulado_motivo', 'pdf'], 'string'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id']],
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => UserDatos::class, 'targetAttribute' => ['user_id' => 'id']],
@@ -97,7 +97,7 @@ class Contratos extends \yii\db\ActiveRecord
             'anulado_fecha' => 'Anulado Fecha',
             'anulado_motivo' => 'Anulado Motivo',
             'user_id' => 'User ID',
-            'PDF' => 'Pdf',
+            'pdf' => 'Pdf',
         ];
     }
 
