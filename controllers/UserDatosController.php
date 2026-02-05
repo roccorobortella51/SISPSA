@@ -9,6 +9,7 @@ use app\models\UserDatosSearch;
 use app\models\CorporativoUser;
 use app\models\Corporativo;
 use app\models\AfiliadosReportSearch;
+use app\models\UserDatosType;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -2301,12 +2302,15 @@ class UserDatosController extends Controller
         }
         $numeroClinicas = count($clinicaIds);
 
+        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+
         // Render HTML content WITHOUT layout
         $content = $this->renderPartial('_reporte_pdf_afiliados', [
             'affiliates' => $affiliates,
             'filtros' => $filtros,
             'total' => count($affiliates),
             'numeroClinicas' => $numeroClinicas,
+            'logo' => $logo
         ]);
 
         // Setup PDF - Use mPDF's built-in CSS support
