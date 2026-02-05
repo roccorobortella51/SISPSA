@@ -8,6 +8,7 @@ use app\models\User;
 use app\models\UserDatosSearch;
 use app\models\CorporativoUser;
 use app\models\Corporativo;
+use app\models\AfiliadosReportSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
