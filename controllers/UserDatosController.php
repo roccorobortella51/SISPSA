@@ -24,16 +24,15 @@ use yii\base\Security;
 use kartik\mpdf\Pdf;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
-use yii\web\UploadedFile;
+use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\Exception;
+use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
 use DateTime;
 use app\models\Cuotas;
 use app\models\TasaCambio;
 use app\models\AgenteFuerza;
-use app\models\UserDatosType;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use app\models\AfiliadosReportSearch;
+use app\models\Dependientes;
+use yii\web\Response;
 
 
 
@@ -47,67 +46,6 @@ use app\models\AfiliadosReportSearch;
  */
 class UserDatosController extends Controller
 {
-    /**
-     * Descarga un archivo Excel con los IDs y nombres de estados, municipios, parroquias y ciudades
-     */
-    public function actionDownloadLocationIds()
-    {
-        // Obtener datos
-        $estados = \app\models\RmEstado::find()->select(['id', 'codigo', 'nombre'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
-        $municipios = \app\models\RmMunicipio::find()->select(['id', 'codigo_muni', 'nombre', 'estado_codigo'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
-        $parroquias = \app\models\RmParroquia::find()->select(['id', 'codigo_parro', 'nombre', 'muni_codigo'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
-        $ciudades = \app\models\RmCiudad::find()->select(['id', 'codigo_ciudad', 'nombre', 'estado_codigo'])->orderBy(['nombre' => SORT_ASC])->asArray()->all();
-
-        // Crear hoja Excel
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-
-        // Parroquias
-        $spreadsheet->createSheet();
-        $sheet3 = $spreadsheet->setActiveSheetIndex(2);
-        $sheet3->setTitle('Parroquias');
-        $sheet3->setCellValue('A1', 'ID');
-        $sheet3->setCellValue('B1', 'Código');
-        $sheet3->setCellValue('C1', 'Nombre');
-        $sheet3->setCellValue('D1', 'Municipio Código');
-        $row = 2;
-        foreach ($parroquias as $parro) {
-            $sheet3->setCellValue('A' . $row, $parro['id']);
-            $sheet3->setCellValue('B' . $row, $parro['codigo_parro']);
-            $sheet3->setCellValue('C' . $row, $parro['nombre']);
-            $sheet3->setCellValue('D' . $row, $parro['muni_codigo']);
-            $row++;
-        }
-
-        // Ciudades
-        $spreadsheet->createSheet();
-        $sheet4 = $spreadsheet->setActiveSheetIndex(3);
-        $sheet4->setTitle('Ciudades');
-        $sheet4->setCellValue('A1', 'ID');
-        $sheet4->setCellValue('B1', 'Código');
-        $sheet4->setCellValue('C1', 'Nombre');
-        $sheet4->setCellValue('D1', 'Estado Código');
-        $row = 2;
-        foreach ($ciudades as $ciudad) {
-            $sheet4->setCellValue('A' . $row, $ciudad['id']);
-            $sheet4->setCellValue('B' . $row, $ciudad['codigo_ciudad']);
-            $sheet4->setCellValue('C' . $row, $ciudad['nombre']);
-            $sheet4->setCellValue('D' . $row, $ciudad['estado_codigo']);
-            $row++;
-        }
-
-        // Volver a la primera hoja
-        $spreadsheet->setActiveSheetIndex(0);
-
-        // Descargar el archivo
-        $filename = 'IDs_Ubicacion.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
-    }
-
     /**
      * @inheritDoc
      */
@@ -131,8 +69,6 @@ class UserDatosController extends Controller
      * @param array $data Los datos del archivo Excel
      * @return array Array con errores encontrados
      */
-
-
     private function validateExcelData($data)
     {
         $errors = [];
@@ -227,67 +163,25 @@ class UserDatosController extends Controller
                 }
             }
 
-            // Validar nacionalidad (columna J)
+            // Validar estado - municipio - parroquia (columna J) 
             if (empty($row['J'])) {
-                $rowErrors[] = 'Nacionalidad es obligatoria';
+                $rowErrors[] = 'Estado - municipio - parroquia es obligatorio';
+            } elseif (strlen($row['J']) < 2) {
+                $rowErrors[] = 'Estado - municipio - parroquia debe tener al menos 2 caracteres';
             }
 
-            // Validar estado civil (columna K)
-            $estadosCivilesValidos = ['Soltero', 'Casado', 'Divorciado', 'Viudo'];
+            // Validar municipio (columna K) - opcional pero si se proporciona debe ser numérico
             if (empty($row['K'])) {
-                $rowErrors[] = 'Estado civil es obligatorio';
-            } elseif (!in_array(ucfirst(strtolower(trim($row['K']))), $estadosCivilesValidos)) {
-                $rowErrors[] = 'Estado civil debe ser: Soltero, Casado, Divorciado o Viudo';
+                $rowErrors[] = 'Ciudad es obligatorio';
+            } elseif (strlen($row['K']) < 2) {
+                $rowErrors[] = 'Ciudad debe tener al menos 2 caracteres';
             }
 
-            // Validar estado (columna L)
+            // Validar dirección (columna N)
             if (empty($row['L'])) {
-                $rowErrors[] = 'Estado es obligatorio';
-            }
-
-            // Validar municipio (columna M)
-            if (empty($row['M'])) {
-                $rowErrors[] = 'Municipio es obligatorio';
-            }
-
-            // Validar parroquia (columna N)
-            if (empty($row['N'])) {
-                $rowErrors[] = 'Parroquia es obligatoria';
-            }
-
-            // Validar ciudad (columna O)
-            if (empty($row['O'])) {
-                $rowErrors[] = 'Ciudad es obligatoria';
-            }
-
-            // Validar dirección (columna P)
-            if (empty($row['P'])) {
                 $rowErrors[] = 'Dirección es obligatoria';
-            } elseif (strlen($row['P']) < 10) {
+            } elseif (strlen($row['L']) < 1) {
                 $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
-            }
-
-            // Validar actividad económica (columna S)
-            $actividadesValidas = ['Industrial', 'Comercial', 'Profesional', 'Gubernamental'];
-            if (empty($row['S'])) {
-                $rowErrors[] = 'Actividad económica es obligatoria';
-            } elseif (!in_array(ucfirst(strtolower(trim($row['S']))), $actividadesValidas)) {
-                $rowErrors[] = 'Actividad económica debe ser: Industrial, Comercial, Profesional o Gubernamental';
-            }
-
-            // Validar descripción de actividad (columna U)
-            $descripcionesValidas = ['Independiente', 'Dependiente', 'Societaria'];
-            if (empty($row['U'])) {
-                $rowErrors[] = 'Descripción de actividad es obligatoria';
-            } elseif (!in_array(ucfirst(strtolower(trim($row['U']))), $descripcionesValidas)) {
-                $rowErrors[] = 'Descripción de actividad debe ser: Independiente, Dependiente o Societaria';
-            }
-
-            // Validar ID Asesor (columna AA)
-            if (empty($row['AA'])) {
-                $rowErrors[] = 'ID Asesor es obligatorio';
-            } elseif (!is_numeric($row['AA']) || !UserHelper::isAgenteFuerzaIdValido($row['AA'])) {
-                $rowErrors[] = 'ID Asesor no es válido';
             }
 
             // Si hay errores en esta fila, agregarlos al array de errores
@@ -498,7 +392,7 @@ class UserDatosController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Definir los encabezados (cada campo en su columna)
+        // Definir los encabezados
         $headers = [
             'A1' => 'Email',
             'B1' => 'Teléfono',
@@ -509,24 +403,11 @@ class UserDatosController extends Controller
             'G1' => 'Fecha Nacimiento',
             'H1' => 'Sexo',
             'I1' => 'Tipo Sangre',
-            'J1' => 'Nacionalidad',
-            'K1' => 'Estado Civil',
-            'L1' => 'Estado',
-            'M1' => 'Municipio',
-            'N1' => 'Parroquia',
-            'O1' => 'Ciudad',
-            'P1' => 'Dirección',
-            'Q1' => 'Profesión',
-            'R1' => 'Ocupación',
-            'S1' => 'Actividad Económica',
-            'T1' => 'Ramo Comercial',
-            'U1' => 'Descripción Actividad',
-            'V1' => 'Dirección Oficina',
-            'W1' => 'Dirección Cobro',
-            'X1' => 'Teléfono Residencia',
-            'Y1' => 'Teléfono Oficina',
-            'Z1' => 'Teléfono Celular',
-            'AA1' => 'ID Asesor',
+            'J1' => 'Estado ID',
+            'K1' => 'Municipio ID',
+            'L1' => 'Parroquia ID',
+            'M1' => 'Ciudad ID',
+            'N1' => 'Dirección'
         ];
 
         // Aplicar encabezados
@@ -545,32 +426,15 @@ class UserDatosController extends Controller
             'G2' => '15/03/1990',
             'H2' => 'M',
             'I2' => 'O+',
-            'J2' => 'Venezolano',
-            'K2' => 'Soltero',
+            'J2' => '1',
+            'K2' => '1',
             'L2' => '1',
             'M2' => '1',
-            'N2' => '1',
-            'O2' => '1',
-            'P2' => 'Av. Principal, Casa #123',
-            'Q2' => 'Ingeniero',
-            'R2' => 'Empleado',
-            'S2' => 'Comercial',                // (Industrial, Comercial, Profesional, Gubernamental)
-            'T2' => 'Alimentos',
-            'U2' => 'Independiente',            // (Independiente, Dependiente, Societaria)
-            'V2' => 'Oficina Principal',
-            'W2' => 'Sucursal Centro',
-            'X2' => '0212-1234567',
-            'Y2' => '0212-7654321',
-            'Z2' => '0414-9876543',
-            'AA2' => '5',
+            'N2' => 'Av. Principal, Casa #123'
         ];
 
         foreach ($exampleData as $cell => $value) {
-            if ($cell === 'G2') {
-                $sheet->setCellValueExplicit($cell, $value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            } else {
-                $sheet->setCellValue($cell, $value);
-            }
+            $sheet->setCellValue($cell, $value);
         }
 
         // Aplicar formato a los encabezados
@@ -585,13 +449,12 @@ class UserDatosController extends Controller
             ],
         ];
 
-        $sheet->getStyle('A1:AA1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
 
         // Autoajustar columnas
-        foreach (range('A', 'Z') as $column) {
+        foreach (range('A', 'N') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-        $sheet->getColumnDimension('AA')->setAutoSize(true);
 
         // Crear el archivo temporal
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
@@ -620,6 +483,7 @@ class UserDatosController extends Controller
             $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
 
             if (empty($masivoFiles) || !$masivoFiles[0]->tempName) {
+                // Si no se subió ningún archivo o el archivo está vacío
                 Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o el archivo está corrupto.');
                 return $this->render('masivo', [
                     'model' => $model,
@@ -628,11 +492,7 @@ class UserDatosController extends Controller
             }
 
             $uploadedFile = $masivoFiles[0];
-            $uploadDir = Yii::getAlias('@app/web/uploads/masivoFiles');
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0775, true);
-            }
-            $filePath = $uploadDir . '/' . $uploadedFile->baseName . '.' . $uploadedFile->extension;
+            $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $uploadedFile->baseName . '.' . $uploadedFile->extension);
 
             if (!$uploadedFile->saveAs($filePath)) {
                 Yii::$app->session->setFlash('error', 'Error al guardar el archivo subido.');
@@ -644,13 +504,16 @@ class UserDatosController extends Controller
 
             $clinica_id = $model->clinica_id;
             $plan_id = $modelContrato->plan_id;
+
+            // ******* CORRECCIÓN CLAVE DE RELACIÓN *******
+            // Asignar el plan_id al modelo UserDatos *antes* de intentar usar la relación.
             $model->plan_id = $plan_id;
 
-            $filteredData = [];
-            $allErrors = [];
-
+            // --- Validar la relación 'plan' antes de acceder a la propiedad 'precio' ---
             if ($model->plan === null) {
+                // Mensaje de error mejorado para mostrar el ID que falló
                 Yii::$app->session->setFlash('error', 'Error de datos: No se pudo cargar el precio porque el Plan ID (' . $plan_id . ') asociado al modelo principal no existe. Verifique que el ID del Plan seleccionado sea válido en la tabla "planes".');
+                // Eliminar el archivo subido
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
@@ -660,30 +523,39 @@ class UserDatosController extends Controller
                 ]);
             }
 
-            $monto = $model->plan->precio;
+            $monto = $model->plan->precio; // Ahora es seguro acceder a 'precio'
+            // --- FIN DE LA CORRECCIÓN DE RELACIÓN ---
+
             $fecha_ini = $modelContrato->fecha_ini;
             $fecha_ven = $modelContrato->fecha_ven;
             $fechaCreacion = date('Y-m-d H:i:s');
-
             try {
+                // Leer archivo .xlsx
+                // *** ESTA LÍNEA NECESITA EL 'use PhpOffice\PhpSpreadsheet\IOFactory;' ***
                 $spreadsheet = IOFactory::load($filePath);
                 $sheet = $spreadsheet->getActiveSheet();
 
-                $highestRow = $sheet->getHighestDataRow();
-                $range = 'A1:AA' . $highestRow;
+                // Establecer el rango de columnas a leer (de A a L)
+                // Usamos getHighestRow() para encontrar la última fila con datos
+                $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
+                $range = 'A1:L' . $highestRow; // Rango de A1 hasta la columna L de la última fila con datos
 
+                // Obtener los datos del rango especificado
                 $sheetData = $sheet->rangeToArray(
-                    $range,
-                    null,
-                    true,
-                    true,
-                    true
+                    $range,     // El rango de celdas a leer
+                    null,       // No aplicar pre-casteo de valores
+                    true,       // Formatear celdas (por ejemplo, fechas)
+                    true,       // Incluir celdas nulas (vacías en el rango)
+                    true        // Incluir las columnas como claves si TRUE (A, B, C...)
                 );
 
-                // Filtrar filas vacías
+                // Filtrar filas vacías (todas las columnas de A a N están vacías)
+                $filteredData = [];
                 foreach ($sheetData as $row) {
+                    // Revisa si TODAS las celdas en el rango A-N de la fila están vacías
                     $isEmptyRow = true;
                     foreach ($row as $cellValue) {
+                        // Si encuentra cualquier valor no nulo o no una cadena vacía, la fila no está vacía
                         if ($cellValue !== null && $cellValue !== '') {
                             $isEmptyRow = false;
                             break;
@@ -694,29 +566,37 @@ class UserDatosController extends Controller
                     }
                 }
 
-                // Quitar encabezado
+                // Si la primera fila es un encabezado, la dejamos fuera del array principal de datos
                 if (!empty($filteredData)) {
-                    $headers = array_shift($filteredData);
+                    $headers = array_shift($filteredData); // Si la primera fila es el encabezado
                 }
 
+                // Validar los datos antes de procesarlos
                 $validationErrors = $this->validateExcelData($filteredData);
                 $duplicateErrors = $this->validateDuplicates($filteredData);
+
                 $allErrors = array_merge($validationErrors, $duplicateErrors);
 
                 if (!empty($allErrors)) {
+                    // Si hay errores de validación, mostrar el reporte HTML y no procesar
                     $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
+
+                    // Guardar el reporte en la sesión para mostrarlo en la vista
                     Yii::$app->session->setFlash('error', $validationReport);
+
+                    // Eliminar el archivo subido
                     if (file_exists($filePath)) {
                         unlink($filePath);
                     }
+
                     return $this->render('masivo', [
                         'model' => $model,
                         'modelContrato' => $modelContrato,
                     ]);
                 }
 
-                foreach ($filteredData as $idx => $row) {
-                    $rowNumber = $idx + 2; // +2 porque la primera fila es encabezado
+                // Si no hay errores de validación, proceder con el procesamiento
+                foreach ($filteredData as $row) {
                     $contrato = new Contratos();
                     $contrato->clinica_id = $clinica_id;
                     $contrato->plan_id = $plan_id;
@@ -725,73 +605,48 @@ class UserDatosController extends Controller
                     $contrato->fecha_ven = $fecha_ven;
                     $contrato->created_at = $fechaCreacion;
                     $contrato->estatus = 'Creado';
+                    $guardadoContrato = $contrato->save();
+                    if ($guardadoContrato) {
+                        Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
+                    } else {
+                        Yii::$app->session->setFlash('error', 'Error al guardar el contrato.');
+                        print_r($contrato->getErrors());
+                        exit;
+                    }
 
+                    // IMPORTANTE: Reiniciar el modelo de afiliado para cada fila
                     $model = new UserDatos();
+
                     $model->role = 'afiliado';
                     $model->estatus = 'Creado';
                     $model->user_datos_type_id = 1;
                     $model->email = $row['A'];
-                    $telefonoLimpio = preg_replace('/[\s\-\(\)]/', '', $row['B']);
-                    if (preg_match('/^[42]\d{9}$/', $telefonoLimpio)) {
-                        $telefonoLimpio = '0' . $telefonoLimpio;
-                    }
-                    $model->telefono = $telefonoLimpio;
+                    $model->telefono = $row['B'];
                     $model->nombres = $row['C'];
                     $model->apellidos = $row['D'];
                     $model->tipo_cedula = $row['E'];
                     $model->cedula = $row['F'];
                     $fechaNacimiento = DateTime::createFromFormat('d/m/Y', $row['G']);
-                    $model->fechanac = $fechaNacimiento ? $fechaNacimiento->format('Y-m-d') : null;
-                    $sexoRaw = strtoupper(trim($row['H']));
-                    if ($sexoRaw === 'M' || $sexoRaw === 'MASCULINO') {
-                        $model->sexo = 'Masculino';
-                    } elseif ($sexoRaw === 'F' || $sexoRaw === 'FEMENINO') {
-                        $model->sexo = 'Femenino';
-                    } elseif ($sexoRaw === 'OTRO') {
-                        $model->sexo = 'Otro';
-                    } else {
-                        $model->sexo = $row['H'];
-                    }
+                    $model->fechanac = $fechaNacimiento->format('Y-m-d');
+                    $model->sexo = $row['H'];
                     $model->tipo_sangre = $row['I'];
-                    $model->nacionalidad = $row['J'] ?? null;
-                    $model->estado_civil = $row['K'] ?? null;
-                    $model->estado = $row['L'] ?? null;
-                    $model->municipio = $row['M'] ?? null;
-                    $model->parroquia = $row['N'] ?? null;
-                    $model->ciudad = $row['O'] ?? null;
-                    $model->direccion = $row['P'] ?? null;
-                    $model->profesion = $row['Q'] ?? null;
-                    $model->ocupacion = $row['R'] ?? null;
-                    $model->actividad_economica = $row['S'] ?? null;
-                    $model->ramo_comercial = $row['T'] ?? null;
-                    $model->descripcion_actividad = $row['U'] ?? null;
-                    $model->direccion_oficina = $row['V'] ?? null;
-                    $model->direccion_cobro = $row['W'] ?? null;
-                    $model->telefono_residencia = $row['X'] ?? null;
-                    $model->telefono_oficina = $row['Y'] ?? null;
-                    $model->telefono_celular = $row['Z'] ?? null;
-                    $model->asesor_id = $row['AA'] ?? null;
-                    $model->contrato_id = null;
+                    $explodeEstado = explode(' - ', $row['J']);
+                    $model->estado = $explodeEstado[0];
+                    $model->municipio = $explodeEstado[1];
+                    $model->parroquia = $explodeEstado[2];
+                    $explodeCiudad = explode(' - ', $row['K']);
+                    $model->ciudad = $explodeCiudad[1];
+                    $model->direccion = $row['L'];
+                    $model->contrato_id = $contrato->id;
                     $model->clinica_id = $clinica_id;
-                    $model->plan_id = $plan_id;
+                    $model->plan_id = $plan_id; // Se asigna el plan_id global a cada nuevo UserDatos
                     $model->created_at = $fechaCreacion;
                     $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
-
-                    $guardo = $model->validate() && $model->save();
+                    $guardo = $model->save();
                     if ($guardo) {
                         $contrato->user_id = $model->id;
                         $contrato->save(false);
-
-                        // Generar y guardar el número de contrato igual que en el create
-                        if ($contrato->id && $model->id) {
-                            $anio_actual = date('Y');
-                            $contrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $contrato->id;
-                            $contrato->save(false);
-
-                            $model->contrato_id = $contrato->id;
-                            $model->save(false);
-                        }
-
+                        Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
                         $pass = 'sispsa' . $model->cedula;
                         $modelUser = new User();
                         $modelUser->username = $model->email;
@@ -801,6 +656,7 @@ class UserDatosController extends Controller
                         $modelUser->status = 1;
                         $guardadoUser = $modelUser->save();
                         if ($guardadoUser) {
+                            Yii::$app->session->setFlash('success', 'Usuario guardado correctamente.');
                             $auth = Yii::$app->authManager;
                             $roleName = 'afiliado';
                             $role = $auth->getRole($roleName);
@@ -815,66 +671,42 @@ class UserDatosController extends Controller
                                     Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
                                 }
                             } else {
-                                $allErrors[] = [
-                                    'row' => $rowNumber,
-                                    'errors' => $modelUser->getFirstErrors(),
-                                    'data' => $row
-                                ];
-                                continue;
+                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                                print_r($modelUser->getErrors());
+                                exit;
                             }
                         } else {
-                            $allErrors[] = [
-                                'row' => $rowNumber,
-                                'errors' => $modelUser->getFirstErrors(),
-                                'data' => $row
-                            ];
-                            continue;
+                            Yii::$app->session->setFlash('error', 'Error al guardar el usuario.');
+                            print_r($modelUser->getErrors());
+                            exit;
                         }
                     } else {
-                        $allErrors[] = [
-                            'row' => $rowNumber,
-                            'errors' => $model->getFirstErrors(),
-                            'data' => $row
-                        ];
-                        continue;
+                        Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
+                        print_r($model->getErrors());
+                        exit;
                     }
                 }
-
-                if (!empty($allErrors)) {
-                    $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
-                    Yii::$app->session->setFlash('error', $validationReport);
-                    if (file_exists($filePath)) {
-                        unlink($filePath);
-                    }
-                    return $this->render('masivo', [
-                        'model' => $model,
-                        'modelContrato' => $modelContrato,
-                    ]);
-                }
-
                 Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
                 return $this->redirect(['index']);
             } catch (Exception $e) {
                 Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
                 Yii::$app->session->setFlash('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
+                // Asegúrate de eliminar el archivo subido si hubo un error al leerlo
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
-                return $this->render('masivo', [
-                    'model' => $model,
-                    'modelContrato' => $modelContrato,
-                ]);
-            } catch (\Exception $e) {
+            } catch (\Exception $e) { // Captura otras excepciones generales
                 Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
                 Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
-                return $this->render('masivo', [
-                    'model' => $model,
-                    'modelContrato' => $modelContrato,
-                ]);
             }
+
+            return $this->render('masivo', [
+                'model' => $model,
+                'modelContrato' => $modelContrato,
+            ]);
         }
 
         return $this->render('masivo', [
@@ -2010,6 +1842,246 @@ class UserDatosController extends Controller
 
         return Json::encode($data);
     }
+
+    /**
+     * Search affiliates for dependent assignment
+     */
+
+    public function actionSearchAfiliados()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $q = Yii::$app->request->get('q');
+        $current_user = Yii::$app->request->get('current_user', 0);
+
+        Yii::info("Searching affiliates: q={$q}, current_user={$current_user}", 'dependientes');
+
+        $query = UserDatos::find()
+            ->select([
+                'id',
+                'nombres',
+                'apellidos',
+                'cedula',
+                'email',
+                'telefono',
+                'tipo_cedula',
+                'CONCAT(nombres, \' \', apellidos) as nombre_completo'
+            ])
+            ->where(['role' => 'afiliado']);
+
+        if ($current_user) {
+            $query->andWhere(['!=', 'id', $current_user]);
+
+            // Also exclude users who are already dependents of someone else
+            $existingDependientes = Dependientes::find()
+                ->select(['dependiente_id'])
+                ->where(['activo' => true])
+                ->column();
+
+            if (!empty($existingDependientes)) {
+                $query->andWhere(['not in', 'id', $existingDependientes]);
+            }
+        }
+
+        if ($q) {
+            // For PostgreSQL, we need to cast cedula to text before using ILIKE
+            $query->andWhere([
+                'or',
+                ['ilike', 'nombres', $q],
+                ['ilike', 'apellidos', $q],
+                ['ilike', 'CAST(cedula AS TEXT)', $q], // Cast cedula to text
+                ['ilike', 'email', $q],
+                ['ilike', 'CONCAT(nombres, \' \', apellidos)', $q]
+            ]);
+        }
+
+        $afiliados = $query->limit(20)->all();
+
+        $results = [];
+        foreach ($afiliados as $afiliado) {
+            // Handle null/empty tipo_cedula
+            $tipoCedula = !empty($afiliado->tipo_cedula) ? $afiliado->tipo_cedula : '';
+            $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $afiliado->cedula : (string)$afiliado->cedula;
+
+            $results[] = [
+                'id' => $afiliado->id,
+                'text' => $afiliado->nombres . ' ' . $afiliado->apellidos . ' (' . $cedulaCompleta . ')',
+                'nombre_completo' => $afiliado->nombres . ' ' . $afiliado->apellidos,
+                'cedula' => $cedulaCompleta,
+                'email' => $afiliado->email,
+                'telefono' => $afiliado->telefono,
+            ];
+        }
+
+        Yii::info("Search found " . count($results) . " results", 'dependientes');
+
+        return ['results' => $results];
+    }
+
+    /**
+     * Get affiliate details
+     */
+    public function actionGetAfiliadoDetails($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $afiliado = UserDatos::findOne($id);
+
+        if (!$afiliado) {
+            return ['success' => false, 'message' => 'Afiliado no encontrado'];
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'id' => $afiliado->id,
+                'nombre_completo' => $afiliado->nombres . ' ' . $afiliado->apellidos,
+                'cedula' => $afiliado->tipo_cedula . '-' . $afiliado->cedula,
+                'email' => $afiliado->email,
+                'telefono' => $afiliado->telefono,
+            ]
+        ];
+    }
+
+    /**
+     * Get dependents for a titular
+     */
+    public function actionGetDependientes($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $dependientes = Dependientes::find()
+            ->with('dependiente')
+            ->where(['titular_id' => $id, 'activo' => true])
+            ->all();
+
+        $data = [];
+        foreach ($dependientes as $dep) {
+            $data[] = [
+                'id' => $dep->id,
+                'dependiente_id' => $dep->dependiente_id,
+                'nombre_completo' => $dep->dependiente->nombres . ' ' . $dep->dependiente->apellidos,
+                'cedula' => $dep->dependiente->tipo_cedula . '-' . $dep->dependiente->cedula,
+                'email' => $dep->dependiente->email,
+                'telefono' => $dep->dependiente->telefono,
+                'parentesco' => $dep->parentesco,
+                'porcentaje_pago' => $dep->porcentaje_pago,
+                'activo' => $dep->activo,
+            ];
+        }
+
+        return ['success' => true, 'data' => $data];
+    }
+
+    /**
+     * Get payment summary for titular and dependents
+     */
+    public function actionGetPaymentSummary($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $pendingPayments = Dependientes::getPendingPaymentsForTitular($id);
+
+        $summary = [
+            'total_dependientes' => count(Dependientes::getDependientesForTitular($id)),
+            'cuotas_titular' => 0,
+            'cuotas_dependientes' => 0,
+            'monto_total' => 0,
+        ];
+
+        foreach ($pendingPayments as $payment) {
+            if ($payment['type'] === 'titular') {
+                $summary['cuotas_titular']++;
+            } else {
+                $summary['cuotas_dependientes']++;
+            }
+            $summary['monto_total'] += $payment['monto'];
+        }
+
+        return ['success' => true, 'data' => $summary];
+    }
+    public function actionCheckDependientes($id)
+    {
+        $dependientesCount = \app\models\Dependientes::find()
+            ->where(['titular_id' => $id])
+            ->andWhere(['activo' => 1])
+            ->count();
+
+        return $this->asJson([
+            'has_dependientes' => $dependientesCount > 0,
+            'count' => $dependientesCount
+        ]);
+    }
+    /**
+     * Test action to debug search
+     */
+    public function actionTestSearch($q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // Test the query directly
+        $query = UserDatos::find()
+            ->select(['id', 'nombres', 'apellidos', 'cedula', 'tipo_cedula'])
+            ->where(['role' => 'afiliado'])
+            ->andWhere(['estatus' => 'Registrado'])
+            ->limit(5);
+
+        if ($q) {
+            $query->andWhere([
+                'or',
+                ['ilike', 'nombres', $q],
+                ['ilike', 'apellidos', $q],
+                ['ilike', 'CAST(cedula AS TEXT)', $q],
+            ]);
+        }
+
+        $results = $query->all();
+
+        $data = [];
+        foreach ($results as $result) {
+            $tipoCedula = !empty($result->tipo_cedula) ? $result->tipo_cedula : '';
+            $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $result->cedula : (string)$result->cedula;
+
+            $data[] = [
+                'id' => $result->id,
+                'nombre' => $result->nombres . ' ' . $result->apellidos,
+                'cedula' => $cedulaCompleta,
+                'tipo_cedula' => $result->tipo_cedula,
+                'cedula_num' => $result->cedula,
+            ];
+        }
+
+        Yii::info("Test search results: " . print_r($data, true), 'dependientes');
+        Yii::info("SQL: " . $query->createCommand()->getRawSql(), 'dependientes');
+
+        return ['success' => true, 'data' => $data];
+    }
+
+    /*public function actionClinicasJson()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $type = Yii::$app->request->get('type');
+        $corporativo_id = Yii::$app->request->get('corporativo');
+
+        if ($type == 2 && $corporativo_id) {
+            $clinicas = RmClinica::find()
+                ->select(['rm_clinica.id', 'rm_clinica.nombre'])
+                ->innerJoin('corporativo_clinica', 'rm_clinica.id = corporativo_clinica.clinica_id')
+                ->where(['corporativo_clinica.corporativo_id' => $corporativo_id])
+                ->asArray()
+                ->all();
+        } else {
+            $clinicas = RmClinica::find()
+                ->select(['id', 'nombre'])
+                ->asArray()
+                ->all();
+        }
+
+        $data = ArrayHelper::map($clinicas, 'id', 'nombre');
+
+        return Json::encode($data);
+    }*/
 
     // REPORT ACTIONS - Only these should be at the end
 
