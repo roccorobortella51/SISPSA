@@ -4,6 +4,14 @@ use yii\helpers\Html;
 
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
+/** @var app\models\Contratos $modelContrato */
+/** @var app\models\Contratos[] $contratos */
+
+// Check if modelContrato is set, if not create a new one
+if (!isset($modelContrato)) {
+    $modelContrato = new \app\models\Contratos();
+    $modelContrato->user_id = $model->id;
+}
 
 // Get the affiliate's full name and formatted cedula
 $fullName = Html::encode(trim($model->nombres . ' ' . $model->apellidos));
@@ -70,6 +78,8 @@ $this->params['breadcrumbs'][] = 'Actualizar';
             <?= $this->render('_form', [
                 'model' => $model,
                 'modelContrato' => $modelContrato,
+                'contratos' => isset($contratos) ? $contratos : [],
+                'contratosCount' => isset($contratosCount) ? $contratosCount : 0, // ADD THIS LINE
             ]) ?>
         </div>
     </div>

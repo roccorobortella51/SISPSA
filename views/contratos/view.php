@@ -133,7 +133,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <div class="detail-item-card p-4 border rounded-3 bg-light shadow-sm h-100">
                         <strong class="text-primary d-block mb-1">PDF:</strong>
-                        <p class="mb-0 fs-5"><?= Html::encode($model->PDF ? $model->PDF : 'N/A') ?></p>
+                        <p class="mb-0 fs-5"><?= Html::encode($model->pdf ? $model->pdf : 'N/A') ?></p>
                     </div>
                 </div>
             </div>

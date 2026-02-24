@@ -781,7 +781,8 @@ class UserHelper
             "CONTROL DE CITAS",
             "ADMISIÓN",
             "ATENCIÓN",
-            "COORDINADOR-CLINICA"
+            "COORDINADOR-CLINICA",
+            "GERENTE-CLINICA"
         ];
 
         $rol = self::getMyRol();

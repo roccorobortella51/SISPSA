@@ -116,14 +116,13 @@ class PagosController extends Controller
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return string|\yii\web\Response
      */
-
-    public function actionCreate($user_id = null)
+    public function actionCreate($user_id = null, $contrato_id = null)
     {
         // CORRECCIÓN: Usar método privado en lugar de llamar a la acción
         $tasa_completa = $this->getTasaCambio();
 
         $model = new Pagos();
-        $model->scenario = 'create'; // ADD THIS LINE to use the 'create' scenario
+        $model->scenario = 'create'; // Use the 'create' scenario
 
         $model->tasa = number_format($tasa_completa, 2, '.', '');
         $model->user_id = $user_id;
@@ -136,6 +135,7 @@ class PagosController extends Controller
         // --- ADD DEBUG LOGGING ---
         Yii::info("=== PAGOS CREATE ACTION STARTED ===");
         Yii::info("User ID: " . $user_id);
+        Yii::info("Contrato ID: " . $contrato_id);
         Yii::info("Request method: " . Yii::$app->request->method);
         Yii::info("Model scenario: " . $model->scenario);
         // --- END DEBUG ---
@@ -143,6 +143,7 @@ class PagosController extends Controller
         // --- ADD CONTRACT CONTEXT LOGIC ---
         $contratoActivo = null;
         $contratosInfo = [];
+        $selectedContrato = null;  // Variable for selected contract
 
         if ($user_id) {
             // Find ALL active/valid contracts for this user
@@ -173,6 +174,12 @@ class PagosController extends Controller
                 ) {
                     $contratoActivo = $contrato;
                 }
+
+                // STEP 3: Get selected contract details if contract_id is provided
+                if ($contrato_id && $contrato->id == $contrato_id) {
+                    $selectedContrato = $contrato;
+                    Yii::info("Selected contract found: ID {$contrato->id}, Nro: {$contrato->nrocontrato}");
+                }
             }
 
             // If no contract is currently active, use the most recent one
@@ -182,9 +189,25 @@ class PagosController extends Controller
         }
         // --- END CONTRACT CONTEXT LOGIC ---
 
-        // Use the new method to get pending cuotas
-        $cuotas = Cuotas::getPendingCuotasForUser($user_id);
+        // --- MODIFIED: Get cuotas based on selected contract or all contracts ---
+        if ($contrato_id) {
+            // CONTRACT-SPECIFIC: Only show pending cuotas from the selected contract
+            Yii::info("Filtering cuotas for specific contract ID: " . $contrato_id);
+            $cuotas = Cuotas::find()
+                ->where(['contrato_id' => $contrato_id])
+                ->andWhere(['estatus' => 'pendiente'])
+                ->orderBy(['fecha_vencimiento' => SORT_ASC])
+                ->all();
 
+            Yii::info("Found " . count($cuotas) . " pending cuotas for contract ID: " . $contrato_id);
+        } else {
+            // FALLBACK: Show pending cuotas from all non-annulled contracts (original behavior)
+            Yii::info("No contract ID provided, showing cuotas from all contracts");
+            $cuotas = Cuotas::getPendingCuotasForUser($user_id);
+        }
+        // --- END MODIFICATION ---
+
+        // Calculate total from displayed cuotas
         $total = 0;
         foreach ($cuotas as $cuota) {
             // Use monto_usd if available, otherwise fall back to monto
@@ -222,6 +245,8 @@ class PagosController extends Controller
                         return $this->render('create', [
                             'model' => $model,
                             'user_id' => $user_id,
+                            'contrato_id' => $contrato_id,
+                            'selectedContrato' => $selectedContrato,  // ← Pass to view
                             'cuotas' => $cuotas,
                             'modelCuotas' => $modelCuotas,
                             'total' => $total,
@@ -275,6 +300,8 @@ class PagosController extends Controller
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $user_id,
+                        'contrato_id' => $contrato_id,
+                        'selectedContrato' => $selectedContrato,  // ← Pass to view
                         'cuotas' => $cuotas,
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
@@ -302,6 +329,8 @@ class PagosController extends Controller
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $user_id,
+                        'contrato_id' => $contrato_id,
+                        'selectedContrato' => $selectedContrato,  // ← Pass to view
                         'cuotas' => $cuotas,
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
@@ -317,6 +346,8 @@ class PagosController extends Controller
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $user_id,
+                        'contrato_id' => $contrato_id,
+                        'selectedContrato' => $selectedContrato,  // ← Pass to view
                         'cuotas' => $cuotas,
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
@@ -336,6 +367,8 @@ class PagosController extends Controller
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $user_id,
+                        'contrato_id' => $contrato_id,
+                        'selectedContrato' => $selectedContrato,  // ← Pass to view
                         'cuotas' => $cuotas,
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
@@ -385,6 +418,8 @@ class PagosController extends Controller
                     return $this->render('create', [
                         'model' => $model,
                         'user_id' => $user_id,
+                        'contrato_id' => $contrato_id,
+                        'selectedContrato' => $selectedContrato,  // ← Pass to view
                         'cuotas' => $cuotas,
                         'modelCuotas' => $modelCuotas,
                         'total' => $total,
@@ -401,14 +436,22 @@ class PagosController extends Controller
             $model->loadDefaultValues();
         }
 
+        // STEP 3 (Alternative): If selectedContrato wasn't set in the loop above, try to find it here
+        if (!$selectedContrato && $contrato_id) {
+            $selectedContrato = Contratos::findOne($contrato_id);
+            Yii::info("Selected contract loaded separately: " . ($selectedContrato ? $selectedContrato->id : 'not found'));
+        }
+
         return $this->render('create', [
             'model' => $model,
             'user_id' => $user_id,
+            'contrato_id' => $contrato_id,
+            'selectedContrato' => $selectedContrato,  // ← Pass contract details to view
             'cuotas' => $cuotas,
             'modelCuotas' => $modelCuotas,
             'total' => $total,
-            'contratoActivo' => $contratoActivo, // Pass contract info to view
-            'contratosInfo' => $contratosInfo,   // Pass all contracts info
+            'contratoActivo' => $contratoActivo,
+            'contratosInfo' => $contratosInfo,
         ]);
     }
 
@@ -535,6 +578,8 @@ class PagosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
+    // In app/controllers/PagosController.php
+
     public function actionUpdatestatus()
     {
         \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -542,39 +587,73 @@ class PagosController extends Controller
         $id = \Yii::$app->request->post('id');
         $status = \Yii::$app->request->post('status');
 
-        \Yii::info('Datos recibidos - id: ' . $id . ', status: ' . $status);
-
-        if (empty($id) || $status === null) {
-            return ['success' => false, 'error' => 'Parámetros requeridos: id=' . $id . ', status=' . $status];
-        }
+        Yii::info("========== PAYMENT RECONCILIATION ==========", 'pagos');
+        Yii::info("Payment ID: {$id}, New Status: " . ($status == '1' ? 'Conciliado' : 'Por Conciliar'), 'pagos');
 
         $model = Pagos::findOne($id);
         if (!$model) {
+            Yii::error("Payment {$id} not found!", 'pagos');
             return ['success' => false, 'error' => 'Registro no encontrado'];
         }
 
+        // Only proceed if we're changing to Conciliado
+        $isBeingConciliated = ($status == '1' && $model->estatus != 'Conciliado');
+
+        $oldStatus = $model->estatus;
         $model->estatus = ($status == '1') ? 'Conciliado' : 'Por Conciliar';
         $model->updated_at = date('Y-m-d');
-        $model->fecha_conciliacion = date('Y-m-d');
-        $model->conciliador_id = Yii::$app->user->id;
+        $model->fecha_conciliacion = ($status == '1') ? date('Y-m-d') : null;
+        $model->conciliador_id = ($status == '1') ? Yii::$app->user->id : null;
 
         if ($model->save(false)) {
-            $user = UserDatos::findOne(['id' => $model->user_id]);
-            if ($user) {
-                $user->estatus_solvente = ($model->estatus == 'Conciliado') ? 'Si' : 'No';
-                $user->save(false);
+            Yii::info("Payment {$id} saved with status: {$model->estatus}", 'pagos');
 
-                if ($user->estatus_solvente == 'Si') {
-                    $contrato = Contratos::find()->where(['user_id' => $model->user_id])->one();
+            // ONLY update contracts if this payment was JUST reconciled
+            if ($isBeingConciliated) {
+                Yii::info("Payment was JUST reconciled - updating affected contracts", 'pagos');
+
+                // Get all contracts affected by this payment
+                $contratoIds = Cuotas::find()
+                    ->select('contrato_id')
+                    ->distinct()
+                    ->where(['id_pago' => $model->id])
+                    ->column();
+
+                Yii::info("Payment {$id} affects contracts: " . implode(', ', $contratoIds), 'pagos');
+
+                foreach ($contratoIds as $contratoId) {
+                    Yii::info("Calling updateStatus() for Contract #{$contratoId}", 'pagos');
+                    $contrato = Contratos::findOne($contratoId);
                     if ($contrato) {
-                        $contrato->estatus = 'Activo';
-                        $contrato->save(false);
+                        $oldContractStatus = $contrato->estatus;
+                        $result = $contrato->updateStatus();
+                        Yii::info("Contract #{$contratoId} update result: " . ($result ? 'true' : 'false') . ", Status changed from {$oldContractStatus} to {$contrato->estatus}", 'pagos');
+                    } else {
+                        Yii::error("Contract #{$contratoId} not found!", 'pagos');
                     }
                 }
+            } else {
+                Yii::info("Payment status changed but not to Conciliado - no contract updates needed", 'pagos');
             }
+
+            // Update user solvent status
+            $user = UserDatos::findOne(['id' => $model->user_id]);
+            if ($user) {
+                $hasPendingPayments = Pagos::find()
+                    ->where(['user_id' => $model->user_id, 'estatus' => 'Por Conciliar'])
+                    ->exists();
+
+                $oldSolventStatus = $user->estatus_solvente;
+                $user->estatus_solvente = $hasPendingPayments ? 'No' : 'Si';
+                $user->save(false);
+
+                Yii::info("User #{$model->user_id} solvent status changed from {$oldSolventStatus} to {$user->estatus_solvente}", 'pagos');
+            }
+
             return ['success' => true, 'new_status' => $model->estatus];
         }
 
+        Yii::error("Failed to save payment {$id}", 'pagos');
         return ['success' => false, 'error' => 'Error al guardar'];
     }
 

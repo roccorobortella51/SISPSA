@@ -4,11 +4,11 @@ use yii\helpers\Html;
 use kartik\form\ActiveForm;
 use kartik\select2\Select2;
 use yii\widgets\MaskedInput;
-use app\components\UserHelper; 
+use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
 use yii\helpers\Url;
 use yii\web\JsExpression;
-use kartik\depdrop\DepDrop; 
+use kartik\depdrop\DepDrop;
 
 // --- Calcula los IDs de los campos antes del bloque JS ---
 $firstEmailFieldId = Html::getInputId($model, 'username');
@@ -20,7 +20,7 @@ $tEmailFieldId = Html::getInputId($model2, 'email');
 $roleFieldId = Html::getInputId($model2, 'role');
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin'); 
+$permisos = ($rol == 'superadmin');
 ?>
 
 <div class="user-form">
@@ -45,22 +45,22 @@ $permisos = ($rol == 'superadmin');
             ]) ?>
         </div>
 
-   
+
         <div class="col-md-4">
             <?= $form->field($model2, 'role')->label('ROL DEL USUARIO')->widget(Select2::classname(), [
-                    'data' => UserHelper::getRolesAllRoles(), 
-                    'options' => [
-                        'placeholder' => 'Seleccione un rol...',
-                        'class' => 'form-control form-control-lg',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => false,
-                    ],
+                'data' => UserHelper::getRolesAllRoles(),
+                'options' => [
+                    'placeholder' => 'Seleccione un rol...',
+                    'class' => 'form-control form-control-lg',
+                ],
+                'pluginOptions' => [
+                    'allowClear' => false,
+                ],
             ]);
             ?>
         </div>
         <div style="display:none">
-           <?= $form->field($model, 'email')->label('CORREO ELECTRÓNICO (Usuario)')->textInput([
+            <?= $form->field($model, 'email')->label('CORREO ELECTRÓNICO (Usuario)')->textInput([
                 'maxlength' => true,
                 'class' => 'form-control form-control-lg',
                 'placeholder' => 'Ej: correo@ejemplo.com',
@@ -69,23 +69,23 @@ $permisos = ($rol == 'superadmin');
             ]) ?>
         </div>
 
-        <?php if($permisos){?>
+        <?php if ($permisos) { ?>
             <div class="col-md-4" id="clinica_field_container" style="display:none;">
-                        <?= $form->field($model2, 'clinica_id')->widget(Select2::classname(), [
-                                'data' => UserHelper::getClinicasList(),
-                                'options' => [
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control  form-control-lg',
-                                    'id' => 'clinica_id'
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => false,
-                                ],
-                            ])->label('Clinica'); ?>
+                <?= $form->field($model2, 'clinica_id')->widget(Select2::classname(), [
+                    'data' => UserHelper::getClinicasList(),
+                    'options' => [
+                        'placeholder' => 'Seleccione',
+                        'class' => 'form-control  form-control-lg',
+                        'id' => 'clinica_id'
+                    ],
+                    'pluginOptions' => [
+                        'allowClear' => false,
+                    ],
+                ])->label('Clinica'); ?>
             </div>
-        <?php }?>
+        <?php } ?>
         <div class="col-md-4 d-flex align-items-center mt-3">
-             <?= $form->field($model, 'status')->label('ESTATUS', ['class' => 'me-3'])->widget(SwitchInput::classname(), [
+            <?= $form->field($model, 'status')->label('ESTATUS', ['class' => 'me-3'])->widget(SwitchInput::classname(), [
                 'options' => [
                     'label' => false,
                 ],
@@ -101,23 +101,23 @@ $permisos = ($rol == 'superadmin');
             ]); ?>
         </div>
 
-        
+
     </div>
-    
-              
+
+
 
     <br>
     <hr>
     <h3 class="mb-4">Datos Personales del Usuario</h3>
     <div class="row">
         <div class="col-md-6">
-            <?= $form->field($model2, 'nombres')->textInput([ 
+            <?= $form->field($model2, 'nombres')->textInput([
                 'class' => 'form-control form-control-lg',
                 'placeholder' => 'Ingrese sus nombres completos',
             ])->label('NOMBRES') ?>
         </div>
         <div class="col-md-6">
-            <?= $form->field($model2, 'apellidos')->textInput([ 
+            <?= $form->field($model2, 'apellidos')->textInput([
                 'class' => 'form-control form-control-lg',
                 'placeholder' => 'Ingrese sus apellidos completos',
             ])->label('APELLIDOS') ?>
@@ -179,7 +179,7 @@ $permisos = ($rol == 'superadmin');
                 'class' => 'form-control form-control-lg',
                 'type' => 'email',
                 'placeholder' => 'Ej: personal@dominio.com',
-                'readonly' => true 
+                'readonly' => true
             ])->label("CORREO ELECTRÓNICO") ?>
         </div>
         <div class="col-md-4">
@@ -218,7 +218,7 @@ $permisos = ($rol == 'superadmin');
                 ],
                 'pluginOptions' => [
                     'depends' => ['estado_id'],
-                    'url' => Url::to(['/site/municipio']), 
+                    'url' => Url::to(['/site/municipio']),
                     'initialize' => true,
                 ]
             ]);
@@ -234,7 +234,7 @@ $permisos = ($rol == 'superadmin');
                 ],
                 'pluginOptions' => [
                     'depends' => ['municipio_id'],
-                    'url' => Url::to(['/site/parroquia']), 
+                    'url' => Url::to(['/site/parroquia']),
                     // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
                 ]
             ]);
@@ -249,8 +249,8 @@ $permisos = ($rol == 'superadmin');
                     'class' => 'form-control  form-control-lg',
                 ],
                 'pluginOptions' => [
-                    'depends' => ['estado_id'], 
-                    'url' => Url::to(['/site/ciudad']), 
+                    'depends' => ['estado_id'],
+                    'url' => Url::to(['/site/ciudad']),
                     'initialize' => true,
                 ]
             ]);  ?>
@@ -271,7 +271,9 @@ $permisos = ($rol == 'superadmin');
 
         <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-primary btn-lg']); ?>
 
-        <?php if ($model->isNewRecord) { echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']); } ?>
+        <?php if ($model->isNewRecord) {
+            echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']);
+        } ?>
     </div>
 
     <?php ActiveForm::end(); ?>
@@ -319,6 +321,7 @@ function toggleClinicaByRole() {
     var allowed = [
         'COORDINADOR-CLINICA',
         'ADMISIÓN',
+        'GERENTE-CLINICA',
         'CONTROL DE CITAS',
         'ATENCIÓN',
         'Administrador-clinica',

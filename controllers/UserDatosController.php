@@ -1054,12 +1054,33 @@ class UserDatosController extends Controller
             }
         }
 
-        // Try to find existing contract by user_id
-        $modelContrato = Contratos::find()->where(['user_id' => $id])->one();
+        // ============================================
+        // FIX: Get ONLY non-annulled contracts
+        // ============================================
+        // Try to find existing NON-ANULLED contract by user_id
+        $modelContrato = Contratos::find()
+            ->where(['user_id' => $id])
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO]) // Exclude annulled contracts
+            ->orderBy(['fecha_ini' => SORT_DESC]) // Get the most recent first
+            ->one();
+
         $isNewContract = false;
 
         if ($modelContrato === null) {
-            // No contract exists for this user
+            // No active contract exists for this user
+            // Check if there ARE contracts but all are annulled
+            $hasAnnulledContracts = Contratos::find()
+                ->where(['user_id' => $id])
+                ->andWhere(['estatus' => Contratos::STATUS_ANULADO])
+                ->exists();
+
+            if ($hasAnnulledContracts) {
+                Yii::info("Usuario {$id} tiene contratos pero todos están anulados", __METHOD__);
+                // Optionally add a flash message to inform the user
+                Yii::$app->session->addFlash('info', 'Este afiliado tiene contratos, pero todos están anulados. Se creará un nuevo contrato.');
+            }
+
+            // No active contract exists, create a new one
             $modelContrato = new Contratos();
             $isNewContract = true;
 
@@ -1068,8 +1089,9 @@ class UserDatosController extends Controller
             $modelContrato->fecha_ven = date('Y-m-d', strtotime('+1 year'));
             $modelContrato->estatus = 'Creado';
         } else {
-            // We found a contract by user_id, update the model's contrato_id
+            // We found an active contract by user_id, update the model's contrato_id
             $model->contrato_id = $modelContrato->id;
+            Yii::info("Contrato activo encontrado para usuario {$id}: ID {$modelContrato->id} con estatus '{$modelContrato->estatus}'", __METHOD__);
         }
 
         // Almacenamos el estado anterior

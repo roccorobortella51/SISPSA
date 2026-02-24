@@ -517,7 +517,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
 
     <!-- ===== SECTION 4: SELECCIÓN DE SERVICIOS MÉDICOS ===== -->
     <?php
-    // This PHP code block is EXACTLY the same as before
     // Initialize variables
     $baremosTotales = [];
     $baremosHtml = [];
@@ -529,6 +528,9 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
     $baremosConPlazoCumplido = [];
     $baremosPendientesPlazo = [];
     $baremosAgotados = [];
+
+    // NEW: Array for available services info
+    $baremosDisponiblesInfo = [];
 
     // Calculate baremos data
     if ($contrato && $contrato->estatus === 'Activo') {
@@ -548,20 +550,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 ['>', 'planes_items_cobertura.cantidad_limite', 0]
             ]);
         } else {
-            // Modo Siniestro: Mostrar solo servicios SIN restricciones
-
-            $query->andWhere(['planes_items_cobertura.plazo_espera' => 0]);
-            /*$query->andWhere([
-            'and',
-            ['or',
-                ['planes_items_cobertura.plazo_espera' => null],
-                ['planes_items_cobertura.plazo_espera' => 0]
-            ],
-            ['or',
-                ['planes_items_cobertura.cantidad_limite' => null],
-                ['planes_items_cobertura.cantidad_limite' => 0]
-            ]
-        ]);*/
+            // MODIFICACIÓN: Modo Siniestro - INCLUIR TODOS los servicios sin filtrar
         }
 
         $planesItemsCobertura = $query->all();
@@ -606,19 +595,19 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
 
                 // Count usage differently based on mode
-                $vecesUsado = \app\models\SisSiniestroBaremo::find()
+                $queryCount = \app\models\SisSiniestroBaremo::find()
                     ->joinWith('siniestro')
                     ->where(['baremo_id' => $item->baremo_id])
                     ->andWhere(['iduser' => $afiliado->id]);
 
                 // For Siniestro mode, only count actual siniestros (not citas)
                 if (!$esCitaMode) {
-                    $vecesUsado->andWhere(['sis_siniestro.es_cita' => 0]);
+                    $queryCount->andWhere(['sis_siniestro.es_cita' => 0]);
                 }
 
-                $vecesUsado = $vecesUsado->count();
+                $vecesUsado = $queryCount->count();
 
-                // Verificar si excede el límite (solo si tiene límite definido)
+                // Verificar si excede el límite (siempre verificar, incluso si cantidad_limite = 0)
                 $excedeLimite = false;
                 if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
                     // Si tiene un límite positivo, verificamos si se alcanzó
@@ -630,183 +619,107 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 // Verificar si este baremo está entre los seleccionados (solo para update)
                 $esBaremoGuardado = !$model->isNewRecord && in_array($item->baremo_id, $selectedBaremos);
 
-                // If item exceeds limit and is NOT a previously saved item (historico)
-                if ($excedeLimite && !$esBaremoGuardado) {
-                    // Add to agotados array for tracking
+                // Lógica de plazo de espera
+                if ($contrato) {
+                    $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+
+                    // Lógica de plazo de espera
+                    if ($hasPlazoEver) {
+                        $diff = $fechaContratoIni->diff($fechaActual);
+                        $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                        $plazoRequerido = (int)$item->plazo_espera;
+
+                        if ($mesesTranscurridos < $plazoRequerido) {
+                            $isRestrictedByPlazo = true; // Plazo PENDIENTE
+                        }
+                    }
+                }
+
+                // MODO SINIESTRO MODIFICADO: Clasificar servicios según su estado real
+
+                // Determinar si el servicio debe incluirse en el dropdown (para selección)
+                $debeIncluirse = true;
+
+                // CLASIFICACIÓN POR ESTADO
+                if ($excedeLimite) {
+                    // Servicio AGOTADO - ha alcanzado su límite de uso
                     $baremosAgotados[$item->baremo_id] = $textoPlano;
-                    $baremosInfo[$item->baremo_id] = [
+                    $baremosInfo[$item->baremo_id]['es_agotado'] = true;
+
+                    // Si NO es un servicio guardado históricamente, no debe ser seleccionable
+                    if (!$esBaremoGuardado) {
+                        $debeIncluirse = false;
+                    }
+                } elseif ($isRestrictedByPlazo) {
+                    // Servicio RESTRINGIDO - aún en período de espera
+                    $baremosPendientesPlazo[$item->baremo_id] = $textoPlano;
+                    $baremosRestringidosIDs[] = $item->baremo_id;
+                    $baremosInfo[$item->baremo_id]['is_restricted_by_plazo'] = true;
+
+                    // Calcular tiempo restante para mostrar
+                    if ($contrato) {
+                        $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+                        $plazoRequerido = (int)$item->plazo_espera;
+                        $fechaTarget = clone $fechaContratoIni;
+                        $fechaTarget->modify("+{$plazoRequerido} months");
+                        $diff = $fechaActual->diff($fechaTarget);
+
+                        $mesesRestantes = ($diff->y * 12) + $diff->m;
+                        $diasRestantes = $diff->d;
+
+                        // Guardar información de tiempo restante
+                        $baremosInfo[$item->baremo_id]['remaining_months'] = $mesesRestantes;
+                        $baremosInfo[$item->baremo_id]['remaining_days'] = $diasRestantes;
+
+                        // Build text representation
+                        if ($mesesRestantes > 0 && $diasRestantes > 0) {
+                            $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "") .
+                                " y " . $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
+                        } elseif ($mesesRestantes > 0) {
+                            $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "");
+                        } elseif ($diasRestantes > 0) {
+                            $tiempoRestanteTexto = $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
+                        } else {
+                            $tiempoRestanteTexto = "Próximamente";
+                        }
+                        $baremosInfo[$item->baremo_id]['remaining_text'] = $tiempoRestanteTexto;
+                    }
+
+                    // Si NO es un servicio guardado históricamente, no debe ser seleccionable
+                    if (!$esBaremoGuardado) {
+                        $debeIncluirse = false;
+                    }
+                } else {
+                    // Servicio DISPONIBLE - cumple todos los criterios
+                    $baremosSinPlazo[$item->baremo_id] = $textoPlano;
+
+                    // NEW: Add to disponibles info array
+                    $baremosDisponiblesInfo[$item->baremo_id] = [
                         'nombre' => $servicio,
                         'area' => $area,
                         'descripcion' => $descripcion,
-                        'plazo_espera' => $item->plazo_espera,
-                        'cantidad_limite' => $item->cantidad_limite,
-                        'veces_usado' => $vecesUsado,
                         'precio' => $precioBaremo,
-                        'is_restricted_by_plazo' => $isRestrictedByPlazo,
-                        'has_plazo_ever' => $hasPlazoEver,
-                        'excede_limite' => $excedeLimite,
-                        'es_historico' => $esBaremoGuardado,
-                        'es_agotado' => true,
+                        'cantidad_limite' => (int)$item->cantidad_limite,
+                        'veces_usado' => (int)$vecesUsado,
+                        'disponibles' => $item->cantidad_limite > 0 ? $item->cantidad_limite - $vecesUsado : 'Ilimitado',
                     ];
-
-                    // Skip further processing for agotados (they won't be selectable)
-                    continue;
                 }
 
-                $debeIncluirse = true;
+                // Guardar información del servicio para el template HTML
+                $baremosInfo[$item->baremo_id] = array_merge($baremosInfo[$item->baremo_id] ?? [], [
+                    'nombre' => $servicio,
+                    'area' => $area,
+                    'descripcion' => $descripcion,
+                    'plazo_espera' => $item->plazo_espera,
+                    'cantidad_limite' => (int)$item->cantidad_limite,
+                    'veces_usado' => (int)$vecesUsado,
+                    'precio' => $precioBaremo,
+                    'has_plazo_ever' => $hasPlazoEver,
+                    'excede_limite' => $excedeLimite,
+                    'es_historico' => $esBaremoGuardado,
+                ]);
 
-                if ($esCitaMode) {
-                    // MODO CITA: Aplicar todas las restricciones
-
-                    if ($contrato) {
-                        $fechaContratoIni = new \DateTime($contrato->fecha_ini);
-
-                        // Lógica de plazo de espera
-                        if ($hasPlazoEver) {
-                            $diff = $fechaContratoIni->diff($fechaActual);
-                            $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                            $plazoRequerido = (int)$item->plazo_espera;
-
-                            if ($mesesTranscurridos < $plazoRequerido) {
-                                $isRestrictedByPlazo = true; // Plazo PENDIENTE
-                            }
-                        }
-                    }
-
-                    // Excluir baremos con plazo pendiente O que exceden el límite
-                    if (($isRestrictedByPlazo || $excedeLimite)) {
-                        if (!$esBaremoGuardado) {
-                            $debeIncluirse = false;
-                        }
-                    }
-                } else {
-                    // MODO SINIESTRO: Check BOTH plazo_espera AND cantidad_limite
-                    if ($contrato) {
-                        $fechaContratoIni = new \DateTime($contrato->fecha_ini);
-
-                        // Lógica de plazo de espera - APPLIES IN SINIESTRO TOO!
-                        if ($hasPlazoEver) {
-                            $diff = $fechaContratoIni->diff($fechaActual);
-                            $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                            $plazoRequerido = (int)$item->plazo_espera;
-
-                            if ($mesesTranscurridos < $plazoRequerido) {
-                                $isRestrictedByPlazo = true; // Plazo PENDIENTE
-                            }
-                        }
-                    }
-
-                    // Excluir baremos con plazo pendiente O que exceden el límite
-                    if (($isRestrictedByPlazo || $excedeLimite)) {
-                        if (!$esBaremoGuardado) {
-                            $debeIncluirse = false;
-                        }
-                    }
-
-                    // In Siniestro mode, include restricted items but mark them as not selectable
-                    if ($isRestrictedByPlazo) {
-                        // Track for the "Restringidos" badge count
-                        $baremosPendientesPlazo[$item->baremo_id] = $textoPlano;
-
-                        // Calculate remaining months
-                        $mesesRestantes = 0;
-                        $diasRestantes = 0;
-                        $tiempoRestanteTexto = '';
-
-                        if ($contrato) {
-                            $fechaContratoIni = new \DateTime($contrato->fecha_ini);
-                            $plazoRequerido = (int)$item->plazo_espera;
-
-                            // Calculate target date (contract start + required waiting period)
-                            $fechaTarget = clone $fechaContratoIni;
-                            $fechaTarget->modify("+{$plazoRequerido} months");
-
-                            // Calculate difference between now and target date
-                            $diff = $fechaActual->diff($fechaTarget);
-
-                            $mesesRestantes = ($diff->y * 12) + $diff->m;
-                            $diasRestantes = $diff->d;
-
-                            // Build text representation
-                            if ($mesesRestantes > 0 && $diasRestantes > 0) {
-                                $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "") .
-                                    " y " . $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
-                            } elseif ($mesesRestantes > 0) {
-                                $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "");
-                            } elseif ($diasRestantes > 0) {
-                                $tiempoRestanteTexto = $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
-                            } else {
-                                $tiempoRestanteTexto = "Próximamente";
-                            }
-                        }
-
-                        // Create a SIMPLE HTML version for restricted items
-                        $simpleHtml = "<div class='baremo-dropdown-option'>";
-                        $simpleHtml .= "<div class='baremo-first-row'>";
-                        $simpleHtml .= "<div class='baremo-content-main'>";
-                        $simpleHtml .= "<div class='baremo-area'>";
-                        $simpleHtml .= "<div class='baremo-area-label'>Área</div>";
-                        $simpleHtml .= "<div class='baremo-area-value'>" . $area . "</div>";
-                        $simpleHtml .= "</div>";
-                        $simpleHtml .= "<div class='baremo-servicio'>";
-                        $simpleHtml .= "<div class='baremo-servicio-label'>Servicio</div>";
-                        $simpleHtml .= "<div class='baremo-servicio-value'>" . $servicio . "</div>";
-                        $simpleHtml .= "</div>";
-                        $simpleHtml .= "<div class='baremo-descripcion'>";
-                        $simpleHtml .= "<div class='baremo-descripcion-label'>Descripción</div>";
-                        $simpleHtml .= "<div class='baremo-descripcion-value'>" . ($descripcion ?: 'Sin descripción') . "</div>";
-                        $simpleHtml .= "</div>";
-                        $simpleHtml .= "</div>"; // Close content-main
-
-                        // Add status badge
-                        $simpleHtml .= "<div class='baremo-status'>";
-                        $simpleHtml .= "<span class='restringido'>Restringido</span>";
-                        $simpleHtml .= "</div>";
-                        $simpleHtml .= "</div>"; // Close first-row
-
-                        // ROW 2: Price and Waiting Period
-                        $simpleHtml .= "<div class='baremo-second-row'>";
-                        $simpleHtml .= "<div class='baremo-price-container'>";
-                        $simpleHtml .= "<span class='baremo-price'>" . number_format($precioBaremo, 2) . "</span>";
-                        $simpleHtml .= "</div>";
-                        $simpleHtml .= "<div class='baremo-waiting-period'>";
-                        $simpleHtml .= "<i class='fas fa-clock me-1'></i>";
-                        $simpleHtml .= "<span>Disponible en " . $tiempoRestanteTexto . "</span>";
-                        $simpleHtml .= "</div>";
-                        $simpleHtml .= "</div>"; // Close second-row
-                        $simpleHtml .= "</div>"; // Close baremo-dropdown-option
-
-                        // Add to HTML for display (but they won't be selectable)
-                        $baremosHtml[$item->baremo_id] = $simpleHtml;
-                        $baremosRestringidosIDs[] = $item->baremo_id;
-
-                        // Add to info array with remaining months
-                        $baremosInfo[$item->baremo_id] = [
-                            'nombre' => $servicio,
-                            'area' => $area,
-                            'descripcion' => $descripcion,
-                            'plazo_espera' => $item->plazo_espera,
-                            'cantidad_limite' => $item->cantidad_limite,
-                            'veces_usado' => $vecesUsado,
-                            'precio' => $precioBaremo,
-                            'is_restricted_by_plazo' => $isRestrictedByPlazo,
-                            'has_plazo_ever' => $hasPlazoEver,
-                            'excede_limite' => $excedeLimite,
-                            'es_historico' => $esBaremoGuardado,
-                            'remaining_months' => $mesesRestantes,
-                            'remaining_days' => $diasRestantes,
-                            'remaining_text' => $tiempoRestanteTexto,
-                        ];
-
-                        // Don't include in selectable items array
-                        if (!$esBaremoGuardado) {
-                            continue; // Skip adding to selectable items arrays
-                        }
-                    }
-                }
-
-
-                // TEXT FOR DROPDOWN VALUE
+                // TEXT FOR DROPDOWN VALUE (recalculate in case it changed)
                 $textoPlano = $servicio . " (" . $area . ")";
                 if (!empty($descripcion)) {
                     $textoPlano .= " - " . $descripcion;
@@ -857,7 +770,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 $htmlFormateado .= "<div class='baremo-status'>";
                 if ($esBaremoGuardado && !$debeIncluirse) {
                     $htmlFormateado .= "<span class='historico'>Histórico</span>";
-                } elseif ($isRestrictedByPlazo && $esCitaMode) {
+                } elseif ($isRestrictedByPlazo) {
                     $htmlFormateado .= "<span class='restringido'>Restringido</span>";
                 } elseif ($excedeLimite) {
                     $htmlFormateado .= "<span class='agotado'>Agotado</span>";
@@ -872,59 +785,37 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 $htmlFormateado .= "<div class='baremo-price-container'>";
                 $htmlFormateado .= "<span class='baremo-price'>" . number_format($precioBaremo, 2) . "</span>";
                 $htmlFormateado .= "</div>";
-                $htmlFormateado .= "<div class='baremo-availability " . $availabilityClass . "'>" . $availabilityText . "</div>";
+
+                // For restricted items, show waiting period instead of availability
+                if ($isRestrictedByPlazo && isset($baremosInfo[$item->baremo_id]['remaining_text'])) {
+                    $htmlFormateado .= "<div class='baremo-waiting-period'>";
+                    $htmlFormateado .= "<i class='fas fa-clock me-1'></i>";
+                    $htmlFormateado .= "<span>Disponible en " . $baremosInfo[$item->baremo_id]['remaining_text'] . "</span>";
+                    $htmlFormateado .= "</div>";
+                } else {
+                    $htmlFormateado .= "<div class='baremo-availability " . $availabilityClass . "'>" . $availabilityText . "</div>";
+                }
                 $htmlFormateado .= "</div>"; // Close second-row
                 $htmlFormateado .= "</div>"; // Close baremo-dropdown-option
 
-                // Si es un baremo guardado que no cumple los filtros
-                if ($esBaremoGuardado && !$debeIncluirse) {
-                    $baremosForzados[$item->baremo_id] = $textoPlano;
+                // Si el servicio debe incluirse (es seleccionable O es histórico), agregar al HTML
+                if ($debeIncluirse || $esBaremoGuardado) {
                     $baremosHtml[$item->baremo_id] = $htmlFormateado;
-                    $debeIncluirse = true;
-                }
 
-                if (!$debeIncluirse) {
-                    continue;
-                }
-
-                // Clasificación según disponibilidad
-                if ($esBaremoGuardado && isset($baremosForzados[$item->baremo_id])) {
-                    // Ya se asignó en la sección de forzados
-                } elseif ($esCitaMode) {
-                    if (!$hasPlazoEver) {
-                        $baremosSinPlazo[$item->baremo_id] = $textoPlano;
-                        $baremosHtml[$item->baremo_id] = $htmlFormateado;
-                    } elseif ($isRestrictedByPlazo) {
-                        $baremosPendientesPlazo[$item->baremo_id] = $textoPlano;
-                        $baremosHtml[$item->baremo_id] = $htmlFormateado;
-                        $baremosRestringidosIDs[] = $item->baremo_id;
-                    } else {
-                        $baremosConPlazoCumplido[$item->baremo_id] = $textoPlano;
-                        $baremosHtml[$item->baremo_id] = $htmlFormateado;
+                    // Add to appropriate totals array for selection
+                    if (!$excedeLimite && !$isRestrictedByPlazo) {
+                        $baremosTotales[$item->baremo_id] = $textoPlano;
+                    } elseif ($esBaremoGuardado) {
+                        // For historical items that are no longer available, add to forzados
+                        $baremosForzados[$item->baremo_id] = $textoPlano;
+                        $baremosTotales[$item->baremo_id] = $textoPlano;
                     }
-                } else {
-                    // Modo Siniestro - los baremos disponibles van a $baremosSinPlazo
-                    $baremosSinPlazo[$item->baremo_id] = $textoPlano;
-                    $baremosHtml[$item->baremo_id] = $htmlFormateado;
                 }
-
-                $baremosInfo[$item->baremo_id] = [
-                    'nombre' => $servicio,
-                    'area' => $area,
-                    'descripcion' => $descripcion,
-                    'plazo_espera' => $item->plazo_espera,
-                    'cantidad_limite' => $item->cantidad_limite,
-                    'veces_usado' => $vecesUsado,
-                    'precio' => $precioBaremo,
-                    'is_restricted_by_plazo' => $isRestrictedByPlazo,
-                    'has_plazo_ever' => $hasPlazoEver,
-                    'excede_limite' => $excedeLimite,
-                    'es_historico' => $esBaremoGuardado,
-                ];
             }
         }
 
-        $baremosTotales = $baremosForzados + $baremosSinPlazo + $baremosConPlazoCumplido;
+        // Merge all selectable items
+        $baremosTotales = $baremosForzados + $baremosSinPlazo;
     }
     ?>
 
@@ -941,27 +832,23 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     </div>
                 </div>
                 <div class="section-badge-white d-flex flex-wrap gap-2 align-items-center">
-                    <span class="badge badge-pill stat-badge disponible"
+                    <!-- MODIFIED: Disponibles badge is now clickable -->
+                    <span class="badge badge-pill stat-badge disponible clickable-badge"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="<?= htmlspecialchars('Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo.', ENT_QUOTES) ?>">
+                        title="<?= htmlspecialchars('Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo. Click para ver detalles.', ENT_QUOTES) ?>">
                         <i class="fas fa-check-circle me-3"></i>
                         <?php
-                        $totalDisponibles = 0;
-                        if ($esCitaMode) {
-                            $totalDisponibles = count($baremosSinPlazo) + count($baremosConPlazoCumplido);
-                        } else {
-                            $totalDisponibles = count($baremosSinPlazo);
-                        }
+                        $totalDisponibles = count($baremosSinPlazo);
                         echo $totalDisponibles;
                         ?> Disponibles
                     </span>
 
                     <?php if (count($baremosPendientesPlazo) > 0): ?>
-                        <span class="badge badge-pill stat-badge restringido"
+                        <span class="badge badge-pill stat-badge restringido clickable-badge"
                             data-toggle="tooltip"
                             data-placement="top"
-                            title="<?= htmlspecialchars('Servicios con plazo de espera pendiente. ' . ($esCitaMode ? 'No disponibles en modo Cita.' : 'No disponibles en modo Siniestro.'), ENT_QUOTES) ?>">
+                            title="<?= htmlspecialchars('Servicios con plazo de espera pendiente. No disponibles para selección. Click para ver detalles.', ENT_QUOTES) ?>">
                             <i class="fas fa-clock me-3"></i>
                             <span>
                                 <?= count($baremosPendientesPlazo) ?> Restringidos
@@ -973,10 +860,10 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     $totalAgotados = count($baremosAgotados);
                     if ($totalAgotados > 0):
                     ?>
-                        <span class="badge badge-pill stat-badge agotado"
+                        <span class="badge badge-pill stat-badge agotado clickable-badge"
                             data-toggle="tooltip"
                             data-placement="top"
-                            title="<?= htmlspecialchars('Servicios que han alcanzado su límite máximo de usos. No disponibles para selección.', ENT_QUOTES) ?>">
+                            title="<?= htmlspecialchars('Servicios que han alcanzado su límite máximo de usos. No disponibles para selección. Click para ver detalles.', ENT_QUOTES) ?>">
                             <i class="fas fa-ban me-3"></i>
                             <span>
                                 <?= $totalAgotados ?> Agotados
@@ -1003,13 +890,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         <i class="fas fa-layer-group me-3"></i>
                         <span>
                             <?php
-                            $totalGeneral = count($baremosForzados) + $totalAgotados + count($baremosPendientesPlazo);
-
-                            if ($esCitaMode) {
-                                $totalGeneral += count($baremosSinPlazo) + count($baremosConPlazoCumplido);
-                            } else {
-                                $totalGeneral += count($baremosSinPlazo);
-                            }
+                            $totalGeneral = count($baremosForzados) + $totalAgotados + count($baremosPendientesPlazo) + count($baremosSinPlazo);
                             echo $totalGeneral;
                             ?> Total
                         </span>
@@ -1260,6 +1141,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     $baremosRestringidosJson = json_encode($baremosRestringidosIDs);
     $baremosPendientesPlazoJson = json_encode($baremosPendientesPlazo ?? []);
     $baremosAgotadosJson = json_encode($baremosAgotados ?? []);
+    $baremosDisponiblesInfoJson = json_encode($baremosDisponiblesInfo ?? []);
     $baremosPendientesInfoJson = json_encode(array_intersect_key($baremosInfo, $baremosPendientesPlazo));
     $baremosAgotadosInfoJson = json_encode(array_intersect_key($baremosInfo, $baremosAgotados));
 
@@ -1274,6 +1156,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     const baremosRestringidosIDs = {$baremosRestringidosJson};
     const baremosPendientesPlazo = {$baremosPendientesPlazoJson};
     const baremosAgotados = {$baremosAgotadosJson};
+    const baremosDisponiblesInfo = {$baremosDisponiblesInfoJson};
     const baremosPendientesInfo = {$baremosPendientesInfoJson};
     const baremosAgotadosInfo = {$baremosAgotadosInfoJson};
     
@@ -1281,6 +1164,103 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     const baremosSelect = \$('#baremos-select');
     const form = baremosSelect.closest('form');
     const citaWarning = \$('#cita-warning');
+    
+    // NEW: Function to show modal for available services
+    function showDisponiblesModal() {
+        const items = baremosDisponiblesInfo;
+        const count = Object.keys(items).length;
+        
+        if (count === 0) {
+            return;
+        }
+        
+        // Create modal HTML
+        let modalHtml = '<div class="restricted-agotados-modal-overlay">';
+        modalHtml += '<div class="restricted-agotados-modal">';
+        
+        // Header
+        modalHtml += '<div class="modal-header">';
+        modalHtml += '<div class="modal-icon"><i class="fas fa-check-circle" style="color: #28a745;"></i></div>';
+        modalHtml += '<h3 class="modal-title">Servicios Disponibles (' + count + ')</h3>';
+        modalHtml += '<button type="button" class="modal-close" id="close-details-modal">&times;</button>';
+        modalHtml += '</div>';
+        
+        // Content
+        modalHtml += '<div class="modal-content">';
+        
+        modalHtml += '<div class="modal-explanation">';
+        modalHtml += '<p><strong>¿Qué significa "Disponible"?</strong></p>';
+        modalHtml += '<p>Estos servicios cumplen todos los criterios y pueden ser seleccionados ahora mismo. Muestran el límite disponible y el precio.</p>';
+        modalHtml += '</div>';
+        
+        // Items table
+        modalHtml += '<div class="items-table-container">';
+        modalHtml += '<table class="items-table">';
+        modalHtml += '<thead>';
+        modalHtml += '<tr>';
+        modalHtml += '<th width="25%">Servicio</th>';
+        modalHtml += '<th width="20%">Área</th>';
+        modalHtml += '<th width="30%">Descripción</th>';
+        modalHtml += '<th width="15%">Disponibles</th>';
+        modalHtml += '<th width="10%">Precio</th>';
+        modalHtml += '</tr>';
+        modalHtml += '</thead>';
+        modalHtml += '<tbody>';
+        
+        // Add each item
+        Object.keys(items).forEach(function(baremoId) {
+            const item = items[baremoId];
+            if (!item) return;
+            
+            modalHtml += '<tr>';
+            modalHtml += '<td><strong>' + (item.nombre || 'Sin nombre') + '</strong></td>';
+            modalHtml += '<td>' + (item.area || 'Sin área') + '</td>';
+            modalHtml += '<td>' + (item.descripcion || 'Sin descripción') + '</td>';
+            modalHtml += '<td class="text-center"><span class="usage-badge" style="background-color: #28a745;">' + (item.disponibles || 'Ilimitado') + '</span></td>';
+            modalHtml += '<td class="text-end"><strong>$' + parseFloat(item.precio).toFixed(2) + '</strong></td>';
+            modalHtml += '</tr>';
+        });
+        
+        modalHtml += '</tbody>';
+        modalHtml += '</table>';
+        modalHtml += '</div>';
+        
+        // Footer
+        modalHtml += '<div class="modal-footer">';
+        modalHtml += '<button type="button" class="btn btn-secondary" id="close-details-modal-btn">';
+        modalHtml += '<i class="fas fa-times me-1"></i> Cerrar';
+        modalHtml += '</button>';
+        modalHtml += '</div>';
+        
+        modalHtml += '</div>';
+        modalHtml += '</div>';
+        modalHtml += '</div>';
+        
+        // Remove any existing modal
+        \$('.restricted-agotados-modal-overlay').remove();
+        
+        // Add to DOM
+        \$('body').append(modalHtml);
+        
+        // Add click handlers
+        \$('#close-details-modal, #close-details-modal-btn').off('click').on('click', function() {
+            \$('.restricted-agotados-modal-overlay').fadeOut(300, function() {
+                \$(this).remove();
+            });
+        });
+        
+        // Close when clicking outside
+        \$('.restricted-agotados-modal-overlay').off('click').on('click', function(e) {
+            if (\$(e.target).hasClass('restricted-agotados-modal-overlay')) {
+                \$(this).fadeOut(300, function() {
+                    \$(this).remove();
+                });
+            }
+        });
+        
+        // Show modal
+        \$('.restricted-agotados-modal-overlay').fadeIn(300);
+    }
     
     // Function to show detailed modal for restricted/agotados items
     function showRestrictedAgotadosModal(type) {
@@ -1361,8 +1341,8 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                 }
                 modalHtml += '<td class="text-center"><span class="time-badge">' + (remainingText || 'No disponible') + '</span></td>';
             } else {
-                const used = item.veces_usado || 0;
-                const limit = item.cantidad_limite || 0;
+                const used = parseInt(item.veces_usado) || 0;
+                const limit = parseInt(item.cantidad_limite) || 0;
                 modalHtml += '<td class="text-center"><span class="usage-badge">' + used + ' / ' + limit + '</span></td>';
             }
             
@@ -1573,6 +1553,13 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     
     // Event handlers setup
     function setupEventHandlers() {
+        // NEW: Make disponibles badge clickable
+        \$('.stat-badge.disponible').off('click').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showDisponiblesModal();
+        });
+        
         // Make restricted/agotados badges clickable
         \$('.stat-badge.restringido').off('click').on('click', function(e) {
             e.preventDefault();

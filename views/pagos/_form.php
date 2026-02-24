@@ -23,94 +23,138 @@ echo '<h4>Debug Info:</h4>';
 echo 'Model isNewRecord: ' . ($model->isNewRecord ? 'Yes' : 'No') . '<br>';
 echo 'Model scenario: ' . $model->scenario . '<br>';
 echo 'User ID: ' . $user_id . '<br>';
+echo 'Contrato ID: ' . (isset($contrato_id) ? $contrato_id : 'Not set') . '<br>';
 echo 'Cuotas count: ' . (is_array($cuotas) ? count($cuotas) : 0) . '<br>';
 echo '</div>';
+
+// ===== CONTRACT INFO ALERT - Shows which contract is being paid =====
+if (isset($contrato_id) && $contrato_id && isset($selectedContrato) && $selectedContrato): ?>
+    <div class="alert alert-info mb-4" style="font-size: 1.5rem; padding: 20px; border-left: 5px solid #17a2b8; background-color: #e8f4f8;">
+        <div class="d-flex align-items-center">
+            <div class="mr-4">
+                <i class="fas fa-file-contract fa-3x text-info"></i>
+            </div>
+            <div>
+                <h4 class="text-info mb-2" style="font-size: 2rem;">
+                    <i class="fas fa-chevron-right mr-2"></i>Registrando Pago para Contrato Específico
+                </h4>
+                <p class="mb-1" style="font-size: 1.6rem;">
+                    <strong>Contrato #<?= $selectedContrato->id ?></strong>
+                    <?php if ($selectedContrato->nrocontrato): ?>
+                        (N°: <?= Html::encode($selectedContrato->nrocontrato) ?>)
+                    <?php endif; ?>
+                </p>
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <strong>Período:</strong>
+                        <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:d/m/Y') ?>
+                        al <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ven, 'php:d/m/Y') ?>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Plan:</strong>
+                        <?= $selectedContrato->plan ? $selectedContrato->plan->nombre : 'N/A' ?>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Clínica:</strong>
+                        <?= $selectedContrato->clinica ? $selectedContrato->clinica->nombre : 'N/A' ?>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <span class="badge badge-info" style="font-size: 1.3rem; padding: 8px 15px;">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Mostrando solo cuotas pendientes de este contrato
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
+<?php
+
 
 // Main JavaScript for form functionality - BULLETPROOF VERSION
 $this->registerJs(
     <<<'JS'
-$(function() {
+    $(function() {
     console.log('Pagos form JavaScript loaded');
-    
+
     // Function to update Bs amount
     function updateMontoBs() {
-        var montoUsd = parseFloat($('#pagos-monto_pagado').val()) || 0;
-        var tasa = parseFloat($('#pagos-tasa').val()) || 0;
-        var montoBs = montoUsd * tasa; // Multiplication, not division
-        $('#pagos-monto_usd').val(montoBs.toFixed(4));
+    var montoUsd=parseFloat($('#pagos-monto_pagado').val()) || 0;
+    var tasa=parseFloat($('#pagos-tasa').val()) || 0;
+    var montoBs=montoUsd * tasa; // Multiplication, not division
+    $('#pagos-monto_usd').val(montoBs.toFixed(4));
     }
-    
+
     // Function to update field visibility
     function updateFieldsVisibility() {
-        var metodo = $('#pagos-metodo_pago').val();
-        var isCashDollar = (metodo === 'Efectivo - Dólar ($)');
-        
-        if (isCashDollar) {
-            // Hide fields for cash dollar
-            $('.field-pagos-numero_referencia_pago').hide();
-            $('.field-pagos-imagen_prueba_file').hide();
-            $('#comprobante-title').hide();
-            
-            // Clear the values so they don't fail validation
-            $('#pagos-numero_referencia_pago').val('');
-            $('#pagos-imagen_prueba_file').val('');
-        } else {
-            // Show fields for other payment methods
-            $('.field-pagos-numero_referencia_pago').show();
-            $('.field-pagos-imagen_prueba_file').show();
-            $('#comprobante-title').show();
-        }
+    var metodo=$('#pagos-metodo_pago').val();
+    var isCashDollar=(metodo==='Efectivo - Dólar ($)' );
+
+    if (isCashDollar) {
+    // Hide fields for cash dollar
+    $('.field-pagos-numero_referencia_pago').hide();
+    $('.field-pagos-imagen_prueba_file').hide();
+    $('#comprobante-title').hide();
+
+    // Clear the values so they don't fail validation
+    $('#pagos-numero_referencia_pago').val('');
+    $('#pagos-imagen_prueba_file').val('');
+    } else {
+    // Show fields for other payment methods
+    $('.field-pagos-numero_referencia_pago').show();
+    $('.field-pagos-imagen_prueba_file').show();
+    $('#comprobante-title').show();
     }
-    
+    }
+
     // Calculate selected cuotas total
     function updateMontoSelected() {
-        var sum = 0;
-        $('.cuota-checkbox:checked').each(function() {
-            sum += parseFloat($(this).data('monto')) || 0;
-        });
-        $('#pagos-monto_pagado').val(sum.toFixed(2));
-        updateMontoBs();
+    var sum=0;
+    $('.cuota-checkbox:checked').each(function() {
+    sum +=parseFloat($(this).data('monto')) || 0;
+    });
+    $('#pagos-monto_pagado').val(sum.toFixed(2));
+    updateMontoBs();
     }
-    
+
     // Event handlers
     $('#fecha-pago').on('change', function() {
-        var fecha = $(this).val();
-        if (fecha) {
-            $.ajax({
-                url: '../site/tasacambio',
-                type: 'post',
-                data: { fecha: fecha },
-                success: function(response) {
-                    if (response) {
-                        $('#pagos-tasa').val(parseFloat(response).toFixed(2));
-                        updateMontoBs();
-                    }
-                }
-            });
-        }
+    var fecha=$(this).val();
+    if (fecha) {
+    $.ajax({
+    url: '../site/tasacambio' ,
+    type: 'post' ,
+    data: { fecha: fecha },
+    success: function(response) {
+    if (response) {
+    $('#pagos-tasa').val(parseFloat(response).toFixed(2));
+    updateMontoBs();
+    }
+    }
     });
-    
+    }
+    });
+
     $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', updateMontoBs);
     $('#pagos-metodo_pago').on('change', updateFieldsVisibility);
-    $(document).on('change', '.cuota-checkbox', updateMontoSelected);
-    
+    $(document).on('change', '.cuota-checkbox' , updateMontoSelected);
+
     // Initialize
     updateMontoSelected();
     updateFieldsVisibility();
     updateMontoBs();
-    
+
     // Disable form submit button while processing to prevent double submission
     $('#pago-form').on('submit', function() {
-        var submitBtn = $('#submit-btn');
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Guardando...');
-        console.log('Form submitted');
+    var submitBtn=$('#submit-btn');
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Guardando...');
+    console.log('Form submitted');
     });
-});
-JS
+    });
+    JS
 );
-
-?>
-
 
 ?>
 <style>

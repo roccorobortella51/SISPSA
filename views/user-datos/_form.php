@@ -453,8 +453,10 @@ $currentRoute = Yii::$app->controller->getRoute();
                             <?= $form->field($model, 'fechanac')->textInput([
                                 'class' => 'form-control form-control-lg',
                                 'type' => 'date',
-                                'placeholder' => 'Seleccione su fecha de nacimiento'
+                                'placeholder' => 'Seleccione su fecha de nacimiento',
+                                'id' => 'userdatos-fechanac'
                             ])->label('Fecha de Nacimiento') ?>
+                            <div id="fechanac-error" class="text-danger mt-1" style="display:none;"></div>
                         </div>
 
                         <div class="col-md-3">
@@ -1087,6 +1089,55 @@ $currentRoute = Yii::$app->controller->getRoute();
     </div>
 
     <?php ActiveForm::end(); ?>
+
+<script>
+// Validación client-side para fecha de nacimiento
+document.addEventListener('DOMContentLoaded', function() {
+    var fechanacInput = document.getElementById('userdatos-fechanac');
+    var errorDiv = document.getElementById('fechanac-error');
+    var form = document.getElementById('user-datos-form');
+    if (fechanacInput && errorDiv && form) {
+        form.addEventListener('submit', function(e) {
+            var value = fechanacInput.value;
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+            if (value) {
+                var parts = value.split('-');
+                if (parts.length !== 3) {
+                    errorDiv.textContent = 'Formato de fecha inválido.';
+                    errorDiv.style.display = 'block';
+                    e.preventDefault();
+                    return;
+                }
+                var year = parseInt(parts[0], 10);
+                var month = parseInt(parts[1], 10);
+                var day = parseInt(parts[2], 10);
+                var currentYear = new Date().getFullYear();
+                if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                    errorDiv.textContent = 'La fecha contiene valores no numéricos.';
+                    errorDiv.style.display = 'block';
+                    e.preventDefault();
+                    return;
+                }
+                if (year < 1900 || year > currentYear) {
+                    errorDiv.textContent = 'El año de nacimiento no es válido.';
+                    errorDiv.style.display = 'block';
+                    e.preventDefault();
+                    return;
+                }
+                // checkdate equivalente en JS
+                var date = new Date(year, month - 1, day);
+                if (date.getFullYear() !== year || (date.getMonth() + 1) !== month || date.getDate() !== day) {
+                    errorDiv.textContent = 'La fecha de nacimiento no es válida.';
+                    errorDiv.style.display = 'block';
+                    e.preventDefault();
+                    return;
+                }
+            }
+        });
+    }
+});
+</script>
 </div>
 
 <div class="modal fade" id="editDependienteModal" tabindex="-1" role="dialog" aria-hidden="true">

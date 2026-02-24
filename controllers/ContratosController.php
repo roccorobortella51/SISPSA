@@ -6,6 +6,7 @@ use Yii;
 use app\models\Contratos;
 use app\models\UserDatos;
 use app\models\ContratosSearch;
+use app\models\Cuotas;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -40,7 +41,6 @@ class ContratosController extends Controller
 
     /**
      * Lists all Contratos models.
-     * @return mixed
      */
     public function actionIndex($user_id = "")
     {
@@ -49,8 +49,8 @@ class ContratosController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'user_id', $user_id]);
 
-        // Update status of all contracts before displaying
-        $this->updateAllContractStatuses($user_id);
+        // REMOVE OR COMMENT OUT THIS LINE - Don't update status on index
+        // $this->updateAllContractStatuses($user_id);
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -61,9 +61,6 @@ class ContratosController extends Controller
 
     /**
      * Displays a single Contratos model.
-     * @param int $id ID
-     * @return mixed
-     * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionView($id)
     {
@@ -74,13 +71,14 @@ class ContratosController extends Controller
             Yii::$app->session->setFlash('warning', 'Este contrato ha sido anulado y no se pueden realizar acciones sobre él.');
         }
 
-        // Update status before displaying
-        $model->updateStatus();
+        // REMOVE OR COMMENT OUT THIS LINE - Don't update status on view
+        // $model->updateStatus();
 
         return $this->render('view', [
             'model' => $model,
         ]);
     }
+
 
     /**
      * Creates a new Contratos model.
@@ -149,18 +147,29 @@ class ContratosController extends Controller
         ]);
     }
 
-    /**
-     * Deletes an existing Contratos model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return mixed
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+    // In ContratosController.php - Enhance delete action
+
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($id);
+        $userId = $model->user_id;
 
-        return $this->redirect(['index']);
+        // Check if contract has payments
+        $hasPayments = Cuotas::find()
+            ->where(['contrato_id' => $id])
+            ->andWhere(['IS NOT', 'id_pago', null])
+            ->exists();
+
+        if ($hasPayments) {
+            Yii::$app->session->setFlash('error', 'No se puede eliminar un contrato con pagos asociados.');
+            return $this->redirect(['/user-datos/update', 'id' => $userId]);
+        }
+
+        // Soft delete or hard delete?
+        $model->delete();
+
+        Yii::$app->session->setFlash('success', 'Contrato eliminado correctamente.');
+        return $this->redirect(['/user-datos/update', 'id' => $userId]);
     }
 
     /**
@@ -398,5 +407,223 @@ class ContratosController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+    /**
+     * Anular (Cancel) a contract
+     * @param int $id
+     * @return \yii\web\Response
+     * @throws NotFoundHttpException
+     */
+    public function actionAnular($id)
+    {
+        $model = $this->findModel($id);
+
+        // Check if user has permission (Superadmin or GERENTE-COMERCIALIZACION)
+        if (!Yii::$app->user->can('superadmin') && !Yii::$app->user->can('GERENTE-COMERCIALIZACION')) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
+            return $this->redirect(['index', 'user_id' => $model->user_id]);
+        }
+
+        // Check if contract is already anulado
+        if ($model->estatus === Contratos::STATUS_ANULADO) {
+            Yii::$app->session->setFlash('error', 'Este contrato ya está anulado.');
+            return $this->redirect(['index', 'user_id' => $model->user_id]);
+        }
+
+        // Begin transaction
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            // Update contract with annulment information
+            $model->estatus = Contratos::STATUS_ANULADO;
+            $model->anulado_por = Yii::$app->user->id;
+            $model->anulado_fecha = date('Y-m-d H:i:s');
+            $model->anulado_motivo = 'Anulado por solicitud administrativa'; // Default reason
+
+            if (!$model->save(false)) {
+                throw new \Exception('Error al guardar la anulación del contrato.');
+            }
+
+            // Update any pending cuotas to "cancelada"
+            \app\models\Cuotas::updateAll(
+                ['estatus' => 'cancelada'],
+                [
+                    'contrato_id' => $model->id,
+                    'estatus' => 'pendiente'
+                ]
+            );
+
+            $transaction->commit();
+
+            Yii::$app->session->setFlash('success', 'Contrato anulado exitosamente.');
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', 'Error al anular el contrato: ' . $e->getMessage());
+        }
+
+        return $this->redirect(['index', 'user_id' => $model->user_id]);
+    }
+
+    /**
+     * Check and update user solvent status based on active contracts
+     * @param int $user_id
+     */
+    private function checkUserSolventStatus($user_id)
+    {
+        // Check if user has any active non-anulled contracts
+        $activeContracts = Contratos::find()
+            ->where(['user_id' => $user_id])
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+            ->andWhere(['in', 'estatus', ['Activo', 'Registrado']])
+            ->count();
+
+        $user = UserDatos::findOne($user_id);
+        if ($user) {
+            // If no active contracts, mark as no solvente
+            if ($activeContracts == 0) {
+                $user->estatus_solvente = 'No';
+                $user->save(false);
+                Yii::info("Usuario #{$user_id} marcado como No solvente (sin contratos activos)", 'contratos');
+            }
+        }
+    }
+    /**
+     * Displays annulment form
+     * @param int $id
+     * @return string|\yii\web\Response
+     */
+    public function actionAnularForm($id)
+    {
+        $model = $this->findModel($id);
+
+        // Check if user has permission
+        if (!Yii::$app->user->can('superadmin') && !Yii::$app->user->can('GERENTE-COMERCIALIZACION')) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
+            return $this->redirect(['index', 'user_id' => $model->user_id]);
+        }
+
+        if ($model->estatus === Contratos::STATUS_ANULADO) {
+            Yii::$app->session->setFlash('error', 'Este contrato ya está anulado.');
+            return $this->redirect(['index', 'user_id' => $model->user_id]);
+        }
+
+        if (Yii::$app->request->isPost) {
+            $motivo = Yii::$app->request->post('motivo');
+
+            if (!$motivo) {
+                Yii::$app->session->setFlash('error', 'Debe indicar el motivo de la anulación.');
+                return $this->render('anular', ['model' => $model]);
+            }
+
+            $transaction = Yii::$app->db->beginTransaction();
+
+            try {
+                $model->estatus = Contratos::STATUS_ANULADO;
+                $model->anulado_por = Yii::$app->user->id;
+                $model->anulado_fecha = date('Y-m-d H:i:s');
+                $model->anulado_motivo = $motivo;
+
+                if (!$model->save(false)) {
+                    throw new \Exception('Error al guardar la anulación.');
+                }
+
+                \app\models\Cuotas::updateAll(
+                    ['estatus' => 'cancelada'],
+                    [
+                        'contrato_id' => $model->id,
+                        'estatus' => 'pendiente'
+                    ]
+                );
+
+                $transaction->commit();
+                Yii::$app->session->setFlash('success', 'Contrato anulado exitosamente.');
+                return $this->redirect(['index', 'user_id' => $model->user_id]);
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', 'Error al anular el contrato: ' . $e->getMessage());
+            }
+        }
+
+        return $this->render('anular', ['model' => $model]);
+    }
+    /**
+     * Check if contract has payments
+     */
+    public function actionHasPayments($id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $contrato = $this->findModel($id);
+
+        // Check if contract has any paid cuotas
+        $hasPayments = Cuotas::find()
+            ->where(['contrato_id' => $id])
+            ->andWhere(['in', 'estatus', ['pagada', 'pagado']])
+            ->exists();
+
+        return [
+            'hasPayments' => $hasPayments,
+            'originalDate' => $contrato->fecha_ini
+        ];
+    }
+
+    /**
+     * Returns expiring contracts for the current user's clinic
+     * @return array
+     */
+    public function actionExpiringSoon()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $user = Yii::$app->user->identity;
+
+        // Get the user's clinic
+        $userDatos = \app\models\UserDatos::find()
+            ->where(['user_login_id' => $user->id])
+            ->one();
+
+        if (!$userDatos || !$userDatos->clinica_id) {
+            return ['success' => false, 'message' => 'No clinic associated'];
+        }
+
+        $clinicaId = $userDatos->clinica_id;
+
+        // Get contracts expiring in the next 30 days
+        $contracts = \app\models\Contratos::find()
+            ->alias('c')
+            ->select([
+                'c.id',
+                'c.fecha_ven',
+                'c.nrocontrato',
+                'p.nombre as plan_nombre',
+                'ud.nombres',
+                'ud.apellidos',
+                'EXTRACT(DAY FROM (c.fecha_ven - NOW())) as dias_restantes'
+            ])
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->innerJoin('planes p', 'p.id = c.plan_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['between', 'c.fecha_ven', date('Y-m-d'), date('Y-m-d', strtotime('+30 days'))])
+            ->andWhere(['c.estatus' => 'Activo'])
+            ->orderBy(['c.fecha_ven' => SORT_ASC])
+            ->limit(10)
+            ->asArray()
+            ->all();
+
+        $formatted = [];
+        foreach ($contracts as $contract) {
+            $formatted[] = [
+                'id' => $contract['id'],
+                'afiliado' => $contract['nombres'] . ' ' . $contract['apellidos'],
+                'plan' => $contract['plan_nombre'],
+                'fecha_ven' => Yii::$app->formatter->asDate($contract['fecha_ven'], 'dd/MM/yyyy'),
+                'dias_restantes' => (int)$contract['dias_restantes']
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $formatted
+        ];
     }
 }

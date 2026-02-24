@@ -129,7 +129,7 @@ $this->title = 'Contratos';
                     style="cursor: pointer; border-bottom: 0;"
                     data-toggle="collapse"
                     data-target="#contractDetails<?= $model->id ?>"
-                    aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>"
+                    aria-expanded="false"
                     aria-controls="contractDetails<?= $model->id ?>">
 
                     <div class="d-flex justify-content-between align-items-center">
@@ -138,7 +138,7 @@ $this->title = 'Contratos';
                             <!-- Expand/Collapse Icon -->
                             <div class="mr-3">
                                 <div class="bg-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                    <i class="fas fa-chevron-<?= $index === 0 ? 'up' : 'down' ?> contract-toggle-icon text-primary"></i>
+                                    <i class="fas fa-chevron-down contract-toggle-icon text-primary"></i>
                                 </div>
                             </div>
 
@@ -227,7 +227,7 @@ $this->title = 'Contratos';
                 </div>
 
                 <!-- Contract Details (Collapsible) -->
-                <div id="contractDetails<?= $model->id ?>" class="collapse <?= $index === 0 ? 'show' : '' ?>">
+                <div id="contractDetails<?= $model->id ?>" class="collapse">
                     <div class="card-body pt-4">
                         <!-- Contract Summary Cards -->
                         <div class="row mb-4">
@@ -366,7 +366,6 @@ $this->title = 'Contratos';
                         <?php endif; ?>
 
                         <!-- Payment History -->
-                        <!-- Payment History -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="text-dark mb-0">
@@ -376,7 +375,7 @@ $this->title = 'Contratos';
                                 <?php if ($model->estatus !== 'Anulado'): ?>
                                     <?= Html::a(
                                         '<i class="fas fa-plus-circle mr-1"></i> Registrar Pago',
-                                        Url::to(['pagos/create', 'user_id' => $model->user_id]),
+                                        Url::to(['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id]),
                                         [
                                             'class' => 'btn btn-success btn-sm',
                                             'title' => 'Registrar nuevo pago'
@@ -549,7 +548,7 @@ $this->title = 'Contratos';
                                             <div class="mt-4">
                                                 <?= Html::a(
                                                     '<i class="fas fa-plus-circle mr-2"></i> Registrar Primer Pago',
-                                                    Url::to(['pagos/create', 'user_id' => $model->user_id]),
+                                                    Url::to(['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id]),
                                                     [
                                                         'class' => 'btn btn-success',
                                                         'title' => 'Registrar el primer pago para este contrato'
@@ -579,9 +578,19 @@ $this->title = 'Contratos';
                                     ) ?>
                                     <?= Html::a(
                                         '<i class="fas fa-file-invoice-dollar mr-1"></i> Registrar Pago',
-                                        ['pagos/create', 'user_id' => $model->user_id],
-                                        ['class' => 'btn btn-success btn-sm']
+                                        ['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id],
+                                        ['class' => 'btn btn-success btn-sm mr-2']
                                     ) ?>
+
+                                    <!-- ANULAR BUTTON - Only for Superadmin and GERENTE-COMERCIALIZACION -->
+                                    <?php if (Yii::$app->user->can('superadmin') || Yii::$app->user->can('GERENTE-COMERCIALIZACION')): ?>
+                                        <?= Html::a(
+                                            '<i class="fas fa-ban mr-1"></i> Anular Contrato',
+                                            ['contratos/anular-form', 'id' => $model->id],
+                                            ['class' => 'btn btn-danger btn-sm']
+                                        ) ?>
+                                    <?php endif; ?>
+
                                 <?php else: ?>
                                     <span class="badge badge-danger py-2 px-3">
                                         <i class="fas fa-ban mr-1"></i> Contrato Anulado
@@ -592,6 +601,147 @@ $this->title = 'Contratos';
                                 <?php endif; ?>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANULAR MODAL for each contract -->
+            <div class="modal fade" id="anularModal<?= $model->id ?>" tabindex="-1" role="dialog" aria-labelledby="anularModalLabel<?= $model->id ?>" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="anularModalLabel<?= $model->id ?>">
+                                <i class="fas fa-exclamation-triangle mr-2"></i> Anular Contrato #<?= $model->id ?>
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+
+                        <?= Html::beginForm(['contratos/anular', 'id' => $model->id], 'post', [
+                            'id' => 'anular-form-' . $model->id,
+                            'class' => 'anular-form'
+                        ]) ?>
+
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <strong>¡Atención!</strong> Está a punto de anular este contrato. Esta acción no se puede deshacer.
+                            </div>
+
+                            <!-- Contract Summary -->
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">Resumen del Contrato</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <table class="table table-sm table-borderless">
+                                                <tr>
+                                                    <th>Contrato #:</th>
+                                                    <td><?= $model->id ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>N° Contrato:</th>
+                                                    <td><?= $model->nrocontrato ?: 'N/A' ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Plan:</th>
+                                                    <td><?= $model->plan ? $model->plan->nombre : 'N/A' ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Clínica:</th>
+                                                    <td><?= $model->clinica ? $model->clinica->nombre : 'N/A' ?></td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <table class="table table-sm table-borderless">
+                                                <tr>
+                                                    <th>Fecha Inicio:</th>
+                                                    <td><?= Yii::$app->formatter->asDate($model->fecha_ini, 'php:d/m/Y') ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Fecha Vencimiento:</th>
+                                                    <td><?= $model->fecha_ven ? Yii::$app->formatter->asDate($model->fecha_ven, 'php:d/m/Y') : 'N/A' ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Monto:</th>
+                                                    <td>$<?= number_format($model->monto, 2) ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Estatus Actual:</th>
+                                                    <td>
+                                                        <?php
+                                                        $statusClass = [
+                                                            'Registrado' => 'badge-primary',
+                                                            'Activo' => 'badge-success',
+                                                            'Vencido' => 'badge-warning',
+                                                            'suspendido' => 'badge-secondary',
+                                                            'Pendiente' => 'badge-info',
+                                                        ];
+                                                        $class = $statusClass[$model->estatus] ?? 'badge-light';
+                                                        echo '<span class="badge ' . $class . '">' . $model->estatus . '</span>';
+                                                        ?>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pending Cuotas Warning -->
+                            <?php
+                            $pendingCuotas = \app\models\Cuotas::find()
+                                ->where(['contrato_id' => $model->id])
+                                ->andWhere(['estatus' => 'pendiente'])
+                                ->count();
+
+                            if ($pendingCuotas > 0):
+                            ?>
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-circle mr-2"></i>
+                                    <strong>¡Importante!</strong> Este contrato tiene <strong><?= $pendingCuotas ?></strong> cuota(s) pendiente(s) de pago.
+                                    Al anular el contrato, estas cuotas quedarán sin efecto.
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Reason for annulment -->
+                            <div class="form-group">
+                                <label for="anulado_motivo_<?= $model->id ?>" class="font-weight-bold required-field">
+                                    Motivo de la Anulación <span class="text-danger">*</span>
+                                </label>
+                                <textarea
+                                    name="anulado_motivo"
+                                    id="anulado_motivo_<?= $model->id ?>"
+                                    class="form-control"
+                                    rows="4"
+                                    required
+                                    placeholder="Indique la razón por la cual se anula este contrato..."></textarea>
+                                <small class="form-text text-muted">
+                                    Este motivo quedará registrado permanentemente en el sistema.
+                                </small>
+                            </div>
+
+                            <!-- Confirmation checkbox -->
+                            <div class="form-group form-check">
+                                <input type="checkbox" class="form-check-input" id="confirm_<?= $model->id ?>" required>
+                                <label class="form-check-label font-weight-bold text-danger" for="confirm_<?= $model->id ?>">
+                                    Confirmo que deseo ANULAR este contrato y entiendo que esta acción es irreversible
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                <i class="fas fa-times mr-1"></i> Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-danger" id="submit-anular-<?= $model->id ?>">
+                                <i class="fas fa-ban mr-1"></i> Sí, Anular Contrato
+                            </button>
+                        </div>
+
+                        <?= Html::endForm() ?>
                     </div>
                 </div>
             </div>
@@ -1103,50 +1253,113 @@ $this->title = 'Contratos';
     .table thead th {
         color: white !important;
     }
+
+    /* Modal styles */
+    .modal-lg {
+        max-width: 800px;
+    }
+
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .table-borderless th,
+    .table-borderless td {
+        border: none;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .table-borderless th {
+        font-weight: 600;
+        color: #495057;
+    }
 </style>
 
-<!-- JavaScript for Bootstrap 4 interactions -->
-<script>
-    $(document).ready(function() {
-        // Initialize tooltips
-        $('[data-toggle="tooltip"]').tooltip();
+<!-- JavaScript for Bootstrap 4 interactions and Anular functionality -->
+<?php
+// Register Bootstrap 4 JavaScript properly
+\yii\bootstrap4\BootstrapPluginAsset::register($this);
 
-        // Handle contract card toggle animation
-        $('.contract-card .card-header').on('click', function() {
-            const icon = $(this).find('.contract-toggle-icon');
-            if (icon.hasClass('fa-chevron-down')) {
-                icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
-            } else {
-                icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
-            }
-        });
-
-        // Auto-expand the first contract
-        if ($('.contract-card').length > 0 && $('.collapse.show').length === 0) {
-            const firstContract = $('.contract-card:first');
-            const firstHeader = firstContract.find('.card-header');
-            const firstCollapse = firstContract.find('.collapse');
-
-            firstCollapse.addClass('show');
-            firstHeader.attr('aria-expanded', 'true');
-            firstHeader.find('.contract-toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-        }
-
-        // Add smooth hover effects to buttons
-        $('.btn').hover(
-            function() {
-                $(this).css({
-                    'transform': 'translateY(-2px)',
-                    'transition': 'transform 0.2s ease',
-                    'box-shadow': '0 4px 8px rgba(0,0,0,0.1)'
-                });
-            },
-            function() {
-                $(this).css({
-                    'transform': 'translateY(0)',
-                    'box-shadow': 'none'
-                });
-            }
-        );
+$this->registerJs(
+    <<<JS
+$(document).ready(function() {
+    console.log('Document ready - Initializing Bootstrap 4 components');
+    
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Initialize all modals
+    $('.modal').modal({
+        show: false
     });
-</script>
+
+    // Handle contract card toggle animation
+    $('.contract-card .card-header').on('click', function() {
+        const icon = $(this).find('.contract-toggle-icon');
+        if (icon.hasClass('fa-chevron-down')) {
+            icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        } else {
+            icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        }
+    });
+
+    /* Auto-expand the first contract
+    if ($('.contract-card').length > 0 && $('.collapse.show').length === 0) {
+        const firstContract = $('.contract-card:first');
+        const firstHeader = firstContract.find('.card-header');
+        const firstCollapse = firstContract.find('.collapse');
+
+        firstCollapse.addClass('show');
+        firstHeader.attr('aria-expanded', 'true');
+        firstHeader.find('.contract-toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    }*/
+
+    // Add smooth hover effects to buttons
+    $('.btn').hover(
+        function() {
+            $(this).css({
+                'transform': 'translateY(-2px)',
+                'transition': 'transform 0.2s ease',
+                'box-shadow': '0 4px 8px rgba(0,0,0,0.1)'
+            });
+        },
+        function() {
+            $(this).css({
+                'transform': 'translateY(0)',
+                'box-shadow': 'none'
+            });
+        }
+    );
+    
+    // Handle anular button click to show modal
+    $('[data-toggle="modal"]').on('click', function(e) {
+        e.preventDefault();
+        var target = $(this).data('target');
+        console.log('Opening modal: ' + target);
+        $(target).modal('show');
+    });
+    
+    // Handle anular form submission to prevent double submission
+    $('.anular-form').on('submit', function() {
+        var form = $(this);
+        var submitBtn = form.find('button[type="submit"]');
+        
+        submitBtn.prop('disabled', true)
+                 .html('<i class="fas fa-spinner fa-spin mr-1"></i> Anulando...');
+        
+        console.log('Anular form submitted');
+        return true;
+    });
+
+    // Debug: Check if Bootstrap is loaded
+    if (typeof $.fn.modal === 'function') {
+        console.log('Bootstrap modal function is available');
+    } else {
+        console.error('Bootstrap modal function is NOT available');
+    }
+});
+JS
+);
+?>
