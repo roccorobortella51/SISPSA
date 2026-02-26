@@ -15,6 +15,13 @@ use app\models\RmCiudad;
 use app\models\Planes;
 use yii\helpers\Json;
 use app\models\TasaCambio;
+use app\models\UserDatos;
+use app\models\RmClinica;
+use app\models\SisSiniestro;
+use app\components\UserHelper;
+use app\models\Baremo;
+
+use app\models\SisSiniestroBaremo;
 
 
 
@@ -71,19 +78,19 @@ class SiteController extends Controller
     {
         $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
 
-        // Check if user is logged in and has GERENTE-CLINICA role
+        // Check if user is logged in
         if (!Yii::$app->user->isGuest) {
             $user = Yii::$app->user->identity;
-            $auth = Yii::$app->authManager;
-            $roles = $auth->getRolesByUser($user->id);
+            $authManager = Yii::$app->authManager;
+            $roles = $authManager->getRolesByUser($user->id);
 
-            // Check if user has GERENTE-CLINICA role
+            // If user has GERENTE-CLINICA role, redirect to dashboard
             if (isset($roles['GERENTE-CLINICA'])) {
-                return $this->render('gerente-dashboard');
+                return $this->redirect(['site/dashboard']);
             }
         }
 
-        // For all other users (including guests), show the welcome page
+        // Otherwise show the regular welcome page
         return $this->render('welcome');
     }
 
@@ -104,6 +111,16 @@ class SiteController extends Controller
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
             $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
+
+            // After successful login, check role and redirect accordingly
+            $user = Yii::$app->user->identity;
+            $authManager = Yii::$app->authManager;
+            $roles = $authManager->getRolesByUser($user->id);
+
+            if (isset($roles['GERENTE-CLINICA'])) {
+                return $this->redirect(['site/dashboard']);
+            }
+
             return $this->goBack();
         }
 
@@ -126,8 +143,427 @@ class SiteController extends Controller
         return $this->redirect(['site/login']);
     }
 
+    /**
+     * Main dashboard for GERENTE-CLINICA with tabs
+     * @return string
+     */
+    public function actionDashboard()
+    {
+        // Check if user has GERENTE-CLINICA role
+        $user = Yii::$app->user->identity;
+        $authManager = Yii::$app->authManager;
+        $roles = $authManager->getRolesByUser($user->id);
 
+        if (!isset($roles['GERENTE-CLINICA'])) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
+            return $this->goHome();
+        }
 
+        // Get the clinic ID for the logged-in user
+        $clinicaId = UserHelper::getMyClinicaId();
+
+        if (!$clinicaId) {
+            Yii::$app->session->setFlash('error', 'No tiene una clínica asociada.');
+            return $this->goHome();
+        }
+
+        // Get clinic name
+        $clinica = RmClinica::findOne($clinicaId);
+
+        // Get active tab from request (default to 'general')
+        $activeTab = Yii::$app->request->get('tab', 'general');
+
+        return $this->render('dashboard', [
+            'clinicaId' => $clinicaId,
+            'clinicaNombre' => $clinica ? $clinica->nombre : 'Su clínica',
+            'activeTab' => $activeTab,
+        ]);
+    }
+
+    /**
+     * AJAX endpoint to load general dashboard data
+     */
+    public function actionGetDashboardData()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $user = Yii::$app->user->identity;
+
+        // Get the clinica_id from the logged-in user's related data
+        $userDatos = \app\models\UserDatos::find()
+            ->where(['user_login_id' => $user->id])
+            ->one();
+
+        if (!$userDatos || !$userDatos->clinica_id) {
+            return ['error' => 'No clinic associated with this user'];
+        }
+
+        $clinicaId = $userDatos->clinica_id;
+        $clinica = \app\models\RmClinica::findOne($clinicaId);
+
+        // Base query for affiliates of this clinic
+        $query = \app\models\UserDatos::find()
+            ->where(['clinica_id' => $clinicaId])
+            ->andWhere(['role' => 'afiliado']);
+
+        // Total affiliates
+        $totalAfiliados = $query->count();
+
+        // Status breakdown (affiliate status)
+        $activos = (clone $query)->andWhere(['estatus' => 'Activo'])->count();
+        $suspendidos = (clone $query)->andWhere(['estatus' => 'Suspendido'])->count();
+        $pendientes = (clone $query)->andWhere(['estatus' => 'Pendiente'])->count();
+        $inactivos = (clone $query)->andWhere(['estatus' => 'Inactivo'])->count();
+
+        // Solvency status
+        $solventes = (clone $query)->andWhere(['estatus_solvente' => 'Si'])->count();
+        $insolventes = (clone $query)->andWhere(['estatus_solvente' => 'No'])->count();
+
+        // Gender distribution
+        $masculinos = (clone $query)->andWhere(['sexo' => 'Masculino'])->count();
+        $femeninos = (clone $query)->andWhere(['sexo' => 'Femenino'])->count();
+
+        // Affiliation type
+        $individuales = (clone $query)->andWhere(['user_datos_type_id' => 1])->count();
+        $corporativos = (clone $query)->andWhere(['user_datos_type_id' => 2])->count();
+
+        // Recent affiliates (last 30 days)
+        $recientes = (clone $query)
+            ->andWhere(['>=', 'created_at', date('Y-m-d H:i:s', strtotime('-30 days'))])
+            ->count();
+
+        // Monthly growth data for chart
+        $monthlyData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = date('Y-m', strtotime("-$i months"));
+            $startDate = date('Y-m-01', strtotime("-$i months"));
+            $endDate = date('Y-m-t', strtotime("-$i months"));
+
+            $count = (clone $query)
+                ->andWhere(['>=', 'created_at', $startDate . ' 00:00:00'])
+                ->andWhere(['<=', 'created_at', $endDate . ' 23:59:59'])
+                ->count();
+
+            $monthlyData[] = [
+                'month' => date('M Y', strtotime($month . '-01')),
+                'count' => (int)$count
+            ];
+        }
+
+        // Contracts expiring soon (next 30 days)
+        $contratosPorVencer = \app\models\Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['between', 'c.fecha_ven', date('Y-m-d'), date('Y-m-d', strtotime('+30 days'))])
+            ->count();
+
+        // Contract status distribution
+        $contratosActivos = \app\models\Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['c.estatus' => 'Activo'])
+            ->count();
+
+        $contratosCreados = \app\models\Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['c.estatus' => 'Creado'])
+            ->count();
+
+        $contratosSuspendidos = \app\models\Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['c.estatus' => 'suspendido']) // Assuming 'Suspendido' is the status value
+            ->count();
+
+        $contratosAnulados = \app\models\Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['c.estatus' => 'Anulado'])
+            ->count();
+
+        $contratosVencidos = \app\models\Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['<', 'c.fecha_ven', date('Y-m-d')])
+            ->andWhere(['not', ['c.estatus' => 'Anulado']])
+            ->count();
+
+        $contractStatus = [
+            'activos' => (int)$contratosActivos,
+            'creados' => (int)$contratosCreados,
+            'suspendidos' => (int)$contratosSuspendidos, // NEW
+            'anulados' => (int)$contratosAnulados,
+            'vencidos' => (int)$contratosVencidos,
+        ];
+
+        // Get plan distribution - FIXED VERSION
+        $planesPopulares = (clone $query)
+            ->select([
+                'user_datos.plan_id',
+                'COUNT(*) as count',
+                'planes.nombre as plan_nombre'
+            ])
+            ->innerJoin('planes', 'user_datos.plan_id = planes.id')
+            ->where(['not', ['user_datos.plan_id' => null]])
+            ->andWhere(['planes.clinica_id' => $clinicaId])
+            ->groupBy(['user_datos.plan_id', 'planes.nombre'])
+            ->orderBy(['count' => SORT_DESC])
+            ->limit(5)
+            ->asArray()
+            ->all();
+
+        $planData = [];
+        foreach ($planesPopulares as $item) {
+            $planData[] = [
+                'name' => $item['plan_nombre'] ?? 'Unknown',
+                'count' => (int)$item['count']
+            ];
+        }
+
+        return [
+            'success' => true,
+            'clinica' => $clinica ? $clinica->nombre : 'Unknown',
+            'stats' => [
+                'total' => (int)$totalAfiliados,
+                'activos' => (int)$activos,
+                'suspendidos' => (int)$suspendidos,
+                'pendientes' => (int)$pendientes,
+                'inactivos' => (int)$inactivos,
+                'solventes' => (int)$solventes,
+                'insolventes' => (int)$insolventes,
+                'masculinos' => (int)$masculinos,
+                'femeninos' => (int)$femeninos,
+                'individuales' => (int)$individuales,
+                'corporativos' => (int)$corporativos,
+                'recientes' => (int)$recientes,
+                'contratos_por_vencer' => (int)$contratosPorVencer,
+                'tasa_actividad' => $totalAfiliados > 0 ? round(($activos / $totalAfiliados) * 100, 1) : 0,
+                'tasa_solvencia' => $totalAfiliados > 0 ? round(($solventes / $totalAfiliados) * 100, 1) : 0,
+            ],
+            'contract_status' => $contractStatus,
+            'monthly_growth' => $monthlyData,
+            'plan_distribution' => $planData
+        ];
+    }
+
+    /**
+     * AJAX endpoint to load atenciones KPI data
+     * @return array
+     */
+    public function actionGetAtencionesData()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        // Aumentar límites para producción
+        set_time_limit(120);
+        ini_set('memory_limit', '256M');
+
+        try {
+            $user = Yii::$app->user->identity;
+            if (!$user) {
+                return ['success' => false, 'message' => 'Usuario no autenticado'];
+            }
+
+            // Get the clinica_id from the logged-in user's related data
+            $userDatos = \app\models\UserDatos::find()
+                ->where(['user_login_id' => $user->id])
+                ->one();
+
+            if (!$userDatos || !$userDatos->clinica_id) {
+                Yii::error("No clinic associated with user ID: " . $user->id, 'atenciones');
+                return ['success' => false, 'message' => 'No clinic associated with this user'];
+            }
+
+            $clinicaId = $userDatos->clinica_id;
+
+            // Get date range from request
+            $dateFrom = Yii::$app->request->get('date_from', date('Y-m-01'));
+            $dateTo = Yii::$app->request->get('date_to', date('Y-m-t'));
+
+            // Validar fechas
+            if (!strtotime($dateFrom) || !strtotime($dateTo)) {
+                return ['success' => false, 'message' => 'Fechas inválidas'];
+            }
+
+            Yii::info("Generando atenciones KPI - Clínica: $clinicaId, Desde: $dateFrom, Hasta: $dateTo", 'atenciones');
+
+            // Base query for this clinic
+            $query = SisSiniestro::find()
+                ->where(['idclinica' => $clinicaId])
+                ->andWhere(['>=', 'fecha', $dateFrom])
+                ->andWhere(['<=', 'fecha', $dateTo]);
+
+            // ===== ESTADÍSTICAS GENERALES =====
+
+            // Total atenciones
+            $totalAtenciones = (clone $query)->count();
+
+            // Siniestros vs Citas (campos boolean)
+            $siniestros = (clone $query)->andWhere(['es_cita' => false])->count();
+            $citas = (clone $query)->andWhere(['es_cita' => true])->count();
+
+            // Atenciones por estatus (campos boolean)
+            $atendidas = (clone $query)->andWhere(['atendido' => true])->count();
+            $pendientes = (clone $query)->andWhere(['atendido' => false])->orWhere(['atendido' => null])->count();
+
+            // Tasa de atención
+            $tasaAtencion = $totalAtenciones > 0 ? round(($atendidas / $totalAtenciones) * 100, 1) : 0;
+
+            // Costos
+            $costoTotal = (clone $query)->sum('costo_total') ?: 0;
+            $costoPromedio = $totalAtenciones > 0 ? round($costoTotal / $totalAtenciones, 2) : 0;
+
+            // Pacientes únicos
+            $pacientesUnicos = (clone $query)
+                ->select('iduser')
+                ->distinct()
+                ->count();
+
+            // Promedio de atenciones por paciente
+            $promedioPorPaciente = $pacientesUnicos > 0 ? round($totalAtenciones / $pacientesUnicos, 1) : 0;
+
+            // ===== DATOS DIARIOS PARA GRÁFICOS =====
+            // Usando boolean directamente
+            $dailyData = (new \yii\db\Query())
+                ->select([
+                    'fecha',
+                    'COUNT(*) as total',
+                    'SUM(CASE WHEN es_cita = TRUE THEN 1 ELSE 0 END) as citas',
+                    'SUM(CASE WHEN es_cita = FALSE THEN 1 ELSE 0 END) as siniestros',
+                    'SUM(CASE WHEN atendido = TRUE THEN 1 ELSE 0 END) as atendidas',
+                    'SUM(costo_total) as costo'
+                ])
+                ->from('sis_siniestro')
+                ->where(['idclinica' => $clinicaId])
+                ->andWhere(['>=', 'fecha', $dateFrom])
+                ->andWhere(['<=', 'fecha', $dateTo])
+                ->groupBy('fecha')
+                ->orderBy('fecha')
+                ->all();
+
+            // ===== DATOS POR DÍA DE LA SEMANA =====
+            $dayOfWeekData = [];
+            try {
+                $dayOfWeekData = (new \yii\db\Query())
+                    ->select([
+                        'EXTRACT(DOW FROM fecha) as day_of_week',
+                        'COUNT(*) as total',
+                        'AVG(costo_total) as avg_cost'
+                    ])
+                    ->from('sis_siniestro')
+                    ->where(['idclinica' => $clinicaId])
+                    ->andWhere(['>=', 'fecha', $dateFrom])
+                    ->andWhere(['<=', 'fecha', $dateTo])
+                    ->groupBy(['EXTRACT(DOW FROM fecha)'])
+                    ->orderBy('day_of_week')
+                    ->all();
+            } catch (\Exception $e) {
+                Yii::error("Error en EXTRACT(DOW): " . $e->getMessage(), 'atenciones');
+                $dayOfWeekData = [];
+            }
+
+            // Mapear días de la semana
+            $daysMap = [
+                0 => 'Domingo',
+                1 => 'Lunes',
+                2 => 'Martes',
+                3 => 'Miércoles',
+                4 => 'Jueves',
+                5 => 'Viernes',
+                6 => 'Sábado'
+            ];
+
+            $formattedDayData = [];
+            foreach ($dayOfWeekData as $item) {
+                $dayNum = is_numeric($item['day_of_week']) ? (int)$item['day_of_week'] : 0;
+                $formattedDayData[] = [
+                    'day' => $daysMap[$dayNum] ?? 'Desconocido',
+                    'total' => (int)$item['total'],
+                    'avg_cost' => round((float)$item['avg_cost'], 2)
+                ];
+            }
+
+            // ===== TOP BAREMOS =====
+            $topBaremos = [];
+            try {
+                // Verificar si hay datos
+                $hasData = (new \yii\db\Query())
+                    ->from('sis_siniestro')
+                    ->where(['idclinica' => $clinicaId])
+                    ->andWhere(['>=', 'fecha', $dateFrom])
+                    ->andWhere(['<=', 'fecha', $dateTo])
+                    ->exists();
+
+                if ($hasData) {
+                    // Consulta optimizada para top baremos
+                    $sql = "
+                    SELECT 
+                        b.nombre_servicio as baremo_nombre,
+                        COUNT(*) as uso_count,
+                        COALESCE(SUM(sb.costo), 0) as costo_total,
+                        COALESCE(AVG(sb.costo), 0) as costo_promedio
+                    FROM sis_siniestro s
+                    INNER JOIN sis_siniestro_baremo sb ON s.id = sb.siniestro_id
+                    INNER JOIN baremo b ON sb.baremo_id = b.id
+                    WHERE s.idclinica = :clinica_id
+                    AND s.fecha >= :date_from
+                    AND s.fecha <= :date_to
+                    GROUP BY b.id, b.nombre_servicio
+                    ORDER BY uso_count DESC
+                    LIMIT 10
+                ";
+
+                    $topBaremos = Yii::$app->db->createCommand($sql, [
+                        ':clinica_id' => $clinicaId,
+                        ':date_from' => $dateFrom,
+                        ':date_to' => $dateTo,
+                    ])->queryAll();
+
+                    Yii::info("Top baremos encontrados: " . count($topBaremos), 'atenciones');
+                }
+            } catch (\Exception $e) {
+                Yii::error("Error en top baremos: " . $e->getMessage(), 'atenciones');
+                $topBaremos = [];
+            }
+
+            // ===== RESPUESTA =====
+            return [
+                'success' => true,
+                'total_atenciones' => (int)$totalAtenciones,
+                'siniestros' => (int)$siniestros,
+                'citas' => (int)$citas,
+                'atendidas' => (int)$atendidas,
+                'pendientes' => (int)$pendientes,
+                'tasa_atencion' => (float)$tasaAtencion,
+                'costo_total' => (float)$costoTotal,
+                'costo_promedio' => (float)$costoPromedio,
+                'pacientes_unicos' => (int)$pacientesUnicos,
+                'promedio_por_paciente' => (float)$promedioPorPaciente,
+                'daily_data' => $dailyData,
+                'day_of_week_data' => $formattedDayData,
+                'top_baremos' => $topBaremos,
+                'date_range' => [
+                    'from' => $dateFrom,
+                    'to' => $dateTo
+                ]
+            ];
+        } catch (\Exception $e) {
+            Yii::error("EXCEPCIÓN GENERAL en actionGetAtencionesData: " . $e->getMessage(), 'atenciones');
+            Yii::error("Stack trace: " . $e->getTraceAsString(), 'atenciones');
+
+            return [
+                'success' => false,
+                'message' => 'Error en el servidor: ' . $e->getMessage()
+            ];
+        }
+    }
 
     public function actionMunicipio()
     {
@@ -183,9 +619,6 @@ class SiteController extends Controller
         }
         return ['output' => '', 'selected' => $selected];
     }
-
-
-
 
     public function actionPlanes()
     {
@@ -426,7 +859,7 @@ class SiteController extends Controller
         foreach ($results as $plan) {
             $formattedResults[] = [
                 'id' => $plan->id,
-                'text' => $plan->nombre . ' ($' . number_format($plan->monto, 2) . ')',
+                'text' => $plan->nombre . ' ($' . number_format($plan->precio, 2) . ')',
             ];
         }
 
@@ -517,7 +950,7 @@ class SiteController extends Controller
             ->andWhere(['between', 'c.fecha_ven', date('Y-m-d'), date('Y-m-d', strtotime('+30 days'))])
             ->count();
 
-        // ===== NEW: CONTRACT STATUS DISTRIBUTION =====
+        // ===== CONTRACT STATUS DISTRIBUTION =====
         // Get contract status counts for this clinic
         $contratosActivos = \app\models\Contratos::find()
             ->alias('c')

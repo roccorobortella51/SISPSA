@@ -21,7 +21,7 @@ $listaEstatus = $listaEstatus ?? [];
 $rol = UserHelper::getMyRol();
 
 // Define which roles should see the full set of clinic management buttons
-$adminRoles = ['superadmin', 'DIRECTOR-COMERCIALIZACION', 'Administrador-clinica', 'COORDINADOR-CLINICA'];
+$adminRoles = ['superadmin', 'DIRECTOR-COMERCIALIZACION', 'Administrador-clinica', 'COORDINADOR-CLINICA', 'GERENTE-CLINICA'];
 $permisos = in_array($rol, $adminRoles);
 
 // Define which roles should see the limited set of buttons (only operational roles that are NOT admin roles)
@@ -29,14 +29,15 @@ $operationalRoles = ['Asesor', 'Agente', 'ADMISIÓN', 'CONTROL DE CITAS'];
 $permisos2 = in_array($rol, $operationalRoles);
 
 $this->title = 'DETALLES DE LA CLÍNICA: ' . Html::encode($model->nombre);
-if($permisos){
+if ($permisos) {
     $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['index']];
 }
 $this->params['breadcrumbs'][] = Html::encode($model->nombre);
 
 \yii\web\YiiAsset::register($this);
 
-function formatUpdatedAt($value) {
+function formatUpdatedAt($value)
+{
     if (empty($value)) {
         return 'No se ha modificado';
     }
@@ -45,14 +46,14 @@ function formatUpdatedAt($value) {
 
 ?>
 
-<div class="main-container"> 
-   
+<div class="main-container">
+
     <!-- Encabezado y Botones de Acción Principal -->
-    <div class="header-section"> 
+    <div class="header-section">
         <h1><?= Html::encode($this->title) ?></h1>
 
-        <div class="header-buttons-group"> 
-            <?php if($permisos): ?>
+        <div class="header-buttons-group">
+            <?php if ($permisos): ?>
                 <?= Html::a(
                     '<i class="fas fa-edit mr-2"></i> Actualizar',
                     ['update', 'id' => $model->id],
@@ -72,27 +73,27 @@ function formatUpdatedAt($value) {
         </div>
     </div>
 
-    <?php if($permisos): ?>
-        <div class="nav-buttons-grid"> 
+    <?php if ($permisos): ?>
+        <div class="nav-buttons-grid">
             <div>
                 <?= Html::a(
                     '<i class="fas fa-file-invoice-dollar mr-2"></i> Baremo',
                     ['baremo/index', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base btn-blue'] 
+                    ['class' => 'nav-btn-base btn-blue']
                 ) ?>
             </div>
             <div>
                 <?= Html::a(
                     '<i class="fas fa-clipboard-list mr-2"></i> Planes',
                     ['planes/index', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-indigo'] 
+                    ['class' => 'nav-btn-base nav-btn-indigo']
                 ) ?>
             </div>
             <div>
                 <?= Html::a(
                     '<i class="fas fa-users mr-2"></i> Afiliados',
                     ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                    ['class' => 'nav-btn-base nav-btn-teal']
                 ) ?>
             </div>
             <div>
@@ -102,7 +103,7 @@ function formatUpdatedAt($value) {
                     ['class' => 'nav-btn-base nav-btn-cyan']
                 ) ?>
             </div>
-            <div align="center"> 
+            <div align="center">
                 <?= Html::a(
                     '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
                     ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
@@ -110,9 +111,9 @@ function formatUpdatedAt($value) {
                 ) ?>
             </div>
         </div>
-    <?php elseif($permisos2): ?>
+    <?php elseif ($permisos2): ?>
         <!-- Only show this section for operational roles that are NOT admin roles -->
-        <div class="nav-buttons-grid"> 
+        <div class="nav-buttons-grid">
             <div align="center">
                 <?= Html::a(
                     '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
@@ -124,7 +125,7 @@ function formatUpdatedAt($value) {
                 <?= Html::a(
                     '<i class="fas fa-users mr-2"></i> Afiliados',
                     ['user-datos/index-clinicas', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-teal'] 
+                    ['class' => 'nav-btn-base nav-btn-teal']
                 ) ?>
             </div>
         </div>

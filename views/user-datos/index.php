@@ -64,6 +64,12 @@ if ($clinica && $clinica->id !== null) {
 
 // Define admin roles for clinic search filter
 $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
+// Define roles that should NOT see the clinic filter
+$rolesSinFiltroClinica = ['GERENTE-CLINICA', 'Administrador-clinica', 'CONTROL DE CITAS', 'ADMISIÓN', 'ATENCIÓN', 'COORDINADOR-CLINICA'];
+$mostrarFiltroClinica = $isAdmin && !in_array($rol, $rolesSinFiltroClinica);
+
+// Define roles that can access Atención Médica
+$rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR-CLINICA', 'CONTROL DE CITAS', 'GERENTE-CLINICA', 'ADMISIÓN', 'ATENCIÓN'];
 
 ?>
 
@@ -157,14 +163,15 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             ]),
                             'contentOptions' => ['style' => 'width: 150px;'],
                         ],
-                        // Clínica search filter - ONLY for admin roles
+                        // Clínica search filter - ONLY for admin roles, hidden for clinic-specific roles
                         [
                             'attribute' => 'clinica_id',
                             'label' => 'Clínica',
                             'value' => function ($model) {
                                 return $model->clinica ? $model->clinica->nombre : 'No asignada';
                             },
-                            'filter' => $isAdmin ? Select2::widget([
+                            // Only show filter for admin users who are not in clinic-specific roles
+                            'filter' => $mostrarFiltroClinica ? Select2::widget([
                                 'model' => $searchModel,
                                 'attribute' => 'clinica_id',
                                 'data' => \yii\helpers\ArrayHelper::map(
@@ -176,10 +183,9 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'pluginOptions' => [
                                     'allowClear' => true
                                 ],
-                            ]) : null,
+                            ]) : false,
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['class' => 'text-center'],
-                            'visible' => $isAdmin, // Only show for admin roles
                         ],
                         // CORRECTED COLUMN: Corporativo Name
                         [
@@ -356,10 +362,8 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 return null;
                             },
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'visible' => $isAdmin, // Only show for admin roles
                         ],
 
-                        // CORRECTED COLUMN: Contract Status with Detailed Tooltips
                         // CORRECTED COLUMN: Contract Status with Detailed Tooltips and Filter
                         [
                             'label' => 'Estatus Contrato',
@@ -439,9 +443,10 @@ $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                         return "";
                                     }
                                 },
-                                // BOTÓN DE ATENCION
-                                'atencion' => function ($url, $model, $key) use ($permisos, $clinica, $rol) {
-                                    if (($permisos == true || $rol == 'COORDINADOR-CLINICA' || $rol == 'CONTROL DE CITAS') && $model->clinica_id) {
+                                // BOTÓN DE ATENCION - AHORA DISPONIBLE PARA GERENTE-CLINICA
+                                'atencion' => function ($url, $model, $key) use ($rolesAtencionMedica, $clinica, $rol) {
+                                    // Check if user role is in the allowed roles for Atención Médica
+                                    if (in_array($rol, $rolesAtencionMedica) && $model->clinica_id) {
 
                                         // URLs para pasar a la función JS
                                         $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);

@@ -52,6 +52,8 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.mi
     .header-subtitle {
         font-size: 1rem;
         opacity: 0.9;
+        color: white !important;
+
     }
 
     .header-date {

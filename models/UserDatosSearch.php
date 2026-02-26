@@ -136,7 +136,7 @@ class UserDatosSearch extends UserDatos
             $query->where(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
         }
 
-        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA") {
+        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA" || $rol == "GERENTE-CLINICA") {
             $query->andFilterWhere(['user_datos.clinica_id' => UserHelper::getMyClinicaId()]);
         }
 
