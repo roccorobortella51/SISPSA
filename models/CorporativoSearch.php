@@ -5,6 +5,7 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Corporativo;
+use app\components\UserHelper; // Add this use statement
 
 /**
  * CorporativoSearch represents the model behind the search form of `app\models\Corporativo`.
@@ -54,6 +55,28 @@ class CorporativoSearch extends Corporativo
             't.estatus',
         ]);
         // 🛑 FIN DE LA OPTIMIZACIÓN
+
+        // ========== NEW CODE: Filter by user's clinic if they have clinic role ==========
+        $userRole = UserHelper::getMyRol();
+        $allowedRoles = [
+            "Administrador-clinica",
+            "CONTROL DE CITAS",
+            "ADMISIÓN",
+            "ATENCIÓN",
+            "COORDINADOR-CLINICA",
+            "GERENTE-CLINICA"
+        ];
+
+        if (in_array($userRole, $allowedRoles)) {
+            $clinicaId = UserHelper::getMyClinicaId();
+
+            if (!empty($clinicaId)) {
+                // Join with the junction table to filter corporativos by clinic
+                $query->innerJoin('corporativo_clinica cc', 'cc.corporativo_id = t.id')
+                    ->andWhere(['cc.clinica_id' => $clinicaId]);
+            }
+        }
+        // ========== END OF NEW CODE ==========
 
         // add conditions that should always apply here
 

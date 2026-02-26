@@ -15,14 +15,14 @@ use app\models\ContratosSearch;
 use app\models\Contratos;
 use app\models\Pagos;
 use app\models\TasaCambio;
-use app\models\Cuotas; 
-use app\components\UserHelper; 
+use app\models\Cuotas;
+use app\components\UserHelper;
 use app\models\MasivoAfiliadosForm;
 use yii\helpers\ArrayHelper;
 use yii\web\Response;
 use yii\web\UploadedFile;
-use app\models\Planes; 
-use app\models\CorporativoClinica; 
+use app\models\Planes;
+use app\models\CorporativoClinica;
 use app\models\User;
 use app\models\RmEstado;
 use \yii\db\Expression;
@@ -40,6 +40,16 @@ class CorporativoController extends Controller
     private $estadoNameToIdMap = [];
     private $estadoNormToCanonicalName = [];
     private $estadoCanonicalNamesText = '';
+    // ========== NEW PROPERTY: Allowed roles with clinic access ==========
+    private $allowedClinicaRoles = [
+        "Administrador-clinica",
+        "CONTROL DE CITAS",
+        "ADMISIÓN",
+        "ATENCIÓN",
+        "COORDINADOR-CLINICA",
+        "GERENTE-CLINICA"
+    ];
+    // ========== END OF NEW PROPERTY ==========
     /**
      * @inheritDoc
      */
@@ -70,7 +80,7 @@ class CorporativoController extends Controller
         $tasaModel = TasaCambio::find()
             ->where(['fecha' => date('Y-m-d')])
             ->one();
-            
+
         if (!$tasaModel) {
             // Fallback: Si no existe la de hoy, busca la más reciente
             $tasaModel = TasaCambio::find()
@@ -90,7 +100,7 @@ class CorporativoController extends Controller
     {
         // No configuramos formato JSON, devolvemos el valor como texto plano (string).
         $fecha = \Yii::$app->request->post('fecha');
-        
+
         if (empty($fecha)) {
             return '0';
         }
@@ -99,9 +109,9 @@ class CorporativoController extends Controller
         $tasa = TasaCambio::find()
             ->select('tasa_cambio')
             ->where(['fecha' => $fecha])
-            ->orderBy(['hora' => SORT_DESC]) 
-            ->scalar(); 
-        
+            ->orderBy(['hora' => SORT_DESC])
+            ->scalar();
+
         // Devolvemos el valor (o '0' si es null) como string para que JavaScript lo maneje.
         return $tasa ? number_format((float)$tasa, 2, '.', '') : '0';
     }
@@ -117,7 +127,23 @@ class CorporativoController extends Controller
         $dataProvider = $searchModel->search($this->request->queryParams);
 
         // Asegurar que las relaciones se carguen
-        $dataProvider->query->with(['users', 'clinicas']);
+        // el query del dataProvider se declara como QueryInterface,
+        // comprobar que es un ActiveQuery antes de usar with()
+        $query = $dataProvider->query;
+        if ($query instanceof \yii\db\ActiveQuery) {
+            $query->with(['users', 'clinicas']);
+        }
+
+        // ========== OPTIONAL: You could also add a check here to verify ==========
+        // ========== that the user has access to at least one corporate ==========
+        $userRole = UserHelper::getMyRol();
+        if (in_array($userRole, $this->allowedClinicaRoles)) {
+            $clinicaId = UserHelper::getMyClinicaId();
+            if (empty($clinicaId)) {
+                Yii::$app->session->setFlash('warning', 'No tiene una clínica asociada. No se mostrarán registros.');
+            }
+        }
+        // ========== END OF OPTIONAL CHECK ==========
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -133,8 +159,17 @@ class CorporativoController extends Controller
      */
     public function actionView($id)
     {
+        $model = $this->findModel($id);
+
+        // ========== NEW: Check if user has access to this corporate ==========
+        if (!$this->userHasAccessToCorporativo($model->id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para ver este corporativo.');
+            return $this->redirect(['index']);
+        }
+        // ========== END OF NEW CHECK ==========
+
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $model,
         ]);
     }
 
@@ -226,14 +261,14 @@ class CorporativoController extends Controller
 
         // --- FIXED: PROPERLY INITIALIZE TASA AND FECHA_PAGO ---
         $model->fecha_pago = date('Y-m-d'); // Set default date
-        
+
         // Get current exchange rate and format it properly
         $currentTasa = $this->getTasaCambioReferencial();
         $model->tasa = number_format($currentTasa, 2, '.', '');
-        
+
         // Pre-fill the payment amount with the calculated total
         $model->monto_pagado = $grandTotal;
-        
+
         // Calculate initial monto_usd (Bs) based on the current rate
         if ($grandTotal > 0 && $currentTasa > 0) {
             $model->monto_usd = $grandTotal * $currentTasa;
@@ -243,7 +278,7 @@ class CorporativoController extends Controller
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
                 $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
-                
+
                 if (abs($grandTotal - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'El monto a pagar debe coincidir con el total de cuotas pendientes.');
                     Yii::$app->session->setFlash('warning', 'El monto no coincide con el total de cuotas pendientes.');
@@ -279,16 +314,16 @@ class CorporativoController extends Controller
                         $model->corporativo_id = $corporativo->id;
                         $post = $this->request->post('Pagos');
                         $model->monto_usd = $post['monto_usd'] ?? null;
-                        
+
                         if ($model->save(false)) {
                             $mainPaymentId = $model->id;
                             $affiliatePaymentsCount = 0;
-                            
+
                             // Create individual payment records for each affiliate
                             foreach ($userAmounts as $userId => $userAmount) {
                                 if ($userAmount > 0) {
                                     $affiliatePayment = new Pagos();
-                                    
+
                                     // Copy only the safe attributes, excluding the ID
                                     $affiliatePayment->created_at = $model->created_at;
                                     $affiliatePayment->recibo_id = $model->recibo_id;
@@ -301,13 +336,13 @@ class CorporativoController extends Controller
                                     $affiliatePayment->tasa = $model->tasa;
                                     $affiliatePayment->monto_usd = $userAmount * $model->tasa; // Calculate user-specific amount in Bs
                                     $affiliatePayment->observacion = $model->observacion;
-                                    
+
                                     // Set the relationship fields
                                     $affiliatePayment->user_id = $userId; // Specific affiliate
                                     $affiliatePayment->corporativo_id = $corporativo->id;
                                     $affiliatePayment->pago_corporativo_id = $mainPaymentId; // Link to main payment
                                     $affiliatePayment->tipo_pago = 'afiliado_corporativo';
-                                    
+
                                     if ($affiliatePayment->save(false)) {
                                         $affiliatePaymentsCount++;
                                         \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}");
@@ -320,14 +355,14 @@ class CorporativoController extends Controller
 
                             $contratosActualizados = [];
                             $cuotasUpdatedCount = 0;
-                            
+
                             foreach ($allCuotas as $cuota) {
                                 if ($cuota->estatus === 'pendiente') {
                                     $cuota->estatus = 'pagado';
                                     $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
-                                    $cuota->rate_usd_bs = $model->tasa; 
+                                    $cuota->rate_usd_bs = $model->tasa;
                                     $cuota->id_pago = $mainPaymentId;
-                                    
+
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;
                                         if (!in_array($cuota->contrato_id, $contratosActualizados)) {
@@ -336,7 +371,7 @@ class CorporativoController extends Controller
                                     }
                                 }
                             }
-                            
+
                             $contractsActivatedCount = 0;
                             foreach ($contratosActualizados as $contratoId) {
                                 $contrato = Contratos::findOne($contratoId);
@@ -344,7 +379,7 @@ class CorporativoController extends Controller
                                     $cuotasPendientes = Cuotas::find()
                                         ->where(['contrato_id' => $contratoId, 'estatus' => 'pendiente'])
                                         ->count();
-                                    
+
                                     if ($cuotasPendientes == 0 && $contrato->estatus !== 'activo') {
                                         $contrato->estatus = 'activo';
                                         if ($contrato->save(false)) {
@@ -355,14 +390,15 @@ class CorporativoController extends Controller
                             }
 
                             $transaction->commit();
-                            
-                            Yii::$app->session->setFlash('success', 
-                                'Pago corporativo registrado exitosamente. ' . 
-                                $affiliatePaymentsCount . ' afiliados procesados. ' .
-                                $cuotasUpdatedCount . ' cuotas actualizadas. ' .
-                                $contractsActivatedCount . ' contratos activados.'
+
+                            Yii::$app->session->setFlash(
+                                'success',
+                                'Pago corporativo registrado exitosamente. ' .
+                                    $affiliatePaymentsCount . ' afiliados procesados. ' .
+                                    $cuotasUpdatedCount . ' cuotas actualizadas. ' .
+                                    $contractsActivatedCount . ' contratos activados.'
                             );
-                            
+
                             return $this->redirect(['view', 'id' => $corporativo->id]);
                         } else {
                             throw new \Exception('Error al guardar el pago corporativo principal.');
@@ -395,35 +431,53 @@ class CorporativoController extends Controller
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
-                
 
-                if ($model->save()) {
-
-                $usersIds = array_filter((array) $model->users_ids); // Elimina vacíos y nulls
-                foreach ($usersIds as $user_datos_id) {
-                    if (empty($user_datos_id)) continue; // Extra seguridad
-
-                    $afiliado = UserDatos::findOne($user_datos_id);
-                    if ($afiliado) {
-                        $modelCorporativoUser = new CorporativoUser();
-                        $modelCorporativoUser->corporativo_id = $model->id;
-                        $modelCorporativoUser->user_id = $afiliado->id;
-                        $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-                        $modelCorporativoUser->rol_en_corporativo = 'afiliado';
-
-                        if (!$modelCorporativoUser->save()) {
-                            Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
-                            Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
-                        }
+                // ========== NEW: For users with clinic roles, auto-assign their clinic ==========
+                $userRole = UserHelper::getMyRol();
+                if (in_array($userRole, $this->allowedClinicaRoles)) {
+                    $clinicaId = UserHelper::getMyClinicaId();
+                    if (!empty($clinicaId) && empty($model->clinicas_ids)) {
+                        $model->clinicas_ids = [$clinicaId];
                     }
                 }
-                
+                // ========== END OF NEW CODE ==========
+
+                if ($model->save()) {
+                    $usersIds = array_filter((array) $model->users_ids); // Elimina vacíos y nulls
+                    foreach ($usersIds as $user_datos_id) {
+                        if (empty($user_datos_id)) continue; // Extra seguridad
+
+                        $afiliado = UserDatos::findOne($user_datos_id);
+                        if ($afiliado) {
+                            $modelCorporativoUser = new CorporativoUser();
+                            $modelCorporativoUser->corporativo_id = $model->id;
+                            $modelCorporativoUser->user_id = $afiliado->id;
+                            $modelCorporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                            $modelCorporativoUser->rol_en_corporativo = 'afiliado';
+
+                            if (!$modelCorporativoUser->save()) {
+                                Yii::error("Error al guardar CorporativoUser: " . json_encode($modelCorporativoUser->errors), __METHOD__);
+                                Yii::$app->session->setFlash('error', 'Error al guardar la relación con el afiliado.');
+                            }
+                        }
+                    }
+
                     Yii::$app->session->setFlash('success', 'Corporativo creado exitosamente.');
                     return $this->redirect(['view', 'id' => $model->id]);
                 }
             }
         } else {
             $model->loadDefaultValues();
+
+            // ========== NEW: Pre-select clinic for users with clinic roles ==========
+            $userRole = UserHelper::getMyRol();
+            if (in_array($userRole, $this->allowedClinicaRoles)) {
+                $clinicaId = UserHelper::getMyClinicaId();
+                if (!empty($clinicaId)) {
+                    $model->clinicas_ids = [$clinicaId];
+                }
+            }
+            // ========== END OF NEW CODE ==========
         }
 
         return $this->render('create', [
@@ -438,10 +492,17 @@ class CorporativoController extends Controller
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-   public function actionUpdate($id)
+    public function actionUpdate($id)
     {
         $model = $this->findModel($id);
-        
+
+        // ========== NEW: Check if user has access to update this corporate ==========
+        if (!$this->userHasAccessToCorporativo($id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para editar este corporativo.');
+            return $this->redirect(['index']);
+        }
+        // ========== END OF NEW CHECK ==========
+
         // Obtener los IDs de los afiliados que ya están asociados con este corporativo
         $afiliadosActuales = CorporativoUser::find()
             ->where(['corporativo_id' => $model->id])
@@ -450,9 +511,24 @@ class CorporativoController extends Controller
 
         if ($this->request->isPost && $model->load($this->request->post())) {
 
+            // ========== NEW: For users with clinic roles, ensure they keep their clinic ==========
+            $userRole = UserHelper::getMyRol();
+            if (in_array($userRole, $this->allowedClinicaRoles)) {
+                $clinicaId = UserHelper::getMyClinicaId();
+                if (!empty($clinicaId)) {
+                    // Make sure the user's clinic is always included
+                    if (empty($model->clinicas_ids)) {
+                        $model->clinicas_ids = [$clinicaId];
+                    } elseif (!in_array($clinicaId, $model->clinicas_ids)) {
+                        $model->clinicas_ids[] = $clinicaId;
+                    }
+                }
+            }
+            // ========== END OF NEW CODE ==========
+
             $afiliadosSeleccionados = (array)($this->request->post('Corporativo')['users_ids'] ?? []);
             $afiliadosSeleccionados = array_filter($afiliadosSeleccionados);
-            
+
             $afiliadosParaBorrar = array_diff($afiliadosActuales, $afiliadosSeleccionados);
             $afiliadosParaAnadir = array_diff($afiliadosSeleccionados, $afiliadosActuales);
 
@@ -472,7 +548,7 @@ class CorporativoController extends Controller
                     $userDatos->save(false);
                 }
             }
-            
+
             // --- LÓGICA PARA AÑADIR NUEVAS RELACIONES Y ACTUALIZAR USER_DATOS ---
             foreach ($afiliadosParaAnadir as $userId) {
                 // 1. Crear la nueva relación en la tabla intermedia
@@ -497,7 +573,7 @@ class CorporativoController extends Controller
                 Yii::$app->session->setFlash('success', 'Corporativo actualizado exitosamente.');
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
-                Yii::$app->session->setFlash('error', 'Error al actualizar el corporativo: ' . implode(', ', array_map(function($errors) {
+                Yii::$app->session->setFlash('error', 'Error al actualizar el corporativo: ' . implode(', ', array_map(function ($errors) {
                     return implode(', ', $errors);
                 }, $model->getErrors())));
             }
@@ -512,66 +588,67 @@ class CorporativoController extends Controller
 
 // ------------------- Controlador de carga masiva de corporativos -------------------------
 
- /**
+    /**
      * Acción principal para mostrar y procesar el formulario de carga masiva de afiliados.
      * @return string|\yii\web\Response
      */
     public function actionCargaMasivaAfiliados()
     {
         $model = new MasivoAfiliadosForm();
-        
+
         // 1. Obtener los corporativos activos para el dropdown
         $corporativosData = Corporativo::find()
             ->select(['id', 'nombre'])
             ->where(['estatus' => 'Activo'])
             ->asArray()
             ->all();
-            
+
         $corporativos = ArrayHelper::map($corporativosData, 'id', 'nombre');
-    
+
         if ($model->load(Yii::$app->request->post())) {
-            
+
             $model->masivoFile = UploadedFile::getInstance($model, 'masivoFile');
-            
+
             if ($model->validate()) {
-                
+
                 $filePath = $model->masivoFile->tempName;
                 $corporativoId = $model->corporativo_id;
-                
+
                 $resultados = $this->procesarCSV(
                     $filePath,
                     $corporativoId,
                     $model->fecha_ini,
                     $model->fecha_ven
                 );
-                
+
                 // 3. Mostrar el resumen del proceso
                 $errorCount = count($resultados['errors']);
                 $successCount = $resultados['successCount'];
-    
+
                 $messageType = $errorCount > 0 ? 'warning' : 'success';
-                $messageText = 'Proceso de carga finalizado con ' . 
-                                $successCount . ' éxitos y ' . 
-                                $errorCount . ' errores.' . 
-                                ($errorCount > 0 ? ' Revise el detalle.' : ' Todo cargado correctamente.');
+                $messageText = 'Proceso de carga finalizado con ' .
+                    $successCount . ' éxitos y ' .
+                    $errorCount . ' errores.' .
+                    ($errorCount > 0 ? ' Revise el detalle.' : ' Todo cargado correctamente.');
 
                 Yii::$app->session->setFlash($messageType, $messageText);
-                
+
                 return $this->render('carga-masiva-resumen', [
                     'model' => $model,
                     'resultados' => $resultados,
                     'corporativo' => Corporativo::findOne($corporativoId),
                 ]);
             } else {
-                
+
                 $validationErrors = ArrayHelper::flatten($model->getErrors());
-                
-                Yii::$app->session->setFlash('error', 
+
+                Yii::$app->session->setFlash(
+                    'error',
                     'Error de validación del formulario de carga: ' . implode('; ', $validationErrors)
                 );
             }
         }
-    
+
         // Mostrar el formulario inicial
         return $this->render('carga-masiva-afiliados', [
             'model' => $model,
@@ -579,7 +656,7 @@ class CorporativoController extends Controller
         ]);
     }
 
-/**
+    /**
      * Lógica principal para leer el archivo CSV y procesar los afiliados,
      * asegurando el cumplimiento de las reglas de validación de UserDatos.
      * * SE HAN AÑADIDO: nacionalidad, estado_civil, lugar_nacimiento, profesion, ocupacion,
@@ -598,10 +675,20 @@ class CorporativoController extends Controller
 
         // Campos requeridos originales
         $requiredFields = [
-            'tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 
-            'telefono', 'email', 'direccion', 'plan_id', 'clinica_id', 'estado' 
+            'tipo_cedula',
+            'cedula',
+            'nombres',
+            'apellidos',
+            'fechanac',
+            'sexo',
+            'telefono',
+            'email',
+            'direccion',
+            'plan_id',
+            'clinica_id',
+            'estado'
         ];
-        
+
         // Manejo de BOM (Byte Order Mark) y lectura de cabeceras
         $bom = chr(0xEF) . chr(0xBB) . chr(0xBF);
         $headerLine = fgets($handle, 1000);
@@ -609,13 +696,13 @@ class CorporativoController extends Controller
             $headerLine = substr($headerLine, 3);
         }
         $headers = str_getcsv($headerLine, ",");
-        
+
         $successCount = 0;
         $errors = [];
         $lineNumber = 1;
-        
+
         if ($headers === false) {
-             return ['successCount' => 0, 'errors' => ['El archivo CSV está vacío o ilegible.']];
+            return ['successCount' => 0, 'errors' => ['El archivo CSV está vacío o ilegible.']];
         }
         $headerMap = array_flip(array_map('trim', $headers));
 
@@ -623,11 +710,11 @@ class CorporativoController extends Controller
         $missingHeaders = array_diff($requiredFields, array_keys($headerMap));
         if (!empty($missingHeaders)) {
             return [
-                'successCount' => 0, 
+                'successCount' => 0,
                 'errors' => ['Línea 1 (Cabecera): Faltan las siguientes columnas requeridas: ' . implode(', ', $missingHeaders)]
             ];
         }
-        
+
         // Pre-carga y mapeo de estados para validación y mensajes de ayuda
         if (empty($this->estadoNameToIdMap)) {
             $allEstados = RmEstado::find()->select(['id', 'nombre'])->asArray()->all();
@@ -648,40 +735,42 @@ class CorporativoController extends Controller
             'actividad_economica' => ['Industrial', 'Comercial', 'Profesional', 'Gubernamental'],
             'descripcion_actividad' => ['Independiente', 'Dependiente', 'Societaria'],
             'ingreso_anual' => [
-                'De 1 a 5 Salarios mínimos', 
-                'De 6 a 10 Salarios mínimos', 
-                'De 11 a 20 Salarios mínimos', 
+                'De 1 a 5 Salarios mínimos',
+                'De 6 a 10 Salarios mínimos',
+                'De 11 a 20 Salarios mínimos',
                 'De 20 Salarios mínimos en adelante'
             ]
         ];
 
         // Procesar cada línea del CSV
         while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-            if (empty(array_filter($data, function($value) { return $value !== ''; }))) {
+            if (empty(array_filter($data, function ($value) {
+                return $value !== '';
+            }))) {
                 continue;
             }
-            
+
             $lineNumber++;
             $transaction = Yii::$app->db->beginTransaction();
-            
+
             $cedulaCsv = trim($data[$headerMap['cedula']] ?? '');
-            
+
             // --- CORRECCIÓN CRÍTICA: LIMPIEZA DE CÉDULA NUMÉRICA ---
             $cedulaLimpia = $this->limpiarSoloNumeros($cedulaCsv);
             // -------------------------------------------------------
 
             $logPrefix = "Línea {$lineNumber} (Cédula: " . ($cedulaCsv ?: 'N/A') . "): ";
-            $userLogin = null; 
+            $userLogin = null;
 
             try {
                 // Extracción y saneamiento de datos clave
                 $planId = (int) trim($data[$headerMap['plan_id']] ?? 0);
                 $clinicaId = (int) trim($data[$headerMap['clinica_id']] ?? 0);
                 $email = trim($data[$headerMap['email']] ?? '');
-                
-                $telefonoCelularCsv = trim($data[$headerMap['telefono']] ?? ''); 
-                $direccionResidencia = trim($data[$headerMap['direccion']] ?? ''); 
-                $estadoNameCsv = trim($data[$headerMap['estado']] ?? ''); 
+
+                $telefonoCelularCsv = trim($data[$headerMap['telefono']] ?? '');
+                $direccionResidencia = trim($data[$headerMap['direccion']] ?? '');
+                $estadoNameCsv = trim($data[$headerMap['estado']] ?? '');
 
                 // Extracción y saneamiento de NUEVOS CAMPOS
                 $nacionalidad = trim($data[$headerMap['nacionalidad']] ?? '');
@@ -698,12 +787,12 @@ class CorporativoController extends Controller
 
                 // Validación de datos principales
                 if (empty($cedulaLimpia) || empty($email) || $planId <= 0 || $clinicaId <= 0) {
-                     throw new \Exception('Datos principales (cédula, email, plan_id, o clinica_id) están incompletos o inválidos.');
+                    throw new \Exception('Datos principales (cédula, email, plan_id, o clinica_id) están incompletos o inválidos.');
                 }
-                
+
                 // Validación del Teléfono Celular (se limpia a 11 dígitos, ej. 04121234567)
                 $telefonoCelularLimpio = $this->limpiarTelefono($telefonoCelularCsv);
-                
+
                 // Validación del Teléfono de Residencia
                 $telefonoResidenciaLimpio = !empty($telefonoResidenciaCsv) ? $this->limpiarTelefono($telefonoResidenciaCsv) : null;
 
@@ -717,7 +806,7 @@ class CorporativoController extends Controller
                 if (!isset($this->estadoNameToIdMap[$normalizedCsvName])) {
                     throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
                 }
-                
+
                 // Nombre del estado para asignación a UserDatos (canónico desde rm_estado)
                 $estadoNombreParaUserDatos = $this->estadoNormToCanonicalName[$normalizedCsvName] ?? $estadoNameCsv;
 
@@ -730,10 +819,10 @@ class CorporativoController extends Controller
                 if (!$plan) {
                     throw new \Exception('El Plan ID ' . $planId . ' no existe o no está activo.');
                 }
-                
+
                 // 3. Validación de Duplicados (Cédula y Email)
                 if (UserDatos::find()->where(['cedula' => $cedulaLimpia])->exists()) {
-                     throw new \Exception("Ya existe un afiliado con la cédula {$cedulaLimpia} registrado.");
+                    throw new \Exception("Ya existe un afiliado con la cédula {$cedulaLimpia} registrado.");
                 }
 
                 if (User::find()->where(['email' => $email])->exists()) {
@@ -753,15 +842,15 @@ class CorporativoController extends Controller
                 if (!empty($ingresoAnualCsv) && !in_array($ingresoAnualCsv, $validRanges['ingreso_anual'])) {
                     throw new \Exception("Valor inválido para 'ingreso_anual': '{$ingresoAnualCsv}'. Debe ser uno de: " . implode(', ', $validRanges['ingreso_anual']));
                 }
-                
+
                 // 5. Crear el User Login
                 $userLogin = new User();
                 $userLogin->email = $email;
-                $userLogin->username = $email; 
-                $userLogin->password_hash = Yii::$app->security->generatePasswordHash(Yii::$app->security->generateRandomString(12)); 
+                $userLogin->username = $email;
+                $userLogin->password_hash = Yii::$app->security->generatePasswordHash(Yii::$app->security->generateRandomString(12));
                 $userLogin->generateAuthKey();
-                $userLogin->status = 10; 
-                
+                $userLogin->status = 10;
+
                 if (!$userLogin->save()) {
                     Yii::error(['Error_User_Login' => $userLogin->getErrors()], __METHOD__);
                     throw new \Exception('Error al crear User Login: ' . implode(', ', ArrayHelper::flatten($userLogin->getErrors())));
@@ -769,23 +858,23 @@ class CorporativoController extends Controller
 
                 // 6. Crear el registro UserDatos (Afiliado)
                 $afiliado = new UserDatos();
-                $afiliado->user_login_id = $userLogin->id; 
-                
+                $afiliado->user_login_id = $userLogin->id;
+
                 // Mapeo de campos del CSV (Existentes)
                 $afiliado->tipo_cedula = trim($data[$headerMap['tipo_cedula']]);
                 $afiliado->cedula = $cedulaLimpia; // Asignación del valor NUMÉRICO
                 $afiliado->nombres = trim($data[$headerMap['nombres']]);
                 $afiliado->apellidos = trim($data[$headerMap['apellidos']]);
-                
+
                 // Validar y Formatear fecha de nacimiento (YYYY-MM-DD)
                 $fechaNacString = trim($data[$headerMap['fechanac']]);
                 $dateObject = \DateTime::createFromFormat('d/m/Y', $fechaNacString) ?: \DateTime::createFromFormat('Y-m-d', $fechaNacString);
-                
+
                 if (!$dateObject) {
                     throw new \Exception("La fecha de nacimiento '{$fechaNacString}' no tiene un formato de fecha válido (Ej: DD/MM/AAAA o YYYY-MM-DD).");
                 }
                 $afiliado->fechanac = $dateObject->format('Y-m-d');
-                
+
                 // Mapeo de Sexo para cumplir con el range de validación: ['Masculino', 'Femenino', 'Otro']
                 $sexoCsv = strtoupper(trim($data[$headerMap['sexo']]));
                 if (in_array($sexoCsv, ['M', 'MASCULINO'])) {
@@ -795,16 +884,16 @@ class CorporativoController extends Controller
                 } else {
                     $afiliado->sexo = $sexoCsv;
                 }
-                
+
                 // Asignación de Teléfono, Dirección y ESTADO (como string/nombre)
-                $afiliado->telefono_celular = $telefonoCelularLimpio; 
-                $afiliado->telefono = $telefonoCelularLimpio; 
-                $afiliado->direccion_residencia = $direccionResidencia; 
-                $afiliado->direccion = $direccionResidencia; 
-                
+                $afiliado->telefono_celular = $telefonoCelularLimpio;
+                $afiliado->telefono = $telefonoCelularLimpio;
+                $afiliado->direccion_residencia = $direccionResidencia;
+                $afiliado->direccion = $direccionResidencia;
+
                 // ** IMPORTANTE: Asignación del NOMBRE del estado (string) - Cumple con la validación del modelo **
-                $afiliado->estado = $estadoNombreParaUserDatos; 
-                
+                $afiliado->estado = $estadoNombreParaUserDatos;
+
                 // Mapeo de campos del CSV (Nuevos Campos)
                 $afiliado->nacionalidad = $nacionalidad ?: null;
                 $afiliado->estado_civil = $estadoCivilCsv ?: null;
@@ -817,51 +906,51 @@ class CorporativoController extends Controller
                 $afiliado->ingreso_anual = $ingresoAnualCsv ?: null;
                 $afiliado->direccion_cobro = $direccionCobro ?: null;
                 $afiliado->telefono_residencia = $telefonoResidenciaLimpio; // Limpiado o null
-                
+
                 // Campos Fijos y Opcionales (si existen en el CSV)
                 $afiliado->user_datos_type_id = 2; // Tipo: Afiliado Corporativo
-                $afiliado->afiliado_corporativo_id = $corporativoId; 
-                $afiliado->email = $email; 
+                $afiliado->afiliado_corporativo_id = $corporativoId;
+                $afiliado->email = $email;
 
-                $afiliado->direccion_oficina = (isset($headerMap['direccion_oficina']) && !empty(trim($data[$headerMap['direccion_oficina']] ?? ''))) ? trim($data[$headerMap['direccion_oficina']]) : null; 
-                
+                $afiliado->direccion_oficina = (isset($headerMap['direccion_oficina']) && !empty(trim($data[$headerMap['direccion_oficina']] ?? ''))) ? trim($data[$headerMap['direccion_oficina']]) : null;
+
                 $telefonoOficinaCsv = (isset($headerMap['telefono_oficina']) && !empty(trim($data[$headerMap['telefono_oficina']] ?? ''))) ? trim($data[$headerMap['telefono_oficina']]) : null;
                 $afiliado->telefono_oficina = $telefonoOficinaCsv ? $this->limpiarTelefono($telefonoOficinaCsv) : null;
-                
+
                 $afiliado->tipo_sangre = (isset($headerMap['tipo_sangre']) && !empty(trim($data[$headerMap['tipo_sangre']] ?? ''))) ? trim($data[$headerMap['tipo_sangre']]) : null;
-                
-                $afiliado->role = 'afiliado'; 
-                $afiliado->estatus = 'Creado'; 
+
+                $afiliado->role = 'afiliado';
+                $afiliado->estatus = 'Creado';
                 $afiliado->estatus_solvente = 'Si';
                 $afiliado->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
                 $afiliado->created_at = date('Y-m-d H:i:s');
                 $afiliado->updated_at = date('Y-m-d H:i:s');
                 $afiliado->plan_id = $planId;
-                $afiliado->clinica_id = $clinicaId; 
-                
+                $afiliado->clinica_id = $clinicaId;
+
                 if (!$afiliado->save()) {
                     $errorMessages = ArrayHelper::flatten($afiliado->getErrors());
-                    
+
                     Yii::error([
                         'ERROR_VALIDACION_MASIVA' => $lineNumber,
                         'Modelo' => 'UserDatos',
-                        'Errores_Detalle' => $afiliado->getErrors(), 
+                        'Errores_Detalle' => $afiliado->getErrors(),
                     ], __METHOD__);
-                    
+
                     throw new \Exception('Error al crear UserDatos (Validación): ' . implode('; ', $errorMessages));
                 }
-                
+
                 // 7. Creación de Contrato, Cuota, CorporativoUser y Asignación de Rol
                 $modelContrato = new Contratos();
-                $modelContrato->user_id = $afiliado->id; 
+                $modelContrato->user_id = $afiliado->id;
                 $modelContrato->estatus = 'Registrado';
-                $modelContrato->clinica_id = $afiliado->clinica_id; 
-                $modelContrato->plan_id = $afiliado->plan_id; 
+                $modelContrato->clinica_id = $afiliado->clinica_id;
+                $modelContrato->plan_id = $afiliado->plan_id;
                 $modelContrato->monto = $plan ? $plan->precio : 0;
-                
+
                 $modelContrato->fecha_ini = $fechaIniGlobal; // formato Y-m-d del formulario
                 $modelContrato->fecha_ven = $fechaVenGlobal; // formato Y-m-d del formulario
-                
+
                 if (!$modelContrato->save()) {
                     Yii::error(['Error_Contrato' => $modelContrato->getErrors()], __METHOD__);
                     throw new \Exception('Error al crear Contrato: ' . implode(', ', ArrayHelper::flatten($modelContrato->getErrors())));
@@ -871,16 +960,16 @@ class CorporativoController extends Controller
                 $modelContrato->nrocontrato = $afiliado->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
                 $afiliado->contrato_id = $modelContrato->id;
 
-                if (!$modelContrato->save(false) || !$afiliado->save(false)) { 
+                if (!$modelContrato->save(false) || !$afiliado->save(false)) {
                     throw new \Exception('Error al guardar NroContrato o contrato_id.');
                 }
-                
+
                 $modelCuota = new Cuotas();
                 $modelCuota->contrato_id = $modelContrato->id;
-                $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini; 
+                $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
                 $modelCuota->monto = $modelContrato->monto;
                 $modelCuota->estatus = 'pendiente';
-                $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio ?? 1; 
+                $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio ?? 1;
 
                 if (!$modelCuota->save()) {
                     Yii::error(['Error_Cuota' => $modelCuota->getErrors()], __METHOD__);
@@ -889,39 +978,38 @@ class CorporativoController extends Controller
 
                 $corporativoUser = new CorporativoUser();
                 $corporativoUser->corporativo_id = $corporativoId;
-                $corporativoUser->user_id = $afiliado->id; 
+                $corporativoUser->user_id = $afiliado->id;
                 $corporativoUser->fecha_vinculacion = new Expression('NOW()');
 
                 $asesorIdData = isset($headerMap['asesor_id']) ? trim($data[$headerMap['asesor_id']] ?? '') : null;
                 if (!empty($asesorIdData)) {
                     $corporativoUser->asesor_id = (int) $asesorIdData;
-                } 
+                }
 
                 if (!$corporativoUser->save()) {
                     Yii::error(['Error_CorporativoUser' => $corporativoUser->getErrors()], __METHOD__);
                     throw new \Exception('Error al vincular con CorporativoUser: ' . implode(', ', ArrayHelper::flatten($corporativoUser->getErrors())));
                 }
-                
+
                 // Asignar rol 'afiliado'
                 $auth = Yii::$app->authManager;
                 $role = $auth->getRole('afiliado');
                 if ($role) {
-                    $auth->assign($role, $userLogin->id); 
+                    $auth->assign($role, $userLogin->id);
                 }
-                
+
                 $transaction->commit();
                 $successCount++;
-
             } catch (\Exception $e) {
                 $transaction->rollBack();
                 $errors[] = $logPrefix . $e->getMessage();
-                
+
                 if (isset($userLogin) && !$userLogin->isNewRecord) {
-                     try {
+                    try {
                         $userLogin->delete(); // Limpiar User Login si falló algo posterior
-                     } catch (\Throwable $th) {
+                    } catch (\Throwable $th) {
                         Yii::error("Error de limpieza del User Login: " . $th->getMessage(), __METHOD__);
-                     }
+                    }
                 }
                 Yii::error("Carga Masiva Error General en Línea {$lineNumber} - " . $e->getMessage(), __METHOD__);
             }
@@ -930,7 +1018,7 @@ class CorporativoController extends Controller
         fclose($handle);
         return ['successCount' => $successCount, 'errors' => $errors];
     }
-    
+
     /**
      * Genera y fuerza la descarga de un archivo CSV de ejemplo (plantilla).
      * Se han añadido los campos: nacionalidad, estado_civil, lugar_nacimiento, profesion, 
@@ -941,44 +1029,86 @@ class CorporativoController extends Controller
     public function actionDescargarPlantilla()
     {
         $headers = [
-            'tipo_cedula', 'cedula', 'nombres', 'apellidos', 'fechanac', 'sexo', 'telefono', 
-            'email', 'direccion', 'plan_id', 'clinica_id', 'estado', 
-            
+            'tipo_cedula',
+            'cedula',
+            'nombres',
+            'apellidos',
+            'fechanac',
+            'sexo',
+            'telefono',
+            'email',
+            'direccion',
+            'plan_id',
+            'clinica_id',
+            'estado',
+
             // Nuevos campos
-            'nacionalidad', 'estado_civil', 'lugar_nacimiento', 'profesion', 'ocupacion',
-            'actividad_economica', 'ramo_comercial', 'descripcion_actividad', 'ingreso_anual',
-            'direccion_cobro', 'telefono_residencia',
+            'nacionalidad',
+            'estado_civil',
+            'lugar_nacimiento',
+            'profesion',
+            'ocupacion',
+            'actividad_economica',
+            'ramo_comercial',
+            'descripcion_actividad',
+            'ingreso_anual',
+            'direccion_cobro',
+            'telefono_residencia',
 
             // Campos opcionales existentes
-            'asesor_id','direccion_oficina', 'telefono_oficina', 'tipo_sangre'
+            'asesor_id',
+            'direccion_oficina',
+            'telefono_oficina',
+            'tipo_sangre'
         ];
-        
+
         $sampleData = [
-            'V', '19088456', 'JUAN PABLO', 'ROJAS PEREZ', '1990-05-15', 'Masculino', '04121234567', 
-            'juan.pablo@yopmail.com', 'CALLE SOL #123', '2', '2', 'MIRANDA', // ESTADO (NOMBRE)
-            
+            'V',
+            '19088456',
+            'JUAN PABLO',
+            'ROJAS PEREZ',
+            '1990-05-15',
+            'Masculino',
+            '04121234567',
+            'juan.pablo@yopmail.com',
+            'CALLE SOL #123',
+            '2',
+            '2',
+            'MIRANDA', // ESTADO (NOMBRE)
+
             // Datos de muestra para nuevos campos
-            'VENEZOLANA', 'Casado', 'CARACAS', 'INGENIERO', 'EMPLEADO',
-            'Gubernamental', 'SERVICIOS', 'Dependiente', 'De 6 a 10 Salarios mínimos',
-            'DIRECCION PARA ENVIAR ESTADOS DE CUENTA', '02125551234',
+            'VENEZOLANA',
+            'Casado',
+            'CARACAS',
+            'INGENIERO',
+            'EMPLEADO',
+            'Gubernamental',
+            'SERVICIOS',
+            'Dependiente',
+            'De 6 a 10 Salarios mínimos',
+            'DIRECCION PARA ENVIAR ESTADOS DE CUENTA',
+            '02125551234',
 
             // Datos de muestra para campos opcionales existentes
-            '', 'AV. PRINCIPAL, EDIF. AZUL, PISO 3', '2125871425', 'A+'
+            '',
+            'AV. PRINCIPAL, EDIF. AZUL, PISO 3',
+            '2125871425',
+            'A+'
         ];
 
-        $output = fopen('php://temp', 'r+'); 
+        $output = fopen('php://temp', 'r+');
         fwrite($output, "\xEF\xBB\xBF"); // BOM para compatibilidad con Excel
-        
-        fputcsv($output, $headers, ','); 
+
+        fputcsv($output, $headers, ',');
         fputcsv($output, $sampleData, ',');
 
-        rewind($output); 
-        $content = stream_get_contents($output); 
-        fclose($output); 
+        rewind($output);
+        $content = stream_get_contents($output);
+        fclose($output);
 
         return Yii::$app->response->sendContentAsFile($content, 'plantilla_afiliados_corporativos.csv', [
             'mimeType' => 'text/csv; charset=UTF-8',
-            'inline' => false 
+            'inline' => false
         ]);
     }
 
@@ -1036,12 +1166,12 @@ class CorporativoController extends Controller
 
         // Si es más largo, se toman los últimos 11 (para manejar códigos de país si los hubiera)
         if (strlen($numeroLimpio) > 11) {
-             $numeroLimpio = substr($numeroLimpio, -11);
+            $numeroLimpio = substr($numeroLimpio, -11);
         }
-        
+
         return $numeroLimpio;
     }
-    
+
     /**
      * Limpia una cadena para dejar únicamente caracteres numéricos.
      * Requerido porque el campo 'cedula' es INTEGER en la DB.
@@ -1053,7 +1183,7 @@ class CorporativoController extends Controller
         // Esta es la función crítica que convierte "V-19.088.456" a "19088456"
         return preg_replace('/[^0-9]/', '', $input);
     }
-    
+
     /**
      * Normaliza una cadena quitando acentos y caracteres especiales (para buscar estados).
      * @param string $string La cadena a normalizar.
@@ -1062,10 +1192,24 @@ class CorporativoController extends Controller
     private function _normalizeString($string)
     {
         $unwanted_array = [
-            'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ñ'=>'n', 
-            'Á'=>'A', 'É'=>'E', 'Í'=>'I', 'Ó'=>'O', 'Ú'=>'U', 'Ñ'=>'N', 
-            'ä'=>'a', 'ë'=>'e', 'ï'=>'i', 'ö'=>'o', 'ü'=>'u',
-            ' '=>'', 
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' => 'o',
+            'ú' => 'u',
+            'ñ' => 'n',
+            'Á' => 'A',
+            'É' => 'E',
+            'Í' => 'I',
+            'Ó' => 'O',
+            'Ú' => 'U',
+            'Ñ' => 'N',
+            'ä' => 'a',
+            'ë' => 'e',
+            'ï' => 'i',
+            'ö' => 'o',
+            'ü' => 'u',
+            ' ' => '',
         ];
 
         return strtr($string, $unwanted_array);
@@ -1073,31 +1217,31 @@ class CorporativoController extends Controller
 
 
     public function actionObtenerClinicasPorCorporativo($id)
-{
-    Yii::$app->response->format = Response::FORMAT_JSON;
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
-    // 1. Obtener los modelos CorporativoClinica asociados
-    $asociaciones = CorporativoClinica::find()
-        ->where(['corporativo_id' => $id])
-        ->all();
-        
-    $clinicasData = [];
+        // 1. Obtener los modelos CorporativoClinica asociados
+        $asociaciones = CorporativoClinica::find()
+            ->where(['corporativo_id' => $id])
+            ->all();
 
-    // 2. Iterar sobre las asociaciones para obtener los datos de la clínica
-    foreach ($asociaciones as $asociacion) {
-        // Asumiendo que el modelo CorporativoClinica tiene una relación 'clinica'
-        // y que el modelo de Clínica tiene las propiedades 'id' y 'nombre'.
-        $clinicasData[] = [
-            'id' => $asociacion->clinica->id,
-            'nombre' => $asociacion->clinica->nombre, // Asegúrate de que 'nombre' es el atributo correcto.
-        ];
+        $clinicasData = [];
+
+        // 2. Iterar sobre las asociaciones para obtener los datos de la clínica
+        foreach ($asociaciones as $asociacion) {
+            // Asumiendo que el modelo CorporativoClinica tiene una relación 'clinica'
+            // y que el modelo de Clínica tiene las propiedades 'id' y 'nombre'.
+            $clinicasData[] = [
+                'id' => $asociacion->clinica->id,
+                'nombre' => $asociacion->clinica->nombre, // Asegúrate de que 'nombre' es el atributo correcto.
+            ];
+        }
+
+        // Devolver el array JSON
+        return $clinicasData;
     }
-    
-    // Devolver el array JSON
-    return $clinicasData;
-}
 
- /**
+    /**
      * Obtiene la lista de clínicas asociadas a un corporativo dado,
      * incluyendo la relación de Planes de cada clínica.
      * @param int $id ID del Corporativo
@@ -1117,7 +1261,7 @@ class CorporativoController extends Controller
                     $query->andWhere(['corporativo_id' => $id]);
                 }])
                 // CARGA: with() para cargar los planes asociados a CADA clínica encontrada.
-                ->with('planes') 
+                ->with('planes')
                 ->all();
 
             // 3. Mapeo a Array para generar la estructura JSON deseada
@@ -1125,7 +1269,7 @@ class CorporativoController extends Controller
                 'app\models\RmClinica' => [
                     'id',
                     'nombre' => 'nombre',
-                    
+
                     // Mapeo de la relación anidada 'planes'
                     'planes' => function ($clinica) {
                         return \yii\helpers\ArrayHelper::toArray($clinica->planes, [
@@ -1140,7 +1284,6 @@ class CorporativoController extends Controller
 
             // Respuesta de éxito con los datos
             return ['success' => true, 'data' => $data];
-
         } catch (\Exception $e) {
             // Manejo de errores detallado
             Yii::error('Error al obtener clínicas con planes: ' . $e->getMessage(), __METHOD__);
@@ -1154,9 +1297,9 @@ class CorporativoController extends Controller
     }
 
 
-/** ----------------------------------------  Fin de Carga Masiva -------------------------------------- */ 
+    /** ----------------------------------------  Fin de Carga Masiva -------------------------------------- */
 
-    
+
     /**
      * Deletes an existing Corporativo model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
@@ -1166,6 +1309,13 @@ class CorporativoController extends Controller
      */
     public function actionDelete($id)
     {
+        // ========== NEW: Check if user has access to delete this corporate ==========
+        if (!$this->userHasAccessToCorporativo($id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para eliminar este corporativo.');
+            return $this->redirect(['index']);
+        }
+        // ========== END OF NEW CHECK ==========
+
         $this->findModel($id)->delete();
 
         return $this->redirect(['index']);
@@ -1186,33 +1336,78 @@ class CorporativoController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
+
+    // ========== NEW HELPER METHOD: Check if user has access to a corporate ==========
+    /**
+     * Checks if the current user has access to a specific corporate
+     * @param int $corporativoId
+     * @return bool
+     */
+    private function userHasAccessToCorporativo($corporativoId)
+    {
+        $userRole = UserHelper::getMyRol();
+
+        // Admin has access to all
+        if ($userRole === 'Administrador') {
+            return true;
+        }
+
+        // If user has clinic role, check if corporate is linked to their clinic
+        if (in_array($userRole, $this->allowedClinicaRoles)) {
+            $clinicaId = UserHelper::getMyClinicaId();
+
+            if (empty($clinicaId)) {
+                return false;
+            }
+
+            // Check if the corporate is linked to the user's clinic
+            $exists = CorporativoClinica::find()
+                ->where(['corporativo_id' => $corporativoId, 'clinica_id' => $clinicaId])
+                ->exists();
+
+            return $exists;
+        }
+
+        // For other roles, you can define their access logic here
+        // For now, default to true
+        return true;
+    }
+    // ========== END OF NEW HELPER METHOD ==========
+
     public function actionDeuda($id)
     {
-        $corporativo = $this->findModel($id);
-        
+        $model = $this->findModel($id);
+
+        // ========== NEW: Check if user has access to this corporate ==========
+        if (!$this->userHasAccessToCorporativo($id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para ver la deuda de este corporativo.');
+            return $this->redirect(['index']);
+        }
+        // ========== END OF NEW CHECK ==========
+
         // Get ALL user IDs for this corporate (BOTH methods)
         $allUserIds = $this->getAllCorporateUserIds($id);
-        
+
         $allCuotas = [];
         $grandTotal = 0;
 
         if (!empty($allUserIds)) {
             // Use INNER JOIN approach (same as actionPagos())
             $allCuotas = \app\models\Cuotas::find()
-            ->select('cuotas.*')
-            ->innerJoinWith(['contrato' => function($query) {
-                $query->innerJoinWith(['user']); // Join with user_datos for ordering by name
-            }])
-            ->where(['contratos.user_id' => $allUserIds])
-            ->andWhere(['cuotas.estatus' => 'pendiente'])
-            ->andWhere(['>', 'cuotas.monto', 0])
-            // Order by expiration date (oldest first) and then by affiliate name
-            ->orderBy([
-                'cuotas.fecha_vencimiento' => SORT_ASC, // Oldest first
-                'user_datos.nombres' => SORT_ASC, // Then by first name
-            ])
-            ->all();
-                
+                ->select('cuotas.*')
+                ->innerJoinWith(['contrato' => function ($query) {
+                    $query->innerJoinWith(['user']); // Join with user_datos for ordering by name
+                }])
+                ->where(['contratos.user_id' => $allUserIds])
+                ->andWhere(['cuotas.estatus' => 'pendiente'])
+                ->andWhere(['>', 'cuotas.monto', 0])
+                // Order by expiration date (oldest first) and then by affiliate name
+                ->orderBy([
+                    'cuotas.fecha_vencimiento' => SORT_ASC, // Oldest first
+                    'user_datos.nombres' => SORT_ASC, // Then by first name
+                ])
+                ->all();
+
             // Calculate grand total
             foreach ($allCuotas as $cuota) {
                 $amount = floatval($cuota->monto);
@@ -1220,12 +1415,12 @@ class CorporativoController extends Controller
             }
         }
 
-        Yii::debug("Corporate ID={$id}: Total users=" . count($allUserIds) . 
-                ", Total fees=" . count($allCuotas) . 
-                ", Total amount={$grandTotal}");
+        Yii::debug("Corporate ID={$id}: Total users=" . count($allUserIds) .
+            ", Total fees=" . count($allCuotas) .
+            ", Total amount={$grandTotal}");
 
         return $this->render('deuda', [
-            'corporativo' => $corporativo,
+            'corporativo' => $model,
             'allCuotas' => $allCuotas,
             'grandTotal' => $grandTotal,
         ]);
@@ -1241,13 +1436,13 @@ class CorporativoController extends Controller
             ->select('user_id')
             ->where(['corporativo_id' => $corporativoId])
             ->column();
-        
+
         // 2. Indirect users (from user_datos.afiliado_corporativo_id field)
         $indirectUserIds = \app\models\UserDatos::find()
             ->select('id')
             ->where(['afiliado_corporativo_id' => $corporativoId])
             ->column();
-        
+
         // 3. Combine and remove duplicates
         return array_unique(array_merge($directUserIds, $indirectUserIds));
     }
@@ -1269,12 +1464,12 @@ class CorporativoController extends Controller
 
         // Parse comma-separated cuota IDs
         $selectedCuotaIds = explode(',', $cuotas);
-        
+
         // Fetch only the selected cuotas
         $allCuotas = [];
         $grandTotal = 0;
         $userAmounts = [];
-        
+
         if (!empty($selectedCuotaIds)) {
             foreach ($selectedCuotaIds as $cuotaId) {
                 $cuota = Cuotas::find()
@@ -1286,11 +1481,11 @@ class CorporativoController extends Controller
 
                 if ($cuota && $cuota->contrato) {
                     $userId = $cuota->contrato->user_id;
-                    
+
                     if (!isset($userAmounts[$userId])) {
                         $userAmounts[$userId] = 0;
                     }
-                    
+
                     $monto = $cuota->monto ?: 0;
                     if ($monto > 0) {
                         $allCuotas[] = $cuota;
@@ -1303,14 +1498,14 @@ class CorporativoController extends Controller
 
         // --- FIXED: PROPERLY INITIALIZE TASA AND FECHA_PAGO ---
         $model->fecha_pago = date('Y-m-d'); // Set default date
-        
+
         // Get current exchange rate and format it properly
         $currentTasa = $this->getTasaCambioReferencial();
         $model->tasa = number_format($currentTasa, 2, '.', '');
-        
+
         // Pre-fill the payment amount with the calculated total
         $model->monto_pagado = $grandTotal;
-        
+
         // Calculate initial monto_usd (Bs) based on the current rate
         if ($grandTotal > 0 && $currentTasa > 0) {
             $model->monto_usd = $grandTotal * $currentTasa;
@@ -1320,7 +1515,7 @@ class CorporativoController extends Controller
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
                 $montoPagadoPosted = (float)($model->monto_pagado ?: 0);
-                
+
                 if (abs($grandTotal - $montoPagadoPosted) > 0.01) {
                     $model->addError('monto_pagado', 'El monto a pagar debe coincidir con el total de cuotas seleccionadas.');
                     Yii::$app->session->setFlash('warning', 'El monto no coincide con el total de cuotas seleccionadas.');
@@ -1356,16 +1551,16 @@ class CorporativoController extends Controller
                         $model->corporativo_id = $corporativo->id;
                         $post = $this->request->post('Pagos');
                         $model->monto_usd = $post['monto_usd'] ?? null;
-                        
+
                         if ($model->save(false)) {
                             $mainPaymentId = $model->id;
                             $affiliatePaymentsCount = 0;
-                            
+
                             // Create individual payment records for each affiliate
                             foreach ($userAmounts as $userId => $userAmount) {
                                 if ($userAmount > 0) {
                                     $affiliatePayment = new Pagos();
-                                    
+
                                     // Copy only the safe attributes, excluding the ID
                                     $affiliatePayment->created_at = $model->created_at;
                                     $affiliatePayment->recibo_id = $model->recibo_id;
@@ -1378,13 +1573,13 @@ class CorporativoController extends Controller
                                     $affiliatePayment->tasa = $model->tasa;
                                     $affiliatePayment->monto_usd = $userAmount * $model->tasa; // Calculate user-specific amount in Bs
                                     $affiliatePayment->observacion = $model->observacion;
-                                    
+
                                     // Set the relationship fields
                                     $affiliatePayment->user_id = $userId; // Specific affiliate
                                     $affiliatePayment->corporativo_id = $corporativo->id;
                                     $affiliatePayment->pago_corporativo_id = $mainPaymentId; // Link to main payment
                                     $affiliatePayment->tipo_pago = 'afiliado_corporativo';
-                                    
+
                                     if ($affiliatePayment->save(false)) {
                                         $affiliatePaymentsCount++;
                                         \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}");
@@ -1397,14 +1592,14 @@ class CorporativoController extends Controller
 
                             $contratosActualizados = [];
                             $cuotasUpdatedCount = 0;
-                            
+
                             foreach ($allCuotas as $cuota) {
                                 if ($cuota->estatus === 'pendiente') {
                                     $cuota->estatus = 'pagado';
                                     $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
-                                    $cuota->rate_usd_bs = $model->tasa; 
+                                    $cuota->rate_usd_bs = $model->tasa;
                                     $cuota->id_pago = $mainPaymentId;
-                                    
+
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;
                                         if (!in_array($cuota->contrato_id, $contratosActualizados)) {
@@ -1413,7 +1608,7 @@ class CorporativoController extends Controller
                                     }
                                 }
                             }
-                            
+
                             $contractsActivatedCount = 0;
                             foreach ($contratosActualizados as $contratoId) {
                                 $contrato = Contratos::findOne($contratoId);
@@ -1421,7 +1616,7 @@ class CorporativoController extends Controller
                                     $cuotasPendientes = Cuotas::find()
                                         ->where(['contrato_id' => $contratoId, 'estatus' => 'pendiente'])
                                         ->count();
-                                    
+
                                     if ($cuotasPendientes == 0 && $contrato->estatus !== 'activo') {
                                         $contrato->estatus = 'activo';
                                         if ($contrato->save(false)) {
@@ -1432,14 +1627,15 @@ class CorporativoController extends Controller
                             }
 
                             $transaction->commit();
-                            
-                            Yii::$app->session->setFlash('success', 
-                                'Pago corporativo PARCIAL registrado exitosamente. ' . 
-                                $affiliatePaymentsCount . ' afiliados procesados. ' .
-                                $cuotasUpdatedCount . ' cuotas actualizadas. ' .
-                                $contractsActivatedCount . ' contratos activados.'
+
+                            Yii::$app->session->setFlash(
+                                'success',
+                                'Pago corporativo PARCIAL registrado exitosamente. ' .
+                                    $affiliatePaymentsCount . ' afiliados procesados. ' .
+                                    $cuotasUpdatedCount . ' cuotas actualizadas. ' .
+                                    $contractsActivatedCount . ' contratos activados.'
                             );
-                            
+
                             return $this->redirect(['view', 'id' => $corporativo->id]);
                         } else {
                             throw new \Exception('Error al guardar el pago corporativo principal.');
