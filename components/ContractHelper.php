@@ -6,6 +6,7 @@ use Yii;
 use yii\helpers\Html;
 use app\models\Contratos;
 use app\models\Cuotas;
+use app\models\Pagos;
 use app\models\UserDatos;
 
 /**
@@ -29,6 +30,7 @@ class ContractHelper
             'vencido' => 'badge badge-warning',
             'pendiente' => 'badge badge-info',
             'suspendido' => 'badge badge-secondary',
+            'sin_contrato' => 'badge badge-light',
         ];
 
         return $classes[$status] ?? 'badge badge-light';
@@ -50,18 +52,74 @@ class ContractHelper
             'vencido' => '⏰',
             'pendiente' => '⏳',
             'suspendido' => '⏸️',
+            'sin_contrato' => '📭',
         ];
 
         return $icons[$status] ?? '📄';
     }
 
     /**
+     * Get pending payment status for a user
+     * 
+     * @param int $userId
+     * @return array|null Information about pending payments
+     */
+    public static function getPendingPaymentStatus($userId)
+    {
+        if (!$userId) {
+            return null;
+        }
+
+        // Find all pending payments (Por Conciliar) for this user
+        $pendingPayments = Pagos::find()
+            ->where(['user_id' => $userId, 'estatus' => 'Por Conciliar'])
+            ->orderBy(['fecha_pago' => SORT_DESC])
+            ->all();
+
+        if (empty($pendingPayments)) {
+            return null;
+        }
+
+        // Count total pending payments
+        $pendingCount = count($pendingPayments);
+
+        // Calculate total amount pending (in USD)
+        $totalAmount = 0;
+        $paymentDetails = [];
+
+        foreach ($pendingPayments as $payment) {
+            $amount = $payment->monto_usd ?: $payment->monto_pagado;
+            $totalAmount += $amount;
+
+            // Get payment date
+            $paymentDate = Yii::$app->formatter->asDate($payment->fecha_pago, 'd/M/Y');
+
+            $paymentDetails[] = [
+                'id' => $payment->id,
+                'amount' => $amount,
+                'date' => $paymentDate,
+                'method' => $payment->metodo_pago,
+                'reference' => $payment->numero_referencia_pago,
+            ];
+        }
+
+        return [
+            'count' => $pendingCount,
+            'total_amount' => round($totalAmount, 2),
+            'details' => $paymentDetails,
+            'first_payment_date' => $paymentDetails[0]['date'] ?? null,
+            'has_pending' => true,
+        ];
+    }
+
+    /**
      * Generate detailed tooltip for contracts
      * 
      * @param Contratos $contrato
+     * @param array|null $pendingPaymentStatus
      * @return string HTML tooltip
      */
-    public static function generateContractTooltip($contrato)
+    public static function generateContractTooltip($contrato, $pendingPaymentStatus = null)
     {
         if (!$contrato) {
             return 'Contrato no disponible';
@@ -94,6 +152,11 @@ class ContractHelper
         }
 
         $tooltip .= "Monto: <strong>$" . number_format($contrato->monto, 2) . "</strong><br>";
+
+        // Add plan info if available
+        if ($contrato->plan) {
+            $tooltip .= "Plan: <strong>{$contrato->plan->nombre}</strong><br>";
+        }
 
         // Status-specific explanations
         $tooltip .= "<hr style='margin: 5px 0; border-color: #ccc;'>";
@@ -158,11 +221,37 @@ class ContractHelper
                 break;
         }
 
-        // Add plan info if available
-        if ($contrato->plan) {
-            $tooltip .= "<hr style='margin: 5px 0; border-color: #ccc;'>";
-            $tooltip .= "<small>Plan: <strong>{$contrato->plan->nombre}</strong></small><br>";
-            $tooltip .= "<small>Clínica: <strong>" . ($contrato->clinica ? $contrato->clinica->nombre : 'N/A') . "</strong></small>";
+        // Add pending payment information if available
+        if ($pendingPaymentStatus) {
+            $tooltip .= "<hr style='margin: 5px 0; border-color: #f39c12;'>";
+            $tooltip .= "<div style='color: #f39c12;'><strong>💰 PAGOS PENDIENTES DE CONCILIACIÓN</strong></div>";
+            $tooltip .= "<small>Cantidad: <strong>{$pendingPaymentStatus['count']} pago(s)</strong></small><br>";
+            $tooltip .= "<small>Monto total: <strong>$" . number_format($pendingPaymentStatus['total_amount'], 2) . "</strong></small><br>";
+
+            if (count($pendingPaymentStatus['details']) > 0) {
+                $tooltip .= "<small>Último pago: <strong>{$pendingPaymentStatus['details'][0]['date']}</strong></small><br>";
+
+                // Show details of pending payments (limited to first 3 for readability)
+                $tooltip .= "<div style='margin-top: 5px; font-size: 11px; background-color: #fff3e0; padding: 5px; border-radius: 4px;'>";
+                $tooltip .= "<small><strong>Detalles:</strong></small><br>";
+
+                $displayCount = min(3, count($pendingPaymentStatus['details']));
+                for ($i = 0; $i < $displayCount; $i++) {
+                    $detail = $pendingPaymentStatus['details'][$i];
+                    $tooltip .= "<small>• {$detail['date']}: <strong>$" . number_format($detail['amount'], 2) . "</strong>";
+                    if ($detail['method']) {
+                        $tooltip .= " ({$detail['method']})";
+                    }
+                    $tooltip .= "</small><br>";
+                }
+
+                if (count($pendingPaymentStatus['details']) > 3) {
+                    $tooltip .= "<small><em>... y " . (count($pendingPaymentStatus['details']) - 3) . " más</em></small><br>";
+                }
+                $tooltip .= "</div>";
+            }
+
+            $tooltip .= "<small><em>Acción requerida: Conciliar los pagos pendientes.</em></small>";
         }
 
         $tooltip .= "</div>";
@@ -174,9 +263,10 @@ class ContractHelper
      * Generate tooltip for "No Contract"
      * 
      * @param \app\models\UserDatos $user
+     * @param array|null $pendingPaymentStatus
      * @return string HTML tooltip
      */
-    public static function generateNoContractTooltip($user)
+    public static function generateNoContractTooltip($user, $pendingPaymentStatus = null)
     {
         $tooltip = "<div class='contract-tooltip'>";
         $tooltip .= "<strong>AFILIADO SIN CONTRATO</strong><br>";
@@ -189,7 +279,19 @@ class ContractHelper
         $tooltip .= "<small>• Contrato aún no creado</small><br>";
         $tooltip .= "<small>• Todos los contratos están anulados</small><br>";
         $tooltip .= "<small>• Error en el registro del contrato</small><br><br>";
-        $tooltip .= "<small><em>Acción requerida: Crear nuevo contrato para este afiliado.</em></small>";
+
+        // Add pending payment information if available
+        if ($pendingPaymentStatus) {
+            $tooltip .= "<hr style='margin: 5px 0; border-color: #f39c12;'>";
+            $tooltip .= "<div style='color: #f39c12;'><strong>💰 PAGOS PENDIENTES DE CONCILIACIÓN</strong></div>";
+            $tooltip .= "<small><strong>IMPORTANTE:</strong> Este afiliado tiene pagos registrados pero sin contrato activo.</small><br>";
+            $tooltip .= "<small>Cantidad: <strong>{$pendingPaymentStatus['count']} pago(s)</strong></small><br>";
+            $tooltip .= "<small>Monto total: <strong>$" . number_format($pendingPaymentStatus['total_amount'], 2) . "</strong></small><br>";
+            $tooltip .= "<small><em>Acción requerida: Revisar la situación del contrato y conciliar pagos.</em></small>";
+        } else {
+            $tooltip .= "<small><em>Acción requerida: Crear nuevo contrato para este afiliado.</em></small>";
+        }
+
         $tooltip .= "</div>";
 
         return $tooltip;
@@ -203,6 +305,9 @@ class ContractHelper
      */
     public static function generateContractStatusBadge($user)
     {
+        // Get pending payment status for this user
+        $pendingPaymentStatus = self::getPendingPaymentStatus($user->id);
+
         // Get the most recent active contract for this affiliate
         $contrato = Contratos::getContratoActivo($user->id);
 
@@ -215,8 +320,8 @@ class ContractHelper
         }
 
         if ($contrato) {
-            // Create detailed tooltip based on contract status
-            $tooltip = self::generateContractTooltip($contrato);
+            // Create detailed tooltip based on contract status AND pending payments
+            $tooltip = self::generateContractTooltip($contrato, $pendingPaymentStatus);
 
             // Get status display text and class
             $statusText = $contrato->getStatusLabel();
@@ -224,6 +329,30 @@ class ContractHelper
 
             // Add status indicator icon
             $statusIcon = self::getStatusIcon($contrato->estatus);
+
+            // Add pending payment indicator if needed
+            $pendingIndicator = '';
+            if ($pendingPaymentStatus && !empty($pendingPaymentStatus['has_pending'])) {
+                $pendingCount = $pendingPaymentStatus['count'];
+                $pendingTotal = $pendingPaymentStatus['total_amount'];
+
+                // Professional pill design with clock icon and number
+                $pendingIndicator = Html::tag(
+                    'span',
+                    '<span class="badge-content">' .
+                        '<span class="badge-icon">⏳</span>' .
+                        '<span class="badge-number">' . $pendingCount . '</span>' .
+                        '</span>',
+                    [
+                        'class' => 'pending-payments-badge',
+                        'title' => $pendingCount . ' pago(s) pendiente(s) por conciliar - Total: $' . number_format($pendingTotal, 2),
+                        'data-toggle' => 'tooltip',
+                        'data-placement' => 'top',
+                        'data-html' => 'true',
+                        'style' => 'cursor: help;'
+                    ]
+                );
+            }
 
             // Return badge with detailed tooltip
             return Html::tag(
@@ -234,24 +363,40 @@ class ContractHelper
                     'data-toggle' => 'tooltip',
                     'data-html' => 'true',
                     'data-placement' => 'top',
-                    'style' => 'cursor: help; white-space: nowrap;'
-                ]),
-                ['style' => 'display: inline-block;']
+                    'style' => 'cursor: help; white-space: nowrap; display: inline-block;'
+                ]) . ' ' . $pendingIndicator,
+                ['style' => 'display: flex; align-items: center; gap: 5px;']
             );
         }
 
-        // No contract found
-        return self::generateNoContractBadge($user);
+        // No contract found - show "Sin Contrato" with pending payment info if any
+        return self::generateNoContractBadge($user, $pendingPaymentStatus);
     }
 
     /**
      * Generate "No Contract" badge
      * 
      * @param \app\models\UserDatos $user
+     * @param array|null $pendingPaymentStatus
      * @return string HTML badge
      */
-    public static function generateNoContractBadge($user)
+    public static function generateNoContractBadge($user, $pendingPaymentStatus = null)
     {
+        // If there are pending payments, show a special warning badge
+        if ($pendingPaymentStatus) {
+            $tooltip = self::generateNoContractTooltip($user, $pendingPaymentStatus);
+
+            return Html::tag('span', '⚠️ ' . $pendingPaymentStatus['count'] . ' pago(s) sin contrato', [
+                'class' => 'badge badge-warning',
+                'title' => $tooltip,
+                'data-toggle' => 'tooltip',
+                'data-html' => 'true',
+                'data-placement' => 'top',
+                'style' => 'cursor: help; white-space: nowrap;'
+            ]);
+        }
+
+        // Regular no contract badge
         return Html::tag('span', '📭 Sin Contrato', [
             'class' => 'badge badge-light',
             'title' => self::generateNoContractTooltip($user),
@@ -271,13 +416,20 @@ class ContractHelper
     public static function getContractStatusCellClasses($user)
     {
         $contrato = Contratos::getContratoActivo($user->id);
+        $pendingPaymentStatus = self::getPendingPaymentStatus($user->id);
+
+        $classes = ['style' => 'text-align: center; padding: 10 !important;'];
+
         if ($contrato) {
-            return [
-                'style' => 'text-align: center; padding: 10 !important;',
-                'class' => 'contract-status-cell ' . strtolower($contrato->estatus)
-            ];
+            $classes['class'] = 'contract-status-cell ' . strtolower($contrato->estatus);
         }
-        return ['style' => 'text-align: center; padding: 10 !important;'];
+
+        // Add special class if there are pending payments
+        if ($pendingPaymentStatus) {
+            $classes['class'] = ($classes['class'] ?? '') . ' has-pending-payments';
+        }
+
+        return $classes;
     }
 
     /**
@@ -332,6 +484,7 @@ class ContractHelper
             'vencido' => 'Vencido',
             'pendiente' => 'Pendiente',
             'anulado' => 'Anulado',
+            'sin_contrato' => 'Sin Contrato',
         ];
 
         return $labels[strtolower($status)] ?? ucfirst($status);
@@ -353,6 +506,7 @@ class ContractHelper
             'vencido' => '⏰ <strong>CONTRATO VENCIDO</strong><br><small>La fecha de vencimiento ha pasado. El afiliado ya no tiene acceso a los servicios.</small>',
             'pendiente' => '⏳ <strong>CONTRATO PENDIENTE</strong><br><small>Contrato en proceso de aprobación o con documentación pendiente.</small>',
             'anulado' => '❌ <strong>CONTRATO ANULADO</strong><br><small>Contrato cancelado permanentemente.</small>',
+            'sin_contrato' => '📭 <strong>SIN CONTRATO</strong><br><small>Afiliado sin contrato activo registrado.</small>',
         ];
 
         return $tooltips[$status] ?? 'Estado: ' . ucfirst($status);
@@ -410,6 +564,7 @@ class ContractHelper
             'vencido' => '#ffc107',
             'pendiente' => '#17a2b8',
             'anulado' => '#dc3545',
+            'sin_contrato' => '#f8f9fa',
         ];
 
         return $colors[$status] ?? '#6c757d';
@@ -459,6 +614,7 @@ class ContractHelper
             'pendiente' => 4,
             'registrado' => 5,
             'activo' => 6,        // Lowest priority (everything is fine)
+            'sin_contrato' => 7,
         ];
 
         return $priority[$status] ?? 99;

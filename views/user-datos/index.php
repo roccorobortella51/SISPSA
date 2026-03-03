@@ -704,7 +704,9 @@ JS;
 $this->registerJs($js, View::POS_READY);
 ?>
 <style>
-    /* ESTILOS PARA CÉDULAS - BOOTSTRAP 4 */
+    /* ============================================
+       CÉDULA DE IDENTIDAD STYLES
+       ============================================ */
     /* Contenedor principal para todas las cédulas */
     .cedula-grande-container {
         text-align: center;
@@ -716,7 +718,6 @@ $this->registerJs($js, View::POS_READY);
     .cedula-grande-text {
         font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         font-size: 1.2rem !important;
-        /* 20% más grande que el tamaño base */
         font-weight: 600;
         line-height: 1.3;
         margin-bottom: 4px;
@@ -726,7 +727,6 @@ $this->registerJs($js, View::POS_READY);
     /* Especial: Menor sin cédula - aún más grande */
     .menor-sin-cedula .cedula-grande-text {
         font-size: 1.3rem !important;
-        /* 30% más grande */
         font-weight: 700;
         color: #e67e22;
         font-family: 'Courier New', Consolas, monospace;
@@ -858,7 +858,9 @@ $this->registerJs($js, View::POS_READY);
         }
     }
 
-    /* ESTILOS PARA BADGES DE ESTATUS DE CONTRATO */
+    /* ============================================
+       BADGES DE ESTATUS DE CONTRATO - BASE STYLES
+       ============================================ */
     .badge {
         display: inline-block;
         padding: 0.35em 0.65em;
@@ -936,22 +938,6 @@ $this->registerJs($js, View::POS_READY);
         animation: statusChange 0.5s ease-in-out;
     }
 
-    /* Tooltip para badges */
-    .badge[title]:hover:after {
-        content: attr(title);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #333;
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 1000;
-    }
-
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .badge {
@@ -960,7 +946,9 @@ $this->registerJs($js, View::POS_READY);
         }
     }
 
-    /* Enhanced Contract Status Column */
+    /* ============================================
+       ENHANCED CONTRACT STATUS COLUMN
+       ============================================ */
     .contract-status-cell {
         font-weight: 600;
     }
@@ -1028,7 +1016,9 @@ $this->registerJs($js, View::POS_READY);
         border-color: #4e555b;
     }
 
-    /* Status indicators */
+    /* ============================================
+       STATUS INDICATORS
+       ============================================ */
     .status-indicator {
         display: inline-block;
         width: 8px;
@@ -1050,7 +1040,56 @@ $this->registerJs($js, View::POS_READY);
         background-color: #ffc107;
     }
 
-    /* Enhanced Tooltip Styling */
+    .status-indicator-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+        animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.2);
+            opacity: 0.8;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .status-dot-active {
+        background-color: #28a745;
+    }
+
+    .status-dot-inactive {
+        background-color: #dc3545;
+    }
+
+    .status-dot-pending {
+        background-color: #ffc107;
+    }
+
+    .status-dot-warning {
+        background-color: #fd7e14;
+    }
+
+    .status-dot-info {
+        background-color: #17a2b8;
+    }
+
+    /* ============================================
+       ENHANCED TOOLTIP STYLING
+       ============================================ */
     .contract-tooltip {
         max-width: 300px;
         text-align: left;
@@ -1164,55 +1203,7 @@ $this->registerJs($js, View::POS_READY);
         border-color: #adb5bd;
     }
 
-    /* Status indicator dots */
-    .status-indicator-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-        animation: pulse-dot 2s infinite;
-    }
-
-    @keyframes pulse-dot {
-        0% {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        50% {
-            transform: scale(1.2);
-            opacity: 0.8;
-        }
-
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .status-dot-active {
-        background-color: #28a745;
-    }
-
-    .status-dot-inactive {
-        background-color: #dc3545;
-    }
-
-    .status-dot-pending {
-        background-color: #ffc107;
-    }
-
-    .status-dot-warning {
-        background-color: #fd7e14;
-    }
-
-    .status-dot-info {
-        background-color: #17a2b8;
-    }
-
-    /* Quick action buttons in tooltip (optional) */
+    /* Quick action buttons in tooltip */
     .tooltip-quick-actions {
         margin-top: 8px;
         padding-top: 8px;
@@ -1238,6 +1229,546 @@ $this->registerJs($js, View::POS_READY);
             font-size: 0.7em;
             padding: 0.2em 0.4em;
             min-width: 70px;
+        }
+    }
+
+    /* ============================================
+       PROFESSIONAL PENDING PAYMENTS INDICATOR
+       Modern, sleek design that complements the interface
+       ============================================ */
+
+    /* Main container for the status badge and payment indicator */
+    .contract-status-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+    }
+
+    /* Professional Pending Payments Badge - Pill Design with Icon */
+    .pending-payments-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        background: #ffffff;
+        border-radius: 30px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(243, 156, 18, 0.25);
+        padding: 0 8px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #e67e22;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: help;
+        position: relative;
+        letter-spacing: 0.3px;
+        background: linear-gradient(to bottom, #fffdf9, #fff9f0);
+        margin-left: 5px;
+    }
+
+    /* Inner content with proper alignment */
+    .pending-payments-badge .badge-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Icon styling */
+    .pending-payments-badge .badge-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: 1;
+        color: #f39c12;
+    }
+
+    /* Number styling */
+    .pending-payments-badge .badge-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #d35400;
+        min-width: 16px;
+        text-align: center;
+    }
+
+    /* Hover effect */
+    .pending-payments-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(243, 156, 18, 0.2), 0 2px 4px rgba(0, 0, 0, 0.05);
+        background: linear-gradient(to bottom, #fff, #fff9f0);
+        border-color: rgba(243, 156, 18, 0.4);
+    }
+
+    /* Subtle pulse animation for attention */
+    @keyframes soft-pulse {
+        0% {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        50% {
+            box-shadow: 0 5px 12px rgba(243, 156, 18, 0.15), 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        100% {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+    }
+
+    .pending-payments-badge {
+        animation: soft-pulse 2.5s infinite ease-in-out;
+    }
+
+    /* Alternative style - Subtle minimal badge */
+    .pending-payments-badge-subtle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        background: rgba(243, 156, 18, 0.1);
+        border-radius: 20px;
+        padding: 0 6px;
+        font-weight: 600;
+        font-size: 11px;
+        color: #e67e22;
+        border: 1px solid rgba(243, 156, 18, 0.2);
+        transition: all 0.2s ease;
+        cursor: help;
+        margin-left: 5px;
+    }
+
+    .pending-payments-badge-subtle:hover {
+        background: rgba(243, 156, 18, 0.15);
+        border-color: rgba(243, 156, 18, 0.3);
+        transform: translateY(-1px);
+    }
+
+    /* Compact circular version - Clean circle with number */
+    .pending-payments-badge-compact {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: linear-gradient(145deg, #f39c12, #e67e22);
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 12px;
+        color: white;
+        box-shadow: 0 4px 8px rgba(243, 156, 18, 0.3);
+        transition: all 0.2s ease;
+        cursor: help;
+        border: 2px solid white;
+        margin-left: 5px;
+    }
+
+    .pending-payments-badge-compact:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 12px rgba(243, 156, 18, 0.4);
+    }
+
+    /* ============================================
+       INTEGRATION WITH EXISTING BADGE
+       How it will look when placed next to contract status
+       ============================================ */
+
+    /* Container for the entire status display */
+    .contract-status-container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    /* Your existing badge styling (enhanced) */
+    .contract-status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.45rem 0.9rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        line-height: 1;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    /* Status-specific styling for badges with pending payments */
+    .contract-status-badge.has-pending-payments {
+        border-right: none;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        position: relative;
+        z-index: 2;
+    }
+
+    .contract-status-badge.has-pending-payments+.pending-payments-badge {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-left: none;
+        position: relative;
+        left: -1px;
+        z-index: 1;
+        box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    /* ============================================
+       PROFESSIONAL TOOLTIP FOR PENDING PAYMENTS
+       Detailed payment information in a clean format
+       ============================================ */
+
+    /* Custom tooltip styling for pending payments */
+    .pending-payments-tooltip {
+        background: white !important;
+        color: #2c3e50 !important;
+        border: 1px solid #e9ecef !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif !important;
+        max-width: 280px !important;
+        opacity: 1 !important;
+    }
+
+    .pending-payments-tooltip .tooltip-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #edf2f7;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .pending-payments-tooltip .tooltip-title i {
+        color: #f39c12;
+        font-size: 16px;
+    }
+
+    .pending-payments-tooltip .tooltip-content {
+        font-size: 13px;
+    }
+
+    .pending-payments-tooltip .payment-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px dashed #edf2f7;
+    }
+
+    .pending-payments-tooltip .payment-row:last-child {
+        border-bottom: none;
+    }
+
+    .pending-payments-tooltip .payment-label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .pending-payments-tooltip .payment-value {
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    .pending-payments-tooltip .payment-value.warning {
+        color: #e67e22;
+    }
+
+    .pending-payments-tooltip .payment-value.success {
+        color: #27ae60;
+    }
+
+    .pending-payments-tooltip .payment-list {
+        margin-top: 8px;
+        max-height: 120px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .pending-payments-tooltip .payment-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        font-size: 12px;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .pending-payments-tooltip .payment-list-item:last-child {
+        border-bottom: none;
+    }
+
+    .pending-payments-tooltip .payment-date {
+        color: #495057;
+    }
+
+    .pending-payments-tooltip .payment-amount {
+        font-weight: 600;
+        color: #e67e22;
+    }
+
+    /* ============================================
+       GRID CELL STYLING FOR CONTRACTS WITH PENDING PAYMENTS
+       Subtle visual cue without being overwhelming
+       ============================================ */
+
+    .contract-status-cell.has-pending-payments {
+        background: linear-gradient(90deg, rgba(243, 156, 18, 0.02) 0%, rgba(243, 156, 18, 0) 100%);
+        border-left: 3px solid #f39c12;
+        position: relative;
+    }
+
+    .contract-status-cell.has-pending-payments::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 0% 50%, rgba(243, 156, 18, 0.03), transparent 70%);
+        pointer-events: none;
+    }
+
+    /* Hover effect for rows with pending payments */
+    tr:hover .contract-status-cell.has-pending-payments {
+        background: linear-gradient(90deg, rgba(243, 156, 18, 0.04) 0%, rgba(243, 156, 18, 0.01) 100%);
+    }
+
+    /* Payment summary badge (for inside tooltips) */
+    .payment-summary-badge {
+        display: inline-block;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.05);
+        color: #6c757d;
+    }
+
+    .payment-summary-badge.pending {
+        background: rgba(255, 193, 7, 0.15);
+        color: #856404;
+    }
+
+    /* ============================================
+       PLAN BADGE STYLING
+       ============================================ */
+    .badge-plan {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 2px 8px;
+        border-radius: 30px;
+        font-size: 0.6rem;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        backdrop-filter: blur(2px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        white-space: nowrap;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ============================================
+       RESPONSIVE ADJUSTMENTS
+       ============================================ */
+    @media (max-width: 768px) {
+        .pending-payments-badge {
+            min-width: 24px;
+            height: 24px;
+            font-size: 11px;
+            padding: 0 5px;
+            margin-left: 3px;
+        }
+
+        .pending-payments-badge .badge-icon {
+            font-size: 12px;
+        }
+
+        .pending-payments-badge-compact {
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            border-width: 1.5px;
+            margin-left: 3px;
+        }
+
+        .pending-payments-badge-subtle {
+            min-width: 20px;
+            height: 20px;
+            font-size: 10px;
+            padding: 0 4px;
+            margin-left: 3px;
+        }
+
+        .contract-status-container {
+            gap: 4px;
+        }
+
+        .contract-status-cell .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .badge-plan {
+            max-width: 70px;
+            font-size: 0.5rem;
+        }
+
+        .contract-status-cell.has-pending-payments {
+            border-left-width: 2px;
+        }
+    }
+
+    /* Tablet adjustments */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .pending-payments-badge {
+            min-width: 26px;
+            height: 26px;
+            font-size: 12px;
+        }
+    }
+
+    /* ============================================
+       PRINT STYLES
+       ============================================ */
+    @media print {
+
+        .pending-payments-badge,
+        .pending-payments-badge-subtle,
+        .pending-payments-badge-compact {
+            background: none !important;
+            border: 1px solid #f39c12 !important;
+            color: #e67e22 !important;
+            box-shadow: none !important;
+            animation: none !important;
+        }
+
+        .pending-payments-badge-compact {
+            border-radius: 50% !important;
+            background: white !important;
+        }
+
+        .contract-status-cell.has-pending-payments {
+            border-left: 2px solid #f39c12 !important;
+            background: none !important;
+        }
+
+        .contract-status-cell.has-pending-payments::before {
+            display: none !important;
+        }
+
+        .badge {
+            border: 1px solid #000 !important;
+            background: none !important;
+            color: #000 !important;
+            box-shadow: none !important;
+        }
+    }
+
+    /* ============================================
+       FIX FOR BOOTSTRAP TOOLTIP CONFLICTS
+       ============================================ */
+    .tooltip.show {
+        opacity: 1 !important;
+    }
+
+    .tooltip-inner {
+        max-width: 350px !important;
+    }
+
+    /* Ensure proper z-index for tooltips */
+    .tooltip {
+        z-index: 9999 !important;
+    }
+
+    /* ============================================
+   CENTER ESTATUS CONTRATO COLUMN CONTENT
+   Ensures both the badge and pending indicator are centered
+   ============================================ */
+
+    /* Target the specific column cells */
+    td.contract-status-cell,
+    .contract-status-cell {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    /* Container for the badge and indicator */
+    .contract-status-cell .badge,
+    .contract-status-cell .pending-payments-badge,
+    .contract-status-cell .pending-payments-badge-subtle,
+    .contract-status-cell .pending-payments-badge-compact {
+        display: inline-flex !important;
+        vertical-align: middle !important;
+    }
+
+    /* Ensure the wrapper centers everything */
+    .contract-status-cell>div,
+    .contract-status-cell>span {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
+    /* Fix for the badge group */
+    .contract-status-cell .badge-group {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    /* Ensure the badge itself is centered within its container */
+    .contract-status-cell .badge {
+        margin: 0 auto !important;
+        justify-content: center !important;
+    }
+
+    /* Fix for the container div that wraps everything */
+    .contract-status-cell div[style*="display: flex"] {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
+    /* Additional fix for Kartik Grid specific alignment */
+    .kv-grid-table td.contract-status-cell {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    /* Ensure the badge and indicator are on the same line and centered */
+    .contract-status-cell .badge,
+    .contract-status-cell .pending-payments-badge,
+    .contract-status-cell .pending-payments-badge-subtle,
+    .contract-status-cell .pending-payments-badge-compact {
+        margin-left: 2px !important;
+        margin-right: 2px !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+
+        .contract-status-cell .badge,
+        .contract-status-cell .pending-payments-badge,
+        .contract-status-cell .pending-payments-badge-subtle,
+        .contract-status-cell .pending-payments-badge-compact {
+            margin-left: 1px !important;
+            margin-right: 1px !important;
         }
     }
 </style>
