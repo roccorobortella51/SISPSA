@@ -75,14 +75,16 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                     </div>
                                 </div>
                                 <div class="col-lg-5">
-                                    <div class="d-flex justify-content-lg-end gap-3 flex-wrap">
-                                        <!-- Change the button to a button element or use onclick event -->
-                                        <button type="button" id="btn-print-pdf" class="ms-btn ms-btn-danger px-4 py-3 shadow"
-                                            style="font-size: 1.4rem !important; min-width: 180px;">
+                                    <div class="d-flex justify-content-lg-end align-items-center">
+                                        <!-- PDF Button - Red -->
+                                        <button type="button" id="btn-print-pdf" class="btn btn-danger px-4 py-3 shadow-lg mr-5"
+                                            style="font-size: 1.4rem !important; min-width: 180px; border: none; font-weight: 600;">
                                             <i class="fas fa-file-pdf me-2" style="font-size: 1.4rem;"></i>Exportar PDF
                                         </button>
-                                        <button type="button" id="btn-export-excel" class="ms-btn ms-btn-success px-4 py-3 shadow"
-                                            style="font-size: 1.4rem !important; min-width: 180px;">
+
+                                        <!-- Excel Button - Green -->
+                                        <button type="button" id="btn-export-excel" class="btn btn-success px-4 py-3 shadow-lg"
+                                            style="font-size: 1.4rem !important; min-width: 180px; border: none; font-weight: 600;">
                                             <i class="fas fa-file-excel me-2" style="font-size: 1.4rem;"></i>Exportar Excel
                                         </button>
                                     </div>
@@ -934,33 +936,60 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
         $('#btn-export-excel').click(function(e) {
             e.preventDefault();
 
-            // Same logic as above for Excel
+            // Get current filter parameters from the form
             var range = $('[name="range"]').val();
             var specific_date = $('[name="specific_date"]').val();
             var status = $('[name="status"]').val();
+
+            // Try to get status from #status-filter if [name="status"] doesn't exist
+            if (!status || status === 'undefined') {
+                status = $('#status-filter').val() || 'todos';
+            }
+
             var clinicas = [];
 
+            // Check if clinicas checkboxes exist and get values
             if ($('[name="clinicas[]"]').length > 0) {
                 $('[name="clinicas[]"]:checked').each(function() {
                     clinicas.push($(this).val());
                 });
             }
 
+            // If no clinicas selected, set default
             if (clinicas.length === 0) {
-                clinicas = ['todas'];
+                clinicas = ['todas']; // Default to "todas"
             }
 
-            // Build URL for comisiones Excel
-            var url = '<?= Yii::$app->urlManager->createUrl(['reportes/export-comisiones-excel']) ?>';
-            url += '?range=' + (range || 'day');
-            url += '&status=' + (status || 'todos');
+            // Set defaults if values are undefined
+            if (!range || range === 'undefined' || range === 'day') {
+                range = 'last-month';
+            }
+
+            if (!status || status === 'undefined') {
+                status = 'todos';
+            }
+
+            console.log("Excel Params:", {
+                range: range,
+                status: status,
+                clinicas: clinicas,
+                specific_date: specific_date
+            });
+
+            // Build URL for comisiones Excel - FIXED: Use proper URL encoding
+            var baseUrl = '<?= Yii::$app->urlManager->createUrl(['reportes/export-comisiones-excel']) ?>';
+            var params = new URLSearchParams();
+
+            params.append('range', range);
+            params.append('status', status);
 
             if (specific_date && specific_date !== 'Invalid date') {
-                url += '&specific_date=' + specific_date;
+                params.append('specific_date', specific_date);
             }
 
             if (clinicas.length > 0) {
-                url += '&clinicas=' + clinicas.join(',');
+                // Send as comma-separated string
+                params.append('clinicas', clinicas.join(','));
             }
 
             // Add custom range if applicable
@@ -969,11 +998,14 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                 var dateFrom = $('[name="date_from"]').val();
                 var dateTo = $('[name="date_to"]').val();
                 if (dateFrom && dateTo) {
-                    url += '&custom_range=true';
-                    url += '&date_from=' + dateFrom;
-                    url += '&date_to=' + dateTo;
+                    params.append('custom_range', 'true');
+                    params.append('date_from', dateFrom);
+                    params.append('date_to', dateTo);
                 }
             }
+
+            var url = baseUrl + '?' + params.toString();
+            console.log("Excel URL:", url);
 
             // Download Excel
             window.location.href = url;

@@ -57,21 +57,21 @@ class ReportesController extends Controller
 
         return parent::beforeAction($action);
     }
-    
+
     public function actionTestAccess()
-{
-    Yii::$app->response->format = Response::FORMAT_JSON;
-    
-    return [
-        'isGuest' => Yii::$app->user->isGuest,
-        'userId' => Yii::$app->user->id,
-        'identity' => Yii::$app->user->identity ? Yii::$app->user->identity->username : null,
-        'roles' => array_keys(Yii::$app->authManager->getRolesByUser(Yii::$app->user->id)),
-        'canAccess' => Yii::$app->user->can('superadmin') || Yii::$app->user->can('FINANZAS'),
-        'sessionId' => session_id(),
-        'csrfToken' => Yii::$app->request->csrfToken,
-    ];
-}
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        return [
+            'isGuest' => Yii::$app->user->isGuest,
+            'userId' => Yii::$app->user->id,
+            'identity' => Yii::$app->user->identity ? Yii::$app->user->identity->username : null,
+            'roles' => array_keys(Yii::$app->authManager->getRolesByUser(Yii::$app->user->id)),
+            'canAccess' => Yii::$app->user->can('superadmin') || Yii::$app->user->can('FINANZAS'),
+            'sessionId' => session_id(),
+            'csrfToken' => Yii::$app->request->csrfToken,
+        ];
+    }
 
 
     /**
@@ -94,7 +94,7 @@ class ReportesController extends Controller
         $customRange = $request->post('custom_range', false);
         $dateFrom = $request->post('date_from');
         $dateTo = $request->post('date_to');
-        $status = $request->post('status', 'Por Conciliar');        
+        $status = $request->post('status', 'Por Conciliar');
         $clinicas = $request->post('clinicas', []);
 
         // NUEVO: Parámetros para rango personalizado
@@ -1403,7 +1403,7 @@ class ReportesController extends Controller
     }
 
     /**
-     * Exporta el reporte de COMISIONES a Excel
+     * Exporta el reporte de COMISIONES a Excel - Matching PDF format
      */
     public function actionExportComisionesExcel($range = 'day', $specific_date = null, $status = 'todos')
     {
@@ -1416,7 +1416,7 @@ class ReportesController extends Controller
         $dateTo = $request->get('date_to');
         $customRange = $request->get('custom_range', false);
 
-        // Procesar clínicas - FIXED VERSION
+        // Procesar clínicas
         $clinicasArray = [];
         if (!empty($clinicasParam)) {
             if (is_array($clinicasParam)) {
@@ -1428,7 +1428,6 @@ class ReportesController extends Controller
             }
         }
 
-        // Ensure it's always an array
         $clinicasArray = (array)$clinicasArray;
 
         // Handle 'undefined' values
@@ -1449,14 +1448,17 @@ class ReportesController extends Controller
             switch ($range) {
                 case 'week':
                     $startDate = date('Y-m-d', strtotime('last Monday'));
+                    $endDate = date('Y-m-d');
                     break;
                 case 'month':
                     $startDate = date('Y-m-01');
+                    $endDate = date('Y-m-d');
                     break;
                 case 'last-month':
                     $startDate = date('Y-m-01', strtotime('first day of last month'));
                     $endDate = date('Y-m-t', strtotime('last month'));
                     break;
+                    // 'day' is default
             }
         }
 
@@ -1464,7 +1466,6 @@ class ReportesController extends Controller
         $searchModel = new PagosReporteSearch();
         $params = $request->get();
 
-        // Ensure params are arrays
         $params['range'] = $range;
         $params['status'] = $status;
         $params['clinicas'] = $clinicasArray;
@@ -1481,7 +1482,7 @@ class ReportesController extends Controller
         // Obtener summary por clínica
         $summaryPorClinica = $this->calculateComisionesSummaryByClinica($dataProvider->query);
 
-        // Calcular totales
+        // Calcular totales generales
         $totalMontoBs = 0;
         $totalMontoUsd = 0;
         $totalComisionAsesorBs = 0;
@@ -1492,9 +1493,8 @@ class ReportesController extends Controller
         $totalComisionClinicaUsd = 0;
 
         foreach ($models as $model) {
-            // EXACT SAME LOGIC AS GRID VIEW
-            $montoBs = $model->monto_usd;        // Actually Bs.
-            $montoUsd = $model->monto_pagado;    // Actually USD
+            $montoBs = $model->monto_usd;        // Bs.
+            $montoUsd = $model->monto_pagado;    // USD
 
             $tasaDia = 0;
             if ($montoUsd > 0 && $montoBs > 0) {
@@ -1507,179 +1507,157 @@ class ReportesController extends Controller
             $totalComisionAsesorUsd += $tasaDia > 0 ? ($montoBs * 0.10) / $tasaDia : 0;
             $totalComisionAgenciaBs += $montoBs * 0.04;
             $totalComisionAgenciaUsd += $tasaDia > 0 ? ($montoBs * 0.04) / $tasaDia : 0;
-            $totalComisionClinicaBs += $montoBs * 0.70;      // 70% of Bs.
-            $totalComisionClinicaUsd += $montoUsd * 0.70;    // 70% of USD
+            $totalComisionClinicaBs += $montoBs * 0.70;
+            $totalComisionClinicaUsd += $montoUsd * 0.70;
         }
 
         // Crear Spreadsheet
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
         // =============================================
-        // HOJA 1: DETALLE DE COMISIONES
+        // HOJA 1: DETALLE DE COMISIONES (PDF Format)
         // =============================================
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Detalle Comisiones');
 
-        // Títulos
-        $sheet->setCellValue('A1', 'REPORTE DE COMISIONES');
-        $sheet->mergeCells('A1:P1');
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        // Título principal
+        $sheet->setCellValue('A1', 'REPORTE DE COMISIONES - SISTEMA SISPSA');
+        $sheet->mergeCells('A1:O1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        $sheet->setCellValue('A2', 'Periodo:');
-        $sheet->setCellValue('B2', $startDate . ' al ' . $endDate);
-
+        // Subtítulo con período
         $statusLabel = $status === 'todos' ? 'Todos los Estados' : ($status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar');
-        $sheet->setCellValue('A3', 'Estado:');
-        $sheet->setCellValue('B3', $statusLabel);
+        $periodoText = "Período: " . date('d/m/Y', strtotime($startDate)) . " al " . date('d/m/Y', strtotime($endDate)) . " - " . $statusLabel;
+        $sheet->setCellValue('A2', $periodoText);
+        $sheet->mergeCells('A2:O2');
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
+        $sheet->getStyle('A2')->getFont()->getColor()->setARGB('FF0078d4');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        $sheet->setCellValue('A4', 'Generado:');
+        // Información del reporte
+        $sheet->setCellValue('A4', 'Fecha de Generación:');
         $sheet->setCellValue('B4', date('d/m/Y H:i:s'));
+        $sheet->getStyle('A4')->getFont()->setBold(true);
 
-        // Encabezados
-        $headers = [
-            '#',
-            'Afiliado',
-            'Cédula',
-            'Monto USD',
-            'Tasa',
-            'Monto Bs.',
-            'Comisión Asesor Bs.',
-            'Comisión Asesor USD',
-            'Comisión Agencia Bs.',
-            'Comisión Agencia USD',
-            'Pago Clínica Bs.',
-            'Pago Clínica USD',
-            'Fecha',
-            'Método',
-            'Estado',
-            'Clínica'
-        ];
-
-        $headerRow = 6;
-        $col = 1;
-        foreach ($headers as $header) {
-            $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col) . $headerRow;
-            $sheet->setCellValue($cell, $header);
-            $col++;
+        if (!empty($clinicasArray) && !in_array('todas', $clinicasArray)) {
+            $clinicasNombres = [];
+            foreach ($clinicasArray as $clinicaId) {
+                $clinica = \app\models\RmClinica::findOne($clinicaId);
+                if ($clinica) {
+                    $clinicasNombres[] = $clinica->nombre;
+                }
+            }
+            if (!empty($clinicasNombres)) {
+                $sheet->setCellValue('A5', 'Clínicas:');
+                $sheet->setCellValue('B5', implode(', ', $clinicasNombres));
+                $sheet->getStyle('A5')->getFont()->setBold(true);
+            }
         }
 
-        // Estilo encabezados
-        $headerStyle = $sheet->getStyle('A' . $headerRow . ':' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers)) . $headerRow);
+        // =============================================
+        // ENCABEZADOS DE TABLA - EXACTAMENTE COMO EL PDF
+        // =============================================
+        $headerRow = 7;
+
+        // Primera fila de encabezados (títulos principales)
+        $sheet->mergeCells('A' . $headerRow . ':A' . ($headerRow + 1)); // #
+        $sheet->setCellValue('A' . $headerRow, '#');
+
+        $sheet->mergeCells('B' . $headerRow . ':B' . ($headerRow + 1)); // Afiliado
+        $sheet->setCellValue('B' . $headerRow, 'Afiliado');
+
+        $sheet->mergeCells('C' . $headerRow . ':C' . ($headerRow + 1)); // Cédula
+        $sheet->setCellValue('C' . $headerRow, 'Cédula');
+
+        // Sección MONTOS (colspan 3)
+        $sheet->mergeCells('D' . $headerRow . ':F' . $headerRow);
+        $sheet->setCellValue('D' . $headerRow, 'MONTOS');
+        $sheet->getStyle('D' . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Subencabezados de MONTOS
+        $sheet->setCellValue('D' . ($headerRow + 1), 'USD');
+        $sheet->setCellValue('E' . ($headerRow + 1), 'TASA');
+        $sheet->setCellValue('F' . ($headerRow + 1), 'Bs.');
+
+        // Sección COMISIONES (colspan 4)
+        $sheet->mergeCells('G' . $headerRow . ':J' . $headerRow);
+        $sheet->setCellValue('G' . $headerRow, 'COMISIONES');
+        $sheet->getStyle('G' . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Subencabezados de COMISIONES
+        $sheet->setCellValue('G' . ($headerRow + 1), 'ASESOR (10%) Bs.');
+        $sheet->setCellValue('H' . ($headerRow + 1), 'ASESOR (10%) USD');
+        $sheet->setCellValue('I' . ($headerRow + 1), 'AGENCIA (4%) Bs.');
+        $sheet->setCellValue('J' . ($headerRow + 1), 'AGENCIA (4%) USD');
+
+        // Sección PAGOS CLÍNICA (colspan 2)
+        $sheet->mergeCells('K' . $headerRow . ':L' . $headerRow);
+        $sheet->setCellValue('K' . $headerRow, 'PAGOS CLÍNICA (70%)');
+        $sheet->getStyle('K' . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Subencabezados de PAGOS CLÍNICA
+        $sheet->setCellValue('K' . ($headerRow + 1), 'Bs.');
+        $sheet->setCellValue('L' . ($headerRow + 1), 'USD');
+
+        // Últimas columnas
+        $sheet->mergeCells('M' . $headerRow . ':M' . ($headerRow + 1)); // Fecha
+        $sheet->setCellValue('M' . $headerRow, 'Fecha');
+
+        $sheet->mergeCells('N' . $headerRow . ':N' . ($headerRow + 1)); // Método
+        $sheet->setCellValue('N' . $headerRow, 'Método');
+
+        $sheet->mergeCells('O' . $headerRow . ':O' . ($headerRow + 1)); // Clínica
+        $sheet->setCellValue('O' . $headerRow, 'Clínica');
+
+        // Aplicar estilos a los encabezados
+        $headerStyle = $sheet->getStyle('A' . $headerRow . ':O' . ($headerRow + 1));
         $headerStyle->getFont()->setBold(true);
         $headerStyle->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
         $headerStyle->getFill()->getStartColor()->setARGB('FF2c3e50');
         $headerStyle->getFont()->getColor()->setARGB('FFFFFFFF');
         $headerStyle->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $headerStyle->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
-        // Datos
-        $dataRow = $headerRow + 1;
+        // Colores específicos para las secciones
+        $sheet->getStyle('D' . $headerRow . ':F' . $headerRow)->getFill()->getStartColor()->setARGB('FF0078d4'); // Azul para MONTOS
+        $sheet->getStyle('G' . $headerRow . ':J' . $headerRow)->getFill()->getStartColor()->setARGB('FF8b0000'); // Rojo para COMISIONES
+        $sheet->getStyle('K' . $headerRow . ':L' . $headerRow)->getFill()->getStartColor()->setARGB('FF006400'); // Verde para PAGOS CLÍNICA
+
+        // =============================================
+        // DATOS DE LA TABLA
+        // =============================================
+        $dataRow = $headerRow + 2;
         $consecutivo = 1;
 
         if (empty($models)) {
             $sheet->setCellValue('A' . $dataRow, 'No hay datos para el período seleccionado');
-            $sheet->mergeCells('A' . $dataRow . ':' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers)) . $dataRow);
+            $sheet->mergeCells('A' . $dataRow . ':O' . $dataRow);
             $sheet->getStyle('A' . $dataRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('A' . $dataRow)->getFont()->setItalic(true);
         } else {
             foreach ($models as $model) {
-                $col = 1;
-
-                // # Consecutivo
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $consecutivo++);
-                $col++;
-
-                // Afiliado
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $afiliado = $model->userDatos ? $model->userDatos->nombres . ' ' . $model->userDatos->apellidos : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $afiliado);
-                $col++;
-
-                // Cédula
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $cedula = $model->userDatos ? $model->userDatos->cedula : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $cedula);
-                $col++;
-
-                // Cálculos
-                $montoUsd = $model->monto_usd;
-                $montoPagado = $model->monto_pagado;
+                // Obtener datos del modelo
+                $montoBs = $model->monto_usd;        // Bs.
+                $montoUsd = $model->monto_pagado;    // USD
 
                 $tasaDia = 0;
-                if ($montoPagado > 0 && $montoUsd > 0) {
-                    $tasaDia = $montoUsd / $montoPagado;
+                if ($montoUsd > 0 && $montoBs > 0) {
+                    $tasaDia = $montoBs / $montoUsd;
                 }
 
-                $comisionAsesorBs = $montoUsd * 0.10;
+                $comisionAsesorBs = $montoBs * 0.10;
                 $comisionAsesorUsd = $tasaDia > 0 ? $comisionAsesorBs / $tasaDia : 0;
-                $comisionAgenciaBs = $montoUsd * 0.04;
+                $comisionAgenciaBs = $montoBs * 0.04;
                 $comisionAgenciaUsd = $tasaDia > 0 ? $comisionAgenciaBs / $tasaDia : 0;
-                $pagoClinicaBs = $montoUsd * 0.70;
-                $pagoClinicaUsd = $montoPagado * 0.70;
+                $pagoClinicaBs = $montoBs * 0.70;
+                $pagoClinicaUsd = $montoUsd * 0.70;
 
-                // Monto USD
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $montoPagado);
-                $col++;
+                // Obtener nombres
+                $afiliado = $model->userDatos ?
+                    trim($model->userDatos->nombres . ' ' . $model->userDatos->apellidos) : 'N/A';
+                $cedula = $model->userDatos ? $model->userDatos->cedula : 'N/A';
 
-                // Tasa
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $tasaDia > 0 ? $tasaDia : 'N/A');
-                $col++;
-
-                // Monto Bs.
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $montoUsd);
-                $col++;
-
-                // Comisión Asesor Bs.
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $comisionAsesorBs);
-                $col++;
-
-                // Comisión Asesor USD
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $comisionAsesorUsd);
-                $col++;
-
-                // Comisión Agencia Bs.
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $comisionAgenciaBs);
-                $col++;
-
-                // Comisión Agencia USD
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $comisionAgenciaUsd);
-                $col++;
-
-                // Pago Clínica Bs.
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $pagoClinicaBs);
-                $col++;
-
-                // Pago Clínica USD
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $pagoClinicaUsd);
-                $col++;
-
-                // Fecha
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $fecha = $model->fecha_pago ? Yii::$app->formatter->asDate($model->fecha_pago, 'php:d/m/Y') : 'N/A';
-                $sheet->setCellValue($colLetter . $dataRow, $fecha);
-                $col++;
-
-                // Método
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $model->metodo_pago ?: 'N/A');
-                $col++;
-
-                // Estado
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet->setCellValue($colLetter . $dataRow, $model->estatus ?: 'N/A');
-                $col++;
-
-                // Clínica
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
                 $clinicaNombre = 'Sin Clínica';
                 if ($model->contratos && count($model->contratos) > 0) {
                     foreach ($model->contratos as $contrato) {
@@ -1689,24 +1667,107 @@ class ReportesController extends Controller
                         }
                     }
                 }
-                $sheet->setCellValue($colLetter . $dataRow, $clinicaNombre);
+
+                // Fecha
+                $fecha = $model->fecha_pago ? date('d/m/Y', strtotime($model->fecha_pago)) : 'N/A';
+
+                // Escribir datos
+                $sheet->setCellValue('A' . $dataRow, $consecutivo++);
+                $sheet->setCellValue('B' . $dataRow, $afiliado);
+                $sheet->setCellValue('C' . $dataRow, $cedula);
+                $sheet->setCellValue('D' . $dataRow, $montoUsd);
+                $sheet->setCellValue('E' . $dataRow, $tasaDia > 0 ? $tasaDia : 'N/A');
+                $sheet->setCellValue('F' . $dataRow, $montoBs);
+                $sheet->setCellValue('G' . $dataRow, $comisionAsesorBs);
+                $sheet->setCellValue('H' . $dataRow, $comisionAsesorUsd);
+                $sheet->setCellValue('I' . $dataRow, $comisionAgenciaBs);
+                $sheet->setCellValue('J' . $dataRow, $comisionAgenciaUsd);
+                $sheet->setCellValue('K' . $dataRow, $pagoClinicaBs);
+                $sheet->setCellValue('L' . $dataRow, $pagoClinicaUsd);
+                $sheet->setCellValue('M' . $dataRow, $fecha);
+                $sheet->setCellValue('N' . $dataRow, $model->metodo_pago ?: 'N/A');
+                $sheet->setCellValue('O' . $dataRow, $clinicaNombre);
+
+                // Aplicar colores de fondo como en el PDF
+                $sheet->getStyle('D' . $dataRow . ':F' . $dataRow)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFF0F8FF'); // Azul claro para montos
+
+                $sheet->getStyle('G' . $dataRow . ':H' . $dataRow)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFFFF9E6'); // Amarillo claro para comisión asesor
+
+                $sheet->getStyle('I' . $dataRow . ':J' . $dataRow)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFFFE6E6'); // Rojo claro para comisión agencia
+
+                $sheet->getStyle('K' . $dataRow . ':L' . $dataRow)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFE6FFE6'); // Verde claro para pagos clínica
 
                 $dataRow++;
             }
+
+            // =============================================
+            // FILA DE TOTALES
+            // =============================================
+            $totalRow = $dataRow;
+
+            // Combinar celdas para el texto "TOTAL DETALLE"
+            $sheet->mergeCells('A' . $totalRow . ':C' . $totalRow);
+            $sheet->setCellValue('A' . $totalRow, 'TOTAL DETALLE');
+            $sheet->getStyle('A' . $totalRow)->getFont()->setBold(true);
+
+            // Totales de montos
+            $sheet->setCellValue('D' . $totalRow, $totalMontoUsd);
+            $sheet->setCellValue('E' . $totalRow, '');
+            $sheet->setCellValue('F' . $totalRow, $totalMontoBs);
+
+            // Totales de comisiones
+            $sheet->setCellValue('G' . $totalRow, $totalComisionAsesorBs);
+            $sheet->setCellValue('H' . $totalRow, $totalComisionAsesorUsd);
+            $sheet->setCellValue('I' . $totalRow, $totalComisionAgenciaBs);
+            $sheet->setCellValue('J' . $totalRow, $totalComisionAgenciaUsd);
+
+            // Totales de pagos clínica
+            $sheet->setCellValue('K' . $totalRow, $totalComisionClinicaBs);
+            $sheet->setCellValue('L' . $totalRow, $totalComisionClinicaUsd);
+
+            // Celdas vacías para las últimas columnas
+            $sheet->setCellValue('M' . $totalRow, '');
+            $sheet->setCellValue('N' . $totalRow, '');
+            $sheet->setCellValue('O' . $totalRow, '');
+
+            // Estilo para la fila de totales
+            $sheet->getStyle('A' . $totalRow . ':O' . $totalRow)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF2c3e50');
+            $sheet->getStyle('A' . $totalRow . ':O' . $totalRow)->getFont()->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle('A' . $totalRow . ':O' . $totalRow)->getFont()->setBold(true);
         }
 
         // Autoajustar columnas
-        for ($i = 1; $i <= count($headers); $i++) {
-            $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
+        foreach (range('A', 'O') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        // Formato numérico
-        $currencyColumns = ['D', 'F', 'G', 'H', 'I', 'J', 'K', 'L']; // Columnas con montos
+        // Formato de números para columnas de montos
+        $currencyColumns = ['D', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+        $lastDataRow = $dataRow - 1;
+
         foreach ($currencyColumns as $col) {
-            $sheet->getStyle($col . ($headerRow + 1) . ':' . $col . ($dataRow - 1))
+            $sheet->getStyle($col . ($headerRow + 2) . ':' . $col . $lastDataRow)
+                ->getNumberFormat()
+                ->setFormatCode('#,##0.00');
+            $sheet->getStyle($col . $totalRow)
                 ->getNumberFormat()
                 ->setFormatCode('#,##0.00');
         }
+
+        // Columnas especiales
+        $sheet->getStyle('E' . ($headerRow + 2) . ':E' . $lastDataRow)
+            ->getNumberFormat()
+            ->setFormatCode('#,##0.00');
 
         // =============================================
         // HOJA 2: RESUMEN POR CLÍNICA
@@ -1716,11 +1777,11 @@ class ReportesController extends Controller
 
         // Título
         $sheet2->setCellValue('A1', 'RESUMEN DE COMISIONES POR CLÍNICA');
-        $sheet2->mergeCells('A1:K1');
+        $sheet2->mergeCells('A1:H1');
         $sheet2->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet2->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Encabezados resumen
+        // Encabezados
         $resumenHeaders = [
             'Clínica',
             'RIF',
@@ -1728,33 +1789,40 @@ class ReportesController extends Controller
             'Conciliados',
             'Pendientes',
             'Comisión Asesor Bs.',
-            'Comisión Asesor USD',
             'Comisión Agencia Bs.',
-            'Comisión Agencia USD',
-            'Total Monto Bs.',
-            'Total Monto USD'
+            'Total Comisiones Bs.'
         ];
 
+        $headerRowResumen = 3;
         $col = 1;
         foreach ($resumenHeaders as $header) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-            $sheet2->setCellValue($colLetter . '3', $header);
+            $sheet2->setCellValue($colLetter . $headerRowResumen, $header);
             $col++;
         }
 
-        // Estilo encabezados resumen
+        // Estilo encabezados
         $headerRangeResumen = 'A3:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($resumenHeaders)) . '3';
         $sheet2->getStyle($headerRangeResumen)->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '2c3e50']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '2c3e50']
+            ],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
         ]);
 
-        // Datos resumen
+        // Datos
         $resumenRow = 4;
+        $totalGeneralComisiones = 0;
+
         if (!empty($summaryPorClinica)) {
             foreach ($summaryPorClinica as $resumen) {
                 $col = 1;
+
+                $totalComisiones = ($resumen['total_comision_asesor_bs'] ?? 0) +
+                    ($resumen['total_comision_agencia_bs'] ?? 0);
+                $totalGeneralComisiones += $totalComisiones;
 
                 // Clínica
                 $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
@@ -1786,107 +1854,149 @@ class ReportesController extends Controller
                 $sheet2->setCellValue($colLetter . $resumenRow, $resumen['total_comision_asesor_bs'] ?? 0);
                 $col++;
 
-                // Comisión Asesor USD
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['total_comision_asesor_usd'] ?? 0);
-                $col++;
-
                 // Comisión Agencia Bs.
                 $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
                 $sheet2->setCellValue($colLetter . $resumenRow, $resumen['total_comision_agencia_bs'] ?? 0);
                 $col++;
 
-                // Comisión Agencia USD
+                // Total Comisiones Bs.
                 $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet2->setCellValue($colLetter . $resumenRow, $resumen['total_comision_agencia_usd'] ?? 0);
-                $col++;
-
-                // Calcular totales
-                $totalBs = ($resumen['total_comision_asesor_bs'] ?? 0) +
-                    ($resumen['total_comision_agencia_bs'] ?? 0);
-                $totalUsd = ($resumen['total_comision_asesor_usd'] ?? 0) +
-                    ($resumen['total_comision_agencia_usd'] ?? 0);
-
-                // Total Monto Bs.
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet2->setCellValue($colLetter . $resumenRow, $totalBs);
-                $col++;
-
-                // Total Monto USD
-                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
-                $sheet2->setCellValue($colLetter . $resumenRow, $totalUsd);
+                $sheet2->setCellValue($colLetter . $resumenRow, $totalComisiones);
 
                 $resumenRow++;
             }
 
+            // Fila de totales
+            $totalRowResumen = $resumenRow;
+            $sheet2->mergeCells('A' . $totalRowResumen . ':B' . $totalRowResumen);
+            $sheet2->setCellValue('A' . $totalRowResumen, 'TOTALES GENERALES');
+            $sheet2->getStyle('A' . $totalRowResumen)->getFont()->setBold(true);
+
+            $sheet2->setCellValue('C' . $totalRowResumen, array_sum(array_column($summaryPorClinica, 'total_pagos')));
+            $sheet2->setCellValue('D' . $totalRowResumen, array_sum(array_column($summaryPorClinica, 'conciliados')));
+            $sheet2->setCellValue('E' . $totalRowResumen, array_sum(array_column($summaryPorClinica, 'pendientes')));
+            $sheet2->setCellValue('F' . $totalRowResumen, array_sum(array_column($summaryPorClinica, 'total_comision_asesor_bs')));
+            $sheet2->setCellValue('G' . $totalRowResumen, array_sum(array_column($summaryPorClinica, 'total_comision_agencia_bs')));
+            $sheet2->setCellValue('H' . $totalRowResumen, $totalGeneralComisiones);
+
+            $sheet2->getStyle('A' . $totalRowResumen . ':H' . $totalRowResumen)->getFont()->setBold(true);
+            $sheet2->getStyle('A' . $totalRowResumen . ':H' . $totalRowResumen)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF2c3e50');
+            $sheet2->getStyle('A' . $totalRowResumen . ':H' . $totalRowResumen)->getFont()->getColor()->setARGB('FFFFFFFF');
+
             // Autoajustar columnas
-            foreach (range('A', \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($resumenHeaders))) as $column) {
+            foreach (range('A', 'H') as $column) {
                 $sheet2->getColumnDimension($column)->setAutoSize(true);
             }
 
             // Formato numérico
-            $currencyCols = ['F', 'G', 'H', 'I', 'J', 'K'];
+            $currencyCols = ['F', 'G', 'H'];
             foreach ($currencyCols as $col) {
                 $sheet2->getStyle($col . '4:' . $col . ($resumenRow - 1))
+                    ->getNumberFormat()
+                    ->setFormatCode('#,##0.00');
+                $sheet2->getStyle($col . $totalRowResumen)
                     ->getNumberFormat()
                     ->setFormatCode('#,##0.00');
             }
         } else {
             $sheet2->setCellValue('A4', 'No hay datos de resumen disponibles');
-            $sheet2->mergeCells('A4:K4');
+            $sheet2->mergeCells('A4:H4');
             $sheet2->getStyle('A4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             $sheet2->getStyle('A4')->getFont()->setItalic(true);
         }
 
         // =============================================
-        // HOJA 3: TOTALES GENERALES
+        // HOJA 3: TARJETAS DE RESUMEN
         // =============================================
         $sheet3 = $spreadsheet->createSheet();
-        $sheet3->setTitle('Totales Generales');
+        $sheet3->setTitle('Resumen General');
 
         // Título
-        $sheet3->setCellValue('A1', 'TOTALES GENERALES DEL REPORTE');
-        $sheet3->mergeCells('A1:B1');
+        $sheet3->setCellValue('A1', 'RESUMEN GENERAL DE COMISIONES');
+        $sheet3->mergeCells('A1:C1');
         $sheet3->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet3->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Totales
-        $sheet3->setCellValue('A3', 'Concepto');
-        $sheet3->setCellValue('B3', 'Monto');
+        // Tarjeta 1: Comisión Asesor
+        $sheet3->setCellValue('A3', 'COMISIÓN ASESOR');
+        $sheet3->getStyle('A3')->getFont()->setBold(true)->setSize(12);
+        $sheet3->getStyle('A3')->getFont()->getColor()->setARGB('FFFF8C00');
 
-        $sheet3->getStyle('A3:B3')->getFont()->setBold(true);
-        $sheet3->getStyle('A3:B3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-        $sheet3->getStyle('A3:B3')->getFill()->getStartColor()->setARGB('FF2c3e50');
-        $sheet3->getStyle('A3:B3')->getFont()->getColor()->setARGB('FFFFFFFF');
+        $sheet3->setCellValue('A4', 'Bs. ' . number_format($totalComisionAsesorBs, 2, ',', '.'));
+        $sheet3->getStyle('A4')->getFont()->setBold(true)->setSize(16);
 
-        $row = 4;
-        $totales = [
-            'Total Monto (Bs.)' => $totalMontoBs,
-            'Total Monto (USD)' => $totalMontoUsd,
-            'Total Comisión Asesor (Bs.)' => $totalComisionAsesorBs,
-            'Total Comisión Asesor (USD)' => $totalComisionAsesorUsd,
-            'Total Comisión Agencia (Bs.)' => $totalComisionAgenciaBs,
-            'Total Comisión Agencia (USD)' => $totalComisionAgenciaUsd,
-            'Total Pago Clínica (Bs.)' => $totalComisionClinicaBs,
-            'Total Pago Clínica (USD)' => $totalComisionClinicaUsd,
-            'Total Registros' => count($models),
-        ];
+        $sheet3->setCellValue('A5', 'USD ' . number_format($totalComisionAsesorUsd, 2, ',', '.'));
+        $sheet3->getStyle('A5')->getFont()->setSize(12);
 
-        foreach ($totales as $label => $value) {
-            $sheet3->setCellValue('A' . $row, $label);
-            $sheet3->setCellValue('B' . $row, $value);
-            $row++;
-        }
+        $sheet3->setCellValue('A6', '10%');
+        $sheet3->getStyle('A6')->getFont()->setBold(true);
 
+        // Tarjeta 2: Comisión Agencia
+        $sheet3->setCellValue('C3', 'COMISIÓN AGENCIA');
+        $sheet3->getStyle('C3')->getFont()->setBold(true)->setSize(12);
+        $sheet3->getStyle('C3')->getFont()->getColor()->setARGB('FFDC3545');
+
+        $sheet3->setCellValue('C4', 'Bs. ' . number_format($totalComisionAgenciaBs, 2, ',', '.'));
+        $sheet3->getStyle('C4')->getFont()->setBold(true)->setSize(16);
+
+        $sheet3->setCellValue('C5', 'USD ' . number_format($totalComisionAgenciaUsd, 2, ',', '.'));
+        $sheet3->getStyle('C5')->getFont()->setSize(12);
+
+        $sheet3->setCellValue('C6', '4%');
+        $sheet3->getStyle('C6')->getFont()->setBold(true);
+
+        // Tarjeta 3: Pagos Clínica
+        $sheet3->setCellValue('E3', 'PAGOS CLÍNICA');
+        $sheet3->getStyle('E3')->getFont()->setBold(true)->setSize(12);
+        $sheet3->getStyle('E3')->getFont()->getColor()->setARGB('FF107C10');
+
+        $sheet3->setCellValue('E4', 'Bs. ' . number_format($totalComisionClinicaBs, 2, ',', '.'));
+        $sheet3->getStyle('E4')->getFont()->setBold(true)->setSize(16);
+
+        $sheet3->setCellValue('E5', 'USD ' . number_format($totalComisionClinicaUsd, 2, ',', '.'));
+        $sheet3->getStyle('E5')->getFont()->setSize(12);
+
+        $sheet3->setCellValue('E6', '70%');
+        $sheet3->getStyle('E6')->getFont()->setBold(true);
+
+        // Total General
+        $sheet3->setCellValue('A8', 'TOTAL GENERAL DE COMISIONES');
+        $sheet3->mergeCells('A8:C8');
+        $sheet3->getStyle('A8')->getFont()->setBold(true)->setSize(14);
+
+        $totalGeneralBs = $totalComisionAsesorBs + $totalComisionAgenciaBs;
+        $totalGeneralUsd = $totalComisionAsesorUsd + $totalComisionAgenciaUsd;
+
+        $sheet3->setCellValue('A9', 'Bs. ' . number_format($totalGeneralBs, 2, ',', '.'));
+        $sheet3->mergeCells('A9:C9');
+        $sheet3->getStyle('A9')->getFont()->setBold(true)->setSize(20);
+        $sheet3->getStyle('A9')->getFont()->getColor()->setARGB('FF4CD964');
+
+        $sheet3->setCellValue('A10', 'USD ' . number_format($totalGeneralUsd, 2, ',', '.'));
+        $sheet3->mergeCells('A10:C10');
+        $sheet3->getStyle('A10')->getFont()->setSize(12);
+
+        $sheet3->setCellValue('A11', 'Total de registros: ' . count($models));
+        $sheet3->mergeCells('A11:C11');
+        $sheet3->getStyle('A11')->getFont()->setItalic(true);
+
+        // Autoajustar columnas en hoja 3
         $sheet3->getColumnDimension('A')->setWidth(30);
-        $sheet3->getColumnDimension('B')->setWidth(20);
-        $sheet3->getStyle('B4:B' . ($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet3->getColumnDimension('C')->setWidth(30);
+        $sheet3->getColumnDimension('E')->setWidth(30);
 
         // Regresar a la primera hoja
         $spreadsheet->setActiveSheetIndex(0);
 
         // Generar archivo
         $filename = 'Reporte_Comisiones_' . date('Ymd_His') . '.xlsx';
+
+        // Limpiar buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
@@ -1901,6 +2011,7 @@ class ReportesController extends Controller
         $writer->save('php://output');
         exit;
     }
+
     public function actionTestData()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
