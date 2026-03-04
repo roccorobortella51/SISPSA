@@ -552,33 +552,118 @@ $this->registerCss($css);
                 },
             ],
 
-            // Columna TIPO con iconos descriptivos
+
+            // Columna CLÍNICA (with filter)
             [
-                'label' => 'TIPO',
+                'label' => 'CLÍNICA',
+                'attribute' => 'clinica_nombre', // This will be added to the search model
                 'value' => function ($model) {
-                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
-                        return '<div class="corporate-type-badge">
-                            <i class="fas fa-crown"></i>
-                            <div>CORPORACIÓN</div>
-                            <small>Principal</small>
-                        </div>';
+                    // For individual payments and affiliates
+                    if ($model->userDatos) {
+                        // Check if userDatos has direct clinica relationship
+                        if ($model->userDatos->clinica) {
+                            return '<span class="badge badge-info" style="font-size: 0.9em;">'
+                                . Html::encode($model->userDatos->clinica->nombre)
+                                . '</span>';
+                        }
+
+                        // If not, try to get clinica through the user's contract
+                        if ($model->userDatos->contratos) {
+                            foreach ($model->userDatos->contratos as $contrato) {
+                                if ($contrato->clinica) {
+                                    return '<span class="badge badge-info" style="font-size: 0.9em;">'
+                                        . Html::encode($contrato->clinica->nombre)
+                                        . '</span>';
+                                }
+                            }
+                        }
                     }
-                    if ($model->pago_corporativo_id) {
-                        return '<div class="affiliate-type-badge">
-                            <i class="fas fa-user-friends"></i>
-                            <div>AFILIADO</div>
-                            <small>Corporativo</small>
-                        </div>';
+
+                    // For corporate payments - get clinics through the corporativo_clinica relationship
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo) {
+                        // Get all clinics associated with this corporate entity
+                        $clinicas = $model->corporativo->clinicas;
+
+                        if (!empty($clinicas)) {
+                            // If there's only one clinic, show it
+                            if (count($clinicas) === 1) {
+                                return '<span class="badge badge-info" style="font-size: 0.9em;">'
+                                    . Html::encode($clinicas[0]->nombre)
+                                    . '</span>';
+                            }
+
+                            // If multiple clinics, show a count or the first one with a +X indicator
+                            $clinicNames = [];
+                            foreach ($clinicas as $clinica) {
+                                $clinicNames[] = $clinica->nombre;
+                            }
+
+                            return '<span class="badge badge-info" style="font-size: 0.9em;" title="'
+                                . Html::encode(implode(', ', $clinicNames)) . '">'
+                                . Html::encode($clinicas[0]->nombre)
+                                . ' +' . (count($clinicas) - 1) . '</span>';
+                        }
                     }
-                    return '<div class="individual-type-badge">
-                        <i class="fas fa-user"></i>
-                        <div>INDIVIDUAL</div>
-                        <small>Independiente</small>
-                    </div>';
+
+                    return '<span class="text-muted">—</span>';
                 },
                 'format' => 'raw',
                 'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
                 'headerOptions' => ['style' => 'text-align: center;'],
+                'filter' => \yii\helpers\ArrayHelper::map(
+                    \app\models\RmClinica::find()->orderBy('nombre')->all(),
+                    'nombre',
+                    'nombre'
+                ),
+                'filterType' => GridView::FILTER_SELECT2,
+                'filterWidgetOptions' => [
+                    'options' => ['placeholder' => 'Filtrar clínica...'],
+                    'pluginOptions' => [
+                        'allowClear' => true
+                    ],
+                ],
+            ],
+
+            // Columna TIPO con iconos descriptivos y filtro
+            [
+                'label' => 'TIPO',
+                'attribute' => 'tipo_filter', // Add this to enable filtering
+                'value' => function ($model) {
+                    if ($model->tipo_pago === 'corporativo' && $model->corporativo_id) {
+                        return '<div class="corporate-type-badge">
+                        <i class="fas fa-crown"></i>
+                        <div>CORPORACIÓN</div>
+                        <small>Principal</small>
+                    </div>';
+                    }
+                    if ($model->pago_corporativo_id) {
+                        return '<div class="affiliate-type-badge">
+                        <i class="fas fa-user-friends"></i>
+                        <div>AFILIADO</div>
+                        <small>Corporativo</small>
+                    </div>';
+                    }
+                    return '<div class="individual-type-badge">
+                    <i class="fas fa-user"></i>
+                    <div>INDIVIDUAL</div>
+                    <small>Independiente</small>
+                </div>';
+                },
+                'format' => 'raw',
+                'contentOptions' => ['style' => 'text-align: center; vertical-align: middle;'],
+                'headerOptions' => ['style' => 'text-align: center;'],
+                'filter' => [ // Add this filter
+                    'corporativo' => 'Colectivo',
+                    'afiliado' => 'Corporativo',
+                    'individual' => 'Individual',
+                ],
+                'filterType' => GridView::FILTER_SELECT2,
+                'filterWidgetOptions' => [
+                    'options' => ['placeholder' => 'Filtrar tipo...'],
+                    'pluginOptions' => [
+                        'allowClear' => true
+                    ],
+                ],
             ],
 
             // Columna REFERENCIA con conexión visual

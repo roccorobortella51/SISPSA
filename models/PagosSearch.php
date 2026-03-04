@@ -15,6 +15,8 @@ class PagosSearch extends Pagos
     public $nombreUsuario;
     public $cedulaUsuario;
     public $observacion;
+    public $clinica_nombre;
+    public $tipo_filter;
 
     /**
      * {@inheritdoc}
@@ -24,7 +26,7 @@ class PagosSearch extends Pagos
         return [
             [['id', 'recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
             [['fecha_pago', 'monto_pagado', 'monto_usd'], 'number'],
-            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'nombreUsuario', 'cedulaUsuario', 'observacion'], 'safe'],
+            [['metodo_pago', 'estatus', 'numero_referencia_pago', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'nombreUsuario', 'cedulaUsuario', 'observacion', 'clinica_nombre', 'tipo_filter'], 'safe'],
         ];
     }
 
@@ -43,17 +45,14 @@ class PagosSearch extends Pagos
      *
      * @return ActiveDataProvider
      */
-    /**
-     * Creates data provider instance with search query applied
-     *
-     * @param array $params
-     *
-     * @return ActiveDataProvider
-     */
     public function search($params)
     {
         // 1. Asignamos alias 't' a la tabla principal 'pagos'
-        $query = Pagos::find()->alias('t')->joinWith(['userDatos']);
+        $query = Pagos::find()->alias('t')
+            ->joinWith(['userDatos'])
+            ->joinWith(['userDatos.clinica as userClinica'])
+            ->joinWith(['userDatos.contratos.clinica as contratoClinica'])
+            ->joinWith(['corporativo.clinicas as corpClinicas']);
 
         // 2. Proyección de columnas
         $query->select([
@@ -84,7 +83,34 @@ class PagosSearch extends Pagos
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'sort' => false, // Desactivamos ordenamiento automático
+            'sort' => [
+                'attributes' => [
+                    'id',
+                    'fecha_pago',
+                    'monto_pagado',
+                    'monto_usd',
+                    'estatus',
+                    'numero_referencia_pago',
+                    'metodo_pago',
+                    'fecha_conciliacion',
+                    'nombre_conciliador',
+                    'observacion',
+                    'created_at',
+                    'tipo_pago',
+                    'nombreUsuario' => [
+                        'asc' => ['user_datos.nombres' => SORT_ASC, 'user_datos.apellidos' => SORT_ASC],
+                        'desc' => ['user_datos.nombres' => SORT_DESC, 'user_datos.apellidos' => SORT_DESC],
+                    ],
+                    'cedulaUsuario' => [
+                        'asc' => ['user_datos.cedula' => SORT_ASC],
+                        'desc' => ['user_datos.cedula' => SORT_DESC],
+                    ],
+                    'clinica_nombre' => [
+                        'asc' => ['userClinica.nombre' => SORT_ASC],
+                        'desc' => ['userClinica.nombre' => SORT_DESC],
+                    ],
+                ],
+            ],
             'pagination' => [
                 'pageSize' => 20,
             ],
@@ -122,11 +148,44 @@ class PagosSearch extends Pagos
             ])
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
 
+        // Filter by clinic name
+        if (!empty($this->clinica_nombre)) {
+            $query->andWhere([
+                'or',
+                ['ilike', 'userClinica.nombre', $this->clinica_nombre],
+                ['ilike', 'contratoClinica.nombre', $this->clinica_nombre],
+                ['ilike', 'corpClinicas.nombre', $this->clinica_nombre],
+            ]);
+        }
+
+        // Filter by tipo
+        if (!empty($this->tipo_filter)) {
+            switch ($this->tipo_filter) {
+                case 'corporativo':
+                    $query->andWhere(['t.tipo_pago' => 'corporativo'])
+                        ->andWhere(['not', ['t.corporativo_id' => null]]);
+                    break;
+                case 'afiliado':
+                    $query->andWhere(['not', ['t.pago_corporativo_id' => null]]);
+                    break;
+                case 'individual':
+                    $query->andWhere([
+                        'or',
+                        ['t.tipo_pago' => null],
+                        ['t.tipo_pago' => ''],
+                        [
+                            'and',
+                            ['t.tipo_pago' => 'individual'],
+                            ['t.pago_corporativo_id' => null]
+                        ]
+                    ]);
+                    break;
+            }
+        }
+
         // ===========================================================================
         // ORDENAMIENTO JERÁRQUICO QUE MANTIENE EL ORDEN CRONOLÓGICO
         // ===========================================================================
-
-        // Necesitamos: 1) Orden cronológico general, 2) Agrupación jerárquica
 
         $query->orderBy(new \yii\db\Expression("
         -- NIVEL 1: Ordenar por la FECHA/HORA del GRUPO PADRE (más importante)
@@ -152,7 +211,7 @@ class PagosSearch extends Pagos
         
         -- NIVEL 5: Por ID como último desempate
         t.id DESC
-    "));
+        "));
 
         return $dataProvider;
     }
@@ -178,8 +237,10 @@ class PagosSearch extends Pagos
             }], true, 'INNER JOIN');
         }], true, 'INNER JOIN');
 
+        // Also join with corporate clinics for completeness
+        $query->joinWith(['corporativo.clinicas']);
+
         // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView
-        // IMPORTANTE: Se ha cambiado 'userDatos.columna' a 'user_datos.columna'
         $query->select([
             't.id',
             't.fecha_pago',
@@ -191,7 +252,6 @@ class PagosSearch extends Pagos
             't.fecha_conciliacion',
             't.nombre_conciliador',
             't.observacion',
-            // CORREGIDO: Usar el nombre de tabla real 'user_datos'
             'user_datos.nombres',
             'user_datos.apellidos',
             'user_datos.cedula',
@@ -202,12 +262,11 @@ class PagosSearch extends Pagos
             't.conciliado',
             't.created_at',
         ]);
-        // -------------------------
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => ['t.id' => SORT_DESC], // Usamos el alias
+                'defaultOrder' => ['t.id' => SORT_DESC],
                 'attributes' => [
                     'id',
                     'created_at',
@@ -300,7 +359,6 @@ class PagosSearch extends Pagos
             't.recibo_id',
             't.conciliado',
         ]);
-        // -------------------------
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -361,7 +419,9 @@ class PagosSearch extends Pagos
         return array_merge(parent::attributes(), [
             'nombreUsuario',
             'cedulaUsuario',
-            'observacion'
+            'observacion',
+            'clinica_nombre',
+            'tipo_filter',
         ]);
     }
 }

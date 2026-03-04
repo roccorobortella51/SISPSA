@@ -178,12 +178,33 @@ class ReportesController extends Controller
         // 5. Obtener el dataProvider
         $params = $request->post();
 
-        // Usar searchConClinicas si hay filtro de clínicas, de lo contrario usar search normal
+        // MODIFY THIS SECTION - Complete DataProvider configuration with sorting
         if (!empty($clinicas) && !in_array('todas', $clinicas)) {
             $dataProvider = $searchModel->searchConClinicas($params, $startDate, $endDate, $status, $clinicas);
         } else {
             $dataProvider = $searchModel->search($params, $startDate, $endDate, $status, $clinicas);
         }
+
+        // ENSURE SORTING IS APPLIED CORRECTLY
+        // If the dataProvider already has sort configuration, merge it
+        $existingSort = $dataProvider->sort;
+
+        $dataProvider->sort = [
+            'defaultOrder' => [
+                'fecha_pago' => SORT_ASC, // Ascending order (oldest to newest)
+            ],
+            'attributes' => array_merge(
+                $existingSort ? $existingSort->attributes : [],
+                [
+                    'fecha_pago' => [
+                        'asc' => ['fecha_pago' => SORT_ASC],
+                        'desc' => ['fecha_pago' => SORT_DESC],
+                        'default' => SORT_ASC,
+                        'label' => 'Fecha de Pago',
+                    ],
+                ]
+            ),
+        ];
 
         // Devolver el HTML de la vista parcial
         return [

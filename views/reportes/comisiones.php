@@ -477,6 +477,311 @@ $this->registerCss(
     .ms-success { color: #107c10 !important; }
     .ms-warning { color: #ff8c00 !important; }
     .ms-danger { color: #d13438 !important; }
+    /* =============================================
+   MICROSOFT LOADING ANIMATION - COMISIONES STYLE
+   ============================================= */
+
+.ms-loading-container {
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 3rem 2rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid #edebe9 !important;
+}
+
+.ms-loading-content {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+}
+
+/* Microsoft Progress Ring */
+.ms-progress-ring {
+    display: inline-block !important;
+    margin-bottom: 2rem !important;
+    position: relative !important;
+}
+
+.ms-progress-ring-svg {
+    transform: rotate(-90deg) !important;
+}
+
+.ms-progress-ring-circle-bg {
+    stroke: #edebe9 !important;
+}
+
+.ms-progress-ring-circle {
+    stroke: #ff8c00 !important; /* Color naranja para comisiones */
+    animation: ms-ring-animation 2s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+}
+
+@keyframes ms-ring-animation {
+    0% { stroke-dashoffset: 226.2; transform: rotate(0deg); }
+    50% { stroke-dashoffset: 56.55; transform: rotate(180deg); }
+    100% { stroke-dashoffset: 226.2; transform: rotate(360deg); }
+}
+
+.ms-loading-title {
+    font-size: 2.4rem !important;
+    font-weight: 600 !important;
+    color: #201f1e !important;
+    margin-bottom: 1.5rem !important;
+    letter-spacing: -0.5px !important;
+}
+
+/* Filter Summary Badge */
+.ms-filter-summary {
+    margin-bottom: 2rem !important;
+}
+
+.ms-filter-badge {
+    display: inline-block !important;
+    background: #fff4ce !important;
+    color: #7a5c00 !important;
+    padding: 1rem 2rem !important;
+    border-radius: 50px !important;
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    border: 2px solid #ff8c00 !important;
+    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.15) !important;
+}
+
+/* Microsoft Step Progress */
+.ms-loading-steps {
+    text-align: left !important;
+    background: #faf9f8 !important;
+    border-radius: 8px !important;
+    padding: 2rem !important;
+    margin: 2rem 0 !important;
+    border: 1px solid #edebe9 !important;
+}
+
+.ms-loading-step {
+    display: flex !important;
+    align-items: flex-start !important;
+    margin-bottom: 1.5rem !important;
+    position: relative !important;
+    opacity: 0.5 !important;
+    transition: all 0.3s ease !important;
+}
+
+.ms-loading-step:last-child {
+    margin-bottom: 0 !important;
+}
+
+.ms-loading-step::before {
+    content: '';
+    position: absolute !important;
+    left: 17px !important;
+    top: 35px !important;
+    bottom: -20px !important;
+    width: 2px !important;
+    background: #c8c6c4 !important;
+}
+
+.ms-loading-step:last-child::before {
+    display: none !important;
+}
+
+.ms-loading-step-active {
+    opacity: 1 !important;
+}
+
+.ms-loading-step-active .ms-step-indicator {
+    background: #107c10 !important;
+    border-color: #107c10 !important;
+}
+
+.ms-loading-step-current {
+    opacity: 1 !important;
+}
+
+.ms-loading-step-current .ms-step-indicator {
+    background: #ff8c00 !important;
+    border-color: #ff8c00 !important;
+}
+
+.ms-step-indicator {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: white !important;
+    border: 2px solid #c8c6c4 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 1.2rem !important;
+    flex-shrink: 0 !important;
+    z-index: 2 !important;
+}
+
+.ms-step-indicator i {
+    font-size: 1.6rem !important;
+    color: white !important;
+}
+
+.ms-pulse-dot {
+    width: 12px !important;
+    height: 12px !important;
+    background: white !important;
+    border-radius: 50% !important;
+    animation: ms-pulse 1.5s ease-in-out infinite !important;
+}
+
+@keyframes ms-pulse {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+.ms-step-content {
+    flex: 1 !important;
+}
+
+.ms-step-title {
+    display: block !important;
+    font-size: 1.8rem !important;
+    font-weight: 600 !important;
+    color: #201f1e !important;
+    margin-bottom: 0.3rem !important;
+}
+
+.ms-step-status {
+    display: block !important;
+    font-size: 1.5rem !important;
+    color: #605e5c !important;
+}
+
+/* Porcentajes destacados en los steps */
+.ms-step-status .ms-percentage {
+    font-weight: 600 !important;
+    color: #ff8c00 !important;
+    background: #fff4ce !important;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 4px !important;
+    margin: 0 0.2rem !important;
+}
+
+/* Microsoft Shimmer Effect */
+.ms-shimmer-container {
+    background: #f3f2f1 !important;
+    border-radius: 8px !important;
+    padding: 2rem !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+.ms-shimmer-container::after {
+    content: '';
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 140, 0, 0.1),
+        transparent
+    ) !important;
+    animation: ms-shimmer 2s infinite !important;
+}
+
+.ms-shimmer-line {
+    height: 16px !important;
+    background: #d2d0ce !important;
+    border-radius: 4px !important;
+    margin-bottom: 12px !important;
+}
+
+.ms-shimmer-line:last-child {
+    margin-bottom: 0 !important;
+}
+
+@keyframes ms-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.ms-loading-footer {
+    border-top: 1px solid #edebe9 !important;
+    padding-top: 2rem !important;
+    margin-top: 2rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 1rem !important;
+}
+
+.ms-loading-time {
+    font-size: 1.5rem !important;
+    color: #605e5c !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.ms-loading-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 20px !important;
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+}
+
+.ms-loading-badge-warning {
+    background: #fff4ce !important;
+    color: #7a5c00 !important;
+    border: 1px solid #ff8c00 !important;
+}
+
+/* Efecto de entrada mejorado */
+.ms-fade-in {
+    animation: msProfessionalFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+@keyframes msProfessionalFadeIn {
+    0% { 
+        opacity: 0; 
+        transform: translateY(20px) scale(0.98);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ms-loading-container {
+        padding: 2rem 1.5rem !important;
+    }
+    
+    .ms-loading-title {
+        font-size: 2rem !important;
+    }
+    
+    .ms-step-title {
+        font-size: 1.6rem !important;
+    }
+    
+    .ms-step-status {
+        font-size: 1.4rem !important;
+    }
+    
+    .ms-filter-badge {
+        font-size: 1.3rem !important;
+        padding: 0.75rem 1.5rem !important;
+    }
+    
+    .ms-loading-footer {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+}
 CSS
 );
 
@@ -541,29 +846,150 @@ $this->registerJs(
     // FUNCIONES UTILITARIAS
     // =============================================
     function showLoading() {
-        \$(config.selectors.results).html(
-            '<div class="col-12">' +
-                '<div class="card border-0 shadow-lg">' +
-                    '<div class="card-body text-center py-5">' +
-                        '<div class="loading-pulse">' +
-                            '<div class="mb-4">' +
-                                '<div class="spinner-grow text-warning" style="width: 4rem; height: 4rem;" role="status">' +
-                                    '<span class="visually-hidden">Cargando...</span>' +
-                                '</div>' +
+    // Obtener resumen de filtros para mostrar
+    const filterSummary = getFilterSummary();
+    
+    // Scroll suave hacia el área de resultados
+    $('html, body').animate({
+        scrollTop: $(config.selectors.results).offset().top - 50
+    }, 300);
+    
+    $(config.selectors.results).html(
+        '<div class="col-12">' +
+            '<div class="ms-loading-container border-0 shadow-lg ms-fade-in">' +
+                '<div class="ms-loading-content">' +
+                    '<!-- Microsoft Progress Ring -->' +
+                    '<div class="ms-progress-ring">' +
+                        '<svg class="ms-progress-ring-svg" width="80" height="80" viewBox="0 0 80 80">' +
+                            '<circle class="ms-progress-ring-circle-bg" cx="40" cy="40" r="36" fill="none" stroke="#edebe9" stroke-width="4"/>' +
+                            '<circle class="ms-progress-ring-circle" cx="40" cy="40" r="36" fill="none" stroke="#ff8c00" stroke-width="4" stroke-linecap="round" ' +
+                                'stroke-dasharray="226.2" stroke-dashoffset="226.2" ' +
+                                'style="animation: ms-ring-animation 2s linear infinite;"/>' +
+                        '</svg>' +
+                    '</div>' +
+                    
+                    '<h3 class="ms-loading-title">Generando Reporte de Comisiones</h3>' +
+                    
+                    '<div class="ms-filter-summary">' +
+                        '<span class="ms-filter-badge"><i class="fas fa-filter me-2"></i>' + filterSummary + '</span>' +
+                    '</div>' +
+                    
+                    '<div class="ms-loading-steps">' +
+                        '<div class="ms-loading-step ms-loading-step-active">' +
+                            '<div class="ms-step-indicator"><i class="fas fa-check-circle"></i></div>' +
+                            '<div class="ms-step-content">' +
+                                '<span class="ms-step-title">Filtros aplicados</span>' +
+                                '<span class="ms-step-status">' + getDetailedFilterSummary() + '</span>' +
                             '</div>' +
-                            '<h3 class="text-warning mb-3">Generando Reporte de Comisiones</h3>' +
-                            '<p class="text-muted fs-5">Calculando comisiones y generando análisis...</p>' +
-                            '<div class="mt-4">' +
-                                '<div class="progress" style="height: 8px; max-width: 300px; margin: 0 auto;">' +
-                                    '<div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" style="width: 75%"></div>' +
-                                '</div>' +
+                        '</div>' +
+                        
+                        '<div class="ms-loading-step ms-loading-step-current">' +
+                            '<div class="ms-step-indicator"><div class="ms-pulse-dot"></div></div>' +
+                            '<div class="ms-step-content">' +
+                                '<span class="ms-step-title">Calculando comisiones</span>' +
+                                '<span class="ms-step-status">Procesando pagos y aplicando porcentajes...</span>' +
+                            '</div>' +
+                        '</div>' +
+                        
+                        '<div class="ms-loading-step">' +
+                            '<div class="ms-step-indicator"><i class="far fa-circle"></i></div>' +
+                            '<div class="ms-step-content">' +
+                                '<span class="ms-step-title">Distribuyendo montos</span>' +
+                                '<span class="ms-step-status">10% Asesor · 4% Agencia · 70% Clínica</span>' +
+                            '</div>' +
+                        '</div>' +
+                        
+                        '<div class="ms-loading-step">' +
+                            '<div class="ms-step-indicator"><i class="far fa-circle"></i></div>' +
+                            '<div class="ms-step-content">' +
+                                '<span class="ms-step-title">Generando vista</span>' +
+                                '<span class="ms-step-status">Preparando tabla de resultados</span>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
+                    
+                    '<!-- Microsoft Shimmer Effect -->' +
+                    '<div class="ms-shimmer-container mt-4">' +
+                        '<div class="ms-shimmer-line" style="width: 60%;"></div>' +
+                        '<div class="ms-shimmer-line" style="width: 80%;"></div>' +
+                        '<div class="ms-shimmer-line" style="width: 40%;"></div>' +
+                    '</div>' +
+                    
+                    '<div class="ms-loading-footer mt-4">' +
+                        '<span class="ms-loading-time"><i class="far fa-clock me-2"></i>Tiempo estimado: 2-5 segundos</span>' +
+                        '<span class="ms-loading-badge ms-loading-badge-warning ms-3">' +
+                            '<i class="fas fa-percentage me-1"></i>Comisiones' +
+                        '</span>' +
+                    '</div>' +
                 '</div>' +
-            '</div>'
-        );
+            '</div>' +
+        '</div>'
+    );
+}
+
+function getFilterSummary() {
+    const status = $(config.selectors.status).val();
+    const clinicas = $(config.selectors.clinica).val() || [];
+    const dateRange = $(config.selectors.dateRange).val();
+    
+    let statusText = status === 'todos' ? 'Todos los estados' : 
+                     status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar';
+    
+    let clinicasText = clinicas.length === 0 || clinicas.includes('todas') ? 
+                      'Todas las clínicas' : 
+                      clinicas.length + ' clínica(s)';
+    
+    let dateText = '';
+    switch(dateRange) {
+        case 'day': dateText = 'Hoy'; break;
+        case 'week': dateText = 'Última semana'; break;
+        case 'month': dateText = 'Mes actual'; break;
+        case 'last-month': dateText = 'Mes anterior'; break;
+        case 'custom': 
+            const from = $(config.selectors.dateFrom).val();
+            const to = $(config.selectors.dateTo).val();
+            dateText = from.split('-').reverse().join('/') + ' - ' + to.split('-').reverse().join('/');
+            break;
     }
+    
+    return statusText + ' · ' + clinicasText + ' · ' + dateText;
+}
+
+function getDetailedFilterSummary() {
+    const status = $(config.selectors.status).val();
+    const clinicas = $(config.selectors.clinica).val() || [];
+    const dateRange = $(config.selectors.dateRange).val();
+    
+    let details = [];
+    
+    // Estado
+    if (status === 'todos') {
+        details.push('✓ Todos los estados de pago');
+    } else {
+        details.push('✓ Estado: ' + (status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar'));
+    }
+    
+    // Clínicas
+    if (clinicas.length === 0 || clinicas.includes('todas')) {
+        details.push('✓ Todas las clínicas activas');
+    } else {
+        details.push('✓ ' + clinicas.length + ' clínica(s) seleccionada(s)');
+    }
+    
+    // Fechas
+    if (dateRange === 'custom') {
+        const from = $(config.selectors.dateFrom).val();
+        const to = $(config.selectors.dateTo).val();
+        details.push('✓ Período: ' + from.split('-').reverse().join('/') + ' al ' + to.split('-').reverse().join('/'));
+    } else {
+        const dateText = dateRange === 'day' ? 'Hoy' :
+                        dateRange === 'week' ? 'Última semana' :
+                        dateRange === 'month' ? 'Mes actual' : 'Mes anterior';
+        details.push('✓ Período: ' + dateText);
+    }
+    
+    return details.join(' · ');
+}
     
     function showError(message) {
         \$(config.selectors.results).html(
