@@ -51,30 +51,19 @@ jobs:
           retention-days: 30
           if-no-files-found: error
       
-      - name: Setup SSH and push backup
+      - name: Commit and push backup
         run: |
-          # Setup SSH
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          
-          # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Prepare backup
+          # Create backups folder and move file
           mkdir -p backups
           mv *.sql.gz backups/
           
-          # Switch to SSH
-          git remote set-url origin git@github.com:${{ github.repository }}.git
-          
-          # Commit and push
+          # Commit
           git add backups/
-          if ! git diff --staged --quiet; then
-            git commit -m "Automated backup $(date +%Y-%m-%d)"
-            git push origin main
-          else
-            echo "No changes to commit"
-          fi
+          git diff --staged --quiet || git commit -m "Automated backup $(date +%Y-%m-%d)"
+          
+          # Push using token (THIS IS THE KEY)
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin main
