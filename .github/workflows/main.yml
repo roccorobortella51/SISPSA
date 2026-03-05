@@ -53,8 +53,20 @@ jobs:
       
       - name: Commit and push backup with token
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          # Remove the default origin that uses github-actions[bot]
+          echo "Removing default origin..."
+          git remote remove origin
+          
+          # Add new origin with your token
+          echo "Adding origin with token..."
+          git remote add origin https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          
+          # Verify the new remote
+          echo "Current remote:"
+          git remote -v
+          
           # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -65,10 +77,17 @@ jobs:
           
           # Commit
           git add backups/
-          git diff --staged --quiet || git commit -m "Automated backup $(date +%Y-%m-%d)"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Automated backup $(date +%Y-%m-%d)"
+            
+            # Push to main branch
+            echo "Pushing to repository..."
+            git push origin main
+          fi
           
-          # Force HTTPS with token authentication
-          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          echo "Pushing to: https://github.com/${GITHUB_REPOSITORY}"
-          git remote set-url origin "$REPO_URL"
-          git push origin main
+          # Clean up token from remote (optional)
+          echo "Cleaning up..."
+          git remote remove origin
+          git remote add origin https://github.com/${GITHUB_REPOSITORY}.git
