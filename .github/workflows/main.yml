@@ -2,77 +2,66 @@
 name: Daily Supabase Backup
 
 on:
-  # Schedule: Run at 2 AM UTC every day
   schedule:
     - cron: '0 2 * * *'
-  
-  # Allow manual trigger from GitHub UI
   workflow_dispatch:
 
 jobs:
   backup:
-    # This runs on Ubuntu Linux (free GitHub runner)
     runs-on: ubuntu-latest
     
     steps:
-      # Step 1: Get the code from repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # Also updated to v4
       
-      # Step 2: Install PostgreSQL client tools
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
       
-      # Step 3: Create the backup
       - name: Create database backup
+        env:
+          SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
+          SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
+          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
         run: |
-          # Create filename with timestamp
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           FILENAME="supabase_backup_${TIMESTAMP}.sql"
           
           echo "Creating backup: $FILENAME"
           
-          # Run pg_dump to create backup
-          PGPASSWORD="${{ secrets.SUPABASE_PASSWORD }}" \
+          PGPASSWORD="$SUPABASE_PASSWORD" \
           pg_dump \
             --disable-triggers \
             --column-inserts \
             --encoding=UTF8 \
-            --host="${{ secrets.SUPABASE_HOST }}" \
+            --host="$SUPABASE_HOST" \
             --port="5432" \
-            --username="${{ secrets.SUPABASE_USER }}" \
+            --username="$SUPABASE_USER" \
             --dbname="postgres" \
             > "$FILENAME"
           
-          # Compress the backup
           gzip "$FILENAME"
-          
           echo "Backup created: ${FILENAME}.gz"
       
-      # Step 4: Upload backup as artifact (temporary storage)
+      # IMPORTANT: Changed from v3 to v4
       - name: Upload backup artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: database-backups
           path: "*.sql.gz"
-          retention-days: 30  # Keep for 30 days
+          retention-days: 30
+          # v4 requires explicit if-no-files-found setting
+          if-no-files-found: error
       
-      # Step 5: Commit backup to repository (permanent storage)
       - name: Commit and push backup
         run: |
-          # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Create backups directory
           mkdir -p backups
-          
-          # Move backup to backups folder
           mv *.sql.gz backups/
           
-          # Commit if there are changes
           git add backups/
           git diff --staged --quiet || git commit -m "Automated backup $(date +%Y-%m-%d)"
           git push
