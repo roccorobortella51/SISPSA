@@ -51,8 +51,11 @@ jobs:
           retention-days: 30
           if-no-files-found: error
       
-      - name: Commit and push backup
+      - name: Commit and push backup with token
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
@@ -64,6 +67,8 @@ jobs:
           git add backups/
           git diff --staged --quiet || git commit -m "Automated backup $(date +%Y-%m-%d)"
           
-          # Push using token (THIS IS THE KEY)
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
+          # Force HTTPS with token authentication
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          echo "Pushing to: https://github.com/${GITHUB_REPOSITORY}"
+          git remote set-url origin "$REPO_URL"
           git push origin main
