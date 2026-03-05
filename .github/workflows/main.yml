@@ -27,8 +27,6 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           FILENAME="supabase_backup_${TIMESTAMP}.sql"
           
-          echo "Creating backup: $FILENAME"
-          
           PGPASSWORD="$SUPABASE_PASSWORD" \
           pg_dump \
             --disable-triggers \
@@ -41,53 +39,25 @@ jobs:
             > "$FILENAME"
           
           gzip "$FILENAME"
-          echo "Backup created: ${FILENAME}.gz"
+          
+          # Create backups folder and move file
+          mkdir -p backups
+          mv "${FILENAME}.gz" backups/
       
-      - name: Upload backup artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: database-backups
-          path: "*.sql.gz"
-          retention-days: 30
-          if-no-files-found: error
-      
-      - name: Commit and push backup with token
+      - name: Upload to GitHub using GitHub CLI
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          # Remove the default origin that uses github-actions[bot]
-          echo "Removing default origin..."
-          git remote remove origin
-          
-          # Add new origin with your token
-          echo "Adding origin with token..."
-          git remote add origin https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
-          
-          # Verify the new remote
-          echo "Current remote:"
-          git remote -v
-          
           # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Create backups folder and move file
-          mkdir -p backups
-          mv *.sql.gz backups/
-          
-          # Commit
+          # Add and commit
           git add backups/
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
             git commit -m "Automated backup $(date +%Y-%m-%d)"
-            
-            # Push to main branch
-            echo "Pushing to repository..."
-            git push origin main
+            # GitHub CLI handles authentication automatically with GH_TOKEN
+            gh repo sync
           fi
-          
-          # Clean up token from remote (optional)
-          echo "Cleaning up..."
-          git remote remove origin
-          git remote add origin https://github.com/${GITHUB_REPOSITORY}.git
