@@ -1,0 +1,646 @@
+/* ========================================
+   MICROSOFT-STYLE GRID FOR USER MANAGEMENT
+   Inspired by Microsoft Fluent Design
+   ======================================== */
+
+/* Table Container */
+.grid-view-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Main Table Styling */
+.table {
+    width: 100%;
+    margin-bottom: 1rem;
+    background-color: transparent;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Header Styling - Microsoft Blue */
+.table thead th {
+    background-color: #2b5797 !important;
+    color: white !important;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 10px;
+    border-bottom: 2px solid #1e3f6e;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Header text color override */
+.table thead th a,
+.table thead th span {
+    color: white !important;
+}
+
+/* Filter Row Styling */
+.grid-view .filters th {
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #2b5797 !important;
+    padding: 12px 8px !important;
+}
+
+/* Filter Inputs */
+.grid-view .filters input,
+.grid-view .filters select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d1d1;
+    border-radius: 3px;
+    font-size: 13px;
+    font-family: 'Segoe UI', sans-serif;
+    transition: all 0.2s ease;
+    background-color: white;
+}
+
+.grid-view .filters input:focus,
+.grid-view .filters select:focus {
+    border-color: #2b5797;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(43, 87, 151, 0.15);
+}
+
+.grid-view .filters input::placeholder {
+    color: #aaa;
+    font-size: 12px;
+}
+
+/* Body Rows */
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f5f5f5 !important;
+    cursor: pointer;
+}
+
+.table tbody td {
+    padding: 12px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #eaeaea;
+    font-size: 13px;
+    color: #333;
+}
+
+/* Striped rows */
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #fcfcfc;
+}
+
+/* Serial Column Styling */
+td:first-child,
+th:first-child {
+    font-weight: 600;
+    color: #2b5797;
+    background-color: rgba(43, 87, 151, 0.02);
+}
+
+/* ========================================
+   STATUS BADGES - MICROSOFT COLORS
+   ======================================== */
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 80px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.status-active {
+    background-color: #107c41; /* Microsoft Green */
+    color: white;
+}
+
+.status-inactive {
+    background-color: #d83b01; /* Microsoft Orange */
+    color: white;
+}
+
+.status-deleted {
+    background-color: #a80000; /* Microsoft Red */
+    color: white;
+}
+
+/* ========================================
+   ROLE BADGES - MICROSOFT COLORS
+   ======================================== */
+
+.role-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 100px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.role-superadmin, 
+.role-admin {
+    background-color: #107c41; /* Microsoft Green */
+    color: white;
+}
+
+.role-director {
+    background-color: #d83b01; /* Microsoft Orange */
+    color: white;
+}
+
+.role-agente {
+    background-color: #0078d4; /* Microsoft Blue */
+    color: white;
+}
+
+.role-asesor {
+    background-color: #5c2d91; /* Microsoft Purple */
+    color: white;
+}
+
+.role-default {
+    background-color: #666666; /* Gray */
+    color: white;
+}
+
+/* ========================================
+   IMPROVED ACTION BUTTONS - MICROSOFT STYLE
+   ======================================== */
+
+/* Action Column Container */
+.action-column {
+    white-space: nowrap;
+}
+
+.action-button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px; /* Proper spacing between buttons */
+    padding: 4px 0;
+}
+
+/* Base Microsoft-style Action Button */
+.microsoft-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background-color: #ffffff;
+    color: #333333;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Icon styling */
+.microsoft-action-btn i {
+    font-size: 16px;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.2s ease;
+}
+
+/* Hover effect - Microsoft Fluent style */
+.microsoft-action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1;
+    border-radius: 3px;
+}
+
+.microsoft-action-btn:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: transparent;
+}
+
+.microsoft-action-btn:hover::before {
+    opacity: 0.12;
+}
+
+.microsoft-action-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Active/Pressed state */
+.microsoft-action-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease;
+}
+
+/* View Button Specific */
+.microsoft-action-btn.view-btn {
+    color: #2b5797; /* Microsoft blue */
+    border-color: #d0e0f0;
+}
+
+.microsoft-action-btn.view-btn:hover {
+    background-color: #2b5797;
+    color: white;
+    border-color: #2b5797;
+}
+
+.microsoft-action-btn.view-btn:hover i {
+    color: white;
+}
+
+/* Edit Button Specific */
+.microsoft-action-btn.edit-btn {
+    color: #107c41; /* Microsoft green */
+    border-color: #c0e0d0;
+}
+
+.microsoft-action-btn.edit-btn:hover {
+    background-color: #107c41;
+    color: white;
+    border-color: #107c41;
+}
+
+.microsoft-action-btn.edit-btn:hover i {
+    color: white;
+}
+
+/* Focus state for accessibility */
+.microsoft-action-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(43, 87, 151, 0.3);
+}
+
+/* Disabled state (if needed) */
+.microsoft-action-btn.disabled,
+.microsoft-action-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: #f5f5f5;
+}
+
+/* ========================================
+   CREATE NEW USER BUTTON - MICROSOFT STYLE
+   ======================================== */
+
+.btn-create-user {
+    color: #2b5797;
+    border: 2px solid #2b5797;
+    background-color: transparent;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    font-family: 'Segoe UI', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-create-user:hover {
+    color: white;
+    background-color: #2b5797;
+    border-color: #1e3f6e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(43, 87, 151, 0.3);
+    text-decoration: none;
+}
+
+.btn-create-user i {
+    font-size: 16px;
+}
+
+.btn-create-user:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(43, 87, 151, 0.3);
+}
+
+/* ========================================
+   PAGINATION - MICROSOFT STYLE
+   ======================================== */
+
+.pagination {
+    margin: 20px 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.pagination > li > a,
+.pagination > li > span {
+    color: #2b5797;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    font-size: 13px;
+    padding: 8px 14px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.pagination > li > a:hover {
+    background-color: #f3f3f3;
+    border-color: #adadad;
+    color: #1e3f6e;
+    transform: translateY(-1px);
+}
+
+.pagination > .active > a,
+.pagination > .active > span {
+    background-color: #2b5797 !important;
+    border-color: #2b5797 !important;
+    color: white !important;
+    font-weight: 600;
+}
+
+.pagination > .disabled > a,
+.pagination > .disabled > span {
+    color: #aaa;
+    pointer-events: none;
+    background-color: #f9f9f9;
+    border-color: #dee2e6;
+}
+
+/* ========================================
+   TOOLTIP STYLING (for action buttons)
+   ======================================== */
+
+.tooltip {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+}
+
+.tooltip-inner {
+    background-color: #2b5797;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tooltip.bs-tooltip-top .arrow::before {
+    border-top-color: #2b5797;
+}
+
+.tooltip.bs-tooltip-right .arrow::before {
+    border-right-color: #2b5797;
+}
+
+.tooltip.bs-tooltip-bottom .arrow::before {
+    border-bottom-color: #2b5797;
+}
+
+.tooltip.bs-tooltip-left .arrow::before {
+    border-left-color: #2b5797;
+}
+
+/* ========================================
+   RIPPLE EFFECT (optional - for buttons)
+   ======================================== */
+
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: scale(0);
+    animation: ripple-animation 0.6s ease-out;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@keyframes ripple-animation {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Ensure buttons have position relative for ripple */
+.microsoft-action-btn,
+.btn-create-user {
+    position: relative;
+    overflow: hidden;
+}
+
+/* ========================================
+   SELECT2 DROPDOWN - MICROSOFT THEME
+   ======================================== */
+
+.select2-container--krajee .select2-selection {
+    border: 1px solid #d1d1d1;
+    border-radius: 3px;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 38px;
+}
+
+.select2-container--krajee .select2-selection:focus {
+    border-color: #2b5797;
+    box-shadow: 0 0 0 3px rgba(43, 87, 151, 0.15);
+}
+
+.select2-container--krajee .select2-selection--single .select2-selection__rendered {
+    color: #333;
+    line-height: 36px;
+    padding-left: 12px;
+}
+
+.select2-container--krajee .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-container--krajee .select2-results__option--highlighted {
+    background-color: #2b5797 !important;
+    color: white !important;
+}
+
+.select2-container--krajee .select2-results__option {
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.select2-container--krajee .select2-search--dropdown .select2-search__field {
+    border: 1px solid #d1d1d1;
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.select2-container--krajee .select2-search--dropdown .select2-search__field:focus {
+    border-color: #2b5797;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(43, 87, 151, 0.15);
+}
+
+/* ========================================
+   DATE FORMATTING AND EMAIL LINKS
+   ======================================== */
+
+.date-cell {
+    font-family: 'Segoe UI', monospace;
+    font-size: 12px;
+    color: #555;
+}
+
+.email-link {
+    color: #0078d4;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.email-link:hover {
+    text-decoration: underline;
+    color: #005a9e;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 1024px) {
+    .table thead th {
+        font-size: 12px;
+        padding: 12px 6px;
+    }
+    
+    .table tbody td {
+        font-size: 12px;
+        padding: 10px 6px;
+    }
+}
+
+@media (max-width: 768px) {
+    .table thead th {
+        font-size: 11px;
+        padding: 10px 4px;
+        white-space: normal;
+    }
+    
+    .table tbody td {
+        font-size: 11px;
+        padding: 8px 4px;
+    }
+    
+    .role-badge, 
+    .status-badge {
+        padding: 3px 8px;
+        font-size: 10px;
+        min-width: 60px;
+    }
+    
+    .btn-create-user {
+        font-size: 12px;
+        padding: 8px 15px;
+    }
+    
+    .action-button-container {
+        gap: 8px;
+    }
+    
+    .microsoft-action-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .microsoft-action-btn i {
+        font-size: 14px;
+    }
+    
+    .pagination {
+        justify-content: center;
+    }
+    
+    .pagination > li > a,
+    .paginaiztion > li > span {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .action-button-container {
+        gap: 6px;
+    }
+    
+    .microsoft-action-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .microsoft-action-btn i {
+        font-size: 12px;
+    }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.font-weight-bold {
+    font-weight: 600;
+}
+
+.font-weight-normal {
+    font-weight: 400;
+}
+
+/* Loading state for buttons */
+.microsoft-action-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.microsoft-action-btn.loading i {
+    animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

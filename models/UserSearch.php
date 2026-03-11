@@ -5,30 +5,39 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\User;
-use app\models\UserDatos; 
-use app\components\UserHelper; 
-
+use app\models\UserDatos;
+use app\components\UserHelper;
 
 /**
  * UserSearch represents the model behind the search form of `app\models\User`.
  */
 class UserSearch extends User
 {
-
     public $roleName;
     public $idasesor;
-
-
     public $nombrecompleto;
     public $agencia;
+    public $cedula;        // Add this property
+    public $telefono;      // Add this property
+
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['username', 'auth_key', 'password_hash', 'password_reset_token', 'email', 'nombrecompleto','roleName', 'agencia'], 'safe'],
-            [['status', 'created_at', 'updated_at', 'id', 'idasesor'], 'integer'],
+            [[
+                'username',
+                'auth_key',
+                'password_hash',
+                'password_reset_token',
+                'email',
+                'nombrecompleto',
+                'roleName',
+                'agencia',
+                'telefono'
+            ], 'safe'],  // Added telefono
+            [['status', 'created_at', 'updated_at', 'id', 'idasesor', 'cedula'], 'integer'], // cedula as integer
         ];
     }
 
@@ -56,10 +65,9 @@ class UserSearch extends User
         $query = User::find();
         $query->innerJoinWith(['userDatos']);
 
-
-        if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente"){
+        if ($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente") {
             $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-            ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
+                ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
         }
 
         // add conditions that should always apply here
@@ -76,8 +84,16 @@ class UserSearch extends User
                 // Permite ordenar por roleName, apuntando a la columna real en la tabla unida
                 'attributes' => array_merge(parent::attributes(), [
                     'roleName' => [
-                         'asc' => ['user_datos.role' => SORT_ASC],
+                        'asc' => ['user_datos.role' => SORT_ASC],
                         'desc' => ['user_datos.role' => SORT_DESC],
+                    ],
+                    'cedula' => [
+                        'asc' => ['user_datos.cedula' => SORT_ASC],
+                        'desc' => ['user_datos.cedula' => SORT_DESC],
+                    ],
+                    'telefono' => [
+                        'asc' => ['user_datos.telefono' => SORT_ASC],
+                        'desc' => ['user_datos.telefono' => SORT_DESC],
                     ],
                 ]),
             ],
@@ -106,12 +122,23 @@ class UserSearch extends User
             ->andFilterWhere(['ilike', 'user.email', $this->email])
             ->andFilterWhere(['like', 'user_datos.role', $this->roleName]);
 
-                // Filtro para el nombre completo
-        if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO
-            $query->andFilterWhere(['or',
+        // Filtro para el nombre completo
+        if (!empty($this->nombrecompleto)) {
+            $query->andFilterWhere([
+                'or',
                 ['ilike', 'user_datos.nombres', $this->nombrecompleto],
                 ['ilike', 'user_datos.apellidos', $this->nombrecompleto]
             ]);
+        }
+
+        // FIXED CÉDULA SEARCH - Cast integer to text for ILIKE
+        if (!empty($this->cedula)) {
+            $query->andWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedula]);
+        }
+
+        // TELÉFONO SEARCH (assuming telefono is string/varchar)
+        if (!empty($this->telefono)) {
+            $query->andFilterWhere(['ilike', 'user_datos.telefono', $this->telefono]);
         }
 
         return $dataProvider;
@@ -126,18 +153,15 @@ class UserSearch extends User
         $query->joinWith(['userDatos.asesor']);
         $query->joinWith(['userDatos.asesor.agente']);
 
-
-        if($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente" || $rol == "admin" || $rol == "superadmin"){
+        if ($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente" || $rol == "admin" || $rol == "superadmin") {
             $query->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-            ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
+                ->andFilterWhere(['auth_assignment.item_name' => "Asesor"]);
         }
 
-        if($rol == "Agente"){
-            
+        if ($rol == "Agente") {
             $query->andFilterWhere(['agente_fuerza.agente_id' => UserHelper::getAgenteId()]);
         }
 
-        
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
@@ -152,8 +176,16 @@ class UserSearch extends User
                 // Permite ordenar por roleName, apuntando a la columna real en la tabla unida
                 'attributes' => array_merge(parent::attributes(), [
                     'roleName' => [
-                         'asc' => ['user_datos.role' => SORT_ASC],
+                        'asc' => ['user_datos.role' => SORT_ASC],
                         'desc' => ['user_datos.role' => SORT_DESC],
+                    ],
+                    'cedula' => [
+                        'asc' => ['user_datos.cedula' => SORT_ASC],
+                        'desc' => ['user_datos.cedula' => SORT_DESC],
+                    ],
+                    'telefono' => [
+                        'asc' => ['user_datos.telefono' => SORT_ASC],
+                        'desc' => ['user_datos.telefono' => SORT_DESC],
                     ],
                 ]),
             ],
@@ -184,12 +216,23 @@ class UserSearch extends User
             ->andFilterWhere(['like', 'user_datos.role', $this->roleName])
             ->andFilterWhere(['like', 'agente.nom', $this->agencia]);
 
-                // Filtro para el nombre completo
-        if (!empty($this->nombrecompleto)) { // <-- AÑADE ESTO
-            $query->andFilterWhere(['or',
+        // Filtro para el nombre completo
+        if (!empty($this->nombrecompleto)) {
+            $query->andFilterWhere([
+                'or',
                 ['ilike', 'user_datos.nombres', $this->nombrecompleto],
                 ['ilike', 'user_datos.apellidos', $this->nombrecompleto]
             ]);
+        }
+
+        // FIXED CÉDULA SEARCH - Cast integer to text for ILIKE
+        if (!empty($this->cedula)) {
+            $query->andWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedula]);
+        }
+
+        // TELÉFONO SEARCH (assuming telefono is string/varchar)
+        if (!empty($this->telefono)) {
+            $query->andFilterWhere(['ilike', 'user_datos.telefono', $this->telefono]);
         }
 
         return $dataProvider;
