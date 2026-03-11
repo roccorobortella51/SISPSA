@@ -13,21 +13,200 @@ $isNewRecord = $isNewRecord ?? true;
 // Calculate field IDs for JavaScript
 $cedulaSearchId = 'cedula-search';
 $propietarioFieldId = Html::getInputId($model, 'idusuariopropietario');
-$userCreateSectionId = 'user-create-section';
 
 // URL variables for AJAX calls - ABSOLUTE URLs
 $findByCedulaUrl = Url::to(['/user/find-by-cedula'], true);
-$createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
+$createUserUrl = Url::to(['/user/create'], true);
+
+// Get agentes list for debugging
+$agentesList = UserHelper::getAgentesList();
+$agentesListCount = count($agentesList);
+$agentesListSample = json_encode(array_slice($agentesList, 0, 5));
 
 ?>
 
 <style>
-/* No CSS hiding - we control visibility via JavaScript */
+    /* Professional Styling for Propietario Section */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    }
+
+    .opacity-75 {
+        opacity: 0.75;
+    }
+
+    .border-left-4 {
+        border-left-width: 4px !important;
+    }
+
+    .border-left-4.border-info {
+        border-left-color: #17a2b8 !important;
+    }
+
+    .border-left-4.border-success {
+        border-left-color: #28a745 !important;
+    }
+
+    .border-left-4.border-warning {
+        border-left-color: #ffc107 !important;
+    }
+
+    .border-left-4.border-danger {
+        border-left-color: #dc3545 !important;
+    }
+
+    .step-circle {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin: 0 auto 0.5rem auto;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .step-circle.step-1 {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+    }
+
+    .step-circle.step-2 {
+        background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+        color: white;
+    }
+
+    .step-circle.step-3 {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        color: white;
+    }
+
+    .step-arrow {
+        font-size: 2rem;
+        color: #adb5bd;
+    }
+
+    .step-label {
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+    }
+
+    .step-description {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .requirement-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1.5rem;
+        border-radius: 30px;
+        background: white;
+        color: #007bff;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(23, 162, 184, 0.1);
+        color: #17a2b8;
+    }
+
+    .search-result .alert {
+        border-left-width: 4px;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+
+    .search-result .btn {
+        transition: all 0.3s ease;
+        min-width: 200px;
+    }
+
+    .search-result .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .search-result .btn-primary:hover {
+        background: #0069d9;
+        border-color: #0062cc;
+    }
+
+    .search-result .btn-success:hover {
+        background: #218838;
+        border-color: #1e7e34;
+    }
+
+    .search-result .btn-secondary:hover {
+        background: #5a6268;
+        border-color: #545b62;
+    }
+
+    /* Ensure Select2 is visible */
+    .select2-container {
+        width: 100% !important;
+        display: block !important;
+    }
+
+    .select2-container .select2-selection--single {
+        height: calc(2.5em + 0.75rem + 2px) !important;
+        padding: 0.375rem 0.75rem !important;
+        font-size: 1.25rem !important;
+        border: 1px solid #ced4da !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: calc(2.5em + 0.75rem) !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: calc(2.5em + 0.75rem + 2px) !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .step-circle {
+            width: 35px;
+            height: 35px;
+            font-size: 1rem;
+        }
+
+        .step-arrow {
+            font-size: 1.5rem;
+        }
+
+        .step-label {
+            font-size: 0.8rem;
+        }
+
+        .step-description {
+            font-size: 0.7rem;
+        }
+
+        .requirement-badge {
+            font-size: 0.8rem;
+            padding: 0.3rem 1rem;
+        }
+    }
 </style>
+
+<!-- DEBUG INFO - Remove in production -->
+<!-- Agentes List Count: <?= $agentesListCount ?> -->
+<!-- Agentes List Sample: <?= $agentesListSample ?> -->
 
 <div class="agente-form">
     <?php $form = ActiveForm::begin(['id' => 'agente-form']); ?>
-    
+
     <div class="row">
         <div class="col-md-12">
             <div class="card shadow-sm mb-4">
@@ -55,173 +234,147 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                             ]) ?>
                         </div>
                     </div>
-                    
-                    <!-- Search Field for Propietario by Cedula -->
-                    <div class="row">
+
+                    <!-- ============================================ -->
+                    <!-- PROPIETARIO REQUIREMENT SECTION - PROFESSIONAL -->
+                    <!-- ============================================ -->
+                    <div class="row mb-4">
                         <div class="col-md-12">
-                            <div class="form-group">
-                                <label style="font-size: 1.5rem !important; font-weight: bold;">BUSCAR PROPIETARIO POR CÉDULA</label>
-                                <div class="input-group">
-                                    <?= Html::textInput('cedula_search', '', [
-                                        'id' => $cedulaSearchId,
-                                        'class' => 'form-control',
-                                        'placeholder' => 'Ingrese la cédula de identidad del propietario',
-                                        'style' => 'font-size: 1.25rem !important; height: calc(2.5em + 1.25rem) !important;'
-                                    ]) ?>
-                                    <div class="input-group-append">
-                                        <?= Html::button('<i class="fas fa-search"></i> Buscar', [
-                                            'id' => 'search-propietario-btn',
-                                            'class' => 'btn btn-primary',
-                                            'style' => 'font-size: 1.25rem !important; height: calc(2.5em + 1.25rem) !important;'
-                                        ]) ?>
+                            <!-- Main Information Card -->
+                            <div class="card shadow-sm border-0 overflow-hidden mt-4">
+                                <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
+                                    <div class="d-flex align-items-center">
+                                        <div class="mr-3">
+                                            <i class="fas fa-user-tie fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="mb-0 font-weight-bold" style="font-size: 1.4rem;">Propietario de la Agencia</h5>
+                                            <p class="mb-0 small" style="color: white !important; opacity: 1;">Requisito fundamental para el registro de una agencia</p>
+                                        </div>
+                                        <div class="ml-auto">
+                                            <span class="badge badge-light px-4 py-1" style="font-size: 0.9rem;">
+                                                <i class="fas fa-check-circle text-success mr-1"></i>
+                                                <p style="color: white !important; opacity: 1;">Rol requerido: Agente
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="search-result" class="mt-2" style="display: none;"></div>
+                                <div class="card-body bg-light">
+                                    <div class="container-fluid p-0">
+                                        <!-- Quick Steps Visual Guide -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-12">
+                                                <div class="d-flex justify-content-around align-items-center">
+                                                    <div class="text-center">
+                                                        <div class="step-circle step-1">1</div>
+                                                        <p class="step-label">Buscar Cédula</p>
+                                                        <p class="step-description">Ingrese el número</p>
+                                                    </div>
+                                                    <div class="step-arrow">
+                                                        <i class="fas fa-arrow-right"></i>
+                                                    </div>
+                                                    <div class="text-center">
+                                                        <div class="step-circle step-2">2</div>
+                                                        <p class="step-label">Verificar Existencia</p>
+                                                        <p class="step-description">¿Usuario con rol Agente?</p>
+                                                    </div>
+                                                    <div class="step-arrow">
+                                                        <i class="fas fa-arrow-right"></i>
+                                                    </div>
+                                                    <div class="text-center">
+                                                        <div class="step-circle step-3">3</div>
+                                                        <p class="step-label">Asignar o Crear</p>
+                                                        <p class="step-description">Según el resultado</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Detailed Explanation -->
+                                        <div class="alert alert-info border-left-4 border-info rounded-0 bg-white mb-4 py-3">
+                                            <div class="d-flex">
+                                                <div class="info-icon mr-3">
+                                                    <i class="fas fa-info-circle fa-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="d-block" style="font-size: 1.1rem;">¿Por qué es necesario un Propietario?</strong>
+                                                    <p class="mb-0 text-muted">
+                                                        Cada agencia debe estar vinculada a un usuario del sistema que actúe como su propietario.
+                                                        Este usuario debe tener el rol <strong class="text-primary">"Agente"</strong> en el sistema.
+                                                        Si el propietario no existe, puede crearlo directamente desde este formulario.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Search Field -->
+                                        <div class="form-group">
+                                            <label class="font-weight-bold text-primary" style="font-size: 1.1rem;">
+                                                <i class="fas fa-search mr-2"></i> Buscar Propietario por Cédula
+                                                <span class="text-danger ml-2">*</span>
+                                            </label>
+                                            <div class="input-group input-group-lg">
+                                                <?= Html::textInput('cedula_search', '', [
+                                                    'id' => $cedulaSearchId,
+                                                    'class' => 'form-control form-control-lg border-primary',
+                                                    'placeholder' => 'Ejemplo: 12345678',
+                                                    'style' => 'font-size: 1.2rem !important;'
+                                                ]) ?>
+                                                <div class="input-group-append">
+                                                    <?= Html::button('<i class="fas fa-search mr-2"></i> Buscar', [
+                                                        'id' => 'search-propietario-btn',
+                                                        'class' => 'btn btn-primary px-4',
+                                                        'style' => 'font-size: 1.2rem !important;'
+                                                    ]) ?>
+                                                </div>
+                                            </div>
+                                            <small class="form-text text-muted mt-2">
+                                                <i class="fas fa-lightbulb text-warning mr-1"></i>
+                                                Ingrese la cédula sin puntos ni guiones. Si el usuario no existe, podrá crearlo.
+                                            </small>
+                                        </div>
+
+                                        <!-- Search Results Container -->
+                                        <div id="search-result" class="search-result mt-3" style="display: none;"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Existing Propietario Selection Field (Hidden initially) -->
+                    <!-- Existing Propietario Selection Field - FIXED VERSION -->
                     <div class="row" id="propietario-selection-row">
                         <div class="col-md-12">
                             <?php
-                            $agentesList = UserHelper::getAgentesList();
-                            $select2Options = [
-                                'data' => $agentesList,
-                                'options' => [
-                                    'placeholder' => 'Seleccione',
-                                    'class' => 'form-control',
-                                    'style' => 'font-size: 1.25rem !important;',
-                                    'id' => $propietarioFieldId
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => false,
-                                ],
-                            ];
-                            echo $form->field($model, 'idusuariopropietario')->label('NOMBRE DEL PROPIETARIO', ['style' => 'font-size: 1.5rem !important; font-weight: bold;'])->widget(Select2::classname(), $select2Options);
-                            ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                            // Ensure we have at least the default option
+                            if (empty($agentesList)) {
+                                $agentesList = ['0' => 'No Asignado'];
+                            }
 
-    <!-- User Creation Section (Hidden initially) -->
-    <div id="<?= $userCreateSectionId ?>" class="row" style="display: none;">
-        <div class="col-md-12">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="m-0" style="font-size: 1.5rem !important;">
-                        <i class="fas fa-user-plus mr-2"></i> Crear Nuevo Propietario (No encontrado en el sistema)
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info" style="font-size: 1.3rem !important; padding: 1.5rem !important;">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        El propietario no fue encontrado en el sistema. Por favor, complete la información para crear un nuevo usuario con rol "Agente".
-                    </div>
-                    
-                    <!-- User Creation Form Fields -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">NOMBRES *</label>
-                                <?= Html::textInput('new_user_nombres', '', [
-                                    'class' => 'form-control',
-                                    'placeholder' => 'Nombres del propietario',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;',
-                                    'required' => true
-                                ]) ?>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">APELLIDOS *</label>
-                                <?= Html::textInput('new_user_apellidos', '', [
-                                    'class' => 'form-control',
-                                    'placeholder' => 'Apellidos del propietario',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;',
-                                    'required' => true
-                                ]) ?>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">TIPO CÉDULA *</label>
-                                <?= Html::dropDownList('new_user_tipo_cedula', 'V', 
-                                    ['V' => 'V', 'E' => 'E', 'J' => 'J', 'P' => 'P', 'N' => 'N', 'M' => 'M'], [
-                                    'class' => 'form-control',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;',
-                                    'required' => true
-                                ]) ?>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">CÉDULA *</label>
-                                <?= Html::textInput('new_user_cedula', '', [
-                                    'id' => 'new_user_cedula',
-                                    'class' => 'form-control',
-                                    'placeholder' => 'Número de cédula',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;',
-                                    'readonly' => true,
-                                    'required' => true
-                                ]) ?>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">TELÉFONO</label>
-                                <?= Html::textInput('new_user_telefono', '', [
-                                    'class' => 'form-control',
-                                    'placeholder' => 'Ej: 04121234567',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;'
-                                ]) ?>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">EMAIL *</label>
-                                <?= Html::textInput('new_user_email', '', [
-                                    'class' => 'form-control',
-                                    'type' => 'email',
-                                    'placeholder' => 'correo@ejemplo.com',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;',
-                                    'required' => true
-                                ]) ?>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label style="font-size: 1.25rem !important; font-weight: bold;">CONTRASEÑA TEMPORAL *</label>
-                                <?= Html::textInput('new_user_password', '', [
-                                    'class' => 'form-control',
-                                    'placeholder' => 'Contraseña temporal para el usuario',
-                                    'style' => 'font-size: 1.1rem !important; height: calc(2.25em + 1rem) !important;',
-                                    'required' => true
-                                ]) ?>
-                                <small class="form-text text-muted" style="font-size: 1rem !important;">El usuario podrá cambiar esta contraseña al iniciar sesión por primera vez.</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <?= Html::button('<i class="fas fa-user-check mr-2"></i> Crear Propietario y Asignar', [
-                                'id' => 'create-propietario-btn',
-                                'class' => 'btn btn-success btn-lg'
-                            ]) ?>
-                            <?= Html::button('<i class="fas fa-times mr-2"></i> Cancelar', [
-                                'id' => 'cancel-create-btn',
-                                'class' => 'btn btn-secondary btn-lg ml-2'
-                            ]) ?>
+                            echo $form->field($model, 'idusuariopropietario')
+                                ->label('PROPIETARIO ASIGNADO', ['style' => 'font-size: 1.5rem !important; font-weight: bold;'])
+                                ->widget(Select2::classname(), [
+                                    'data' => $agentesList,
+                                    'options' => [
+                                        'placeholder' => 'Seleccione un propietario existente',
+                                        'class' => 'form-control',
+                                        'style' => 'font-size: 1.25rem !important;',
+                                        'id' => $propietarioFieldId
+                                    ],
+                                    'pluginOptions' => [
+                                        'allowClear' => false,
+                                        'width' => '100%',
+                                    ],
+                                    'pluginEvents' => [
+                                        "select2:open" => "function() { console.log('Select2 opened'); }",
+                                        "select2:select" => "function(e) { console.log('Selected:', e.params.data); }",
+                                    ]
+                                ]);
+                            ?>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle text-info mr-1"></i>
+                                Seleccione un propietario de la lista. Si no aparece, búsquelo por cédula arriba.
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -234,14 +387,14 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
         <div class="col-md-12">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-secondary text-white">
-                    <h5 class="m-0" style="font-size: 1.5rem !important;"></i> Porcentajes (%) de Comisiónes</h5>
+                    <h5 class="m-0" style="font-size: 1.5rem !important;"> Porcentajes (%) de Comisiónes</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
                         <div class="col-6 col-sm-4 col-md-2">
                             <?= $form->field($model, 'por_venta')->label('VENTA ' . Html::tag('i', '', [
                                 'class' => 'fas fa-info-circle ml-1 text-info',
-                                'data-toggle' => 'tooltip', 
+                                'data-toggle' => 'tooltip',
                                 'title' => 'Escriba el porcentaje de comisión para ventas.',
                                 'data-placement' => 'top'
                             ]), [
@@ -257,7 +410,7 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                         <div class="col-6 col-sm-4 col-md-2">
                             <?= $form->field($model, 'por_asesor')->label('ASESORÍA ' . Html::tag('i', '', [
                                 'class' => 'fas fa-info-circle ml-1 text-info',
-                                'data-toggle' => 'tooltip', 
+                                'data-toggle' => 'tooltip',
                                 'title' => 'Establece el porcentaje de comisión por servicios de asesoría.',
                                 'data-placement' => 'top'
                             ]), [
@@ -273,7 +426,7 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                         <div class="col-6 col-sm-4 col-md-2">
                             <?= $form->field($model, 'por_cobranza')->label('COBRANZA ' . Html::tag('i', '', [
                                 'class' => 'fas fa-info-circle ml-1 text-info',
-                                'data-toggle' => 'tooltip', 
+                                'data-toggle' => 'tooltip',
                                 'title' => 'Define la comisión para la gestión de cobranza.',
                                 'data-placement' => 'top'
                             ]), [
@@ -290,7 +443,7 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                         <div class="col-6 col-sm-4 col-md-2">
                             <?= $form->field($model, 'por_post_venta')->label('POST VENTA ' . Html::tag('i', '', [
                                 'class' => 'fas fa-info-circle ml-1 text-info',
-                                'data-toggle' => 'tooltip', 
+                                'data-toggle' => 'tooltip',
                                 'title' => 'Ingrese el porcentaje para servicios de post-venta.',
                                 'data-placement' => 'top'
                             ]), [
@@ -306,7 +459,7 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                         <div class="col-6 col-sm-4 col-md-2">
                             <?= $form->field($model, 'por_agente')->label('AGENCIA ' . Html::tag('i', '', [
                                 'class' => 'fas fa-info-circle ml-1 text-info',
-                                'data-toggle' => 'tooltip', 
+                                'data-toggle' => 'tooltip',
                                 'title' => 'Este es el porcentaje total de comisión de la agencia.',
                                 'data-placement' => 'top'
                             ]), [
@@ -322,7 +475,7 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                         <div class="col-6 col-sm-4 col-md-2">
                             <?= $form->field($model, 'por_max')->label('MÁXIMO ' . Html::tag('i', '', [
                                 'class' => 'fas fa-info-circle ml-1 text-info',
-                                'data-toggle' => 'tooltip', 
+                                'data-toggle' => 'tooltip',
                                 'title' => 'El porcentaje de comisión más alto que se puede asignar.',
                                 'data-placement' => 'top'
                             ]), [
@@ -336,21 +489,21 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
                             ]) ?>
                         </div>
                     </div>
-                 </div>
-             </div>
-         </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row mb-3">
         <div class="col-md-12 d-flex justify-content-start">
             <?= Html::submitButton('<i class="fas fa-save mr-2"></i> Guardar', ['class' => 'btn btn-success btn-lg mr-3']) ?>
             <?= Html::a(
-                '<i class="fas fa-undo mr-2"></i> Volver', 
+                '<i class="fas fa-undo mr-2"></i> Volver',
                 '#',
                 [
                     'class' => 'btn btn-secondary btn-lg',
-                    'onclick' => 'window.history.back(); return false;', 
-                    'title' => 'Volver a la página anterior', 
+                    'onclick' => 'window.history.back(); return false;',
+                    'title' => 'Volver a la página anterior',
                 ]
             ) ?>
         </div>
@@ -359,7 +512,7 @@ $createAgenteUserUrl = Url::to(['/user/create-agente-user'], true);
     <?php ActiveForm::end(); ?>
 </div>
 
-<?php 
+<?php
 // JavaScript to initialize Bootstrap Tooltips
 $this->registerJs('
     $(function () {
@@ -376,36 +529,62 @@ $(function () {
     var searchBtn = $('#search-propietario-btn');
     var searchResult = $('#search-result');
     var propietarioSelection = $('#propietario-selection-row');
-    var userCreateSection = $('#{$userCreateSectionId}');
     var propietarioField = $('#{$propietarioFieldId}');
-    var createPropietarioBtn = $('#create-propietario-btn');
-    var cancelCreateBtn = $('#cancel-create-btn');
-    var newUserCedula = $('#new_user_cedula');
     
     console.log('=== DEBUG: Element IDs ===');
     console.log('propietarioField ID:', '{$propietarioFieldId}');
     console.log('propietarioField element:', propietarioField);
     console.log('propietarioField length:', propietarioField.length);
-    console.log('Is Select2:', propietarioField.hasClass('select2-hidden-accessible'));
-    console.log('User Create Section ID:', '{$userCreateSectionId}');
-    console.log('User Create Section element:', userCreateSection);
-    console.log('User Create Section length:', userCreateSection.length);
+    console.log('propietarioField HTML:', propietarioField.prop('outerHTML'));
     
-    // Get initial options from Select2 for debugging
-    var initialOptions = propietarioField.find('option').map(function() {
+    // Check if Select2 is initialized
+    console.log('Is Select2 initialized?', propietarioField.hasClass('select2-hidden-accessible'));
+    console.log('Select2 instance:', propietarioField.data('select2'));
+    
+    // If not initialized, initialize it manually
+    if (propietarioField.length && !propietarioField.hasClass('select2-hidden-accessible')) {
+        console.log('Manually initializing Select2...');
+        propietarioField.select2({
+            placeholder: 'Seleccione un propietario existente',
+            allowClear: false,
+            width: '100%',
+            language: {
+                noResults: function() {
+                    return "No se encontraron resultados";
+                }
+            }
+        });
+    }
+    
+    // Log available options
+    var options = propietarioField.find('option').map(function() {
         return { value: this.value, text: this.text };
     }).get();
-    console.log('Initial Select2 options:', initialOptions);
+    console.log('Available options:', options);
+    console.log('Total options count:', options.length);
     
-    // Ensure creation section is hidden on page load
-    userCreateSection.hide();
+    // Helper function to show notifications
+    function showNotification(type, message) {
+        if (type === 'success') {
+            alert('✅ ¡ÉXITO!\\n\\n' + message);
+        } else {
+            alert('❌ ERROR\\n\\n' + message);
+        }
+    }
     
     // Search for propietario by cedula
     searchBtn.on('click', function() {
         var cedula = cedulaSearch.val().trim();
         
         if (!cedula) {
-            showSearchResult('<div class="alert alert-danger" style="font-size: 1.5rem !important; padding: 1rem !important;"><i class="fas fa-exclamation-circle mr-2"></i>Por favor ingrese una cédula para buscar.</div>', 'danger');
+            showSearchResult(
+                '<div class="alert alert-danger border-left-4 border-danger" style="font-size: 1.2rem !important; padding: 1.5rem !important;">' +
+                '<div class="d-flex align-items-center">' +
+                '<i class="fas fa-exclamation-circle fa-2x text-danger mr-3"></i>' +
+                '<div><strong>Error</strong><br>Por favor ingrese una cédula para buscar.</div>' +
+                '</div></div>', 
+                'danger'
+            );
             return;
         }
         
@@ -420,7 +599,7 @@ $(function () {
                 console.log('With data:', { cedula: cedula });
             },
             success: function(response) {
-                searchBtn.prop('disabled', false).html('<i class="fas fa-search"></i> Buscar');
+                searchBtn.prop('disabled', false).html('<i class="fas fa-search mr-2"></i> Buscar');
                 console.log('AJAX Success Response:', response);
                 
                 if (response.success && response.user) {
@@ -431,13 +610,15 @@ $(function () {
                     if (userExists) {
                         // User exists in Select2 options - we can select it
                         showSearchResult(
-                            '<div class="alert alert-success" style="font-size: 1.5rem !important; padding: 1.5rem !important;">' +
-                            '<i class="fas fa-check-circle mr-2"></i>' +
-                            '<strong>Usuario encontrado:</strong> ' + response.user.nombres + ' ' + response.user.apellidos +
-                            '<br><strong>Cédula:</strong> ' + response.user.tipo_cedula + '-' + response.user.cedula +
-                            '</div>' +
+                            '<div class="alert alert-success border-left-4 border-success" style="font-size: 1.2rem !important; padding: 1.5rem !important;">' +
+                            '<div class="d-flex align-items-center mb-3">' +
+                            '<i class="fas fa-check-circle fa-2x text-success mr-3"></i>' +
+                            '<div><strong>¡Usuario encontrado!</strong><br>' +
+                            response.user.nombres + ' ' + response.user.apellidos + '<br>' +
+                            '<span class="text-muted">Cédula: ' + response.user.tipo_cedula + '-' + response.user.cedula + '</span>' +
+                            '</div></div>' +
                             '<div class="text-center mt-3">' +
-                            '<button type="button" class="btn btn-success btn-lg" id="assign-btn-' + response.user.id + '" style="font-size: 1.5rem !important; padding: 1rem 2rem !important;">' +
+                            '<button type="button" class="btn btn-success btn-lg px-5" id="assign-btn-' + response.user.id + '" style="font-size: 1.2rem !important;">' +
                             '<i class="fas fa-user-check mr-2"></i> Asignar como Propietario' +
                             '</button>' +
                             '</div>',
@@ -452,61 +633,57 @@ $(function () {
                             assignPropietario(response.user.id);
                         });
                     } else {
-                        // User doesn't exist in Select2 options - show creation section
+                        // User doesn't exist in Select2 options
                         showSearchResult(
-                            '<div class="alert alert-warning" style="font-size: 1.5rem !important; padding: 1.5rem !important;">' +
-                            '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                            '<strong>Usuario encontrado pero no disponible:</strong> ' + response.user.nombres + ' ' + response.user.apellidos +
-                            '</div>' +
-                            '<div class="alert alert-info" style="font-size: 1.3rem !important; padding: 1.5rem !important;">' +
-                            '<i class="fas fa-info-circle mr-2"></i>' +
-                            'Este usuario existe en el sistema pero no está disponible como propietario. Puede crear un nuevo usuario o contactar al administrador.' +
-                            '</div>' +
-                            '<div class="text-center mt-3">' +
-                            '<button type="button" class="btn btn-primary btn-lg mr-3" id="create-user-btn-' + cedula + '" style="font-size: 1.5rem !important; padding: 1rem 2rem !important;">' +
-                            '<i class="fas fa-user-plus mr-2"></i> Crear Nuevo Usuario' +
-                            '</button>' +
-                            '</div>',
+                            '<div class="alert alert-warning border-left-4 border-warning" style="font-size: 1.2rem !important; padding: 1.5rem !important;">' +
+                            '<div class="d-flex align-items-center">' +
+                            '<i class="fas fa-exclamation-triangle fa-2x text-warning mr-3"></i>' +
+                            '<div><strong>Usuario encontrado pero no disponible</strong><br>' +
+                            response.user.nombres + ' ' + response.user.apellidos + '<br>' +
+                            '<span class="text-muted">Cédula: ' + response.user.tipo_cedula + '-' + response.user.cedula + '</span><br>' +
+                            '<span class="text-muted small">Este usuario existe en el sistema pero no está configurado como propietario.</span>' +
+                            '</div></div>',
                             'warning'
                         );
-                        
-                        // Add click handler to the create user button
-                        $('#create-user-btn-' + cedula).on('click', function() {
-                            console.log('=== DEBUG: Create User button clicked ===');
-                            console.log('Cedula:', cedula);
-                            showUserCreationForm(cedula);
-                        });
                     }
                     
-                    // Hide user creation section if it was visible
-                    userCreateSection.hide();
-                    propietarioSelection.show();
-                    
                 } else {
-                    // User not found
+                    // USER NOT FOUND - Show message with option to create new Agente
                     showSearchResult(
-                        '<div class="alert alert-warning" style="font-size: 1.5rem !important; padding: 1.5rem !important;">' +
-                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                        '<strong>No se encontró ningún usuario con la cédula:</strong> ' + cedula +
-                        '</div>' +
-                        '<div class="text-center mt-3">' +
-                        '<button type="button" class="btn btn-primary btn-lg" id="create-user-btn-' + cedula + '" style="font-size: 1.5rem !important; padding: 1rem 2rem !important;">' +
-                        '<i class="fas fa-user-plus mr-2"></i> Crear Nuevo Usuario' +
+                        '<div class="alert alert-warning border-left-4 border-warning" style="font-size: 1.2rem !important; padding: 1.5rem !important;">' +
+                        '<div class="d-flex align-items-center mb-4">' +
+                        '<i class="fas fa-exclamation-triangle fa-2x text-warning mr-3"></i>' +
+                        '<div><strong>Usuario no encontrado</strong><br>' +
+                        'No existe ningún usuario con la cédula: <strong>' + cedula + '</strong>' +
+                        '</div></div>' +
+                        '<div class="text-center">' +
+                        '<p class="mb-4">¿Desea crear un nuevo Agente con esta cédula?</p>' +
+                        '<button type="button" class="btn btn-primary btn-lg px-5 mr-3" id="create-agente-yes-btn" style="font-size: 1.2rem !important;">' +
+                        '<i class="fas fa-check-circle mr-2"></i> Sí, crear nuevo Agente' +
+                        '</button>' +
+                        '<button type="button" class="btn btn-secondary btn-lg px-5" id="create-agente-no-btn" style="font-size: 1.2rem !important;">' +
+                        '<i class="fas fa-times-circle mr-2"></i> No, cancelar' +
                         '</button>' +
                         '</div>',
                         'warning'
                     );
                     
-                    // Add click handler to the create user button
-                    $('#create-user-btn-' + cedula).on('click', function() {
-                        console.log('=== DEBUG: Create User button clicked ===');
-                        console.log('Cedula:', cedula);
-                        showUserCreationForm(cedula);
+                    // Add click handler for "Sí" button
+                    $('#create-agente-yes-btn').on('click', function() {
+                        // Redirect to user creation page with parameters
+                        var createUrl = '{$createUserUrl}?cedula=' + encodeURIComponent(cedula) + '&role=Agente&from=agente';
+                        window.location.href = createUrl;
+                    });
+                    
+                    // Add click handler for "No" button
+                    $('#create-agente-no-btn').on('click', function() {
+                        // Just clear the search result
+                        searchResult.fadeOut();
                     });
                 }
             },
             error: function(xhr, status, error) {
-                searchBtn.prop('disabled', false).html('<i class="fas fa-search"></i> Buscar');
+                searchBtn.prop('disabled', false).html('<i class="fas fa-search mr-2"></i> Buscar');
                 
                 console.log('AJAX Error Details:', {
                     status: status,
@@ -517,12 +694,21 @@ $(function () {
                 });
                 
                 let errorMessage = 'Error al buscar el usuario. Por favor, intente nuevamente.';
+                let errorTitle = 'Error del Sistema';
                 
                 // Check if it's a server error (500) or other HTTP error
-                if (xhr.status >= 500) {
-                    errorMessage = 'Error del servidor. Por favor, contacte al administrador.';
+                if (xhr.status === 403) {
+                    errorTitle = 'Error de Permisos';
+                    errorMessage = 'No tiene permisos para realizar esta búsqueda (403). Por favor, contacte al administrador.';
+                } else if (xhr.status === 401) {
+                    errorTitle = 'Sesión Expirada';
+                    errorMessage = 'Su sesión ha expirado (401). Por favor, recargue la página y vuelva a iniciar sesión.';
+                } else if (xhr.status >= 500) {
+                    errorTitle = 'Error del Servidor';
+                    errorMessage = 'Error interno del servidor (500). Por favor, contacte al administrador.';
                 } else if (xhr.status === 404) {
-                    errorMessage = 'Servicio no encontrado. Verifique la configuración.';
+                    errorTitle = 'Servicio no Encontrado';
+                    errorMessage = 'El servicio de búsqueda no está disponible (404). Verifique la configuración.';
                 } else if (xhr.responseText) {
                     try {
                         let response = JSON.parse(xhr.responseText);
@@ -538,9 +724,10 @@ $(function () {
                 }
                 
                 showSearchResult(
-                    '<div class="alert alert-danger" style="font-size: 1.5rem !important; padding: 1.5rem !important;">' +
-                    '<i class="fas fa-exclamation-circle mr-2"></i>' +
-                    errorMessage +
+                    '<div class="alert alert-danger border-left-4 border-danger" style="font-size: 1.2rem !important; padding: 1.5rem !important;">' +
+                    '<div class="d-flex align-items-center">' +
+                    '<i class="fas fa-exclamation-circle fa-2x text-danger mr-3"></i>' +
+                    '<div><strong>' + errorTitle + '</strong><br>' + errorMessage + '</div>' +
                     '</div>',
                     'danger'
                 );
@@ -556,100 +743,14 @@ $(function () {
         }
     });
     
-    // Create new propietario
-    createPropietarioBtn.on('click', function() {
-        var formData = {
-            nombres: $('input[name="new_user_nombres"]').val(),
-            apellidos: $('input[name="new_user_apellidos"]').val(),
-            tipo_cedula: $('select[name="new_user_tipo_cedula"]').val(),
-            cedula: $('input[name="new_user_cedula"]').val(),
-            telefono: $('input[name="new_user_telefono"]').val(),
-            email: $('input[name="new_user_email"]').val(),
-            password: $('input[name="new_user_password"]').val(),
-            role: 'Agente' // Predefined role
-        };
-        
-        // Basic validation
-        if (!formData.nombres || !formData.apellidos || !formData.cedula || !formData.email || !formData.password) {
-            alert('Por favor complete todos los campos obligatorios (*)');
-            return;
-        }
-        
-        createPropietarioBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creando...');
-        
-        $.ajax({
-            url: '{$createAgenteUserUrl}',
-            type: 'POST',
-            data: formData,
-            success: function(response) {
-                createPropietarioBtn.prop('disabled', false).html('<i class="fas fa-user-check mr-2"></i> Crear Propietario y Asignar');
-                
-                if (response.success && response.user) {
-                    // Successfully created user - we need to refresh the page or update the Select2
-                    userCreateSection.hide();
-                    showSearchResult(
-                        '<div class="alert alert-success" style="font-size: 1.5rem !important; padding: 1.5rem !important;">' +
-                        '<i class="fas fa-check-circle mr-2"></i>' +
-                        '<strong>¡Usuario creado exitosamente!</strong><br>' +
-                        'Nombre: ' + response.user.nombres + ' ' + response.user.apellidos + '<br>' +
-                        'Email: ' + response.user.email + '<br><br>' +
-                        '<em>Nota: Actualice la página para ver el nuevo usuario en la lista de propietarios.</em>' +
-                        '</div>',
-                        'success'
-                    );
-                } else {
-                    alert('Error al crear el usuario: ' + (response.message || 'Error desconocido'));
-                }
-            },
-            error: function(xhr) {
-                createPropietarioBtn.prop('disabled', false).html('<i class="fas fa-user-check mr-2"></i> Crear Propietario y Asignar');
-                var errorMessage = 'Error al crear el usuario';
-                try {
-                    var response = JSON.parse(xhr.responseText);
-                    if (response.message) {
-                        errorMessage = response.message;
-                    }
-                } catch (e) {}
-                alert(errorMessage);
-            }
-        });
-    });
-    
-    // Cancel user creation
-    cancelCreateBtn.on('click', function() {
-        userCreateSection.hide();
-        searchResult.hide();
-        cedulaSearch.val('').focus();
-    });
-    
     function showSearchResult(message, type) {
-        searchResult.html(message).show();
-    }
-    
-    // Define showUserCreationForm function - SIMPLIFIED VERSION
-    function showUserCreationForm(cedula) {
-        console.log('=== DEBUG: showUserCreationForm called ===');
+        searchResult.html(message).fadeIn();
         
-        // Hide everything else
-        $('#search-result').hide();
-        $('#propietario-selection-row').hide();
-        
-        // Set the cedula value
-        $('#new_user_cedula').val(cedula);
-        
-        // Simply remove the inline style that's hiding it and show it
-        $('#{$userCreateSectionId}').removeAttr('style').show();
-        
-        console.log('User Create Section after show:', $('#{$userCreateSectionId}').is(':visible'));
-        
-        // Scroll to it
+        // Scroll to the result
         $('html, body').animate({
-            scrollTop: $('#{$userCreateSectionId}').offset().top - 100
+            scrollTop: searchResult.offset().top - 100
         }, 500);
     }
-    
-    // Make function globally available
-    window.showUserCreationForm = showUserCreationForm;
 });
 
 // Global functions for button onclick events
@@ -667,9 +768,9 @@ function assignPropietario(userId) {
     
     $('#search-result').hide();
     $('#propietario-selection-row').show();
-    $('#{$userCreateSectionId}').hide();
     
-    alert('¡Propietario asignado exitosamente!');
+    // Show success message
+    alert('✅ ¡ÉXITO!\\n\\n¡Propietario asignado exitosamente!');
 }
 JS;
 

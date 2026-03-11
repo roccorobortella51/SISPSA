@@ -20,7 +20,15 @@ $tEmailFieldId = Html::getInputId($model2, 'email');
 $roleFieldId = Html::getInputId($model2, 'role');
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin');
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
+
+// Get parameters from URL for pre-filling
+$cedulaParam = Yii::$app->request->get('cedula');
+$roleParam = Yii::$app->request->get('role');
+$fromAgente = Yii::$app->request->get('from') === 'agente'; // Check if coming from Agente form
+
+// Determine if role field should be read-only
+$roleReadOnly = $fromAgente && $roleParam === 'Agente';
 ?>
 
 <div class="user-form">
@@ -34,6 +42,7 @@ $permisos = ($rol == 'superadmin');
                 'class' => 'form-control form-control-lg',
                 'placeholder' => 'Escriba una dirección de correo electronico válida',
                 'autofocus' => true,
+                'value' => $model->username ?: ''  // Will be overridden by JavaScript if needed
             ]) ?>
         </div>
         <div class="col-md-4">
@@ -45,20 +54,41 @@ $permisos = ($rol == 'superadmin');
             ]) ?>
         </div>
 
-
         <div class="col-md-4">
-            <?= $form->field($model2, 'role')->label('ROL DEL USUARIO')->widget(Select2::classname(), [
-                'data' => UserHelper::getRolesAllRoles(),
-                'options' => [
-                    'placeholder' => 'Seleccione un rol...',
-                    'class' => 'form-control form-control-lg',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => false,
-                ],
-            ]);
-            ?>
+            <?php if ($roleReadOnly): ?>
+                <!-- Hidden field to store the role value -->
+                <?= Html::activeHiddenInput($model2, 'role', ['value' => 'Agente']) ?>
+                <?= Html::activeHiddenInput($model, 'roles', ['value' => 'Agente']) ?>
+
+                <!-- Display-only role field -->
+                <div class="form-group">
+                    <label class="control-label">ROL DEL USUARIO</label>
+                    <div class="form-control form-control-lg bg-light" style="cursor: not-allowed; opacity: 0.8;">
+                        <i class="fas fa-lock mr-2 text-muted"></i> Agente
+                    </div>
+                    <small class="form-text text-muted">
+                        <i class="fas fa-info-circle"></i> El rol está predefinido como "Agente" para este formulario.
+                    </small>
+                </div>
+            <?php elseif ($permisos): ?>
+                <?= $form->field($model2, 'role')->label('ROL DEL USUARIO')->widget(Select2::classname(), [
+                    'data' => UserHelper::getRolesAllRoles(),
+                    'options' => [
+                        'placeholder' => 'Seleccione un rol...',
+                        'class' => 'form-control form-control-lg',
+                        'value' => $roleParam ?: $model2->role,
+                    ],
+                    'pluginOptions' => [
+                        'allowClear' => false,
+                    ],
+                ]); ?>
+            <?php else: ?>
+                <!-- For other roles, hide role selection completely -->
+                <?= Html::activeHiddenInput($model2, 'role', ['value' => $model2->role ?: 'afiliado']) ?>
+                <?= Html::activeHiddenInput($model, 'roles', ['value' => $model->roles ?: 'afiliado']) ?>
+            <?php endif; ?>
         </div>
+
         <div style="display:none">
             <?= $form->field($model, 'email')->label('CORREO ELECTRÓNICO (Usuario)')->textInput([
                 'maxlength' => true,
@@ -100,15 +130,16 @@ $permisos = ($rol == 'superadmin');
                 ],
             ]); ?>
         </div>
-
-
     </div>
-
-
 
     <br>
     <hr>
     <h3 class="mb-4">Datos Personales del Usuario</h3>
+
+    <!-- Hidden field to store the cedula parameter for JavaScript -->
+    <input type="hidden" id="cedula-param" value="<?= Html::encode($cedulaParam) ?>">
+    <input type="hidden" id="from-agente" value="<?= $fromAgente ? '1' : '0' ?>">
+
     <div class="row">
         <div class="col-md-6">
             <?= $form->field($model2, 'nombres')->textInput([
@@ -131,6 +162,7 @@ $permisos = ($rol == 'superadmin');
                 'options' => [
                     'placeholder' => 'Tipo',
                     'class' => 'form-control form-control-lg',
+                    'id' => 'userdatos-tipo_cedula'
                 ],
                 'pluginOptions' => [
                     'allowClear' => true,
@@ -141,7 +173,9 @@ $permisos = ($rol == 'superadmin');
         <div class="col-md-4">
             <?= $form->field($model2, 'cedula')->textInput([
                 'class' => 'form-control form-control-lg',
-                'placeholder' => 'Ej: 12345678'
+                'placeholder' => 'Ej: 12345678',
+                'id' => 'userdatos-cedula',
+                'value' => $cedulaParam ?: $model2->cedula  // Pre-fill cedula from URL
             ])->label('CÉDULA / RIF')
             ?>
         </div>
@@ -179,7 +213,8 @@ $permisos = ($rol == 'superadmin');
                 'class' => 'form-control form-control-lg',
                 'type' => 'email',
                 'placeholder' => 'Ej: personal@dominio.com',
-                'readonly' => true
+                'readonly' => true,
+                'id' => $tEmailFieldId
             ])->label("CORREO ELECTRÓNICO") ?>
         </div>
         <div class="col-md-4">
@@ -235,7 +270,6 @@ $permisos = ($rol == 'superadmin');
                 'pluginOptions' => [
                     'depends' => ['municipio_id'],
                     'url' => Url::to(['/site/parroquia']),
-                    // 'initValueText' => isset($parroquiaName) ? $parroquiaName : '',
                 ]
             ]);
             ?>
@@ -269,7 +303,7 @@ $permisos = ($rol == 'superadmin');
     <div class="form-group text-end mt-4">
         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Usuario', ['class' => 'btn btn-success btn-lg']); ?>
 
-        <?= Html::a('<i class="fas fa-undo"></i> Volver', ['index'], ['class' => 'btn btn-primary btn-lg']); ?>
+        <?= Html::a('<i class="fas fa-undo"></i> Volver', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-primary btn-lg']); ?>
 
         <?php if ($model->isNewRecord) {
             echo Html::a('Limpiar', ['create'], ['class' => 'btn btn-lg btn-outline-dark']);
@@ -281,7 +315,6 @@ $permisos = ($rol == 'superadmin');
 </div>
 
 <?php
-
 $js = <<<JS
 // Obtener los elementos jQuery usando los IDs calculados
 var \$firstEmailField = $('#{$firstEmailFieldId}');
@@ -292,6 +325,10 @@ var \$tEmailField = $('#{$tEmailFieldId}');
 var \$roleField = $('#{$roleFieldId}');
 var \$clinicaContainer = $('#clinica_field_container');
 var \$clinicaSelect = $('#clinica_id');
+
+// Get the cedula parameter from URL
+var cedulaParam = $('#cedula-param').val();
+var fromAgente = $('#from-agente').val() === '1';
 
 // Función para copiar el valor
 function copyEmailToPersonal() {
@@ -344,6 +381,22 @@ if (\$roleField.length) {
     \$roleField.on('change', toggleClinicaByRole);
     // Evaluar estado inicial (en edición o al cargar)
     toggleClinicaByRole();
+}
+
+// Auto-generate username from cedula if cedula parameter exists and username is empty
+if (cedulaParam && cedulaParam !== '' && \$firstEmailField.val() === '') {
+    // Generate a default email using cedula
+    var defaultEmail = cedulaParam + '@sispsa.com';
+    \$firstEmailField.val(defaultEmail);
+    copyEmailToPersonal();
+}
+
+// Show a helpful message if coming from Agente form
+if (fromAgente) {
+    // Add a subtle indicator that this is for creating an Agente
+    $('.user-form .card-header').prepend(
+        '<span class="badge badge-info ml-2">Creando Agente para Agencia</span>'
+    );
 }
 JS;
 $this->registerJs($js);
