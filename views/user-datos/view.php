@@ -242,7 +242,19 @@ $currentRoute = Yii::$app->controller->getRoute();
                 </div>
                 <div>
                     <h5><strong>Apellidos:</strong> <?= Html::encode(!empty($model->apellidos) ? $model->apellidos : 'N/A') ?></h5>
-                    <h5><strong>Fecha de Nacimiento:</strong> <span class="font-medium"><?= Html::encode(Yii::$app->formatter->asDate($model->fechanac, 'd-m-Y') ?? 'N/A') ?></span></h5>
+                    <h5><strong>Fecha de Nacimiento:</strong>
+                        <span class="font-medium">
+                            <?php
+                            if (!empty($model->fechanac)) {
+                                // Parse the date and format it directly
+                                $date = new DateTime($model->fechanac);
+                                echo $date->format('d-m-Y');
+                            } else {
+                                echo 'N/A';
+                            }
+                            ?>
+                        </span>
+                    </h5>
                     <h5><strong>Teléfono:</strong> <?= Html::encode(!empty($model->telefono) ? $model->telefono : 'N/A') ?></h5>
                 </div>
             </div>
@@ -311,12 +323,12 @@ $currentRoute = Yii::$app->controller->getRoute();
                 <div class="mt-4">
                     <h6 class="text-center"><strong>Últimos siniestros registrados:</strong></h6>
                     <div class="table-responsive">
-                        <table class="table  table-bordered">
-                            <thead>
+                        <table class="table table-bordered">
+                            <thead class="bg-dark text-white">
                                 <tr>
-                                    <th>Fecha</th>
-                                    <th>Descripción</th>
-                                    <th>Costo</th>
+                                    <th style="color: white !important;">Fecha</th>
+                                    <th style="color: white !important;">Descripción</th>
+                                    <th style="color: white !important;">Costo</th>
                                 </tr>
                             </thead>
                             <tbody>

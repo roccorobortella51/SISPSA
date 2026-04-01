@@ -162,8 +162,8 @@ if (!function_exists('formatDateTime')) {
                             <thead class="thead-light">
                                 <tr>
                                     <th><span class="text-white">Servicio (Baremos)</span></th>
-                                    <th class="text-center"><span class="text-white">Límite</span></th>
-                                    <th class="text-center"><span class="text-white">Plazo</span></th>
+                                    <th class="text-center"><span class="text-white">Límite (Veces/Año)</span></th>
+                                    <th class="text-center"><span class="text-white">Plazo (Meses)</span></th>
                                     <?php if ($canManage) : ?>
                                         <th class="text-center"><span class="text-white">Acciones</span></th>
                                     <?php endif; ?>

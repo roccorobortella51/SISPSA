@@ -5,10 +5,13 @@ namespace app\controllers;
 
 use Yii;
 use yii\web\Controller;
+use app\components\UserHelper;
 use yii\web\Response;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use app\models\Pagos;
+use app\models\Contratos;
+use app\models\Cuotas;
 use app\models\PagosReporteSearch;
 use kartik\mpdf\Pdf; // IMPORTANTE: Asegúrate de incluir esta dependencia
 
@@ -26,7 +29,7 @@ class ReportesController extends Controller
                     [
                         'allow' => true,
                         // Todas las acciones del controlador
-                        'actions' => ['index', 'get-pagos-detail', 'generate-pdf', 'export-excel', 'comisiones', 'get-comisiones-detail', 'generate-comisiones-pdf-tcpdf', 'generate-comisiones-pdf', 'export-comisiones-excel', 'test-data', 'test-pdf'],
+                        'actions' => ['index', 'get-pagos-detail', 'generate-pdf', 'export-excel', 'comisiones', 'get-comisiones-detail', 'generate-comisiones-pdf-tcpdf', 'generate-comisiones-pdf', 'export-comisiones-excel', 'test-data', 'test-pdf', 'test-payment-clinic'],
                         // Acceso para 'superadmin' y 'finanzas'
                         'roles' => ['superadmin', 'FINANZAS', 'COORDINADOR-CLINICA'],
                     ],
@@ -58,6 +61,47 @@ class ReportesController extends Controller
         return parent::beforeAction($action);
     }
 
+    /**
+     * Normaliza el filtro de clinicas y aplica restriccion por rol.
+     * - Roles de clinica: solo su clinica_id asignada.
+     * - Roles administrativos: acepta "todas" o IDs numericos.
+     *
+     * @param mixed $rawClinicas
+     * @return array
+     */
+    private function resolveClinicaFilter($rawClinicas): array
+    {
+        if (UserHelper::hasClinicAccess()) {
+            $myClinicaId = UserHelper::getMyClinicaId();
+            return $myClinicaId ? [(string)$myClinicaId] : [];
+        }
+
+        $clinicas = [];
+        if (is_array($rawClinicas)) {
+            $clinicas = $rawClinicas;
+        } elseif ($rawClinicas !== null && $rawClinicas !== '') {
+            $rawClinicas = (string)$rawClinicas;
+            $clinicas = strpos($rawClinicas, ',') !== false
+                ? explode(',', $rawClinicas)
+                : [$rawClinicas];
+        }
+
+        $clinicas = array_values(array_filter(array_map(static function ($value) {
+            $value = trim((string)$value);
+            return $value;
+        }, $clinicas), static function ($value) {
+            return $value !== '';
+        }));
+
+        if (in_array('todas', $clinicas, true)) {
+            return ['todas'];
+        }
+
+        return array_values(array_filter($clinicas, static function ($value) {
+            return ctype_digit((string)$value);
+        }));
+    }
+
     public function actionTestAccess()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -83,10 +127,151 @@ class ReportesController extends Controller
         return $this->render('index');
     }
 
+    /**
+     * Obtiene el detalle de pagos para el reporte (vía AJAX)
+     * @return array JSON con los resultados del reporte
+     */
     public function actionGetPagosDetail()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
+
         $request = Yii::$app->request;
+
+        // =============================================
+        // EXTENSIVE DEBUGGING - START
+        // =============================================
+        $userRole = UserHelper::getMyRol();
+        $userClinicaId = UserHelper::getMyClinicaId();
+
+        Yii::info("=== PAYMENT REPORT DEBUG START ===", 'pagos-debug');
+        Yii::info("User ID: " . Yii::$app->user->id, 'pagos-debug');
+        Yii::info("User Role: {$userRole}", 'pagos-debug');
+        Yii::info("User Clinic ID: " . ($userClinicaId ?? 'NULL'), 'pagos-debug');
+
+        // =============================================
+        // DEBUG 1: Check if there are ANY payments at all
+        // =============================================
+        $totalPayments = Pagos::find()->count();
+        Yii::info("Total payments in system: {$totalPayments}", 'pagos-debug');
+
+        // =============================================
+        // DEBUG 2: Check payments with cuotas relationship
+        // =============================================
+        $paymentsWithCuotas = Pagos::find()
+            ->innerJoin(['cu' => 'cuotas'], 'cu.id_pago = pagos.id')
+            ->count();
+        Yii::info("Payments with linked cuotas: {$paymentsWithCuotas}", 'pagos-debug');
+
+        // =============================================
+        // DEBUG 3: Check payments without cuotas
+        // =============================================
+        $paymentsWithoutCuotas = Pagos::find()
+            ->leftJoin(['cu' => 'cuotas'], 'cu.id_pago = pagos.id')
+            ->where(['cu.id_pago' => null])
+            ->count();
+        Yii::info("Payments WITHOUT linked cuotas: {$paymentsWithoutCuotas}", 'pagos-debug');
+
+        // =============================================
+        // DEBUG 4: Check sample payment with cuota data
+        // =============================================
+        $samplePaymentWithCuota = Pagos::find()
+            ->alias('p')
+            ->select(['p.id', 'p.user_id', 'p.monto_usd', 'p.fecha_pago', 'cu.id as cuota_id', 'cu.contrato_id'])
+            ->innerJoin(['cu' => 'cuotas'], 'cu.id_pago = p.id')
+            ->limit(1)
+            ->asArray()
+            ->one();
+
+        if ($samplePaymentWithCuota) {
+            Yii::info("Sample payment WITH cuota: " . json_encode($samplePaymentWithCuota), 'pagos-debug');
+
+            // Get contract for this payment
+            $contrato = Contratos::findOne($samplePaymentWithCuota['contrato_id']);
+            if ($contrato) {
+                Yii::info("Contract for sample payment: ID={$contrato->id}, clinica_id={$contrato->clinica_id}", 'pagos-debug');
+            }
+        } else {
+            Yii::info("NO payments found with cuotas linked!", 'pagos-debug');
+        }
+
+        // =============================================
+        // DEBUG 5: Check if the user's clinic has any contracts
+        // =============================================
+        if ($userClinicaId) {
+            $contractsInClinic = Contratos::find()
+                ->where(['clinica_id' => $userClinicaId])
+                ->count();
+            Yii::info("Contracts in user's clinic ({$userClinicaId}): {$contractsInClinic}", 'pagos-debug');
+
+            if ($contractsInClinic > 0) {
+                // Get a sample contract
+                $sampleContract = Contratos::find()
+                    ->where(['clinica_id' => $userClinicaId])
+                    ->limit(1)
+                    ->asArray()
+                    ->one();
+                Yii::info("Sample contract: " . json_encode($sampleContract), 'pagos-debug');
+
+                // Check cuotas for this contract
+                $cuotasForContract = Cuotas::find()
+                    ->where(['contrato_id' => $sampleContract['id']])
+                    ->count();
+                Yii::info("Cuotas for contract {$sampleContract['id']}: {$cuotasForContract}", 'pagos-debug');
+
+                // Check if any of those cuotas have id_pago (linked to payments)
+                $cuotasWithPayments = Cuotas::find()
+                    ->where(['contrato_id' => $sampleContract['id']])
+                    ->andWhere(['IS NOT', 'id_pago', null])
+                    ->count();
+                Yii::info("Cuotas WITH payments for contract {$sampleContract['id']}: {$cuotasWithPayments}", 'pagos-debug');
+            }
+        } else {
+            Yii::info("User has no clinic assigned (NULL clinic ID)", 'pagos-debug');
+        }
+
+        // =============================================
+        // DEBUG 6: Direct query to see what payments should be returned
+        // =============================================
+        $startDateDebug = date('Y-m-d', strtotime('-30 days'));
+        $endDateDebug = date('Y-m-d');
+
+        $directQuery = Pagos::find()
+            ->alias('p')
+            ->select(['p.id', 'p.user_id', 'p.monto_usd', 'p.fecha_pago', 'ct.clinica_id', 'rc.nombre as clinica_nombre'])
+            ->innerJoin(['cu' => 'cuotas'], 'cu.id_pago = p.id')
+            ->innerJoin(['ct' => 'contratos'], 'ct.id = cu.contrato_id')
+            ->innerJoin(['rc' => 'rm_clinica'], 'rc.id = ct.clinica_id')
+            ->where(['between', 'p.fecha_pago', $startDateDebug, $endDateDebug]);
+
+        if ($userClinicaId) {
+            $directQuery->andWhere(['ct.clinica_id' => $userClinicaId]);
+        }
+
+        $directResults = $directQuery->limit(5)->asArray()->all();
+        Yii::info("Direct query results (limit 5): " . json_encode($directResults), 'pagos-debug');
+        Yii::info("Direct query SQL: " . $directQuery->createCommand()->rawSql, 'pagos-debug');
+
+        // =============================================
+        // DEBUG 7: Alternative query using user_datos.clinica_id directly
+        // =============================================
+        $altQuery = Pagos::find()
+            ->alias('p')
+            ->select(['p.id', 'p.user_id', 'p.monto_usd', 'p.fecha_pago', 'ud.clinica_id', 'rc.nombre as clinica_nombre'])
+            ->innerJoin(['ud' => 'user_datos'], 'ud.id = p.user_id')
+            ->innerJoin(['rc' => 'rm_clinica'], 'rc.id = ud.clinica_id')
+            ->where(['between', 'p.fecha_pago', $startDateDebug, $endDateDebug]);
+
+        if ($userClinicaId) {
+            $altQuery->andWhere(['ud.clinica_id' => $userClinicaId]);
+        }
+
+        $altResults = $altQuery->limit(5)->asArray()->all();
+        Yii::info("Alternative query via user_datos.clinica_id (limit 5): " . json_encode($altResults), 'pagos-debug');
+        Yii::info("Alternative query SQL: " . $altQuery->createCommand()->rawSql, 'pagos-debug');
+
+        // =============================================
+        // END OF DEBUGGING
+        // =============================================
 
         // Parámetros de la vista
         $range = $request->post('range', 'day');
@@ -95,7 +280,7 @@ class ReportesController extends Controller
         $dateFrom = $request->post('date_from');
         $dateTo = $request->post('date_to');
         $status = $request->post('status', 'Por Conciliar');
-        $clinicas = $request->post('clinicas', []);
+        $clinicas = $this->resolveClinicaFilter($request->post('clinicas', []));
 
         // NUEVO: Parámetros para rango personalizado
         $customRange = $request->post('custom_range', false);
@@ -163,6 +348,8 @@ class ReportesController extends Controller
         // 3. Obtener el resumen general
         $summary = $searchModel->obtenerResumenGeneral($startDate, $endDate, $status, $clinicas);
 
+        Yii::info("Summary general: " . json_encode($summary), 'pagos-debug');
+
         // 4. Obtener el resumen por clínica
         $summaryPorClinica = [];
         if (!empty($clinicas)) {
@@ -175,6 +362,9 @@ class ReportesController extends Controller
             $summaryPorClinica = $searchModel->obtenerResumenPorClinica($startDate, $endDate, $status, []);
         }
 
+        Yii::info("Summary por clinica count: " . count($summaryPorClinica), 'pagos-debug');
+        Yii::info("Summary por clinica: " . json_encode($summaryPorClinica), 'pagos-debug');
+
         // 5. Obtener el dataProvider
         $params = $request->post();
 
@@ -184,6 +374,9 @@ class ReportesController extends Controller
         } else {
             $dataProvider = $searchModel->search($params, $startDate, $endDate, $status, $clinicas);
         }
+
+        // Log the number of records found
+        Yii::info("DataProvider total records: " . $dataProvider->getTotalCount(), 'pagos-debug');
 
         // ENSURE SORTING IS APPLIED CORRECTLY
         // If the dataProvider already has sort configuration, merge it
@@ -226,7 +419,16 @@ class ReportesController extends Controller
                 'range' => $range,
                 'customRange' => $customRange,
                 'dateFrom' => $dateFrom,
-                'dateTo' => $dateTo
+                'dateTo' => $dateTo,
+                'userRole' => $userRole,
+                'userClinicaId' => $userClinicaId,
+                'totalPayments' => $totalPayments,
+                'paymentsWithCuotas' => $paymentsWithCuotas,
+                'paymentsWithoutCuotas' => $paymentsWithoutCuotas,
+                'summaryCount' => count($summaryPorClinica),
+                'dataProviderCount' => $dataProvider->getTotalCount(),
+                'directQueryResults' => $directResults,
+                'altQueryResults' => $altResults
             ]
         ];
     }
@@ -248,19 +450,7 @@ class ReportesController extends Controller
         $customRange = $request->get('custom_range', false);
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        $clinicasParam = $request->get('clinicas', '');
-
-        // Procesar clínicas
-        $clinicasArray = [];
-        if (!empty($clinicasParam)) {
-            if (is_array($clinicasParam)) {
-                $clinicasArray = $clinicasParam;
-            } else if (strpos($clinicasParam, ',') !== false) {
-                $clinicasArray = explode(',', $clinicasParam);
-            } else {
-                $clinicasArray = [$clinicasParam];
-            }
-        }
+        $clinicasArray = $this->resolveClinicaFilter($request->get('clinicas', ''));
 
         // Inicializar fechas
         $startDate = date('Y-m-d');
@@ -589,19 +779,7 @@ class ReportesController extends Controller
 
         // Obtener parámetros
         $status = $request->get('status', 'Por Conciliar');
-        $clinicasParam = $request->get('clinicas', '');
-        $clinicasArray = [];
-
-        // Procesar clínicas
-        if (!empty($clinicasParam)) {
-            if (is_array($clinicasParam)) {
-                $clinicasArray = $clinicasParam;
-            } else if (strpos($clinicasParam, ',') !== false) {
-                $clinicasArray = explode(',', $clinicasParam);
-            } else {
-                $clinicasArray = [$clinicasParam];
-            }
-        }
+        $clinicasArray = $this->resolveClinicaFilter($request->get('clinicas', ''));
 
         // Determinar fechas
         $startDate = date('Y-m-d');
@@ -1019,7 +1197,7 @@ class ReportesController extends Controller
             // Get filter parameters
             $range = $request->post('range', 'day');
             $status = $request->post('status', 'todos');
-            $clinicas = $request->post('clinicas', []);
+            $clinicas = $this->resolveClinicaFilter($request->post('clinicas', []));
             $dateFrom = $request->post('date_from');
             $dateTo = $request->post('date_to');
             $customRange = $request->post('custom_range', false);
@@ -1228,28 +1406,13 @@ class ReportesController extends Controller
 
         // Obtener todos los parámetros
         $status = $request->get('status', 'todos');
-        $clinicasParam = $request->get('clinicas', '');
+        $clinicasArray = $this->resolveClinicaFilter($request->get('clinicas', ''));
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
         $customRange = $request->get('custom_range', false);
 
         // Debug log
-        Yii::debug("PDF Request - range: {$range}, status: {$status}, clinicasParam: {$clinicasParam}", 'application');
-
-        // Procesar clínicas - FIXED VERSION
-        $clinicasArray = [];
-        if (!empty($clinicasParam)) {
-            if (is_array($clinicasParam)) {
-                $clinicasArray = $clinicasParam;
-            } else if (strpos($clinicasParam, ',') !== false) {
-                $clinicasArray = explode(',', $clinicasParam);
-            } else {
-                $clinicasArray = [$clinicasParam];
-            }
-        }
-
-        // Ensure it's always an array
-        $clinicasArray = (array)$clinicasArray;
+        Yii::debug("PDF Request - range: {$range}, status: {$status}, clinicas: " . json_encode($clinicasArray), 'application');
 
         // Log the processed clinics
         Yii::debug("Processed clinics array: " . print_r($clinicasArray, true), 'application');
@@ -1432,24 +1595,10 @@ class ReportesController extends Controller
 
         // Obtener parámetros
         $status = $request->get('status', 'todos');
-        $clinicasParam = $request->get('clinicas', '');
+        $clinicasArray = $this->resolveClinicaFilter($request->get('clinicas', ''));
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
         $customRange = $request->get('custom_range', false);
-
-        // Procesar clínicas
-        $clinicasArray = [];
-        if (!empty($clinicasParam)) {
-            if (is_array($clinicasParam)) {
-                $clinicasArray = $clinicasParam;
-            } else if (strpos($clinicasParam, ',') !== false) {
-                $clinicasArray = explode(',', $clinicasParam);
-            } else {
-                $clinicasArray = [$clinicasParam];
-            }
-        }
-
-        $clinicasArray = (array)$clinicasArray;
 
         // Handle 'undefined' values
         $range = ($range === 'undefined' || empty($range)) ? 'day' : $range;
@@ -2133,24 +2282,10 @@ class ReportesController extends Controller
 
             // Obtener todos los parámetros
             $status = $request->get('status', 'todos');
-            $clinicasParam = $request->get('clinicas', '');
+            $clinicasArray = $this->resolveClinicaFilter($request->get('clinicas', ''));
             $dateFrom = $request->get('date_from');
             $dateTo = $request->get('date_to');
             $customRange = $request->get('custom_range', false);
-
-            // Procesar clínicas
-            $clinicasArray = [];
-            if (!empty($clinicasParam)) {
-                if (is_array($clinicasParam)) {
-                    $clinicasArray = $clinicasParam;
-                } else if (strpos($clinicasParam, ',') !== false) {
-                    $clinicasArray = explode(',', $clinicasParam);
-                } else {
-                    $clinicasArray = [$clinicasParam];
-                }
-            }
-
-            $clinicasArray = (array)$clinicasArray;
 
             // Determinar fechas
             $startDate = date('Y-m-d');
@@ -2751,5 +2886,104 @@ class ReportesController extends Controller
             Yii::$app->session->setFlash('error', 'Error al generar el PDF: ' . $e->getMessage());
             return $this->redirect(['comisiones']);
         }
+    }
+    /**
+     * Test action to debug payment-clinic relationship
+     */
+    public function actionTestPaymentClinic()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $results = [];
+
+        // 1. Check all payments and their relationships
+        $payments = Pagos::find()
+            ->alias('p')
+            ->select([
+                'p.id',
+                'p.user_id',
+                'p.monto_usd',
+                'p.fecha_pago',
+                'cu.id as cuota_id',
+                'cu.contrato_id',
+                'ct.clinica_id',
+                'rc.nombre as clinica_nombre'
+            ])
+            ->leftJoin(['cu' => 'cuotas'], 'cu.id_pago = p.id')
+            ->leftJoin(['ct' => 'contratos'], 'ct.id = cu.contrato_id')
+            ->leftJoin(['rc' => 'rm_clinica'], 'rc.id = ct.clinica_id')
+            ->limit(20)
+            ->asArray()
+            ->all();
+
+        $results['payments_with_relationships'] = $payments;
+
+        // 2. Check cuotas that have id_pago
+        $cuotasWithPayments = Cuotas::find()
+            ->select(['id', 'contrato_id', 'id_pago', 'numero_cuota', 'estatus'])
+            ->where(['IS NOT', 'id_pago', null])
+            ->limit(20)
+            ->asArray()
+            ->all();
+
+        $results['cuotas_with_payments'] = $cuotasWithPayments;
+
+        // 3. Check contracts for the user's clinic
+        $userClinicaId = UserHelper::getMyClinicaId();
+        $userRole = UserHelper::getMyRol();
+
+        $results['user_role'] = $userRole;
+        $results['user_clinic_id'] = $userClinicaId;
+
+        if ($userClinicaId) {
+            $contracts = Contratos::find()
+                ->select(['id', 'nrocontrato', 'user_id', 'clinica_id', 'estatus'])
+                ->where(['clinica_id' => $userClinicaId])
+                ->limit(20)
+                ->asArray()
+                ->all();
+
+            $results['contracts_in_user_clinic'] = $contracts;
+
+            // Get contract IDs
+            $contractIds = array_column($contracts, 'id');
+
+            // Check cuotas for these contracts
+            $cuotasForContracts = Cuotas::find()
+                ->select(['id', 'contrato_id', 'id_pago', 'numero_cuota', 'estatus'])
+                ->where(['contrato_id' => $contractIds])
+                ->limit(20)
+                ->asArray()
+                ->all();
+
+            $results['cuotas_for_contracts'] = $cuotasForContracts;
+
+            // Check if any of these cuotas have id_pago
+            $cuotaIdsWithPayments = array_filter(array_column($cuotasForContracts, 'id_pago'));
+            $results['cuotas_with_payments_in_clinic'] = count($cuotaIdsWithPayments);
+
+            // Get the actual payments from these cuotas
+            if (!empty($cuotaIdsWithPayments)) {
+                $paymentsFromCuotas = Pagos::find()
+                    ->where(['id' => $cuotaIdsWithPayments])
+                    ->limit(20)
+                    ->asArray()
+                    ->all();
+
+                $results['payments_from_cuotas'] = $paymentsFromCuotas;
+            }
+        }
+
+        // 4. Overall statistics
+        $results['stats'] = [
+            'total_payments' => Pagos::find()->count(),
+            'payments_with_cuotas' => Pagos::find()->innerJoin(['cu' => 'cuotas'], 'cu.id_pago = pagos.id')->count(),
+            'total_cuotas' => Cuotas::find()->count(),
+            'cuotas_with_payments' => Cuotas::find()->where(['IS NOT', 'id_pago', null])->count(),
+            'total_contracts' => Contratos::find()->count(),
+            'contracts_with_clinica' => Contratos::find()->where(['IS NOT', 'clinica_id', null])->count(),
+        ];
+
+        return $results;
     }
 }

@@ -808,26 +808,34 @@ class UserDatosController extends Controller
         $model->role = 'afiliado';
         $model->estatus = 'Creado';
 
-
         if ($model->estatus_solvente == "" || $model->estatus_solvente == null) {
             $model->estatus_solvente = "No";
         }
 
-
-        //if ($this->request->isPost) {
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
+            // ============================================
+            // FIX 2: Calculate fecha_ven from fecha_ini BEFORE validation
+            // ============================================
+            if (!empty($modelContrato->fecha_ini)) {
+                $fechaIni = new \DateTime($modelContrato->fecha_ini);
+                $fechaIni->modify('+1 year');
+                $fechaIni->modify('-1 day');
+                $modelContrato->fecha_ven = $fechaIni->format('Y-m-d');
+
+                // Log for debugging
+                Yii::info("Setting fecha_ven: {$modelContrato->fecha_ven} based on fecha_ini: {$modelContrato->fecha_ini}", 'user-datos');
+            }
+            // ============================================
 
             $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
 
-            //-- --- ADD THIS CODE BLOCK HERE ---
             // Normalize estatus_solvente to consistent format
             if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
                 $model->estatus_solvente = "Si";
             } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
                 $model->estatus_solvente = "No";
             }
-            // --- END OF ADDED CODE ---
 
             // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
@@ -876,7 +884,6 @@ class UserDatosController extends Controller
                 $model->imagenIdentificacionFile = !empty($imagenIdentificacionFiles) ? reset($imagenIdentificacionFiles) : null;
                 $model->selfieFile = !empty($selfieFiles) ? reset($selfieFiles) : null;
 
-
                 if (!empty($imagenIdentificacionFiles) && $imagenIdentificacionFiles[0]->size > 0) {
                     $folder = 'documentos';
                     $fileName = uniqid('imagen_identificacion_') . '.' . $model->imagenIdentificacionFile->extension;
@@ -914,6 +921,7 @@ class UserDatosController extends Controller
                         Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
                     }
                 }
+
                 if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
                     $folder = 'FotoPerfil';
                     $fileName = uniqid('selfie_') . '.' . $model->selfieFile->extension;
@@ -951,82 +959,111 @@ class UserDatosController extends Controller
                     }
                 }
 
-                $modelUser->username = $model->email;;
+                $modelUser->username = $model->email;
                 $pass = 'sispsa' . $model->cedula;
                 $modelUser->password_hash = User::setPassword($pass);
                 $modelUser->auth_key = User::generateAuthKey();
                 $modelUser->email = $model->email;
                 $modelUser->status = 1;
+
                 if ($modelUser->save()) {
-
-
                     $modelContrato->user_id = $model->id;
                     $modelContrato->estatus = 'Registrado';
                     $modelContrato->clinica_id = $model->clinica_id;
                     $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
                     $modelContrato->monto = $plan ? $plan->precio : 0;
-                    $modelContrato->save();
-                    $modelCuota = new Cuotas();
-                    $modelCuota->contrato_id = $modelContrato->id;
-                    $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                    $contratoExistente = Contratos::find()->where(['id' => $modelContrato->id])->one();
-                    $modelCuota->monto = $contratoExistente ? $contratoExistente->monto : 0;
-                    $modelCuota->estatus = 'pendiente';
-                    $tasaCambio = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one();
-                    $modelCuota->rate_usd_bs = $tasaCambio ? $tasaCambio->tasa_cambio : 1; // Default to 1 if no record
-                    $modelCuota->save();
-                    $anio_actual = date('Y');
-                    $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
-                    $model->contrato_id = $modelContrato->id;
-                    $modelContrato->save();
-                    $auth = Yii::$app->authManager;
-                    $roleName = 'afiliado';
-                    $role = $auth->getRole($roleName);
-                    if ($role) {
-                        try {
-                            $auth->revokeAll($modelUser->id);
-                            $auth->assign($role, $modelUser->id);
-                            Yii::$app->cache->flush();
-                            $model->user_login_id = $modelUser->id;
-                            $model->save();
 
-                            // Crear relación con corporativo si es tipo 2 y hay ID de corporativo
-                            if ($model->user_datos_type_id == 2 && !empty($model->afiliado_corporativo_id)) {
-                                // Eliminar relación previa si existe para evitar duplicados
-                                CorporativoUser::deleteAll(['user_id' => $model->id]);
+                    // ============================================
+                    // Generate anniversary-based cuotas
+                    // ============================================
+                    if ($modelContrato->save()) {
 
-                                $corporativoUser = new CorporativoUser();
-                                $corporativoUser->corporativo_id = $model->afiliado_corporativo_id;
-                                $corporativoUser->user_id = $model->id;
-                                $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
-                                if (!$corporativoUser->save()) {
-                                    Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
-                                }
-                            } elseif (empty($model->afiliado_corporativo_id)) {
-                                // Si no hay corporativo, eliminar relación existente
-                                CorporativoUser::deleteAll(['user_id' => $model->id]);
-                            }
-                        } catch (\Exception $e) {
-                            Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                        // ADD THIS DEBUG CODE
+                        Yii::info("=== START CUOTA GENERATION DEBUG ===", 'debug');
+                        Yii::info("Contract ID: " . $modelContrato->id, 'debug');
+                        Yii::info("Start Date: " . $modelContrato->fecha_ini, 'debug');
+                        Yii::info("Monto: " . $modelContrato->monto, 'debug');
+
+                        // Check if method exists
+                        if (!method_exists('app\models\Cuotas', 'generateCuotasSimple')) {
+                            Yii::error("CRITICAL: generateCuotasSimple method not found!", 'debug');
+                        } else {
+                            Yii::info("Method exists, calling it now...", 'debug');
                         }
+
+                        // Generate 12 cuotas using the new anniversary-based method
+                        $cuotaGeneration = Cuotas::generateCuotasSimple(
+                            $modelContrato->id,
+                            $modelContrato->fecha_ini,
+                            $modelContrato->monto
+                        );
+                        // Log the result
+                        Yii::info("Generation result: " . print_r($cuotaGeneration, true), 'debug');
+
+                        if (!$cuotaGeneration['success']) {
+                            Yii::error("Failed to generate cuotas: " . $cuotaGeneration['error'], 'user-datos');
+                            Yii::$app->session->setFlash('warning', 'Contrato creado pero hubo un problema generando las cuotas. Por favor, ejecute el comando de generación manualmente.');
+                        } else {
+                            Yii::info("Successfully generated anniversary-based cuotas for contract #{$modelContrato->id}", 'user-datos');
+                            Yii::$app->session->setFlash('success', 'Afiliado creado exitosamente con 12 cuotas mensuales. La primera cuota vence hoy, las siguientes el mismo día de cada mes.');
+                        }
+
+                        // ============================================
+                        // END OF CUOTA GENERATION
+                        // ============================================
+
+                        $anio_actual = date('Y');
+                        $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
+                        $model->contrato_id = $modelContrato->id;
+                        $modelContrato->save();
+
+                        $auth = Yii::$app->authManager;
+                        $roleName = 'afiliado';
+                        $role = $auth->getRole($roleName);
+                        if ($role) {
+                            try {
+                                $auth->revokeAll($modelUser->id);
+                                $auth->assign($role, $modelUser->id);
+                                Yii::$app->cache->flush();
+                                $model->user_login_id = $modelUser->id;
+                                $model->save();
+
+                                // Crear relación con corporativo si es tipo 2 y hay ID de corporativo
+                                if ($model->user_datos_type_id == 2 && !empty($model->afiliado_corporativo_id)) {
+                                    // Eliminar relación previa si existe para evitar duplicados
+                                    CorporativoUser::deleteAll(['user_id' => $model->id]);
+
+                                    $corporativoUser = new CorporativoUser();
+                                    $corporativoUser->corporativo_id = $model->afiliado_corporativo_id;
+                                    $corporativoUser->user_id = $model->id;
+                                    $corporativoUser->fecha_vinculacion = date('Y-m-d H:i:s');
+                                    if (!$corporativoUser->save()) {
+                                        Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
+                                    }
+                                } elseif (empty($model->afiliado_corporativo_id)) {
+                                    // Si no hay corporativo, eliminar relación existente
+                                    CorporativoUser::deleteAll(['user_id' => $model->id]);
+                                }
+                            } catch (\Exception $e) {
+                                Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                            }
+                        } else {
+                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                        }
+                        return $this->redirect(['view', 'id' => $model->id]);
                     } else {
-                        Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                        Yii::error("Error saving contract: " . json_encode($modelContrato->errors), __METHOD__);
+                        Yii::$app->session->setFlash('error', 'Error al guardar el contrato: ' . implode(', ', $modelContrato->getErrorSummary(true)));
                     }
-                    return $this->redirect(['view', 'id' => $model->id]);
                 } else {
-                    var_dump($modelUser->errors);
-                    exit;
+                    Yii::error("Error saving user: " . json_encode($modelUser->errors), __METHOD__);
+                    Yii::$app->session->setFlash('error', 'Error al guardar el usuario: ' . implode(', ', $modelUser->getErrorSummary(true)));
                 }
             } else {
-                var_dump($model->errors);
-                exit;
+                Yii::error("Error saving UserDatos: " . json_encode($model->errors), __METHOD__);
+                Yii::$app->session->setFlash('error', 'Error al guardar los datos del afiliado: ' . implode(', ', $model->getErrorSummary(true)));
             }
         }
-
-        // }
-        /*} else {
-            $model->loadDefaultValues();
-        }*/
 
         return $this->render('create', [
             'model' => $model,
@@ -2676,5 +2713,465 @@ class UserDatosController extends Controller
         ]);
 
         return $pdf->render();
+    }
+    /**
+     * Dashboard-style affiliates report with charts and statistics
+     */
+    public function actionReporteAfiliadosDashboard()
+    {
+        $searchModel = new AfiliadosReportSearch();
+        $params = Yii::$app->request->queryParams;
+
+        // Get all data for charts and summary
+        $summaryByClinic = $searchModel->getSummaryByClinic($params);
+        $summaryByPlan = $searchModel->getSummaryByPlan($params);
+        $timelineData = $searchModel->getTimelineData($params);
+        $topClinics = $searchModel->getTopClinics(8, $params);
+        $totals = $searchModel->getTotals($params);
+
+        // Prepare chart data as JSON for JavaScript
+        $chartData = [
+            'clinicLabels' => array_column($summaryByClinic, 'clinica_nombre'),
+            'clinicTotals' => array_column($summaryByClinic, 'total_afiliados'),
+            'clinicIndividual' => array_column($summaryByClinic, 'tipo_individual'),
+            'clinicCorporativo' => array_column($summaryByClinic, 'tipo_corporativo'),
+            'clinicActivos' => array_column($summaryByClinic, 'activos'),
+            'timelineLabels' => array_column($timelineData, 'month'),
+            'timelineTotals' => array_column($timelineData, 'total'),
+            'timelineIndividual' => array_column($timelineData, 'individual'),
+            'timelineCorporativo' => array_column($timelineData, 'corporativo'),
+            'planLabels' => array_column($summaryByPlan, 'plan_category'),
+            'planTotals' => array_column($summaryByPlan, 'total_afiliados'),
+        ];
+
+        // Get ALL clinics for filter dropdown (not filtered by search)
+        // FIX: Define $clinicas here
+        $clinicas = RmClinica::find()
+            ->select(['id', 'nombre'])
+            ->where(['IS', 'deleted_at', null])
+            ->orderBy(['nombre' => SORT_ASC])
+            ->asArray()
+            ->all();
+
+        $clinicaList = \yii\helpers\ArrayHelper::map($clinicas, 'id', 'nombre');
+
+        $planes = Planes::find()
+            ->select(['id', 'nombre'])
+            ->where(['estatus' => 'Activo'])
+            ->orderBy(['nombre' => SORT_ASC])
+            ->asArray()
+            ->all();
+        $planList = \yii\helpers\ArrayHelper::map($planes, 'id', 'nombre');
+
+        $tipoAfiliadoList = UserDatosType::getList();
+
+        return $this->render('reporte-afiliados-dashboard', [
+            'searchModel' => $searchModel,
+            'summaryByClinic' => $summaryByClinic,
+            'summaryByPlan' => $summaryByPlan,
+            'timelineData' => $timelineData,
+            'topClinics' => $topClinics,
+            'totals' => $totals,
+            'clinicaList' => $clinicaList,
+            'clinicas' => $clinicas,  // FIX: Add this line to pass $clinicas to the view
+            'planList' => $planList,
+            'tipoAfiliadoList' => $tipoAfiliadoList,
+            'chartData' => $chartData,
+        ]);
+    }
+    /**
+     * Export Resumen Detallado por Clínica to Excel with Logo
+     */
+    public function actionExportarResumenExcel()
+    {
+        $searchModel = new AfiliadosReportSearch();
+        $summary = $searchModel->getSummaryByClinic(Yii::$app->request->queryParams);
+        $totals = $searchModel->getTotals(Yii::$app->request->queryParams);
+
+        // Get filter values for report header
+        $filtros = $this->getFilterLabels(Yii::$app->request->get('AfiliadosReportSearch', []));
+
+        // Get logo path
+        $logoPath = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+        $logoExists = file_exists($logoPath);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        // ============================================
+        // SHEET 1: Resumen Detallado por Clínica
+        // ============================================
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Resumen por Clínica');
+
+        $currentRow = 1;
+
+        // Add Logo if exists
+        if ($logoExists) {
+            $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+            $drawing->setName('Logo SISPSA');
+            $drawing->setDescription('Logo SISPSA');
+            $drawing->setPath($logoPath);
+            $drawing->setHeight(120); // Height in pixels (approx 1.6 inches)
+            $drawing->setCoordinates('A' . $currentRow);
+            $drawing->setOffsetX(10);
+            $drawing->setWorksheet($sheet);
+
+            // Merge cells for logo area
+            $sheet->mergeCells('A' . $currentRow . ':I' . ($currentRow + 5));
+            $sheet->getStyle('A' . $currentRow . ':I' . ($currentRow + 5))->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+            $currentRow += 6; // Move down after logo
+        }
+
+        // Title
+        $sheet->setCellValue('A' . $currentRow, 'RESUMEN DE AFILIADOS POR CLÍNICA');
+        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->getStyle('A' . $currentRow)->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $currentRow++;
+
+        // Company Info
+        $sheet->setCellValue('A' . $currentRow, 'Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013');
+        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $currentRow)->getFont()->setSize(10);
+        $currentRow++;
+
+        $sheet->setCellValue('A' . $currentRow, 'R.I.F.: J-50654922');
+        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $currentRow)->getFont()->setSize(10);
+        $currentRow++;
+
+        $sheet->setCellValue('A' . $currentRow, 'Generado: ' . date('d/m/Y H:i:s'));
+        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $currentRow)->getFont()->setSize(9);
+        $currentRow++;
+
+        // Add empty row
+        $currentRow++;
+
+        // Add filters if applied
+        if (!empty($filtros)) {
+            $sheet->setCellValue('A' . $currentRow, 'Filtros aplicados:');
+            $sheet->setCellValue('B' . $currentRow, implode(' | ', $filtros));
+            $sheet->mergeCells('B' . $currentRow . ':I' . $currentRow);
+            $sheet->getStyle('A' . $currentRow)->getFont()->setBold(true);
+            $currentRow++;
+            $currentRow++; // Add empty row after filters
+        }
+
+        // Headers
+        $headers = [
+            'A' => 'Clínica',
+            'B' => 'Total Afiliados',
+            'C' => 'Individual',
+            'D' => 'Corporativo',
+            'E' => 'Activos',
+            'F' => 'Suspendidos',
+            'G' => 'Anulados',
+            'H' => 'Vencidos',
+            'I' => 'Registrados',
+        ];
+
+        $headerRow = $currentRow;
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValue($col . $headerRow, $header);
+            $sheet->getStyle($col . $headerRow)->getFont()->setBold(true);
+            $sheet->getStyle($col . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        // Apply header styling
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '2c3e50'], // Dark blue-gray
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ];
+        $sheet->getStyle('A' . $headerRow . ':I' . $headerRow)->applyFromArray($headerStyle);
+
+        // Fill data
+        $dataRow = $headerRow + 1;
+        foreach ($summary as $clinic) {
+            $sheet->setCellValue('A' . $dataRow, $clinic['clinica_nombre']);
+            $sheet->setCellValue('B' . $dataRow, $clinic['total_afiliados']);
+            $sheet->setCellValue('C' . $dataRow, $clinic['tipo_individual']);
+            $sheet->setCellValue('D' . $dataRow, $clinic['tipo_corporativo']);
+            $sheet->setCellValue('E' . $dataRow, $clinic['contratos_activos'] ?? 0);
+            $sheet->setCellValue('F' . $dataRow, $clinic['contratos_suspendidos'] ?? 0);
+            $sheet->setCellValue('G' . $dataRow, $clinic['contratos_anulados'] ?? 0);
+            $sheet->setCellValue('H' . $dataRow, $clinic['contratos_vencidos'] ?? 0);
+            $sheet->setCellValue('I' . $dataRow, $clinic['contratos_registrados'] ?? 0);
+            $dataRow++;
+        }
+
+        // Add total row
+        $totalRow = $dataRow;
+        $sheet->setCellValue('A' . $totalRow, 'TOTAL GENERAL');
+        $sheet->getStyle('A' . $totalRow)->getFont()->setBold(true);
+        $sheet->setCellValue('B' . $totalRow, $totals['total_afiliados']);
+        $sheet->setCellValue('C' . $totalRow, $totals['total_individual']);
+        $sheet->setCellValue('D' . $totalRow, $totals['total_corporativo']);
+        $sheet->setCellValue('E' . $totalRow, $totals['total_contratos_activos']);
+        $sheet->setCellValue('F' . $totalRow, $totals['total_contratos_suspendidos']);
+        $sheet->setCellValue('G' . $totalRow, $totals['total_contratos_anulados'] ?? 0);
+        $sheet->setCellValue('H' . $totalRow, $totals['total_contratos_vencidos'] ?? 0);
+        $sheet->setCellValue('I' . $totalRow, $totals['total_contratos_registrados'] ?? 0);
+
+        $sheet->getStyle('A' . $totalRow . ':I' . $totalRow)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $totalRow . ':I' . $totalRow)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE8F4FD');
+
+        // Apply borders to all data cells
+        $styleArray = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['argb' => 'FF000000'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A' . $headerRow . ':I' . $totalRow)->applyFromArray($styleArray);
+
+        // Center align numeric columns
+        foreach (range('B', 'I') as $col) {
+            $sheet->getStyle($col . $headerRow . ':' . $col . $totalRow)
+                ->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // ============================================
+        // SHEET 2: Resumen General de Todas las Clínicas
+        // ============================================
+        $spreadsheet->createSheet();
+        $spreadsheet->setActiveSheetIndex(1);
+        $sheet2 = $spreadsheet->getActiveSheet();
+        $sheet2->setTitle('Resumen General');
+
+        $currentRow2 = 1;
+
+        // Add Logo to second sheet as well
+        if ($logoExists) {
+            $drawing2 = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+            $drawing2->setName('Logo SISPSA');
+            $drawing2->setDescription('Logo SISPSA');
+            $drawing2->setPath($logoPath);
+            $drawing2->setHeight(120);
+            $drawing2->setCoordinates('A' . $currentRow2);
+            $drawing2->setOffsetX(10);
+            $drawing2->setWorksheet($sheet2);
+
+            $sheet2->mergeCells('A' . $currentRow2 . ':D' . ($currentRow2 + 5));
+            $sheet2->getStyle('A' . $currentRow2 . ':D' . ($currentRow2 + 5))->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+            $currentRow2 += 6;
+        }
+
+        // Title
+        $sheet2->setCellValue('A' . $currentRow2, 'RESUMEN GENERAL DE TODAS LAS CLÍNICAS');
+        $sheet2->mergeCells('A' . $currentRow2 . ':D' . $currentRow2);
+        $sheet2->getStyle('A' . $currentRow2)->getFont()->setBold(true)->setSize(14);
+        $sheet2->getStyle('A' . $currentRow2)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $currentRow2++;
+
+        $sheet2->setCellValue('A' . $currentRow2, 'Generado: ' . date('d/m/Y H:i:s'));
+        $sheet2->mergeCells('A' . $currentRow2 . ':D' . $currentRow2);
+        $sheet2->getStyle('A' . $currentRow2)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $currentRow2++;
+
+        // Filters
+        if (!empty($filtros)) {
+            $sheet2->setCellValue('A' . $currentRow2, 'Filtros aplicados:');
+            $sheet2->setCellValue('B' . $currentRow2, implode(' | ', $filtros));
+            $sheet2->mergeCells('B' . $currentRow2 . ':D' . $currentRow2);
+            $sheet2->getStyle('A' . $currentRow2)->getFont()->setBold(true);
+            $currentRow2 += 2;
+        } else {
+            $currentRow2 += 2;
+        }
+
+        // Totals cards - using styled cells
+        $totalsData = [
+            ['TOTAL AFILIADOS', number_format($totals['total_afiliados']), 'en todas las clínicas'],
+            ['INDIVIDUALES', number_format($totals['total_individual']), round(($totals['total_individual'] / max($totals['total_afiliados'], 1)) * 100) . '% del total'],
+            ['CORPORATIVOS', number_format($totals['total_corporativo']), round(($totals['total_corporativo'] / max($totals['total_afiliados'], 1)) * 100) . '% del total'],
+            ['ACTIVOS', number_format($totals['total_contratos_activos']), 'usuarios con contrato activo'],
+            ['SUSPENDIDOS', number_format($totals['total_contratos_suspendidos']), 'usuarios con cuotas vencidas'],
+            ['ANULADOS', number_format($totals['total_contratos_anulados'] ?? 0), 'usuarios con contratos anulados'],
+            ['TOTAL CLÍNICAS', number_format($totals['total_clinicas']), 'con afiliados registrados'],
+            ['TOTAL CONTRATOS', number_format($totals['total_contratos'] ?? 0), 'registrados en sistema'],
+            ['CONTRATOS ACTIVOS', number_format($totals['total_contratos_activos_count'] ?? 0), 'en vigencia'],
+        ];
+
+        foreach ($totalsData as $index => $item) {
+            $row = $currentRow2 + ($index * 3);
+
+            $sheet2->setCellValue('A' . $row, $item[0]);
+            $sheet2->setCellValue('B' . $row, $item[1]);
+            $sheet2->setCellValue('C' . $row, $item[2]);
+
+            $sheet2->getStyle('A' . $row)->getFont()->setBold(true)->setSize(11);
+            $sheet2->getStyle('B' . $row)->getFont()->setBold(true)->setSize(14);
+            $sheet2->getStyle('B' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_DARKBLUE));
+
+            // Add a light background for each card
+            $sheet2->getStyle('A' . $row . ':C' . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFF5F5F5');
+
+            $sheet2->getStyle('A' . ($row + 1) . ':C' . ($row + 1))->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFF5F5F5');
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'C') as $col) {
+            $sheet2->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Set back to first sheet for output
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Generate filename
+        $filename = 'Resumen_Afiliados_por_Clinica_' . date('Y-m-d_His') . '.xlsx';
+
+        // Output to browser
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Cache-Control: max-age=1');
+        header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+        header('Cache-Control: cache, must-revalidate');
+        header('Pragma: public');
+
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Export Resumen Detallado por Clínica to PDF - BULLETPROOF VERSION
+     */
+    public function actionExportarResumenPdf()
+    {
+        // CRITICAL: Clear all output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        try {
+            $searchModel = new AfiliadosReportSearch();
+            $summary = $searchModel->getSummaryByClinic(Yii::$app->request->queryParams);
+            $totals = $searchModel->getTotals(Yii::$app->request->queryParams);
+
+            $filtros = $this->getFilterLabels(Yii::$app->request->get('AfiliadosReportSearch', []));
+            $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+
+            // Use the new template WITHOUT complex CSS
+            $content = $this->renderPartial('_reporte_resumen_pdf_v2', [
+                'summary' => $summary,
+                'totals' => $totals,
+                'filtros' => $filtros,
+                'logo' => $logo,
+            ]);
+
+            // Verify content is not empty
+            if (empty(trim($content))) {
+                throw new \Exception('Generated HTML content is empty');
+            }
+
+            // Log the first 500 characters for debugging
+            Yii::info('PDF Content (first 500 chars): ' . substr($content, 0, 500), 'pdf');
+
+            // Create PDF with minimal options
+            $pdf = new \kartik\mpdf\Pdf([
+                'mode' => \kartik\mpdf\Pdf::MODE_UTF8,
+                'format' => \kartik\mpdf\Pdf::FORMAT_A4,
+                'orientation' => \kartik\mpdf\Pdf::ORIENT_LANDSCAPE,
+                'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
+                'content' => $content,
+                // NO external CSS file
+                'options' => [
+                    'title' => 'Resumen de Afiliados por Clínica - SISPSA',
+                    'default_font_size' => 10,
+                    'default_font' => 'Arial',
+                    'autoLangToFont' => true,
+                ],
+                'methods' => [
+                    'SetHeader' => ['SISPSA - Resumen de Afiliados por Clínica|{DATE j-m-Y}|'],
+                    'SetFooter' => ['|Página {PAGENO} de {nbpg}|'],
+                ]
+            ]);
+
+            return $pdf->render();
+        } catch (\Exception $e) {
+            Yii::error("PDF Generation Error: " . $e->getMessage(), 'pdf');
+            Yii::error($e->getTraceAsString(), 'pdf');
+
+            // Return a simple error message
+            echo "Error generating PDF: " . $e->getMessage();
+            exit;
+        }
+    }
+
+    /**
+     * Helper method to get filter labels for report header
+     */
+    private function getFilterLabels($params)
+    {
+        $filtros = [];
+
+        // NEW: Handle multiple clinics
+        if (!empty($params['clinica_ids']) && is_array($params['clinica_ids'])) {
+            $clinicas = RmClinica::find()
+                ->select(['nombre'])
+                ->where(['id' => $params['clinica_ids']])
+                ->column();
+            if (!empty($clinicas)) {
+                $filtros[] = 'Clínicas: ' . implode(', ', $clinicas);
+            }
+        } elseif (!empty($params['clinica_id'])) {
+            $clinica = RmClinica::findOne($params['clinica_id']);
+            $filtros[] = 'Clínica: ' . ($clinica ? $clinica->nombre : '');
+        }
+
+        if (!empty($params['user_datos_type_id'])) {
+            $tipo = UserDatosType::findOne($params['user_datos_type_id']);
+            $filtros[] = 'Tipo: ' . ($tipo ? $tipo->nombre : '');
+        }
+
+        if (!empty($params['plan_id'])) {
+            $plan = Planes::findOne($params['plan_id']);
+            $filtros[] = 'Plan: ' . ($plan ? $plan->nombre : '');
+        }
+
+        if (!empty($params['estatus'])) {
+            $filtros[] = 'Estado: ' . $params['estatus'];
+        }
+
+        if (!empty($params['date_from'])) {
+            $filtros[] = 'Desde: ' . $params['date_from'];
+        }
+
+        if (!empty($params['date_to'])) {
+            $filtros[] = 'Hasta: ' . $params['date_to'];
+        }
+
+        return $filtros;
     }
 }

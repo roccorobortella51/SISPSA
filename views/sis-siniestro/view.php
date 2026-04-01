@@ -2,9 +2,17 @@
 
 use yii\helpers\Html;
 
+// Get es_cita parameter from the model or URL
+$esCita = isset($model->es_cita) ? (int)$model->es_cita : (int)Yii::$app->request->get('es_cita', 0);
+$termino = $esCita === 1 ? 'Cita' : 'Atención';
+$terminoLower = strtolower($termino);
+
+// Determine correct plural label
+$pluralLabel = ($termino === 'Cita') ? 'Citas' : 'Atenciones';
+
 $afiliadoName = is_object($afiliado) ? ($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula) : 'Afiliado';
-$this->title = 'Detalles de la Atención: ' . Html::encode($afiliadoName);
-$this->params['breadcrumbs'][] = ['label' => 'Siniestros', 'url' => ['index', 'user_id' => $model->iduser]];
+$this->title = 'Detalles de la ' . $termino . ': ' . Html::encode($afiliadoName);
+$this->params['breadcrumbs'][] = ['label' => $pluralLabel, 'url' => ['index', 'user_id' => $model->iduser, 'modo' => $esCita == 1 ? 'cita' : 'siniestro']];
 $this->params['breadcrumbs'][] = $this->title;
 
 \yii\web\YiiAsset::register($this);
@@ -25,7 +33,7 @@ function formatBooleanIcon($value)
         <div class="header-buttons-group">
             <?= Html::a(
                 '<i class="fas fa-edit mr-2"></i> Actualizar',
-                ['update', 'id' => $model->id],
+                ['update', 'id' => $model->id, 'es_cita' => $esCita],
                 ['class' => 'btn-base btn-blue']
             ) ?>
             <?php Html::a(
@@ -34,7 +42,7 @@ function formatBooleanIcon($value)
                 [
                     'class' => 'btn-base btn-red',
                     'data' => [
-                        'confirm' => '¿Está seguro de que desea eliminar esta atención? Esta acción no se puede deshacer.',
+                        'confirm' => '¿Está seguro de que desea eliminar esta ' . $terminoLower . '? Esta acción no se puede deshacer.',
                         'method' => 'post',
                     ],
                 ]
@@ -44,11 +52,12 @@ function formatBooleanIcon($value)
                 [
                     'index',
                     'user_id' => $model->iduser,
-                    'clinica_id' => $model->idclinica
+                    'clinica_id' => $model->idclinica,
+                    'modo' => $esCita == 1 ? 'cita' : 'siniestro'  // Send 'cita' or 'siniestro' string
                 ],
                 [
                     'class' => 'btn-base btn-gray',
-                    'title' => 'Volver a la lista de siniestros',
+                    'title' => 'Volver a la lista de ' . $terminoLower . 's de ' . Html::encode($afiliadoName),
                     'data' => [
                         'pjax' => 0,
                     ],
@@ -60,18 +69,18 @@ function formatBooleanIcon($value)
     <div class="ms-panel">
         <div class="ms-panel-body">
             <h3 class="section-title">
-                <i class="fas fa-info-circle text-blue-600 mr-3"></i> Información General de la Atención
+                <i class="fas fa-info-circle text-blue-600 mr-3"></i> Información General de la <?= $termino ?>
             </h3>
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
                         <h5 class="text-muted">Clínica Asociada</h5>
-                        <p class="h4 text-dark"><?= Html::encode($model->clinica->nombre) ?></h5>
+                        <p class="h4 text-dark"><?= Html::encode($model->clinica->nombre) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Servicios de Baremo</h5>
+                        <h5 class="text-muted">Servicios Médicos</h5>
                         <?php
                         if (!empty($baremos) && is_array($baremos)) {
                             $nombresBaremos = [];
@@ -80,39 +89,39 @@ function formatBooleanIcon($value)
                             }
                             echo '<p class="h5 text-dark">' . implode(', ', $nombresBaremos) . '</p>';
                         } else {
-                            echo '<p class="text-muted">No se han seleccionado servicios de baremo</p>';
+                            echo '<p class="text-muted">No se han seleccionado servicios médicos</p>';
                         }
                         ?>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Fecha del Siniestro</h5>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDate($model->fecha) ?></h5>
+                        <h5 class="text-muted">Fecha del Evento de Salud</h5>
+                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDate($model->fecha) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Hora del Siniestro</h5>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora) ?></h5>
+                        <h5 class="text-muted">Hora del Evento de Salud</h5>
+                        <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Fecha de Atención</h5>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDate($model->fecha_atencion) ?></h5>
+                        <h5 class="text-muted">Fecha de la <?= $termino ?></h5>
+                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDate($model->fecha_atencion) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Hora de Atención</h5>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora_atencion) ?></h5>
+                        <h5 class="text-muted">Hora de la <?= $termino ?></h5>
+                        <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora_atencion) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Atendido</h5>
-                        <p class="h5 text-dark"><?= formatBooleanIcon($model->atendido) ?></h5>
+                        <h5 class="text-muted">¿Fue atendido?</h5>
+                        <p class="h5 text-dark"><?= formatBooleanIcon($model->atendido) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -128,7 +137,7 @@ function formatBooleanIcon($value)
     <div class="ms-panel">
         <div class="ms-panel-body">
             <h3 class="section-title">
-                <i class="fas fa-file-alt text-blue-600 mr-3"></i> Descripción del Siniestro
+                <i class="fas fa-file-alt text-blue-600 mr-3"></i> Descripción de la <?= $termino ?>
             </h3>
             <div class="info-card-body">
                 <h5><strong>Descripción:</strong> <?= nl2br(Html::encode($model->descripcion)) ?></h5>
@@ -148,13 +157,13 @@ function formatBooleanIcon($value)
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
                         <h5 class="text-muted">Fecha de Creación</h5>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->created_at) ?></h5>
+                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->created_at) ?></p>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
                         <h5 class="text-muted">Última Actualización</h5>
-                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->updated_at) ?></h5>
+                        <p class="h5 text-dark"><?= Yii::$app->formatter->asDatetime($model->updated_at) ?></p>
                     </div>
                 </div>
             </div>
@@ -164,12 +173,12 @@ function formatBooleanIcon($value)
     <div class="ms-panel">
         <div class="ms-panel-body">
             <h3 class="section-title">
-                <i class="fas fa-images text-blue-600 mr-3"></i> Documentos del Siniestro
+                <i class="fas fa-images text-blue-600 mr-3"></i> Documentos de la <?= $termino ?>
             </h3>
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
-                        <h5 class="text-muted">Recipe</h5>
+                        <h5 class="text-muted">Récipe Médico</h5>
                         <?php
                         if ($model->imagen_recipe) {
                             $extension = strtolower(pathinfo($model->imagen_recipe, PATHINFO_EXTENSION));
@@ -238,7 +247,7 @@ function formatBooleanIcon($value)
                                 ]
                             );
                         } else {
-                            echo '<p class="text-muted">No se ha subido ningún recibo.</p>';
+                            echo '<p class="text-muted">No se ha subido ningún récipe médico.</p>';
                         }
                         ?>
                     </div>
@@ -312,7 +321,7 @@ function formatBooleanIcon($value)
                                 ]
                             );
                         } else {
-                            echo '<p class="text-muted">No se ha subido ningún informe.</p>';
+                            echo '<p class="text-muted">No se ha subido ningún informe médico.</p>';
                         }
                         ?>
                     </div>

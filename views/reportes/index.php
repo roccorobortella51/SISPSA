@@ -4,18 +4,36 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use app\models\RmClinica;
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 $this->title = 'Reporte de Pagos de Afiliados';
 $this->params['breadcrumbs'][] = $this->title;
 
+// Check user role for clinic access
+$hasClinicAccess = UserHelper::hasClinicAccess();
+$isSuperAdmin = Yii::$app->user->can('superadmin') || Yii::$app->user->can('admin');
+
+// Get clinics based on user access
+if ($hasClinicAccess) {
+    // Users with clinic roles only see their assigned clinics
+    $clinicas = UserHelper::getAccessibleClinicas();
+    $clinicaIds = \yii\helpers\ArrayHelper::getColumn($clinicas, 'id');
+    $hasMultipleClinicas = count($clinicas) > 1;
+} else {
+    // Superadmin and admin see all active clinics
+    $clinicas = RmClinica::find()
+        ->where(['estatus' => 'Activo'])
+        ->andWhere(['IS', 'deleted_at', null])
+        ->orderBy('nombre')
+        ->all();
+    $clinicaIds = \yii\helpers\ArrayHelper::getColumn($clinicas, 'id');
+    $hasMultipleClinicas = true;
+}
 
 // URLs
 $ajaxUrl = Url::to(['get-pagos-detail']);
 $pdfUrl = Url::to(['generate-pdf']);
-
-// Obtener todas las clínicas activas
-$clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')->all();
 ?>
 
 <div class="reportes-pagos-index">
@@ -26,7 +44,20 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                 <h1 class="display-5 fw-bold text-primary mb-2">
                     <i class="fas fa-chart-pie me-2"></i> <?= Html::encode($this->title) ?>
                 </h1>
-                <p class="lead text-muted">Análisis financiero y gestión de pagos</p>
+                <p class="lead text-muted">
+                    Análisis financiero y gestión de pagos
+                    <?php if ($hasClinicAccess): ?>
+                        <span class="badge bg-info ms-2" style="font-size: 1rem;">
+                            <i class="fas fa-lock me-1"></i> Acceso Restringido
+                        </span>
+                    <?php endif; ?>
+                </p>
+                <?php if ($hasClinicAccess && count($clinicas) === 1): ?>
+                    <div class="alert alert-info d-inline-block mt-2">
+                        <i class="fas fa-building me-2"></i>
+                        Mostrando datos exclusivamente de: <strong><?= Html::encode($clinicas[0]->nombre) ?></strong>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -50,6 +81,9 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                                 </h3>
                                 <p class="mb-0 ms-body-lg text-muted" style="font-size: 1.4rem !important;">
                                     Configure los parámetros para generar el análisis de pagos
+                                    <?php if ($hasClinicAccess): ?>
+                                        <br><small class="text-primary"><i class="fas fa-info-circle me-1"></i>Los datos están limitados a sus clínicas asignadas</small>
+                                    <?php endif; ?>
                                 </p>
                             </div>
                         </div>
@@ -103,24 +137,48 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                             </div>
                             Selección de Clínicas
                         </label>
-                        <select id="clinica-filter" class="form-select select2-multiple border-2 border-success shadow-sm"
-                            style="font-size: 1.4rem !important; min-height: 55px; border-radius: 8px;" multiple="multiple">
-                            <option value="todas" selected class="py-2">
-                                <span style="font-size: 1.4rem !important;">🏥 Todas las Clínicas</span>
-                            </option>
-                            <?php foreach ($clinicas as $clinica): ?>
-                                <option value="<?= $clinica->id ?>" class="py-2">
-                                    <span style="font-size: 1.4rem !important;">
-                                        <i class="fas fa-clinic-medical me-2"></i><?= Html::encode($clinica->nombre) ?>
-                                    </span>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="mt-1">
-                            <small class="text-muted" style="font-size: 1.2rem !important;">
-                                <i class="fas fa-info-circle me-2 ms-success"></i>Seleccione una o múltiples clínicas
-                            </small>
-                        </div>
+                        <?php if ($hasClinicAccess && count($clinicas) === 1): ?>
+                            <!-- Single clinic - display as read-only -->
+                            <div class="form-control border-2 border-success shadow-sm py-2"
+                                style="font-size: 1.4rem !important; height: 55px; border-radius: 8px; background-color: #f8f9fa;">
+                                <i class="fas fa-hospital me-2 text-success"></i>
+                                <?= Html::encode($clinicas[0]->nombre) ?>
+                                <input type="hidden" id="clinica-filter" value="<?= $clinicas[0]->id ?>">
+                            </div>
+                            <div class="mt-1">
+                                <small class="text-muted" style="font-size: 1.2rem !important;">
+                                    <i class="fas fa-lock me-2 ms-success"></i>Acceso restringido a su clínica asignada
+                                </small>
+                            </div>
+                        <?php else: ?>
+                            <select id="clinica-filter" class="form-select select2-multiple border-2 border-success shadow-sm"
+                                style="font-size: 1.4rem !important; min-height: 55px; border-radius: 8px;"
+                                <?= $hasClinicAccess ? 'disabled' : '' ?>
+                                <?= $hasClinicAccess ? '' : 'multiple="multiple"' ?>>
+                                <?php if (!$hasClinicAccess): ?>
+                                    <option value="todas" selected class="py-2">
+                                        <span style="font-size: 1.4rem !important;">🏥 Todas las Clínicas</span>
+                                    </option>
+                                <?php endif; ?>
+                                <?php foreach ($clinicas as $clinica): ?>
+                                    <option value="<?= $clinica->id ?>" class="py-2">
+                                        <span style="font-size: 1.4rem !important;">
+                                            <i class="fas fa-clinic-medical me-2"></i><?= Html::encode($clinica->nombre) ?>
+                                        </span>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="mt-1">
+                                <small class="text-muted" style="font-size: 1.2rem !important;">
+                                    <i class="fas fa-info-circle me-2 ms-success"></i>
+                                    <?php if ($hasClinicAccess): ?>
+                                        Datos limitados a sus <?= count($clinicas) ?> clínicas asignadas
+                                    <?php else: ?>
+                                        Seleccione una o múltiples clínicas
+                                    <?php endif; ?>
+                                </small>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -278,6 +336,9 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
                     <p class="text-muted mb-4 fs-4">
                         Configure los filtros arriba y presione <span class="badge bg-primary px-4 py-3 fs-5">Generar Reporte</span><br>
                         para visualizar el análisis de datos.
+                        <?php if ($hasClinicAccess): ?>
+                            <br><span class="text-info"><i class="fas fa-chart-simple me-1"></i>Los datos se limitarán automáticamente a sus clínicas asignadas</span>
+                        <?php endif; ?>
                     </p>
                 </div>
             </div>
@@ -286,8 +347,8 @@ $clinicas = RmClinica::find()->where(['estatus' => 'Activo'])->orderBy('nombre')
 </div>
 
 <?php
+// Complete CSS Section with Microsoft Professional Design (same as before, plus clinic access styles)
 
-// Complete CSS Section with Microsoft Professional Design and 3x larger fonts
 $this->registerCss(
     <<<CSS
     /* =============================================
@@ -370,7 +431,7 @@ $this->registerCss(
     
     /* Microsoft Typography Scale - 3x larger */
     .ms-title-xl {
-        font-size: 3.75rem !important; /* Was 1.25rem, now 3x larger */
+        font-size: 3.75rem !important;
         font-weight: 700 !important;
         line-height: 1.1 !important;
         color: #201f1e !important;
@@ -378,7 +439,7 @@ $this->registerCss(
     }
     
     .ms-title-lg {
-        font-size: 3rem !important; /* Was 1rem, now 3x larger */
+        font-size: 3rem !important;
         font-weight: 700 !important;
         line-height: 1.2 !important;
         color: #201f1e !important;
@@ -386,35 +447,35 @@ $this->registerCss(
     }
     
     .ms-title-md {
-        font-size: 2.5rem !important; /* Was 0.875rem, now 3x larger */
+        font-size: 2.5rem !important;
         font-weight: 600 !important;
         line-height: 1.3 !important;
         color: #201f1e !important;
     }
     
     .ms-title-sm {
-        font-size: 2rem !important; /* Was 0.75rem, now 3x larger */
+        font-size: 2rem !important;
         font-weight: 600 !important;
         line-height: 1.4 !important;
         color: #201f1e !important;
     }
     
     .ms-body-lg {
-        font-size: 2rem !important; /* Was 0.75rem, now 3x larger */
+        font-size: 2rem !important;
         font-weight: 400 !important;
         line-height: 1.5 !important;
         color: #323130 !important;
     }
     
     .ms-body {
-        font-size: 1.75rem !important; /* Was 0.625rem, now 3x larger */
+        font-size: 1.75rem !important;
         font-weight: 400 !important;
         line-height: 1.5 !important;
         color: #323130 !important;
     }
     
     .ms-body-sm {
-        font-size: 1.5rem !important; /* Was 0.5rem, now 3x larger */
+        font-size: 1.5rem !important;
         font-weight: 400 !important;
         line-height: 1.5 !important;
         color: #605e5c !important;
@@ -427,10 +488,10 @@ $this->registerCss(
     .ms-btn {
         font-family: 'Segoe UI', sans-serif !important;
         font-weight: 600 !important;
-        padding: 1rem 2rem !important; /* Larger padding for bigger text */
+        padding: 1rem 2rem !important;
         border: 2px solid transparent !important;
         border-radius: 6px !important;
-        font-size: 1.75rem !important; /* 3x larger */
+        font-size: 1.75rem !important;
         line-height: 1.5 !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         cursor: pointer !important;
@@ -497,9 +558,9 @@ $this->registerCss(
     
     .ms-table th {
         font-weight: 600 !important;
-        font-size: 2rem !important; /* 3x larger */
+        font-size: 2rem !important;
         color: #323130 !important;
-        padding: 1.5rem 1.5rem !important; /* Larger padding */
+        padding: 1.5rem 1.5rem !important;
         text-align: left !important;
         text-transform: uppercase !important;
         letter-spacing: 1px !important;
@@ -507,8 +568,8 @@ $this->registerCss(
     }
     
     .ms-table td {
-        padding: 1.25rem 1.5rem !important; /* Larger padding */
-        font-size: 1.75rem !important; /* 3x larger */
+        padding: 1.25rem 1.5rem !important;
+        font-size: 1.75rem !important;
         color: #323130 !important;
         border-bottom: 2px solid #edebe9 !important;
         vertical-align: middle !important;
@@ -530,8 +591,8 @@ $this->registerCss(
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        padding: 0.75rem 1.5rem !important; /* Larger padding */
-        font-size: 1.5rem !important; /* 3x larger */
+        padding: 0.75rem 1.5rem !important;
+        font-size: 1.5rem !important;
         font-weight: 600 !important;
         line-height: 1.2 !important;
         text-align: center !important;
@@ -565,12 +626,12 @@ $this->registerCss(
        ============================================= */
     
     .ms-icon {
-        font-size: 2.5rem !important; /* Larger icons */
+        font-size: 2.5rem !important;
         vertical-align: middle !important;
     }
     
     .ms-icon-lg {
-        font-size: 3.5rem !important; /* Larger icons */
+        font-size: 3.5rem !important;
     }
     
     /* =============================================
@@ -607,7 +668,7 @@ $this->registerCss(
        ============================================= */
     
     .ms-progress {
-        height: 8px !important; /* Thicker for larger design */
+        height: 8px !important;
         background-color: #edebe9 !important;
         border-radius: 4px !important;
         overflow: hidden !important;
@@ -693,7 +754,6 @@ $this->registerCss(
        CUSTOM UTILITIES FOR RESUMEN AND DETALLE SECTIONS
        ============================================= */
     
-    /* Make Resumen and Detalle sections have same font size */
     .resumen-section *,
     .detalle-section * {
         font-size: inherit !important;
@@ -754,8 +814,11 @@ $this->registerCss(
     .report-results .ms-body-sm {
         font-size: 1.5rem !important;
     }
-        /* Enhanced Filter Styles */
-    .filter-group-ms 
+    
+    /* Enhanced Filter Styles */
+    .filter-group-ms {
+        transition: all 0.2s ease;
+    }
     
     /* Animation for custom dates container */
     #custom-dates-container {
@@ -785,280 +848,259 @@ $this->registerCss(
         border-radius: 5px !important;
         transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    /* =============================================
-   MICROSOFT LOADING ANIMATION - PROFESSIONAL
-   ============================================= */
-
-.ms-loading-container {
-    background: white !important;
-    border-radius: 12px !important;
-    padding: 3rem 2rem !important;
-    position: relative !important;
-    overflow: hidden !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-    border: 1px solid #edebe9 !important;
-}
-
-.ms-loading-content {
-    max-width: 600px !important;
-    margin: 0 auto !important;
-    text-align: center !important;
-}
-
-/* Microsoft Progress Ring */
-.ms-progress-ring {
-    display: inline-block !important;
-    margin-bottom: 2rem !important;
-    position: relative !important;
-}
-
-.ms-progress-ring-svg {
-    transform: rotate(-90deg) !important;
-}
-
-.ms-progress-ring-circle-bg {
-    stroke: #edebe9 !important;
-}
-
-.ms-progress-ring-circle {
-    stroke: #0078d4 !important;
-    animation: ms-ring-animation 2s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
-}
-
-@keyframes ms-ring-animation {
-    0% { stroke-dashoffset: 226.2; transform: rotate(0deg); }
-    50% { stroke-dashoffset: 56.55; transform: rotate(180deg); }
-    100% { stroke-dashoffset: 226.2; transform: rotate(360deg); }
-}
-
-.ms-loading-title {
-    font-size: 2.4rem !important;
-    font-weight: 600 !important;
-    color: #201f1e !important;
-    margin-bottom: 2rem !important;
-    letter-spacing: -0.5px !important;
-}
-
-/* Microsoft Step Progress */
-.ms-loading-steps {
-    text-align: left !important;
-    background: #faf9f8 !important;
-    border-radius: 8px !important;
-    padding: 2rem !important;
-    margin: 2rem 0 !important;
-    border: 1px solid #edebe9 !important;
-}
-
-.ms-loading-step {
-    display: flex !important;
-    align-items: flex-start !important;
-    margin-bottom: 1.5rem !important;
-    position: relative !important;
-    opacity: 0.5 !important;
-    transition: all 0.3s ease !important;
-}
-
-.ms-loading-step:last-child {
-    margin-bottom: 0 !important;
-}
-
-.ms-loading-step::before {
-    content: '';
-    position: absolute !important;
-    left: 17px !important;
-    top: 35px !important;
-    bottom: -20px !important;
-    width: 2px !important;
-    background: #c8c6c4 !important;
-}
-
-.ms-loading-step:last-child::before {
-    display: none !important;
-}
-
-.ms-loading-step-active {
-    opacity: 1 !important;
-}
-
-.ms-loading-step-active .ms-step-indicator {
-    background: #107c10 !important;
-    border-color: #107c10 !important;
-}
-
-.ms-loading-step-active .ms-step-indicator i {
-    color: white !important;
-}
-
-.ms-loading-step-current {
-    opacity: 1 !important;
-}
-
-.ms-loading-step-current .ms-step-indicator {
-    background: #0078d4 !important;
-    border-color: #0078d4 !important;
-}
-
-.ms-step-indicator {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 50% !important;
-    background: white !important;
-    border: 2px solid #c8c6c4 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin-right: 1.2rem !important;
-    flex-shrink: 0 !important;
-    z-index: 2 !important;
-}
-
-.ms-step-indicator i {
-    font-size: 1.6rem !important;
-    color: #605e5c !important;
-}
-
-.ms-pulse-dot {
-    width: 12px !important;
-    height: 12px !important;
-    background: white !important;
-    border-radius: 50% !important;
-    animation: ms-pulse 1.5s ease-in-out infinite !important;
-}
-
-@keyframes ms-pulse {
-    0% { transform: scale(0.8); opacity: 0.5; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(0.8); opacity: 0.5; }
-}
-
-.ms-step-content {
-    flex: 1 !important;
-}
-
-.ms-step-title {
-    display: block !important;
-    font-size: 1.8rem !important;
-    font-weight: 600 !important;
-    color: #201f1e !important;
-    margin-bottom: 0.3rem !important;
-}
-
-.ms-step-status {
-    display: block !important;
-    font-size: 1.5rem !important;
-    color: #605e5c !important;
-}
-
-/* Microsoft Shimmer Effect */
-.ms-shimmer-container {
-    background: #f3f2f1 !important;
-    border-radius: 8px !important;
-    padding: 2rem !important;
-    overflow: hidden !important;
-    position: relative !important;
-}
-
-.ms-shimmer-container::after {
-    content: '';
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.5),
-        transparent
-    ) !important;
-    animation: ms-shimmer 2s infinite !important;
-}
-
-.ms-shimmer-line {
-    height: 16px !important;
-    background: #d2d0ce !important;
-    border-radius: 4px !important;
-    margin-bottom: 12px !important;
-}
-
-.ms-shimmer-line:last-child {
-    margin-bottom: 0 !important;
-}
-
-@keyframes ms-shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
-.ms-loading-footer {
-    border-top: 1px solid #edebe9 !important;
-    padding-top: 2rem !important;
-    margin-top: 2rem !important;
-}
-
-.ms-loading-time {
-    font-size: 1.5rem !important;
-    color: #605e5c !important;
-    display: inline-flex !important;
-    align-items: center !important;
-}
-
-/* Mejora del scroll suave */
-html {
-    scroll-behavior: smooth !important;
-}
-
-/* Efecto de entrada mejorado */
-.ms-fade-in {
-    animation: msProfessionalFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-@keyframes msProfessionalFadeIn {
-    0% { 
-        opacity: 0; 
-        transform: translateY(20px) scale(0.98);
-    }
-    100% { 
-        opacity: 1; 
-        transform: translateY(0) scale(1);
-    }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
+    
+    /* Microsoft Loading Animation */
     .ms-loading-container {
-        padding: 2rem 1.5rem !important;
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 3rem 2rem !important;
+        position: relative !important;
+        overflow: hidden !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+        border: 1px solid #edebe9 !important;
+    }
+    
+    .ms-loading-content {
+        max-width: 600px !important;
+        margin: 0 auto !important;
+        text-align: center !important;
+    }
+    
+    /* Microsoft Progress Ring */
+    .ms-progress-ring {
+        display: inline-block !important;
+        margin-bottom: 2rem !important;
+        position: relative !important;
+    }
+    
+    .ms-progress-ring-svg {
+        transform: rotate(-90deg) !important;
+    }
+    
+    .ms-progress-ring-circle-bg {
+        stroke: #edebe9 !important;
+    }
+    
+    .ms-progress-ring-circle {
+        stroke: #0078d4 !important;
+        animation: ms-ring-animation 2s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+    }
+    
+    @keyframes ms-ring-animation {
+        0% { stroke-dashoffset: 226.2; transform: rotate(0deg); }
+        50% { stroke-dashoffset: 56.55; transform: rotate(180deg); }
+        100% { stroke-dashoffset: 226.2; transform: rotate(360deg); }
     }
     
     .ms-loading-title {
-        font-size: 2rem !important;
+        font-size: 2.4rem !important;
+        font-weight: 600 !important;
+        color: #201f1e !important;
+        margin-bottom: 2rem !important;
+        letter-spacing: -0.5px !important;
+    }
+    
+    /* Microsoft Step Progress */
+    .ms-loading-steps {
+        text-align: left !important;
+        background: #faf9f8 !important;
+        border-radius: 8px !important;
+        padding: 2rem !important;
+        margin: 2rem 0 !important;
+        border: 1px solid #edebe9 !important;
+    }
+    
+    .ms-loading-step {
+        display: flex !important;
+        align-items: flex-start !important;
+        margin-bottom: 1.5rem !important;
+        position: relative !important;
+        opacity: 0.5 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .ms-loading-step:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .ms-loading-step::before {
+        content: '';
+        position: absolute !important;
+        left: 17px !important;
+        top: 35px !important;
+        bottom: -20px !important;
+        width: 2px !important;
+        background: #c8c6c4 !important;
+    }
+    
+    .ms-loading-step:last-child::before {
+        display: none !important;
+    }
+    
+    .ms-loading-step-active {
+        opacity: 1 !important;
+    }
+    
+    .ms-loading-step-active .ms-step-indicator {
+        background: #107c10 !important;
+        border-color: #107c10 !important;
+    }
+    
+    .ms-loading-step-active .ms-step-indicator i {
+        color: white !important;
+    }
+    
+    .ms-loading-step-current {
+        opacity: 1 !important;
+    }
+    
+    .ms-loading-step-current .ms-step-indicator {
+        background: #0078d4 !important;
+        border-color: #0078d4 !important;
+    }
+    
+    .ms-step-indicator {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 50% !important;
+        background: white !important;
+        border: 2px solid #c8c6c4 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-right: 1.2rem !important;
+        flex-shrink: 0 !important;
+        z-index: 2 !important;
+    }
+    
+    .ms-step-indicator i {
+        font-size: 1.6rem !important;
+        color: #605e5c !important;
+    }
+    
+    .ms-pulse-dot {
+        width: 12px !important;
+        height: 12px !important;
+        background: white !important;
+        border-radius: 50% !important;
+        animation: ms-pulse 1.5s ease-in-out infinite !important;
+    }
+    
+    @keyframes ms-pulse {
+        0% { transform: scale(0.8); opacity: 0.5; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.8); opacity: 0.5; }
+    }
+    
+    .ms-step-content {
+        flex: 1 !important;
     }
     
     .ms-step-title {
-        font-size: 1.6rem !important;
+        display: block !important;
+        font-size: 1.8rem !important;
+        font-weight: 600 !important;
+        color: #201f1e !important;
+        margin-bottom: 0.3rem !important;
     }
     
     .ms-step-status {
-        font-size: 1.4rem !important;
+        display: block !important;
+        font-size: 1.5rem !important;
+        color: #605e5c !important;
     }
     
-    .ms-loading-steps {
-        padding: 1.5rem !important;
+    /* Microsoft Shimmer Effect */
+    .ms-shimmer-container {
+        background: #f3f2f1 !important;
+        border-radius: 8px !important;
+        padding: 2rem !important;
+        overflow: hidden !important;
+        position: relative !important;
     }
-}
+    
+    .ms-shimmer-container::after {
+        content: '';
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.5),
+            transparent
+        ) !important;
+        animation: ms-shimmer 2s infinite !important;
+    }
+    
+    .ms-shimmer-line {
+        height: 16px !important;
+        background: #d2d0ce !important;
+        border-radius: 4px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .ms-shimmer-line:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    @keyframes ms-shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .ms-loading-footer {
+        border-top: 1px solid #edebe9 !important;
+        padding-top: 2rem !important;
+        margin-top: 2rem !important;
+    }
+    
+    .ms-loading-time {
+        font-size: 1.5rem !important;
+        color: #605e5c !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+    
+    /* Mejora del scroll suave */
+    html {
+        scroll-behavior: smooth !important;
+    }
+    
+    /* Efecto de entrada mejorado */
+    .ms-fade-in {
+        animation: msProfessionalFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    @keyframes msProfessionalFadeIn {
+        0% { 
+            opacity: 0; 
+            transform: translateY(20px) scale(0.98);
+        }
+        100% { 
+            opacity: 1; 
+            transform: translateY(0) scale(1);
+        }
+    }
 CSS
 );
 
-// Remove the problematic second registerJs call and merge everything
-
+// JavaScript section
+// Prepare the userClinicaIds value for JS
+$userClinicaIdsJs = $hasClinicAccess ? json_encode($clinicaIds) : '[]';
 $this->registerJs(
     <<<JS
     // =============================================
-    // CONFIGURACIÓN INICIAL
+    // CONFIGURACIÓN INICIAL CON ACCESO RESTRINGIDO
     // =============================================
     const config = {
         ajaxUrl: '{$ajaxUrl}',
         pdfUrl: '{$pdfUrl}',
+        hasClinicAccess: '{$hasClinicAccess}' === '1',
+        isSuperAdmin: '{$isSuperAdmin}' === '1',
+        userClinicaIds: {$userClinicaIdsJs},
         selectors: {
             results: '#report-results',
             status: '#pago-status-selector',
@@ -1071,16 +1113,14 @@ $this->registerJs(
         }
     };
     
-    // Debug: Verificar las URLs
-    console.log('AJAX URL:', config.ajaxUrl);
-    console.log('PDF URL:', config.pdfUrl);
+    console.log('Reportes cargado con acceso restringido:', config.hasClinicAccess);
     
     // =============================================
     // INICIALIZACIÓN DE COMPONENTES
     // =============================================
     function initComponents() {
-        // Inicializar Select2 para selección múltiple
-        if (\$.fn.select2 && \$(config.selectors.clinica).length) {
+        // Inicializar Select2 para selección múltiple (solo si no tiene acceso restringido o tiene múltiples clínicas)
+        if (\$.fn.select2 && \$(config.selectors.clinica).length && !config.hasClinicAccess) {
             \$(config.selectors.clinica).select2({
                 placeholder: "Seleccione clínicas...",
                 width: '100%',
@@ -1089,9 +1129,6 @@ $this->registerJs(
                 closeOnSelect: false
             });
         }
-        
-        // Inicializar tooltips
-        \$('[data-bs-toggle="tooltip"]').tooltip();
         
         // Set default dates for range inputs
         const today = new Date().toISOString().split('T')[0];
@@ -1105,108 +1142,115 @@ $this->registerJs(
     // =============================================
     // FUNCIONES UTILITARIAS
     // =============================================
-    function showLoading() {
-    // Primero, hacer scroll suave hacia el área de resultados
-    $('html, body').animate({
-        scrollTop: $(config.selectors.results).offset().top - 50
-    }, 300);
-    
-    $(config.selectors.results).html(
-        '<div class="col-12">' +
-            '<div class="ms-loading-container border-0 shadow-lg ms-fade-in">' +
-                '<div class="ms-loading-content">' +
-                    '<!-- Microsoft Progress Ring -->' +
-                    '<div class="ms-progress-ring">' +
-                        '<svg class="ms-progress-ring-svg" width="80" height="80" viewBox="0 0 80 80">' +
-                            '<circle class="ms-progress-ring-circle-bg" cx="40" cy="40" r="36" fill="none" stroke="#edebe9" stroke-width="4"/>' +
-                            '<circle class="ms-progress-ring-circle" cx="40" cy="40" r="36" fill="none" stroke="#0078d4" stroke-width="4" stroke-linecap="round" ' +
-                                'stroke-dasharray="226.2" stroke-dashoffset="226.2" ' +
-                                'style="animation: ms-ring-animation 2s linear infinite;"/>' +
-                        '</svg>' +
-                    '</div>' +
-                    
-                    '<h3 class="ms-loading-title">Generando Reporte de Pagos</h3>' +
-                    
-                    '<div class="ms-loading-steps">' +
-                        '<div class="ms-loading-step ms-loading-step-active">' +
-                            '<div class="ms-step-indicator"><i class="fas fa-check-circle"></i></div>' +
-                            '<div class="ms-step-content">' +
-                                '<span class="ms-step-title">Filtros aplicados</span>' +
-                                '<span class="ms-step-status">' + getFilterSummary() + '</span>' +
-                            '</div>' +
-                        '</div>' +
-                        
-                        '<div class="ms-loading-step ms-loading-step-current">' +
-                            '<div class="ms-step-indicator"><div class="ms-pulse-dot"></div></div>' +
-                            '<div class="ms-step-content">' +
-                                '<span class="ms-step-title">Procesando datos</span>' +
-                                '<span class="ms-step-status">Consultando base de datos...</span>' +
-                            '</div>' +
-                        '</div>' +
-                        
-                        '<div class="ms-loading-step">' +
-                            '<div class="ms-step-indicator"><i class="far fa-circle"></i></div>' +
-                            '<div class="ms-step-content">' +
-                                '<span class="ms-step-title">Generando análisis</span>' +
-                                '<span class="ms-step-status">Calculando comisiones y totales</span>' +
-                            '</div>' +
-                        '</div>' +
-                        
-                        '<div class="ms-loading-step">' +
-                            '<div class="ms-step-indicator"><i class="far fa-circle"></i></div>' +
-                            '<div class="ms-step-content">' +
-                                '<span class="ms-step-title">Renderizando vista</span>' +
-                                '<span class="ms-step-status">Preparando resultados</span>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                    
-                    '<!-- Microsoft Shimmer Effect -->' +
-                    '<div class="ms-shimmer-container mt-4">' +
-                        '<div class="ms-shimmer-line" style="width: 60%;"></div>' +
-                        '<div class="ms-shimmer-line" style="width: 80%;"></div>' +
-                        '<div class="ms-shimmer-line" style="width: 40%;"></div>' +
-                    '</div>' +
-                    
-                    '<div class="ms-loading-footer mt-4">' +
-                        '<span class="ms-loading-time"><i class="far fa-clock me-2"></i>Tiempo estimado: 2-5 segundos</span>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>'
-    );
-}
-
-function getFilterSummary() {
-    const status = $(config.selectors.status).val();
-    const clinicas = $(config.selectors.clinica).val() || [];
-    const dateRange = $(config.selectors.dateRange).val();
-    
-    let statusText = status === 'todos' ? 'Todos los estados' : 
-                     status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar';
-    
-    let clinicasText = clinicas.length === 0 || clinicas.includes('todas') ? 
-                      'Todas las clínicas' : 
-                      clinicas.length + ' clínica(s) seleccionada(s)';
-    
-    let dateText = '';
-    switch(dateRange) {
-        case 'day': dateText = 'Hoy'; break;
-        case 'week': dateText = 'Última semana'; break;
-        case 'month': dateText = 'Mes actual'; break;
-        case 'last-month': dateText = 'Mes anterior'; break;
-        case 'custom': 
-            const from = $(config.selectors.dateFrom).val();
-            const to = $(config.selectors.dateTo).val();
-            dateText = from + ' al ' + to;
-            break;
+    function getSelectedClinicas() {
+        if (config.hasClinicAccess) {
+            // For clinic users, enforce assigned clinic IDs only
+            if (Array.isArray(config.userClinicaIds)) {
+                return config.userClinicaIds;
+            }
+            return [];
+        }
+        
+        // For superadmin/admin, get from selector
+        const clinicas = \$(config.selectors.clinica).val();
+        if (!clinicas || clinicas.length === 0 || clinicas.includes('todas')) {
+            return [];
+        }
+        return clinicas;
     }
     
-    return statusText + ' · ' + clinicasText + ' · ' + dateText;
-}
+    function showLoading() {
+        // Scroll to results area
+        $('html, body').animate({
+            scrollTop: $(config.selectors.results).offset().top - 50
+        }, 300);
+        
+        $(config.selectors.results).html(
+            '<div class="col-12">' +
+                '<div class="ms-loading-container border-0 shadow-lg ms-fade-in">' +
+                    '<div class="ms-loading-content">' +
+                        '<div class="ms-progress-ring">' +
+                            '<svg class="ms-progress-ring-svg" width="80" height="80" viewBox="0 0 80 80">' +
+                                '<circle class="ms-progress-ring-circle-bg" cx="40" cy="40" r="36" fill="none" stroke="#edebe9" stroke-width="4"/>' +
+                                '<circle class="ms-progress-ring-circle" cx="40" cy="40" r="36" fill="none" stroke="#0078d4" stroke-width="4" stroke-linecap="round" ' +
+                                    'stroke-dasharray="226.2" stroke-dashoffset="226.2" ' +
+                                    'style="animation: ms-ring-animation 2s linear infinite;"/>' +
+                            '</svg>' +
+                        '</div>' +
+                        '<h3 class="ms-loading-title">Generando Reporte de Pagos</h3>' +
+                        '<div class="ms-loading-steps">' +
+                            '<div class="ms-loading-step ms-loading-step-active">' +
+                                '<div class="ms-step-indicator"><i class="fas fa-check-circle"></i></div>' +
+                                '<div class="ms-step-content">' +
+                                    '<span class="ms-step-title">Filtros aplicados</span>' +
+                                    '<span class="ms-step-status">' + getFilterSummary() + '</span>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="ms-loading-step ms-loading-step-current">' +
+                                '<div class="ms-step-indicator"><div class="ms-pulse-dot"></div></div>' +
+                                '<div class="ms-step-content">' +
+                                    '<span class="ms-step-title">Procesando datos</span>' +
+                                    '<span class="ms-step-status">Consultando base de datos...</span>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="ms-loading-step">' +
+                                '<div class="ms-step-indicator"><i class="far fa-circle"></i></div>' +
+                                '<div class="ms-step-content">' +
+                                    '<span class="ms-step-title">Generando análisis</span>' +
+                                    '<span class="ms-step-status">Calculando comisiones y totales</span>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="ms-loading-step">' +
+                                '<div class="ms-step-indicator"><i class="far fa-circle"></i></div>' +
+                                '<div class="ms-step-content">' +
+                                    '<span class="ms-step-title">Renderizando vista</span>' +
+                                    '<span class="ms-step-status">Preparando resultados</span>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="ms-shimmer-container mt-4">' +
+                            '<div class="ms-shimmer-line" style="width: 60%;"></div>' +
+                            '<div class="ms-shimmer-line" style="width: 80%;"></div>' +
+                            '<div class="ms-shimmer-line" style="width: 40%;"></div>' +
+                        '</div>' +
+                        '<div class="ms-loading-footer mt-4">' +
+                            '<span class="ms-loading-time"><i class="far fa-clock me-2"></i>Tiempo estimado: 2-5 segundos</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>'
+        );
+    }
+    
+    function getFilterSummary() {
+        const status = $(config.selectors.status).val();
+        const clinicas = getSelectedClinicas();
+        const dateRange = $(config.selectors.dateRange).val();
+        
+        let statusText = status === 'todos' ? 'Todos los estados' : 
+                         status === 'Conciliado' ? 'Conciliados' : 'Por Conciliar';
+        
+        let clinicasText = clinicas.length === 0 ? 'Todas las clínicas' : 
+                          (config.hasClinicAccess ? clinicas.length + ' clínica(s) asignada(s)' : clinicas.length + ' clínica(s) seleccionada(s)');
+        
+        let dateText = '';
+        switch(dateRange) {
+            case 'day': dateText = 'Hoy'; break;
+            case 'week': dateText = 'Última semana'; break;
+            case 'month': dateText = 'Mes actual'; break;
+            case 'last-month': dateText = 'Mes anterior'; break;
+            case 'custom': 
+                const from = $(config.selectors.dateFrom).val();
+                const to = $(config.selectors.dateTo).val();
+                dateText = from + ' al ' + to;
+                break;
+        }
+        
+        return statusText + ' · ' + clinicasText + ' · ' + dateText;
+    }
     
     function showError(message) {
-        \$(config.selectors.results).html(
+        $(config.selectors.results).html(
             '<div class="col-12">' +
                 '<div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">' +
                     '<div class="d-flex align-items-center">' +
@@ -1242,19 +1286,22 @@ function getFilterSummary() {
             console.log('Iniciando carga de reporte con params:', params);
             showLoading();
         
-            const csrfToken = \$('meta[name="csrf-token"]').attr('content') || '';
+            const csrfToken = $('meta[name="csrf-token"]').attr('content') || '';
+            
+            // Get selected clinics
+            const clinicasSeleccionadas = params.clinicas || getSelectedClinicas();
         
             const requestData = {
                 ...params,
-                status: params.status || \$(config.selectors.status).val(),
-                clinicas: params.clinicas || \$(config.selectors.clinica).val() || [],
+                status: params.status || $(config.selectors.status).val(),
+                clinicas: clinicasSeleccionadas,
                 _csrf: csrfToken
             };
         
             console.log('Enviando request data:', requestData);
             console.log('URL:', config.ajaxUrl);
             
-            const response = await \$.ajax({
+            const response = await $.ajax({
                 url: config.ajaxUrl,
                 type: 'POST',
                 data: requestData,
@@ -1267,16 +1314,15 @@ function getFilterSummary() {
             console.log('Respuesta recibida:', response);
             
             if (response.success) {
-                // Mostrar directamente el HTML recibido del servidor
-                \$(config.selectors.results).html(response.html);
+                $(config.selectors.results).html(response.html);
                 
-                // Intentar actualizar el botón PDF si existe
-                const pdfBtn = \$('#btn-print-pdf');
+                // Update PDF button if exists
+                const pdfBtn = $('#btn-print-pdf');
                 if (pdfBtn.length) {
-                    const pdfParams = {
+                    let pdfParams = {
                         range: params.range || 'day',
                         status: params.status,
-                        clinicas: params.clinicas ? params.clinicas.join(',') : 'todas',
+                        clinicas: clinicasSeleccionadas.length ? clinicasSeleccionadas.join(',') : 'todas',
                         ...(params.custom_range && { custom_range: 'true' }),
                         ...(params.date_from && { date_from: params.date_from }),
                         ...(params.date_to && { date_to: params.date_to })
@@ -1286,9 +1332,9 @@ function getFilterSummary() {
                     pdfBtn.attr('href', pdfUrl);
                 }
                 
-                // Scroll suave a resultados
-                \$('html, body').animate({
-                    scrollTop: \$(config.selectors.results).offset().top - 100
+                // Smooth scroll to results
+                $('html, body').animate({
+                    scrollTop: $(config.selectors.results).offset().top - 100
                 }, 500);
                 
             } else {
@@ -1298,7 +1344,6 @@ function getFilterSummary() {
             
         } catch (error) {
             console.error('Error en carga de reporte:', error);
-            console.error('Error details:', error.responseText);
             
             let errorMessage = 'Error de conexión con el servidor.';
             if (error.status === 403) {
@@ -1339,16 +1384,16 @@ function getFilterSummary() {
             case 'last-month':
                 startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-                \$(config.selectors.dateFrom).val(formatDate(startDate));
-                \$(config.selectors.dateTo).val(formatDate(endDate));
+                $(config.selectors.dateFrom).val(formatDate(startDate));
+                $(config.selectors.dateTo).val(formatDate(endDate));
                 return;
             case 'custom':
-                \$(config.selectors.customDatesContainer).slideDown(200);
+                $(config.selectors.customDatesContainer).slideDown(200);
                 return;
         }
         
-        \$(config.selectors.dateFrom).val(formatDate(startDate));
-        \$(config.selectors.dateTo).val(formatDate(today));
+        $(config.selectors.dateFrom).val(formatDate(startDate));
+        $(config.selectors.dateTo).val(formatDate(today));
     }
     
     function formatDate(date) {
@@ -1358,52 +1403,37 @@ function getFilterSummary() {
     // =============================================
     // EXCEL EXPORT FUNCTIONALITY
     // =============================================
-    
-    /**
-     * Performs the Excel export with current filters
-     */
     function performExcelExport() {
         console.log('Starting Excel export process...');
         
-        // 1. Gather all current filter values
-        const status = \$(config.selectors.status).val();
-        const clinicasSeleccionadas = \$(config.selectors.clinica).val();
-        const dateRange = \$(config.selectors.dateRange).val();
-        const dateFrom = \$(config.selectors.dateFrom).val();
-        const dateTo = \$(config.selectors.dateTo).val();
+        const status = $(config.selectors.status).val();
+        const clinicasSeleccionadas = getSelectedClinicas();
+        const dateRange = $(config.selectors.dateRange).val();
+        const dateFrom = $(config.selectors.dateFrom).val();
+        const dateTo = $(config.selectors.dateTo).val();
         
-        // 2. Validate inputs (optional but recommended)
         if (dateRange === 'custom' && (!dateFrom || !dateTo)) {
             alert('Por favor seleccione ambas fechas para el rango personalizado.');
             return;
         }
         
-        // 3. Construct the export URL
-        // Replace the AJAX endpoint from 'get-pagos-detail' to 'export-excel'
         let exportUrl = config.ajaxUrl.replace('get-pagos-detail', 'export-excel') + '?';
-        
-        // 4. Add all parameters as query string
         exportUrl += 'range=' + encodeURIComponent(dateRange);
         exportUrl += '&status=' + encodeURIComponent(status);
-        exportUrl += '&clinicas=' + (clinicasSeleccionadas ? 
-            clinicasSeleccionadas.join(',') : 'todas');
+        exportUrl += '&clinicas=' + (clinicasSeleccionadas.length ? clinicasSeleccionadas.join(',') : 'todas');
         
-        // 5. Add custom date parameters if applicable
         if (dateRange === 'custom' && dateFrom && dateTo) {
             exportUrl += '&date_from=' + encodeURIComponent(dateFrom);
             exportUrl += '&date_to=' + encodeURIComponent(dateTo);
             exportUrl += '&custom_range=true';
         }
         
-        // 6. Add CSRF token for security
-        const csrfToken = \$('meta[name="csrf-token"]').attr('content');
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
         if (csrfToken) {
             exportUrl += '&_csrf=' + encodeURIComponent(csrfToken);
         }
         
-        console.log('Export URL constructed:', exportUrl);
-        
-        // 7. Open the export URL in a new window/tab
+        console.log('Export URL:', exportUrl);
         window.open(exportUrl, '_blank');
     }
     
@@ -1411,32 +1441,28 @@ function getFilterSummary() {
     // MANEJADORES DE EVENTOS
     // =============================================
     function setupEventHandlers() {
-        // Cambio en selector de rango de fechas
-        \$(config.selectors.dateRange).on('change', function() {
-            const range = \$(this).val();
+        $(config.selectors.dateRange).on('change', function() {
+            const range = $(this).val();
             
             if (range !== 'custom') {
-                \$(config.selectors.customDatesContainer).slideUp(200);
+                $(config.selectors.customDatesContainer).slideUp(200);
                 updateDateInputsByRange(range);
             } else {
                 updateDateInputsByRange(range);
             }
         });
         
-        // Botón principal de generar reporte
-        \$(config.selectors.aplicarBtn).on('click', function() {
+        $(config.selectors.aplicarBtn).on('click', function() {
             generateReport();
         });
         
-        // Excel export handler - Event delegation
-        \$(document).on('click', '#btn-export-excel', function(e) {
+        $(document).on('click', '#btn-export-excel', function(e) {
             console.log('Excel export button clicked');
             e.preventDefault();
             performExcelExport();
         });
         
-        // Permitir Enter en campos de fecha
-        \$(config.selectors.dateFrom).add(config.selectors.dateTo).on('keypress', function(e) {
+        $(config.selectors.dateFrom).add(config.selectors.dateTo).on('keypress', function(e) {
             if (e.which === 13) generateReport();
         });
     }
@@ -1445,9 +1471,9 @@ function getFilterSummary() {
     // FUNCIÓN PRINCIPAL PARA GENERAR REPORTE
     // =============================================
     function generateReport() {
-        const status = \$(config.selectors.status).val();
-        const clinicas = \$(config.selectors.clinica).val() || [];
-        const dateRange = \$(config.selectors.dateRange).val();
+        const status = $(config.selectors.status).val();
+        const clinicas = getSelectedClinicas();
+        const dateRange = $(config.selectors.dateRange).val();
         
         let params = {
             status: status,
@@ -1455,8 +1481,8 @@ function getFilterSummary() {
         };
         
         if (dateRange === 'custom') {
-            const dateFrom = \$(config.selectors.dateFrom).val();
-            const dateTo = \$(config.selectors.dateTo).val();
+            const dateFrom = $(config.selectors.dateFrom).val();
+            const dateTo = $(config.selectors.dateTo).val();
             
             if (!dateFrom || !dateTo) {
                 alert('Por favor seleccione ambas fechas para el rango personalizado.');
@@ -1483,9 +1509,10 @@ function getFilterSummary() {
     // =============================================
     // INICIALIZACIÓN DE LA PÁGINA
     // =============================================
-    \$(document).ready(function() {
+    $(document).ready(function() {
         console.log('Reportes cargado correctamente');
-        console.log('AJAX URL configurada:', config.ajaxUrl);
+        console.log('Acceso restringido a clínicas:', config.hasClinicAccess);
+        console.log('Clínicas del usuario:', config.userClinicaIds);
         
         initComponents();
         setupEventHandlers();

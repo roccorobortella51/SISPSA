@@ -6,17 +6,352 @@ use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
 use app\models\Cuotas;
-use app\models\Contratos; // Modelo correcto
+use app\models\Contratos;
 use app\models\TasaCambio;
 use yii\helpers\Console;
-use app\models\Pagos;  // ← ADD THIS IMPORT
-use app\models\UserDatos;  // Used in actionRepararRelacionPagos() method
+use app\models\Pagos;
+use app\models\UserDatos;
 
 /**
  * Controlador de comandos para la gestión de cuotas de suscripción.
  */
 class CuotaController extends Controller
 {
+    /**
+     * Daily cron job to check cuota statuses (run every day at 00:05)
+     * This handles grace period transitions and contract suspensions
+     * 
+     * Uso: `yii cuota/daily-check`
+     */
+    public function actionDailyCheck()
+    {
+        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
+        $this->stdout("║        VERIFICACIÓN DIARIA DE CUOTAS - GRACE PERIOD      ║\n");
+        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
+
+        $this->stdout("📅 Fecha: " . date('Y-m-d H:i:s') . "\n");
+        $this->stdout("⏱️  Período de gracia: " . Cuotas::GRACE_PERIOD_DAYS . " días\n\n");
+
+        // Step 1: Check cuota statuses (grace period transitions)
+        $this->stdout("1. Verificando estados de cuotas...\n");
+        $stats = Cuotas::checkCuotasStatus();
+
+        $this->stdout("   📊 Resultados:\n");
+        $this->stdout("      - A período de gracias: {$stats['to_grace']}\n");
+        $this->stdout("      - A vencidas (desde gracias): {$stats['to_vencida_from_grace']}\n");
+        $this->stdout("      - A vencidas directas: {$stats['to_vencida_direct']}\n");
+        $this->stdout("      - Total actualizadas: {$stats['total']}\n\n");
+
+        // Step 2: Check for contracts to suspend (vencidas after grace period)
+        $this->stdout("2. Verificando contratos para suspender...\n");
+        $contratosSuspendidos = $this->checkContractsToSuspend();
+
+        $this->stdout("   📊 Contratos suspendidos: {$contratosSuspendidos}\n\n");
+
+        // Step 3: Check for contracts to reactivate (if all cuotas are paid)
+        $this->stdout("3. Verificando contratos para reactivar...\n");
+        $contratosReactivados = $this->checkContractsToReactivate();
+
+        $this->stdout("   📊 Contratos reactivados: {$contratosReactivados}\n\n");
+
+        $this->stdout("✅ Verificación diaria completada.\n");
+
+        return ExitCode::OK;
+    }
+
+    private function checkContractsToSuspend()
+    {
+        // Find contracts with vencidas cuotas (after grace period)
+        $contratosConVencidas = Contratos::find()
+            ->alias('c')
+            ->innerJoin(['cu' => Cuotas::tableName()], 'c.id = cu.contrato_id')
+            ->where(['cu.estatus' => Cuotas::ESTADO_VENCIDA]) // Solo vencidas, no pendientes
+            ->andWhere(['!=', 'c.estatus', 'suspendido'])
+            ->andWhere(['!=', 'c.estatus', 'Anulado'])
+            ->groupBy('c.id')
+            ->all();
+
+        $suspendidos = 0;
+        foreach ($contratosConVencidas as $contrato) {
+            $contrato->estatus = 'suspendido';
+            if ($contrato->save()) {
+                $suspendidos++;
+                $this->stdout("      ⚠️  Contrato #{$contrato->id} suspendido por cuotas vencidas\n");
+
+                if ($contrato->user) {
+                    $contrato->user->estatus_solvente = 'No';
+                    $contrato->user->save(false);
+                }
+            }
+        }
+        return $suspendidos;
+    }
+
+    private function checkContractsToReactivate()
+    {
+        $contratosSuspendidos = Contratos::find()
+            ->where(['estatus' => 'suspendido'])
+            ->all();
+
+        $reactivados = 0;
+        foreach ($contratosSuspendidos as $contrato) {
+            // SOLO contar cuotas VENCIDAS - las de gracia NO impiden reactivación
+            $cuotasVencidas = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id])
+                ->andWhere(['estatus' => Cuotas::ESTADO_VENCIDA])
+                ->count();
+
+            // Información para debug (opcional)
+            $cuotasEnGracia = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id])
+                ->andWhere(['estatus' => Cuotas::ESTADO_GRACE_PERIOD])
+                ->count();
+
+            $cuotasPendientes = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id])
+                ->andWhere(['estatus' => Cuotas::ESTADO_PENDIENTE])
+                ->count();
+
+            Yii::info("Contract #{$contrato->id} - Vencidas: {$cuotasVencidas}, En gracia: {$cuotasEnGracia}, Pendientes: {$cuotasPendientes}", 'cuotas');
+
+            // ===== CORRECTED LOGIC =====
+            // Si NO hay cuotas VENCIDAS, reactivar (así tenga cuotas en gracia o pendientes)
+            if ($cuotasVencidas == 0) {
+                $contrato->estatus = 'Activo';
+                if ($contrato->save()) {
+                    $reactivados++;
+                    $this->stdout("      🔄 Contrato #{$contrato->id} REACTIVADO (vencidas: {$cuotasVencidas}, en gracia: {$cuotasEnGracia}, pendientes: {$cuotasPendientes})\n");
+
+                    if ($contrato->user) {
+                        $contrato->user->estatus_solvente = 'Si';
+                        $contrato->user->save(false);
+                    }
+                }
+            } else {
+                $this->stdout("      ⏸️ Contrato #{$contrato->id} sigue suspendido (vencidas: {$cuotasVencidas}, en gracia: {$cuotasEnGracia})\n");
+            }
+        }
+        return $reactivados;
+    }
+
+    /**
+     * Monthly generation - safety net for extended or reactivated contracts
+     * 
+     * Uso: `yii cuota/monthly-check` (run on 1st of each month)
+     */
+    public function actionMonthlyCheck()
+    {
+        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
+        $this->stdout("║        VERIFICACIÓN MENSUAL DE CUOTAS - SAFETY NET       ║\n");
+        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
+
+        $this->stdout("📅 Fecha: " . date('Y-m-d H:i:s') . "\n");
+        $this->stdout("📆 Mes objetivo: " . date('F Y', strtotime('+1 month')) . "\n\n");
+
+        // Only generate next month's cuota if it doesn't exist
+        // This is for extended contracts or reactivated contracts
+        $nextMonth = date('Y-m', strtotime('+1 month'));
+        $firstDayNextMonth = date('Y-m-01', strtotime('+1 month'));
+        $lastDayNextMonth = date('Y-m-t', strtotime('+1 month'));
+
+        $contratosActivos = Contratos::find()
+            ->where(['in', 'estatus', ['Activo', 'Registrado']])
+            ->all();
+
+        $generadas = 0;
+        $saltadas = 0;
+        $errores = 0;
+
+        $this->stdout("Procesando " . count($contratosActivos) . " contratos activos...\n\n");
+
+        foreach ($contratosActivos as $contrato) {
+            // Check if next month's cuota exists
+            $cuotaExistente = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id])
+                ->andWhere(['between', 'fecha_vencimiento', $firstDayNextMonth, $lastDayNextMonth])
+                ->exists();
+
+            if (!$cuotaExistente) {
+                // Find the last cuota to determine the next number
+                $lastCuota = Cuotas::find()
+                    ->where(['contrato_id' => $contrato->id])
+                    ->orderBy(['numero_cuota' => SORT_DESC])
+                    ->one();
+
+                if ($lastCuota && $lastCuota->numero_cuota < 12) {
+                    $newCuota = new Cuotas();
+                    $newCuota->contrato_id = $contrato->id;
+                    $newCuota->numero_cuota = $lastCuota->numero_cuota + 1;
+                    $newCuota->monto = $contrato->monto;
+                    $newCuota->monto_usd = $contrato->monto;
+                    $newCuota->estatus = Cuotas::ESTADO_PENDIENTE;
+                    $newCuota->fecha_vencimiento = date('Y-m-07', strtotime('+1 month'));
+                    $newCuota->rate_usd_bs = $this->obtenerTasaCambioActual();
+
+                    if ($newCuota->save()) {
+                        $generadas++;
+                        $this->stdout("   ✅ Cuota #{$newCuota->numero_cuota} generada para contrato #{$contrato->id} (Vence: {$newCuota->fecha_vencimiento})\n");
+                    } else {
+                        $errores++;
+                        $this->stderr("   ❌ Error generando cuota para contrato #{$contrato->id}: " . print_r($newCuota->errors, true) . "\n");
+                    }
+                } else {
+                    $saltadas++;
+                    $this->stdout("   ⏭️  Contrato #{$contrato->id} ya tiene todas sus cuotas (12/12)\n");
+                }
+            } else {
+                $saltadas++;
+            }
+        }
+
+        $this->stdout("\n📊 RESUMEN:\n");
+        $this->stdout("   - Cuotas generadas: {$generadas}\n");
+        $this->stdout("   - Cuotas ya existentes: {$saltadas}\n");
+        $this->stdout("   - Errores: {$errores}\n");
+        $this->stdout("✅ Verificación mensual completada.\n");
+
+        return ExitCode::OK;
+    }
+
+    /**
+     * Report on grace period status
+     * 
+     * Uso: `yii cuota/grace-report`
+     */
+    public function actionGraceReport()
+    {
+        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
+        $this->stdout("║        REPORTE DE PERÍODO DE GRACIA                      ║\n");
+        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
+
+        // Cuotas in grace period
+        $cuotasEnGracias = Cuotas::find()
+            ->with('contrato.user')
+            ->where(['estatus' => Cuotas::ESTADO_GRACE_PERIOD])
+            ->orderBy(['fecha_vencimiento' => SORT_ASC])
+            ->all();
+
+        $this->stdout("📊 CUOTAS EN PERÍODO DE GRACIA: " . count($cuotasEnGracias) . "\n");
+
+        if (empty($cuotasEnGracias)) {
+            $this->stdout("✅ No hay cuotas en período de gracia.\n\n");
+        } else {
+            $this->stdout(str_repeat("─", 100) . "\n");
+            $this->stdout(sprintf(
+                " %-6s | %-8s | %-20s | %-12s | %-10s | %-10s\n",
+                "Cuota#",
+                "Contrato",
+                "Afiliado",
+                "Vencimiento",
+                "Días Venc.",
+                "Días Rest."
+            ));
+            $this->stdout(str_repeat("─", 100) . "\n");
+
+            foreach ($cuotasEnGracias as $cuota) {
+                $diasVencida = (new \DateTime())->diff(new \DateTime($cuota->fecha_vencimiento))->days;
+                $diasRestantes = Cuotas::GRACE_PERIOD_DAYS - $diasVencida;
+                $afiliado = $cuota->contrato && $cuota->contrato->user ?
+                    $cuota->contrato->user->nombres . ' ' . $cuota->contrato->user->apellidos :
+                    'N/A';
+
+                $this->stdout(sprintf(
+                    " %-6d | %-8d | %-20s | %-12s | %-10d | %-10d\n",
+                    $cuota->numero_cuota,
+                    $cuota->contrato_id,
+                    substr($afiliado, 0, 20),
+                    $cuota->fecha_vencimiento,
+                    $diasVencida,
+                    $diasRestantes
+                ));
+            }
+            $this->stdout(str_repeat("─", 100) . "\n\n");
+        }
+
+        // Cuotas vencidas
+        $cuotasVencidas = Cuotas::find()
+            ->with('contrato.user')
+            ->where(['estatus' => Cuotas::ESTADO_VENCIDA])
+            ->orderBy(['fecha_vencimiento' => SORT_ASC])
+            ->all();
+
+        $this->stdout("📊 CUOTAS VENCIDAS: " . count($cuotasVencidas) . "\n");
+
+        if (empty($cuotasVencidas)) {
+            $this->stdout("✅ No hay cuotas vencidas.\n\n");
+        } else {
+            $this->stdout(str_repeat("─", 90) . "\n");
+            $this->stdout(sprintf(
+                " %-6s | %-8s | %-20s | %-12s | %-10s | %-12s\n",
+                "Cuota#",
+                "Contrato",
+                "Afiliado",
+                "Vencimiento",
+                "Días Venc.",
+                "Estado Contrato"
+            ));
+            $this->stdout(str_repeat("─", 90) . "\n");
+
+            foreach ($cuotasVencidas as $cuota) {
+                $diasVencida = (new \DateTime())->diff(new \DateTime($cuota->fecha_vencimiento))->days;
+                $afiliado = $cuota->contrato && $cuota->contrato->user ?
+                    $cuota->contrato->user->nombres . ' ' . $cuota->contrato->user->apellidos :
+                    'N/A';
+                $estadoContrato = $cuota->contrato ? $cuota->contrato->estatus : 'N/A';
+
+                $this->stdout(sprintf(
+                    " %-6d | %-8d | %-20s | %-12s | %-10d | %-12s\n",
+                    $cuota->numero_cuota,
+                    $cuota->contrato_id,
+                    substr($afiliado, 0, 20),
+                    $cuota->fecha_vencimiento,
+                    $diasVencida,
+                    $estadoContrato
+                ));
+            }
+            $this->stdout(str_repeat("─", 90) . "\n\n");
+        }
+
+        // Resumen por contrato
+        $this->stdout("📊 RESUMEN POR CONTRATO CON PROBLEMAS:\n");
+        $this->stdout(str_repeat("─", 80) . "\n");
+
+        $contratosConProblemas = Contratos::find()
+            ->alias('c')
+            ->innerJoin(['cu' => Cuotas::tableName()], 'c.id = cu.contrato_id')
+            ->where(['in', 'cu.estatus', [Cuotas::ESTADO_GRACE_PERIOD, Cuotas::ESTADO_VENCIDA]])
+            ->groupBy('c.id')
+            ->all();
+
+        foreach ($contratosConProblemas as $contrato) {
+            $enGracias = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id, 'estatus' => Cuotas::ESTADO_GRACE_PERIOD])
+                ->count();
+            $vencidas = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id, 'estatus' => Cuotas::ESTADO_VENCIDA])
+                ->count();
+            $pendientes = Cuotas::find()
+                ->where(['contrato_id' => $contrato->id, 'estatus' => Cuotas::ESTADO_PENDIENTE])
+                ->count();
+
+            $this->stdout(sprintf(
+                "   Contrato #%d - %s %s\n",
+                $contrato->id,
+                $contrato->user ? $contrato->user->nombres . ' ' . $contrato->user->apellidos : 'N/A',
+                $contrato->estatus == 'suspendido' ? '🔴 SUSPENDIDO' : ''
+            ));
+            $this->stdout(sprintf(
+                "      📊 Cuotas: %d en gracias, %d vencidas, %d pendientes\n",
+                $enGracias,
+                $vencidas,
+                $pendientes
+            ));
+        }
+
+        $this->stdout("\n✅ Reporte completado.\n");
+        return ExitCode::OK;
+    }
+
     /**
      * Genera las cuotas pendientes basadas en los contratos activos.
      * Uso: `yii cuota/generar`
@@ -163,15 +498,13 @@ class CuotaController extends Controller
                     ->exists();
 
                 if (!$existeCuota) {
-                    // Create the cuota
-
                     // Create the cuota with rounded amount
-                    $montoCuota = round($contrato->monto, 2); // ← ADD ROUND TO 2 DECIMALS
+                    $montoCuota = round($contrato->monto, 2);
 
                     $cuota = new Cuotas([
                         'contrato_id' => $contrato->id,
                         'fecha_vencimiento' => $fechaVencimiento,
-                        'monto_usd' => $montoCuota,  // ← USE ROUNDED VALUE
+                        'monto_usd' => $montoCuota,
                         'monto' => $montoCuota,
                         'estatus' => 'pendiente',
                         'rate_usd_bs' => $this->obtenerTasaCambioActual(),
@@ -191,7 +524,6 @@ class CuotaController extends Controller
 
         return $cuotasGeneradas;
     }
-
 
     /**
      * Genera la cuota del mes actual para un contrato.
@@ -223,9 +555,7 @@ class CuotaController extends Controller
             return false;
         }
 
-        // ============================================================
-        // ADDED: CHECK IF PAYMENT ALREADY EXISTS FOR THIS MONTH
-        // ============================================================
+        // CHECK IF PAYMENT ALREADY EXISTS FOR THIS MONTH
         $pagoExistente = Pagos::find()
             ->alias('p')
             ->innerJoin(['c' => Cuotas::tableName()], 'p.id = c.id_pago')
@@ -239,7 +569,6 @@ class CuotaController extends Controller
             $this->stdout("  ✅ Payment already exists for month {$mesActual}, skipping cuota generation\n");
             return false;
         }
-        // ============================================================
 
         // Calcular fecha de vencimiento (día 7 del mes actual)
         $fechaVencimiento = new \DateTime();
@@ -264,27 +593,8 @@ class CuotaController extends Controller
         $cuotasExistentesCount = Cuotas::find()->where(['contrato_id' => $contrato->id])->count();
         $esCuotaInicial = ($cuotasExistentesCount == 0);
 
-        // ============================================================
-        // LÓGICA DE PRORRATEO COMENTADA - USAR MONTO COMPLETO SIEMPRE
-        // ============================================================
-
         // Calcular monto (USAR MONTO COMPLETO - PRORRATEO DESHABILITADO)
-        $montoCuota = round($contrato->monto, 2); // ← ADD ROUND TO 2 DECIMALS
-
-        /*
-        // LÓGICA DE PRORRATEO DESHABILITADA - MANTENER PARA REFERENCIA FUTURA
-        if ($esCuotaInicial) {
-            $fechaIni = new \DateTime($contrato->fecha_ini);
-            $diaMesIni = (int) $fechaIni->format('j');
-            
-            if ($diaMesIni > 7) {
-                $montoCuota = $contrato->monto / 2;
-                $this->stdout("    Monto prorrateado (mitad: {$montoCuota} USD) - fecha_ini después del día 7\n");
-            } else {
-                $this->stdout("    Monto completo ({$montoCuota} USD) - fecha_ini en primeros 7 días\n");
-            }
-        }
-        */
+        $montoCuota = round($contrato->monto, 2);
 
         // Siempre usar monto completo - registrar esta decisión
         if ($esCuotaInicial) {
@@ -298,7 +608,7 @@ class CuotaController extends Controller
             'contrato_id' => $contrato->id,
             'fecha_vencimiento' => $fechaVencimientoStr,
             'monto_usd' => $montoCuota,
-            'monto' => $montoCuota,         // ALSO SET MONTO FIELD!
+            'monto' => $montoCuota,
             'estatus' => 'pendiente',
             'rate_usd_bs' => $this->obtenerTasaCambioActual(),
         ]);
@@ -425,299 +735,6 @@ class CuotaController extends Controller
         }
 
         $this->stdout("💡 Ejecuta 'yii cuota/eliminar-duplicados' para limpiar las duplicadas.\n");
-
-        return ExitCode::OK;
-    }
-
-    /**
-     * Genera cuotas mensuales para todos los contratos activos (para ejecutar el día 1 de cada mes).
-     * Uso: `yii cuota/generar-mensual`
-     * 
-     * @return int Código de salida
-     */
-    public function actionGenerarMensual()
-    {
-        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
-        $this->stdout("║        GENERACIÓN DE CUOTAS MENSUALES - REPORTE          ║\n");
-        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
-
-        $fechaActual = date('Y-m-d');
-        $mesActual = date('F Y');
-
-        $this->stdout("📅 Fecha de ejecución: " . date('Y-m-d H:i:s') . "\n");
-        $this->stdout("📋 Mes objetivo: {$mesActual} (1 al " . date('t') . ")\n");
-
-        // Verificar que sea el día 1 del mes
-        if (date('j') !== '1') {
-            $this->stdout("\n⚠️  ⚠️  ⚠️  ADVERTENCIA ⚠️  ⚠️  ⚠️\n");
-            $this->stdout("Este comando debería ejecutarse el día 1 de cada mes.\n");
-            $this->stdout("Hoy es el día " . date('j') . " del mes.\n");
-            $this->stdout("Continuando con la generación...\n");
-            // No retornar error, solo advertir
-        }
-
-        $this->stdout("\n📊 BUSCANDO CONTRATOS ELEGIBLES...\n");
-        $this->stdout(str_repeat("─", 60) . "\n");
-
-        // Obtener contratos activos que ya iniciaron - INCLUIR SUSPENDIDOS
-        $contratos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado', 'suspendido']])
-            ->andWhere(['<=', 'fecha_ini', $fechaActual])
-            ->orderBy(['estatus' => SORT_ASC, 'id' => SORT_ASC])
-            ->all();
-
-        $this->stdout("✅ Encontrados " . count($contratos) . " contratos para procesar\n\n");
-
-        // Contadores por estatus
-        $estatusCounts = [
-            'activo' => 0,
-            'Creado' => 0,
-            'Registrado' => 0,
-            'suspendido' => 0,
-            'otros' => 0
-        ];
-
-        foreach ($contratos as $contrato) {
-            $estatus = strtolower($contrato->estatus);
-            if (isset($estatusCounts[$estatus])) {
-                $estatusCounts[$estatus]++;
-            } else {
-                $estatusCounts['otros']++;
-            }
-        }
-
-        $this->stdout("📈 DISTRIBUCIÓN POR ESTATUS:\n");
-        foreach ($estatusCounts as $estatus => $count) {
-            if ($count > 0) {
-                $icon = $estatus === 'suspendido' ? '⏸️' : ($estatus === 'activo' ? '✅' : '📝');
-                $this->stdout("  {$icon} " . ucfirst($estatus) . ": {$count} contratos\n");
-            }
-        }
-
-        $this->stdout("\n");
-        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
-        $this->stdout("║                    PROCESANDO CONTRATOS                  ║\n");
-        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
-
-        $cuotasGeneradas = 0;
-        $cuotasExistentes = 0;
-        $contratosConPagoExistente = 0;
-        $contratosProcesados = 0;
-        $errores = 0;
-
-        // Tabla simplificada
-        $this->stdout("┌──────┬─────────────────┬─────────┬────────────┐\n");
-        $this->stdout("│  ID  │    Usuario      │ Estatus │  Resultado │\n");
-        $this->stdout("├──────┼─────────────────┼─────────┼────────────┤\n");
-
-        $resultados = [];
-
-        foreach ($contratos as $contrato) {
-            $contratosProcesados++;
-
-            // Obtener nombre de usuario
-            $nombreUsuario = "N/A";
-            $userDatos = UserDatos::findOne($contrato->user_id);
-            if ($userDatos) {
-                $nombreUsuario = substr($userDatos->nombres . ' ' . $userDatos->apellidos, 0, 15);
-                if (strlen($userDatos->nombres . ' ' . $userDatos->apellidos) > 15) {
-                    $nombreUsuario .= "..";
-                }
-            }
-
-            // Verificar si ya existe cuota para este mes
-            $primerDiaMes = date('Y-m-01');
-            $ultimoDiaMes = date('Y-m-t');
-
-            $cuotaExistente = Cuotas::find()
-                ->where(['contrato_id' => $contrato->id])
-                ->andWhere(['>=', 'fecha_vencimiento', $primerDiaMes])
-                ->andWhere(['<=', 'fecha_vencimiento', $ultimoDiaMes])
-                ->exists();
-
-            if ($cuotaExistente) {
-                $cuotasExistentes++;
-                $resultado = "⏭️  Ya existe";
-                $icono = "⏭️";
-            } else {
-                // Verificar si ya hay pago para este mes
-                $pagoExistente = Pagos::find()
-                    ->alias('p')
-                    ->innerJoin(['c' => Cuotas::tableName()], 'p.id = c.id_pago')
-                    ->where(['p.user_id' => $contrato->user_id])
-                    ->andWhere(['p.estatus' => 'Conciliado'])
-                    ->andWhere(['>=', 'c.fecha_vencimiento', $primerDiaMes])
-                    ->andWhere(['<=', 'c.fecha_vencimiento', $ultimoDiaMes])
-                    ->exists();
-
-                if ($pagoExistente) {
-                    $contratosConPagoExistente++;
-                    $resultado = "✅  Pagado";
-                    $icono = "✅";
-                } else {
-                    // Generar cuota
-                    $cuotaGenerada = $this->generarCuotaMesActual($contrato);
-                    if ($cuotaGenerada) {
-                        $cuotasGeneradas++;
-                        $resultado = "🆕  Generada";
-                        $icono = "🆕";
-                    } else {
-                        $errores++;
-                        $resultado = "❌  Error";
-                        $icono = "❌";
-                    }
-                }
-            }
-
-            // Mostrar línea simplificada
-            $estatusCorto = substr($contrato->estatus, 0, 8);
-            $this->stdout(sprintf(
-                "│ #%-4s │ %-15s │ %-7s │ %-10s │\n",
-                $contrato->id,
-                $nombreUsuario,
-                $estatusCorto,
-                $resultado
-            ));
-
-            $resultados[] = [
-                'id' => $contrato->id,
-                'usuario' => $nombreUsuario,
-                'estatus' => $contrato->estatus,
-                'monto' => $contrato->monto ?: '0.00',
-                'resultado' => $icono,
-                'detalle' => $resultado
-            ];
-        }
-
-        $this->stdout("└──────┴─────────────────┴─────────┴────────────┘\n");
-
-        $this->stdout("\n📋 RESUMEN DETALLADO POR CONTRATO:\n");
-        $this->stdout(str_repeat("─", 80) . "\n");
-        $this->stdout(sprintf(
-            " %-6s | %-25s | %-12s | %-8s | %-12s | %s\n",
-            "ID",
-            "Usuario",
-            "Estatus",
-            "Monto",
-            "Resultado",
-            "Detalle"
-        ));
-        $this->stdout(str_repeat("─", 80) . "\n");
-
-        foreach ($resultados as $row) {
-            $this->stdout(sprintf(
-                " %-6s | %-25s | %-12s | $%-7s | %-12s | %s\n",
-                $row['id'],
-                substr($row['usuario'], 0, 25),
-                $row['estatus'],
-                $row['monto'],
-                $row['resultado'],
-                $row['detalle']
-            ));
-        }
-
-        $this->stdout(str_repeat("─", 80) . "\n\n");
-
-        // Resumen estadístico
-        $this->stdout("📊 RESUMEN ESTADÍSTICO:\n");
-        $this->stdout(str_repeat("═", 40) . "\n");
-
-        $this->stdout(sprintf(" %-30s: %d\n", "Total contratos procesados", $contratosProcesados));
-        $this->stdout(sprintf(" %-30s: %d\n", "Nuevas cuotas generadas", $cuotasGeneradas));
-        $this->stdout(sprintf(" %-30s: %d\n", "Cuotas ya existentes", $cuotasExistentes));
-        $this->stdout(sprintf(" %-30s: %d\n", "Contratos con pago previo", $contratosConPagoExistente));
-        $this->stdout(sprintf(" %-30s: %d\n", "Errores encontrados", $errores));
-
-        $porcentajeGenerado = $contratosProcesados > 0 ?
-            round(($cuotasGeneradas / $contratosProcesados) * 100, 1) : 0;
-
-        $this->stdout(sprintf(" %-30s: %.1f%%\n", "Tasa de generación", $porcentajeGenerado));
-
-        $this->stdout("\n💰 IMPACTO FINANCIERO ESTIMADO:\n");
-        $this->stdout(str_repeat("═", 40) . "\n");
-
-        $ingresoEstimado = 0;
-        foreach ($resultados as $row) {
-            if ($row['resultado'] === '🆕 GENERADA') {
-                $ingresoEstimado += (float)$row['monto'];
-            }
-        }
-
-        $this->stdout(sprintf(" %-30s: $%.2f USD\n", "Ingreso potencial nuevo", $ingresoEstimado));
-
-        // Mostrar los primeros 5 contratos con nuevas cuotas
-        $nuevasCuotas = array_filter($resultados, function ($row) {
-            return $row['resultado'] === '🆕 GENERADA';
-        });
-
-        if (!empty($nuevasCuotas)) {
-            $this->stdout("\n🎯 CONTRATOS CON NUEVAS CUOTAS (primeros 5):\n");
-            $this->stdout(str_repeat("─", 60) . "\n");
-
-            $contador = 0;
-            foreach ($nuevasCuotas as $row) {
-                if ($contador < 5) {
-                    $this->stdout(sprintf(
-                        " • Contrato #%d: %s - $%.2f USD\n",
-                        $row['id'],
-                        $row['usuario'],
-                        $row['monto']
-                    ));
-                    $contador++;
-                }
-            }
-
-            if (count($nuevasCuotas) > 5) {
-                $this->stdout(sprintf(" ... y %d contratos más\n", count($nuevasCuotas) - 5));
-            }
-        }
-
-        // Mostrar contratos con errores
-        $contratosConError = array_filter($resultados, function ($row) {
-            return $row['resultado'] === '❌ ERROR';
-        });
-
-        if (!empty($contratosConError)) {
-            $this->stdout("\n⚠️  CONTRATOS CON ERRORES:\n");
-            $this->stdout(str_repeat("─", 60) . "\n");
-
-            foreach ($contratosConError as $row) {
-                $this->stdout(sprintf(" • Contrato #%d: %s\n", $row['id'], $row['usuario']));
-            }
-        }
-
-        $this->stdout("\n" . str_repeat("═", 60) . "\n");
-
-        if ($cuotasGeneradas > 0) {
-            $this->stdout("✅ GENERACIÓN COMPLETADA CON ÉXITO\n");
-            $this->stdout(sprintf(
-                "   Se generaron %d nuevas cuotas para %d contratos\n",
-                $cuotasGeneradas,
-                count($nuevasCuotas)
-            ));
-        } elseif ($cuotasExistentes > 0) {
-            $this->stdout("ℹ️  GENERACIÓN COMPLETADA - SIN CAMBIOS\n");
-            $this->stdout("   Todas las cuotas ya estaban generadas o pagadas\n");
-        } else {
-            $this->stdout("⚠️  GENERACIÓN COMPLETADA - SIN RESULTADOS\n");
-            $this->stdout("   No se generaron nuevas cuotas\n");
-        }
-
-        $this->stdout(str_repeat("═", 60) . "\n");
-
-        // Sugerencias basadas en los resultados
-        if ($cuotasExistentes > 0) {
-            $this->stdout("\n💡 SUGERENCIAS:\n");
-            if ($cuotasExistentes > 0) {
-                $this->stdout(" • Verificar si las cuotas existentes están correctamente vinculadas\n");
-            }
-            if ($errores > 0) {
-                $this->stdout(" • Revisar los contratos con errores para identificar problemas\n");
-            }
-            if ($contratosConPagoExistente > 0) {
-                $this->stdout(" • Confirmar que los pagos están correctamente aplicados\n");
-            }
-        }
 
         return ExitCode::OK;
     }
@@ -997,7 +1014,7 @@ class CuotaController extends Controller
                 if (!empty($cuotasExistentes)) {
                     $this->stdout("  - Cuotas existentes:\n");
                     foreach ($cuotasExistentes as $cuota) {
-                        $this->stdout("    * {$cuota->fecha_vencimiento} - {$cuota->Estatus} - {$cuota->monto_usd} USD\n");
+                        $this->stdout("    * {$cuota->fecha_vencimiento} - {$cuota->estatus} - {$cuota->monto_usd} USD\n");
                     }
                 }
 
@@ -1053,40 +1070,6 @@ class CuotaController extends Controller
         $this->stdout("Ahora puedes ejecutar 'yii cuota/generar' para regenerar con la lógica corregida.\n");
 
         return ExitCode::OK;
-    }
-
-    /**
-     * Calcula cuántas cuotas están atrasadas para un contrato (sin generarlas).
-     * 
-     * @param Contratos $contrato
-     * @return int Número de cuotas atrasadas
-     */
-    private function calcularCuotasAtrasadas($contrato)
-    {
-        // Obtener la última cuota pagada o la fecha de inicio del contrato
-        $ultimaCuotaPagada = Cuotas::find()
-            ->where(['contrato_id' => $contrato->id, 'estatus' => 'pagado'])
-            ->orderBy(['fecha_vencimiento' => SORT_DESC])
-            ->one();
-
-        $fechaInicio = $ultimaCuotaPagada ?
-            date('Y-m-d', strtotime($ultimaCuotaPagada->fecha_vencimiento . ' +1 month')) :
-            $contrato->fecha_ini;
-
-        $fechaActual = date('Y-m-d');
-
-        // Si no hay cuotas atrasadas, salir
-        if (strtotime($fechaInicio) >= strtotime($fechaActual)) {
-            return 0;
-        }
-
-        // Calcular cuántas cuotas están atrasadas
-        $fechaActual = new \DateTime($fechaActual);
-        $fechaInicio = new \DateTime($fechaInicio);
-        $intervalo = $fechaInicio->diff($fechaActual);
-        $mesesAtrasados = ($intervalo->y * 12) + $intervalo->m;
-
-        return max(0, $mesesAtrasados);
     }
 
     /**
@@ -1384,8 +1367,41 @@ class CuotaController extends Controller
     }
 
     /**
+     * Calcula cuántas cuotas están atrasadas para un contrato (sin generarlas).
+     * 
+     * @param Contratos $contrato
+     * @return int Número de cuotas atrasadas
+     */
+    private function calcularCuotasAtrasadas($contrato)
+    {
+        // Obtener la última cuota pagada o la fecha de inicio del contrato
+        $ultimaCuotaPagada = Cuotas::find()
+            ->where(['contrato_id' => $contrato->id, 'estatus' => 'pagado'])
+            ->orderBy(['fecha_vencimiento' => SORT_DESC])
+            ->one();
+
+        $fechaInicio = $ultimaCuotaPagada ?
+            date('Y-m-d', strtotime($ultimaCuotaPagada->fecha_vencimiento . ' +1 month')) :
+            $contrato->fecha_ini;
+
+        $fechaActual = date('Y-m-d');
+
+        // Si no hay cuotas atrasadas, salir
+        if (strtotime($fechaInicio) >= strtotime($fechaActual)) {
+            return 0;
+        }
+
+        // Calcular cuántas cuotas están atrasadas
+        $fechaActual = new \DateTime($fechaActual);
+        $fechaInicio = new \DateTime($fechaInicio);
+        $intervalo = $fechaInicio->diff($fechaActual);
+        $mesesAtrasados = ($intervalo->y * 12) + $intervalo->m;
+
+        return max(0, $mesesAtrasados);
+    }
+
+    /**
      * Obtiene la tasa de cambio actual.
-     * Implementa esta función según tu lógica de obtención de tasas.
      * 
      * @return int Tasa de cambio actual
      */
@@ -1440,7 +1456,7 @@ class CuotaController extends Controller
                 $userName = $payment['nombres'] . ' ' . $payment['apellidos'];
                 $output .= "Procesando pago #{$payment['pago_id']} para usuario {$payment['user_id']} ({$userName})...\n";
 
-                // CORRECTED: Use monto_pagado (the actual payment amount in USD)
+                // Use monto_pagado (the actual payment amount in USD)
                 $paymentAmount = $payment['monto_pagado'] ?? 0;
                 $montoUsd = $payment['monto_usd'] ?? 'NULL';
                 $output .= "  💰 Monto del pago - monto_pagado: {$paymentAmount} USD (monto_usd: {$montoUsd})\n";
@@ -1461,7 +1477,7 @@ class CuotaController extends Controller
                     $cuotasToUpdate = [];
 
                     foreach ($cuotas as $cuota) {
-                        // CORRECTED: Use monto field (the actual cuota amount in USD)
+                        // Use monto field (the actual cuota amount in USD)
                         $monto = $cuota->monto ?? 0;
                         $montoUsdCuota = $cuota->monto_usd ?? 'NULL';
                         $output .= "    📊 Cuota #{$cuota->id}: monto = {$monto} USD (monto_usd: {$montoUsdCuota})\n";
@@ -1566,5 +1582,42 @@ class CuotaController extends Controller
         } catch (\Exception $e) {
             $output .= "  ❌ Error reactivando contrato: " . $e->getMessage() . "\n";
         }
+    }
+    /**
+     * Verify that all cuotas have correct coverage periods
+     * Uso: `yii cuota/verify-coverage`
+     */
+    public function actionVerifyCoverage()
+    {
+        $this->stdout("Verificando períodos de cobertura de cuotas...\n");
+
+        $cuotas = Cuotas::find()
+            ->where(['is not', 'coverage_start', null])
+            ->andWhere(['is not', 'coverage_end', null])
+            ->all();
+
+        $errors = 0;
+        foreach ($cuotas as $cuota) {
+            $start = new \DateTime($cuota->coverage_start);
+            $end = new \DateTime($cuota->coverage_end);
+            $due = new \DateTime($cuota->fecha_vencimiento);
+
+            // Coverage should end the day before due date
+            $expectedEnd = clone $due;
+            $expectedEnd->modify('-1 day');
+
+            if ($end->format('Y-m-d') != $expectedEnd->format('Y-m-d')) {
+                $this->stdout("❌ Cuota #{$cuota->id}: Coverage end {$end->format('Y-m-d')} should be {$expectedEnd->format('Y-m-d')}\n");
+                $errors++;
+            }
+        }
+
+        if ($errors === 0) {
+            $this->stdout("✅ Todas las cuotas tienen períodos de cobertura correctos.\n");
+        } else {
+            $this->stdout("⚠️ Se encontraron {$errors} errores.\n");
+        }
+
+        return ExitCode::OK;
     }
 }

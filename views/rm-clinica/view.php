@@ -21,7 +21,7 @@ $listaEstatus = $listaEstatus ?? [];
 $rol = UserHelper::getMyRol();
 
 // Define which roles should see the full set of clinic management buttons
-$adminRoles = ['superadmin', 'DIRECTOR-COMERCIALIZACION', 'Administrador-clinica', 'COORDINADOR-CLINICA', 'GERENTE-CLINICA'];
+$adminRoles = ['superadmin', 'DIRECTOR-COMERCIALIZACION', 'Administrador-clinica', 'COORDINADOR-CLINICA', 'GERENTE-CLINICA', 'GERENTE-OPERACIONES', 'GERENTE-COMERCIALIZACION'];
 $permisos = in_array($rol, $adminRoles);
 
 // Define which roles should see the limited set of buttons (only operational roles that are NOT admin roles)

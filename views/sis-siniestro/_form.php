@@ -393,7 +393,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             <!-- Attention Details Card -->
             <div class="card mb-4">
                 <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
-                    <i class="fas fa-stethoscope me-2"></i> Detalles de la Atención
+                    <i class="fas fa-stethoscope me-2"></i> Detalles de la <?= $terminoPrincipal ?>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">

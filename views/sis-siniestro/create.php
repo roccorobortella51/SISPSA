@@ -2,12 +2,15 @@
 
 use yii\helpers\Html;
 
-
 /** @var yii\web\View $this */
 /** @var app\models\SisSiniestro $model */
 /** @var app\models\UserDatos $afiliado */
 
-$this->title = 'Crear Atención Médica: ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
+// Get es_cita parameter from URL
+$esCita = (int)Yii::$app->request->get('es_cita', 0);
+$termino = $esCita === 1 ? 'Cita' : 'Atención';
+
+$this->title = 'Crear ' . $termino . ' Médica: ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
 $this->params['breadcrumbs'][] = ['label' => 'Afiliados', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>

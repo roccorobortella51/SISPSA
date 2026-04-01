@@ -195,7 +195,11 @@ class PagosController extends Controller
             Yii::info("Filtering cuotas for specific contract ID: " . $contrato_id);
             $cuotas = Cuotas::find()
                 ->where(['contrato_id' => $contrato_id])
-                ->andWhere(['estatus' => 'pendiente'])
+                ->andWhere(['in', 'estatus', [
+                    'pendiente',     // Future payments
+                    'en_gracias',    // In grace period
+                    'vencida'        // OVERDUE - MUST SHOW!
+                ]])
                 ->orderBy(['fecha_vencimiento' => SORT_ASC])
                 ->all();
 
@@ -578,8 +582,6 @@ class PagosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
-    // In app/controllers/PagosController.php
-
     public function actionUpdatestatus()
     {
         \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -622,12 +624,37 @@ class PagosController extends Controller
                 Yii::info("Payment {$id} affects contracts: " . implode(', ', $contratoIds), 'pagos');
 
                 foreach ($contratoIds as $contratoId) {
-                    Yii::info("Calling updateStatus() for Contract #{$contratoId}", 'pagos');
+                    Yii::info("========== PROCESSING CONTRACT #{$contratoId} ==========", 'pagos');
+
+                    // Verificar cuotas del contrato antes de updateStatus
+                    $cuotasAntes = Cuotas::find()
+                        ->where(['contrato_id' => $contratoId])
+                        ->select(['numero_cuota', 'estatus', 'fecha_vencimiento'])
+                        ->orderBy('numero_cuota')
+                        ->asArray()
+                        ->all();
+                    Yii::info("Cuotas ANTES de updateStatus: " . print_r($cuotasAntes, true), 'pagos');
+
                     $contrato = Contratos::findOne($contratoId);
                     if ($contrato) {
                         $oldContractStatus = $contrato->estatus;
+                        Yii::info("Contract #{$contratoId} BEFORE updateStatus: {$oldContractStatus}", 'pagos');
+
                         $result = $contrato->updateStatus();
-                        Yii::info("Contract #{$contratoId} update result: " . ($result ? 'true' : 'false') . ", Status changed from {$oldContractStatus} to {$contrato->estatus}", 'pagos');
+
+                        // Recargar el contrato para obtener el estado actualizado
+                        $contrato->refresh();
+                        Yii::info("Contract #{$contratoId} AFTER updateStatus: {$contrato->estatus}", 'pagos');
+                        Yii::info("Contract #{$contratoId} update result: " . ($result ? 'true' : 'false'), 'pagos');
+
+                        // Verificar cuotas después de updateStatus
+                        $cuotasDespues = Cuotas::find()
+                            ->where(['contrato_id' => $contratoId])
+                            ->select(['numero_cuota', 'estatus', 'fecha_vencimiento'])
+                            ->orderBy('numero_cuota')
+                            ->asArray()
+                            ->all();
+                        Yii::info("Cuotas DESPUÉS de updateStatus: " . print_r($cuotasDespues, true), 'pagos');
                     } else {
                         Yii::error("Contract #{$contratoId} not found!", 'pagos');
                     }

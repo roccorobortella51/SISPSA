@@ -163,23 +163,40 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <div class="row">
 
                         <div class="col-md-6 field-with-icon">
+                            <div class="form-group">
+                                <?= $form->field($modelContrato, 'fecha_ini')->textInput([
+                                    'class' => 'form-control form-control-lg fecha-ini-field',
+                                    'type' => 'date',
+                                    'required' => true,
+                                    'placeholder' => 'Seleccione la fecha de inicio',
+                                    'id' => 'contrato-fecha-ini'
+                                ])->label('Fecha de Inicio del Contrato') ?>
 
-                            <?= $form->field($modelContrato, 'fecha_ini')->textInput([
-                                'class' => 'form-control form-control-lg fecha-ini-field',
-                                'type' => 'date',
-                                'required' => true,
-                                'placeholder' => 'Seleccione la fecha de inicio'
-                            ])->label('Fecha de Inicio') ?>
+                                <!-- Professional reminder message -->
+                                <div class="mt-2 p-3 rounded" style="background-color: #fff3cd; border-left: 4px solid #ffc107;">
+                                    <div class="d-flex align-items-start">
+                                        <div class="mr-3">
+                                            <i class="fas fa-exclamation-triangle text-warning" style="font-size: 1.5rem;"></i>
+                                        </div>
+                                        <div>
+                                            <span class="font-weight-bold" style="font-size: 1.2rem;">Importante:</span>
+                                            <div style="font-size: 1.1rem; color: #856404;">
+                                                Al registrar un nuevo afiliado, la <strong>FECHA DE INICIO DEL CONTRATO</strong> debe ser exactamente igual a la <strong>FECHA DEL PRIMER PAGO</strong>.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-6 field-with-icon fecha-ven-container" style="display: none;">
-
                             <?= $form->field($modelContrato, 'fecha_ven')->textInput([
                                 'class' => 'form-control form-control-lg fecha-ven-field',
                                 'type' => 'date',
-                                'required' => true,
-                                'placeholder' => 'Seleccione la fecha de vencimiento'
-                            ])->label('Fecha de Vencimiento') ?>
+                                'readonly' => true,  // Make it read-only
+                                'disabled' => true,   // Disable it so user can't edit
+                                'placeholder' => 'Fecha calculada automáticamente'
+                            ])->label('Fecha de Vencimiento (calculada automáticamente)') ?>
                         </div>
                         <div class="col-md-4 field-with-icon" style="display:none;">
 
@@ -1090,54 +1107,54 @@ $currentRoute = Yii::$app->controller->getRoute();
 
     <?php ActiveForm::end(); ?>
 
-<script>
-// Validación client-side para fecha de nacimiento
-document.addEventListener('DOMContentLoaded', function() {
-    var fechanacInput = document.getElementById('userdatos-fechanac');
-    var errorDiv = document.getElementById('fechanac-error');
-    var form = document.getElementById('user-datos-form');
-    if (fechanacInput && errorDiv && form) {
-        form.addEventListener('submit', function(e) {
-            var value = fechanacInput.value;
-            errorDiv.style.display = 'none';
-            errorDiv.textContent = '';
-            if (value) {
-                var parts = value.split('-');
-                if (parts.length !== 3) {
-                    errorDiv.textContent = 'Formato de fecha inválido.';
-                    errorDiv.style.display = 'block';
-                    e.preventDefault();
-                    return;
-                }
-                var year = parseInt(parts[0], 10);
-                var month = parseInt(parts[1], 10);
-                var day = parseInt(parts[2], 10);
-                var currentYear = new Date().getFullYear();
-                if (isNaN(year) || isNaN(month) || isNaN(day)) {
-                    errorDiv.textContent = 'La fecha contiene valores no numéricos.';
-                    errorDiv.style.display = 'block';
-                    e.preventDefault();
-                    return;
-                }
-                if (year < 1900 || year > currentYear) {
-                    errorDiv.textContent = 'El año de nacimiento no es válido.';
-                    errorDiv.style.display = 'block';
-                    e.preventDefault();
-                    return;
-                }
-                // checkdate equivalente en JS
-                var date = new Date(year, month - 1, day);
-                if (date.getFullYear() !== year || (date.getMonth() + 1) !== month || date.getDate() !== day) {
-                    errorDiv.textContent = 'La fecha de nacimiento no es válida.';
-                    errorDiv.style.display = 'block';
-                    e.preventDefault();
-                    return;
-                }
+    <script>
+        // Validación client-side para fecha de nacimiento
+        document.addEventListener('DOMContentLoaded', function() {
+            var fechanacInput = document.getElementById('userdatos-fechanac');
+            var errorDiv = document.getElementById('fechanac-error');
+            var form = document.getElementById('user-datos-form');
+            if (fechanacInput && errorDiv && form) {
+                form.addEventListener('submit', function(e) {
+                    var value = fechanacInput.value;
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                    if (value) {
+                        var parts = value.split('-');
+                        if (parts.length !== 3) {
+                            errorDiv.textContent = 'Formato de fecha inválido.';
+                            errorDiv.style.display = 'block';
+                            e.preventDefault();
+                            return;
+                        }
+                        var year = parseInt(parts[0], 10);
+                        var month = parseInt(parts[1], 10);
+                        var day = parseInt(parts[2], 10);
+                        var currentYear = new Date().getFullYear();
+                        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                            errorDiv.textContent = 'La fecha contiene valores no numéricos.';
+                            errorDiv.style.display = 'block';
+                            e.preventDefault();
+                            return;
+                        }
+                        if (year < 1900 || year > currentYear) {
+                            errorDiv.textContent = 'El año de nacimiento no es válido.';
+                            errorDiv.style.display = 'block';
+                            e.preventDefault();
+                            return;
+                        }
+                        // checkdate equivalente en JS
+                        var date = new Date(year, month - 1, day);
+                        if (date.getFullYear() !== year || (date.getMonth() + 1) !== month || date.getDate() !== day) {
+                            errorDiv.textContent = 'La fecha de nacimiento no es válida.';
+                            errorDiv.style.display = 'block';
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                });
             }
         });
-    }
-});
-</script>
+    </script>
 </div>
 
 <div class="modal fade" id="editDependienteModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1226,7 +1243,130 @@ $(document).ready(function() {
     console.log('Yii global on load:', typeof yii);
     // Add this function at the beginning of your $(document).ready()
 
+// Function to update the helper message based on selected start date
+function updateFechaIniHelper() {
+    var fechaIni = $('#contrato-fecha-ini').val();
+    var helperDiv = $('#fecha-ini-helper');
+    var messageSpan = $('#fecha-ini-message');
+    var previewDiv = $('#pago-schedule-preview');
+    
+    if (fechaIni) {
+        // Parse the selected date
+        var parts = fechaIni.split('-');
+        var year = parseInt(parts[0]);
+        var month = parseInt(parts[1]);
+        var day = parseInt(parts[2]);
+        
+        // Create date objects
+        var startDate = new Date(year, month - 1, day);
+        var firstPaymentDate = new Date(year, month, day); // Add 1 month
+        
+        // Handle month-end dates (e.g., Jan 31 -> Feb 28)
+        if (firstPaymentDate.getDate() !== day) {
+            firstPaymentDate.setDate(0); // Last day of previous month
+        }
+        
+        // Format dates for display
+        var startFormatted = formatDate(startDate);
+        var paymentFormatted = formatDate(firstPaymentDate);
+        
+        // Calculate day of month for display
+        var dayOfMonth = day;
+        var daySuffix = getDaySuffix(day);
+        
+        // Check if it's a month-end date
+        var isMonthEnd = (day > 28);
+        var monthEndMessage = isMonthEnd ? 
+            '<span class="badge badge-warning ml-2" style="font-size: 0.9rem;">Ajustado a fin de mes</span>' : '';
+        
+        // Create message with proper HTML structure
+        var message = `
+            <div class="d-flex align-items-start mb-2">
+                <i class="fas fa-credit-card text-primary mr-2 mt-1" style="font-size: 1.2rem;"></i>
+                <span>La primera cuota vencerá el <strong class="text-primary">${paymentFormatted}</strong></span>
+            </div>
+            <div class="d-flex align-items-start">
+                <i class="fas fa-calendar-alt text-success mr-2 mt-1" style="font-size: 1.2rem;"></i>
+                <span>Las cuotas siguientes vencerán el día <strong class="text-primary">${day}${daySuffix}</strong> de cada mes ${monthEndMessage}</span>
+            </div>
+        `;
+        
+        messageSpan.html(message);
+        
+        // Create preview of payment schedule
+        var previewHtml = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="font-weight-bold" style="font-size: 1.1rem; color: #17a2b8;">
+                    <i class="fas fa-calendar-check mr-2"></i>Calendario de Pagos
+                </span>
+                <span class="badge badge-info px-3 py-2" style="font-size: 1.0rem;">12 cuotas mensuales</span>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mr-2" 
+                             style="width: 24px; height: 24px; font-size: 0.9rem;">
+                            <i class="fas fa-play"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Inicio</small>
+                            <span class="font-weight-bold">${startFormatted}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center mr-2" 
+                             style="width: 24px; height: 24px; font-size: 0.9rem;">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">1er pago</small>
+                            <span class="font-weight-bold">${paymentFormatted}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex align-items-center">
+                <i class="fas fa-info-circle text-info mr-2"></i>
+                <small class="text-muted">
+                    <strong>Nota:</strong> Todas las cuotas vencen el día ${day}${daySuffix} de cada mes
+                </small>
+            </div>
+        `;
+        
+        previewDiv.html(previewHtml).show();
+        helperDiv.slideDown(300);
+    } else {
+        helperDiv.slideUp(300);
+        previewDiv.hide();
+    }
+}
 
+// Helper function to format date as DD/MM/YYYY
+function formatDate(date) {
+    var d = date.getDate();
+    var m = date.getMonth() + 1;
+    var y = date.getFullYear();
+    return (d < 10 ? '0' + d : d) + '/' + (m < 10 ? '0' + m : m) + '/' + y;
+}
+
+// Helper function to get day suffix (st, nd, rd, th)
+function getDaySuffix(day) {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+        case 1: return 'st';
+        case 2: return 'nd';
+        case 3: return 'rd';
+        default: return 'th';
+    }
+}
+
+// Listen for changes on the fecha_ini field
+$('#contrato-fecha-ini').on('change', updateFechaIniHelper);
+
+// Also call on page load in case there's already a value
+setTimeout(updateFechaIniHelper, 500);
 function initializePage() {
     console.log('Initializing page...');
     
@@ -1483,37 +1623,43 @@ $(document).ready(function() {
     });
 
     function calcularFechaVencimiento(fechaIni) {
-        if (fechaIni) {
-            var parts = fechaIni.split('-');
-            var year = parseInt(parts[0]);
-            var month = parseInt(parts[1]) - 1;
-            var day = parseInt(parts[2]);
-            
-            var fecha = new Date(year, month, day);
-            fecha.setFullYear(fecha.getFullYear() + 1);
-            
-            var newYear = fecha.getFullYear();
-            var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
-            var newDay = String(fecha.getDate()).padStart(2, '0');
-            
-            return newYear + '-' + newMonth + '-' + newDay;
-        }
-        return '';
+    if (fechaIni) {
+        var parts = fechaIni.split('-');
+        var year = parseInt(parts[0]);
+        var month = parseInt(parts[1]) - 1;
+        var day = parseInt(parts[2]);
+        
+        // Create date object
+        var fecha = new Date(year, month, day);
+        
+        // Add 1 year
+        fecha.setFullYear(fecha.getFullYear() + 1);
+        
+        // Subtract 1 day to get last day of coverage
+        fecha.setDate(fecha.getDate() - 1);
+        
+        var newYear = fecha.getFullYear();
+        var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
+        var newDay = String(fecha.getDate()).padStart(2, '0');
+        
+        return newYear + '-' + newMonth + '-' + newDay;
     }
+    return '';
+}
 
     function toggleFechaVen() {
-        var fechaIni = $('.fecha-ini-field').val();
-        var fechaVenContainer = $('.fecha-ven-container');
-        
-        if (fechaIni) {
-            fechaVenContainer.show();
-            var fechaVen = calcularFechaVencimiento(fechaIni);
-            $('.fecha-ven-field').val(fechaVen);
-        } else {
-            fechaVenContainer.hide();
-            $('.fecha-ven-field').val('');
-        }
+    var fechaIni = $('.fecha-ini-field').val();
+    var fechaVenContainer = $('.fecha-ven-container');
+    
+    if (fechaIni) {
+        fechaVenContainer.show();
+        var fechaVen = calcularFechaVencimiento(fechaIni);
+        $('.fecha-ven-field').val(fechaVen);
+    } else {
+        fechaVenContainer.hide();
+        $('.fecha-ven-field').val('');
     }
+}
     
     // Toggle maternity fields visibility
     $('#cobertura_maternidad_checkbox').on('change', function() {
@@ -2057,5 +2203,348 @@ JS
 
     .conditional-asterisk {
         display: inline;
+    }
+
+    /* ============================================
+       PROFESSIONAL HELPER MESSAGE STYLING
+       ============================================ */
+
+    #fecha-ini-helper {
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        line-height: 1.5;
+        border-radius: 8px;
+    }
+
+    #fecha-ini-helper .d-flex {
+        gap: 15px;
+    }
+
+    #fecha-ini-helper i {
+        vertical-align: middle;
+    }
+
+    #fecha-ini-message div {
+        margin-bottom: 8px;
+    }
+
+    #fecha-ini-message i {
+        width: 20px;
+        text-align: center;
+    }
+
+    #pago-schedule-preview {
+        font-size: 1.1rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    #pago-schedule-preview .rounded-circle {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Hover effect */
+    #fecha-ini-helper:hover {
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.15);
+        transform: translateY(-1px);
+    }
+
+    #pago-schedule-preview:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-color: #17a2b8;
+    }
+
+    /* Badge styling */
+    .badge-info {
+        background-color: #17a2b8;
+        color: white;
+        font-weight: 500;
+        padding: 6px 12px;
+    }
+
+    .badge-warning {
+        background-color: #ffc107;
+        color: #212529;
+        font-weight: 500;
+    }
+
+    /* Text colors */
+    .text-primary {
+        color: #007bff !important;
+    }
+
+    .text-success {
+        color: #28a745 !important;
+    }
+
+    .text-info {
+        color: #17a2b8 !important;
+    }
+
+    .text-muted {
+        color: #6c757d !important;
+    }
+
+    /* Border utilities */
+    .border-top {
+        border-top: 1px solid #dee2e6 !important;
+    }
+
+    .border-primary {
+        border-color: #007bff !important;
+    }
+
+    .border-info {
+        border-color: #17a2b8 !important;
+    }
+
+    /* Spacing utilities */
+    .mt-1 {
+        margin-top: 0.25rem !important;
+    }
+
+    .mt-2 {
+        margin-top: 0.5rem !important;
+    }
+
+    .mt-3 {
+        margin-top: 1rem !important;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem !important;
+    }
+
+    .mb-1 {
+        margin-bottom: 0.25rem !important;
+    }
+
+    .mb-2 {
+        margin-bottom: 0.5rem !important;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .ml-1 {
+        margin-left: 0.25rem !important;
+    }
+
+    .ml-2 {
+        margin-left: 0.5rem !important;
+    }
+
+    .ml-3 {
+        margin-left: 1rem !important;
+    }
+
+    .mr-1 {
+        margin-right: 0.25rem !important;
+    }
+
+    .mr-2 {
+        margin-right: 0.5rem !important;
+    }
+
+    .mr-3 {
+        margin-right: 1rem !important;
+    }
+
+    .mr-4 {
+        margin-right: 1.5rem !important;
+    }
+
+    .p-2 {
+        padding: 0.5rem !important;
+    }
+
+    .p-3 {
+        padding: 1rem !important;
+    }
+
+    .p-4 {
+        padding: 1.5rem !important;
+    }
+
+    .px-2 {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    .px-3 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .py-2 {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .py-3 {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* Font utilities */
+    .font-weight-bold {
+        font-weight: 700 !important;
+    }
+
+    .font-weight-normal {
+        font-weight: 400 !important;
+    }
+
+    .small {
+        font-size: 0.875rem !important;
+    }
+
+    /* Background colors */
+    .bg-white {
+        background-color: #ffffff !important;
+    }
+
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+
+    .bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+    }
+
+    .bg-info {
+        background-color: #17a2b8 !important;
+    }
+
+    /* Rounded corners */
+    .rounded {
+        border-radius: 0.25rem !important;
+    }
+
+    .rounded-circle {
+        border-radius: 50% !important;
+    }
+
+    .rounded-pill {
+        border-radius: 50rem !important;
+    }
+
+    /* Flex utilities */
+    .d-flex {
+        display: flex !important;
+    }
+
+    .d-inline-flex {
+        display: inline-flex !important;
+    }
+
+    .align-items-start {
+        align-items: flex-start !important;
+    }
+
+    .align-items-center {
+        align-items: center !important;
+    }
+
+    .justify-content-start {
+        justify-content: flex-start !important;
+    }
+
+    .justify-content-center {
+        justify-content: center !important;
+    }
+
+    .justify-content-between {
+        justify-content: space-between !important;
+    }
+
+    .flex-grow-1 {
+        flex-grow: 1 !important;
+    }
+
+    .flex-shrink-0 {
+        flex-shrink: 0 !important;
+    }
+
+    /* Grid utilities */
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+
+    .col-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+
+    /* Border utilities */
+    .border {
+        border: 1px solid #dee2e6 !important;
+    }
+
+    .border-top {
+        border-top: 1px solid #dee2e6 !important;
+    }
+
+    .border-left {
+        border-left: 1px solid #dee2e6 !important;
+    }
+
+    .border-primary {
+        border-color: #007bff !important;
+    }
+
+    .border-info {
+        border-color: #17a2b8 !important;
+    }
+
+    .border-success {
+        border-color: #28a745 !important;
+    }
+
+    .border-warning {
+        border-color: #ffc107 !important;
+    }
+
+    /* Box shadow */
+    .shadow-sm {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+    }
+
+    /* Animation */
+    .transition {
+        transition: all 0.2s ease-in-out;
+    }
+
+    /* Hover effects */
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 </style>

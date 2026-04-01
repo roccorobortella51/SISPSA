@@ -151,6 +151,16 @@ $this->params['breadcrumbs'][] = $this->title;
                             data-action-name="verificar-espera">
                             <i class="fas fa-pause-circle"></i> Verificar Contratos en Espera
                         </button>
+                        <li class="nav-item">
+                            <?= Html::a(
+                                '<i class="fas fa-play-circle mr-2"></i> Verificar Cuotas y Contratos',
+                                ['daily-check-page'],  // ← Changed from 'daily-check'
+                                [
+                                    'class' => 'btn btn-primary btn-lg px-5',
+                                    'style' => 'font-size: 1.2rem; padding: 0.75rem 2rem;',
+                                ]
+                            ) ?>
+                        </li>
                     </div>
                 </div>
             </div>
@@ -174,6 +184,95 @@ $this->params['breadcrumbs'][] = $this->title;
 
                         <small class="text-muted mt-2">
                             <i class="fas fa-info-circle"></i> Genere cuotas futuras para afiliados que pagan por adelantado.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIGRATION CARD - Add this after the Cuotas Adelantadas card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 border-warning">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-database"></i> Migración de Contratos Antiguos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Use estas herramientas para migrar contratos antiguos al nuevo sistema de 12 cuotas.
+                        Siempre haga backup antes de migrar.
+                    </div>
+
+                    <!-- Contract List -->
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar Contrato</label>
+                        <select class="form-control" id="migration-contrato-select">
+                            <option value="">Cargando contratos...</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-sync-alt fa-spin" id="migration-loading" style="display: none;"></i>
+                            <span id="migration-stats"></span>
+                        </small>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-info w-100 mb-2"
+                                onclick="runMigrationAction('check', true)">
+                                <i class="fas fa-search"></i> Check Todos
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-info w-100 mb-2"
+                                onclick="runMigrationAction('check', false)">
+                                <i class="fas fa-search"></i> Check Seleccionado
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-secondary w-100 mb-2"
+                                onclick="runMigrationAction('preview', false)">
+                                <i class="fas fa-eye"></i> Preview
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-success w-100 mb-2"
+                                onclick="runMigrationAction('backup', false)">
+                                <i class="fas fa-save"></i> Backup
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 mb-2"
+                                onclick="runMigrationAction('show-backup', false)">
+                                <i class="fas fa-list"></i> Show Backup
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-warning w-100 mb-2"
+                                onclick="runMigrationAction('migrate-contrato', false)">
+                                <i class="fas fa-play"></i> Migrar Seleccionado
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button type="button" class="btn btn-warning w-100 mb-2"
+                                onclick="runMigrationAction('migrate-all', true)">
+                                <i class="fas fa-forward"></i> Migrar TODOS los contratos
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button type="button" class="btn btn-danger w-100"
+                                onclick="runMigrationAction('rollback', false)">
+                                <i class="fas fa-undo"></i> Rollback
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                            <strong>Precaución:</strong> Siempre verifique el backup antes de migrar.
+                            Use "Check" primero para ver qué contratos necesitan migración.
                         </small>
                     </div>
                 </div>
@@ -496,6 +595,166 @@ $this->params['breadcrumbs'][] = $this->title;
     </div>
 
     <script>
+        // ==============================================
+        // FUNCIONES DE MIGRACIÓN
+        // ==============================================
+
+        // Cargar lista de contratos
+        function loadMigrationContracts() {
+            const select = document.getElementById('migration-contrato-select');
+            const loading = document.getElementById('migration-loading');
+            const stats = document.getElementById('migration-stats');
+
+            loading.style.display = 'inline-block';
+            select.innerHTML = '<option value="">Cargando contratos...</option>';
+
+            fetch('<?= Url::to(['cuota-web/migration-list-contracts']) ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+
+                    if (data.success) {
+                        let needsMigration = 0;
+                        let migrated = 0;
+
+                        let options = '<option value="">Seleccione un contrato...</option>';
+                        data.contratos.forEach(c => {
+                            const isMigrated = c.cuotas_migradas > 0 && c.cuotas_migradas == c.total_cuotas;
+                            if (isMigrated) migrated++;
+                            else needsMigration++;
+
+                            const statusIcon = isMigrated ? '✅' : '⚠️';
+                            const clientName = c.nombres ? c.nombres + ' ' + c.apellidos : 'N/A';
+                            options += `<option value="${c.id}" data-migrated="${isMigrated}">
+                    ${statusIcon} #${c.id} - ${clientName} (${c.fecha_ini}) - Pagos: ${c.cuotas_pagadas}
+                </option>`;
+                        });
+
+                        select.innerHTML = options;
+                        stats.innerHTML = `✅ Migrados: ${migrated} | ⚠️ Pendientes: ${needsMigration}`;
+                    } else {
+                        select.innerHTML = '<option value="">Error cargando contratos</option>';
+                        stats.innerHTML = '❌ Error: ' + data.error;
+                    }
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    select.innerHTML = '<option value="">Error de conexión</option>';
+                    stats.innerHTML = '❌ Error: ' + error.message;
+                });
+        }
+
+        // Ejecutar acción de migración
+        function runMigrationAction(action, isAll = false) {
+            const select = document.getElementById('migration-contrato-select');
+            const contratoId = isAll ? null : select.value;
+            let message = '';
+            let confirmRequired = true;
+
+            if (!isAll && !contratoId) {
+                alert('Por favor seleccione un contrato');
+                return;
+            }
+
+            switch (action) {
+                case 'migrate-all':
+                    message = '⚠️ ¿Está ABSOLUTAMENTE SEGURO de migrar TODOS los contratos?\n\n' +
+                        'Esta operación:\n' +
+                        '• Migrará TODOS los contratos antiguos\n' +
+                        '• Preservará los pagos existentes\n' +
+                        '• Creará backups automáticos\n\n' +
+                        '¿Desea continuar?';
+                    break;
+                case 'migrate-contrato':
+                    message = '⚠️ ¿Migrar el contrato seleccionado?\n\n' +
+                        'Esta operación:\n' +
+                        '• Creará un backup automático\n' +
+                        '• Preservará los pagos existentes\n' +
+                        '• Generará 12 nuevas cuotas\n\n' +
+                        '¿Desea continuar?';
+                    break;
+                case 'rollback':
+                    message = '⚠️ ¿Hacer rollback del contrato seleccionado?\n\n' +
+                        '⚠️ ADVERTENCIA: Esto RESTAURARÁ el contrato a su estado original\n' +
+                        'antes de la migración. Los cambios se perderán.\n\n' +
+                        '¿Está ABSOLUTAMENTE SEGURO?';
+                    break;
+                case 'backup':
+                    message = '¿Crear backup del contrato seleccionado?';
+                    confirmRequired = false; // No requiere confirmación fuerte
+                    break;
+                default:
+                    confirmRequired = false;
+            }
+
+            if (confirmRequired && !confirm(message)) {
+                return;
+            }
+
+            showGlobalLoading();
+
+            // Construir URL
+            let url = '<?= Url::to(['cuota-web/migration-']) ?>' + action;
+            if (!isAll && contratoId) {
+                url += '?contratoId=' + contratoId;
+            }
+
+            fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideGlobalLoading();
+
+                    // Mostrar resultado
+                    document.getElementById('result-area').style.display = 'block';
+                    let resultHtml = '';
+
+                    if (data.success) {
+                        resultHtml = '<div class="text-success mb-2"><i class="fas fa-check-circle"></i> ' +
+                            (data.message || 'Operación completada') + '</div>';
+                    } else {
+                        resultHtml = '<div class="text-danger mb-2"><i class="fas fa-exclamation-circle"></i> ' +
+                            (data.message || 'Error en operación') + '</div>';
+                    }
+
+                    resultHtml += '<pre style="background:#1e1e1e; color:#fff; padding:15px; border-radius:5px; overflow-x:auto; max-height:400px;">' +
+                        (data.output || 'Sin salida') + '</pre>';
+
+                    document.getElementById('result-content').innerHTML = resultHtml;
+                    document.getElementById('result-area').scrollIntoView({
+                        behavior: 'smooth'
+                    });
+
+                    // Recargar lista después de acciones importantes
+                    if (['migrate-contrato', 'migrate-all', 'rollback', 'backup'].includes(action)) {
+                        setTimeout(loadMigrationContracts, 2000);
+                    }
+                })
+                .catch(error => {
+                    hideGlobalLoading();
+                    document.getElementById('result-area').style.display = 'block';
+                    document.getElementById('result-content').innerHTML =
+                        '<div class="text-danger mb-2"><i class="fas fa-times-circle"></i> Error de conexión</div>' +
+                        '<pre style="background:#1e1e1e; color:#ff6b6b; padding:15px; border-radius:5px;">' +
+                        error.message + '</pre>';
+                });
+        }
+
+        // Cargar contratos al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMigrationContracts();
+        });
         // Debug: Check if modal exists on page load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('=== DEBUG: Checking modal existence ===');
@@ -2315,5 +2574,25 @@ $this->params['breadcrumbs'][] = $this->title;
         .modal-footer .btn {
             padding: 8px 20px;
             font-weight: 500;
+        }
+
+        /* Migration card styling */
+        #migration-contrato-select {
+            font-size: 0.9rem;
+        }
+
+        #migration-stats {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .border-warning {
+            border-width: 2px !important;
+        }
+
+        /* Add to existing modal-open rule */
+        body.modal-open {
+            overflow: hidden !important;
+            padding-right: 0 !important;
         }
     </style>

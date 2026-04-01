@@ -92,9 +92,15 @@ class SisSiniestroController extends Controller
         $baremosPorSiniestro = [];
         if (!empty($siniestroIds)) {
             $baremos = (new \yii\db\Query())
-                ->select(['sb.siniestro_id', 'b.*'])
+                ->select([
+                    'sb.siniestro_id',
+                    'b.*',
+                    'a.id as area_id',
+                    'a.nombre as area_nombre'
+                ])
                 ->from(['sb' => 'sis_siniestro_baremo'])
                 ->leftJoin(['b' => 'baremo'], 'sb.baremo_id = b.id')
+                ->leftJoin(['a' => 'area'], 'b.area_id = a.id')  // Add this join
                 ->where(['sb.siniestro_id' => $siniestroIds])
                 ->all();
 
@@ -326,7 +332,9 @@ class SisSiniestroController extends Controller
                         throw new \Exception('Error al guardar los baremos');
                     }
                     $transaction->commit();
-                    Yii::$app->session->setFlash('success', 'Atención creada correctamente.');
+                    // Determine the correct success message based on es_cita value
+                    $successMessage = $model->es_cita == 1 ? 'Cita creada correctamente.' : 'Atención creada correctamente.';
+                    Yii::$app->session->setFlash('success', $successMessage);
                     return $this->redirect(['view', 'id' => $model->id]);
                 } else {
                     throw new \Exception('Error al guardar los datos principales de la atención.');
@@ -334,7 +342,7 @@ class SisSiniestroController extends Controller
             } catch (\Exception $e) {
                 $transaction->rollBack();
                 Yii::$app->session->setFlash('error', $e->getMessage());
-                Yii::error('Error al crear siniestro/cita: ' . $e->getMessage(), __METHOD__);
+                Yii::error('Error al crear Atención/cita: ' . $e->getMessage(), __METHOD__);
             }
         }
 
@@ -347,13 +355,6 @@ class SisSiniestroController extends Controller
         ]);
     }
 
-    /**
-     * Updates an existing SisSiniestro model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param integer $id
-     * @return mixed
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
@@ -361,6 +362,10 @@ class SisSiniestroController extends Controller
 
         // Obtener el modo (cita o siniestro) de la URL o del modelo
         $esCita = (int)Yii::$app->request->get('es_cita', $model->es_cita);
+
+        // Determinar los términos para mensajes dinámicos
+        $termino = $esCita == 1 ? 'Cita' : 'Atención';
+        $terminoLower = strtolower($termino);
 
         // Actualizar el modelo con el valor de es_cita si se proporcionó en la URL
         if (Yii::$app->request->get('es_cita') !== null) {
@@ -385,7 +390,7 @@ class SisSiniestroController extends Controller
 
                 // Si aún no hay baremos, mostrar error
                 if (empty($baremoIds)) {
-                    Yii::$app->session->setFlash('error', 'Debe seleccionar al menos un baremo.');
+                    Yii::$app->session->setFlash('error', 'Debe seleccionar al menos un servicio médico.');
                     return $this->refresh();
                 }
 
@@ -395,7 +400,7 @@ class SisSiniestroController extends Controller
                 if ($model->save(false)) {
                     // Actualizar la relación con los baremos
                     if (!$model->saveBaremos($baremoIds)) {
-                        throw new \Exception('Error al actualizar los baremos');
+                        throw new \Exception('Error al actualizar los servicios médicos');
                     }
 
                     $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
@@ -478,15 +483,21 @@ class SisSiniestroController extends Controller
                     }
 
                     $transaction->commit();
-                    Yii::$app->session->setFlash('success', 'Siniestro actualizado correctamente.');
+
+                    // Dynamic success message
+                    $successMessage = $esCita == 1 ? 'Cita actualizada correctamente.' : 'Atención actualizada correctamente.';
+                    Yii::$app->session->setFlash('success', $successMessage);
                     return $this->redirect(['view', 'id' => $model->id]);
                 } else {
-                    throw new \Exception('Error al guardar los datos principales del siniestro.');
+                    throw new \Exception('Error al guardar los datos principales de la ' . $terminoLower . '.');
                 }
             } catch (\Exception $e) {
                 $transaction->rollBack();
-                Yii::error('Error al actualizar siniestro: ' . $e->getMessage(), __METHOD__);
-                Yii::$app->session->setFlash('error', 'Error al actualizar el siniestro: ' . $e->getMessage());
+                Yii::error('Error al actualizar ' . $terminoLower . ': ' . $e->getMessage(), __METHOD__);
+
+                // Dynamic error message
+                $errorMessage = 'Error al actualizar la ' . $terminoLower . ': ' . $e->getMessage();
+                Yii::$app->session->setFlash('error', $errorMessage);
 
                 // En caso de error, volver a cargar la vista con los datos actuales
                 return $this->render('update', [
@@ -558,9 +569,21 @@ class SisSiniestroController extends Controller
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($id);
+        $esCita = $model->es_cita;
+        $termino = $esCita == 1 ? 'Cita' : 'Atención';
+        $terminoLower = strtolower($termino);
 
-        return $this->redirect(['index']);
+        // Delete the record
+        $model->delete();
+
+        // Set dynamic success message
+        $successMessage = $esCita == 1 ? 'Cita eliminada correctamente.' : 'Atención eliminada correctamente.';
+        Yii::$app->session->setFlash('success', $successMessage);
+
+        // Redirect to index with the correct mode
+        $modo = $esCita == 1 ? 'cita' : 'siniestro';
+        return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => $modo]);
     }
 
     /**

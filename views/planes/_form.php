@@ -11,154 +11,164 @@ use kartik\select2\Select2;
 ?>
 <style>
     /* En tu archivo CSS o en la vista */
-.card {
-    margin-bottom: 20px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
+    .card {
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 
-.card-header {
-    font-weight: bold;
-}
+    .card-header {
+        font-weight: bold;
+    }
 
-.table th {
-    position: sticky;
-    top: 0;
-    background-color: #f8f9fa;
-}
+    .table th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+    }
 
-.alert-warning {
-    background-color: #fff3cd;
-    border-color: #ffeeba;
-}
+    .alert-warning {
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+    }
 </style>
 
 <div class="baremo-form">
     <div class="ms-panel-body">
-    <?php $form = ActiveForm::begin(['id' => 'plan-form']); ?>
+        <?php $form = ActiveForm::begin(['id' => 'plan-form']); ?>
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h3 class="card-title">Información Básica del Plan</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title">Información Básica del Plan</h3>
+                    </div>
+                    <div class="card-body">
+                        <?= $form->field($model, 'nombre')->textInput(['maxlength' => true]) ?>
+
+                        <?= $form->field($model, 'descripcion')->textInput() ?>
+
+                        <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'step' => '0.01']) ?>
+
+                        <?= $form->field($model, 'estatus')->dropDownList([
+                            'Activo' => 'Activo',
+                            'Inactivo' => 'Inactivo'
+                        ], ['prompt' => 'Seleccione...']) ?>
+
+                        <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number']) ?>
+                        <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number']) ?>
+
+
+                        <?= $form->field($model, 'comision')->textInput(['type' => 'number', 'step' => '0.01']) ?>
+                        <?= $form->field($model, 'cobertura')->textInput(['type' => 'number', 'step' => '0.01']) ?>
+
+                    </div>
+                </div>
+
+                <div class="alert alert-info" role="alert">
+                    <h4 class="alert-heading text-primary">
+                        Instrucciones Importantes para Baremos
+                    </h4>
+
+                    <p>
+                        Al configurar los baremos, por favor considere la siguiente lógica de asignación para el sistema:
+                    </p>
+
+                    <hr>
+
+                    <p class="mb-1 fw-bold text-danger">
+                        1. Para Atención Médica (No genera cita):
+                    </p>
+                    <p class="ms-3">
+                        Debe colocar la cantidad en: <span class="badge bg-danger fs-6 p-2">0</span> (Cero).
+                    </p>
+
+                    <p class="mb-1 fw-bold text-success">
+                        2. Para Cita Programada (Genera cita en agenda):
+                    </p>
+                    <p class="ms-3">
+                        Debe colocar la cantidad en: <span class="badge bg-success fs-6 p-2">1</span> o un número mayor.
+                    </p>
+                </div>
+
             </div>
-            <div class="card-body">
-                <?= $form->field($model, 'nombre')->textInput(['maxlength' => true]) ?>
-                
-                <?= $form->field($model, 'descripcion')->textInput() ?>
-                
-                <?= $form->field($model, 'precio')->textInput(['type' => 'number', 'step' => '0.01']) ?>
-                
-                <?= $form->field($model, 'estatus')->dropDownList([
-                    'Activo' => 'Activo', 
-                    'Inactivo' => 'Inactivo'
-                ], ['prompt' => 'Seleccione...']) ?>
-                
-                <?= $form->field($model, 'edad_limite')->textInput(['type' => 'number']) ?>
-                <?= $form->field($model, 'edad_minima')->textInput(['type' => 'number']) ?>
-                
-                
-                <?= $form->field($model, 'comision')->textInput(['type' => 'number', 'step' => '0.01']) ?>
-                <?= $form->field($model, 'cobertura')->textInput(['type' => 'number', 'step' => '0.01']) ?>
 
-            </div>
-        </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h3 class="card-title">Coberturas del Plan</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style=" overflow-y: auto;">
+                        <?php if (!empty($itemsModels)): ?>
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th width="70%"><span class="text-white">Servicio (Baremos)</span></th>
+                                        <!--<th width="15%">% Cobertura</th> -->
+                                        <th width="50%"><span class="text-white">Límite (Veces/Año)</span></th>
+                                        <th width="50%"><span class="text-white">Plazo Espera (Meses/Año)</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($itemsModels as $index => $item): ?>
+                                        <tr>
+                                            <td>
+                                                <?= Html::activeHiddenInput($item, "[$index]baremo_id") ?>
+                                                <?= Html::activeHiddenInput($item, "[$index]nombre_servicio") ?>
+                                                <b>Servicio:</b> <?= $item->baremo->nombre_servicio ?><br>
+                                                <b>Descripcion:</b> <?= $item->baremo->descripcion ?><br>
+                                                <b>Area:</b> <?= $item->baremo->area->nombre ?>
+                                            </td>
+                                            <td>
+                                                <?= $form->field($item, "[$index]cantidad_limite")
+                                                    ->textInput([
+                                                        'type' => 'number',
+                                                        'min' => 0,
+                                                        'style' => 'text-align: center;'
+                                                    ])
+                                                    ->label(false) ?>
 
-        <div class="alert alert-info" role="alert">
-    <h4 class="alert-heading text-primary">
-        Instrucciones Importantes para Baremos
-    </h4>
-    
-    <p>
-        Al configurar los baremos, por favor considere la siguiente lógica de asignación para el sistema:
-    </p>
-
-    <hr>
-    
-    <p class="mb-1 fw-bold text-danger">
-        1. Para Atención Médica (No genera cita):
-    </p>
-    <p class="ms-3">
-        Debe colocar la cantidad en: <span class="badge bg-danger fs-6 p-2">0</span> (Cero).
-    </p>
-
-    <p class="mb-1 fw-bold text-success">
-        2. Para Cita Programada (Genera cita en agenda):
-    </p>
-    <p class="ms-3">
-        Debe colocar la cantidad en: <span class="badge bg-success fs-6 p-2">1</span> o un número mayor.
-    </p>
-</div>
-
-    </div>
-    
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <h3 class="card-title">Coberturas del Plan</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
+                                            </td>
+                                            <td>
+                                                <?= $form->field($item, "[$index]plazo_espera")
+                                                    ->textInput([
+                                                        'type' => 'number',
+                                                        'min' => 0,
+                                                        'max' => 100,
+                                                        'style' => 'text-align: center;' // Centra el texto
+                                                    ])
+                                                    ->label(false) ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php else: ?>
+                            <div class="alert alert-warning">
+                                No se encontraron baremos para esta clínica.
+                                <?= Html::a('Agregar baremos', ['/baremo/index', 'clinica_id' => $clinica->id], [
+                                    'class' => 'alert-link'
+                                ]) ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
-            <div class="card-body" style=" overflow-y: auto;">
-                <?php if (!empty($itemsModels)): ?>
-                    <table class="table table-bordered table-hover">
-                        <thead class="thead-light">
-                            <tr>
-                                <th><span class="text-white">Servicio (Baremos)</span></th>
-                                <!--<th width="15%">% Cobertura</th> -->
-                                <th width="50%"><span class="text-white">Plazo Espera Mes</span></th>
-                                <th width="50%"><span class="text-white">Límite</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($itemsModels as $index => $item): ?>
-                                <tr>
-                                    <td>
-                                        <?= Html::activeHiddenInput($item, "[$index]baremo_id") ?>
-                                        <?= Html::activeHiddenInput($item, "[$index]nombre_servicio") ?>
-                                        <b>Servicio:</b> <?= $item->baremo->nombre_servicio ?><br>
-                                        <b>Descripcion:</b> <?= $item->baremo->descripcion ?><br>
-                                        <b>Area:</b> <?= $item->baremo->area->nombre ?>
-                                    </td>
-                                    <td>
-                                        <?= $form->field($item, "[$index]plazo_espera")
-                                            ->textInput(['type' => 'number', 'min' => 0, 'max' => 100])
-                                            ->label(false) ?>
-                                    </td>
-                                    <td>
-                                        <?= $form->field($item, "[$index]cantidad_limite")
-                                            ->textInput(['type' => 'number', 'min' => 0])
-                                            ->label(false) ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php else: ?>
-                    <div class="alert alert-warning">
-                        No se encontraron baremos para esta clínica. 
-                        <?= Html::a('Agregar baremos', ['/baremo/index', 'clinica_id' => $clinica->id], [
-                            'class' => 'alert-link'
-                        ]) ?>
-                    </div>
-                <?php endif; ?>
-            </div>
         </div>
+
+        <div class="form-group mt-3">
+            <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Plan', ['class' => 'btn btn-success btn-lg']) ?>
+            <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'clinica_id' => $clinica->id], ['class' => 'btn btn-danger btn-lg']) ?>
+        </div>
+
+        <?php ActiveForm::end(); ?>
     </div>
 </div>
-
-<div class="form-group mt-3">
-    <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Plan', ['class' => 'btn btn-success btn-lg']) ?>
-    <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'clinica_id' => $clinica->id], ['class' => 'btn btn-danger btn-lg']) ?>
-</div>
-
-<?php ActiveForm::end(); ?>
-    </div>
-</div>
-<?php 
+<?php
 // En tu vista
 $js = <<<JS
 // Validar que edad mínima < edad límite
@@ -184,4 +194,3 @@ JS;
 $this->registerJs($js);
 
 ?>
-

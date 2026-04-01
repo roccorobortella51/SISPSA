@@ -48,12 +48,286 @@ class CuotaWebController extends Controller
             'generar-adelantadas',
             'preview-adelantadas',
             'get-user-contracts',
-            'search-user'  // ← AÑADIR ESTO
+            'search-user',
+            'migration-check',
+            'migration-preview',
+            'migration-backup',
+            'migration-show-backup',
+            'migration-migrate-contrato',
+            'migration-migrate-all',
+            'migration-rollback',
+            'migration-list-contracts',  // ← AÑADIR ESTO
+            'daily-check',  // ← ADD THIS LINE
         ])) {
             $this->enableCsrfValidation = false;
         }
 
         return parent::beforeAction($action);
+    }
+
+    /**
+     * Lista los contratos que necesitan migración
+     */
+    public function actionMigrationListContracts()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $sql = "
+            SELECT 
+                c.id,
+                c.user_id,
+                c.fecha_ini,
+                c.fecha_ven,
+                c.monto,
+                c.estatus,
+                ud.nombres,
+                ud.apellidos,
+                COUNT(cu.id) as total_cuotas,
+                SUM(CASE WHEN cu.id_pago IS NOT NULL THEN 1 ELSE 0 END) as cuotas_pagadas,
+                SUM(CASE WHEN cu.coverage_start IS NOT NULL THEN 1 ELSE 0 END) as cuotas_migradas
+            FROM contratos c
+            LEFT JOIN user_datos ud ON c.user_id = ud.id
+            LEFT JOIN cuotas cu ON c.id = cu.contrato_id
+            WHERE c.fecha_ini IS NOT NULL 
+              AND c.monto IS NOT NULL
+            GROUP BY c.id, c.user_id, c.fecha_ini, c.fecha_ven, c.monto, c.estatus, ud.nombres, ud.apellidos
+            ORDER BY c.id DESC
+        ";
+
+            $contratos = Yii::$app->db->createCommand($sql)->queryAll();
+
+            return [
+                'success' => true,
+                'contratos' => $contratos
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Verificar estado de contratos
+     */
+    public function actionMigrationCheck($contratoId = null)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            // Construir el comando
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/check";
+            if ($contratoId) {
+                $command .= " " . $contratoId;
+            }
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Verificación completada' : 'Error en verificación',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Preview de migración
+     */
+    public function actionMigrationPreview($contratoId = null)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/preview";
+            if ($contratoId) {
+                $command .= " " . $contratoId;
+            }
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Preview completado' : 'Error en preview',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Crear backup de un contrato
+     */
+    public function actionMigrationBackup($contratoId)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/backup " . $contratoId;
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Backup creado exitosamente' : 'Error creando backup',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Mostrar backup de un contrato
+     */
+    public function actionMigrationShowBackup($contratoId)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/show-backup " . $contratoId;
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Backup mostrado exitosamente' : 'Error mostrando backup',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Migrar un contrato específico (MODO NO INTERACTIVO)
+     */
+    public function actionMigrationMigrateContrato($contratoId)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            // Primero preguntar al usuario con un modal (esto ya se hace en JS)
+            // El comando usa --interactive=0 para responder "yes" automáticamente
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/migrate-contrato " . $contratoId . " --interactive=0";
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Contrato migrado exitosamente' : 'Error migrando contrato',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Migrar todos los contratos (MODO NO INTERACTIVO)
+     */
+    public function actionMigrationMigrateAll()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            // El comando usa --interactive=0 para responder "yes" automáticamente
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/migrate-all --interactive=0";
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Migración masiva completada' : 'Error en migración masiva',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
+    }
+
+    /**
+     * Rollback de un contrato (MODO NO INTERACTIVO)
+     */
+    public function actionMigrationRollback($contratoId)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            // El comando usa --interactive=0 para responder "yes" automáticamente
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota-migration/rollback " . $contratoId . " --interactive=0";
+
+            $output = [];
+            $returnCode = 0;
+            exec($command . " 2>&1", $output, $returnCode);
+
+            return [
+                'success' => $returnCode === 0,
+                'output' => implode("\n", $output),
+                'message' => $returnCode === 0 ? 'Rollback completado' : 'Error en rollback',
+                'returnCode' => $returnCode
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => 'Error ejecutando comando',
+                'returnCode' => -1
+            ];
+        }
     }
 
     public function actionIndex()
@@ -1239,5 +1513,55 @@ class CuotaWebController extends Controller
                 'trace' => $e->getTraceAsString()
             ];
         }
+    }
+    /**
+     * Execute daily check (grace period, suspensions, reactivations)
+     * This is the same as the cron job but can be triggered manually
+     */
+    public function actionDailyCheck()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $output = [];
+            $returnCode = 0;
+
+            // Execute the console command
+            $command = "php " . Yii::getAlias('@app/yii') . " cuota/daily-check";
+
+            // Run the command and capture output
+            exec($command . " 2>&1", $output, $returnCode);
+
+            // Format the output nicely for web display
+            $formattedOutput = implode("\n", $output);
+
+            // Check if the command succeeded
+            $success = ($returnCode === 0);
+
+            return [
+                'success' => $success,
+                'output' => $formattedOutput,
+                'message' => $success ? '✅ Verificación diaria completada exitosamente' : '❌ Error ejecutando verificación diaria',
+                'returnCode' => $returnCode,
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+        } catch (\Exception $e) {
+            Yii::error("Error in actionDailyCheck: " . $e->getMessage());
+
+            return [
+                'success' => false,
+                'output' => "Error: " . $e->getMessage(),
+                'message' => '❌ Error ejecutando el comando',
+                'returnCode' => -1,
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+        }
+    }
+    /**
+     * Displays the Daily Check page with the form
+     */
+    public function actionDailyCheckPage()
+    {
+        return $this->render('daily-check');
     }
 }

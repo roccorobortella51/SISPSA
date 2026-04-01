@@ -17,9 +17,21 @@ use Yii;
  * @property float|null $rate_usd_bs
  * @property float|null $monto_usd
  * @property int|null $id_pago
+ * @property int|null $numero_cuota
+ * @property string|null $coverage_start
+ * @property string|null $coverage_end
  */
 class Cuotas extends \yii\db\ActiveRecord
 {
+    const ESTADO_PENDIENTE = 'pendiente';
+    const ESTADO_PAGADA = 'pagada';
+    const ESTADO_VENCIDA = 'vencida';
+    const ESTADO_ANULADA = 'anulada';
+    const ESTADO_GRACE_PERIOD = 'en_gracias';
+
+    // Grace period configuration (7 days as per CuotaController)
+    const GRACE_PERIOD_DAYS = 7;
+
     /**
      * {@inheritdoc}
      */
@@ -34,13 +46,35 @@ class Cuotas extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['contrato_id', 'fecha_vencimiento', 'monto', 'estatus', 'fecha_pago', 'rate_usd_bs', 'id_pago'], 'default', 'value' => null],
-            [['created_at', 'fecha_vencimiento', 'fecha_pago'], 'safe'],
-            [['contrato_id', 'id_pago'], 'integer'],
+            [['contrato_id', 'fecha_vencimiento', 'monto', 'numero_cuota'], 'required'],
+            [['contrato_id', 'id_pago', 'numero_cuota'], 'default', 'value' => null],
+            [['contrato_id', 'id_pago', 'numero_cuota'], 'integer'],
+            [['created_at', 'fecha_vencimiento', 'fecha_pago', 'coverage_start', 'coverage_end'], 'safe'],
             [['monto', 'rate_usd_bs', 'monto_usd'], 'number'],
             [['monto', 'monto_usd'], 'number', 'numberPattern' => '/^\d+(\.\d{1,2})?$/'], // 2 decimal validation
             [['estatus'], 'string', 'max' => 20],
+            [['numero_cuota'], 'integer', 'min' => 1, 'max' => 12],
+            ['numero_cuota', 'validateUniqueCuota'],
         ];
+    }
+
+    /**
+     * Ensure each cuota number is unique per contract
+     */
+    public function validateUniqueCuota($attribute, $params)
+    {
+        if ($this->isNewRecord) {
+            $exists = self::find()
+                ->where([
+                    'contrato_id' => $this->contrato_id,
+                    'numero_cuota' => $this->numero_cuota
+                ])
+                ->exists();
+
+            if ($exists) {
+                $this->addError($attribute, "La cuota #{$this->numero_cuota} ya existe para este contrato.");
+            }
+        }
     }
 
     /**
@@ -77,6 +111,9 @@ class Cuotas extends \yii\db\ActiveRecord
             'rate_usd_bs' => 'Rate Usd Bs',
             'monto_usd' => 'Monto USD',
             'id_pago' => 'ID Pago',
+            'numero_cuota' => 'Número de Cuota',
+            'coverage_start' => 'Inicio de Cobertura',
+            'coverage_end' => 'Fin de Cobertura',
         ];
     }
 
@@ -86,6 +123,300 @@ class Cuotas extends \yii\db\ActiveRecord
     public function getContrato()
     {
         return $this->hasOne(Contratos::class, ['id' => 'contrato_id']);
+    }
+
+    /**
+     * Get payment associated with this cuota
+     */
+    public function getPago()
+    {
+        return $this->hasOne(Pagos::class, ['id' => 'id_pago']);
+    }
+
+    /**
+     * Generate 12 cuotas based on monthly anniversary dates
+     * 
+     * @param int $contrato_id
+     * @param string $fecha_inicio Contract start date (YYYY-MM-DD)
+     * @param float $monto Monthly amount
+     * @return array ['success' => bool, 'cuotas' => array, 'error' => string]
+     */
+    public static function generateCuotasAnniversaryBased($contrato_id, $fecha_inicio, $monto)
+    {
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            $cuotas = [];
+            $startDate = new \DateTime($fecha_inicio);
+            $startDay = (int)$startDate->format('d');
+
+            // Calculate contract end date: 1 year from start minus 1 day
+            $contractEndDate = clone $startDate;
+            $contractEndDate->modify('+1 year');
+            $contractEndDate->modify('-1 day');
+
+            // Update the contract with the correct end date
+            $contrato = Contratos::findOne($contrato_id);
+            if ($contrato) {
+                $contrato->fecha_ven = $contractEndDate->format('Y-m-d');
+                $contrato->save(false);
+                Yii::info("Contrato #{$contrato_id} actualizado con fecha fin: {$contrato->fecha_ven}", 'cuotas');
+            }
+
+            // Log the calculation
+            Yii::info("Contract dates - Start: {$fecha_inicio}, End: {$contractEndDate->format('Y-m-d')}, Total days: " . $startDate->diff($contractEndDate)->days + 1, 'cuotas');
+
+            // Generate 12 cuotas
+            for ($i = 1; $i <= 12; $i++) {
+                $cuota = new self();
+                $cuota->contrato_id = $contrato_id;
+                $cuota->numero_cuota = $i;
+                $cuota->monto = $monto;
+                $cuota->monto_usd = $monto;
+                $cuota->estatus = self::ESTADO_PENDIENTE;
+                $cuota->rate_usd_bs = 1; // Default rate
+
+                // Calculate due date: monthly anniversary
+                $dueDate = clone $startDate;
+                $dueDate->modify('+' . $i . ' months');
+
+                // Handle month-end dates (e.g., Jan 31 -> Feb 28/29)
+                if ($dueDate->format('d') != $startDay) {
+                    // Day overflow occurred, use last day of the month
+                    $dueDate->modify('last day of this month');
+                }
+
+                $cuota->fecha_vencimiento = $dueDate->format('Y-m-d');
+
+                // Calculate coverage period
+                $coverageStart = clone $startDate;
+                if ($i > 1) {
+                    $coverageStart->modify('+' . ($i - 1) . ' months');
+                    // Handle month-end for coverage start as well
+                    if ($coverageStart->format('d') != $startDay) {
+                        $coverageStart->modify('last day of this month');
+                    }
+                }
+
+                $coverageEnd = clone $dueDate;
+                $coverageEnd->modify('-1 day');
+
+                $cuota->coverage_start = $coverageStart->format('Y-m-d');
+                $cuota->coverage_end = $coverageEnd->format('Y-m-d');
+
+                if ($cuota->save()) {
+                    $cuotas[] = $cuota;
+                    Yii::info("Cuota #{$i} generada: Vence {$cuota->fecha_vencimiento}, Cubre {$cuota->coverage_start} al {$cuota->coverage_end}", 'cuotas');
+                } else {
+                    throw new \Exception('Error guardando cuota #' . $i . ': ' . json_encode($cuota->getErrors()));
+                }
+            }
+
+            $transaction->commit();
+
+            Yii::info("✅ Generadas 12 cuotas con vencimiento en aniversario para contrato #{$contrato_id}", 'cuotas');
+
+            return [
+                'success' => true,
+                'cuotas' => $cuotas,
+                'message' => '12 cuotas generadas exitosamente con vencimiento en fecha aniversario'
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::error("❌ Error generando cuotas: " . $e->getMessage(), 'cuotas');
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate 12 cuotas with due dates on the same day as contract start
+     * FIRST PAYMENT IS DUE ON THE START DATE ITSELF
+     * 
+     * @param int $contrato_id
+     * @param string $fecha_inicio Contract start date (YYYY-MM-DD)
+     * @param float $monto Monthly amount
+     * @return array ['success' => bool, 'cuotas' => array, 'error' => string]
+     */
+    public static function generateCuotasSimple($contrato_id, $fecha_inicio, $monto)
+    {
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            $cuotas = [];
+            $startDate = new \DateTime($fecha_inicio);
+            $startDay = (int)$startDate->format('d');
+
+            // Calculate contract end date: 1 year from start minus 1 day
+            $contractEndDate = clone $startDate;
+            $contractEndDate->modify('+1 year');
+            $contractEndDate->modify('-1 day');
+
+            // Update the contract with the correct end date
+            $contrato = Contratos::findOne($contrato_id);
+            if ($contrato) {
+                $contrato->fecha_ven = $contractEndDate->format('Y-m-d');
+                $contrato->save(false);
+                Yii::info("Contrato #{$contrato_id} actualizado con fecha fin: {$contrato->fecha_ven}", 'cuotas');
+            }
+
+            // Generate 12 cuotas
+            for ($i = 1; $i <= 12; $i++) {
+                $cuota = new self();
+                $cuota->contrato_id = $contrato_id;
+                $cuota->numero_cuota = $i;
+                $cuota->monto = $monto;
+                $cuota->monto_usd = $monto;
+                $cuota->estatus = self::ESTADO_PENDIENTE;
+                $cuota->rate_usd_bs = 1; // Default rate
+
+                // Calculate due date: start date + (i-1) months
+                $dueDate = clone $startDate;
+                $dueDate->modify('+' . ($i - 1) . ' months');
+
+                // Handle month-end dates (e.g., Jan 31 -> Feb 28)
+                if ($dueDate->format('d') != $startDay) {
+                    // Day overflow occurred, use last day of the month
+                    $dueDate->modify('last day of this month');
+                }
+
+                $cuota->fecha_vencimiento = $dueDate->format('Y-m-d');
+
+                // Calculate coverage period
+                $coverageStart = clone $startDate;
+                if ($i > 1) {
+                    $coverageStart->modify('+' . ($i - 1) . ' months');
+                    // Handle month-end for coverage start as well
+                    if ($coverageStart->format('d') != $startDay) {
+                        $coverageStart->modify('last day of this month');
+                    }
+                }
+
+                $coverageEnd = clone $dueDate;
+                $coverageEnd->modify('+1 month');
+                $coverageEnd->modify('-1 day');
+
+                $cuota->coverage_start = $coverageStart->format('Y-m-d');
+                $cuota->coverage_end = $coverageEnd->format('Y-m-d');
+
+                if ($cuota->save()) {
+                    $cuotas[] = $cuota;
+                    Yii::info("Cuota #{$i} generada: Vence {$cuota->fecha_vencimiento}, Cubre {$cuota->coverage_start} al {$cuota->coverage_end}", 'cuotas');
+                } else {
+                    throw new \Exception('Error guardando cuota #' . $i . ': ' . json_encode($cuota->getErrors()));
+                }
+            }
+
+            $transaction->commit();
+
+            Yii::info("✅ Generadas 12 cuotas simples para contrato #{$contrato_id}", 'cuotas');
+
+            return [
+                'success' => true,
+                'cuotas' => $cuotas,
+                'message' => '12 cuotas generadas exitosamente con vencimiento en la misma fecha de inicio'
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::error("❌ Error generando cuotas: " . $e->getMessage(), 'cuotas');
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    /**
+     * For backward compatibility, keep the old method name but point to the new one
+     */
+    public static function generate12Cuotas($contrato_id, $fecha_inicio, $monto)
+    {
+        return self::generateCuotasAnniversaryBased($contrato_id, $fecha_inicio, $monto);
+    }
+
+    /**
+     * Check cuota statuses and apply grace period logic
+     * This should be called by a daily cron job
+     * 
+     * @return array Statistics of updated cuotas
+     */
+    public static function checkCuotasStatus()
+    {
+        $today = date('Y-m-d');
+        $gracePeriodEnd = date('Y-m-d', strtotime('-' . self::GRACE_PERIOD_DAYS . ' days'));
+
+        Yii::info("🔍 Verificando estado de cuotas: Hoy={$today}, Fin gracias={$gracePeriodEnd}", 'cuotas');
+
+        // 1. Move from PENDIENTE to GRACE_PERIOD when past due date (within grace period)
+        $toGrace = self::updateAll(
+            ['estatus' => self::ESTADO_GRACE_PERIOD],
+            [
+                'and',
+                ['estatus' => self::ESTADO_PENDIENTE],
+                ['<', 'fecha_vencimiento', $today],
+                ['>=', 'fecha_vencimiento', $gracePeriodEnd]
+            ]
+        );
+
+        // 2. Move from GRACE_PERIOD to VENCIDA after grace period ends
+        $toVencidaFromGrace = self::updateAll(
+            ['estatus' => self::ESTADO_VENCIDA],
+            [
+                'and',
+                ['estatus' => self::ESTADO_GRACE_PERIOD],
+                ['<', 'fecha_vencimiento', $gracePeriodEnd]
+            ]
+        );
+
+        // 3. Directly from PENDIENTE to VENCIDA (if we missed grace period check)
+        $toVencidaDirect = self::updateAll(
+            ['estatus' => self::ESTADO_VENCIDA],
+            [
+                'and',
+                ['estatus' => self::ESTADO_PENDIENTE],
+                ['<', 'fecha_vencimiento', $gracePeriodEnd]
+            ]
+        );
+
+        return [
+            'to_grace' => $toGrace,
+            'to_vencida_from_grace' => $toVencidaFromGrace,
+            'to_vencida_direct' => $toVencidaDirect,
+            'total' => $toGrace + $toVencidaFromGrace + $toVencidaDirect
+        ];
+    }
+
+    /**
+     * Check if cuota is in grace period
+     */
+    public function isInGracePeriod()
+    {
+        if ($this->estatus != self::ESTADO_PENDIENTE) {
+            return false;
+        }
+
+        $today = date('Y-m-d');
+        $graceEnd = date('Y-m-d', strtotime($this->fecha_vencimiento . ' + ' . self::GRACE_PERIOD_DAYS . ' days'));
+
+        return ($today > $this->fecha_vencimiento && $today <= $graceEnd);
+    }
+
+    /**
+     * Get days remaining in grace period
+     */
+    public function getGraceDaysRemaining()
+    {
+        if (!$this->isInGracePeriod()) {
+            return 0;
+        }
+
+        $today = new \DateTime();
+        $graceEnd = new \DateTime($this->fecha_vencimiento);
+        $graceEnd->modify('+' . self::GRACE_PERIOD_DAYS . ' days');
+
+        $interval = $today->diff($graceEnd);
+        return $interval->days;
     }
 
     /**
@@ -117,7 +448,11 @@ class Cuotas extends \yii\db\ActiveRecord
         // Find pending cuotas only from these active contracts
         $cuotas = self::find()
             ->where(['IN', 'contrato_id', $contratoIds])
-            ->andWhere(['estatus' => 'pendiente'])
+            ->andWhere(['in', 'estatus', [
+                'pendiente',     // Future payments
+                'en_gracias',    // In grace period
+                'vencida'        // OVERDUE - MUST SHOW!
+            ]])
             ->orderBy(['fecha_vencimiento' => SORT_ASC])
             ->all();
 
@@ -163,7 +498,7 @@ class Cuotas extends \yii\db\ActiveRecord
     }
 
     /**
-     * Preview advance cuotas without saving - CORREGIDO: Cambiado de nombre a previewCuotasAdelantadas
+     * Preview advance cuotas without saving
      */
     public static function previewCuotasAdelantadas($contrato_id, $num_cuotas, $fecha_inicio = null, $meses = '', $modo = 'cantidad', $fecha_limite = null)
     {
@@ -181,7 +516,6 @@ class Cuotas extends \yii\db\ActiveRecord
             if (!$startDate && $lastCuota) {
                 $startDate = $lastCuota->fecha_vencimiento;
             } elseif (!$startDate) {
-                // CORREGIDO: Cambiar fecha_inicio por fecha_ini
                 $startDate = $contrato->fecha_ini ?: date('Y-m-d');
             }
 
@@ -221,7 +555,7 @@ class Cuotas extends \yii\db\ActiveRecord
                     'id' => $contrato->id,
                     'nrocontrato' => $contrato->nrocontrato,
                     'user_id' => $contrato->user_id,
-                    'fecha_ini' => $contrato->fecha_ini // Añadir esto para referencia
+                    'fecha_ini' => $contrato->fecha_ini
                 ],
                 'last_cuota' => $lastCuota ? [
                     'fecha_vencimiento' => $lastCuota->fecha_vencimiento,
@@ -320,9 +654,7 @@ class Cuotas extends \yii\db\ActiveRecord
                 }
             }
 
-            // ==============================================
-            // VALIDACIÓN DE LÍMITE DE 1 AÑO - INSERTA ESTO
-            // ==============================================
+            // VALIDACIÓN DE LÍMITE DE 1 AÑO
             if ($fecha_limite) {
                 $fechaLimiteObj = new \DateTime($fecha_limite);
                 foreach ($cuotas_a_generar as $cuota) {
@@ -337,9 +669,6 @@ class Cuotas extends \yii\db\ActiveRecord
                     }
                 }
             }
-            // ==============================================
-            // FIN DE LA VALIDACIÓN
-            // ==============================================
 
             // Generar las cuotas válidas
             foreach ($cuotas_a_generar as $cuotaData) {
@@ -391,5 +720,155 @@ class Cuotas extends \yii\db\ActiveRecord
                 'error' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Get status badge HTML
+     */
+    public function getStatusBadge()
+    {
+        $badges = [
+            self::ESTADO_PENDIENTE => '<span class="badge badge-warning">Pendiente</span>',
+            self::ESTADO_PAGADA => '<span class="badge badge-success">Pagada</span>',
+            self::ESTADO_VENCIDA => '<span class="badge badge-danger">Vencida</span>',
+            self::ESTADO_ANULADA => '<span class="badge badge-secondary">Anulada</span>',
+            self::ESTADO_GRACE_PERIOD => '<span class="badge badge-info">En Gracias (' . self::GRACE_PERIOD_DAYS . ' días)</span>',
+        ];
+
+        return $badges[$this->estatus] ?? '<span class="badge badge-light">' . $this->estatus . '</span>';
+    }
+
+    /**
+     * Get next pending cuota for a contract
+     * 
+     * @param int $contrato_id
+     * @return Cuotas|null
+     */
+    public static function getNextPending($contrato_id)
+    {
+        return self::find()
+            ->where(['contrato_id' => $contrato_id])
+            ->andWhere(['in', 'estatus', [self::ESTADO_PENDIENTE, self::ESTADO_GRACE_PERIOD]])
+            ->orderBy(['numero_cuota' => SORT_ASC])
+            ->one();
+    }
+
+    /**
+     * Get payment summary for a contract
+     * 
+     * @param int $contrato_id
+     * @return array
+     */
+    public static function getPaymentSummary($contrato_id)
+    {
+        $cuotas = self::find()
+            ->where(['contrato_id' => $contrato_id])
+            ->orderBy(['numero_cuota' => SORT_ASC])
+            ->all();
+
+        $total = count($cuotas);
+        $pagadas = 0;
+        $pendientes = 0;
+        $vencidas = 0;
+        $enGracias = 0;
+        $montoTotal = 0;
+        $montoPagado = 0;
+
+        foreach ($cuotas as $cuota) {
+            $montoTotal += $cuota->monto;
+
+            switch ($cuota->estatus) {
+                case self::ESTADO_PAGADA:
+                    $pagadas++;
+                    $montoPagado += $cuota->monto;
+                    break;
+                case self::ESTADO_PENDIENTE:
+                    $pendientes++;
+                    break;
+                case self::ESTADO_GRACE_PERIOD:
+                    $enGracias++;
+                    break;
+                case self::ESTADO_VENCIDA:
+                    $vencidas++;
+                    break;
+            }
+        }
+
+        return [
+            'total_cuotas' => $total,
+            'pagadas' => $pagadas,
+            'pendientes' => $pendientes,
+            'en_gracias' => $enGracias,
+            'vencidas' => $vencidas,
+            'monto_total' => $montoTotal,
+            'monto_pagado' => $montoPagado,
+            'saldo_pendiente' => $montoTotal - $montoPagado,
+            'porcentaje_pagado' => $montoTotal > 0 ? round(($montoPagado / $montoTotal) * 100, 1) : 0
+        ];
+    }
+
+    /**
+     * Mark cuota as paid when payment is recorded
+     * 
+     * @param int $pago_id
+     * @return bool
+     */
+    public function markAsPaid($pago_id)
+    {
+        $this->id_pago = $pago_id;
+        $this->fecha_pago = date('Y-m-d H:i:s');
+        $this->estatus = self::ESTADO_PAGADA;
+
+        if ($this->save()) {
+            Yii::info("✅ Cuota #{$this->numero_cuota} (ID: {$this->id}) marcada como pagada", 'cuotas');
+
+            // Check if this was the last pending cuota to update contract status
+            $this->checkAndUpdateContractStatus();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if this was the last pending cuota and update contract status if needed
+     */
+    private function checkAndUpdateContractStatus()
+    {
+        $pendingCuotas = self::find()
+            ->where(['contrato_id' => $this->contrato_id])
+            ->andWhere(['in', 'estatus', [self::ESTADO_PENDIENTE, self::ESTADO_GRACE_PERIOD, self::ESTADO_VENCIDA]])
+            ->count();
+
+        if ($pendingCuotas == 0 && $this->contrato) {
+            // All cuotas are paid - contract is fully paid
+            Yii::info("💰 Todas las cuotas pagadas para contrato #{$this->contrato_id}", 'cuotas');
+
+            // Update contract status to Activo if it was suspended
+            if ($this->contrato->estatus === 'suspendido') {
+                $this->contrato->estatus = 'Activo';
+                $this->contrato->save(false);
+
+                // Update user solvent status
+                if ($this->contrato->user) {
+                    $this->contrato->user->estatus_solvente = 'Si';
+                    $this->contrato->user->save(false);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get formatted coverage period for display
+     */
+    public function getCoveragePeriodText()
+    {
+        if ($this->coverage_start && $this->coverage_end) {
+            $start = Yii::$app->formatter->asDate($this->coverage_start, 'dd/MM/yyyy');
+            $end = Yii::$app->formatter->asDate($this->coverage_end, 'dd/MM/yyyy');
+            return "Cubre: {$start} al {$end}";
+        }
+        return '';
     }
 }

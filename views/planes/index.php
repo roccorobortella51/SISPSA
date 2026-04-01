@@ -32,6 +32,7 @@ if (!isset($clinica)) {
 
 $rol = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'COORDINADOR-CLINICA');
+$isReadOnly = ($rol == 'COORDINADOR-CLINICA' || $rol == 'Asesor');
 
 if ($permisos == true) {
     $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
@@ -76,7 +77,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
     <div class="header-section d-flex align-items-center justify-content-between">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group d-flex align-items-center flex-grow-1">
-            <?php if ($permisos) : ?>
+            <?php if ($permisos && !$isReadOnly) : ?>
                 <?= Html::a(
                     '<i class="fas fa-plus mr-2"></i> AGREGAR PLAN',
                     ['create', 'clinica_id' => $clinica->id],
@@ -115,138 +116,139 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
         </div>
     </div>
 
-    <!-- SIMPLE, BULLETPROOF MODAL -->
-    <div id="importModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px;">
-                <h3 style="margin: 0; color: #333; font-size: 22px;">
-                    <i class="fas fa-file-excel" style="color: #28a745; margin-right: 10px;"></i>
-                    Importar Planes desde Excel
-                </h3>
-                <button type="button" onclick="hideImportModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
-            </div>
-
-            <?php $form = ActiveForm::begin([
-                'id' => 'import-form',
-                'action' => ['planes/import'],
-                'options' => ['enctype' => 'multipart/form-data'],
-            ]); ?>
-
-            <div style="margin-bottom: 25px;">
-                <!-- Instructions Box -->
-                <div style="background: #e8f4fd; border-left: 4px solid #2196F3; padding: 18px; border-radius: 4px; margin-bottom: 25px; font-size: 14px; line-height: 1.6;">
-                    <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-                        <i class="fas fa-info-circle" style="color: #2196F3; font-size: 18px; margin-right: 10px; margin-top: 2px;"></i>
-                        <div>
-                            <strong style="color: #0c5460; font-size: 15px;">Instrucciones importantes:</strong>
-                        </div>
-                    </div>
-                    <div style="margin-left: 28px;">
-                        <div style="margin-bottom: 6px;">✓ El archivo Excel debe tener una hoja principal llamada <strong>"Plans"</strong>.</div>
-                        <div style="margin-bottom: 6px;">✓ Para cada plan listado en la hoja "Plans" (ej. "Bronce"), debe existir una hoja con el <strong>mismo nombre exacto</strong> ("Bronce") que contenga sus servicios.</div>
-                        <div style="margin-bottom: 6px;">✓ Asegúrese de que el formato de datos sea correcto.</div>
-                        <div>✓ El archivo debe estar en formato .xlsx o .xls</div>
-                    </div>
+    <!-- IMPORT MODAL (Only shown for users with write permissions) -->
+    <?php if (!$isReadOnly): ?>
+        <div id="importModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px;">
+                    <h3 style="margin: 0; color: #333; font-size: 22px;">
+                        <i class="fas fa-file-excel" style="color: #28a745; margin-right: 10px;"></i>
+                        Importar Planes desde Excel
+                    </h3>
+                    <button type="button" onclick="hideImportModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
                 </div>
 
-                <!-- File Selection Section -->
+                <?php $form = ActiveForm::begin([
+                    'id' => 'import-form',
+                    'action' => ['planes/import'],
+                    'options' => ['enctype' => 'multipart/form-data'],
+                ]); ?>
+
                 <div style="margin-bottom: 25px;">
-                    <label style="display: block; font-weight: 600; color: #495057; margin-bottom: 12px; font-size: 16px;">
-                        <i class="fas fa-file-upload" style="color: #6c757d; margin-right: 8px;"></i>
-                        Seleccionar archivo Excel
-                    </label>
-
-                    <!-- File Input with Custom Styling -->
-                    <div style="border: 2px dashed #ced4da; border-radius: 6px; padding: 25px; text-align: center; background: #f8f9fa; margin-bottom: 12px; transition: all 0.3s;">
-                        <div style="margin-bottom: 15px;">
-                            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #6c757d; margin-bottom: 10px;"></i>
+                    <!-- Instructions Box -->
+                    <div style="background: #e8f4fd; border-left: 4px solid #2196F3; padding: 18px; border-radius: 4px; margin-bottom: 25px; font-size: 14px; line-height: 1.6;">
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                            <i class="fas fa-info-circle" style="color: #2196F3; font-size: 18px; margin-right: 10px; margin-top: 2px;"></i>
+                            <div>
+                                <strong style="color: #0c5460; font-size: 15px;">Instrucciones importantes:</strong>
+                            </div>
                         </div>
+                        <div style="margin-left: 28px;">
+                            <div style="margin-bottom: 6px;">✓ El archivo Excel debe tener una hoja principal llamada <strong>"Plans"</strong>.</div>
+                            <div style="margin-bottom: 6px;">✓ Para cada plan listado en la hoja "Plans" (ej. "Bronce"), debe existir una hoja con el <strong>mismo nombre exacto</strong> ("Bronce") que contenga sus servicios.</div>
+                            <div style="margin-bottom: 6px;">✓ Asegúrese de que el formato de datos sea correcto.</div>
+                            <div>✓ El archivo debe estar en formato .xlsx o .xls</div>
+                        </div>
+                    </div>
 
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: inline-block; position: relative; overflow: hidden;">
-                                <button type="button" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: 500; font-size: 15px; cursor: pointer; transition: background 0.3s;"
-                                    onmouseover="this.style.background='#218838'"
-                                    onmouseout="this.style.background='#28a745'">
-                                    <i class="fas fa-folder-open mr-2"></i> Buscar archivo
+                    <!-- File Selection Section -->
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; font-weight: 600; color: #495057; margin-bottom: 12px; font-size: 16px;">
+                            <i class="fas fa-file-upload" style="color: #6c757d; margin-right: 8px;"></i>
+                            Seleccionar archivo Excel
+                        </label>
+
+                        <div style="border: 2px dashed #ced4da; border-radius: 6px; padding: 25px; text-align: center; background: #f8f9fa; margin-bottom: 12px; transition: all 0.3s;">
+                            <div style="margin-bottom: 15px;">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #6c757d; margin-bottom: 10px;"></i>
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <div style="display: inline-block; position: relative; overflow: hidden;">
+                                    <button type="button" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: 500; font-size: 15px; cursor: pointer; transition: background 0.3s;"
+                                        onmouseover="this.style.background='#218838'"
+                                        onmouseout="this.style.background='#28a745'">
+                                        <i class="fas fa-folder-open mr-2"></i> Buscar archivo
+                                    </button>
+                                    <?= Html::fileInput('excelFile', null, [
+                                        'class' => 'form-control',
+                                        'accept' => '.xlsx,.xls',
+                                        'required' => true,
+                                        'id' => 'excel-file',
+                                        'style' => 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;'
+                                    ]) ?>
+                                </div>
+                            </div>
+
+                            <div style="color: #6c757d; font-size: 14px; margin-bottom: 5px;">
+                                Arrastra y suelta tu archivo aquí o haz clic para seleccionarlo
+                            </div>
+
+                            <div id="selected-file-name" style="display: none; margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 4px; font-size: 14px;">
+                                <i class="fas fa-file-excel text-success mr-2"></i>
+                                <span id="file-name-text"></span>
+                                <button type="button" onclick="clearFileSelection()" style="background: none; border: none; color: #dc3545; margin-left: 10px; cursor: pointer;">
+                                    <i class="fas fa-times"></i>
                                 </button>
-                                <?= Html::fileInput('excelFile', null, [
-                                    'class' => 'form-control',
-                                    'accept' => '.xlsx,.xls',
-                                    'required' => true,
-                                    'id' => 'excel-file',
-                                    'style' => 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;'
-                                ]) ?>
                             </div>
                         </div>
 
-                        <div style="color: #6c757d; font-size: 14px; margin-bottom: 5px;">
-                            Arrastra y suelta tu archivo aquí o haz clic para seleccionarlo
-                        </div>
-
-                        <div id="selected-file-name" style="display: none; margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 4px; font-size: 14px;">
-                            <i class="fas fa-file-excel text-success mr-2"></i>
-                            <span id="file-name-text"></span>
-                            <button type="button" onclick="clearFileSelection()" style="background: none; border: none; color: #dc3545; margin-left: 10px; cursor: pointer;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- File Info -->
-                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 12px 15px; font-size: 13px; color: #6c757d;">
-                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                            <i class="fas fa-check-circle text-success mr-2"></i>
-                            <span>Formatos soportados: <strong>.xlsx, .xls</strong></span>
-                        </div>
-                        <div style="display: flex; align-items: center;">
-                            <i class="fas fa-database text-info mr-2"></i>
-                            <span>Tamaño máximo permitido: <strong>10MB</strong></span>
+                        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 12px 15px; font-size: 13px; color: #6c757d;">
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <i class="fas fa-check-circle text-success mr-2"></i>
+                                <span>Formatos soportados: <strong>.xlsx, .xls</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <i class="fas fa-database text-info mr-2"></i>
+                                <span>Tamaño máximo permitido: <strong>10MB</strong></span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <?= Html::hiddenInput('clinica_id', $clinica->id) ?>
-                </div>
-
-                <!-- Enhanced Progress Section -->
-                <div class="import-progress" style="display: none; margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;">
-                    <div style="margin-bottom: 20px;">
-                        <div style="height: 25px; background: #e9ecef; border-radius: 12px; overflow: hidden; position: relative;">
-                            <div class="progress-bar" style="height: 100%; background: linear-gradient(90deg, #dc3545, #ffc107, #28a745); width: 0%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.5s ease-in-out; font-size: 12px;">0%</div>
-                        </div>
-                    </div>
                     <div>
-                        <div class="progress-text" style="text-align: center; font-weight: 600; color: #495057; margin-bottom: 10px; font-size: 16px;">Preparando importación...</div>
-                        <div style="font-size: 13px; color: #6c757d; text-align: center; line-height: 1.5;">
-                            <div id="progress-details-text">Esperando archivo...</div>
+                        <?= Html::hiddenInput('clinica_id', $clinica->id) ?>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div class="import-progress" style="display: none; margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;">
+                        <div style="margin-bottom: 20px;">
+                            <div style="height: 25px; background: #e9ecef; border-radius: 12px; overflow: hidden; position: relative;">
+                                <div class="progress-bar" style="height: 100%; background: linear-gradient(90deg, #dc3545, #ffc107, #28a745); width: 0%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.5s ease-in-out; font-size: 12px;">0%</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-text" style="text-align: center; font-weight: 600; color: #495057; margin-bottom: 10px; font-size: 16px;">Preparando importación...</div>
+                            <div style="font-size: 13px; color: #6c757d; text-align: center; line-height: 1.5;">
+                                <div id="progress-details-text">Esperando archivo...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Footer Buttons -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-                <button type="button" onclick="hideImportModal()"
-                    style="padding: 10px 25px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 15px; transition: background 0.3s;"
-                    onmouseover="this.style.background='#5a6268'"
-                    onmouseout="this.style.background='#6c757d'">
-                    <i class="fas fa-times mr-2"></i> Cancelar
-                </button>
-                <?= Html::submitButton('<i class="fas fa-upload mr-2"></i> Iniciar Importación', [
-                    'class' => 'btn btn-success',
-                    'id' => 'submit-import',
-                    'style' => 'padding: 10px 25px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 15px; transition: background 0.3s;'
-                ]) ?>
+                <!-- Footer Buttons -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                    <button type="button" onclick="hideImportModal()"
+                        style="padding: 10px 25px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 15px; transition: background 0.3s;"
+                        onmouseover="this.style.background='#5a6268'"
+                        onmouseout="this.style.background='#6c757d'">
+                        <i class="fas fa-times mr-2"></i> Cancelar
+                    </button>
+                    <?= Html::submitButton('<i class="fas fa-upload mr-2"></i> Iniciar Importación', [
+                        'class' => 'btn btn-success',
+                        'id' => 'submit-import',
+                        'style' => 'padding: 10px 25px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 15px; transition: background 0.3s;'
+                    ]) ?>
+                </div>
+                <?php ActiveForm::end(); ?>
             </div>
-            <?php ActiveForm::end(); ?>
         </div>
-    </div>
+    <?php endif; ?>
 
     <div class="ms-panel ms-panel-fh border-indigo">
         <div class="ms-panel-header">
-            <h3 class="section-title text-start" style="text-align:left;">
-                <i class="fas fa-list-alt mr-3 text-indigo-600"></i> Listado de Planes de <?= Html::encode($clinica->nombre) ?>
+            <h3 class="section-title text-start" style="text-align:left; color: #ffffff !important;">
+                <i class="fas fa-list-alt mr-3" style="color: #ffffff !important; display: inline-block;"></i>
+                Listado de Planes de <?= Html::encode($clinica->nombre) ?>
             </h3>
         </div>
         <div class="ms-panel-body">
@@ -319,65 +321,60 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                             },
                             'headerOptions' => ['class' => 'text-left header-link'],
                         ],
-                        // NEW COLUMN: Services Included
+                        // UNIFIED SERVICES COLUMN - Clean and Simple
                         [
-                            'label' => 'Servicios Incluidos',
+                            'label' => 'Servicios',
                             'format' => 'raw',
-                            'headerOptions' => ['class' => 'text-center', 'style' => 'color: white!important;'],
-                            'contentOptions' => ['class' => 'text-center'],
+                            'headerOptions' => [
+                                'class' => 'text-center',
+                                'style' => 'color: white!important; min-width: 180px;'
+                            ],
+                            'contentOptions' => ['class' => 'text-center', 'style' => 'padding: 8px !important;'],
                             'value' => function ($model) use ($clinica) {
-                                // Count services included in this plan
+                                // Get counts
                                 $includedCount = \app\models\PlanesItemsCobertura::find()
                                     ->where(['plan_id' => $model->id])
                                     ->count();
 
-                                // Create a badge with the count
-                                $badgeClass = $includedCount > 0 ? 'badge-success' : 'badge-warning';
-                                $badge = '<span class="badge ' . $badgeClass . ' badge-pill" style="font-size: 12px; padding: 5px 10px;">' . $includedCount . '</span>';
-
-                                // Always link to view page to see/manage services
-                                return Html::a($badge, ['view', 'id' => $model->id, 'clinica_id' => $clinica->id], [
-                                    'title' => 'Ver y gestionar servicios del plan',
-                                    'style' => 'text-decoration: none;',
-                                    'data-toggle' => 'tooltip',
-                                    'data-placement' => 'top'
-                                ]);
-                            },
-                            'filter' => false,
-                            'enableSorting' => false,
-                        ],
-                        // NEW COLUMN: Available Services
-                        [
-                            'label' => 'Servicios Disponibles',
-                            'format' => 'raw',
-                            'headerOptions' => ['class' => 'text-center', 'style' => 'color: white!important;'],
-                            'contentOptions' => ['class' => 'text-center'],
-                            'value' => function ($model) use ($clinica) {
-                                // Count total active baremos for this clinic
                                 $totalBaremos = \app\models\Baremo::find()
                                     ->where(['clinica_id' => $model->clinica_id, 'estatus' => 'Activo'])
                                     ->count();
 
-                                // Count services already included
-                                $includedCount = \app\models\PlanesItemsCobertura::find()
-                                    ->where(['plan_id' => $model->id])
-                                    ->count();
+                                // Calculate percentage
+                                $percentage = $totalBaremos > 0 ? round(($includedCount / $totalBaremos) * 100) : 0;
 
-                                // Calculate available services (total - included)
-                                $availableCount = $totalBaremos - $includedCount;
+                                // Determine progress bar color based on completion
+                                if ($percentage == 100) {
+                                    $progressColor = '#28a745';
+                                } elseif ($percentage >= 50) {
+                                    $progressColor = '#17a2b8';
+                                } elseif ($percentage > 0) {
+                                    $progressColor = '#ffc107';
+                                } else {
+                                    $progressColor = '#dc3545';
+                                }
 
-                                // Create badge - always positive or zero
-                                $availableCount = max(0, $availableCount);
-                                $badgeClass = $availableCount > 0 ? 'badge-info' : 'badge-secondary';
-                                $badge = '<span class="badge ' . $badgeClass . ' badge-pill" style="font-size: 12px; padding: 5px 10px;">' . $availableCount . '</span>';
+                                $html = <<<HTML
+                                <div class="service-info">
+                                    <div class="service-count">
+                                        <strong>{$includedCount}</strong> <span class="text-muted">de</span> <strong>{$totalBaremos}</strong> servicios
+                                    </div>
+                                    <div class="progress mt-1" style="height: 6px;">
+                                        <div class="progress-bar" style="width: {$percentage}%; background-color: {$progressColor};"></div>
+                                    </div>
+                                </div>
+HTML;
 
-                                // Link to view page where user can manually add services
-                                return Html::a($badge, ['view', 'id' => $model->id, 'clinica_id' => $clinica->id], [
-                                    'title' => 'Ver servicios disponibles y agregar nuevos',
-                                    'style' => 'text-decoration: none;',
-                                    'data-toggle' => 'tooltip',
-                                    'data-placement' => 'top'
-                                ]);
+                                return Html::a(
+                                    $html,
+                                    ['view', 'id' => $model->id, 'clinica_id' => $clinica->id],
+                                    [
+                                        'class' => 'service-link',
+                                        'title' => "Haga clic para administrar los servicios del plan",
+                                        'data-toggle' => 'tooltip',
+                                        'data-placement' => 'top'
+                                    ]
+                                );
                             },
                             'filter' => false,
                             'enableSorting' => false,
@@ -389,7 +386,13 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                             'format' => 'raw',
                             'headerOptions' => ['class' => 'text-center header-link'],
                             'contentOptions' => ['class' => 'text-center'],
-                            'value' => function ($model) {
+                            'value' => function ($model) use ($isReadOnly) {
+                                // If user is read-only (COORDINADOR-CLINICA or Asesor), show static badge
+                                if ($isReadOnly) {
+                                    return '<span class="status-badge ' . ($model->estatus == 'Activo' ? 'active' : 'inactive') . '">' .
+                                        ($model->estatus == 'Activo' ? 'Activo' : 'Inactivo') . '</span>';
+                                }
+
                                 $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
 
                                 return SwitchInput::widget([
@@ -422,7 +425,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-3">{view}{update}</div>',
+                            'template' => $isReadOnly ? '<div class="d-flex justify-content-center gap-3">{view}</div>' : '<div class="d-flex justify-content-center gap-3">{view}{update}</div>',
                             'options' => ['style' => 'width:90px; min-width:90px;'],
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 8px !important;'],
@@ -438,8 +441,8 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                                         ]
                                     );
                                 },
-                                'update' => function ($url, $model, $key) use ($permisos, $clinica) {
-                                    if ($permisos == true) {
+                                'update' => function ($url, $model, $key) use ($permisos, $clinica, $isReadOnly) {
+                                    if ($permisos && !$isReadOnly) {
                                         return Html::a(
                                             '<i class="fas fa-pencil-alt"></i>',
                                             Url::to(['update', 'id' => $model->id, 'clinica_id' => $clinica->id]),
@@ -450,6 +453,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                                             ]
                                         );
                                     }
+                                    return '';
                                 },
                             ],
                         ],
@@ -461,7 +465,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
 </div>
 
 <?php
-// SIMPLE, BULLETPROOF JAVASCRIPT
+// BULLETPROOF JAVASCRIPT (Only load for users with write permissions)
 $bulletproofJs = <<<JS
 // ============================================
 // BULLETPROOF MODAL FUNCTIONS
@@ -557,6 +561,7 @@ function clearFileSelection() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('BULLETPROOF: DOM loaded, initializing...');
     
+    <?php if (!$isReadOnly): ?>
     // Get button and modal for debugging
     var importBtn = document.getElementById('import-plans-btn');
     var modal = document.getElementById('importModal');
@@ -638,6 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    <?php endif; ?>
     
     // Initialize tooltips for service badges
     if (typeof $ !== 'undefined' && $.fn.tooltip) {
@@ -646,77 +652,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('BULLETPROOF: Initialization complete');
 });
-
-// ============================================
-// DEBUG FUNCTION - TEST MODAL VISIBILITY
-// ============================================
-
-window.debugModal = function() {
-    var modal = document.getElementById('importModal');
-    if (!modal) {
-        console.error('DEBUG: Modal not found in DOM');
-        return;
-    }
-    
-    console.log('=== MODAL DEBUG INFO ===');
-    console.log('Modal exists:', true);
-    console.log('Modal display:', modal.style.display);
-    console.log('Modal computed display:', window.getComputedStyle(modal).display);
-    
-    var rect = modal.getBoundingClientRect();
-    console.log('Modal bounds:', rect.top, rect.left, rect.width, rect.height);
-    
-    // Try to force show it
-    console.log('DEBUG: Forcing modal to show...');
-    modal.style.display = 'block';
-    modal.style.zIndex = '999999';
-    modal.style.position = 'fixed';
-    modal.style.top = '50px';
-    modal.style.left = '50px';
-    modal.style.width = '500px';
-    modal.style.height = '300px';
-    modal.style.backgroundColor = 'red';
-    modal.style.color = 'white';
-    modal.style.padding = '20px';
-    modal.innerHTML = '<h2>DEBUG MODAL - CAN YOU SEE THIS?</h2><p>If you can see this red box, then the modal element works.</p><button onclick="this.parentElement.style.display=\'none\'">Close</button>';
-    
-    alert('Debug modal activated. Check console and look for a red box on screen.');
-};
-
-// Make debug function available immediately
-console.log('BULLETPROOF: Modal functions loaded');
-console.log('showImportModal available:', typeof showImportModal === 'function');
-console.log('hideImportModal available:', typeof hideImportModal === 'function');
-console.log('debugModal available:', typeof debugModal === 'function');
-
-// ============================================
-// QUICK TEST - Add debug button
-// ============================================
-
-/* Create debug button dynamically
-setTimeout(function() {
-    var debugBtn = document.createElement('button');
-    debugBtn.innerHTML = 'DEBUG MODAL';
-    debugBtn.style.position = 'fixed';
-    debugBtn.style.bottom = '10px';
-    debugBtn.style.right = '10px';
-    debugBtn.style.zIndex = '1000000';
-    debugBtn.style.backgroundColor = 'red';
-    debugBtn.style.color = 'white';
-    debugBtn.style.padding = '10px';
-    debugBtn.style.border = 'none';
-    debugBtn.style.borderRadius = '5px';
-    debugBtn.style.cursor = 'pointer';
-    debugBtn.onclick = debugModal;
-    document.body.appendChild(debugBtn);
-    console.log('BULLETPROOF: Debug button added to page');
-}, 1000);*/
 JS;
 
 $this->registerJs($bulletproofJs, \yii\web\View::POS_END);
 
-// Import progress JavaScript (kept separate)
-$importJs = <<<JS
+// Import progress JavaScript (Only load for users with write permissions)
+if (!$isReadOnly) {
+    $importJs = <<<JS
 
 let progressPoller = null;
 let currentTaskId = null;
@@ -894,7 +836,6 @@ function showImportError(mainMessage, detailedMessage) {
     }
 }
 
-
 function copyErrorToClipboard() {
     var errorText = 'Error: ' + $('#error-main-message').text() + '\\n' +
                    'Detalles: ' + $('#error-detailed-message').text() + '\\n' +
@@ -961,7 +902,7 @@ function updatestatus(planId) {
     });
 }
 
-// Initialize
+// Simple service link hover effects
 $(document).ready(function() {
     console.log('Import functionality loaded');
     
@@ -972,13 +913,114 @@ $(document).ready(function() {
 });
 JS;
 
-$this->registerJs($importJs, \yii\web\View::POS_END);
+    $this->registerJs($importJs, \yii\web\View::POS_END);
+}
 ?>
 
 <?php
-// BULLETPROOF CSS
-$bulletproofCss = <<<CSS
-/* BULLETPROOT MODAL STYLES - Override everything */
+// CLEAN SIMPLE CSS STYLES
+$cleanCss = <<<CSS
+/* Service Info Styles - Clean and Simple */
+.service-link {
+    text-decoration: none !important;
+    display: block;
+    cursor: pointer;
+}
+
+.service-link:hover {
+    text-decoration: none !important;
+}
+
+.service-info {
+    padding: 4px 0;
+}
+
+.service-count {
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #495057;
+}
+
+.service-count strong {
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.service-count .text-muted {
+    font-size: 12px;
+}
+
+.progress {
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Status badge styles for read-only users */
+.status-badge.active {
+    background-color: #d1fae5;
+    color: #065f46;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.status-badge.inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+/* Tooltip styles */
+.tooltip-inner {
+    max-width: 250px;
+    padding: 8px 12px;
+    font-size: 12px;
+    background: #2c3e50;
+    border-radius: 6px;
+}
+
+/* Table row hover effect */
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Ensure action buttons remain consistent */
+.btn-xs {
+    padding: 0.15rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+    border-radius: 0.2rem !important;
+    min-width: 30px !important;
+    min-height: 24px !important;
+    height: 24px !important;
+}
+
+.d-flex.justify-content-center.gap-3 {
+    gap: 1rem !important;
+}
+
+.btn-info.me-2,
+.btn-info[style*="margin-right"] {
+    margin-right: 12px !important;
+}
+
+.btn-warning.ms-2,
+.btn-warning[style*="margin-left"] {
+    margin-left: 12px !important;
+}
+
+/* Import modal styles */
 #importModal {
     display: none !important;
     position: fixed !important;
@@ -994,7 +1036,6 @@ $bulletproofCss = <<<CSS
     display: block !important;
 }
 
-/* Modal content */
 #importModal > div {
     position: absolute !important;
     top: 50% !important;
@@ -1010,153 +1051,7 @@ $bulletproofCss = <<<CSS
     box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
 }
 
-/* Make sure nothing hides our modal */
-body.modal-open {
-    overflow: hidden !important;
-}
-
-/* Override any other modal styles */
-.modal.fade {
-    display: none !important;
-}
-
-/* Style for the new service badges */
-.badge-pill {
-    border-radius: 10rem;
-    min-width: 50px;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.badge-pill:hover {
-    transform: scale(1.05);
-    opacity: 0.9;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* Badge colors for services */
-.badge-success {
-    background-color: #28a745 !important;
-}
-
-.badge-warning {
-    background-color: #ffc107 !important;
-    color: #212529 !important;
-}
-
-.badge-info {
-    background-color: #17a2b8 !important;
-}
-
-.badge-secondary {
-    background-color: #6c757d !important;
-}
-
-/* Tooltip styles */
-.tooltip-inner {
-    max-width: 300px;
-    padding: 8px 12px;
-    text-align: center;
-    border-radius: 4px;
-    font-size: 13px;
-}
-
-/* File upload area styles */
-.file-upload-area {
-    transition: all 0.3s ease;
-}
-
-.file-upload-area:hover {
-    border-color: #28a745 !important;
-    background: #f1f8ff !important;
-}
-
-/* Make buttons twice smaller and ensure they stay small */
-.btn-xs {
-    padding: 0.15rem 0.5rem !important;
-    font-size: 0.7rem !important;
-    line-height: 1.2 !important;
-    border-radius: 0.2rem !important;
-    min-width: 30px !important;
-    min-height: 24px !important;
-    height: 24px !important;
-}
-
-/* Ensure consistent spacing between action buttons */
-.d-flex.justify-content-center.gap-3 {
-    gap: 1rem !important;
-}
-
-/* Force margin between buttons */
-.btn-info.me-2,
-.btn-info[style*="margin-right"] {
-    margin-right: 12px !important;
-}
-
-.btn-warning.ms-2,
-.btn-warning[style*="margin-left"] {
-    margin-left: 12px !important;
-}
-
-/* Specific targeting for action column buttons */
-.table .btn-xs {
-    margin: 0 2px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-/* Ensure icons are properly sized in small buttons */
-.btn-xs i {
-    font-size: 10px !important;
-    margin-right: 0 !important;
-    line-height: 1 !important;
-}
-
-/* Override any conflicting Bootstrap styles */
-.ms-panel .btn-xs {
-    margin: 1px 2px !important;
-}
-
-/* Prevent button text from affecting size */
-.btn-xs span {
-    line-height: 1 !important;
-    font-size: 0.7rem !important;
-}
-
-/* Ensure the action column container doesn't compress buttons */
-.d-flex.justify-content-center {
-    min-width: 80px !important;
-}
-
-/* Force small button dimensions */
-#planes-grid .btn-xs {
-    width: 30px !important;
-    height: 24px !important;
-    padding: 0.1rem 0.3rem !important;
-}
-
-/* Additional protection against responsive resizing */
-@media (max-width: 768px) {
-    .btn-xs {
-        min-width: 28px !important;
-        min-height: 22px !important;
-        padding: 0.1rem 0.2rem !important;
-    }
-    
-    .btn-xs i {
-        font-size: 9px !important;
-    }
-    
-    /* Modal responsive adjustments */
-    #importModal > div {
-        width: 95% !important;
-        padding: 15px !important;
-    }
-}
-
-/* Enhanced Error Display Styles */
+/* Error display styles */
 #import-error-alert {
     border-left: 4px solid #dc3545;
     margin-bottom: 20px;
@@ -1166,19 +1061,6 @@ body.modal-open {
 .import-progress .progress-bar {
     transition: width 0.3s ease;
     font-weight: bold;
-}
-
-.import-progress .progress {
-    height: 30px;
-}
-
-.progress-info {
-    margin-top: 10px;
-}
-
-.progress-details {
-    font-size: 12px;
-    line-height: 1.4;
 }
 
 #technical-details pre {
@@ -1191,11 +1073,41 @@ body.modal-open {
     padding: 10px;
 }
 
-/* Progress bar color transitions */
-.progress-bar {
-    transition: width 0.5s ease-in-out, background-color 0.5s ease;
+/* Header styling */
+.ms-panel-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 15px 20px;
+    border-radius: 8px 8px 0 0;
+}
+
+.section-title {
+    color: white !important;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .service-count {
+        font-size: 11px;
+    }
+    
+    .service-count strong {
+        font-size: 13px;
+    }
+    
+    .btn-xs {
+        min-width: 28px !important;
+        min-height: 22px !important;
+        padding: 0.1rem 0.2rem !important;
+    }
+    
+    .btn-xs i {
+        font-size: 9px !important;
+    }
 }
 CSS;
 
-$this->registerCss($bulletproofCss);
+$this->registerCss($cleanCss);
 ?>

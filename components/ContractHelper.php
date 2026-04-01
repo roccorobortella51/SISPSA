@@ -182,17 +182,19 @@ class ContractHelper
                 $tooltip .= "<div style='color: #6c757d;'><strong>⏸️ CONTRATO SUSPENDIDO</strong></div>";
                 $tooltip .= "<small>Contrato suspendido por falta de pago o incumplimiento.</small><br>";
 
-                // Check for pending cuotas
-                $pendingCuotas = Cuotas::find()
+                // CHANGED: Show expired cuotas instead of pending ones
+                $expiredCuotas = Cuotas::find()
                     ->where(['contrato_id' => $contrato->id])
-                    ->andWhere(['estatus' => 'pendiente'])
+                    ->andWhere(['estatus' => Cuotas::ESTADO_VENCIDA])
                     ->count();
 
-                if ($pendingCuotas > 0) {
-                    $tooltip .= "<small><strong>{$pendingCuotas} cuota(s) pendiente(s)</strong></small><br>";
+                if ($expiredCuotas > 0) {
+                    $tooltip .= "<small><strong>{$expiredCuotas} cuota(s) vencida(s)</strong> - " . ($expiredCuotas == 1 ? "Requiere pago inmediato" : "Requieren pago inmediato") . "</small><br>";
+                } else {
+                    $tooltip .= "<small><strong>0 cuotas vencidas</strong> - Suspendido por otras razones</small><br>";
                 }
 
-                $tooltip .= "<small><em>Acción requerida: Regularizar pagos pendientes.</em></small>";
+                $tooltip .= "<small><em>Acción requerida: Regularizar pagos vencidos.</em></small>";
                 break;
 
             case 'anulado':

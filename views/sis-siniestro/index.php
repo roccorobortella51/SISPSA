@@ -24,7 +24,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol
 
 // Definir variables basadas en el modo
 $esCita = ($modo === 'cita') ? 1 : 0;
-$tituloModo = ($modo === 'cita') ? 'Citas' : 'Atención';
+$tituloModo = ($modo === 'cita') ? 'Citas' : 'Atenciones';
 $textoBoton = ($modo === 'cita') ? 'Crear Nueva Cita' : 'Crear Nueva Atención';
 
 $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
@@ -56,6 +56,428 @@ $volverBtnClass = $contratoSuspendido ? 'btn-warning' : 'btn-outline-secondary';
 $volverBtnIcon = $contratoSuspendido ? 'fas fa-exclamation-triangle' : 'fas fa-undo';
 $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver a la lista de afiliados';
 // ----------------------------------------------------------------------
+
+// Register CSS for professional styling
+$this->registerCss("
+    /* Header Section Styling */
+    .ms-panel-header {
+        padding: 20px 25px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 3px solid #2a5298;
+    }
+    
+    .ms-panel-header h1 {
+        color: #1e3c72;
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+    }
+    
+    /* Button styling */
+    .btn-create {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+        color: white;
+        background: linear-gradient(135deg, #34ce57 0%, #2ee0a5 100%);
+    }
+    
+    .btn-back {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-back:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+        color: white;
+        background: linear-gradient(135deg, #7e888f 0%, #6b757d 100%);
+    }
+    
+    .btn-back-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+    }
+    
+    .btn-back-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
+        color: #212529;
+    }
+    
+    /* Consecutive counter badge styling */
+    .consecutive-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        color: #1e3c72;
+        font-weight: 700;
+        font-size: 0.95rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .consecutive-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(42, 82, 152, 0.02) 100%);
+        border-radius: 12px;
+        z-index: 0;
+    }
+    
+    .consecutive-badge span {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .consecutive-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(30, 60, 114, 0.15);
+        border-color: #2a5298;
+        background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+    }
+    
+    /* Services column styling */
+    .services-container {
+        scrollbar-width: thin;
+        scrollbar-color: #2a5298 #e9ecef;
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    .services-container::-webkit-scrollbar {
+        width: 5px;
+    }
+    
+    .services-container::-webkit-scrollbar-track {
+        background: #e9ecef;
+        border-radius: 3px;
+    }
+    
+    .services-container::-webkit-scrollbar-thumb {
+        background: #2a5298;
+        border-radius: 3px;
+    }
+    
+    .services-container::-webkit-scrollbar-thumb:hover {
+        background: #1e3c72;
+    }
+    
+    .service-item {
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+    }
+    
+    .service-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .service-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(2px);
+        padding-left: 4px;
+    }
+    
+    /* Status badges styling */
+    .status-badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        transition: all 0.2s ease;
+    }
+    
+    .status-badge.cita {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+    }
+    
+    .status-badge.atencion {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+    }
+    
+    .status-badge.atendido {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+    }
+    
+    .status-badge.no-atendido {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: white;
+    }
+    
+    /* Grid view header styling */
+    .grid-view-container table {
+        margin-bottom: 0;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .grid-view-container th {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 14px 12px !important;
+        vertical-align: middle;
+        border: none;
+    }
+    
+    .grid-view-container td {
+        vertical-align: middle;
+        padding: 12px 10px !important;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .grid-view-container tr:hover td {
+        background-color: #f8f9fa;
+    }
+    
+    /* Action buttons styling - Improved spacing and centering */
+    .action-buttons-cell {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+    
+    .action-buttons-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        transition: all 0.25s ease;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .btn-action i {
+        font-size: 18px;
+        display: inline-block;
+    }
+    
+    .btn-action.view {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+    }
+    
+    .btn-action.view:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(23, 162, 184, 0.4);
+        color: white;
+        text-decoration: none;
+        background: linear-gradient(135deg, #1fb0c8 0%, #1596aa 100%);
+    }
+    
+    .btn-action.view:active {
+        transform: translateY(0);
+    }
+    
+    .btn-action.edit {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+    }
+    
+    .btn-action.edit:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4);
+        color: #212529;
+        text-decoration: none;
+        background: linear-gradient(135deg, #ffce3a 0%, #f0b800 100%);
+    }
+    
+    .btn-action.edit:active {
+        transform: translateY(0);
+    }
+    
+    /* Panel styling */
+    .ms-panel {
+        border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+        background: white;
+    }
+    
+    .ms-panel-body {
+        padding: 25px;
+    }
+    
+    /* Pagination styling */
+    .pagination {
+        margin-top: 20px;
+        justify-content: center;
+    }
+    
+    .pagination > li > a,
+    .pagination > li > span {
+        border-radius: 8px;
+        margin: 0 4px;
+        color: #1e3c72;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    
+    .pagination > li.active > a,
+    .pagination > li.active > span {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        border-color: #2a5298;
+        color: white;
+    }
+    
+    .pagination > li > a:hover {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        transform: translateY(-2px);
+    }
+    
+    /* Keep existing flash message styles */
+    .contract-alert-header {
+        background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+        padding: 18px 20px;
+        border-radius: 10px;
+        border-left: 5px solid #dc3545;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.1);
+    }
+
+    .alert-elevated {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .alert-elevated:hover {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .contract-suspended-box {
+        transition: all 0.3s ease;
+    }
+
+    .contract-suspended-box:hover {
+        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.2);
+        transform: translateY(-1px);
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+        }
+        50% {
+            box-shadow: 0 4px 18px rgba(211, 47, 47, 0.5);
+        }
+        100% {
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+        }
+    }
+
+    .attention-alert {
+        animation: attention-pulse 1.2s infinite alternate ease-in-out;
+        color: #d32f2f !important;
+        font-weight: 800 !important;
+        font-size: 1.4em !important;
+        display: inline-block;
+        padding: 8px 16px;
+        margin: 0 5px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+        box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+        border: 3px solid #ff8a80;
+        position: relative;
+        overflow: hidden;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .contract-alert {
+        animation: contract-warning 1s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 1.3em !important;
+        display: inline-block;
+        padding: 8px 18px;
+        margin: 0 5px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+    }
+
+    @keyframes attention-pulse {
+        0% {
+            transform: scale(1) translateY(0);
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+            border-color: #ff8a80;
+        }
+        100% {
+            transform: scale(1.05) translateY(-3px);
+            box-shadow: 0 8px 25px rgba(211, 47, 47, 0.5);
+            border-color: #ff5252;
+        }
+    }
+
+    @keyframes contract-warning {
+        0% {
+            transform: scale(1) translateY(0);
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+            background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+        }
+        100% {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 10px 30px rgba(211, 47, 47, 0.7), inset 0 2px 0 rgba(255, 255, 255, 0.5);
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+    }
+");
 ?>
 <div class="row" style="margin:3px !important;">
     <!-- PROFESSIONAL FLASH MESSAGES DISPLAY -->
@@ -99,10 +521,7 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                     </div>
 
                                     <?php
-                                    // Clean HTML tags from the message for parsing
                                     $cleanMessage = strip_tags($message);
-
-                                    // Parse and format the suspended contract message nicely
                                     $lines = explode("\n", $cleanMessage);
                                     $formattedLines = [];
 
@@ -113,25 +532,16 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                         }
                                     }
 
-                                    // Display formatted message
                                     foreach ($formattedLines as $index => $formattedLine):
                                         if (strpos($formattedLine, '¡ATENCIÓN!') === 0):
-                                            // Skip the header as we already have our own
                                             continue;
                                         elseif (strpos($formattedLine, 'No se puede crear una nueva atención para el afiliado') === 0):
-                                            // Extract afiliado name
                                             $afiliadoText = str_replace('No se puede crear una nueva atención para el afiliado ', '', $formattedLine);
                                     ?>
-                                            <div class="mb-3 p-3" style="
-                                                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                                                border-radius: 8px;
-                                                border-left: 4px solid #6c757d;
-                                            ">
+                                            <div class="mb-3 p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; border-left: 4px solid #6c757d;">
                                                 <div class="d-flex align-items-center mb-2">
                                                     <i class="fas fa-user-times mr-3" style="color: #dc3545; font-size: 1.3rem;"></i>
-                                                    <h5 style="color: #495057; font-weight: 600; font-size: 1.2rem; margin: 0;">
-                                                        Restricción de Acceso
-                                                    </h5>
+                                                    <h5 style="color: #495057; font-weight: 600; font-size: 1.2rem; margin: 0;">Restricción de Acceso</h5>
                                                 </div>
                                                 <p style="color: #495057; line-height: 1.6; font-size: 1.1rem; margin-left: 3rem;">
                                                     No se puede crear una nueva atención para el afiliado<br>
@@ -141,26 +551,13 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                         <?php elseif (strpos($formattedLine, 'Motivo:') === 0):
                                             $motivoText = trim(str_replace('Motivo:', '', $formattedLine));
                                         ?>
-                                            <div class="contract-suspended-box p-4 mb-3" style="
-                                                background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
-                                                border-radius: 8px;
-                                                border: 2px solid #ffcdd2;
-                                            ">
+                                            <div class="contract-suspended-box p-4 mb-3" style="background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%); border-radius: 8px; border: 2px solid #ffcdd2;">
                                                 <div class="d-flex align-items-center mb-3">
                                                     <i class="fas fa-file-contract mr-3" style="color: #dc3545; font-size: 1.4rem;"></i>
-                                                    <h5 style="color: #dc3545; font-weight: 700; font-size: 1.25rem; margin: 0;">
-                                                        Estado del Contrato
-                                                    </h5>
+                                                    <h5 style="color: #dc3545; font-weight: 700; font-size: 1.25rem; margin: 0;">Estado del Contrato</h5>
                                                 </div>
                                                 <div class="ml-4 pl-1">
-                                                    <span class="badge badge-danger px-4 py-3" style="
-                                                        font-size: 1.1rem;
-                                                        font-weight: 600;
-                                                        letter-spacing: 0.5px;
-                                                        background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
-                                                        box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
-                                                        border-radius: 6px;
-                                                    ">
+                                                    <span class="badge badge-danger px-4 py-3" style="font-size: 1.1rem; font-weight: 600; letter-spacing: 0.5px; background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%); box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3); border-radius: 6px;">
                                                         <i class="fas fa-pause-circle mr-2"></i>
                                                         <?= Html::encode($motivoText) ?>
                                                     </span>
@@ -173,26 +570,15 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                         <?php elseif (strpos($formattedLine, 'Período:') === 0):
                                             $periodoText = trim(str_replace('Período:', '', $formattedLine));
                                         ?>
-                                            <div class="d-flex align-items-center mb-3 p-3" style="
-                                                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                                                border-radius: 8px;
-                                            ">
+                                            <div class="d-flex align-items-center mb-3 p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px;">
                                                 <i class="fas fa-calendar-alt mr-3" style="color: #6c757d; font-size: 1.4rem;"></i>
                                                 <div>
-                                                    <h6 style="color: #495057; font-weight: 600; font-size: 1.15rem; margin-bottom: 5px;">
-                                                        Vigencia de la Suspensión
-                                                    </h6>
-                                                    <span style="color: #6c757d; font-size: 1.1rem; font-weight: 500;">
-                                                        <?= Html::encode($periodoText) ?>
-                                                    </span>
+                                                    <h6 style="color: #495057; font-weight: 600; font-size: 1.15rem; margin-bottom: 5px;">Vigencia de la Suspensión</h6>
+                                                    <span style="color: #6c757d; font-size: 1.1rem; font-weight: 500;"><?= Html::encode($periodoText) ?></span>
                                                 </div>
                                             </div>
                                         <?php elseif (strpos($formattedLine, 'Contacte') === 0): ?>
-                                            <div class="alert-footer mt-4 pt-4" style="
-                                                border-top: 2px solid #dee2e6;
-                                                color: #495057;
-                                                font-size: 1.05rem;
-                                            ">
+                                            <div class="alert-footer mt-4 pt-4" style="border-top: 2px solid #dee2e6; color: #495057; font-size: 1.05rem;">
                                                 <div class="d-flex align-items-start">
                                                     <i class="fas fa-headset mr-3 mt-1" style="font-size: 1.4rem; color: #0c5460;"></i>
                                                     <div>
@@ -220,15 +606,9 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                     <?php endif;
                                     endforeach;
                                 else: ?>
-                                    <!-- Regular flash messages - strip HTML tags first, then display -->
                                     <?php $cleanMessage = strip_tags($message); ?>
                                     <div class="mb-3">
-                                        <h4 class="alert-title mb-3" style="
-                                            color: <?= $type === 'error' ? '#721c24' : ($type === 'success' ? '#155724' : '#856404') ?>;
-                                            font-weight: 700;
-                                            font-size: 1.4rem;
-                                            letter-spacing: 0.3px;
-                                        ">
+                                        <h4 class="alert-title mb-3" style="color: <?= $type === 'error' ? '#721c24' : ($type === 'success' ? '#155724' : '#856404') ?>; font-weight: 700; font-size: 1.4rem; letter-spacing: 0.3px;">
                                             <?php if ($type === 'error'): ?>
                                                 <i class="fas fa-exclamation-circle mr-2"></i>Alerta Importante
                                             <?php elseif ($type === 'success'): ?>
@@ -239,38 +619,14 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                                 <i class="fas fa-info-circle mr-2"></i>Notificación del Sistema
                                             <?php endif; ?>
                                         </h4>
-                                        <div class="alert-message p-3" style="
-                                            color: #495057; 
-                                            line-height: 1.7; 
-                                            font-size: 1.15rem;
-                                            background-color: rgba(0,0,0,0.02);
-                                            border-radius: 8px;
-                                            border-left: 4px solid <?= $type === 'error' ? '#dc3545' : ($type === 'success' ? '#28a745' : '#ffc107') ?>;
-                                        ">
+                                        <div class="alert-message p-3" style="color: #495057; line-height: 1.7; font-size: 1.15rem; background-color: rgba(0,0,0,0.02); border-radius: 8px; border-left: 4px solid <?= $type === 'error' ? '#dc3545' : ($type === 'success' ? '#28a745' : '#ffc107') ?>;">
                                             <?= nl2br(Html::encode($cleanMessage)) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
                             <button type="button" class="close" onclick="this.parentElement.parentElement.style.display='none'"
-                                style="
-                                    position: absolute;
-                                    top: 20px;
-                                    right: 20px;
-                                    background: none;
-                                    border: none;
-                                    font-size: 1.5rem;
-                                    cursor: pointer;
-                                    color: rgba(0,0,0,0.4);
-                                    transition: all 0.2s;
-                                    padding: 5px;
-                                    border-radius: 4px;
-                                    width: 40px;
-                                    height: 40px;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                "
+                                style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: rgba(0,0,0,0.4); transition: all 0.2s; padding: 5px; border-radius: 4px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
                                 onmouseover="this.style.color='rgba(0,0,0,0.8)'; this.style.backgroundColor='rgba(0,0,0,0.05)'"
                                 onmouseout="this.style.color='rgba(0,0,0,0.4)'; this.style.backgroundColor='transparent'">
                                 <span aria-hidden="true" style="font-size: 1.8rem;">&times;</span>
@@ -280,142 +636,6 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                 <?php endforeach; ?>
             <?php endforeach; ?>
         </div>
-
-        <style>
-            .contract-alert-header {
-                background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
-                padding: 18px 20px;
-                border-radius: 10px;
-                border-left: 5px solid #dc3545;
-                margin-bottom: 20px;
-                box-shadow: 0 4px 8px rgba(220, 53, 69, 0.1);
-            }
-
-            .alert-elevated {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            .alert-elevated:hover {
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-                transform: translateY(-2px);
-            }
-
-            .contract-suspended-box {
-                transition: all 0.3s ease;
-            }
-
-            .contract-suspended-box:hover {
-                box-shadow: 0 6px 20px rgba(211, 47, 47, 0.2);
-                transform: translateY(-1px);
-            }
-
-            .badge-danger {
-                animation: pulse 1.5s infinite;
-                transition: all 0.3s ease;
-            }
-
-            .badge-danger:hover {
-                transform: scale(1.02);
-                box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
-            }
-
-            @keyframes pulse {
-                0% {
-                    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
-                }
-
-                50% {
-                    box-shadow: 0 4px 18px rgba(211, 47, 47, 0.5);
-                }
-
-                100% {
-                    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
-                }
-            }
-
-            .alert-footer {
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                padding: 20px;
-                border-radius: 10px;
-                border: 1px solid #dee2e6;
-            }
-
-            /* Typography enhancements */
-            .alert-title {
-                font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-                letter-spacing: 0.3px;
-            }
-
-            .alert-message {
-                font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-                letter-spacing: 0.1px;
-            }
-
-            /* Add the original attention-alert and contract-alert styles */
-            .attention-alert {
-                animation: attention-pulse 1.2s infinite alternate ease-in-out;
-                color: #d32f2f !important;
-                font-weight: 800 !important;
-                font-size: 1.4em !important;
-                display: inline-block;
-                padding: 8px 16px;
-                margin: 0 5px;
-                border-radius: 6px;
-                background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-                box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
-                border: 3px solid #ff8a80;
-                position: relative;
-                overflow: hidden;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-            }
-
-            .contract-alert {
-                animation: contract-warning 1s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-                color: #ffffff !important;
-                font-weight: 700 !important;
-                font-size: 1.3em !important;
-                display: inline-block;
-                padding: 8px 18px;
-                margin: 0 5px;
-                border-radius: 6px;
-                background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
-                box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                position: relative;
-                overflow: hidden;
-                text-transform: uppercase;
-                letter-spacing: 1.2px;
-            }
-
-            @keyframes attention-pulse {
-                0% {
-                    transform: scale(1) translateY(0);
-                    box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
-                    border-color: #ff8a80;
-                }
-
-                100% {
-                    transform: scale(1.05) translateY(-3px);
-                    box-shadow: 0 8px 25px rgba(211, 47, 47, 0.5);
-                    border-color: #ff5252;
-                }
-            }
-
-            @keyframes contract-warning {
-                0% {
-                    transform: scale(1) translateY(0);
-                    box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
-                    background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
-                }
-
-                100% {
-                    transform: scale(1.05) translateY(-2px);
-                    box-shadow: 0 10px 30px rgba(211, 47, 47, 0.7), inset 0 2px 0 rgba(255, 255, 255, 0.5);
-                    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-                }
-            }
-        </style>
     <?php endif; ?>
 
     <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
@@ -423,26 +643,34 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
     <div class="col-md-12">
         <div class="ms-panel ms-panel-fh">
             <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1 style="font-size: 1.8rem; font-weight: 600; letter-spacing: 0.3px;"><?= $this->title ?></h1>
-                <div class="d-flex gap-3"> <?php
-                                            // BOTÓN DE CREACIÓN DINÁMICO
-                                            if ($permisos) {
-                                                echo Html::a(
-                                                    '<i class="fas fa-plus mr-2"></i>' . $textoBoton,
-                                                    // Enlace a actionCreate, pasando user_id y el valor binario es_cita (0 o 1)
-                                                    ['create', 'user_id' => $user_id, 'es_cita' => $esCita],
-                                                    ['class' => 'btn btn-outline-primary btn-lg', 'style' => 'font-size: 1.05rem; padding: 10px 20px;']
-                                                );
-                                            }
-                                            ?>
+                <div>
+                    <h1 style="font-size: 1.8rem; font-weight: 700; letter-spacing: -0.3px;">
+                        <i class="fas fa-calendar-alt me-2" style="color: #2a5298;"></i>
+                        <?= $this->title ?>
+                    </h1>
+                    <p class="text-muted mb-0 mt-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <?= $modo === 'cita' ? 'Gestión de citas médicas programadas' : 'Gestión de atenciones médicas realizadas' ?>
+                    </p>
+                </div>
+                <div class="d-flex gap-3">
+                    <?php
+                    if ($permisos) {
+                        echo Html::a(
+                            '<i class="fas fa-plus-circle me-2"></i>' . $textoBoton,
+                            ['create', 'user_id' => $user_id, 'es_cita' => $esCita],
+                            ['class' => 'btn btn-create btn-lg', 'style' => 'font-size: 1rem; padding: 12px 24px; border-radius: 12px;']
+                        );
+                    }
+                    ?>
                     <?= Html::a(
-                        '<i class="' . $volverBtnIcon . ' mr-2"></i> Volver',
+                        '<i class="' . $volverBtnIcon . ' me-2"></i> Volver',
                         ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id],
                         [
-                            'class' => 'btn btn-lg ' . $volverBtnIcon,
+                            'class' => 'btn btn-lg ' . ($contratoSuspendido ? 'btn-back-warning' : 'btn-back'),
                             'title' => $volverBtnTitle,
                             'data' => ['pjax' => 0],
-                            'style' => 'font-size: 1.05rem; padding: 10px 20px;'
+                            'style' => 'font-size: 1rem; padding: 12px 24px; border-radius: 12px;'
                         ]
                     ) ?>
                 </div>
@@ -459,134 +687,176 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                         'responsiveWrap' => false,
                         'persistResize' => false,
                         'tableOptions' => [
-                            'class' => 'table table-striped table-bordered table-hover '
+                            'class' => 'table table-striped table-hover'
                         ],
                         'options' => [
-                            'class' => 'grid-view-container table-responsive',
+                            'class' => 'grid-view-container',
                         ],
                         'columns' => [
+                            // Professional consecutive counter instead of ID
                             [
-                                'attribute' => 'id',
-                                'value' => 'id',
-                                'label' => 'ID',
-                                'contentOptions' => ['style' => 'font-size: 1rem;'],
+                                'class' => 'yii\grid\DataColumn',
+                                'header' => '<i class="fas fa-hashtag me-1"></i> N°',
+                                'headerOptions' => [
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center; width: 70px; border-radius: 12px 0 0 0;'
+                                ],
+                                'contentOptions' => [
+                                    'style' => 'text-align: center; vertical-align: middle; padding: 8px 4px !important;'
+                                ],
+                                'options' => ['style' => 'width: 70px;'],
+                                'value' => function ($model, $key, $index, $column) {
+                                    $pagination = $column->grid->dataProvider->getPagination();
+                                    if ($pagination) {
+                                        $page = $pagination->getPage();
+                                        $pageSize = $pagination->getPageSize();
+                                        $sequentialNumber = $page * $pageSize + $index + 1;
+                                    } else {
+                                        $sequentialNumber = $index + 1;
+                                    }
+
+                                    return '<div class="consecutive-badge"><span>' . $sequentialNumber . '</span></div>';
+                                },
+                                'format' => 'raw',
                             ],
                             [
                                 'attribute' => 'idclinica',
                                 'value' => 'clinica.nombre',
                                 'label' => 'Clínica',
-                                'contentOptions' => ['style' => 'font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'font-size: 0.95rem; font-weight: 500;'],
                             ],
                             [
                                 'attribute' => 'fecha',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; font-size: 0.95rem;'],
                                 'value' => function ($model) {
-                                    return Yii::$app->formatter->asDate($model->fecha);
+                                    return '<i class="fas fa-calendar-alt me-1" style="color: #6c757d;"></i> ' . Yii::$app->formatter->asDate($model->fecha);
                                 },
                             ],
                             [
                                 'attribute' => 'hora',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; font-size: 0.95rem;'],
                                 'value' => function ($model) {
-                                    return Yii::$app->formatter->asTime($model->hora);
+                                    return '<i class="fas fa-clock me-1" style="color: #6c757d;"></i> ' . Yii::$app->formatter->asTime($model->hora);
                                 },
                             ],
-                            // Columna para mostrar si es Cita o Siniestro
+                            // Columna para mostrar si es Cita o Atención
                             [
                                 'label' => 'Tipo',
                                 'attribute' => 'es_cita',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
                                 'value' => function ($model) {
-                                    return $model->es_cita == 1 ? '<span class="status-badge active bg-success" style="font-size: 0.95rem; padding: 6px 12px;">Cita</span>' : '<span class="status-badge inactive bg-primary" style="font-size: 0.95rem; padding: 6px 12px;">Siniestro</span>';
+                                    return $model->es_cita == 1
+                                        ? '<span class="status-badge cita"><i class="fas fa-calendar-check me-1"></i> Cita</span>'
+                                        : '<span class="status-badge atencion"><i class="fas fa-stethoscope me-1"></i> Atención</span>';
                                 },
-                                'filter' => [0 => 'Siniestro', 1 => 'Cita'],
+                                'filter' => [0 => 'Atención', 1 => 'Cita'],
                             ],
                             [
                                 'attribute' => 'baremos',
                                 'format' => 'raw',
-                                'contentOptions' => ['style' => 'max-width: 250px; white-space: normal; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'max-width: 320px; white-space: normal; padding: 12px 8px;'],
                                 'value' => function ($model) {
                                     $baremos = $model->baremos;
                                     if (empty($baremos)) {
-                                        return '<span class="text-muted" style="font-size: 1rem;">No hay baremos</span>';
+                                        return '<span class="text-muted" style="font-size: 0.85rem; font-style: italic;">
+                                                    <i class="fas fa-info-circle me-1"></i> Sin servicios
+                                                </span>';
                                     }
 
                                     $items = [];
                                     foreach ($baremos as $baremo) {
-                                        if (is_array($baremo) && isset($baremo['nombre_servicio'])) {
-                                            $items[] = Html::tag(
-                                                'div',
-                                                Html::encode($baremo['nombre_servicio']),
-                                                ['class' => 'mb-1', 'style' => 'font-size: 1rem;']
-                                            );
-                                        } elseif (is_object($baremo) && property_exists($baremo, 'nombre_servicio')) {
-                                            $items[] = Html::tag(
-                                                'div',
-                                                Html::encode($baremo->nombre_servicio),
-                                                ['class' => 'mb-1', 'style' => 'font-size: 1rem;']
-                                            );
+                                        $serviceName = is_array($baremo) ? $baremo['nombre_servicio'] : $baremo->nombre_servicio;
+                                        $serviceArea = is_array($baremo) ? ($baremo['area_nombre'] ?? '') : ($baremo->area->nombre ?? '');
+                                        $servicePrice = is_array($baremo) ? ($baremo['precio'] ?? 0) : ($baremo->precio ?? 0);
+
+                                        if (!empty($serviceArea)) {
+                                            $areaDisplay = '<i class="fas fa-tag me-1" style="font-size: 0.65rem;"></i>' . Html::encode($serviceArea) . '<span class="mx-1">•</span>';
+                                        } else {
+                                            $areaDisplay = '<i class="fas fa-question-circle me-1" style="color: #ffc107; font-size: 0.65rem;"></i><span style="color: #856404;">Sin categoría</span><span class="mx-1">•</span>';
                                         }
+
+                                        $items[] = Html::tag(
+                                            'div',
+                                            '<div class="d-flex align-items-start gap-2" style="margin-bottom: 8px;">' .
+                                                '<div class="flex-shrink-0" style="width: 28px; text-align: center;">' .
+                                                '<i class="fas fa-stethoscope" style="color: #2a5298; font-size: 13px;"></i>' .
+                                                '</div>' .
+                                                '<div class="flex-grow-1">' .
+                                                '<div style="font-weight: 600; color: #1e3c72; font-size: 0.85rem; line-height: 1.3;">' . Html::encode($serviceName) . '</div>' .
+                                                '<div style="font-size: 0.7rem; color: #6c757d; margin-top: 2px;">' .
+                                                $areaDisplay .
+                                                '<i class="fas fa-dollar-sign me-1" style="font-size: 0.7rem;"></i>$' . number_format($servicePrice, 2) .
+                                                '</div>' .
+                                                '</div>' .
+                                                '</div>',
+                                            ['class' => 'service-item']
+                                        );
                                     }
 
-                                    return !empty($items) ? implode('', $items) : '<span class="text-muted" style="font-size: 1rem;">No hay baremos</span>';
+                                    return '<div class="services-container">' . implode('', $items) . '</div>';
                                 },
-                                'label' => 'Baremos',
+                                'label' => '<i class="fas fa-notes-medical me-2"></i> Servicios Médicos',
+                                'encodeLabel' => false,
+                                'headerOptions' => [
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600;'
+                                ],
+                                'filter' => false,
                             ],
                             [
                                 'attribute' => 'fecha_atencion',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; font-size: 0.9rem;'],
                                 'value' => function ($model) {
-                                    return Yii::$app->formatter->asDate($model->fecha_atencion);
+                                    return '<i class="fas fa-calendar-day me-1" style="color: #6c757d;"></i> ' . Yii::$app->formatter->asDate($model->fecha_atencion);
                                 },
                             ],
                             [
                                 'attribute' => 'hora_atencion',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; font-size: 0.9rem;'],
                                 'value' => function ($model) {
-                                    return Yii::$app->formatter->asTime($model->hora_atencion);
+                                    return '<i class="fas fa-hourglass-half me-1" style="color: #6c757d;"></i> ' . Yii::$app->formatter->asTime($model->hora_atencion);
                                 },
                             ],
-
                             [
                                 'attribute' => 'costo_total',
                                 'format' => ['currency', 'USD'],
-                                'contentOptions' => ['style' => 'text-align: right; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: right; font-size: 0.95rem; font-weight: 700; color: #28a745;'],
                                 'filter' => false
                             ],
-
                             [
                                 'attribute' => 'atendido',
                                 'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important; font-size: 1rem;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important;'],
                                 'value' => function ($model) {
                                     $isTrue = $model->atendido;
-                                    return $isTrue == 1 ? '<p class="status-badge active" style="font-size: 1rem; padding: 6px 12px;">Sí</p>' : '<p class="status-badge inactive" style="font-size: 1rem; padding: 6px 12px;">No</p>';
+                                    return $isTrue == 1
+                                        ? '<span class="status-badge atendido"><i class="fas fa-check-circle me-1"></i> Sí</span>'
+                                        : '<span class="status-badge no-atendido"><i class="fas fa-times-circle me-1"></i> No</span>';
                                 },
                                 'filter' => [0 => 'No', 1 => 'Sí'],
                             ],
-
-
                             [
                                 'class' => 'yii\grid\ActionColumn',
-                                'header' => 'ACCIONES',
-                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}</div>',
-                                'options' => ['class' => 'action-buttons'],
-                                'headerOptions' => ['style' => 'color: white!important; font-size: 1.1rem;'],
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
+                                'header' => '<i class="fas fa-cog me-1"></i> ACCIONES',
+                                'template' => '<div class="action-buttons-container">{view}{update}</div>',
+                                'options' => ['class' => 'action-buttons-cell'],
+                                'headerOptions' => [
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center; width: 100px;'
+                                ],
+                                'contentOptions' => [
+                                    'style' => 'text-align: center; vertical-align: middle; padding: 10px !important;'
+                                ],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) {
                                         return Html::a(
                                             '<i class="fa fa-eye"></i>',
-                                            Url::to(['view', 'id' => $model->id, 'user_id' => $model->iduser]),
+                                            Url::to(['view', 'id' => $model->id, 'user_id' => $model->iduser, 'es_cita' => $model->es_cita]),
                                             [
-                                                'title' => 'Detalle de la atención',
+                                                'title' => 'Ver detalle',
                                                 'class' => 'btn-action view',
-                                                'style' => 'font-size: 1.1rem;'
                                             ]
                                         );
                                     },
@@ -603,12 +873,11 @@ $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver
                                                 [
                                                     'title' => 'Editar',
                                                     'class' => 'btn-action edit',
-                                                    'style' => 'font-size: 1.1rem;'
                                                 ]
                                             );
                                         }
+                                        return '';
                                     },
-
                                 ],
                             ],
                         ],
