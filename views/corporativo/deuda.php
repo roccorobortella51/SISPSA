@@ -9,76 +9,134 @@ use yii\widgets\ActiveForm;
 /** @var app\models\Corporativo $corporativo */
 /** @var array $allCuotas Array of all pending Cuotas across affiliates >0 */
 /** @var float $grandTotal Total sum of pending cuotas >0 */
-$grandTotal = $grandTotal ?? 0;
+/** @var array $paymentHistory Array of corporate payments */
+/** @var array $affiliatePayments Array of affiliate payments */
+/** @var float $totalPaid Total amount paid by corporation */
+/** @var int $totalPayments Total number of payments */
+/** @var string $lastPaymentDate Last payment date */
 
-// Calculate consecutive numbers for each affiliate
-$affiliateNumbers = [];
-$currentNumber = 1;
-if (!empty($allCuotas)) {
-    foreach ($allCuotas as $cuota) {
-        $contrato = $cuota->contrato ?? null;
-        $userId = $contrato->user_id ?? null;
-        
-        if ($userId && !isset($affiliateNumbers[$userId])) {
-            $affiliateNumbers[$userId] = $currentNumber;
-            $currentNumber++;
+$grandTotal = $grandTotal ?? 0;
+$paymentHistory = $paymentHistory ?? [];
+$affiliatePayments = $affiliatePayments ?? [];
+$totalPaid = $totalPaid ?? 0;
+$totalPayments = $totalPayments ?? 0;
+$lastPaymentDate = $lastPaymentDate ?? null;
+
+// Group cuotas by month (based on fecha_vencimiento)
+$monthGroups = [];
+
+foreach ($allCuotas as $cuota) {
+    $fechaVencimiento = new \DateTime($cuota->fecha_vencimiento);
+    $monthKey = $fechaVencimiento->format('Y-m');
+    $monthName = $fechaVencimiento->format('F Y');
+    $monthNumber = $fechaVencimiento->format('m');
+    $year = $fechaVencimiento->format('Y');
+
+    $contrato = $cuota->contrato ?? null;
+    $userDatos = $contrato->user ?? null;
+
+    if (!isset($monthGroups[$monthKey])) {
+        $monthGroups[$monthKey] = [
+            'key' => $monthKey,
+            'name' => $monthName,
+            'year' => $year,
+            'month' => $monthNumber,
+            'cuotas' => [],
+            'total' => 0,
+            'cuota_count' => 0,
+            'affiliates' => [],
+        ];
+    }
+
+    // Store cuota with affiliate info
+    $cuotaData = [
+        'cuota' => $cuota,
+        'affiliate_id' => $userDatos ? $userDatos->id : null,
+        'affiliate_name' => $userDatos ? $userDatos->nombres . ' ' . $userDatos->apellidos : 'N/A',
+        'affiliate_cedula' => $userDatos ? $userDatos->tipo_cedula . '-' . $userDatos->cedula : 'N/A',
+        'contrato_nro' => $contrato ? $contrato->nrocontrato : 'N/A',
+    ];
+
+    $monthGroups[$monthKey]['cuotas'][] = $cuotaData;
+    $monthGroups[$monthKey]['total'] += floatval($cuota->monto);
+    $monthGroups[$monthKey]['cuota_count']++;
+
+    // Group by affiliate for detail view
+    if ($userDatos) {
+        $affiliateId = $userDatos->id;
+        $affiliateName = $userDatos->nombres . ' ' . $userDatos->apellidos;
+
+        if (!isset($monthGroups[$monthKey]['affiliates'][$affiliateId])) {
+            $monthGroups[$monthKey]['affiliates'][$affiliateId] = [
+                'id' => $affiliateId,
+                'name' => $affiliateName,
+                'cedula' => $userDatos->tipo_cedula . '-' . $userDatos->cedula,
+                'contrato_nro' => $contrato ? $contrato->nrocontrato : 'N/A',
+                'cuotas' => [],
+                'total' => 0,
+            ];
         }
+        $monthGroups[$monthKey]['affiliates'][$affiliateId]['cuotas'][] = $cuota;
+        $monthGroups[$monthKey]['affiliates'][$affiliateId]['total'] += floatval($cuota->monto);
     }
 }
 
-// Register variable global in HEAD to avoid problems with heredoc
-$this->registerJs('var grandTotal = ' . Json::encode($grandTotal) . ';', \yii\web\View::POS_HEAD);
+// Sort months chronologically
+ksort($monthGroups);
 
-// Register Microsoft Fluent Design CSS
-$this->registerCss(<<<CSS
+// Sort affiliates alphabetically within each month
+foreach ($monthGroups as $monthKey => &$month) {
+    uasort($month['affiliates'], function ($a, $b) {
+        return strcmp($a['name'], $b['name']);
+    });
+}
+
+// Calculate totals
+$totalMonths = count($monthGroups);
+$totalCuotas = count($allCuotas);
+$totalAffiliates = count(array_unique(array_reduce($monthGroups, function ($carry, $month) {
+    return array_merge($carry, array_keys($month['affiliates']));
+}, [])));
+
+// Calculate paid cuotas count per payment (store in temporary array)
+$paymentCuotasCount = [];
+foreach ($paymentHistory as $payment) {
+    $paymentCuotasCount[$payment->id] = \app\models\Cuotas::find()
+        ->where(['id_pago' => $payment->id])
+        ->count();
+}
+
+// Register CSS
+$this->registerCss(
+    <<<CSS
 /* ===== MICROSOFT FLUENT DESIGN SYSTEM ===== */
 body {
     font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-    font-size: 16px !important;
+    font-size: 14px !important;
     color: #323130 !important;
     background-color: #faf9f8 !important;
 }
 
-/* ===== TYPOGRAPHY - Microsoft Fluent Scale - ADJUSTED SIZES ===== */
-h1, h2, h3, h4, h5, h6 {
-    font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-    font-weight: 600 !important;
-    color: #000000 !important;
-    margin-bottom: 16px !important;
-}
+/* ===== TYPOGRAPHY ===== */
+h1 { font-size: 28px !important; font-weight: 600 !important; }
+h2 { font-size: 24px !important; font-weight: 600 !important; }
+h3 { font-size: 20px !important; font-weight: 600 !important; }
+h4 { font-size: 18px !important; font-weight: 600 !important; }
+h5 { font-size: 16px !important; font-weight: 600 !important; }
 
-/* FIX: Main header title should be black, not white */
-.ms-panel-header h1:not(.no-deuda-title) {
-    color: #000000 !important;
-}
-
-/* ADJUSTED: Title sizes following Microsoft Fluent standards */
-h1 { font-size: 28px !important; }
-h2 { font-size: 24px !important; }
-h3 { font-size: 20px !important; }
-h4 { font-size: 18px !important; }
-
-/* ===== BUTTONS - Microsoft Fluent Buttons - ADJUSTED SIZES (MADE SMALLER) ===== */
+/* ===== BUTTONS ===== */
 .btn {
-    border-radius: 2px !important;
-    padding: 4px 10px !important; /* Made smaller */
+    border-radius: 4px !important;
+    padding: 8px 20px !important;
     font-weight: 600 !important;
-    font-size: 12px !important; /* Made smaller */
-    font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-    border: 1px solid transparent !important;
-    line-height: 1.33 !important;
-    min-height: 28px !important; /* Made smaller */
-    transition: all 0.1s ease !important;
-    text-decoration: none !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    font-size: 14px !important;
+    min-height: 36px !important;
 }
 
 .btn-lg {
-    padding: 6px 12px !important; /* Made smaller */
-    font-size: 14px !important; /* Made smaller */
-    min-height: 32px !important; /* Made smaller */
+    padding: 10px 24px !important;
+    font-size: 14px !important;
+    min-height: 42px !important;
 }
 
 .btn-success {
@@ -90,7 +148,6 @@ h4 { font-size: 18px !important; }
 .btn-success:hover {
     background-color: #0e700e !important;
     border-color: #0e700e !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
 }
 
 .btn-secondary {
@@ -99,323 +156,295 @@ h4 { font-size: 18px !important; }
     color: #323130 !important;
 }
 
-.btn-secondary:hover {
-    background-color: #edebe9 !important;
-    border-color: #8a8886 !important;
-    color: #201f1e !important;
-}
-
-.btn-outline-light {
+.btn-outline-secondary {
     background-color: transparent !important;
-    border-color: #ffffff !important;
-    color: #ffffff !important;
-}
-
-.btn-outline-light:hover {
-    background-color: rgba(255,255,255,0.1) !important;
-    border-color: #ffffff !important;
-    color: #ffffff !important;
-}
-
-.btn-light {
-    background-color: #ffffff !important;
     border-color: #8a8886 !important;
     color: #323130 !important;
 }
 
-.btn-light:hover {
+.btn-outline-secondary:hover {
     background-color: #f3f2f1 !important;
     border-color: #8a8886 !important;
     color: #201f1e !important;
 }
 
-/* ===== SECTION TEXT SIZES - CONSISTENT ACROSS ALL SECTIONS ===== */
-.ms-panel-body {
-    padding: 20px !important;
-    font-size: 18px !important;
+.btn-outline-primary {
+    background-color: transparent !important;
+    border-color: #0078d4 !important;
+    color: #0078d4 !important;
 }
 
-/* Ensure all text in sections is the same size */
-.ms-panel-body p,
-.ms-panel-body div:not(.btn),
-.ms-panel-body span:not(.btn),
-.ms-panel-body strong,
-.ms-panel-body .text-muted {
-    font-size: 18px !important;
-    line-height: 1.5 !important;
+.btn-outline-primary:hover {
+    background-color: #e8f4fd !important;
+    border-color: #0078d4 !important;
+    color: #0078d4 !important;
 }
 
-/* Specific styling for informational sections */
-.informacion-corporativo p,
-.resumen-deuda p {
-    font-size: 18px !important;
-    margin-bottom: 12px !important;
+/* ===== MONTH ACCORDION ===== */
+.month-accordion {
+    margin-bottom: 16px;
+    border: 1px solid #edebe9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: all 0.2s ease;
 }
 
-/* ===== TABLES - Microsoft Fluent Tables - LARGER ===== */
-.table {
-    font-size: 18px !important;
+.month-accordion.selected {
+    border-color: #0078d4;
+    border-width: 2px;
+    box-shadow: 0 2px 8px rgba(0,120,212,0.2);
+}
+
+.month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background-color: #faf9f8;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.month-header:hover {
+    background-color: #f3f2f1;
+}
+
+.month-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.month-header-left .toggle-icon {
+    font-size: 16px;
+    transition: transform 0.2s ease;
+    color: #0078d4;
+}
+
+.month-header-left .toggle-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.month-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #323130;
+}
+
+.month-badge {
+    background-color: #e8f4fd;
+    color: #0078d4;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.month-header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.month-stats {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+}
+
+.month-stats .cuota-count {
+    font-size: 13px;
+    color: #605e5c;
+}
+
+.month-stats .month-total {
+    font-size: 20px;
+    font-weight: 700;
+    color: #107c10;
+}
+
+.month-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.month-content {
+    display: none;
+    border-top: 1px solid #edebe9;
+    background-color: #ffffff;
+}
+
+/* ===== AFFILIATE TABLE INSIDE MONTH ===== */
+.affiliate-table {
+    width: 100%;
+    font-size: 13px;
+}
+
+.affiliate-table th {
+    background-color: #e8f4fd !important;
     color: #323130 !important;
-    border-collapse: collapse !important;
-    width: 100% !important;
-}
-
-.table th {
-    background-color: #0078d4 !important;
-    color: #ffffff !important;
     font-weight: 600 !important;
-    font-size: 18px !important;
-    padding: 12px 16px !important;
-    border: none !important;
-    border-bottom: 2px solid #0078d4 !important;
+    padding: 12px 12px !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid #c8e6f5 !important;
 }
 
-.table td {
-    font-size: 18px !important;
-    padding: 12px 16px !important;
+.affiliate-table td {
+    padding: 10px 12px !important;
     border-bottom: 1px solid #edebe9 !important;
     vertical-align: middle !important;
+    background-color: #ffffff !important;
+    color: #323130 !important;
 }
 
-.table-striped tbody tr:nth-of-type(odd) {
+.affiliate-table tr:last-child td {
+    border-bottom: none !important;
+}
+
+.affiliate-group-row {
+    background-color: #faf9f8 !important;
+    cursor: pointer;
+}
+
+.affiliate-group-row td {
+    font-weight: 600 !important;
+    background-color: #faf9f8 !important;
+    color: #323130 !important;
+}
+
+.affiliate-group-row:hover td {
+    background-color: #f3f2f1 !important;
+}
+
+.affiliate-group-row .sub-toggle-icon {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+    display: inline-block;
+    color: #0078d4 !important;
+}
+
+.affiliate-group-row .sub-toggle-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.affiliate-cuotas-row {
+    background-color: #ffffff !important;
+}
+
+.affiliate-cuotas-row td {
+    padding: 0 !important;
+    background-color: #ffffff !important;
+}
+
+.affiliate-cuotas-table {
+    width: 100%;
     background-color: #faf9f8 !important;
 }
 
-.table-striped tbody tr:hover {
-    background-color: #f3f2f1 !important;
-}
-
-.table-bordered {
-    border: 1px solid #edebe9 !important;
-}
-
-.table-bordered th,
-.table-bordered td {
-    border: 1px solid #edebe9 !important;
-}
-
-/* FIX: Total a Pagar row - make it readable */
-.table-dark {
-    background-color: #0078d4 !important;
-    color: #ffffff !important;
-}
-
-.table-dark td {
-    background-color: #0078d4 !important;
-    color: #ffffff !important;
-    border-color: #106ebe !important;
-    font-size: 20px !important;
-    font-weight: 700 !important;
-}
-
-.table-dark td strong {
-    color: #ffffff !important;
-}
-
-/* ===== ALERTS - Microsoft Fluent Alerts - LARGER ===== */
-.alert {
-    font-size: 18px !important;
-    padding: 16px 20px !important;
-    border-radius: 2px !important;
-    border: 1px solid !important;
-    line-height: 1.33 !important;
-    margin-bottom: 20px !important;
-}
-
-.alert-info {
-    background-color: #f8f9fc !important;
-    border-color: #0078d4 !important;
-    color: #004578 !important;
-}
-
-/* CHANGED: Orange to Burgundy */
-.alert-warning {
-    background-color: #fdf4f7 !important;
-    border-color: #800020 !important;
-    color: #800020 !important;
-}
-
-.alert-danger {
-    background-color: #fdf6f6 !important;
-    border-color: #d13438 !important;
-    color: #d13438 !important;
-}
-
-/* ===== NO DEUDA MESSAGE - Microsoft Style - LARGER ===== */
-.no-deuda-message {
-    background: linear-gradient(135deg, #107c10 0%, #0e700e 100%) !important;
-    border: none !important;
-    border-radius: 2px !important;
-    box-shadow: 0 8px 16px rgba(16, 124, 16, 0.3) !important;
-    color: #ffffff !important;
-    padding: 60px 40px !important;
-    text-align: center !important;
-    margin: 30px 0 !important;
-}
-
-.no-deuda-icon {
-    font-size: 80px !important;
-    margin-bottom: 30px !important;
-    opacity: 0.9 !important;
-}
-
-.no-deuda-title {
-    font-size: 36px !important;
-    font-weight: 300 !important;
-    margin-bottom: 20px !important;
-    letter-spacing: 0.5px !important;
-    color: #ffffff !important; /* Pure White for high contrast */
-}
-
-.no-deuda-subtitle {
-    font-size: 24px !important;
-    opacity: 1 !important;
-    margin-bottom: 40px !important;
-    color: #ffffff !important; /* Blanco puro para el texto circundante */
-    line-height: 1.4 !important;
-}
-
-/* NUEVO: Asegura que la etiqueta strong dentro del subtítulo también sea blanca */
-.no-deuda-subtitle strong {
-    color: #ffffff !important;
-    font-size: 32px !important;
-}
-
-/* ===== FORM CONTROLS - LARGER ===== */
-.form-control {
-    font-size: 18px !important;
-    padding: 10px 12px !important;
-    border-radius: 2px !important;
-    border: 1px solid #605e5c !important;
-    font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-    min-height: 44px !important;
-    background-color: #ffffff !important;
-}
-
-.form-control:focus {
-    border-color: #0078d4 !important;
-    outline: 2px solid #0078d4 !important;
-    outline-offset: -2px !important;
-    box-shadow: none !important;
-}
-
-.control-label {
-    font-size: 18px !important;
-    font-weight: 600 !important;
+.affiliate-cuotas-table td {
+    padding: 10px 12px 10px 48px !important;
+    border-bottom: 1px solid #edebe9 !important;
+    font-size: 13px !important;
+    background-color: #faf9f8 !important;
     color: #323130 !important;
-    margin-bottom: 8px !important;
 }
 
-/* ===== LAYOUT AND SPACING - LARGER ===== */
-.row {
-    margin: 0 !important;
+.affiliate-cuotas-table tr:last-child td {
+    border-bottom: none !important;
 }
 
-.col-xl-12, .col-md-12 {
-    padding: 12px !important;
+.affiliate-cuotas-table .text-muted {
+    color: #605e5c !important;
 }
 
-/* NEW: GRADIENT CLASSES (Light to Dark Blue Variations) */
-.bg-gradient-blue-1 { /* Lightest: Resumen Financiero */
-    background: linear-gradient(135deg, #1E90FF 0%, #0078D4 100%) !important;
-    color: #ffffff !important; 
-    border-color: #0078D4 !important;
-    box-shadow: 0 4px 8px rgba(30, 144, 255, 0.2) !important;
-}
+/* ===== STATUS STYLES ===== */
+.status-overdue { color: #d13438 !important; font-weight: 600 !important; }
+.status-grace { color: #ff8c00 !important; font-weight: 600 !important; }
+.status-pending { color: #107c10 !important; font-weight: 600 !important; }
+.status-paid { color: #107c10 !important; font-weight: 600 !important; }
 
-.bg-gradient-blue-2 { /* Light-Medium: Información del Corporativo */
+/* ===== SUMMARY CARDS ===== */
+.summary-card {
     background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%) !important;
-    color: #ffffff !important; 
-    border-color: #005a9e !important;
-    box-shadow: 0 4px 8px rgba(0, 120, 212, 0.2) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin-bottom: 20px !important;
+    color: white !important;
+    text-align: center;
 }
 
-.bg-gradient-blue-3 { /* Medium-Dark: Detalle de Cuotas Pendientes */
-    background: linear-gradient(135deg, #005A9E 0%, #003E6C 100%) !important;
-    color: #ffffff !important; 
-    border-color: #003E6C !important;
-    box-shadow: 0 4px 8px rgba(0, 90, 158, 0.2) !important;
+.summary-number {
+    font-size: 32px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
 }
 
-.bg-gradient-blue-4 { /* Darkest: Resumen de Deuda */
-    background: linear-gradient(135deg, #003E6C 0%, #002D4F 100%) !important;
-    color: #ffffff !important; 
-    border-color: #002D4F !important;
-    box-shadow: 0 4px 8px rgba(0, 62, 108, 0.2) !important;
+.summary-label {
+    font-size: 13px !important;
+    opacity: 0.9 !important;
+    margin-top: 6px !important;
 }
 
-/* FIX: Ensure titles inside the gradient header are white */
-.bg-gradient-blue-1 h2, .bg-gradient-blue-1 h3,
-.bg-gradient-blue-2 h2, .bg-gradient-blue-2 h3,
-.bg-gradient-blue-3 h2, .bg-gradient-blue-3 h3,
-.bg-gradient-blue-4 h2, .bg-gradient-blue-4 h3 {
-    color: #ffffff !important;
+.summary-card-success {
+    background: linear-gradient(135deg, #107c10 0%, #B9D750 100%) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin-bottom: 20px !important;
+    color: white !important;
+    text-align: center;
 }
 
-.text-primary { color: #0078d4 !important; }
-.text-success { color: #107c10 !important; }
-.text-danger { color: #d13438 !important; }
-/* CHANGED: Orange to Burgundy */
-.text-warning { color: #800020 !important; }
-.text-info { color: #004578 !important; }
-
-.bg-primary { background-color: #0078d4 !important; }
-.bg-success { background-color: #107c10 !important; }
-/* CHANGED: Orange to Burgundy */
-.bg-warning { background-color: #800020 !important; }
-.bg-info { background-color: #004578 !important; }
-.bg-dark { background-color: #323130 !important; }
-
-.border-primary { border-color: #0078d4 !important; }
-.border-success { border-color: #107c10 !important; }
-/* CHANGED: Orange to Burgundy */
-.border-warning { border-color: #800020 !important; }
-.border-info { border-color: #004578 !important; }
-
-.shadow-sm {
-    box-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,.132), 0 0.3px 0.9px 0 rgba(0,0,0,.108) !important;
+/* ===== PAYMENT HISTORY TABLE ===== */
+.payment-history-table {
+    font-size: 13px !important;
 }
 
-/* ===== ICONS - LARGER ===== */
-.fas, .fa {
-    font-size: 20px !important;
-    margin-right: 10px !important;
+.payment-history-table th {
+    background-color: #e8f4fd !important;
+    color: #323130 !important;
+    font-weight: 600 !important;
+    padding: 12px 12px !important;
+    font-size: 13px !important;
 }
 
-/* ===== CHECKBOX STYLING ===== */
-.checkbox-cell {
-    width: 50px !important;
-    text-align: center !important;
+.payment-history-table td {
+    padding: 10px 12px !important;
+    vertical-align: middle !important;
+    background-color: #ffffff !important;
+    color: #323130 !important;
+    border-bottom: 1px solid #edebe9 !important;
 }
 
-.checkbox-header {
-    width: 50px !important;
-    text-align: center !important;
+.payment-badge-paid {
+    background-color: #107c10 !important;
+    color: white !important;
+    padding: 4px 12px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
 }
 
-.checkbox-select-all {
-    margin: 0 !important;
-    transform: scale(1.2) !important;
-}
-
-.checkbox-cuota {
-    margin: 0 !important;
-    transform: scale(1.2) !important;
-}
-
-/* Checkbox container styling */
-.checkbox-container {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    height: 100% !important;
+.payment-badge-pending {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+    padding: 4px 12px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
 }
 
 /* ===== SELECTION INFO PANEL ===== */
 .selection-info-panel {
     background-color: #f3f2f1 !important;
     border: 1px solid #edebe9 !important;
-    border-radius: 2px !important;
+    border-radius: 8px !important;
     padding: 16px 20px !important;
     margin-bottom: 20px !important;
     display: none !important;
@@ -423,129 +452,66 @@ h4 { font-size: 18px !important; }
 
 .selection-info-panel.active {
     display: block !important;
-    animation: fadeIn 0.3s ease-in !important;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .selection-info-content {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
 }
 
 .selection-info-text {
-    font-size: 18px !important;
+    font-size: 14px !important;
     color: #323130 !important;
 }
 
 .selection-info-text strong {
+    font-size: 16px !important;
     color: #107c10 !important;
 }
 
-/* ===== AFFILIATE NUMBER COLUMN STYLING ===== */
-.affiliate-number {
-    width: 50px !important;
-    text-align: center !important;
-    font-weight: 600 !important;
-    background-color: #f3f2f1 !important;
-    border-right: 2px solid #0078d4 !important;
-}
+/* ===== UTILITY ===== */
+.text-end { text-align: right !important; }
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.fw-bold { font-weight: 700 !important; }
+.me-1 { margin-right: 4px !important; }
+.me-2 { margin-right: 8px !important; }
+.me-3 { margin-right: 12px !important; }
+.ms-2 { margin-left: 8px !important; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-3 { margin-bottom: 12px !important; }
+.mb-4 { margin-bottom: 20px !important; }
+.mt-2 { margin-top: 8px !important; }
+.mt-3 { margin-top: 12px !important; }
+.mt-4 { margin-top: 20px !important; }
+.p-0 { padding: 0 !important; }
 
-.affiliate-number-header {
-    width: 50px !important;
-    text-align: center !important;
-    background-color: #005a9e !important;
-    border-right: 2px solid #ffffff !important;
-}
-
-/* ===== RESPONSIVE DESIGN ===== */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-    body {
-        font-size: 14px !important;
+    .month-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
     }
     
-    .ms-panel-body {
-        padding: 16px !important;
-        font-size: 16px !important;
+    .month-header-right {
+        width: 100%;
+        justify-content: space-between;
     }
     
-    /* ADJUSTED: Responsive title sizes */
-    h1 { font-size: 24px !important; }
-    h2 { font-size: 20px !important; }
-    h3 { font-size: 18px !important; }
-    h4 { font-size: 16px !important; }
-    
-    .btn-lg {
-        width: 100% !important;
-        margin-bottom: 12px !important;
-    }
-    
-    .no-deuda-message {
-        padding: 40px 20px !important;
-        margin: 20px 0 !important;
-    }
-    
-    .no-deuda-icon {
-        font-size: 60px !important;
-    }
-    
-    .no-deuda-title {
-        font-size: 28px !important;
-    }
-    
-    .no-deuda-subtitle {
-        font-size: 20px !important;
-    }
-    
-    .table {
-        font-size: 16px !important;
-    }
-    
-    .table th,
-    .table td {
-        font-size: 16px !important;
-        padding: 10px 12px !important;
-    }
-    
-    .selection-info-content {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 10px !important;
-    }
-    
-    /* Adjust column widths for mobile */
-    .affiliate-number,
-    .affiliate-number-header {
-        width: 40px !important;
-    }
-    
-    .checkbox-cell,
-    .checkbox-header {
-        width: 40px !important;
-    }
+    .summary-number { font-size: 28px !important; }
+    .selection-info-content { flex-direction: column !important; align-items: flex-start !important; }
+    .affiliate-table th, .affiliate-table td { font-size: 12px !important; padding: 8px !important; }
 }
 
-/* ===== ACCESSIBILITY ===== */
-.btn:focus,
-.form-control:focus {
-    outline: 2px solid #0078d4 !important;
-    outline-offset: 2px !important;
-}
-
-.table-responsive {
-    border: 1px solid #edebe9 !important;
-    border-radius: 2px !important;
-}
-
-/* Additional Microsoft Fluent Panel Styles */
+/* ===== PANEL STYLES ===== */
 .ms-panel {
     background: #ffffff !important;
-    border-radius: 2px !important;
-    box-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,.132), 0 0.3px 0.9px 0 rgba(0,0,0,.108) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
     margin-bottom: 20px !important;
     border: 1px solid #edebe9 !important;
 }
@@ -553,60 +519,111 @@ h4 { font-size: 18px !important; }
 .ms-panel-header {
     padding: 16px 20px !important;
     border-bottom: 1px solid #edebe9 !important;
-    color: #ffffff !important;
-    font-weight: 600 !important;
 }
 
-.ms-panel-header h1,
-.ms-panel-header h2,
-.ms-panel-header h3 {
-    color: #ffffff !important;
-    margin-bottom: 0 !important;
-}
+.bg-gradient-blue-1 { background: linear-gradient(135deg, #1E90FF 0%, #0078D4 100%) !important; color: #ffffff !important; }
+.bg-gradient-blue-2 { background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%) !important; color: #ffffff !important; }
+.bg-gradient-blue-3 { background: linear-gradient(135deg, #005A9E 0%, #003E6C 100%) !important; color: #ffffff !important; }
+.bg-gradient-blue-4 { background: linear-gradient(135deg, #003E6C 0%, #002D4F 100%) !important; color: #ffffff !important; }
+.bg-gradient-green { background: linear-gradient(135deg, #107c10 0%, #B1D34A 100%) !important; color: #ffffff !important; }
 
-.ms-panel-fh {
-    min-height: 400px !important;
+.bg-gradient-blue-1 h2, .bg-gradient-blue-1 h3,
+.bg-gradient-blue-2 h2, .bg-gradient-blue-2 h3,
+.bg-gradient-blue-3 h2, .bg-gradient-blue-3 h3,
+.bg-gradient-blue-4 h2, .bg-gradient-blue-4 h3,
+.bg-gradient-green h2, .bg-gradient-green h3 {
+    color: #ffffff !important;
 }
 CSS
 );
 
-// JavaScript for checkbox functionality
-$this->registerJs(<<<JS
+// JavaScript for month accordion functionality
+$this->registerJs(
+    <<<JS
 $(document).ready(function() {
-    // Store cuota amounts in a data attribute for easier access
+    // Store cuota amounts
     $('.checkbox-cuota').each(function() {
-        var cuotaRow = $(this).closest('tr');
-        var amountText = cuotaRow.find('td:eq(6)').text().trim(); // Changed index because we added affiliate number column
-        
-        // Parse currency value
+        var amountText = $(this).closest('tr').find('.cuota-amount').text();
         var amount = parseCurrency(amountText);
         $(this).data('amount', amount);
     });
     
-    // Select all checkbox functionality
-    $('#select-all-cuotas').on('change', function() {
+    // Toggle month content (expand/collapse)
+    $('.month-header').on('click', function(e) {
+        if ($(e.target).is('.month-checkbox') || $(e.target).closest('.month-checkbox').length) {
+            return;
+        }
+        var targetContent = $(this).next('.month-content');
+        var icon = $(this).find('.toggle-icon');
+        targetContent.slideToggle(200);
+        if (targetContent.is(':visible')) {
+            icon.addClass('expanded');
+        } else {
+            icon.removeClass('expanded');
+        }
+    });
+    
+    // Toggle affiliate cuotas within month
+    $(document).on('click', '.affiliate-group-row', function(e) {
+        if ($(e.target).is('.checkbox-cuota') || $(e.target).closest('.checkbox-cell').length) {
+            return;
+        }
+        var targetRow = $(this).next('.affiliate-cuotas-row');
+        var icon = $(this).find('.sub-toggle-icon');
+        targetRow.toggle();
+        if (targetRow.is(':visible')) {
+            icon.addClass('expanded');
+        } else {
+            icon.removeClass('expanded');
+        }
+    });
+    
+    // Month checkbox selection
+    $('.month-checkbox').on('change', function() {
+        var monthKey = $(this).data('month-key');
         var isChecked = $(this).prop('checked');
-        $('.checkbox-cuota').prop('checked', isChecked);
+        var monthAccordion = $(this).closest('.month-accordion');
+        
+        if (isChecked) {
+            monthAccordion.addClass('selected');
+        } else {
+            monthAccordion.removeClass('selected');
+        }
+        
+        $('.checkbox-cuota[data-month-key="' + monthKey + '"]').prop('checked', isChecked);
         updateSelectionInfo();
     });
     
-    // Individual checkbox functionality
-    $('.checkbox-cuota').on('change', function() {
-        updateSelectionInfo();
+    // Global select all months
+    $('#select-all-months').on('change', function() {
+        var isChecked = $(this).prop('checked');
+        $('.month-checkbox').prop('checked', isChecked);
+        $('.checkbox-cuota').prop('checked', isChecked);
         
-        // Update select all checkbox state
-        var totalCheckboxes = $('.checkbox-cuota').length;
-        var checkedCheckboxes = $('.checkbox-cuota:checked').length;
-        $('#select-all-cuotas').prop('checked', totalCheckboxes === checkedCheckboxes);
+        if (isChecked) {
+            $('.month-accordion').addClass('selected');
+        } else {
+            $('.month-accordion').removeClass('selected');
+        }
+        
+        updateSelectionInfo();
+    });
+    
+    // Clear selection button
+    $('#clear-selection').on('click', function() {
+        $('.month-checkbox, #select-all-months').prop('checked', false);
+        $('.checkbox-cuota').prop('checked', false);
+        $('.month-accordion').removeClass('selected');
+        updateSelectionInfo();
     });
     
     // Update selection info panel
     function updateSelectionInfo() {
         var selectedCuotas = $('.checkbox-cuota:checked');
+        var selectedMonths = $('.month-checkbox:checked');
         var selectedCount = selectedCuotas.length;
         var selectedTotal = 0;
         
-        // Calculate total amount of selected cuotas
         selectedCuotas.each(function() {
             var amount = $(this).data('amount') || 0;
             if (!isNaN(amount)) {
@@ -616,20 +633,18 @@ $(document).ready(function() {
         
         if (selectedCount > 0) {
             $('#selection-info-panel').addClass('active');
+            $('#selected-months').text(selectedMonths.length);
             $('#selected-count').text(selectedCount);
             $('#selected-total').text(selectedTotal.toFixed(2));
             
-            // Update payment button
             var paymentBtn = $('#pago-parcial-btn');
-            paymentBtn.text('Realizar Pago Corporativo por ' + selectedTotal.toFixed(2) + ' USD');
+            paymentBtn.html('<i class="fas fa-credit-card me-2"></i> Pagar ' + selectedCount + ' cuota(s) de ' + selectedMonths.length + ' mes(es) por $' + selectedTotal.toFixed(2) + ' USD');
             
-            // Get selected cuota IDs
             var selectedIds = [];
             selectedCuotas.each(function() {
                 selectedIds.push($(this).val());
             });
             
-            // Update button URL
             var baseUrl = $('#pago-parcial-base-url').val();
             paymentBtn.attr('href', baseUrl + '&cuotas=' + selectedIds.join(','));
         } else {
@@ -637,29 +652,15 @@ $(document).ready(function() {
         }
     }
     
-    // Helper function to parse currency strings
     function parseCurrency(currencyString) {
-        // Remove all non-numeric characters except decimal point and minus sign
         var cleaned = currencyString.replace(/[^0-9.,-]+/g, '');
-        
-        // Replace comma with dot if comma is used as decimal separator
         cleaned = cleaned.replace(',', '.');
-        
-        // Parse as float
         var result = parseFloat(cleaned);
-        
-        // Return 0 if parsing fails
         return isNaN(result) ? 0 : result;
     }
     
-    // Initialize selection info
     updateSelectionInfo();
-    
-    // Clear selection button
-    $('#clear-selection').on('click', function() {
-        $('.checkbox-cuota, #select-all-cuotas').prop('checked', false);
-        updateSelectionInfo();
-    });
+    $('.month-header').first().trigger('click');
 });
 JS
 );
@@ -667,246 +668,397 @@ JS
 
 <div class="row">
     <div class="col-xl-12 col-md-12">
-        
-        <?php if ($grandTotal == 0): ?>
-        
-        <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-body">
-                <div class="no-deuda-message">
-                    <div class="no-deuda-icon">
-                        <i class="fas fa-check-circle"></i>
+
+        <?php if ($grandTotal == 0 && empty($paymentHistory)): ?>
+
+            <div class="ms-panel ms-panel-fh">
+                <div class="ms-panel-body">
+                    <div class="no-deuda-message">
+                        <div class="no-deuda-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h1 class="no-deuda-title">Estado financiero actualizado</h1>
+                        <p class="no-deuda-subtitle"><strong><?= Html::encode($corporativo->nombre) ?></strong></p>
+                        <p><span class="text-white">Se encuentra al día con todos sus compromisos financieros.</span></p>
+                        <div class="mt-4">
+                            <?= Html::a(
+                                '<i class="fas fa-arrow-left me-2"></i> Volver al Corporativo',
+                                ['view', 'id' => $corporativo->id],
+                                ['class' => 'btn btn-light btn-lg']
+                            ) ?>
+                            <?= Html::a(
+                                '<i class="fas fa-list me-2"></i> Ver Todos los Corporativos',
+                                ['index'],
+                                ['class' => 'btn btn-outline-light btn-lg ms-2']
+                            ) ?>
+                        </div>
                     </div>
-                    <h1 class="no-deuda-title">Estado financiero actualizado</h1>
-                    <p class="no-deuda-subtitle"><strong><?= Html::encode($corporativo->nombre) ?></strong></p> 
-                    <p><span class="text-white">Se encuentra al día con todos sus compromisos financieros.</span></p>
-                    <div class="mt-4">
+                </div>
+            </div>
+
+        <?php else: ?>
+
+            <input type="hidden" id="corporativo-id" value="<?= $corporativo->id ?>">
+            <input type="hidden" id="pago-parcial-base-url" value="<?= \yii\helpers\Url::to(['pagos-parcial', 'id' => $corporativo->id]) ?>">
+
+            <div class="ms-panel ms-panel-fh">
+                <div class="ms-panel-header d-flex justify-content-between align-items-center flex-wrap">
+                    <h1 style="font-size: 24px !important; font-weight: 700 !important; margin-bottom: 0 !important;">
+                        <i class="fas fa-building me-2"></i>Gestión de Pagos - <?= Html::encode($corporativo->nombre) ?>
+                    </h1>
+
+                </div>
+
+                <div class="ms-panel-body">
+                    <!-- Corporate Info -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="ms-panel border-info mb-4">
+                                <div class="ms-panel-header bg-gradient-blue-2">
+                                    <h3 class="mb-0"><i class="fas fa-building me-2"></i>Información del Corporativo</h3>
+                                </div>
+                                <div class="ms-panel-body informacion-corporativo">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Nombre:</strong> <?= Html::encode($corporativo->nombre) ?></p>
+                                            <p><strong>RIF:</strong> <?= Html::encode($corporativo->rif) ?></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Email:</strong> <?= Html::encode($corporativo->email) ?></p>
+                                            <p><strong>Teléfono:</strong> <?= Html::encode($corporativo->telefono) ?></p>
+                                            <?php if ($lastPaymentDate): ?>
+                                                <p><strong>Último pago:</strong> <?= Yii::$app->formatter->asDate($lastPaymentDate, 'php:d/m/Y') ?></p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards - Enhanced with Payment Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-number"><?= $totalAffiliates ?></div>
+                                <div class="summary-label">Afiliados con Deuda</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-number"><?= $totalMonths ?></div>
+                                <div class="summary-label">Meses con Deuda</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="summary-card">
+                                <div class="summary-number">$<?= number_format($grandTotal, 2, '.', ',') ?> USD</div>
+                                <div class="summary-label">Deuda Pendiente</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="summary-card-success">
+                                <div class="summary-number">$<?= number_format($totalPaid, 2, '.', ',') ?> USD</div>
+                                <div class="summary-label">Total Pagado</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment History Section -->
+                    <?php if (!empty($paymentHistory)): ?>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="ms-panel border-success mb-4">
+                                    <div class="ms-panel-header bg-gradient-green">
+                                        <h3 class="mb-0">
+                                            <i class="fas fa-history me-2"></i>Historial de Pagos
+                                            <span class="badge badge-light ms-2"><?= $totalPayments ?> pagos</span>
+                                        </h3>
+                                    </div>
+                                    <div class="ms-panel-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table payment-history-table mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 50px;">#</th>
+                                                        <th>Fecha de Pago</th>
+                                                        <th>Mes Pagado</th>
+                                                        <th>Método de Pago</th>
+                                                        <th class="text-end">Monto Pagado (USD)</th>
+                                                        <th class="text-end">Monto Bs</th>
+                                                        <th class="text-end">Tasa Cambio</th>
+                                                        <th class="text-center">Cuotas Pagadas</th>
+                                                        <th>Estado</th>
+                                                        <th>Referencia</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php
+                                                    $paymentCounter = 1;
+                                                    foreach ($paymentHistory as $payment):
+                                                        // Extract month from payment date
+                                                        $paymentDate = new \DateTime($payment->fecha_pago);
+                                                        $paidMonth = $paymentDate->format('F Y');
+                                                        $paidCuotas = $paymentCuotasCount[$payment->id] ?? 0;
+
+                                                        // Get values directly from database
+                                                        $montoPagadoUSD = floatval($payment->monto_pagado);  // USD
+                                                        $montoBs = floatval($payment->monto_usd);            // Bs
+
+                                                        // Calculate tasa: Monto Bs / Monto Pagado USD
+                                                        $tasaCalculada = ($montoPagadoUSD > 0) ? $montoBs / $montoPagadoUSD : 0;
+                                                    ?>
+                                                        <tr>
+                                                            <td class="text-center"><strong><?= $paymentCounter++ ?></strong></td>
+                                                            <td>
+                                                                <?= Yii::$app->formatter->asDate($payment->fecha_pago, 'php:d/m/Y') ?>
+                                                                <br>
+                                                                <small class="text-muted"><?= Yii::$app->formatter->asTime($payment->created_at, 'php:H:i') ?></small>
+                                                            </td>
+                                                            <td>
+                                                                <span class="month-badge">
+                                                                    <i class="far fa-calendar-alt me-1"></i>
+                                                                    <?= $paidMonth ?>
+                                                                </span>
+                                                            </td>
+                                                            <td><?= Html::encode($payment->metodo_pago) ?></td>
+                                                            <td class="text-end">
+                                                                <strong>$<?= number_format($montoPagadoUSD, 2, '.', ',') ?> USD</strong>
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <strong><?= number_format($montoBs, 2, '.', ',') ?> Bs</strong>
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <?= number_format($tasaCalculada, 2, '.', ',') ?> Bs/USD
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <span class="badge badge-primary">
+                                                                    <i class="fas fa-file-invoice me-1"></i> <?= $paidCuotas ?> cuota(s)
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <?php if ($payment->estatus === 'Conciliado'): ?>
+                                                                    <span class="payment-badge-paid">
+                                                                        <i class="fas fa-check-circle me-1"></i> Conciliado
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <span class="payment-badge-pending">
+                                                                        <i class="fas fa-clock me-1"></i> Por Conciliar
+                                                                    </span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td>
+                                                                <?= Html::encode($payment->numero_referencia_pago) ?>
+                                                                <?php if ($payment->imagen_prueba): ?>
+                                                                    <br>
+                                                                    <a href="<?= $payment->imagen_prueba ?>" target="_blank" class="text-primary">
+                                                                        <i class="fas fa-file-image me-1"></i> Ver comprobante
+                                                                    </a>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+
+
+                    <!-- Selection Controls -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="alert alert-light border" style="background-color: #EE931F; border-radius: 8px;">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                    <div>
+                                        <div class="checkbox-container" style="display: inline-flex; align-items: center;">
+                                            <input type="checkbox" id="select-all-months" style="margin-right: 10px; width: 18px; height: 18px;">
+                                            <label for="select-all-months" style="margin: 0; font-weight: 600;">Seleccionar Todos los Meses</label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-selection">
+                                            <i class="fas fa-times me-2"></i> Limpiar Selección
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Month Accordion -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="ms-panel border-warning mb-4">
+                                <div class="ms-panel-header bg-gradient-blue-3">
+                                    <h3 class="mb-0">
+                                        <i class="fas fa-calendar-alt me-2"></i>Cuotas Pendientes por Mes
+                                        <span class="badge badge-light ms-2"><?= $totalMonths ?> meses</span>
+                                    </h3>
+                                </div>
+                                <div class="ms-panel-body">
+
+                                    <?php if (empty($monthGroups)): ?>
+                                        <div class="alert alert-success text-center">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            No hay cuotas pendientes. El corporativo está al día con sus pagos.
+                                        </div>
+                                    <?php else: ?>
+
+                                        <?php foreach ($monthGroups as $monthKey => $month): ?>
+                                            <div class="month-accordion" data-month-key="<?= $monthKey ?>">
+                                                <div class="month-header">
+                                                    <div class="month-header-left">
+                                                        <i class="fas fa-chevron-right toggle-icon"></i>
+                                                        <span class="month-name"><?= Html::encode($month['name']) ?></span>
+                                                        <span class="month-badge">
+                                                            <i class="fas fa-file-invoice me-1"></i> <?= $month['cuota_count'] ?> cuota(s)
+                                                        </span>
+                                                    </div>
+                                                    <div class="month-header-right">
+                                                        <div class="month-stats">
+                                                            <span class="month-total">
+                                                                $<?= number_format($month['total'], 2, '.', ',') ?> USD
+                                                            </span>
+                                                        </div>
+                                                        <input type="checkbox" class="month-checkbox" data-month-key="<?= $monthKey ?>">
+                                                    </div>
+                                                </div>
+                                                <div class="month-content">
+                                                    <div class="table-responsive">
+                                                        <table class="affiliate-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th style="width: 40px;"></th>
+                                                                    <th>Afiliado</th>
+                                                                    <th>Cédula</th>
+                                                                    <th>Contrato</th>
+                                                                    <th class="text-end">Total</th>
+                                                                    <th style="width: 100px;"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php
+                                                                $affiliateCounter = 1;
+                                                                foreach ($month['affiliates'] as $affiliateId => $affiliate):
+                                                                    $cuotasList = $affiliate['cuotas'];
+                                                                    usort($cuotasList, function ($a, $b) {
+                                                                        return strtotime($a->fecha_vencimiento) - strtotime($b->fecha_vencimiento);
+                                                                    });
+                                                                ?>
+                                                                    <tr class="affiliate-group-row">
+                                                                        <td class="text-center">
+                                                                            <i class="fas fa-chevron-right sub-toggle-icon"></i>
+                                                                        </td>
+                                                                        <td>
+                                                                            <strong><?= Html::encode($affiliate['name']) ?></strong>
+                                                                        </td>
+                                                                        <td><?= Html::encode($affiliate['cedula']) ?></td>
+                                                                        <td><?= Html::encode($affiliate['contrato_nro']) ?></td>
+                                                                        <td class="text-end">
+                                                                            <strong class="text-danger">$<?= number_format($affiliate['total'], 2, '.', ',') ?> USD</strong>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <span class="badge badge-primary"><?= count($cuotasList) ?> cuota(s)</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr class="affiliate-cuotas-row" style="display: none;">
+                                                                        <td colspan="6" class="p-0">
+                                                                            <table class="affiliate-cuotas-table">
+                                                                                <tbody>
+                                                                                    <?php foreach ($cuotasList as $cuota):
+                                                                                        $statusClass = 'status-pending';
+                                                                                        $statusText = 'Pendiente';
+                                                                                        if ($cuota->estatus === 'vencida') {
+                                                                                            $statusClass = 'status-overdue';
+                                                                                            $statusText = 'Vencida';
+                                                                                        } elseif ($cuota->estatus === 'en_gracias') {
+                                                                                            $statusClass = 'status-grace';
+                                                                                            $statusText = 'En Gracia';
+                                                                                        }
+                                                                                    ?>
+                                                                                        <tr>
+                                                                                            <td style="width: 40px; text-align: center;">
+                                                                                                <input type="checkbox" class="checkbox-cuota"
+                                                                                                    value="<?= $cuota->id ?>"
+                                                                                                    data-month-key="<?= $monthKey ?>"
+                                                                                                    data-cuota-id="<?= $cuota->id ?>">
+                                                                                            </td>
+                                                                                            <td colspan="2">
+                                                                                                <small class="text-muted">Cuota #<?= $cuota->numero_cuota ?></small>
+                                                                                            </td>
+                                                                                            <td class="text-end cuota-amount">
+                                                                                                <strong>$<?= number_format($cuota->monto, 2, '.', ',') ?> USD</strong>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <span class="<?= $statusClass ?>"><?= $statusText ?></span>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    <?php endforeach; ?>
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endforeach; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selection Info Panel -->
+                    <div class="selection-info-panel" id="selection-info-panel">
+                        <div class="selection-info-content">
+                            <div class="selection-info-text">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong><span id="selected-months">0</span> mes(es)</strong> seleccionado(s) -
+                                <strong><span id="selected-count">0</span> cuota(s)</strong> -
+                                Total: <strong>$<span id="selected-total">0.00</span> USD</strong>
+                            </div>
+                            <div>
+                                <?= Html::a(
+                                    '<i class="fas fa-credit-card me-2"></i> Pagar Seleccionadas',
+                                    '#',
+                                    [
+                                        'class' => 'btn btn-success btn-lg',
+                                        'id' => 'pago-parcial-btn'
+                                    ]
+                                ) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4 d-flex justify-content-center gap-3">
                         <?= Html::a(
                             '<i class="fas fa-arrow-left me-2"></i> Volver al Corporativo',
                             ['view', 'id' => $corporativo->id],
-                            ['class' => 'btn btn-light btn-lg']
+                            ['class' => 'btn btn-secondary btn-lg']
                         ) ?>
                         <?= Html::a(
-                            '<i class="fas fa-list me-2"></i> Ver Todos los Corporativos',
-                            ['index'],
-                            ['class' => 'btn btn-outline-light btn-lg ms-2']
+                            '<i class="fas fa-chart-line me-2"></i> Ver Reporte de Pagos',
+                            ['pagos', 'id' => $corporativo->id],
+                            ['class' => 'btn btn-outline-primary btn-lg']
                         ) ?>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <?php else: ?>
-        
-        <!-- Hidden fields for URLs and IDs -->
-        <input type="hidden" id="corporativo-id" value="<?= $corporativo->id ?>">
-        <input type="hidden" id="pago-parcial-base-url" value="<?= \yii\helpers\Url::to(['pagos-parcial', 'id' => $corporativo->id]) ?>">
-        
-        <div class="ms-panel ms-panel-fh">
-            <div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1 style="font-size: 26px !important; font-weight: 700 !important;">
-                    <i class="fas fa-building me-2"></i>Gestión de Deuda - <?= Html::encode($corporativo->nombre) ?>
-                </h1>
-                <div style="margin-left: 40px !important;"> 
-                    <?= Html::a(
-                        '<i class="fas fa-credit-card me-2"></i> Realizar Pago Corporativo Completo',
-                        ['pagos', 'id' => $corporativo->id],
-                        ['class' => 'btn btn-success btn-lg']
-                    ) ?>
-                </div>
-            </div>
 
-            <div class="ms-panel-body">
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="ms-panel border-primary mb-4">
-                            <div class="ms-panel-header bg-gradient-blue-1">
-                                <h2 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Resumen Financiero</h2>
-                            </div>
-                            <div class="ms-panel-body">
-                                <div class="alert alert-info" role="alert">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>Corporativo:</strong> <?= Html::encode($corporativo->nombre) ?><br>
-                                            <strong>Estado:</strong> <span class="text-danger">Pendiente de pago</span>
-                                        </div>
-                                        <div class="text-end">
-                                            <div class="text-muted">Total Pendiente:</div>
-                                            <h3 class="text-danger mb-0">
-                                                <strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong>
-                                            </h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="ms-panel border-info mb-4">
-                            <div class="ms-panel-header bg-gradient-blue-2">
-                                <h3 class="mb-0"><i class="fas fa-building me-2"></i>Información del Corporativo</h3>
-                            </div>
-                            <div class="ms-panel-body informacion-corporativo">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p><strong>Nombre:</strong> <?= Html::encode($corporativo->nombre) ?></p>
-                                        <p><strong>RIF:</strong> <?= Html::encode($corporativo->rif) ?></p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <p><strong>Email:</strong> <?= Html::encode($corporativo->email) ?></p>
-                                        <p><strong>Teléfono:</strong> <?= Html::encode($corporativo->telefono) ?></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="ms-panel border-warning mb-4">
-                            <div class="ms-panel-header bg-gradient-blue-3">
-                                <h3 class="mb-0"><i class="fas fa-list-ul me-2"></i>Detalle de Cuotas Pendientes</h3>
-                            </div>
-                            <div class="ms-panel-body p-0">
-                                
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-striped mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th class="affiliate-number-header">#</th>
-                                                <th class="checkbox-header">
-                                                    <div class="checkbox-container">
-                                                        <input type="checkbox" id="select-all-cuotas" class="checkbox-select-all">
-                                                    </div>
-                                                </th>
-                                                <th>ID Cuota</th>
-                                                <th>ID Afiliado</th>
-                                                <th>Afiliado</th>
-                                                <th>Contrato</th>
-                                                <th class="text-end">Monto USD</th>
-                                                <th>Vencimiento</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($allCuotas as $cuota): 
-                                                $contrato = $cuota->contrato ?? null;
-                                                $userDatos = $contrato->user ?? null;
-                                                
-                                                $userId = $contrato->user_id ?? 'N/A';
-                                                $nombreCompleto = $userDatos ? Html::encode($userDatos->nombres . ' ' . $userDatos->apellidos) : 'Afiliado no encontrado';
-                                                
-                                                // Get the consecutive number for this affiliate
-                                                $affiliateNumber = isset($affiliateNumbers[$userId]) ? $affiliateNumbers[$userId] : '';
-                                            ?>
-                                            <tr>
-                                                <td class="affiliate-number"><?= $affiliateNumber ?></td>
-                                                <td class="checkbox-cell">
-                                                    <div class="checkbox-container">
-                                                        <input type="checkbox" class="checkbox-cuota" value="<?= $cuota->id ?>" data-cuota-id="<?= $cuota->id ?>">
-                                                    </div>
-                                                </td>
-                                                <td><?= Html::encode($cuota->id) ?></td>
-                                                <td><?= $userId ?></td>
-                                                <td title="<?= $nombreCompleto ?>"><?= \yii\helpers\StringHelper::truncateWords($nombreCompleto, 3, '...') ?></td>
-                                                <td><?= Html::encode($contrato->nrocontrato ?? 'N/A') ?></td>
-                                                <td class="text-end"><?= Yii::$app->formatter->asCurrency($cuota->monto) ?></td>
-                                                <td><?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?></td>
-                                            </tr>
-                                            <?php endforeach; ?>
-                                            <?php if (empty($allCuotas)): ?>
-                                            <tr>
-                                                <td colspan="8" class="text-center">No hay cuotas pendientes para los afiliados de este corporativo.</td>
-                                            </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr class="table-dark">
-                                                <td colspan="6" class="text-end"><strong>TOTAL PENDIENTE:</strong></td>
-                                                <td class="text-end"><strong><?= Yii::$app->formatter->asCurrency($grandTotal) ?></strong></td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                                
-                                <!-- Selection Info Panel (moved here, right after the table) -->
-                                <div class="selection-info-panel mt-4" id="selection-info-panel">
-                                    <div class="selection-info-content">
-                                        <div class="selection-info-text">
-                                            <i class="fas fa-check-circle text-success me-2"></i>
-                                            <span id="selected-count">0</span> cuota(s) seleccionada(s) - 
-                                            Total: <strong>$<span id="selected-total">0.00</span> USD</strong>
-                                        </div>
-                                        <div>
-                                            <?= Html::a(
-                                                '<i class="fas fa-credit-card me-2"></i> Pagar Seleccionadas',
-                                                '#',
-                                                [
-                                                    'class' => 'btn btn-success btn-lg',
-                                                    'id' => 'pago-parcial-btn'
-                                                ]
-                                            ) ?>
-                                            <button type="button" class="btn btn-secondary btn-lg ms-2" id="clear-selection">
-                                                <i class="fas fa-times me-2"></i> Limpiar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="ms-panel border-success mb-4">
-                            <div class="ms-panel-header bg-gradient-blue-4">
-                                <h3 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumen de Deuda</h3>
-                            </div>
-                            <div class="ms-panel-body resumen-deuda">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p><strong>Total de Cuotas Pendientes:</strong> <?= count($allCuotas) ?></p>
-                                        <p><strong>Total Afiliados con Deuda:</strong> <?= count($affiliateNumbers) ?></p>
-                                        <p><strong>Corporativo:</strong> <?= Html::encode($corporativo->nombre) ?></p>
-                                        <p><strong>Calculado el:</strong> <?= date('d/m/Y H:i:s') ?></p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="text-end">
-                                            <p class="text-muted mb-1">Total Deuda Pendiente</p>
-                                            <h3 class="text-primary mb-0"><?= number_format($grandTotal, 2, ',', '.') ?> USD</h3>
-                                            <p class="text-muted mt-2">Promedio por afiliado: <?= number_format(count($affiliateNumbers) > 0 ? $grandTotal / count($affiliateNumbers) : 0, 2, ',', '.') ?> USD</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="text-center mt-4">
-                                    <?= Html::a(
-                                        '<i class="fas fa-credit-card me-2"></i> Realizar Pago Corporativo Completo por ' . number_format($grandTotal, 2, ',', '.') . ' USD',
-                                        ['pagos', 'id' => $corporativo->id],
-                                        ['class' => 'btn btn-success btn-lg']
-                                    ) ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group mt-4 d-flex justify-content-center">
-                    <?= Html::a(
-                        '<i class="fas fa-arrow-left me-2"></i> Volver al Corporativo',
-                        ['view', 'id' => $corporativo->id],
-                        ['class' => 'btn btn-secondary btn-lg']
-                    ) ?>
-                </div>
-            </div>
-        </div>
-        
         <?php endif; ?>
-        
+
     </div>
 </div>

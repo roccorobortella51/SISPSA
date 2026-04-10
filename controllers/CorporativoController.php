@@ -1374,16 +1374,21 @@ class CorporativoController extends Controller
     }
     // ========== END OF NEW HELPER METHOD ==========
 
+    /**
+     * Displays debt and payment history for a corporativo.
+     * @param int $id Corporativo ID
+     * @return string
+     * @throws NotFoundHttpException if the corporativo cannot be found
+     */
     public function actionDeuda($id)
     {
         $model = $this->findModel($id);
 
-        // ========== NEW: Check if user has access to this corporate ==========
+        // Check if user has access
         if (!$this->userHasAccessToCorporativo($id)) {
             Yii::$app->session->setFlash('error', 'No tiene permiso para ver la deuda de este corporativo.');
             return $this->redirect(['index']);
         }
-        // ========== END OF NEW CHECK ==========
 
         // Get ALL user IDs for this corporate (BOTH methods)
         $allUserIds = $this->getAllCorporateUserIds($id);
@@ -1396,15 +1401,14 @@ class CorporativoController extends Controller
             $allCuotas = \app\models\Cuotas::find()
                 ->select('cuotas.*')
                 ->innerJoinWith(['contrato' => function ($query) {
-                    $query->innerJoinWith(['user']); // Join with user_datos for ordering by name
+                    $query->innerJoinWith(['user']);
                 }])
                 ->where(['contratos.user_id' => $allUserIds])
                 ->andWhere(['cuotas.estatus' => 'pendiente'])
                 ->andWhere(['>', 'cuotas.monto', 0])
-                // Order by expiration date (oldest first) and then by affiliate name
                 ->orderBy([
-                    'cuotas.fecha_vencimiento' => SORT_ASC, // Oldest first
-                    'user_datos.nombres' => SORT_ASC, // Then by first name
+                    'cuotas.fecha_vencimiento' => SORT_ASC,
+                    'user_datos.nombres' => SORT_ASC,
                 ])
                 ->all();
 
@@ -1415,14 +1419,53 @@ class CorporativoController extends Controller
             }
         }
 
+        // ===== NEW: Get payment history for this corporation =====
+        $paymentHistory = \app\models\Pagos::find()
+            ->where(['corporativo_id' => $id])
+            ->andWhere(['tipo_pago' => 'corporativo'])
+            ->orderBy(['fecha_pago' => SORT_DESC, 'created_at' => SORT_DESC])
+            ->all();
+
+        // Also get individual payments made by affiliates of this corporation
+        $affiliatePaymentIds = \app\models\Pagos::find()
+            ->select('id')
+            ->where(['user_id' => $allUserIds])
+            ->andWhere(['tipo_pago' => 'afiliado_corporativo'])
+            ->column();
+
+        $affiliatePayments = \app\models\Pagos::find()
+            ->where(['id' => $affiliatePaymentIds])
+            ->orderBy(['fecha_pago' => SORT_DESC, 'created_at' => SORT_DESC])
+            ->all();
+
+        // Calculate payment statistics
+        $totalPaid = 0;
+        $totalPayments = count($paymentHistory);
+        foreach ($paymentHistory as $payment) {
+            $totalPaid += floatval($payment->monto_pagado);
+        }
+
+        // Get last payment date
+        $lastPaymentDate = null;
+        if (!empty($paymentHistory)) {
+            $lastPaymentDate = $paymentHistory[0]->fecha_pago;
+        }
+
         Yii::debug("Corporate ID={$id}: Total users=" . count($allUserIds) .
             ", Total fees=" . count($allCuotas) .
-            ", Total amount={$grandTotal}");
+            ", Total amount={$grandTotal}" .
+            ", Total payments={$totalPayments}" .
+            ", Total paid={$totalPaid}");
 
         return $this->render('deuda', [
             'corporativo' => $model,
             'allCuotas' => $allCuotas,
             'grandTotal' => $grandTotal,
+            'paymentHistory' => $paymentHistory,
+            'affiliatePayments' => $affiliatePayments,
+            'totalPaid' => $totalPaid,
+            'totalPayments' => $totalPayments,
+            'lastPaymentDate' => $lastPaymentDate,
         ]);
     }
 
@@ -1431,19 +1474,21 @@ class CorporativoController extends Controller
      */
     private function getAllCorporateUserIds($corporativoId)
     {
-        // 1. Direct users (from corporativo_user table)
-        $directUserIds = \app\models\CorporativoUser::find()
-            ->select('user_id')
+        // Cast INTEGER to TEXT/BIGINT for consistent comparison
+        $directUserIds = CorporativoUser::find()
+            ->select('CAST(user_id AS BIGINT) as user_id')
             ->where(['corporativo_id' => $corporativoId])
             ->column();
 
-        // 2. Indirect users (from user_datos.afiliado_corporativo_id field)
-        $indirectUserIds = \app\models\UserDatos::find()
+        $indirectUserIds = UserDatos::find()
             ->select('id')
             ->where(['afiliado_corporativo_id' => $corporativoId])
             ->column();
 
-        // 3. Combine and remove duplicates
+        // Convert all to strings for safe comparison
+        $directUserIds = array_map('strval', $directUserIds);
+        $indirectUserIds = array_map('strval', $indirectUserIds);
+
         return array_unique(array_merge($directUserIds, $indirectUserIds));
     }
     /**

@@ -89,46 +89,36 @@ class CuotaController extends Controller
 
     private function checkContractsToReactivate()
     {
+        // Get ALL suspended contracts, not just those with vencidas
         $contratosSuspendidos = Contratos::find()
             ->where(['estatus' => 'suspendido'])
             ->all();
 
         $reactivados = 0;
         foreach ($contratosSuspendidos as $contrato) {
-            // SOLO contar cuotas VENCIDAS - las de gracia NO impiden reactivación
-            $cuotasVencidas = Cuotas::find()
+            // Check for ANY cuotas that are NOT paid AND overdue
+            $hasUnpaidOverdue = Cuotas::find()
                 ->where(['contrato_id' => $contrato->id])
-                ->andWhere(['estatus' => Cuotas::ESTADO_VENCIDA])
-                ->count();
+                ->andWhere(['in', 'estatus', ['pendiente', 'en_gracias']])
+                ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
+                ->exists();
 
-            // Información para debug (opcional)
-            $cuotasEnGracia = Cuotas::find()
-                ->where(['contrato_id' => $contrato->id])
-                ->andWhere(['estatus' => Cuotas::ESTADO_GRACE_PERIOD])
-                ->count();
-
-            $cuotasPendientes = Cuotas::find()
-                ->where(['contrato_id' => $contrato->id])
-                ->andWhere(['estatus' => Cuotas::ESTADO_PENDIENTE])
-                ->count();
-
-            Yii::info("Contract #{$contrato->id} - Vencidas: {$cuotasVencidas}, En gracia: {$cuotasEnGracia}, Pendientes: {$cuotasPendientes}", 'cuotas');
-
-            // ===== CORRECTED LOGIC =====
-            // Si NO hay cuotas VENCIDAS, reactivar (así tenga cuotas en gracia o pendientes)
-            if ($cuotasVencidas == 0) {
+            // If NO unpaid overdue cuotas, reactivate
+            if (!$hasUnpaidOverdue) {
+                $oldStatus = $contrato->estatus;
                 $contrato->estatus = 'Activo';
+
                 if ($contrato->save()) {
                     $reactivados++;
-                    $this->stdout("      🔄 Contrato #{$contrato->id} REACTIVADO (vencidas: {$cuotasVencidas}, en gracia: {$cuotasEnGracia}, pendientes: {$cuotasPendientes})\n");
+                    $this->stdout("      🔄 Contrato #{$contrato->id} REACTIVADO (was: {$oldStatus})\n");
 
+                    // Update user solvent status
                     if ($contrato->user) {
                         $contrato->user->estatus_solvente = 'Si';
                         $contrato->user->save(false);
+                        $this->stdout("      👤 Usuario #{$contrato->user_id} marcado como solvente\n");
                     }
                 }
-            } else {
-                $this->stdout("      ⏸️ Contrato #{$contrato->id} sigue suspendido (vencidas: {$cuotasVencidas}, en gracia: {$cuotasEnGracia})\n");
             }
         }
         return $reactivados;

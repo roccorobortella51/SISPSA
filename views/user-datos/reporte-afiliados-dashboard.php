@@ -5,12 +5,52 @@ use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use yii\helpers\ArrayHelper;
 use app\components\UserHelper;
+use app\models\rmclinica;
 
 $this->title = 'Dashboard de Afiliados';
 $this->params['breadcrumbs'][] = $this->title;
 
 // Check user role for link permissions
-$isSuperAdmin = Yii::$app->user->can('superadmin');
+$isSuperAdmin = Yii::$app->user->can('superadmin') || Yii::$app->user->can('admin');
+$hasClinicAccess = UserHelper::hasClinicAccess();
+$currentUserId = Yii::$app->user->id;
+
+// Get accessible clinics based on user role
+if ($hasClinicAccess) {
+    // Users with clinic roles get their assigned clinics
+    $userClinicas = UserHelper::getAccessibleClinicas();
+    $userClinicaIds = ArrayHelper::getColumn($userClinicas, 'id');
+} elseif ($isSuperAdmin) {
+    // Superadmin can see all clinics
+    $userClinicas = $clinicas;
+    $userClinicaIds = ArrayHelper::getColumn($clinicas, 'id');
+} else {
+    // Other users - try to get their assigned clinics
+    $userClinicas = UserHelper::getAccessibleClinicas();
+    $userClinicaIds = ArrayHelper::getColumn($userClinicas, 'id');
+}
+
+// If user has no clinics assigned, prevent access
+if (empty($userClinicaIds) && !$isSuperAdmin) {
+    Yii::$app->session->setFlash('error', 'No tiene clínicas asignadas. Contacte al administrador.');
+    return;
+}
+
+// Filter the initial clinic list for dropdown
+$filteredClinicas = $isSuperAdmin ? $clinicas : $userClinicas;
+
+// Set default selected clinics based on user's access
+$defaultClinicaIds = [];
+if (!$isSuperAdmin && !empty($userClinicaIds)) {
+    // For non-superadmins, automatically select their assigned clinics
+    $defaultClinicaIds = $userClinicaIds;
+} elseif (empty($searchModel->clinica_ids)) {
+    $defaultClinicaIds = $userClinicaIds;
+} else {
+    // If user submitted filters, respect them but ensure they only include accessible clinics
+    $submittedClinicaIds = is_array($searchModel->clinica_ids) ? $searchModel->clinica_ids : [$searchModel->clinica_ids];
+    $defaultClinicaIds = array_intersect($submittedClinicaIds, $userClinicaIds);
+}
 
 // Register Chart.js CDN
 $this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js', ['depends' => [\yii\web\JqueryAsset::class]]);
@@ -46,14 +86,23 @@ foreach ($summaryByClinic as $clinic) {
     $totalAnulados += $clinic['contratos_anulados'] ?? 0;
 }
 
-// Custom CSS with beautiful totals styling
+// Custom CSS with Microsoft styles
 $this->registerCss("
+    /* Microsoft-style layout */
+    body {
+        background-color: #f5f5f5;
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    }
+    
     .stat-card {
-        border-radius: 15px;
-        transition: transform 0.3s ease;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     }
     .stat-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
     }
     .stat-card.bg-primary, .stat-card.bg-success, .stat-card.bg-danger {
         color: white !important;
@@ -73,6 +122,9 @@ $this->registerCss("
     }
     .card-header.bg-primary, .card-header.bg-success, .card-header.bg-info, .card-header.bg-warning {
         color: white !important;
+        border-bottom: none;
+        font-weight: 600;
+        font-size: 1rem;
     }
     .table thead.bg-primary th,
     .table thead.bg-success th,
@@ -80,54 +132,46 @@ $this->registerCss("
     .table thead.bg-warning th {
         color: white !important;
         font-weight: 600;
-        font-size: 0.95rem;
-        padding: 15px 12px;
+        font-size: 0.9rem;
+        padding: 12px 12px;
+        border-bottom: none;
     }
     .progress {
         background-color: #e9ecef;
-        border-radius: 10px;
+        border-radius: 4px;
         overflow: hidden;
     }
     .progress-bar {
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #0078d4, #005a9e);
     }
     .badge {
-        font-size: 1.1rem;
-        padding: 0.5rem 0.9rem;
-        border-radius: 10px;
-        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-weight: 500;
         display: inline-block;
-        min-width: 80px;
+        min-width: 70px;
     }
     .badge-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        font-size: 1.2rem;
-        padding: 0.6rem 1rem;
+        background: #0078d4;
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
     }
     .badge-info {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        font-size: 1.1rem;
-        padding: 0.5rem 0.9rem;
+        background: #5bc0de;
     }
     .badge-warning {
-        background: linear-gradient(135deg, #f39c12, #e67e22);
-        font-size: 1.1rem;
-        padding: 0.5rem 0.9rem;
+        background: #ffc107;
+        color: #212529;
     }
     .badge-success {
-        background: linear-gradient(135deg, #2ecc71, #27ae60);
-        font-size: 1.1rem;
-        padding: 0.5rem 0.9rem;
+        background: #28a745;
     }
     .badge-danger {
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        font-size: 1.1rem;
-        padding: 0.5rem 0.9rem;
+        background: #dc3545;
     }
     .badge-secondary {
-        background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-        font-size: 1.1rem;
-        padding: 0.5rem 0.9rem;
+        background: #6c757d;
     }
     .table-hover tbody tr:hover {
         background-color: #f8f9fa;
@@ -139,31 +183,33 @@ $this->registerCss("
         cursor: default;
     }
     
-    /* Beautiful Totals Section Styles */
+    /* Microsoft-style Totals Section */
     .totals-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
+        background: #ffffff;
+        border-radius: 8px;
         padding: 0;
         margin-top: 25px;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e0e0e0;
         overflow: hidden;
     }
     
     .totals-header {
-        background: rgba(0, 0, 0, 0.1);
-        padding: 15px 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        background: #f8f9fa;
+        padding: 12px 20px;
+        border-bottom: 1px solid #e0e0e0;
     }
     
     .totals-header h4 {
         margin: 0;
-        color: white;
+        color: #333;
         font-weight: 600;
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
     
     .totals-header h4 i {
-        margin-right: 10px;
+        margin-right: 8px;
+        color: #0078d4;
     }
     
     .totals-grid {
@@ -175,15 +221,15 @@ $this->registerCss("
     
     .total-item {
         text-align: center;
-        padding: 15px 25px;
+        padding: 15px 20px;
         flex: 1;
-        min-width: 140px;
-        transition: transform 0.3s ease;
+        min-width: 130px;
+        transition: all 0.2s ease;
         position: relative;
     }
     
     .total-item:hover {
-        transform: translateY(-5px);
+        background-color: #f8f9fa;
     }
     
     .total-item:not(:last-child)::after {
@@ -192,83 +238,121 @@ $this->registerCss("
         right: 0;
         top: 50%;
         transform: translateY(-50%);
-        height: 60px;
+        height: 50px;
         width: 1px;
-        background: rgba(255, 255, 255, 0.3);
+        background: #e0e0e0;
     }
     
     .total-icon {
-        font-size: 2rem;
-        margin-bottom: 10px;
-        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+        color: #0078d4;
     }
     
     .total-label {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.85rem;
+        color: #6c757d;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         font-weight: 500;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
     
     .total-number {
-        font-size: 2rem;
-        font-weight: 800;
-        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
         line-height: 1;
-        margin-bottom: 5px;
-        font-family: 'Courier New', monospace;
+        margin-bottom: 4px;
     }
     
     .total-sub {
-        font-size: 0.7rem;
-        color: rgba(255, 255, 255, 0.7);
-        margin-top: 5px;
-    }
-    
-    .total-number small {
-        font-size: 1rem;
-        font-weight: normal;
+        font-size: 0.65rem;
+        color: #6c757d;
+        margin-top: 4px;
     }
     
     @media (max-width: 768px) {
         .total-item {
             flex-basis: 50%;
-            padding: 15px;
+            padding: 12px;
         }
         .total-item:nth-child(even)::after {
             display: none;
         }
         .total-number {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
         }
     }
     
     /* Special styling for specific totals */
-    .total-item.total-afiliados .total-number {
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    }
     .total-item.total-activos .total-number {
-        color: #a8e6cf;
+        color: #28a745;
     }
     .total-item.total-suspendidos .total-number {
-        color: #ffaaa5;
+        color: #dc3545;
     }
     
     .table td {
         vertical-align: middle;
-        padding: 12px 8px;
-        font-size: 0.95rem;
+        padding: 10px 8px;
+        font-size: 0.9rem;
     }
     .table td:first-child {
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
     .clinic-name {
-        font-weight: 700;
-        font-size: 1rem;
+        font-weight: 600;
+        font-size: 0.95rem;
         color: #2c3e50;
+    }
+    
+    /* Microsoft-style cards */
+    .card {
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card-header {
+        border-bottom: 1px solid #e0e0e0;
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .btn {
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    
+    .btn-light {
+        background-color: #ffffff;
+        border-color: #d0d0d0;
+    }
+    
+    .btn-light:hover {
+        background-color: #f8f9fa;
+        border-color: #b0b0b0;
+    }
+    
+    /* Filter section */
+    .filter-section {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+    }
+    
+    /* Access restriction badge */
+    .access-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 20px;
+        background-color: #e8f4fd;
+        color: #0078d4;
+        margin-left: 10px;
     }
 ");
 ?>
@@ -278,29 +362,41 @@ $this->registerCss("
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h2 mb-2 text-gray-800">
-                <i class="fas fa-chart-line mr-2 text-primary"></i>Dashboard de Afiliados
+            <h1 class="h3 mb-2 text-gray-800">
+                <i class="fas fa-chart-line mr-2" style="color: #0078d4;"></i>Dashboard de Afiliados
+                <?php if ($hasClinicAccess): ?>
+                    <span class="access-badge">
+                        <i class="fas fa-lock mr-1"></i> Acceso Restringido
+                    </span>
+                <?php endif; ?>
             </h1>
-            <p class="text-muted">Análisis completo de afiliados por clínica, tipo de afiliado y planes seleccionados</p>
+            <p class="text-muted">
+                <?php if ($hasClinicAccess && count($userClinicas) === 1): ?>
+                    <i class="fas fa-building mr-1"></i> Datos de: <strong><?= Html::encode($userClinicas[0]->nombre ?? 'Mi Clínica') ?></strong>
+                <?php elseif ($hasClinicAccess && count($userClinicas) > 1): ?>
+                    <i class="fas fa-building mr-1"></i> Datos de: <strong><?= count($userClinicas) ?> clínicas asignadas</strong>
+                <?php else: ?>
+                    <i class="fas fa-chart-bar mr-1"></i> Análisis completo de afiliados por clínica, tipo de afiliado y planes seleccionados
+                <?php endif; ?>
+            </p>
         </div>
         <div>
-            <!-- NEW BUTTONS -->
             <?= Html::a(
                 '<i class="fas fa-chart-bar mr-2"></i>Exportar Resumen Excel',
                 ['exportar-resumen-excel', 'AfiliadosReportSearch' => Yii::$app->request->get('AfiliadosReportSearch', [])],
-                ['class' => 'btn btn-info mr-2']
+                ['class' => 'btn btn-outline-primary mr-2']
             ) ?>
 
             <?= Html::a(
                 '<i class="fas fa-chart-pie mr-2"></i>Exportar Resumen PDF',
                 ['exportar-resumen-pdf', 'AfiliadosReportSearch' => Yii::$app->request->get('AfiliadosReportSearch', [])],
-                ['class' => 'btn btn-warning', 'target' => '_blank']
+                ['class' => 'btn btn-outline-warning', 'target' => '_blank']
             ) ?>
         </div>
     </div>
 
     <!-- Filter Section -->
-    <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
+    <div class="card mb-4 filter-section">
         <div class="card-body">
             <?php $form = ActiveForm::begin([
                 'method' => 'get',
@@ -308,47 +404,87 @@ $this->registerCss("
                 'options' => ['class' => 'row align-items-end', 'id' => 'filter-form']
             ]); ?>
 
-            <!-- REPLACE the clinica_id dropdown with this multi-select -->
+            <!-- Clinica selection - Limited by user's permissions -->
             <div class="col-lg-3 col-md-6 mb-3">
-                <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
-                    ArrayHelper::map($clinicas, 'id', 'nombre'),
-                    [
-                        'multiple' => true,
-                        'size' => 5,
-                        'class' => 'form-control form-control-sm',
-                        'prompt' => 'Seleccione una o más clínicas...'
-                    ]
-                )->label('<i class="fas fa-hospital mr-1"></i> Clínicas', ['style' => 'color: white;']) ?>
-                <small class="text-white-50">Ctrl + clic para seleccionar múltiples</small>
+                <?php if ($hasClinicAccess): ?>
+                    <?php
+                    // User has clinic-level access - show their assigned clinics (read-only or disabled)
+                    $accessibleClinicas = UserHelper::getAccessibleClinicas();
+                    $accessibleClinicaIds = ArrayHelper::getColumn($accessibleClinicas, 'id');
+                    ?>
+                    <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
+                        ArrayHelper::map($accessibleClinicas, 'id', 'nombre'),
+                        [
+                            'multiple' => true,
+                            'size' => count($accessibleClinicas) > 1 ? 4 : 1,
+                            'class' => 'form-control form-control-sm',
+                            'disabled' => count($accessibleClinicas) === 1,
+                            'value' => $accessibleClinicaIds,
+                        ]
+                    )->label('<i class="fas fa-hospital mr-1"></i> Clínicas') ?>
+                    <?php if (count($accessibleClinicas) === 1): ?>
+                        <small class="text-muted">Acceso restringido a su clínica asignada</small>
+                    <?php else: ?>
+                        <small class="text-muted">Seleccione una o más clínicas (solo sus asignadas)</small>
+                    <?php endif; ?>
+                <?php elseif ($isSuperAdmin): ?>
+                    <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
+                        ArrayHelper::map($clinicas, 'id', 'nombre'),
+                        [
+                            'multiple' => true,
+                            'size' => 4,
+                            'class' => 'form-control form-control-sm',
+                            'prompt' => 'Todas las clínicas...',
+                            'value' => $defaultClinicaIds
+                        ]
+                    )->label('<i class="fas fa-hospital mr-1"></i> Clínicas') ?>
+                    <small class="text-muted">Ctrl + clic para seleccionar múltiples</small>
+                <?php else: ?>
+                    <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
+                        ArrayHelper::map($clinicas, 'id', 'nombre'),
+                        [
+                            'multiple' => true,
+                            'size' => count($clinicas) > 1 ? 4 : 1,
+                            'class' => 'form-control form-control-sm',
+                            'disabled' => count($clinicas) === 1,
+                            'value' => $defaultClinicaIds
+                        ]
+                    )->label('<i class="fas fa-hospital mr-1"></i> Clínicas') ?>
+                    <?php if (count($clinicas) === 1): ?>
+                        <small class="text-muted">Acceso restringido a su clínica asignada</small>
+                    <?php else: ?>
+                        <small class="text-muted">Seleccione una o más clínicas (solo sus asignadas)</small>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
 
             <div class="col-lg-2 col-md-6 mb-3">
                 <?= $form->field($searchModel, 'user_datos_type_id')->dropDownList(
                     ['' => 'Todos'] + $tipoAfiliadoList,
                     ['class' => 'form-control form-control-sm']
-                )->label('<i class="fas fa-user-tag mr-1"></i> Tipo de Afiliado', ['style' => 'color: white;']) ?>
+                )->label('<i class="fas fa-user-tag mr-1"></i> Tipo de Afiliado') ?>
             </div>
 
             <div class="col-lg-2 col-md-6 mb-3">
                 <?= $form->field($searchModel, 'plan_id')->dropDownList(
                     ['' => 'Todos los planes'] + $planList,
                     ['class' => 'form-control form-control-sm']
-                )->label('<i class="fas fa-file-invoice-dollar mr-1"></i> Plan', ['style' => 'color: white;']) ?>
+                )->label('<i class="fas fa-file-invoice-dollar mr-1"></i> Plan') ?>
             </div>
 
             <div class="col-lg-2 col-md-6 mb-3">
                 <?= $form->field($searchModel, 'estatus')->dropDownList(
                     ['' => 'Todos', 'Registrado' => 'Activos', 'Inactivo' => 'Inactivos'],
                     ['class' => 'form-control form-control-sm']
-                )->label('<i class="fas fa-circle mr-1"></i> Estado', ['style' => 'color: white;']) ?>
+                )->label('<i class="fas fa-circle mr-1"></i> Estado') ?>
             </div>
 
             <div class="col-lg-3 col-md-12 mb-3">
                 <div class="form-group">
                     <label>&nbsp;</label>
                     <div class="d-flex">
-                        <?= Html::submitButton('<i class="fas fa-filter mr-2"></i>Aplicar Filtros', ['class' => 'btn btn-light btn-lg mr-2 flex-grow-1']) ?>
-                        <?= Html::a('<i class="fas fa-sync-alt"></i>', ['reporte-afiliados-dashboard'], ['class' => 'btn btn-outline-light btn-lg', 'title' => 'Limpiar filtros']) ?>
+                        <?= Html::submitButton('<i class="fas fa-filter mr-2"></i>Aplicar Filtros', ['class' => 'btn btn-primary mr-2 flex-grow-1']) ?>
+                        <?= Html::a('<i class="fas fa-sync-alt"></i>', ['reporte-afiliados-dashboard'], ['class' => 'btn btn-outline-secondary', 'title' => 'Limpiar filtros']) ?>
                     </div>
                 </div>
             </div>
@@ -357,14 +493,24 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- KPI Cards - Only 3 cards -->
+    <!-- KPI Cards -->
     <div class="row mb-4">
         <div class="col-lg-4 col-md-6 mb-3">
             <div class="card stat-card bg-primary text-white h-100">
                 <div class="card-body">
-                    <h6 class="card-title text-white">Total Afiliados en Clínicas</h6>
-                    <h2 class="mb-0 text-white" style="font-size: 2.5rem;"><?= number_format($totals['total_afiliados']) ?></h2>
-                    <small class="text-white-50">En <?= $totals['total_clinicas'] ?> clínicas</small>
+                    <h6 class="card-title text-white">
+                        <i class="fas fa-users mr-1"></i>
+                        <?= $hasClinicAccess ? 'Afiliados en su Clínica' : 'Total Afiliados en Clínicas' ?>
+                    </h6>
+                    <h2 class="mb-0 text-white" style="font-size: 2rem;"><?= number_format($totals['total_afiliados'] ?? 0) ?></h2>
+                    <small class="text-white-50">
+                        <?php if ($hasClinicAccess): ?>
+                            <?php $clinicaCount = count($userClinicas); ?>
+                            En <?= $clinicaCount ?> <?= $clinicaCount == 1 ? 'clínica' : 'clínicas' ?>
+                        <?php else: ?>
+                            En <?= $totals['total_clinicas'] ?? 0 ?> clínicas
+                        <?php endif; ?>
+                    </small>
                 </div>
             </div>
         </div>
@@ -372,8 +518,10 @@ $this->registerCss("
         <div class="col-lg-4 col-md-6 mb-3">
             <div class="card stat-card bg-success text-white h-100">
                 <div class="card-body">
-                    <h6 class="card-title text-white">Activos</h6>
-                    <h2 class="mb-0 text-white" style="font-size: 2.5rem;"><?= number_format($totals['total_contratos_activos']) ?></h2>
+                    <h6 class="card-title text-white">
+                        <i class="fas fa-check-circle mr-1"></i> Activos
+                    </h6>
+                    <h2 class="mb-0 text-white" style="font-size: 2rem;"><?= number_format($totals['total_contratos_activos'] ?? 0) ?></h2>
                     <small class="text-white-50">Contratos en vigencia</small>
                 </div>
             </div>
@@ -382,8 +530,10 @@ $this->registerCss("
         <div class="col-lg-4 col-md-6 mb-3">
             <div class="card stat-card bg-danger text-white h-100">
                 <div class="card-body">
-                    <h6 class="card-title text-white">Suspendidos</h6>
-                    <h2 class="mb-0 text-white" style="font-size: 2.5rem;"><?= number_format($totals['total_contratos_suspendidos']) ?></h2>
+                    <h6 class="card-title text-white">
+                        <i class="fas fa-pause-circle mr-1"></i> Suspendidos
+                    </h6>
+                    <h2 class="mb-0 text-white" style="font-size: 2rem;"><?= number_format($totals['total_contratos_suspendidos'] ?? 0) ?></h2>
                     <small class="text-white-50">Con cuotas vencidas</small>
                 </div>
             </div>
@@ -426,7 +576,8 @@ $this->registerCss("
             <!-- Top Clinics -->
             <div class="card">
                 <div class="card-header bg-warning text-white">
-                    <i class="fas fa-trophy mr-2"></i> Top Clínicas por Afiliados
+                    <i class="fas fa-trophy mr-2"></i>
+                    <?= $hasClinicAccess ? 'Top Afiliados por Categoría' : 'Top Clínicas por Afiliados' ?>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -434,7 +585,7 @@ $this->registerCss("
                             <thead class="bg-warning">
                                 <tr class="text-white">
                                     <th class="text-white">#</th>
-                                    <th class="text-white">Clínica</th>
+                                    <th class="text-white"><?= $hasClinicAccess ? 'Categoría' : 'Clínica' ?></th>
                                     <th class="text-white text-right">Afiliados</th>
                                     <th class="text-white text-center">%</th>
                                 </tr>
@@ -442,7 +593,7 @@ $this->registerCss("
                             <tbody>
                                 <?php
                                 $rank = 1;
-                                $total = $totals['total_afiliados'];
+                                $total = $totals['total_afiliados'] ?? 0;
                                 foreach ($topClinics as $clinic):
                                     $percentage = $total > 0 ? round(($clinic['total_afiliados'] / $total) * 100) : 0;
                                 ?>
@@ -565,7 +716,7 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- BEAUTIFUL TOTALS SECTION - REPLACES THE OLD TOTALS ROW -->
+    <!-- BEAUTIFUL TOTALS SECTION -->
     <div class="totals-container">
         <div class="totals-header">
             <h4>
@@ -630,13 +781,17 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- Footer Statistics - Simplified -->
+    <!-- Footer Statistics -->
     <div class="row mt-3">
         <div class="col-12 text-center">
             <small class="text-muted">
                 <i class="fas fa-calendar-alt"></i> Última actualización: <?= date('d/m/Y H:i:s') ?>
                 &nbsp;&nbsp;|&nbsp;&nbsp;
                 <i class="fas fa-chart-bar"></i> Datos basados en los filtros aplicados
+                <?php if ($hasClinicAccess): ?>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <i class="fas fa-lock"></i> Datos limitados a sus clínicas asignadas
+                <?php endif; ?>
             </small>
         </div>
     </div>
@@ -679,7 +834,7 @@ $this->registerJs("
                         backgroundColor: 'rgba(52, 152, 219, 0.8)',
                         borderColor: 'rgba(52, 152, 219, 1)',
                         borderWidth: 1,
-                        borderRadius: 5
+                        borderRadius: 4
                     },
                     {
                         label: 'Corporativo',
@@ -687,7 +842,7 @@ $this->registerJs("
                         backgroundColor: 'rgba(231, 76, 60, 0.8)',
                         borderColor: 'rgba(231, 76, 60, 1)',
                         borderWidth: 1,
-                        borderRadius: 5
+                        borderRadius: 4
                     }
                 ]
             },

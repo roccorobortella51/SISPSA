@@ -6,6 +6,7 @@ namespace app\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use Yii;
+use app\components\UserHelper;
 
 /**
  * AfiliadosReportSearch represents the model behind the report form.
@@ -19,6 +20,32 @@ class AfiliadosReportSearch extends Model
     public $date_from;
     public $date_to;
     public $estatus;
+
+    // Track whether user has restricted clinic access
+    private $_hasClinicRestriction = false;
+    private $_accessibleClinicaIds = null;
+
+    /**
+     * Constructor - determine clinic access restrictions
+     */
+    public function __construct($config = [])
+    {
+        parent::__construct($config);
+
+        // Check if user has clinic-level access
+        if (UserHelper::hasClinicAccess()) {
+            $this->_hasClinicRestriction = true;
+            $this->_accessibleClinicaIds = [UserHelper::getMyClinicaId()];
+        } elseif (!Yii::$app->user->can('superadmin') && !Yii::$app->user->can('admin')) {
+            // For other roles, also restrict to their assigned clinics
+            $this->_hasClinicRestriction = true;
+            $this->_accessibleClinicaIds = UserHelper::getMyClinicaId() ? [UserHelper::getMyClinicaId()] : [];
+        } else {
+            // Superadmin and admin have no restrictions
+            $this->_hasClinicRestriction = false;
+            $this->_accessibleClinicaIds = null;
+        }
+    }
 
     /**
      * {@inheritdoc}
@@ -46,6 +73,39 @@ class AfiliadosReportSearch extends Model
             'date_to' => 'Fecha Hasta',
             'estatus' => 'Estado',
         ];
+    }
+
+    /**
+     * Apply clinic restrictions to a query
+     */
+    private function applyClinicRestrictions(&$query, $alias = 'ud')
+    {
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
+            $query->andWhere(["{$alias}.clinica_id" => $this->_accessibleClinicaIds]);
+        }
+    }
+
+    /**
+     * Get filtered clinic IDs for queries (respects user access)
+     */
+    private function getFilteredClinicaIds()
+    {
+        // If user has clinic restriction, always limit to their clinics
+        if ($this->_hasClinicRestriction) {
+            return $this->_accessibleClinicaIds;
+        }
+
+        // For admin/superadmin, use the selected filters if any
+        if (!empty($this->clinica_ids) && is_array($this->clinica_ids)) {
+            return $this->clinica_ids;
+        }
+
+        if (!empty($this->clinica_id)) {
+            return [$this->clinica_id];
+        }
+
+        // No filter, return null (meaning all clinics)
+        return null;
     }
 
     /**
@@ -87,6 +147,9 @@ class AfiliadosReportSearch extends Model
             ->where(['ud.role' => 'afiliado'])
             ->andWhere(['IS', 'ud.deleted_at', null]);
 
+        // Apply clinic restrictions based on user role
+        $this->applyClinicRestrictions($query);
+
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => false,
@@ -100,11 +163,10 @@ class AfiliadosReportSearch extends Model
             return $dataProvider;
         }
 
-        // Handle multiple clinics
-        if (!empty($this->clinica_ids) && is_array($this->clinica_ids)) {
-            $query->andWhere(['ud.clinica_id' => $this->clinica_ids]);
-        } elseif (!empty($this->clinica_id)) {
-            $query->andWhere(['ud.clinica_id' => $this->clinica_id]);
+        // Handle multiple clinics - but respect user restrictions
+        $filteredClinicaIds = $this->getFilteredClinicaIds();
+        if ($filteredClinicaIds !== null) {
+            $query->andWhere(['ud.clinica_id' => $filteredClinicaIds]);
         }
 
         if (!empty($this->user_datos_type_id)) {
@@ -146,11 +208,13 @@ class AfiliadosReportSearch extends Model
             ->andWhere(['IS', 'ud.deleted_at', null])
             ->orderBy(['rm_clinica.nombre' => SORT_ASC, 'ud.nombres' => SORT_ASC, 'ud.apellidos' => SORT_ASC]);
 
-        // Handle multiple clinics
-        if (!empty($this->clinica_ids) && is_array($this->clinica_ids)) {
-            $query->andWhere(['ud.clinica_id' => $this->clinica_ids]);
-        } elseif (!empty($this->clinica_id)) {
-            $query->andWhere(['ud.clinica_id' => $this->clinica_id]);
+        // Apply clinic restrictions based on user role
+        $this->applyClinicRestrictions($query);
+
+        // Handle multiple clinics - but respect user restrictions
+        $filteredClinicaIds = $this->getFilteredClinicaIds();
+        if ($filteredClinicaIds !== null) {
+            $query->andWhere(['ud.clinica_id' => $filteredClinicaIds]);
         }
 
         if (!empty($this->user_datos_type_id)) {
@@ -216,18 +280,28 @@ class AfiliadosReportSearch extends Model
 
         $sqlParams = [];
 
-        // Handle multiple clinics with named parameters
-        if (!empty($this->clinica_ids) && is_array($this->clinica_ids)) {
+        // Apply clinic restrictions based on user role
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
             $placeholders = [];
-            foreach ($this->clinica_ids as $index => $clinicaId) {
-                $paramName = ":clinica_id_{$index}";
+            foreach ($this->_accessibleClinicaIds as $index => $clinicaId) {
+                $paramName = ":restricted_clinica_id_{$index}";
                 $placeholders[] = $paramName;
                 $sqlParams[$paramName] = $clinicaId;
             }
             $sql .= " AND ud.clinica_id IN (" . implode(',', $placeholders) . ")";
-        } elseif (!empty($this->clinica_id)) {
-            $sql .= " AND ud.clinica_id = :clinica_id";
-            $sqlParams[':clinica_id'] = $this->clinica_id;
+        }
+        // Handle user-selected clinic filters (only for users without restrictions)
+        elseif (!$this->_hasClinicRestriction) {
+            $filteredClinicaIds = $this->getFilteredClinicaIds();
+            if ($filteredClinicaIds !== null) {
+                $placeholders = [];
+                foreach ($filteredClinicaIds as $index => $clinicaId) {
+                    $paramName = ":clinica_id_{$index}";
+                    $placeholders[] = $paramName;
+                    $sqlParams[$paramName] = $clinicaId;
+                }
+                $sql .= " AND ud.clinica_id IN (" . implode(',', $placeholders) . ")";
+            }
         }
 
         if (!empty($this->user_datos_type_id)) {
@@ -287,18 +361,28 @@ class AfiliadosReportSearch extends Model
 
         $sqlParams = [];
 
-        // Handle multiple clinics with named parameters
-        if (!empty($this->clinica_ids) && is_array($this->clinica_ids)) {
+        // Apply clinic restrictions based on user role
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
             $placeholders = [];
-            foreach ($this->clinica_ids as $index => $clinicaId) {
-                $paramName = ":clinica_id_{$index}";
+            foreach ($this->_accessibleClinicaIds as $index => $clinicaId) {
+                $paramName = ":restricted_clinica_id_{$index}";
                 $placeholders[] = $paramName;
                 $sqlParams[$paramName] = $clinicaId;
             }
             $sql .= " AND ud.clinica_id IN (" . implode(',', $placeholders) . ")";
-        } elseif (!empty($this->clinica_id)) {
-            $sql .= " AND ud.clinica_id = :clinica_id";
-            $sqlParams[':clinica_id'] = $this->clinica_id;
+        }
+        // Handle user-selected clinic filters (only for users without restrictions)
+        elseif (!$this->_hasClinicRestriction) {
+            $filteredClinicaIds = $this->getFilteredClinicaIds();
+            if ($filteredClinicaIds !== null) {
+                $placeholders = [];
+                foreach ($filteredClinicaIds as $index => $clinicaId) {
+                    $paramName = ":clinica_id_{$index}";
+                    $placeholders[] = $paramName;
+                    $sqlParams[$paramName] = $clinicaId;
+                }
+                $sql .= " AND ud.clinica_id IN (" . implode(',', $placeholders) . ")";
+            }
         }
 
         if (!empty($this->user_datos_type_id)) {
@@ -383,18 +467,28 @@ class AfiliadosReportSearch extends Model
 
         $sqlParams = [':date_limit' => date('Y-m-d', strtotime('-12 months'))];
 
-        // Handle multiple clinics with named parameters
-        if (!empty($this->clinica_ids) && is_array($this->clinica_ids)) {
+        // Apply clinic restrictions based on user role
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
             $placeholders = [];
-            foreach ($this->clinica_ids as $index => $clinicaId) {
-                $paramName = ":clinica_id_{$index}";
+            foreach ($this->_accessibleClinicaIds as $index => $clinicaId) {
+                $paramName = ":restricted_clinica_id_{$index}";
                 $placeholders[] = $paramName;
                 $sqlParams[$paramName] = $clinicaId;
             }
             $sql .= " AND clinica_id IN (" . implode(',', $placeholders) . ")";
-        } elseif (!empty($this->clinica_id)) {
-            $sql .= " AND clinica_id = :clinica_id";
-            $sqlParams[':clinica_id'] = $this->clinica_id;
+        }
+        // Handle user-selected clinic filters (only for users without restrictions)
+        elseif (!$this->_hasClinicRestriction) {
+            $filteredClinicaIds = $this->getFilteredClinicaIds();
+            if ($filteredClinicaIds !== null) {
+                $placeholders = [];
+                foreach ($filteredClinicaIds as $index => $clinicaId) {
+                    $paramName = ":clinica_id_{$index}";
+                    $placeholders[] = $paramName;
+                    $sqlParams[$paramName] = $clinicaId;
+                }
+                $sql .= " AND clinica_id IN (" . implode(',', $placeholders) . ")";
+            }
         }
 
         $sql .= " GROUP BY DATE_TRUNC('month', created_at) ORDER BY month ASC";

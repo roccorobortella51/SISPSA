@@ -97,6 +97,7 @@ $this->registerJs("const IMPORT_STATUS_URL = '{$importStatusUrl}';", \yii\web\Vi
                     [
                         'class' => 'btn btn-success me-2',
                         'id' => 'import-plans-btn',
+                        'type' => 'button'  // Add this explicitly
                     ]
                 ) ?>
             <?php endif; ?>
@@ -468,23 +469,31 @@ HTML;
 // BULLETPROOF JAVASCRIPT (Only load for users with write permissions)
 $bulletproofJs = <<<JS
 // ============================================
-// BULLETPROOF MODAL FUNCTIONS
+// IMPROVED MODAL FUNCTIONS
 // ============================================
 
 // Global functions accessible from anywhere
 window.showImportModal = function() {
-    console.log('BULLETPROOF: Showing modal');
+    console.log('showImportModal called');
     
-    // Get modal element
     var modal = document.getElementById('importModal');
     
     if (!modal) {
-        console.error('BULLETPROOF: Modal element not found!');
-        alert('Error: Modal not found. Please refresh the page.');
+        console.error('Modal element not found!');
+        setTimeout(function() {
+            var retryModal = document.getElementById('importModal');
+            if (retryModal) {
+                console.log('Modal found on retry');
+                retryModal.style.display = 'block';
+                retryModal.style.zIndex = '999999';
+                document.body.style.overflow = 'hidden';
+            } else {
+                alert('Error: No se pudo encontrar el modal. Por favor recargue la página.');
+            }
+        }, 100);
         return;
     }
     
-    // Show modal with maximum z-index and important styles
     modal.style.display = 'block';
     modal.style.zIndex = '999999';
     modal.style.position = 'fixed';
@@ -493,98 +502,134 @@ window.showImportModal = function() {
     modal.style.width = '100%';
     modal.style.height = '100%';
     modal.style.backgroundColor = 'rgba(0,0,0,0.7)';
-    
-    // Also add a class for additional styling
     modal.classList.add('active');
-    
-    // Prevent body scrolling
     document.body.style.overflow = 'hidden';
-    
-    console.log('BULLETPROOF: Modal should now be visible');
-    
-    // Debug: Check if modal is in viewport
-    var rect = modal.getBoundingClientRect();
-    console.log('Modal position:', rect.top, rect.left, rect.width, rect.height);
+    console.log('Modal displayed');
 }
 
 window.hideImportModal = function() {
-    console.log('BULLETPROOF: Hiding modal');
-    
+    console.log('hideImportModal called');
     var modal = document.getElementById('importModal');
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-    
-    // Restore body scrolling
     document.body.style.overflow = '';
 }
 
-// File selection display handling
-function updateFileDisplay() {
+window.updateFileDisplay = function() {
     var fileInput = document.getElementById('excel-file');
     var fileNameDisplay = document.getElementById('selected-file-name');
     var fileNameText = document.getElementById('file-name-text');
     
-    if (fileInput.files.length > 0) {
+    if (fileInput && fileInput.files.length > 0) {
         var file = fileInput.files[0];
-        var fileSize = (file.size / (1024 * 1024)).toFixed(2); // Convert to MB
+        var fileSize = (file.size / (1024 * 1024)).toFixed(2);
         
-        fileNameText.textContent = file.name + ' (' + fileSize + ' MB)';
-        fileNameDisplay.style.display = 'block';
-        
-        // Style based on file size
-        if (file.size > 10 * 1024 * 1024) {
-            fileNameDisplay.style.background = '#f8d7da';
-            fileNameDisplay.style.border = '1px solid #f5c6cb';
-            fileNameText.innerHTML = '<span style="color: #721c24;">' + file.name + ' (' + fileSize + ' MB) - <strong>Archivo demasiado grande!</strong></span>';
-        } else {
-            fileNameDisplay.style.background = '#d4edda';
-            fileNameDisplay.style.border = '1px solid #c3e6cb';
-            fileNameText.innerHTML = '<span style="color: #155724;">' + file.name + ' (' + fileSize + ' MB) - <strong>Archivo válido</strong></span>';
+        if (fileNameText) {
+            fileNameText.textContent = file.name + ' (' + fileSize + ' MB)';
         }
-    } else {
+        if (fileNameDisplay) {
+            fileNameDisplay.style.display = 'block';
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+            if (fileNameDisplay) {
+                fileNameDisplay.style.background = '#f8d7da';
+                fileNameDisplay.style.border = '1px solid #f5c6cb';
+            }
+            if (fileNameText) {
+                fileNameText.innerHTML = '<span style="color: #721c24;">' + file.name + ' (' + fileSize + ' MB) - <strong>Archivo demasiado grande!</strong></span>';
+            }
+        } else {
+            if (fileNameDisplay) {
+                fileNameDisplay.style.background = '#d4edda';
+                fileNameDisplay.style.border = '1px solid #c3e6cb';
+            }
+            if (fileNameText) {
+                fileNameText.innerHTML = '<span style="color: #155724;">' + file.name + ' (' + fileSize + ' MB) - <strong>Archivo válido</strong></span>';
+            }
+        }
+    } else if (fileNameDisplay) {
         fileNameDisplay.style.display = 'none';
     }
 }
 
-function clearFileSelection() {
+window.clearFileSelection = function() {
     var fileInput = document.getElementById('excel-file');
-    fileInput.value = '';
+    if (fileInput) {
+        fileInput.value = '';
+    }
     updateFileDisplay();
 }
 
-// ============================================
-// INITIALIZATION
-// ============================================
+function initImportButton() {
+    console.log('initImportButton - Starting');
+JS;
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('BULLETPROOF: DOM loaded, initializing...');
+// Add the conditional content based on PHP variable
+if (!$isReadOnly) {
+    $bulletproofJs .= <<<JS
     
-    <?php if (!$isReadOnly): ?>
-    // Get button and modal for debugging
     var importBtn = document.getElementById('import-plans-btn');
-    var modal = document.getElementById('importModal');
+    
+    if (!importBtn) {
+        importBtn = document.querySelector('#import-plans-btn');
+    }
     
     console.log('Import button found:', !!importBtn);
-    console.log('Modal found:', !!modal);
     
-    // Add click event to import button
     if (importBtn) {
+        var newBtn = importBtn.cloneNode(true);
+        importBtn.parentNode.replaceChild(newBtn, importBtn);
+        importBtn = newBtn;
+        
         importBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('BULLETPROOF: Button clicked via event listener');
+            e.stopPropagation();
+            console.log('Import button clicked!');
             showImportModal();
+            return false;
         });
+        
+        console.log('Event listener attached to import button');
+    } else {
+        console.error('Import button NOT found! Retrying in 500ms...');
+        setTimeout(initImportButton, 500);
+        return;
     }
     
-    // Also add event listener to close button
-    var closeBtn = modal ? modal.querySelector('.close') || modal.querySelector('button[onclick*="hideImportModal"]') : null;
-    if (closeBtn) {
-        closeBtn.addEventListener('click', hideImportModal);
+    var fileInput = document.getElementById('excel-file');
+    if (fileInput) {
+        fileInput.addEventListener('change', updateFileDisplay);
+        
+        var dropZone = fileInput.closest('div[style*="border"]') || fileInput.parentElement.parentElement.parentElement;
+        if (dropZone) {
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#28a745';
+                this.style.background = '#e9f7ef';
+            });
+            
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#ced4da';
+                this.style.background = '#f8f9fa';
+            });
+            
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.borderColor = '#ced4da';
+                this.style.background = '#f8f9fa';
+                if (e.dataTransfer.files.length && fileInput) {
+                    fileInput.files = e.dataTransfer.files;
+                    updateFileDisplay();
+                }
+            });
+        }
     }
     
-    // Close modal when clicking on backdrop (outside modal content)
+    var modal = document.getElementById('importModal');
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
@@ -593,65 +638,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize file input event listeners
-    var fileInput = document.getElementById('excel-file');
-    if (fileInput) {
-        fileInput.addEventListener('change', updateFileDisplay);
-        
-        // Also handle drag and drop
-        var fileDropZone = fileInput.parentElement.parentElement.parentElement;
-        
-        fileDropZone.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.style.borderColor = '#28a745';
-            this.style.background = '#e9f7ef';
-        });
-        
-        fileDropZone.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.style.borderColor = '#ced4da';
-            this.style.background = '#f8f9fa';
-        });
-        
-        fileDropZone.addEventListener('drop', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.style.borderColor = '#ced4da';
-            this.style.background = '#f8f9fa';
-            
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateFileDisplay();
-            }
-        });
-    }
+JS;
+}
+
+$bulletproofJs .= <<<JS
     
-    // Update submit button text based on file selection
-    var submitBtn = document.getElementById('submit-import');
-    if (submitBtn) {
-        var originalText = submitBtn.innerHTML;
-        
-        if (fileInput) {
-            fileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    submitBtn.innerHTML = '<i class="fas fa-upload mr-2"></i> Importar "' + this.files[0].name + '"';
-                } else {
-                    submitBtn.innerHTML = originalText;
-                }
-            });
-        }
-    }
-    <?php endif; ?>
-    
-    // Initialize tooltips for service badges
     if (typeof $ !== 'undefined' && $.fn.tooltip) {
         $('[data-toggle="tooltip"]').tooltip();
     }
     
-    console.log('BULLETPROOF: Initialization complete');
+    console.log('initImportButton - Complete');
+}
+
+// DOM Ready initialization
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded - Initializing import functionality');
+    initImportButton();
 });
+
+if (typeof $ !== 'undefined') {
+    $(document).ready(function() {
+        console.log('jQuery ready - Initializing import functionality');
+        initImportButton();
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initImportButton);
+} else {
+    setTimeout(initImportButton, 100);
+}
+
+window.addEventListener('load', function() {
+    console.log('Window load - Ensuring import button works');
+    var btn = document.getElementById('import-plans-btn');
+    if (btn && !btn.hasAttribute('data-listener-attached')) {
+        btn.setAttribute('data-listener-attached', 'true');
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showImportModal();
+        });
+    }
+});
+
+window.updatestatus = function(planId) {
+    var isActive = $('#status-switch-' + planId).is(':checked');
+    $.post('/planes/updatestatus', {
+        id: planId,
+        _csrf: $('#csrf-token').val()
+    });
+}
 JS;
 
 $this->registerJs($bulletproofJs, \yii\web\View::POS_END);

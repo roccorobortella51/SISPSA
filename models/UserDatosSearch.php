@@ -18,7 +18,6 @@ class UserDatosSearch extends UserDatos
     public $afiliado_corporativo_id;
     public $clinica_nombre;
     public $consecutivo_menor;
-    // ADDED: Property for contract status filter
     public $contrato_estatus;
 
     /**
@@ -28,7 +27,6 @@ class UserDatosSearch extends UserDatos
     {
         return [
             [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id', 'consecutivo_menor'], 'integer'],
-            // ADDED: 'contrato_estatus' to safe array
             [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'clinica_nombre', 'contrato_estatus'], 'safe'],
             [['paso'], 'number'],
         ];
@@ -49,7 +47,6 @@ class UserDatosSearch extends UserDatos
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -66,9 +63,28 @@ class UserDatosSearch extends UserDatos
         $rol = UserHelper::getMyRol();
         $query = UserDatos::find();
 
-        // INICIO DE LA OPTIMIZACIÓN
+        // ============================================================
+        // CLINIC FILTERING - Apply based on user role
+        // ============================================================
+        // Users with clinic roles only see records from their own clinic
+        if (UserHelper::hasClinicAccess()) {
+            $clinicId = UserHelper::getMyClinicaId();
+            if ($clinicId) {
+                $query->andFilterWhere(['user_datos.clinica_id' => $clinicId]);
+            }
+        }
+
+        // ============================================================
+        // ASESOR FILTERING - For Asesor role
+        // ============================================================
+        if ($rol == "Asesor") {
+            $query->andWhere(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
+        }
+
+        // ============================================================
+        // QUERY BUILDING WITH SELECTIONS AND JOINS
+        // ============================================================
         $query->select([
-            // Columnas DIRECTAS de la tabla user_datos
             'user_datos.id',
             'user_datos.created_at',
             'user_datos.nombres',
@@ -87,29 +103,21 @@ class UserDatosSearch extends UserDatos
             'rm_clinica.nombre as clinicaNombre',
             'ud_asesor.nombres as asesorNombres',
             'ud_asesor.apellidos as asesorApellidos',
-            // ADDED: Contract status for sorting/filtering
             'contratos.estatus as contrato_estatus',
         ]);
 
         $query->joinWith(['userDatosType']);
-
-        // Eager loading para evitar N+1 y asegurar acceso a asesor (persona) y clínica en el Grid
         $query->joinWith([
             'asesor.userDatos' => function ($q) {
                 $q->from(['ud_asesor' => 'user_datos']);
             },
             'clinica'
         ]);
-
-        // Explicit LEFT JOIN for corporativos to avoid ambiguity
         $query->leftJoin('corporativos', 'user_datos.afiliado_corporativo_id = corporativos.id');
-
-        // ADDED: Join with contracts - LEFT JOIN to include users without contracts
         $query->leftJoin('contratos', 'contratos.user_id = user_datos.id AND contratos.estatus != :anulado', [
             ':anulado' => Contratos::STATUS_ANULADO
         ]);
 
-        // Group by user to avoid duplicates if a user has multiple contracts
         $query->groupBy([
             'user_datos.id',
             'user_datos.created_at',
@@ -132,40 +140,32 @@ class UserDatosSearch extends UserDatos
             'contratos.estatus'
         ]);
 
-        if ($rol == "Asesor") {
-            $query->where(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
-        }
-
-        if ($rol == "Administrador-clinica" || $rol == "CONTROL DE CITAS" || $rol == "ADMISIÓN" || $rol == "ATENCIÓN" || $rol == "COORDINADOR-CLINICA" || $rol == "GERENTE-CLINICA") {
-            $query->andFilterWhere(['user_datos.clinica_id' => UserHelper::getMyClinicaId()]);
-        }
-
+        // ============================================================
+        // DATA PROVIDER CONFIGURATION
+        // ============================================================
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-                'defaultOrder' => [
-                    'id' => SORT_DESC,
-                ],
+                'defaultOrder' => ['id' => SORT_DESC],
             ],
         ]);
 
-        // ADDED: Enable sorting for contract status
+        // Sort attributes
         $dataProvider->sort->attributes['contrato_estatus'] = [
             'asc' => ['contratos.estatus' => SORT_ASC],
             'desc' => ['contratos.estatus' => SORT_DESC],
         ];
 
-        // campo 'Tipo Afiliado'
         $dataProvider->sort->attributes['user_datos_type_id'] = [
             'asc' => ['user_datos_type.nombre' => SORT_ASC],
             'desc' => ['user_datos_type.nombre' => SORT_DESC],
         ];
 
-        // ADDED: Enable sorting for corporativo ID and name
         $dataProvider->sort->attributes['afiliado_corporativo_id'] = [
             'asc' => ['user_datos.afiliado_corporativo_id' => SORT_ASC],
             'desc' => ['user_datos.afiliado_corporativo_id' => SORT_DESC],
         ];
+
         $dataProvider->sort->attributes['corporativo'] = [
             'asc' => ['corporativos.nombre' => SORT_ASC],
             'desc' => ['corporativos.nombre' => SORT_DESC],
@@ -177,7 +177,11 @@ class UserDatosSearch extends UserDatos
             return $dataProvider;
         }
 
-        // grid filtering conditions
+        // ============================================================
+        // FILTERING CONDITIONS
+        // ============================================================
+
+        // Exact match filters
         $query->andFilterWhere([
             'user_datos.id' => $this->id,
             'user_datos.paso' => $this->paso,
@@ -212,18 +216,16 @@ class UserDatosSearch extends UserDatos
             $query->andFilterWhere(['between', 'user_datos.fechanac', $dates[0] . ' 00:00:00', $dates[1] . ' 23:59:59']);
         }
 
-        // ADDED: Contract status filter
+        // Contract status filter
         if (!empty($this->contrato_estatus)) {
             if ($this->contrato_estatus === 'sin_contrato') {
-                // Filter for users without any valid contract
                 $query->andWhere(['contratos.id' => null]);
             } else {
-                // Filter for specific contract status
                 $query->andFilterWhere(['contratos.estatus' => $this->contrato_estatus]);
             }
         }
 
-        // Text filters
+        // Text filters (ILike)
         $query->andFilterWhere(['ilike', 'user_id', $this->user_id])
             ->andFilterWhere(['ilike', 'user_datos.nombres', $this->nombres])
             ->andFilterWhere(['ilike', 'user_datos.sexo', $this->sexo])

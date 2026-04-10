@@ -2744,14 +2744,19 @@ class UserDatosController extends Controller
             'planTotals' => array_column($summaryByPlan, 'total_afiliados'),
         ];
 
-        // Get ALL clinics for filter dropdown (not filtered by search)
-        // FIX: Define $clinicas here
-        $clinicas = RmClinica::find()
-            ->select(['id', 'nombre'])
-            ->where(['IS', 'deleted_at', null])
-            ->orderBy(['nombre' => SORT_ASC])
-            ->asArray()
-            ->all();
+        // Get clinics for filter dropdown - but respect user access
+        if (UserHelper::hasClinicAccess()) {
+            // Users with clinic access only see their own clinic
+            $clinicas = UserHelper::getAccessibleClinicas();
+        } else {
+            // Superadmin and admin see all clinics
+            $clinicas = RmClinica::find()
+                ->select(['id', 'nombre'])
+                ->where(['IS', 'deleted_at', null])
+                ->orderBy(['nombre' => SORT_ASC])
+                ->asArray()
+                ->all();
+        }
 
         $clinicaList = \yii\helpers\ArrayHelper::map($clinicas, 'id', 'nombre');
 
@@ -2773,7 +2778,7 @@ class UserDatosController extends Controller
             'topClinics' => $topClinics,
             'totals' => $totals,
             'clinicaList' => $clinicaList,
-            'clinicas' => $clinicas,  // FIX: Add this line to pass $clinicas to the view
+            'clinicas' => $clinicas,
             'planList' => $planList,
             'tipoAfiliadoList' => $tipoAfiliadoList,
             'chartData' => $chartData,

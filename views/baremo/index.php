@@ -459,17 +459,13 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
     document.addEventListener('DOMContentLoaded', function() {
         // Function to handle delete
         function handleDelete(event) {
-            // Find the clicked link
             var link = event.currentTarget;
             var url = link.getAttribute('href');
             var confirmMessage = link.getAttribute('data-confirm');
 
-            // Show confirmation dialog
             if (confirm(confirmMessage || '¿Estás seguro de que quieres eliminar este baremo?')) {
-                // Get CSRF token
                 var csrfToken = document.getElementById('csrf-token').value;
 
-                // Perform AJAX delete
                 fetch(url, {
                         method: 'POST',
                         headers: {
@@ -491,12 +487,11 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                     });
             }
 
-            // Prevent default link behavior
             event.preventDefault();
             return false;
         }
 
-        // Find all delete buttons and add click handlers
+        // Initialize delete handlers
         var deleteButtons = document.querySelectorAll('.delete');
         for (var i = 0; i < deleteButtons.length; i++) {
             if (!deleteButtons[i].hasAttribute('data-handler-attached')) {
@@ -505,7 +500,7 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             }
         }
 
-        // For dynamically loaded content (GridView with pagination)
+        // Observer for dynamic content
         var observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.addedNodes.length) {
@@ -520,7 +515,6 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             });
         });
 
-        // Start observing the table container for dynamic changes
         var tableContainer = document.querySelector('.table-responsive');
         if (tableContainer) {
             observer.observe(tableContainer, {
@@ -529,7 +523,6 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             });
         }
 
-        // Handle PJAX pagination
         if (typeof $ !== 'undefined') {
             $(document).on('pjax:end', function() {
                 var newDeleteButtons = document.querySelectorAll('.delete');
@@ -540,6 +533,286 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
                     }
                 }
             });
+        }
+
+        // ========== IMPORT FUNCTIONALITY ==========
+        const importBtn = document.getElementById('importExcelBtn');
+        const fileInput = document.getElementById('excelFile');
+        const fileFeedback = document.getElementById('fileFeedback');
+        const importForm = document.getElementById('importForm');
+        const csrfToken = document.getElementById('csrf-token').value;
+
+        if (importBtn && fileInput && fileFeedback) {
+            // Create progress container
+            const progressContainer = document.createElement('div');
+            progressContainer.id = 'uploadProgressContainer';
+            progressContainer.className = 'upload-progress-container';
+            progressContainer.style.display = 'none';
+            fileFeedback.appendChild(progressContainer);
+
+            // Trigger file input when button clicked
+            importBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fileInput.click();
+            });
+
+            // Handle file selection
+            fileInput.addEventListener('change', function(e) {
+                if (this.files.length === 0) {
+                    fileFeedback.innerHTML = '';
+                    fileFeedback.appendChild(progressContainer);
+                    return;
+                }
+
+                const file = this.files[0];
+                const validTypes = ['.xlsx', '.xls'];
+                const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+
+                // Validate file type
+                if (!validTypes.includes(fileExtension)) {
+                    fileFeedback.innerHTML = '<div class="alert alert-danger alert-dismissible fade show mt-2"><i class="fas fa-exclamation-triangle me-2"></i>Formato no válido. Use archivos .xlsx o .xls<button type="button" class="close" data-dismiss="alert">&times;</button></div>';
+                    fileFeedback.appendChild(progressContainer);
+                    fileInput.value = '';
+                    return;
+                }
+
+                // Validate file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    fileFeedback.innerHTML = '<div class="alert alert-danger alert-dismissible fade show mt-2"><i class="fas fa-exclamation-triangle me-2"></i>El archivo es demasiado grande. Máximo 10MB<button type="button" class="close" data-dismiss="alert">&times;</button></div>';
+                    fileFeedback.appendChild(progressContainer);
+                    fileInput.value = '';
+                    return;
+                }
+
+                // Escape HTML helper
+                function escapeHtml(str) {
+                    const div = document.createElement('div');
+                    div.textContent = str;
+                    return div.innerHTML;
+                }
+
+                // Show confirmation UI
+                fileFeedback.innerHTML = `
+                <div class="file-info mt-2 p-3 border rounded bg-white shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="mb-2 mb-md-0">
+                            <i class="fas fa-file-excel text-success fa-2x me-3"></i>
+                            <strong>${escapeHtml(file.name)}</strong> 
+                            <span class="text-muted">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="cancelFile">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-success" id="confirmImport">
+                                <i class="fas fa-upload me-1"></i>Importar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Formato esperado: Área | Nombre Servicio | Descripción | Costo | Precio
+                    </div>
+                </div>
+            `;
+                fileFeedback.appendChild(progressContainer);
+                progressContainer.style.display = 'none';
+
+                // Cancel button handler
+                const cancelBtn = document.getElementById('cancelFile');
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', function() {
+                        fileInput.value = '';
+                        fileFeedback.innerHTML = '';
+                        fileFeedback.appendChild(progressContainer);
+                        progressContainer.style.display = 'none';
+                    });
+                }
+
+                // Confirm import button handler
+                const confirmBtn = document.getElementById('confirmImport');
+                if (confirmBtn) {
+                    confirmBtn.addEventListener('click', function() {
+                        performUpload(file);
+                    });
+                }
+            });
+
+            // Perform actual AJAX upload
+            function performUpload(file) {
+                progressContainer.style.display = 'block';
+                progressContainer.innerHTML = `
+                <div class="upload-progress">
+                    <div class="upload-status">
+                        <div class="upload-text">
+                            <i class="fas fa-cloud-upload-alt me-2"></i>
+                            <span class="upload-message">Subiendo archivo...</span>
+                        </div>
+                        <div class="upload-percentage">0%</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="upload-details">
+                        <div class="file-name">${escapeHtml(file.name)}</div>
+                        <div class="file-size">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                </div>
+            `;
+
+                // Disable confirm button
+                const confirmBtn = document.getElementById('confirmImport');
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Importando...';
+                }
+
+                const formData = new FormData();
+                formData.append('excelFile', file);
+                formData.append('_csrf', csrfToken);
+
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        const progressFill = progressContainer.querySelector('.progress-fill');
+                        const percentageEl = progressContainer.querySelector('.upload-percentage');
+                        const messageEl = progressContainer.querySelector('.upload-message');
+
+                        if (progressFill) progressFill.style.width = percent + '%';
+                        if (percentageEl) percentageEl.textContent = percent + '%';
+
+                        if (messageEl) {
+                            if (percent < 30) messageEl.textContent = 'Subiendo archivo...';
+                            else if (percent < 60) messageEl.textContent = 'Procesando datos...';
+                            else if (percent < 90) messageEl.textContent = 'Guardando en base de datos...';
+                            else messageEl.textContent = 'Finalizando importación...';
+                        }
+                    }
+                });
+
+                xhr.addEventListener('load', function() {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                const progressFill = progressContainer.querySelector('.progress-fill');
+                                const percentageEl = progressContainer.querySelector('.upload-percentage');
+                                const messageEl = progressContainer.querySelector('.upload-message');
+
+                                if (progressFill) progressFill.style.width = '100%';
+                                if (percentageEl) percentageEl.textContent = '100%';
+                                if (messageEl) messageEl.textContent = '¡Importación completada!';
+
+                                showNotification('success', response.message || 'Importación completada exitosamente');
+
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showNotification('error', response.message || 'Error durante la importación');
+                                resetUpload();
+                            }
+                        } catch (e) {
+                            showNotification('error', 'Error al procesar la respuesta del servidor');
+                            resetUpload();
+                        }
+                    } else {
+                        showNotification('error', 'Error en el servidor. Código: ' + xhr.status);
+                        resetUpload();
+                    }
+                });
+
+                xhr.addEventListener('error', function() {
+                    showNotification('error', 'Error de red. Por favor, verifique su conexión e intente nuevamente.');
+                    resetUpload();
+                });
+
+                xhr.timeout = 60000;
+                xhr.open('POST', importForm.action);
+                xhr.send(formData);
+            }
+
+            function showNotification(type, message) {
+                const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+
+                const notification = document.createElement('div');
+                notification.className = `alert ${alertClass} alert-dismissible fade show mt-3`;
+                notification.role = 'alert';
+                notification.innerHTML = `
+                <i class="fas ${icon} me-2"></i>
+                ${escapeHtml(message)}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            `;
+
+                fileFeedback.appendChild(notification);
+
+                setTimeout(function() {
+                    if (notification.parentNode) {
+                        $(notification).alert('close');
+                    }
+                }, 5000);
+            }
+
+            function resetUpload() {
+                fileInput.value = '';
+                setTimeout(function() {
+                    progressContainer.style.display = 'none';
+                    progressContainer.innerHTML = '';
+                }, 2000);
+
+                const confirmBtn = document.getElementById('confirmImport');
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Importar';
+                }
+
+                setTimeout(function() {
+                    if (fileFeedback.children.length <= 1 || !fileFeedback.querySelector('.alert-danger, .alert-success')) {
+                        fileFeedback.innerHTML = '';
+                        fileFeedback.appendChild(progressContainer);
+                    }
+                }, 3000);
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // Drag and drop functionality
+            const fileInputWrapper = document.querySelector('.file-input-wrapper');
+            if (fileInputWrapper) {
+                fileInputWrapper.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.backgroundColor = '#f8f9fa';
+                    this.style.borderColor = '#4f46e5';
+                    this.style.borderStyle = 'dashed';
+                });
+
+                fileInputWrapper.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.style.backgroundColor = '';
+                    this.style.borderColor = 'transparent';
+                    this.style.borderStyle = 'dashed';
+                });
+
+                fileInputWrapper.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.backgroundColor = '';
+                    this.style.borderColor = 'transparent';
+
+                    if (e.dataTransfer.files.length > 0) {
+                        fileInput.files = e.dataTransfer.files;
+                        fileInput.dispatchEvent(new Event('change'));
+                    }
+                });
+            }
         }
     });
 
@@ -556,9 +829,6 @@ $this->title = 'Gestión de Baremos de ' . Html::encode($clinica->nombre);
             });
         <?php endif; ?>
     }
-
-    // Import functionality (keep the existing import code)
-    // ... rest of your import code ...
 </script>
 
 <style>

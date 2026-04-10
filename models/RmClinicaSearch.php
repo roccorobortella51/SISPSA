@@ -6,6 +6,8 @@ use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\RmClinica;
 use Yii;
+use app\components\UserHelper;
+
 /**
  * RmClinicaSearch represents the model behind the search form of `app\models\RmClinica`.
  */
@@ -18,7 +20,6 @@ class RmClinicaSearch extends RmClinica
     {
         return [
             [['id'], 'integer'],
-            // Mantener 'safe' para todos los campos que se usan en el filtro
             [['created_at', 'rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'safe'],
         ];
     }
@@ -28,7 +29,6 @@ class RmClinicaSearch extends RmClinica
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -42,11 +42,18 @@ class RmClinicaSearch extends RmClinica
      */
     public function search($params, $formName = null)
     {
-        // 1. Asignamos alias 't' a la tabla principal 'rm_clinica'
         $query = RmClinica::find()->alias('t');
 
-        // 2. Proyección de columnas: Seleccionamos solo las columnas necesarias para el GridView
-        // ID, Nombre, RIF, Teléfono, Correo, Estado, Estatus (y las de control de tiempo si son necesarias)
+        // Apply clinic filtering - users with clinic roles only see their own clinic
+        if (UserHelper::hasClinicAccess()) {
+            $clinicId = UserHelper::getMyClinicaId();
+            if ($clinicId) {
+                $query->andWhere(['t.id' => $clinicId]);
+            }
+        }
+
+        // For superadmin, admin, and other roles with full access, no additional filter needed
+
         $query->select([
             't.id',
             't.nombre',
@@ -55,41 +62,28 @@ class RmClinicaSearch extends RmClinica
             't.correo',
             't.estado',
             't.estatus',
-            't.created_at', 
+            't.created_at',
         ]);
 
-
-        // add conditions that should always apply here
-
-        if(Yii::$app->request->get('per_page') == ""){
-            $paginas = 20;
-        }else{
-            // Nota: Es mejor usar $paginas = Yii::$app->request->get('per_page') si quieres que el parámetro funcione, 
-            // pero si siempre quieres 20, tu lógica actual está bien.
-            $paginas = 20;
-        }
+        // Pagination setup
+        $pageSize = Yii::$app->request->get('per_page', 20);
+        $pageSize = is_numeric($pageSize) && $pageSize > 0 ? (int)$pageSize : 20;
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'sort' => [
-               // Usamos alias 't.created_at' para la ordenación por defecto
-               'defaultOrder' => ['created_at' => SORT_DESC],
-               // Definir el resto de atributos para ordenar si es necesario.
-               // Si no se definen aquí, Yii2 asume que son atributos de 't'.
-             ],
-            'pagination' => ['pageSize' => $paginas ],
+                'defaultOrder' => ['created_at' => SORT_DESC],
+            ],
+            'pagination' => ['pageSize' => $pageSize],
         ]);
 
         $this->load($params, $formName);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
-        // grid filtering conditions
-        // Usamos 't.id' en las condiciones
+        // Grid filtering conditions
         $query->andFilterWhere([
             't.id' => $this->id,
             't.created_at' => $this->created_at,
@@ -97,22 +91,18 @@ class RmClinicaSearch extends RmClinica
             't.updated_at' => $this->updated_at,
         ]);
 
-        // Los siguientes filtros ilike usan nombres de columna simples (ej. 'rif'),
-        // por lo que Yii2 los califica automáticamente con el alias 't' debido a la configuración previa.
-        $query->andFilterWhere(['ilike', 'rif', $this->rif])
-            ->andFilterWhere(['ilike', 'nombre', $this->nombre])
-            ->andFilterWhere(['ilike', 'estado', $this->estado])
-            // Solo incluimos las columnas que son necesarias para la búsqueda o la visualización.
-            // La columna 'direccion' no se muestra pero se puede buscar.
-            ->andFilterWhere(['ilike', 'direccion', $this->direccion])
-            ->andFilterWhere(['ilike', 'telefono', $this->telefono])
-            ->andFilterWhere(['ilike', 'correo', $this->correo])
-            ->andFilterWhere(['ilike', 'estatus', $this->estatus])
-            ->andFilterWhere(['ilike', 'webpage', $this->webpage])
-            ->andFilterWhere(['ilike', 'rs_instagram', $this->rs_instagram])
-            ->andFilterWhere(['ilike', 'QRCode', $this->QRCode])
-            ->andFilterWhere(['ilike', 'codigo_clinica', $this->codigo_clinica])
-            ->andFilterWhere(['ilike', 'private_key', $this->private_key]);
+        $query->andFilterWhere(['ilike', 't.rif', $this->rif])
+            ->andFilterWhere(['ilike', 't.nombre', $this->nombre])
+            ->andFilterWhere(['ilike', 't.estado', $this->estado])
+            ->andFilterWhere(['ilike', 't.direccion', $this->direccion])
+            ->andFilterWhere(['ilike', 't.telefono', $this->telefono])
+            ->andFilterWhere(['ilike', 't.correo', $this->correo])
+            ->andFilterWhere(['ilike', 't.estatus', $this->estatus])
+            ->andFilterWhere(['ilike', 't.webpage', $this->webpage])
+            ->andFilterWhere(['ilike', 't.rs_instagram', $this->rs_instagram])
+            ->andFilterWhere(['ilike', 't.QRCode', $this->QRCode])
+            ->andFilterWhere(['ilike', 't.codigo_clinica', $this->codigo_clinica])
+            ->andFilterWhere(['ilike', 't.private_key', $this->private_key]);
 
         return $dataProvider;
     }

@@ -4,6 +4,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use app\models\RmClinica;
+use app\components\UserHelper;
 
 /** @var yii\web\View $this */
 /** @var app\models\SisSiniestroReporteSearch $searchModel */
@@ -11,6 +12,27 @@ use app\models\RmClinica;
 
 $this->title = 'Reporte de Atenciones Médicas por Clínica';
 $this->params['breadcrumbs'][] = $this->title;
+
+// Check user role for clinic access
+$hasClinicAccess = UserHelper::hasClinicAccess();
+$isSuperAdmin = Yii::$app->user->can('superadmin') || Yii::$app->user->can('admin');
+
+// Get clinics based on user access
+if ($hasClinicAccess) {
+    // Users with clinic roles only see their assigned clinics
+    $clinicas = UserHelper::getAccessibleClinicas();
+    $userClinicaIds = \yii\helpers\ArrayHelper::getColumn($clinicas, 'id');
+    $hasMultipleClinicas = count($clinicas) > 1;
+} else {
+    // Superadmin and admin see all active clinics
+    $clinicas = RmClinica::find()
+        ->where(['estatus' => 'Activo'])
+        ->andWhere(['IS', 'deleted_at', null])
+        ->orderBy('nombre')
+        ->all();
+    $userClinicaIds = \yii\helpers\ArrayHelper::getColumn($clinicas, 'id');
+    $hasMultipleClinicas = true;
+}
 
 // URLs
 $ajaxUrl = Url::to(['generate-report']);
@@ -26,8 +48,20 @@ $clinicDetailUrl = Url::to(['clinic-detail']);
             <div class="text-center">
                 <h1 class="display-5 fw-bold text-primary mb-2">
                     <i class="fas fa-hospital me-2"></i> <?= Html::encode($this->title) ?>
+                    <?php if ($hasClinicAccess): ?>
+                        <span class="badge bg-info ms-2" style="font-size: 0.9rem;">
+                            <i class="fas fa-lock me-1"></i> Acceso Restringido
+                        </span>
+                    <?php endif; ?>
                 </h1>
-                <p class="lead text-muted">Análisis de atenciones médicas por centro de salud</p>
+                <p class="lead text-muted">
+                    Análisis de atenciones médicas por centro de salud
+                    <?php if ($hasClinicAccess && count($clinicas) === 1): ?>
+                        <br><small class="text-primary"><i class="fas fa-building me-1"></i>Datos limitados a: <strong><?= Html::encode($clinicas[0]->nombre) ?></strong></small>
+                    <?php elseif ($hasClinicAccess && count($clinicas) > 1): ?>
+                        <br><small class="text-primary"><i class="fas fa-building me-1"></i>Datos limitados a sus <?= count($clinicas) ?> clínicas asignadas</small>
+                    <?php endif; ?>
+                </p>
             </div>
         </div>
     </div>
@@ -51,6 +85,9 @@ $clinicDetailUrl = Url::to(['clinic-detail']);
                                 </h3>
                                 <p class="mb-0 ms-body-lg text-muted" style="font-size: 1.4rem !important;">
                                     Configure los parámetros para analizar las atenciones médicas por clínica
+                                    <?php if ($hasClinicAccess): ?>
+                                        <br><small class="text-primary"><i class="fas fa-info-circle me-1"></i>Los datos están limitados a sus clínicas asignadas</small>
+                                    <?php endif; ?>
                                 </p>
                             </div>
                         </div>
@@ -110,24 +147,49 @@ $clinicDetailUrl = Url::to(['clinic-detail']);
                             </div>
                             Selección de Clínicas
                         </label>
-                        <select id="clinica-filter" class="form-select select2-multiple border-2 border-success shadow-sm"
-                            style="font-size: 1.4rem !important; min-height: 55px; border-radius: 8px;" multiple="multiple">
-                            <option value="todas" selected class="py-2">
-                                <span style="font-size: 1.4rem !important;">🏥 Todas las Clínicas</span>
-                            </option>
-                            <?php foreach ($clinicas as $clinica): ?>
-                                <option value="<?= $clinica->id ?>" class="py-2">
-                                    <span style="font-size: 1.4rem !important;">
-                                        <i class="fas fa-clinic-medical me-2"></i><?= Html::encode($clinica->nombre) ?>
-                                    </span>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="mt-1">
-                            <small class="text-muted" style="font-size: 1.2rem !important;">
-                                <i class="fas fa-info-circle me-2 ms-success"></i>Seleccione una o múltiples clínicas
-                            </small>
-                        </div>
+
+                        <?php if ($hasClinicAccess && count($clinicas) === 1): ?>
+                            <!-- Single clinic - display as read-only -->
+                            <div class="form-control border-2 border-success shadow-sm py-2"
+                                style="font-size: 1.4rem !important; min-height: 55px; border-radius: 8px; background-color: #f8f9fa; display: flex; align-items: center;">
+                                <i class="fas fa-hospital me-2 text-success"></i>
+                                <?= Html::encode($clinicas[0]->nombre) ?>
+                                <input type="hidden" id="clinica-filter" value="<?= $clinicas[0]->id ?>">
+                            </div>
+                            <div class="mt-1">
+                                <small class="text-muted" style="font-size: 1.2rem !important;">
+                                    <i class="fas fa-lock me-2 ms-success"></i>Acceso restringido a su clínica asignada
+                                </small>
+                            </div>
+                        <?php else: ?>
+                            <select id="clinica-filter" class="form-select select2-multiple border-2 border-success shadow-sm"
+                                style="font-size: 1.4rem !important; min-height: 55px; border-radius: 8px;"
+                                <?= $hasClinicAccess ? 'disabled' : '' ?>
+                                <?= $hasClinicAccess ? '' : 'multiple="multiple"' ?>>
+                                <?php if (!$hasClinicAccess): ?>
+                                    <option value="todas" selected class="py-2">
+                                        <span style="font-size: 1.4rem !important;">🏥 Todas las Clínicas</span>
+                                    </option>
+                                <?php endif; ?>
+                                <?php foreach ($clinicas as $clinica): ?>
+                                    <option value="<?= $clinica->id ?>" class="py-2">
+                                        <span style="font-size: 1.4rem !important;">
+                                            <i class="fas fa-clinic-medical me-2"></i><?= Html::encode($clinica->nombre) ?>
+                                        </span>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="mt-1">
+                                <small class="text-muted" style="font-size: 1.2rem !important;">
+                                    <i class="fas fa-info-circle me-2 ms-success"></i>
+                                    <?php if ($hasClinicAccess): ?>
+                                        Datos limitados a sus <?= count($clinicas) ?> clínicas asignadas
+                                    <?php else: ?>
+                                        Seleccione una o múltiples clínicas
+                                    <?php endif; ?>
+                                </small>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -225,6 +287,9 @@ $clinicDetailUrl = Url::to(['clinic-detail']);
                             <div class="mt-2">
                                 <small class="text-white" style="font-size: 1.2rem !important;">
                                     <i class="fas fa-bolt me-2"></i>Presione para generar el reporte con los filtros seleccionados
+                                    <?php if ($hasClinicAccess): ?>
+                                        <br><i class="fas fa-lock me-1"></i>Los datos se limitarán automáticamente a sus clínicas asignadas
+                                    <?php endif; ?>
                                 </small>
                             </div>
                         </div>
@@ -246,6 +311,9 @@ $clinicDetailUrl = Url::to(['clinic-detail']);
                     <p class="text-muted mb-4 fs-4">
                         Configure los filtros arriba y presione <span class="badge bg-primary px-4 py-3 fs-5">Generar Reporte</span><br>
                         para visualizar el análisis de atenciones médicas.
+                        <?php if ($hasClinicAccess): ?>
+                            <br><span class="text-info"><i class="fas fa-chart-simple me-1"></i>Los datos se limitarán automáticamente a sus clínicas asignadas</span>
+                        <?php endif; ?>
                     </p>
                 </div>
             </div>
@@ -254,19 +322,45 @@ $clinicDetailUrl = Url::to(['clinic-detail']);
 </div>
 
 <?php
+// Pass user clinic IDs to JavaScript
+$userClinicaIdsJs = $hasClinicAccess ? json_encode($userClinicaIds) : '[]';
+
 $this->registerJs(
     <<<JS
 $(document).ready(function() {
-    // Configuration
+    // Configuration with clinic access
     const config = {
         ajaxUrl: '{$ajaxUrl}',
         excelUrl: '{$excelUrl}',
         pdfUrl: '{$pdfUrl}',
-        clinicDetailUrl: '{$clinicDetailUrl}'
+        clinicDetailUrl: '{$clinicDetailUrl}',
+        hasClinicAccess: '{$hasClinicAccess}' === '1',
+        userClinicaIds: {$userClinicaIdsJs}
     };
+    
+    console.log('Reporte de Atenciones cargado con acceso restringido:', config.hasClinicAccess);
+    console.log('Clínicas del usuario:', config.userClinicaIds);
+    
+    // Function to get selected clinics (respects access restrictions)
+    function getSelectedClinicas() {
+        if (config.hasClinicAccess) {
+            // For clinic users, enforce assigned clinic IDs only
+            if (Array.isArray(config.userClinicaIds) && config.userClinicaIds.length > 0) {
+                return config.userClinicaIds;
+            }
+            return [];
+        }
+        
+        // For superadmin/admin, get from selector
+        const clinicas = $('#clinica-filter').val();
+        if (!clinicas || clinicas.length === 0 || clinicas.includes('todas')) {
+            return [];
+        }
+        return clinicas;
+    }
 
-    // Initialize Select2
-    if ($.fn.select2) {
+    // Initialize Select2 only if not restricted or multiple clinics
+    if ($.fn.select2 && $('#clinica-filter').length && !config.hasClinicAccess) {
         $('#clinica-filter').select2({
             placeholder: "Seleccione clínicas...",
             width: '100%',
@@ -376,7 +470,7 @@ $(document).ready(function() {
 
     // Generate report function
     function generateReport() {
-        const clinicas = $('#clinica-filter').val() || [];
+        const clinicas = getSelectedClinicas();
         const dateRange = $('#date-range-selector').val();
         
         // Calculate date range
@@ -469,7 +563,7 @@ $(document).ready(function() {
     });
 
     function exportReport(type) {
-        const clinicas = $('#clinica-filter').val() || [];
+        const clinicas = getSelectedClinicas();
         const dateRange = $('#date-range-selector').val();
         const calculatedRange = calculateDateRange(dateRange);
         
@@ -484,31 +578,7 @@ $(document).ready(function() {
         window.open(exportUrl, '_blank');
     }
 
-    // Function to force modal visibility
-    function forceShowModal() {
-        var modalElement = $('#clinic-detail-modal');
-        var backdropElement = $('.modal-backdrop');
-        
-        // Remove any existing backdrops
-        $('.modal-backdrop').remove();
-        
-        // Create new backdrop
-        $('body').append('<div class="modal-backdrop fade show"></div>');
-        
-        // Force modal to show
-        modalElement.css({
-            'display': 'block',
-            'padding-right': '15px'
-        });
-        modalElement.addClass('show');
-        
-        // Prevent body scrolling
-        $('body').addClass('modal-open');
-        
-        console.log('Modal forced to show');
-    }
-
-    // View clinic detail - FIXED VERSION
+    // View clinic detail - with clinic access support
     $(document).on('click', '.btn-view-detail', function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -516,7 +586,7 @@ $(document).ready(function() {
         const clinicId = $(this).data('id');
         const dateRange = $('#date-range-selector').val();
         const calculatedRange = calculateDateRange(dateRange);
-        const clinicas = $('#clinica-filter').val() || [];
+        const clinicas = getSelectedClinicas();
         
         console.log('Loading clinic detail for ID:', clinicId);
         
@@ -530,20 +600,13 @@ $(document).ready(function() {
             '</div>'
         );
         
-        // Show modal - Bootstrap 4 way
+        // Show modal
         var modalElement = $('#clinic-detail-modal');
         modalElement.modal({
             backdrop: 'static',
             keyboard: false
         });
         modalElement.modal('show');
-        
-        console.log('Modal shown?', modalElement.hasClass('show'));
-        
-        // Check modal events
-        modalElement.on('shown.bs.modal', function() {
-            console.log('Modal fully shown event fired');
-        });
         
         // AJAX request for clinic detail
         $.ajax({
@@ -561,23 +624,12 @@ $(document).ready(function() {
                 console.log('Clinic detail response:', response);
                 
                 if (response.success && response.html) {
-                    console.log('Setting modal content...');
                     $('#clinic-detail-modal .modal-body').html(response.html);
-                    console.log('Modal content set');
-                    
-                    // Check after a short delay if modal is visible
-                    setTimeout(function() {
-                        if (!modalElement.hasClass('show') || modalElement.css('display') !== 'block') {
-                            console.log('Bootstrap modal not showing, forcing visibility...');
-                            forceShowModal();
-                        }
-                    }, 300);
                 } else {
-                    console.log('Error or no HTML in response');
                     $('#clinic-detail-modal .modal-body').html(
                         '<div class="alert alert-danger">' +
                         '    <i class="fas fa-exclamation-triangle me-2"></i>' +
-                        '    ' + (response.message || 'Error al cargar detalles - respuesta vacía') +
+                        '    ' + (response.message || 'Error al cargar detalles') +
                         '</div>'
                     );
                 }
@@ -594,64 +646,14 @@ $(document).ready(function() {
         });
     });
 
-    // Test modal button
-    $('#test-modal-btn').on('click', function() {
-        console.log('Test modal button clicked');
-        $('#clinic-detail-modal .modal-body').html(
-            '<div class="alert alert-success">' +
-            '    <i class="fas fa-check me-2"></i>' +
-            '    Test modal content loaded successfully!' +
-            '</div>'
-        );
-        $('#clinic-detail-modal').modal('show');
-    });
-
     // Initialize
     updateDateInputs('day');
     console.log('System initialized');
+    console.log('Clinic access restricted:', config.hasClinicAccess);
 });
 JS
 );
 ?>
-
-<!-- Emergency modal CSS -->
-<style>
-    /* Emergency modal fix */
-    #clinic-detail-modal.show {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-    }
-
-    .modal-backdrop.show {
-        opacity: 0.5 !important;
-    }
-
-    /* Force modal visibility if needed */
-    #clinic-detail-modal.force-show {
-        z-index: 99999 !important;
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        position: fixed !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        background: rgba(0, 0, 0, 0.5) !important;
-    }
-
-    #clinic-detail-modal.force-show .modal-dialog {
-        z-index: 100000 !important;
-        margin: 0 !important;
-        position: relative !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-    }
-
-    .modal-backdrop.force-show {
-        z-index: 99998 !important;
-    }
-</style>
 
 <!-- Clinic Detail Modal - WIDE VERSION -->
 <div class="modal fade" id="clinic-detail-modal" tabindex="-1" role="dialog" aria-labelledby="clinicDetailModalLabel" aria-hidden="true">
@@ -773,5 +775,50 @@ JS
     /* Ensure modal is visible when shown */
     #clinic-detail-modal.modal.show .modal-dialog {
         transform: none !important;
+    }
+
+    /* Filter group styling */
+    .filter-group-ms {
+        transition: all 0.2s ease;
+    }
+
+    /* Animation for custom dates */
+    #custom-dates-container {
+        animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Icon colors */
+    .ms-primary {
+        color: #0078d4 !important;
+    }
+
+    .ms-success {
+        color: #107c10 !important;
+    }
+
+    .ms-warning {
+        color: #ff8c00 !important;
+    }
+
+    .ms-danger {
+        color: #d13438 !important;
+    }
+
+    /* Badge styling */
+    .badge.bg-info {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
     }
 </style>

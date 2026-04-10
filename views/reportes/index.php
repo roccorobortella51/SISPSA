@@ -1367,34 +1367,36 @@ $this->registerJs(
     // FUNCIONES PARA MANEJAR EL RANGO DE FECHAS
     // =============================================
     function updateDateInputsByRange(range) {
-        const today = new Date();
-        let startDate = today;
-        
-        switch (range) {
-            case 'day':
-                startDate = new Date(today);
-                break;
-            case 'week':
-                startDate = new Date(today);
-                startDate.setDate(today.getDate() - 7);
-                break;
-            case 'month':
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                break;
-            case 'last-month':
-                startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                const endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-                $(config.selectors.dateFrom).val(formatDate(startDate));
-                $(config.selectors.dateTo).val(formatDate(endDate));
-                return;
-            case 'custom':
-                $(config.selectors.customDatesContainer).slideDown(200);
-                return;
-        }
-        
-        $(config.selectors.dateFrom).val(formatDate(startDate));
-        $(config.selectors.dateTo).val(formatDate(today));
+    const today = new Date();
+    let startDate = today;
+    let endDate = today;
+    
+    switch (range) {
+        case 'day':
+            startDate = new Date(today);
+            endDate = new Date(today);
+            break;
+        case 'week':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 7);
+            endDate = new Date(today);
+            break;
+        case 'month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today);
+            break;
+        case 'last-month':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0); // Last day of previous month
+            break;
+        case 'custom':
+            $(config.selectors.customDatesContainer).slideDown(200);
+            return;
     }
+    
+    $(config.selectors.dateFrom).val(formatDate(startDate));
+    $(config.selectors.dateTo).val(formatDate(endDate));
+}
     
     function formatDate(date) {
         return date.toISOString().split('T')[0];

@@ -6,6 +6,7 @@ use yii\widgets\ActiveForm;
 use yii\grid\GridView;
 use yii\widgets\Pjax;
 use kartik\select2\Select2;
+use app\components\UserHelper;
 
 /* @var $this yii\web\View */
 /* @var $searchModel app\models\AfiliadosReportSearch */
@@ -15,19 +16,48 @@ use kartik\select2\Select2;
 
 $this->title = 'Reporte de Afiliados';
 $this->params['breadcrumbs'][] = $this->title;
+
+// Check user role for clinic access
+$hasClinicAccess = UserHelper::hasClinicAccess();
+$isSuperAdmin = Yii::$app->user->can('superadmin') || Yii::$app->user->can('admin');
+
+// Get user's accessible clinics for display
+if ($hasClinicAccess) {
+    $accessibleClinicas = UserHelper::getAccessibleClinicas();
+    $accessibleClinicaIds = \yii\helpers\ArrayHelper::getColumn($accessibleClinicas, 'id');
+    $hasMultipleClinicas = count($accessibleClinicas) > 1;
+} else {
+    $accessibleClinicas = [];
+    $accessibleClinicaIds = [];
+    $hasMultipleClinicas = true;
+}
 ?>
 <div class="user-datos-index">
 
     <div class="card">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0"><i class="fas fa-file-alt"></i> <?= Html::encode($this->title) ?></h4>
+            <h4 class="mb-0">
+                <i class="fas fa-file-alt"></i> <?= Html::encode($this->title) ?>
+                <?php if ($hasClinicAccess): ?>
+                    <span class="badge bg-info ms-2" style="font-size: 0.8rem;">
+                        <i class="fas fa-lock me-1"></i> Acceso Restringido
+                    </span>
+                <?php endif; ?>
+            </h4>
         </div>
         <div class="card-body">
 
             <!-- Filter Form -->
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-filter"></i> Filtros
+                        <?php if ($hasClinicAccess): ?>
+                            <small class="text-white ms-2">
+                                <i class="fas fa-info-circle"></i> Datos limitados a sus clínicas asignadas
+                            </small>
+                        <?php endif; ?>
+                    </h5>
                 </div>
                 <div class="card-body">
                     <?php $form = ActiveForm::begin([
@@ -42,13 +72,46 @@ $this->params['breadcrumbs'][] = $this->title;
 
                     <div class="row">
                         <div class="col-md-6">
-                            <?= $form->field($searchModel, 'clinica_id')->widget(Select2::class, [
-                                'data' => $clinicaList,
-                                'options' => ['placeholder' => 'Todas las clínicas'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                ],
-                            ]) ?>
+                            <?php if ($hasClinicAccess && count($accessibleClinicas) === 1): ?>
+                                <!-- Single clinic - display as read-only with hidden input -->
+                                <div class="form-group">
+                                    <label class="control-label">Clínica</label>
+                                    <div class="form-control-static border rounded p-2" style="background-color: #f8f9fa;">
+                                        <i class="fas fa-hospital me-2 text-success"></i>
+                                        <strong><?= Html::encode($accessibleClinicas[0]->nombre) ?></strong>
+                                        <input type="hidden" name="AfiliadosReportSearch[clinica_id]" value="<?= $accessibleClinicas[0]->id ?>">
+                                        <input type="hidden" name="AfiliadosReportSearch[clinica_ids][]" value="<?= $accessibleClinicas[0]->id ?>">
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-lock me-1"></i>Acceso restringido a su clínica asignada
+                                    </small>
+                                </div>
+                            <?php elseif ($hasClinicAccess && count($accessibleClinicas) > 1): ?>
+                                <!-- Multiple clinics - show as disabled multi-select -->
+                                <div class="form-group">
+                                    <label class="control-label">Clínicas (Acceso Restringido)</label>
+                                    <div class="form-control-static border rounded p-2" style="background-color: #f8f9fa;">
+                                        <?php foreach ($accessibleClinicas as $clinica): ?>
+                                            <span class="badge bg-success me-1 mb-1 p-2">
+                                                <i class="fas fa-hospital me-1"></i><?= Html::encode($clinica->nombre) ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                        <input type="hidden" name="AfiliadosReportSearch[clinica_ids][]" value="<?= implode(',', $accessibleClinicaIds) ?>">
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-lock me-1"></i>Datos limitados a sus <?= count($accessibleClinicas) ?> clínicas asignadas
+                                    </small>
+                                </div>
+                            <?php else: ?>
+                                <!-- Normal clinic selector for admin/superadmin -->
+                                <?= $form->field($searchModel, 'clinica_id')->widget(Select2::class, [
+                                    'data' => $clinicaList,
+                                    'options' => ['placeholder' => 'Todas las clínicas'],
+                                    'pluginOptions' => [
+                                        'allowClear' => true,
+                                    ],
+                                ]) ?>
+                            <?php endif; ?>
                         </div>
 
                         <div class="col-md-6">
@@ -93,6 +156,11 @@ $this->params['breadcrumbs'][] = $this->title;
                     <span class="badge badge-info">
                         <i class="fas fa-users"></i> Total: <?= number_format($dataProvider->getTotalCount()) ?> afiliados
                     </span>
+                    <?php if ($hasClinicAccess): ?>
+                        <span class="badge badge-warning ms-2">
+                            <i class="fas fa-lock"></i> Datos Restringidos
+                        </span>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -174,6 +242,11 @@ $this->params['breadcrumbs'][] = $this->title;
                         $uniqueClinicas = count($clinicaIds);
                         ?>
                         <span class="badge badge-pill badge-secondary"><?= $uniqueClinicas ?></span>
+                        <?php if ($hasClinicAccess): ?>
+                            <small class="text-muted ms-2">
+                                <i class="fas fa-lock"></i> Limitado a sus clínicas
+                            </small>
+                        <?php endif; ?>
                     </div>
                     <div class="col-md-4 text-right">
                         <small><i class="fas fa-clock"></i> Generado: <?= date('d/m/Y H:i:s') ?></small>
@@ -188,6 +261,9 @@ $this->params['breadcrumbs'][] = $this->title;
                     <small>
                         <i class="fas fa-lightbulb"></i>
                         <strong>Consejo:</strong> Use los filtros para buscar afiliados específicos.
+                        <?php if ($hasClinicAccess): ?>
+                            <span class="text-primary"><i class="fas fa-lock ms-2 me-1"></i>Sus datos están limitados a sus clínicas asignadas.</span>
+                        <?php endif; ?>
                     </small>
                 </div>
                 <div class="col-md-6 text-right">
@@ -237,6 +313,21 @@ $this->registerCss('
     .select2-container--krajee .select2-selection {
         border-radius: 4px;
         border: 1px solid #ced4da;
+    }
+    .form-control-static {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 0.375rem 0.75rem;
+    }
+    .badge.bg-info {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+        vertical-align: middle;
+    }
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529;
     }
 ');
 ?>

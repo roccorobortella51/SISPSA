@@ -838,8 +838,13 @@ class UserHelper
 
         if ($userdatos) {
             $agencia = Agente::find()->where(['idusuariopropietario' => $userdatos->id])->one();
-            return $agencia->id;
+            // ✅ Add null check before accessing id
+            if ($agencia !== null) {
+                return $agencia->id;
+            }
         }
+
+        return null;
     }
 
     public static function getAgenteFuerzaId()
@@ -848,12 +853,94 @@ class UserHelper
 
         if ($userdatos) {
             $agencia = AgenteFuerza::find()->where(['idusuario' => $userdatos->id])->one();
-            return $agencia->id;
+            // ✅ Add null check before accessing id
+            if ($agencia !== null) {
+                return $agencia->id;
+            }
         }
+
+        // Return null if no agent found (instead of throwing error)
+        return null;
     }
 
     public static function isAgenteFuerzaIdValido($id)
     {
         return \app\models\AgenteFuerza::find()->where(['id' => $id])->exists();
+    }
+    // Add this method to your UserHelper class (after getMyClinicaId() is fine)
+
+    /**
+     * Check if current user has clinic-level access (can only see their own clinic's data)
+     * @return bool
+     */
+    /**
+     * Check if current user has clinic-level access (can only see their own clinic's data)
+     * @return bool
+     */
+    public static function hasClinicAccess()
+    {
+        $clinicRoles = [
+            "Administrador-clinica",
+            "CONTROL DE CITAS",
+            "ADMISIÓN",
+            "ATENCIÓN",
+            "COORDINADOR-CLINICA",
+            "GERENTE-CLINICA"
+        ];
+
+        $rol = self::getMyRol();
+        return in_array($rol, $clinicRoles);
+    }
+
+    /**
+     * Apply clinic filter to a query based on user role
+     * @param \yii\db\ActiveQuery $query
+     * @param string $clinicField The field name for clinic ID (default: 'clinica_id')
+     * @return \yii\db\ActiveQuery
+     */
+    public static function applyClinicFilter($query, $clinicField = 'clinica_id')
+    {
+        if (self::hasClinicAccess()) {
+            $clinicId = self::getMyClinicaId();
+            if ($clinicId) {
+                $query->andFilterWhere([$clinicField => $clinicId]);
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * Get clinics accessible to the current user
+     * @return array Array of clinic IDs
+     */
+    public static function getAccessibleClinicaIds()
+    {
+        if (self::hasClinicAccess()) {
+            $clinicId = self::getMyClinicaId();
+            return $clinicId ? [$clinicId] : [];
+        }
+
+        // For superadmin, admin, etc., return empty array meaning "all clinics"
+        // But we need to distinguish between "all" and "none"
+        return null; // null means all clinics are accessible
+    }
+
+    /**
+     * Get clinics accessible to the current user with names
+     * @return array Array of clinic models or empty array
+     */
+    public static function getAccessibleClinicas()
+    {
+        if (self::hasClinicAccess()) {
+            $clinicId = self::getMyClinicaId();
+            if ($clinicId) {
+                return RmClinica::find()->where(['id' => $clinicId])->all();
+            }
+            return [];
+        }
+
+        // For superadmin/admin, return all clinics
+        return RmClinica::find()->where(['IS', 'deleted_at', null])->all();
     }
 }
