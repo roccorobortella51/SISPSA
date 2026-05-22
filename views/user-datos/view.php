@@ -27,7 +27,7 @@ if (!empty($clinica_id_from_url)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'COORDINADOR-CLINICA');
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'GERENTE-CLINICA' || $rol == 'Asesor' || $rol == 'COORDINADOR-CLINICA' || $rol == 'ATENCIÓN');
 
 // --- Título y BREADCRUMBS CONDICIONALES ---
 $titulo = 'PERFIL DEL AFILIADO: ' .
@@ -91,7 +91,8 @@ function formatBooleanIcon($value)
 $currentRoute = Yii::$app->controller->getRoute();
 ?>
 
-<div class="row row-cols-1 row-cols-md-4 justify-content-center g-3 mb-4">
+<!-- Microsoft-style Navigation Tabs -->
+<div class="row row-cols-1 row-cols-md-5 justify-content-center g-3 mb-4">
     <div class="col">
         <h4><?= Html::a('<i class="fas fa-user"></i> Datos Personales', Url::to(['index']), [
                 'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'index' ? 'active' : ''),
@@ -106,15 +107,22 @@ $currentRoute = Yii::$app->controller->getRoute();
     </div>
 
     <div class="col">
-        <h4><?= Html::a('<i class="fas fa-heartbeat"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
+        <h4><?= Html::a('<i class="fas fa-poll-h"></i> Declaración de Salud', Url::to(['declaracion-de-salud/index', 'user_id' => $model->id]), [
                 'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'declaracion-salud/index' ? 'active' : ''),
                 'data-pjax' => '0'
             ]) ?></h4>
     </div>
 
     <div class="col">
-        <h4><?= Html::a('<i class="fas fa-file-medical"></i> Siniestros', Url::to(['sis-siniestro/index', 'user_id' => $model->id]), [
-                'class' => 'btn btn-primary btn-lg w-100 ' . ($currentRoute === 'sis-siniestro/index' ? 'active' : ''),
+        <h4><?= Html::a('<i class="fas fa-heartbeat"></i> Atenciones', Url::to(['sis-siniestro/index', 'user_id' => $model->id]), [
+                'class' => 'btn btn-danger btn-lg w-100 ' . ($currentRoute === 'sis-siniestro/index' ? 'active' : ''),
+                'data-pjax' => '0'
+            ]) ?></h4>
+    </div>
+
+    <div class="col">
+        <h4><?= Html::a('<i class="fas fa-credit-card"></i> Pagos', Url::to(['contratos/index', 'user_id' => $model->id]), [
+                'class' => 'btn btn-success btn-lg w-100 ' . ($currentRoute === 'contratos/index' ? 'active' : ''),
                 'data-pjax' => '0'
             ]) ?></h4>
     </div>
@@ -140,6 +148,15 @@ $currentRoute = Yii::$app->controller->getRoute();
                     '<i class="fas fa-edit mr-2"></i> Actualizar',
                     Url::to(array_merge(['update', 'id' => $model->id], ($clinica && $clinica->id !== null ? ['clinica_id' => $clinica->id] : []))),
                     ['class' => 'btn-base btn-blue']
+                ) ?>
+                <?= Html::a(
+                    '<i class="fas fa-credit-card mr-2"></i> Registrar Pago',
+                    ['contratos/index', 'user_id' => $model->id],
+                    [
+                        'class' => 'btn-base btn-green',
+                        'data-pjax' => '0',
+                        'title' => 'Registrar un nuevo pago para este afiliado'
+                    ]
                 ) ?>
                 <?php if (!empty($clinica_id_from_url)) : ?>
                     <?= Html::a(
@@ -171,8 +188,6 @@ $currentRoute = Yii::$app->controller->getRoute();
     </div>
 
     <hr class="my-4">
-
-
 
     <div class="progress-bar-container mt-4">
         <div class="progress-bar" style="width: <?= $porcentajeConsumido ?>%; background-color: <?= $porcentajeConsumido > 80 ? '#dc3545' : ($porcentajeConsumido > 50 ? '#ffc107' : '#28a745') ?>;"></div>
@@ -316,8 +331,6 @@ $currentRoute = Yii::$app->controller->getRoute();
                 </div>
             </div>
 
-
-
             <!-- Historial de Siniestros (Opcional) -->
             <?php if (!empty($historialSiniestros)): ?>
                 <div class="mt-4">
@@ -440,8 +453,6 @@ $currentRoute = Yii::$app->controller->getRoute();
             </div>
         </div>
     <?php endif; ?>
-
-
 
     <div class="ms-panel border-red">
         <div class="ms-panel-body">

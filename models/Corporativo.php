@@ -40,7 +40,7 @@ use app\models\RmCiudad;
  * @property string $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
- * * @property string|null $nombre_representante
+ * @property string|null $nombre_representante
  * @property string|null $cedula_representante
  * @property string|null $nacionalidad_representante
  * @property string|null $estado_civil_representante
@@ -60,7 +60,8 @@ use app\models\RmCiudad;
  * @property CorporativoClinica[] $corporativoClinicas
  * @property RmClinica[] $clinicas
  * @property CorporativoUser[] $corporativoUsers
- * @property User[] $users
+ * @property UserDatos[] $empleadosAsociados (CORRECTED: via afiliado_corporativo_id)
+ * @property UserDatos[] $users (Legacy - via corporativo_user junction table)
  *
  * @property array $clinicas_ids
  * @property array $users_ids
@@ -85,30 +86,65 @@ class Corporativo extends \yii\db\ActiveRecord
     {
         return [
             // Campos requeridos
-            [['nombre', 'estatus', 'rif', 'telefono', 'email', 'lugar_registro', 'fecha_registro_mercantil', 'tomo_registro', 'folio_registro', 'direccion', 
-            'domicilio_fiscal', 'contacto_nombre', 'contacto_cedula', 'contacto_telefono', 'estado', 'municipio', 'parroquia', 'ciudad'], 'required'],
-            
+            [[
+                'nombre',
+                'estatus',
+                'rif',
+                'telefono',
+                'email',
+                'lugar_registro',
+                'fecha_registro_mercantil',
+                'tomo_registro',
+                'folio_registro',
+                'direccion',
+                'domicilio_fiscal',
+                'contacto_nombre',
+                'contacto_cedula',
+                'contacto_telefono',
+                'estado',
+                'municipio',
+                'parroquia',
+                'ciudad'
+            ], 'required'],
+
             // Regla SAFE para los nuevos campos que no tienen una validación específica de tipo
-            [['nombre_representante', 'cedula_representante', 'nacionalidad_representante', 'estado_civil_representante', 
-            'lugar_nacimiento_representante', 'sexo_representante', 'profesion_representante', 'ocupacion_representante', 
-            'descripcion_actividad_representante', 'direccion_representante', 'telefono_representante', 
-            'actividad_economica', 'productos_servicios', 'utilidad_ejercicio_anterior', 'patrimonio', 'fecha_nacimiento_representante'], 'safe'],
-            
+            [[
+                'nombre_representante',
+                'cedula_representante',
+                'nacionalidad_representante',
+                'estado_civil_representante',
+                'lugar_nacimiento_representante',
+                'sexo_representante',
+                'profesion_representante',
+                'ocupacion_representante',
+                'descripcion_actividad_representante',
+                'direccion_representante',
+                'telefono_representante',
+                'actividad_economica',
+                'productos_servicios',
+                'utilidad_ejercicio_anterior',
+                'patrimonio',
+                'fecha_nacimiento_representante'
+            ], 'safe'],
+
             // Reglas de validación para campos existentes
             [['direccion', 'domicilio_fiscal'], 'string'],
             [['fecha_registro_mercantil', 'created_at', 'updated_at', 'deleted_at', 'ciudad'], 'safe'],
             [['nombre', 'email', 'lugar_registro', 'contacto_nombre'], 'string', 'max' => 255],
             [['rif'], 'string', 'max' => 12],
-            [['telefono', 'contacto_telefono', 'telefono_representante'], 'string', 'max' => 12], 
-            [['telefono', 'contacto_telefono', 'telefono_representante'], 'match',
+            [['telefono', 'contacto_telefono', 'telefono_representante'], 'string', 'max' => 12],
+            [
+                ['telefono', 'contacto_telefono', 'telefono_representante'],
+                'match',
                 'pattern' => '/^(0416|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
-                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'],
+                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'
+            ],
             [['contacto_cedula'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
             [['estado', 'municipio', 'parroquia', 'contacto_cargo', 'ciudad'], 'string', 'max' => 100],
             [['codigo_asesor', 'tomo_registro', 'folio_registro', 'estatus'], 'string', 'max' => 50],
             [['nombre'], 'unique'],
             [['email'], 'email'],
-            [['email'], 'unique','message' => 'Este correo electrónico ya está registrado.'],
+            [['email'], 'unique', 'message' => 'Este correo electrónico ya está registrado.'],
             [['rif'], 'unique'],
             [['estatus'], 'default', 'value' => 'Activo'],
             [['clinicas_ids', 'users_ids'], 'each', 'rule' => ['integer']],
@@ -194,6 +230,8 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     /**
+     * Gets query for [[CorporativoClinicas]].
+     *
      * @return \yii\db\ActiveQuery
      */
     public function getCorporativoClinicas()
@@ -202,7 +240,8 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     /**
-     * Obtiene las clínicas asociadas a este corporativo a través de la tabla intermedia.
+     * Gets query for [[Clinicas]] associated via junction table.
+     *
      * @return \yii\db\ActiveQuery
      */
     public function getClinicas()
@@ -212,6 +251,8 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     /**
+     * Gets query for [[CorporativoUsers]] (legacy junction table).
+     *
      * @return \yii\db\ActiveQuery
      */
     public function getCorporativoUsers()
@@ -220,23 +261,123 @@ class Corporativo extends \yii\db\ActiveRecord
     }
 
     /**
-     * Obtiene los usuarios (empleados) asociados a este corporativo a través de la tabla intermedia.
+     * ============================================================
+     * CORRECTED RELATIONSHIP FOR EMPLEADOS ASOCIADOS
+     * ============================================================
+     * Gets employees associated with this corporate via the
+     * afiliado_corporativo_id field in user_datos table.
+     * 
+     * This is the correct way based on the business logic where:
+     * - Employees are created with user_datos_type_id = 2 (Corporativo)
+     * - They have afiliado_corporativo_id = this corporativo's id
+     * 
      * @return \yii\db\ActiveQuery
      */
-    public function getUsers()
+    public function getEmpleadosAsociados()
     {
-        return $this->hasMany(UserDatos::class, ['id' => 'user_id'])
-            ->viaTable('corporativo_user', ['corporativo_id' => 'id']);
+        return $this->hasMany(UserDatos::class, ['afiliado_corporativo_id' => 'id'])
+            ->andWhere(['user_datos_type_id' => 2]); // Only corporativo-type affiliates
     }
 
-    // Métodos para cargar y guardar las relaciones Many-to-Many
+    public function getUsers()
+    {
+        return $this->hasMany(UserDatos::class, ['afiliado_corporativo_id' => 'id'])
+            ->andWhere(['user_datos_type_id' => 2]);
+    }
+
+    /**
+     * Gets all employees for this corporate (alias for getEmpleadosAsociados).
+     * Use this method for accurate employee counting.
+     * 
+     * @return \yii\db\ActiveQuery
+     */
+    public function getEmployees()
+    {
+        return $this->getEmpleadosAsociados();
+    }
+
+    /**
+     * Gets employee count for this corporate.
+     * 
+     * @return int
+     */
+    public function getEmployeeCount()
+    {
+        return $this->getEmpleadosAsociados()->count();
+    }
+
+    // ============================================================
+    // RELATIONSHIPS FOR LOCATION (Estado, Municipio, Parroquia, Ciudad)
+    // ============================================================
+
+    /**
+     * Gets query for [[RmEstado]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getRmEstado()
+    {
+        return $this->hasOne(RmEstado::class, ['id' => 'estado']);
+    }
+
+    /**
+     * Gets query for [[RmMunicipio]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getRmMunicipio()
+    {
+        return $this->hasOne(RmMunicipio::class, ['codigo_muni' => 'municipio']);
+    }
+
+    /**
+     * Gets query for [[RmParroquia]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getRmParroquia()
+    {
+        return $this->hasOne(RmParroquia::class, ['id' => 'parroquia']);
+    }
+
+    /**
+     * Gets query for [[RmCiudad]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getRmCiudad()
+    {
+        return $this->hasOne(RmCiudad::class, ['id' => 'ciudad']);
+    }
+
+    // ============================================================
+    // AFTER FIND - Load relations into virtual attributes
+    // ============================================================
+
+    /**
+     * {@inheritdoc}
+     */
     public function afterFind()
     {
         parent::afterFind();
+
+        // Load clinics IDs from the many-to-many relationship
         $this->clinicas_ids = ArrayHelper::getColumn($this->clinicas, 'id');
-        $this->users_ids = ArrayHelper::getColumn($this->users, 'id');
+
+        // ============================================================
+        // CORRECTED: Load employee IDs from the correct relationship
+        // Using getEmpleadosAsociados() instead of getUsers()
+        // ============================================================
+        $this->users_ids = ArrayHelper::getColumn($this->getEmpleadosAsociados()->all(), 'id');
     }
 
+    // ============================================================
+    // AFTER SAVE - Save many-to-many relations
+    // ============================================================
+
+    /**
+     * {@inheritdoc}
+     */
     public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
@@ -245,9 +386,13 @@ class Corporativo extends \yii\db\ActiveRecord
         $this->saveUsersRelations();
     }
 
+    /**
+     * Saves the many-to-many relationship with clinics.
+     */
     private function saveClinicasRelations()
     {
         CorporativoClinica::deleteAll(['corporativo_id' => $this->id]);
+
         if (is_array($this->clinicas_ids) && !empty($this->clinicas_ids)) {
             $batch = [];
             foreach ($this->clinicas_ids as $clinicaId) {
@@ -262,9 +407,17 @@ class Corporativo extends \yii\db\ActiveRecord
         }
     }
 
+    /**
+     * Saves the many-to-many relationship with users (employees).
+     * 
+     * NOTE: This method saves to the legacy corporativo_user junction table.
+     * The actual business logic uses user_datos.afiliado_corporativo_id
+     * which is handled separately in UserDatosController.
+     */
     private function saveUsersRelations()
     {
         CorporativoUser::deleteAll(['corporativo_id' => $this->id]);
+
         if (is_array($this->users_ids) && !empty($this->users_ids)) {
             $batch = [];
             foreach ($this->users_ids as $userId) {
@@ -277,26 +430,5 @@ class Corporativo extends \yii\db\ActiveRecord
                     $batch
                 )->execute();
         }
-    }
-
-    // Relaciones para obtener el objeto de la ubicación (RmEstado, RmMunicipio, etc.)
-    public function getRmEstado()
-    {
-        return $this->hasOne(RmEstado::class, ['id' => 'estado']); 
-    }
-
-    public function getRmMunicipio()
-    {
-        return $this->hasOne(RmMunicipio::class, ['codigo_muni' => 'municipio']);
-    }
-
-    public function getRmParroquia()
-    {
-        return $this->hasOne(RmParroquia::class, ['id' => 'parroquia']);
-    }
-
-    public function getRmCiudad()
-    {
-        return $this->hasOne(RmCiudad::class, ['id' => 'ciudad']);
     }
 }

@@ -332,24 +332,26 @@ class PlanesController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+
+        // ONLY get existing coverage items - NOT missing ones
         $itemsModels = $model->planesItemsCoberturas;
         $clinica = RmClinica::find()->where(['id' => $model->clinica_id])->one();
 
-        // Get missing baremos
-        $baremosFaltantes = Baremo::find()
-            ->where(['clinica_id' => $model->clinica_id])
-            ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsModels, 'baremo_id')])
-            ->all();
-
-        // Create models for missing baremos
-        foreach ($baremosFaltantes as $baremo) {
-            $item = new PlanesItemsCobertura([
-                'baremo_id' => $baremo->id,
-                'nombre_servicio' => $baremo->nombre_servicio,
-                'porcentaje_cobertura' => 80,
-            ]);
-            $itemsModels[] = $item;
-        }
+        // ===== REMOVED: This block that adds ALL missing baremos =====
+        // $baremosFaltantes = Baremo::find()
+        //     ->where(['clinica_id' => $model->clinica_id])
+        //     ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsModels, 'baremo_id')])
+        //     ->all();
+        //
+        // foreach ($baremosFaltantes as $baremo) {
+        //     $item = new PlanesItemsCobertura([
+        //         'baremo_id' => $baremo->id,
+        //         'nombre_servicio' => $baremo->nombre_servicio,
+        //         'porcentaje_cobertura' => 80,
+        //     ]);
+        //     $itemsModels[] = $item;
+        // }
+        // ===== END REMOVED BLOCK =====
 
         if ($model->load(Yii::$app->request->post())) {
             $transaction = Yii::$app->db->beginTransaction();
@@ -362,19 +364,32 @@ class PlanesController extends Controller
                     $itemsData = Yii::$app->request->post('PlanesItemsCobertura', []);
 
                     foreach ($itemsData as $itemData) {
+                        // Skip items with BOTH cantidad_limite and plazo_espera empty/NULL
+                        // This prevents saving services that should NOT be in the plan
+                        $cantidadLimite = !empty($itemData['cantidad_limite']) ? $itemData['cantidad_limite'] : null;
+                        $plazoEspera = !empty($itemData['plazo_espera']) ? $itemData['plazo_espera'] : null;
+
+                        // If BOTH are empty/NULL, skip saving this service (not added to plan)
+                        if (empty($cantidadLimite) && empty($plazoEspera)) {
+                            continue;
+                        }
 
                         $item = new PlanesItemsCobertura();
-                        $item->cantidad_limite = $itemData['cantidad_limite'];
-                        $item->plazo_espera = $itemData['plazo_espera'];
+                        $item->cantidad_limite = $cantidadLimite;
+                        $item->plazo_espera = $plazoEspera;
                         $item->plan_id = $model->id;
                         $item->nombre_servicio = $itemData['nombre_servicio'];
                         $item->baremo_id = $itemData['baremo_id'];
 
                         if (!$item->save()) {
-                            echo "MODEL NOT SAVED";
-                            print_r($item->getAttributes());
-                            print_r($item->getErrors());
-                            exit;
+                            $transaction->rollBack();
+                            Yii::error("Failed to save coverage item: " . print_r($item->getErrors(), true));
+                            Yii::$app->session->setFlash('error', 'Error saving coverage for service: ' . $itemData['nombre_servicio']);
+                            return $this->render('update', [
+                                'model' => $model,
+                                'itemsModels' => $itemsModels,
+                                'clinica' => $clinica
+                            ]);
                         }
                     }
 

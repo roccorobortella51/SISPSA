@@ -948,4 +948,46 @@ class PagosController extends Controller
 
         return true;
     }
+
+    /**
+     * Generate receipts for an existing payment
+     * @param int $id Payment ID
+     * @return \yii\web\Response
+     */
+    public function actionGenerateReceipts($id)
+    {
+        $payment = $this->findModel($id);
+
+        // Check if receipts already exist
+        $existingReceipts = \app\models\Receipt::find()
+            ->where(['payment_id' => $payment->id])
+            ->all();
+
+        if (!empty($existingReceipts)) {
+            Yii::$app->session->setFlash('warning', 'Este pago ya tiene ' . count($existingReceipts) . ' recibos generados.');
+            return $this->redirect(['view', 'id' => $payment->id]);
+        }
+
+        // Check if payment has installments
+        $installments = \app\models\Cuotas::find()
+            ->where(['id_pago' => $payment->id])
+            ->all();
+
+        if (empty($installments)) {
+            Yii::$app->session->setFlash('error', 'Este pago no tiene cuotas asociadas. No se pueden generar recibos.');
+            return $this->redirect(['view', 'id' => $payment->id]);
+        }
+
+        // Generate receipts
+        $receipts = \app\components\ReceiptGenerator::generateForPayment($payment);
+
+        if (!empty($receipts)) {
+            Yii::$app->session->setFlash('success', 'Se generaron ' . count($receipts) . ' recibos correctamente.');
+            // DO NOT set recibo_id - it doesn't exist
+        } else {
+            Yii::$app->session->setFlash('error', 'No se pudieron generar los recibos. Verifique que el pago tenga cuotas asociadas.');
+        }
+
+        return $this->redirect(['view', 'id' => $payment->id]);
+    }
 }

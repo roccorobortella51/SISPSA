@@ -19,7 +19,7 @@ class PagosReporteSearch extends Pagos
     public function rules()
     {
         return [
-            [['id', 'recibo_id', 'user_id'], 'integer'],
+            [['id', 'user_id'], 'integer'], // REMOVED recibo_id
             [['fecha_pago', 'metodo_pago', 'estatus', 'numero_referencia_pago'], 'safe'],
             [['monto_usd'], 'number'],
             [['nombres', 'apellidos', 'cedula'], 'safe'],
@@ -353,7 +353,6 @@ class PagosReporteSearch extends Pagos
 
     /**
      * COMMISSION REPORT - FIXED with clinic access restrictions
-     * This method uses applyDateRange which is correct
      */
     public function searchComisiones($params)
     {
@@ -456,8 +455,7 @@ class PagosReporteSearch extends Pagos
     }
 
     /**
-     * Apply date range filter - CORRECT as is
-     * This properly calculates last-month as first to last day of previous month
+     * Apply date range filter
      */
     private function applyDateRange($query, $range)
     {

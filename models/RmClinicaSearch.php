@@ -19,7 +19,7 @@ class RmClinicaSearch extends RmClinica
     public function rules()
     {
         return [
-            [['id'], 'integer'],
+            [['id', 'meta'], 'integer'],
             [['created_at', 'rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'safe'],
         ];
     }
@@ -63,6 +63,7 @@ class RmClinicaSearch extends RmClinica
             't.estado',
             't.estatus',
             't.created_at',
+            't.meta',
         ]);
 
         // Pagination setup
@@ -73,6 +74,22 @@ class RmClinicaSearch extends RmClinica
             'query' => $query,
             'sort' => [
                 'defaultOrder' => ['created_at' => SORT_DESC],
+                'attributes' => [
+                    'id',
+                    'nombre',
+                    'rif',
+                    'telefono',
+                    'correo',
+                    'estado',
+                    'estatus',
+                    'created_at',
+                    'meta' => [
+                        'asc' => ['t.meta' => SORT_ASC],
+                        'desc' => ['t.meta' => SORT_DESC],
+                        'default' => SORT_DESC,
+                        'label' => 'Meta Mensual'
+                    ],
+                ],
             ],
             'pagination' => ['pageSize' => $pageSize],
         ]);
@@ -89,7 +106,18 @@ class RmClinicaSearch extends RmClinica
             't.created_at' => $this->created_at,
             't.deleted_at' => $this->deleted_at,
             't.updated_at' => $this->updated_at,
+            't.meta' => $this->meta,
         ]);
+
+        // Range filter for meta if needed
+        if (strpos($this->meta, '-') !== false) {
+            $range = explode('-', $this->meta);
+            if (count($range) == 2 && is_numeric(trim($range[0])) && is_numeric(trim($range[1]))) {
+                $query->andFilterWhere(['between', 't.meta', trim($range[0]), trim($range[1])]);
+            }
+        } else {
+            $query->andFilterWhere(['t.meta' => $this->meta]);
+        }
 
         $query->andFilterWhere(['ilike', 't.rif', $this->rif])
             ->andFilterWhere(['ilike', 't.nombre', $this->nombre])

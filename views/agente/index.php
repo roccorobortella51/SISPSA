@@ -2,12 +2,13 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use kartik\grid\GridView; 
+use kartik\grid\GridView;
 use yii\grid\ActionColumn;
-use app\models\Agente; 
+use app\models\Agente;
 use app\models\AgenteFuerza;
 use app\models\User;
 use app\components\UserHelper;
+
 /**
  * @var yii\web\View $this
  * @var app\models\AgenteSearch $searchModel
@@ -21,31 +22,31 @@ $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 $this->title = 'GESTIÓN DE AGENCIAS'; // Título para la página y breadcrumbs
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN'); 
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 
 ?>
 <div class="row" style="margin:3px !important;">
-   
+
     <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
 
 
-        <div class="ms-panel-header d-flex justify-content-between align-items-center mb-3">
-            <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
+            <div class="ms-panel-header d-flex justify-content-between align-items-center mb-3">
+                <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
 
-            <?php if($permisos){ ?>
-                <div>
-                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
-                </div>
-            <?php } ?>
+                <?php if ($permisos) { ?>
+                    <div>
+                        <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA AGENCIA', ['create'], ['class' => 'btn btn-primary']) ?>
+                    </div>
+                <?php } ?>
 
-        </div>
+            </div>
 
 
             <div class="ms-panel-body">
                 <div class="table-responsive">
                     <?= GridView::widget([
-                        'id' => 'clinica-grid', 
+                        'id' => 'clinica-grid',
                         'dataProvider' => $dataProvider,
                         'filterModel' => $searchModel,
                         'layout' => "{items}{pager}",
@@ -113,11 +114,11 @@ $permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
                                 // El 'value' sigue usando la relación para mostrar el nombre concatenado
-                                'value' => function($model) {
+                                'value' => function ($model) {
                                     return $model->propietario ? $model->propietario->nombres . ' ' . $model->propietario->apellidos : 'No asignado';
                                 }
                             ],
-                            
+
                             [
                                 'attribute' => 'propietarioEmail', // Atributo virtual del AgenteSearch
                                 'label' => 'Correo del Propietario', // Etiqueta para el encabezado
@@ -139,49 +140,49 @@ $permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
                                     return ($model->propietario && $model->propietario->cedula) ? $model->propietario->cedula : 'N/A';
                                 },
                             ],
-               
-                            
+
+
                             [
-                                'attribute' => 'agenteFuerzaCount', 
-                                'label' => 'Fuerza de Venta', 
+                                'attribute' => 'agenteFuerzaCount',
+                                'label' => 'Fuerza de Venta',
                                 'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['class' => 'text-center'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar fuerza', 
+                                    'placeholder' => 'Buscar fuerza',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
-                                'format' => 'raw', 
-                                'value' => function($model) {
-                                    
-                                    
+                                'format' => 'raw',
+                                'value' => function ($model) {
+
+
                                     $count = User::find()
-                                            ->joinWith('userDatos')
-                                            ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
-                                            ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
-                                            ->where(['auth_assignment.item_name' => "Asesor"])
-                                            ->andWhere(['agente_id' => $model->id])
-                                            ->andWhere(['is not', 'agente_fuerza.idusuario', null])
-                                            ->count();
-                            
+                                        ->joinWith('userDatos')
+                                        ->leftJoin('auth_assignment', '"user"."id" = CAST("auth_assignment"."user_id" AS INTEGER)')
+                                        ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
+                                        ->where(['auth_assignment.item_name' => "Asesor"])
+                                        ->andWhere(['agente_id' => $model->id])
+                                        ->andWhere(['is not', 'agente_fuerza.idusuario', null])
+                                        ->count();
+
                                     return Html::a(
                                         $count, // El texto del enlace será el número de asesores
                                         ['agente-fuerza/index-by-agente', 'agente_id' => $model->id], // URL a la vista de los asesores de esta agencia
                                         ['title' => 'Ver asesores de esta agencia', 'data-pjax' => '0'] // data-pjax="0" para que no recargue el Pjax del GridView si lo usas
                                     );
-                            
+
                                     // Si solo quieres mostrar el número sin enlace, usa:
                                     // return $count;
                                 },
                                 'contentOptions' => ['class' => 'text-center'],
                             ],
 
-                           // Columna de Acciones (Ver, Editar, Eliminar)
-                        [
+                            // Columna de Acciones (Ver, Editar, Eliminar)
+                            [
                                 'class' => ActionColumn::class,
                                 'header' => 'ACCIONES',
                                 'template' => '{view}&nbsp;{update}',
                                 'options' => ['class' => 'action-buttons'],
-                                'headerOptions' => ['style' => 'color: white!important;'], 
+                                'headerOptions' => ['style' => 'color: white!important;'],
                                 'contentOptions' => ['class' => 'text-center'],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) {
@@ -194,18 +195,18 @@ $permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key)use($permisos) {
-                                        if($permisos)
-                                        return Html::a(
-                                            '<i class="fas fa-pen"></i>',
-                                            $url,
-                                            [
-                                                'title' => 'Editar',
-                                                'class' => 'btn-action edit'
-                                            ]
-                                        );
+                                    'update' => function ($url, $model, $key) use ($permisos) {
+                                        if ($permisos)
+                                            return Html::a(
+                                                '<i class="fas fa-pen"></i>',
+                                                $url,
+                                                [
+                                                    'title' => 'Editar',
+                                                    'class' => 'btn-action edit'
+                                                ]
+                                            );
                                     },
-                             
+
                                 ],
                             ],
                         ], // Fin de columns

@@ -15,6 +15,14 @@ use yii\data\ActiveDataProvider;
 /** @var string $startDate */
 /** @var string $endDate */
 
+
+// =============================================
+// IMPORTANT: These variables are needed for the JavaScript
+// Make sure they are passed from the controller
+// =============================================
+$hasClinicAccess = $hasClinicAccess ?? false;
+$userClinicaIds = $userClinicaIds ?? [];
+
 // Calcula total de páginas si existe paginación
 $totalPages = $dataProvider->pagination ?
     ceil($dataProvider->getTotalCount() / $dataProvider->pagination->pageSize) : 1;
@@ -859,37 +867,22 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
         $('#btn-print-pdf').click(function(e) {
             e.preventDefault();
 
-            // Get current filter parameters from the form
-            var range = $('[name="range"]').val();
-            var specific_date = $('[name="specific_date"]').val();
-            var status = $('[name="status"]').val(); // This might not exist
+            // Get current filter parameters from the actual form elements in comisiones.php
+            var range = $('#date-range-selector').val();
+            var status = $('#status-filter').val();
+            var clinicas = getSelectedClinicasForComisiones();
 
-            // Try to get status from #status-filter if [name="status"] doesn't exist
-            if (!status || status === 'undefined') {
-                status = $('#status-filter').val() || 'todos';
+            // Get custom date range values if they exist
+            var customRange = $('#date-range-selector').val() === 'custom';
+            var dateFrom = $('#date-from').val();
+            var dateTo = $('#date-to').val();
+
+            // Use 'last-month' as default if range is undefined
+            if (!range || range === 'undefined') {
+                range = 'month';
             }
 
-            var clinicas = [];
-
-            // Check if clinicas checkboxes exist and get values
-            if ($('[name="clinicas[]"]').length > 0) {
-                $('[name="clinicas[]"]:checked').each(function() {
-                    clinicas.push($(this).val());
-                });
-            }
-
-            // If no clinicas selected, set default
-            if (clinicas.length === 0) {
-                clinicas = ['todas']; // Default to "todas"
-            }
-
-            // Use 'last-month' as default if range is undefined or empty
-            // Since your data is from November 2025
-            if (!range || range === 'undefined' || range === 'day') {
-                range = 'last-month'; // Changed to 'last-month' since data is from previous month
-            }
-
-            // Use 'todos' as default if status is undefined or empty
+            // Use 'todos' as default if status is undefined
             if (!status || status === 'undefined') {
                 status = 'todos';
             }
@@ -898,34 +891,31 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                 range: range,
                 status: status,
                 clinicas: clinicas,
-                specific_date: specific_date
+                customRange: customRange,
+                dateFrom: dateFrom,
+                dateTo: dateTo
             });
 
             // Build URL for comisiones PDF
             var url = '<?= Yii::$app->urlManager->createUrl(['reportes/generate-comisiones-pdf-tcpdf']) ?>';
-            url += '?range=' + encodeURIComponent(range);
-            url += '&status=' + encodeURIComponent(status);
+            var params = new URLSearchParams();
 
-            if (specific_date && specific_date !== 'Invalid date') {
-                url += '&specific_date=' + encodeURIComponent(specific_date);
+            params.append('range', range);
+            params.append('status', status);
+
+            if (clinicas.length > 0 && clinicas[0] !== 'todas') {
+                params.append('clinicas', clinicas.join(','));
+            } else {
+                params.append('clinicas', 'todas');
             }
 
-            if (clinicas.length > 0) {
-                url += '&clinicas=' + encodeURIComponent(clinicas.join(','));
+            if (customRange && dateFrom && dateTo) {
+                params.append('custom_range', 'true');
+                params.append('date_from', dateFrom);
+                params.append('date_to', dateTo);
             }
 
-            // Add custom range if applicable
-            var customRangeToggle = $('#custom-range-toggle');
-            if (customRangeToggle.length > 0 && customRangeToggle.is(':checked')) {
-                var dateFrom = $('[name="date_from"]').val();
-                var dateTo = $('[name="date_to"]').val();
-                if (dateFrom && dateTo) {
-                    url += '&custom_range=true';
-                    url += '&date_from=' + encodeURIComponent(dateFrom);
-                    url += '&date_to=' + encodeURIComponent(dateTo);
-                }
-            }
-
+            url = url + '?' + params.toString();
             console.log("PDF URL:", url);
 
             // Open PDF in new tab
@@ -936,33 +926,19 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
         $('#btn-export-excel').click(function(e) {
             e.preventDefault();
 
-            // Get current filter parameters from the form
-            var range = $('[name="range"]').val();
-            var specific_date = $('[name="specific_date"]').val();
-            var status = $('[name="status"]').val();
+            // Get current filter parameters from the actual form elements in comisiones.php
+            var range = $('#date-range-selector').val();
+            var status = $('#status-filter').val();
+            var clinicas = getSelectedClinicasForComisiones();
 
-            // Try to get status from #status-filter if [name="status"] doesn't exist
-            if (!status || status === 'undefined') {
-                status = $('#status-filter').val() || 'todos';
-            }
-
-            var clinicas = [];
-
-            // Check if clinicas checkboxes exist and get values
-            if ($('[name="clinicas[]"]').length > 0) {
-                $('[name="clinicas[]"]:checked').each(function() {
-                    clinicas.push($(this).val());
-                });
-            }
-
-            // If no clinicas selected, set default
-            if (clinicas.length === 0) {
-                clinicas = ['todas']; // Default to "todas"
-            }
+            // Get custom date range values if they exist
+            var customRange = $('#date-range-selector').val() === 'custom';
+            var dateFrom = $('#date-from').val();
+            var dateTo = $('#date-to').val();
 
             // Set defaults if values are undefined
-            if (!range || range === 'undefined' || range === 'day') {
-                range = 'last-month';
+            if (!range || range === 'undefined') {
+                range = 'month';
             }
 
             if (!status || status === 'undefined') {
@@ -973,42 +949,92 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                 range: range,
                 status: status,
                 clinicas: clinicas,
-                specific_date: specific_date
+                customRange: customRange,
+                dateFrom: dateFrom,
+                dateTo: dateTo
             });
 
-            // Build URL for comisiones Excel - FIXED: Use proper URL encoding
+            // Build URL for comisiones Excel
             var baseUrl = '<?= Yii::$app->urlManager->createUrl(['reportes/export-comisiones-excel']) ?>';
             var params = new URLSearchParams();
 
             params.append('range', range);
             params.append('status', status);
 
-            if (specific_date && specific_date !== 'Invalid date') {
-                params.append('specific_date', specific_date);
-            }
-
-            if (clinicas.length > 0) {
-                // Send as comma-separated string
+            if (clinicas.length > 0 && clinicas[0] !== 'todas') {
                 params.append('clinicas', clinicas.join(','));
+            } else {
+                params.append('clinicas', 'todas');
             }
 
-            // Add custom range if applicable
-            var customRangeToggle = $('#custom-range-toggle');
-            if (customRangeToggle.length > 0 && customRangeToggle.is(':checked')) {
-                var dateFrom = $('[name="date_from"]').val();
-                var dateTo = $('[name="date_to"]').val();
-                if (dateFrom && dateTo) {
-                    params.append('custom_range', 'true');
-                    params.append('date_from', dateFrom);
-                    params.append('date_to', dateTo);
-                }
+            if (customRange && dateFrom && dateTo) {
+                params.append('custom_range', 'true');
+                params.append('date_from', dateFrom);
+                params.append('date_to', dateTo);
             }
 
             var url = baseUrl + '?' + params.toString();
             console.log("Excel URL:", url);
 
-            // Download Excel
-            window.location.href = url;
+            // Show loading indicator (if Swal is available)
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Generando Excel...',
+                    text: 'Por favor espere mientras se genera el archivo de comisiones',
+                    icon: 'info',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Download Excel
+                window.open(url, '_blank');
+
+                setTimeout(() => {
+                    Swal.close();
+                }, 2000);
+            } else {
+                // Direct download
+                window.location.href = url;
+            }
         });
+
+        // Helper function to get selected clinics from comisiones.php
+        function getSelectedClinicasForComisiones() {
+            // Check if we have clinic access restriction
+            var hasClinicAccess = <?= json_encode($hasClinicAccess ?? false) ?>;
+
+            if (hasClinicAccess) {
+                // For clinic users, return user's clinic IDs
+                var userClinicaIds = <?= json_encode($userClinicaIds ?? []) ?>;
+                return userClinicaIds;
+            }
+
+            // For superadmin/admin, get from select2 or regular select
+            var clinicasSelect = $('#clinica-filter');
+
+            if (clinicasSelect.length === 0) {
+                return ['todas'];
+            }
+
+            // Check if it's a Select2 element
+            if (clinicasSelect.hasClass('select2-hidden-accessible')) {
+                var selectedValues = clinicasSelect.val();
+                if (!selectedValues || selectedValues.length === 0 || selectedValues.includes('todas')) {
+                    return ['todas'];
+                }
+                return selectedValues;
+            }
+
+            // Regular select element
+            var selectedValue = clinicasSelect.val();
+            if (!selectedValue || selectedValue === 'todas') {
+                return ['todas'];
+            }
+
+            return Array.isArray(selectedValue) ? selectedValue : [selectedValue];
+        }
     });
 </script>

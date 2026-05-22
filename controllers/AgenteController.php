@@ -43,6 +43,13 @@ class AgenteController extends Controller
         $searchModel = new AgenteSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
+        // ✅ FIX PAGINATION HERE
+        $dataProvider->pagination = [
+            'pageSize' => 20, // Standard page size
+            'pageSizeLimit' => [1, 100], // Allow up to 100 records
+            'defaultPageSize' => 20,
+        ];
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -73,9 +80,9 @@ class AgenteController extends Controller
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post())) {
-        
+
                 if ($model->save()) {
-                    
+
                     Yii::$app->session->setFlash('success', 'La agencia ha sido creada exitosamente.');
                     return $this->redirect(['view', 'id' => $model->id]); // Redirige a la vista de la agencia creada
                 } else {
@@ -84,31 +91,30 @@ class AgenteController extends Controller
                     $errors = $model->getErrors();
 
                     // mensaje de error flash.
-                
+
                     $errorMessage = 'No se pudo crear la agencia. Por favor, revise los siguientes errores:<br>';
                     foreach ($errors as $attribute => $attributeErrors) {
-                      
+
                         foreach ($attributeErrors as $error) {
                             $errorMessage .= Html::encode($error) . '<br>';
                         }
                     }
-                    
+
                     Yii::$app->session->setFlash('error', $errorMessage);
 
-                  
+
                     return $this->render('create', [
                         'model' => $model,
                         'isNewRecord' => true,
                     ]);
                 }
             }
-            
         } else {
-          
-            $model->loadDefaultValues(); 
+
+            $model->loadDefaultValues();
         }
 
-    
+
         return $this->render('create', [
             'model' => $model,
             'isNewRecord' => true,

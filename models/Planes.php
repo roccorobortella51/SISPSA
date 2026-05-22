@@ -56,7 +56,7 @@ class Planes extends \yii\db\ActiveRecord
 
             [['nombre', 'descripcion', 'precio', 'estatus', 'cobertura', 'edad_minima', 'edad_limite'], 'required',],
 
-             // Reglas para campos obligatorios y tipos de datos
+            // Reglas para campos obligatorios y tipos de datos
             [['nombre', 'precio', 'edad_minima'], 'required', 'message' => 'El campo {attribute} es obligatorio.'],
 
             // Reglas para tipo de datos
@@ -68,14 +68,14 @@ class Planes extends \yii\db\ActiveRecord
             ['cobertura', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'La cobertura no puede ser menor a 0.'],
 
             ['edad_minima', 'compare', 'compareValue' => 0, 'operator' => '>=', 'type' => 'number', 'message' => 'La edad mínima no puede ser menor a 0.'],
-            ['edad_minima', 'compare', 'compareAttribute' => 'edad_limite', 'operator' => '<', 'message' => 'La edad mínima debe ser menor que la edad límite.', 'when' => function($model) {
+            ['edad_minima', 'compare', 'compareAttribute' => 'edad_limite', 'operator' => '<', 'message' => 'La edad mínima debe ser menor que la edad límite.', 'when' => function ($model) {
                 return !empty($model->edad_limite); // Aplica esta regla solo si edad_limite tiene un valor
             }, 'whenClient' => "function (attribute, value) {
                 return $('#plan-edad_limite').val() != '';
             }"],
 
             // edad_limite
-            ['edad_limite', 'compare', 'compareAttribute' => 'edad_minima', 'operator' => '>', 'message' => 'La edad límite debe ser mayor que la edad mínima.', 'when' => function($model) {
+            ['edad_limite', 'compare', 'compareAttribute' => 'edad_minima', 'operator' => '>', 'message' => 'La edad límite debe ser mayor que la edad mínima.', 'when' => function ($model) {
                 return !empty($model->edad_minima); // Aplica esta regla solo si edad_minima tiene un valor
             }, 'whenClient' => "function (attribute, value) {
                 return $('#plan-edad_minima').val() != '';
@@ -156,5 +156,4 @@ class Planes extends \yii\db\ActiveRecord
     {
         return $this->hasMany(UserDatos::class, ['id' => 'user_id']);
     }
-
 }

@@ -4,9 +4,8 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
-use yii\grid\ActionColumn;
 use kartik\widgets\SwitchInput;
-use app\components\UserHelper; // Importar el UserHelper
+use app\components\UserHelper;
 
 /**
  * @var yii\web\View $this
@@ -15,361 +14,462 @@ use app\components\UserHelper; // Importar el UserHelper
  */
 
 // --- BREADCRUMBS ---
-
-$this->params['breadcrumbs'][] = ['label' => 'CLINICAS', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['index']];
 // --- FIN  --- 
 
+$this->title = 'GESTIÓN DE CLÍNICAS';
 
-$this->title = 'Gestión de Clínicas'; // Este sigue siendo el título para la página y breadcrumbs
-
-$clinicNames = json_encode(array_column($chartData, 'clinicName'));
-$percentages = json_encode(array_column($chartData, 'percentage'));
-$clinicIds = json_encode(array_column($chartData, 'clinicId')); // <-- ¡NUEVO! Pasar los IDs de las clínicas
-$currentDate = Yii::$app->formatter->asDate(time(), 'php:d/m/y');
-
+// Permisos basados en el rol del usuario
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Administrador-clinica');
-
-$permisos2 = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
-
-
+$permisosCrear = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Administrador-clinica');
+$permisosSiniestros = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 ?>
 
-<div class=row style="margin:3px !important;">
-<input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
-    <div class="col-md-12 text-end">
-       
-    </div>
-    <div class="col-md-8">
+<div class="row" style="margin:3px !important;">
+    <div class="col-xl-12 col-md-12">
         <div class="ms-panel ms-panel-fh">
-<div class="ms-panel-header d-flex justify-content-between align-items-center">
-                <h1><?= $this->title = 'Gestión de Clínicas'; ?></h1>
-                <div>
-                    <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA CLÍNICA', ['create'], ['class' => 'btn btn-outline-primary btn-lg']) ?>
-                </div>
+
+            <div class="ms-panel-header d-flex justify-content-between align-items-center mb-3">
+                <h1 class="m-0"><?= Html::encode($this->title) ?></h1>
+
+                <?php if ($permisosCrear): ?>
+                    <div>
+                        <?= Html::a('<i class="fas fa-plus"></i> CREAR NUEVA CLÍNICA', ['create'], ['class' => 'btn btn-primary']) ?>
+                    </div>
+                <?php endif; ?>
             </div>
+
             <div class="ms-panel-body">
-                        <div class="table-responsive">
-
-
-                            <?= GridView::widget([
-                            'id' => 'clinica-grid',
-                            'dataProvider' => $dataProvider,
-                            'filterModel' => $searchModel,
-                            'layout' => "{items}{pager}",
-                            'resizableColumns' => false,
-                            'bordered' => false,
-                            'responsiveWrap' => false,
-                            'persistResize' => false,
-
-                            'tableOptions' => [
-                                'class' => 'table table-striped table-bordered table-hover '
+                <div class="table-responsive">
+                    <?= GridView::widget([
+                        'id' => 'clinica-grid',
+                        'dataProvider' => $dataProvider,
+                        'filterModel' => $searchModel,
+                        'layout' => "{items}{pager}",
+                        'resizableColumns' => false,
+                        'bordered' => false,
+                        'responsiveWrap' => false,
+                        'persistResize' => false,
+                        'tableOptions' => [
+                            'class' => 'table table-striped table-bordered table-hover'
+                        ],
+                        'options' => [
+                            'class' => 'grid-view-container table-responsive',
+                        ],
+                        'columns' => [
+                            // ID - Compacto
+                            [
+                                'attribute' => 'id',
+                                'label' => 'ID',
+                                'headerOptions' => ['style' => 'color: white!important; width: 60px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar ID',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
                             ],
-                            'options' => [
-                                'class' => 'grid-view-container table-responsive',
+                            // Nombre
+                            [
+                                'attribute' => 'nombre',
+                                'label' => 'CLÍNICA',
+                                'format' => 'ntext',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 250px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar nombre',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
                             ],
+                            // RIF
+                            [
+                                'attribute' => 'rif',
+                                'label' => 'RIF',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 130px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar RIF',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
+                            // Teléfono
+                            [
+                                'attribute' => 'telefono',
+                                'label' => 'TELÉFONO',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 140px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar teléfono',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
+                            // Correo
+                            [
+                                'attribute' => 'correo',
+                                'label' => 'CORREO',
+                                'format' => 'email',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 250px;'],
+                                'contentOptions' => ['class' => 'text-center text-truncate', 'style' => 'max-width: 220px;'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar correo',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                            ],
+                            // Estado - Con colores diferentes según el estado
+                            [
+                                'attribute' => 'estado',
+                                'label' => 'ESTADO',
+                                'headerOptions' => ['style' => 'color: white!important;'],
+                                'options' => ['style' => 'width: 180px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'filterInputOptions' => [
+                                    'placeholder' => 'Buscar estado',
+                                    'class' => 'form-control form-control-lg text-center',
+                                ],
+                                'value' => function ($model) {
+                                    // Cache de estados para evitar múltiples consultas
+                                    static $estados = [];
 
-                            'columns' => [
-                                // ID
-                                [
-                                    'attribute' => 'id',
-                                    'options' => ['style' => 'width: 50px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
-                                    ],
-                                ],
+                                    $estadoValue = $model->estado;
 
-                                // Nombre
-                                [
-                                    'attribute' => 'nombre',
-                                    'format' => 'ntext',
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    'options' => ['style' => 'width: 250px;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
-                                    ],
-                                ],
+                                    // Si es numérico, buscar en cache o en BD
+                                    if (is_numeric($estadoValue)) {
+                                        if (!isset($estados[$estadoValue])) {
+                                            $estados[$estadoValue] = \app\models\RmEstado::find()
+                                                ->select('nombre')
+                                                ->where(['id' => (int)$estadoValue])
+                                                ->scalar();
+                                        }
+                                        $nombreEstado = $estados[$estadoValue] ?: $estadoValue;
+                                    } else {
+                                        $nombreEstado = $estadoValue;
+                                    }
 
-                                // RIF
-                                [
-                                    'attribute' => 'rif',
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    'options' => ['style' => 'width: 120px;'], 
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center',
-                                    ],
-                                ],
+                                    // Colores diferentes según la región (ejemplo)
+                                    $colorStyles = [
+                                        'Distrito Capital' => 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        'Miranda' => 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                        'Aragua' => 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                        'Carabobo' => 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                                        'Zulia' => 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                                        'Bolívar' => 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+                                    ];
 
-                                // Teléfono
-                                [
-                                    'attribute' => 'telefono',
-                                    'options' => ['style' => 'width: 120px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
-                                    ],
-                                ],
-                                // Correo
-                                [
-                                    'attribute' => 'correo',
-                                    'options' => ['style' => 'width: 250px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
-                                    ],
-                                ],
-                                 [
+                                    $gradient = $colorStyles[$nombreEstado] ?? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
+                                    return Html::tag('span', Html::encode($nombreEstado), [
+                                        'class' => 'badge',
+                                        'style' => "background: {$gradient}; color: white; font-weight: 600; font-size: 0.95rem; padding: 8px 18px; border-radius: 30px; letter-spacing: 0.5px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); display: inline-block; min-width: 100px;"
+                                    ]);
+                                },
+                                'format' => 'raw',
+                                'filter' => \kartik\select2\Select2::widget([
+                                    'model' => $searchModel,
                                     'attribute' => 'estado',
-                                    'options' => ['style' => 'width: 250px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    // MODIFICACIÓN: Añadir placeholder y centrado para el input de búsqueda
-                                    'filterInputOptions' => [
-                                        'placeholder' => 'Búsqueda',
-                                        'class' => 'form-control text-center', // Añadimos text-center de Bootstrap
+                                    'data' => \yii\helpers\ArrayHelper::map(
+                                        \app\models\RmEstado::find()->orderBy('nombre')->all(),
+                                        'nombre',
+                                        'nombre'
+                                    ),
+                                    'options' => [
+                                        'placeholder' => 'Filtrar por Estado',
+                                        'class' => 'form-control'
                                     ],
-
-                                    /*filterType' => \kartik\grid\GridView::FILTER_SELECT2,
-                                     'filter' => \yii\helpers\ArrayHelper::map(\app\models\RmEstado::find()->orderBy('nombre')->asArray()->all(), 'estado.nombre', 'customer.estado.nombre'),
-                                    'filterWidgetOptions' => [
-                                        'pluginOptions' => ['allowClear' => true],
+                                    'pluginOptions' => [
+                                        'allowClear' => true,
+                                        'width' => '100%',
                                     ],
-                                    'filterInputOptions' => ['placeholder' => 'Estado'],*/
+                                ]),
+                            ],
+                            // Estatus - Switch
+                            [
+                                'label' => 'ESTATUS',
+                                'attribute' => 'estatus',
+                                'format' => 'raw',
+                                'headerOptions' => ['class' => 'text-center', 'style' => 'color: white!important; width: 110px;'],
+                                'contentOptions' => ['class' => 'text-center'],
+                                'value' => function ($model) {
+                                    $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
+                                    return SwitchInput::widget([
+                                        'name' => 'status_' . $model->id,
+                                        'value' => $isActive,
+                                        'pluginEvents' => [
+                                            'switchChange.bootstrapSwitch' => "function(e){ updatestatus('{$model->id}'); }"
+                                        ],
+                                        'pluginOptions' => [
+                                            'onText' => 'Activo',
+                                            'offText' => 'Inactivo',
+                                            'onColor' => 'success',
+                                            'offColor' => 'secondary',
+                                            'state' => $isActive,
+                                            'size' => 'small',
+                                        ],
+                                        'options' => [
+                                            'id' => 'status-switch-' . $model->id,
+                                            'title' => $isActive ? 'Click para desactivar' : 'Click para activar'
+                                        ],
+                                    ]);
+                                },
+                                'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                'filter' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],
+                                'filterWidgetOptions' => [
+                                    'pluginOptions' => ['allowClear' => true, 'width' => '100%', 'minimumResultsForSearch' => -1],
                                 ],
-                                [
-                                    'label' => 'Estatus',
-                                    'attribute' => 'estatus',
-                                    'format' => 'raw',
-                                    'headerOptions' => ['class' => 'text-left header-link'],
-                                    'options' => ['style' => 'width: 100px;'],
-                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                                    'value' => function ($model) {
-                                        // Asegurarse que el valor es booleano o compatible (1/0, 'true'/'false')
-                                        $isActive = ($model->estatus === 'Activo' || $model->estatus === 1 || $model->estatus === true);
-                                        
-                                        return SwitchInput::widget([
-                                            'name' => 'status_'.$model->id, // Mejor usar un nombre único por registro
-                                            'value' => $isActive, // Valor booleano que determina el estado inicial
-                                            'pluginEvents' => [
-                                                'switchChange.bootstrapSwitch' => "function(e){updatestatus('$model->id')}"
-                                            ],
-                                            'pluginOptions' => [
-                                                'onText' => 'Activo',
-                                                'offText' => 'Inactivo',
-                                                'onColor' => 'success',
-                                                'offColor' => 'danger',
-                                                'state' => $isActive // Estado inicial del switch
-                                            ],
-                                            'options' => [
-                                                'id' => 'status-switch-'.$model->id // ID único para cada switch
-                                            ],
-                                            'labelOptions' => ['style' => 'font-size: 12px;'],
-                                        ]);
+                                'filterInputOptions' => ['placeholder' => 'Todos', 'class' => 'form-control form-control-lg'],
+                            ],
+                            // Columna de Acciones - Mismos iconos que Afiliados
+                            [
+                                'class' => 'yii\grid\ActionColumn',
+                                'header' => 'ACCIONES',
+                                'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestros}{indicator}</div>',
+                                'options' => ['style' => 'width:100px; min-width:100px;'],
+                                'headerOptions' => ['style' => 'color: white!important; text-align: center;'],
+                                'contentOptions' => ['style' => 'text-align: center; padding: 8px !important;'],
+                                'buttons' => [
+                                    'view' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fa fa-eye"></i>',
+                                            Url::to(['view', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Detalle de la Clínica',
+                                                'class' => 'btn-action view'
+                                            ]
+                                        );
                                     },
-                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
-                                    'filter' => ['Activo' => 'Activo', 'Inactivo' => 'Inactivo'],
-                                    'filterWidgetOptions' => [
-                                        'pluginOptions' => ['allowClear' => true],
-                                    ],
-                                    'filterInputOptions' => ['placeholder' => 'Estatus'],
-                                ],
-
-                                // Columna de Acciones - Se mantiene sin cambios para no afectar lo ya logrado
-                                [
-                                    'class' => 'yii\grid\ActionColumn',
-                                    'header' => 'ACCIONES',
-                                    'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{siniestros}{indicator}</div>',
-                                    'options' => ['style' => 'width:55px; min-width:55px;'],
-                                    'headerOptions' => ['style' => 'color: white!important;'],
-                                    'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
-                                    'buttons' => [
-                                        'view' => function ($url, $model, $key) {
+                                    'update' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fas fa-pencil-alt ms-text-primary"></i>',
+                                            Url::to(['update', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Editar',
+                                                'class' => 'btn-action view'
+                                            ]
+                                        );
+                                    },
+                                    'siniestros' => function ($url, $model, $key) use ($permisosSiniestros) {
+                                        if ($permisosSiniestros) {
                                             return Html::a(
-                                                '<i class="fa fa-eye"></i>',
-                                                Url::to(['view', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Detalle de la Clínica',
-                                                    'class' => 'btn-action view'
-                                                ]
-                                            );
-                                        },
-                                        'update' => function ($url, $model, $key) {
-                                            return Html::a(
-                                                '<i class="fas fa-pencil-alt ms-text-primary"></i>',
-                                                Url::to(['update', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Editar',
-                                                    'class' => 'btn-action view'
-                                                ]
-                                            );
-                                        },
-                                        'siniestros' => function ($url, $model, $key)use($permisos2) {
-                                            if($permisos2){
-                                            return Html::a(
-                                                '<i class="fas fa-file-medical"></i>',
+                                                '<i class="fas fa-heartbeat" style="color: red;"></i>',
                                                 Url::to(['/sis-siniestro/por-clinica', 'clinica_id' => $model->id]),
                                                 [
                                                     'title' => 'Siniestros de esta Clínica',
                                                     'class' => 'btn-action view'
                                                 ]
-                                            );}
-                                        },
-                                        'indicator' => function ($url, $model, $key) {
-                                            return Html::a(
-                                                '<i class="fa fa-chart-line"></i>',
-                                                Url::to(['indicator', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Indicadores de la Clínica',
-                                                    'class' => 'btn-action indicator'
-                                                ]
                                             );
-                                        },
-                                        /*'delete' => function ($url, $model, $key) {
-                                            return Html::a(
-                                                '<i class="far fa-trash-alt ms-text-danger"></i>',
-                                                Url::to(['delete', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Eliminar',
-                                                    'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
-                                                    'data-method' => 'post',
-                                                    'class' => 'btn-action view'
-                                                ]
-                                            );
-                                        },*/
-                                        
-                                    ],
+                                        }
+                                        return '';
+                                    },
+                                    'indicator' => function ($url, $model, $key) {
+                                        return Html::a(
+                                            '<i class="fa fa-chart-line"></i>',
+                                            Url::to(['indicator', 'id' => $model->id]),
+                                            [
+                                                'title' => 'Indicadores de la Clínica',
+                                                'class' => 'btn-action indicator'
+                                            ]
+                                        );
+                                    },
                                 ],
-
-                            ], // Fin de columns
-                        ]); ?>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-               <div class="col-md-4">
-                    <div class="ms-panel ms-panel-fh">
-                        <div class="ms-panel-header">
-                            <h1>% Avance de los Check list por Clínica <?= $currentDate ?></h1>
-                        </div>
-                        <div class="card-body">
-                            <div style="height: 450px; width: 100%;"> <canvas id="progressChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
+                            ],
+                        ],
+                    ]); ?>
                 </div>
             </div>
-            <div class="clearfix"></div>
+        </div>
+    </div>
 </div>
+
 <?php
-// Script para Chart.js
-$this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js');
-
-$js = <<<JS
-// Datos pasados desde PHP
-const clinicNames = {$clinicNames};
-const percentages = {$percentages};
-const clinicIds = {$clinicIds}; // <-- ¡NUEVO! IDs de las clínicas
-
-const ctx = document.getElementById('progressChart').getContext('2d');
-
-const progressChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: clinicNames,
-        datasets: [{
-            label: '% Avance',
-            data: percentages,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-        }]
-    },
-    options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            x: {
-                beginAtZero: true,
-                max: 100,
-                title: {
-                    display: true,
-                    text: 'Porcentaje (%)'
-                }
-            },
-            y: {
-                ticks: {
-                    autoSkip: false,
-                    maxRotation: 0,
-                    minRotation: 0,
-                    font: {
-                        size: 10
-                    }
-                },
-                title: {
-                    display: false
-                }
+// JavaScript para actualización de estatus
+$js = <<<'JS'
+// Función para actualizar estado vía AJAX
+window.updatestatus = function(id) {
+    var isChecked = $('#status-switch-' + id).bootstrapSwitch('state');
+    var newStatus = isChecked ? 'Activo' : 'Inactivo';
+    
+    $.ajax({
+        url: '/rm-clinica/update-status',
+        type: 'POST',
+        data: {
+            id: id,
+            estatus: newStatus,
+            _csrf: $('#csrf-token').val()
+        },
+        success: function(response) {
+            if (response && response.success) {
+                // Feedback visual - resaltado verde
+                var row = $('#status-switch-' + id).closest('tr');
+                row.css('background-color', '#d4edda');
+                setTimeout(function() {
+                    row.css('background-color', '');
+                }, 500);
+            } else {
+                // Revertir en caso de error
+                $('#status-switch-' + id).bootstrapSwitch('state', !isChecked);
+                var row = $('#status-switch-' + id).closest('tr');
+                row.css('background-color', '#f8d7da');
+                setTimeout(function() {
+                    row.css('background-color', '');
+                }, 500);
             }
         },
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        let label = context.dataset.label || '';
-                        if (label) {
-                            label += ': ';
-                        }
-                        if (context.parsed.x !== null) {
-                            label += context.parsed.x + '%';
-                        }
-                        return label;
-                    }
-                }
-            }
-        },
-        // *** AQUI AGREGAMOS LA LOGICA DE CLICK ***
-        onClick: (e, elements) => {
-            if (elements.length > 0) {
-                const firstElement = elements[0];
-                const index = firstElement.index; // Obtener el índice de la barra clicada
+        error: function() {
+            $('#status-switch-' + id).bootstrapSwitch('state', !isChecked);
+            var row = $('#status-switch-' + id).closest('tr');
+            row.css('background-color', '#f8d7da');
+            setTimeout(function() {
+                row.css('background-color', '');
+            }, 500);
+        }
+    });
+};
+JS;
 
-                const clickedClinicId = clinicIds[index]; // Obtener el ID de la clínica usando el índice
-                if (clickedClinicId) {
-                    // Construir la URL de redirección
-                    const url = '/web/check-list-clinicas/index?clinica_id=' + clickedClinicId;
-                    window.location.href = url; // Redirigir a la nueva URL
-                }
-            }
-        },
-        // Opcional: Cambiar el cursor a 'pointer' cuando se pasa sobre una barra
-        hover: {
-            mode: 'nearest',
-            intersect: true,
-            onHover: function(e, elements) {
-                e.native.target.style.cursor = elements[0] ? 'pointer' : 'default';
-            }
+$this->registerJs($js, \yii\web\View::POS_READY);
+
+// Registrar CSS consistente
+$this->registerCss("
+    /* Estilos para tabla */
+    .table th {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: white !important;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 12px 8px;
+        border-bottom: none;
+    }
+    
+    .table td {
+        padding: 10px 8px;
+        vertical-align: middle;
+        border-bottom: 1px solid #ecf0f1;
+        font-size: 0.85rem;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f5f7fd !important;
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #fafbfc;
+    }
+    
+    /* Botones de acción - Mismos estilos que Afiliados */
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #f8f9fa;
+        color: #6c757d;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        margin: 0 2px;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-2px);
+        text-decoration: none;
+    }
+    
+    .btn-action.view:hover {
+        background-color: #0078D4;
+        color: white;
+    }
+    
+    .btn-action.indicator:hover {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    /* Formularios de filtro */
+    .form-control.form-control-lg {
+        font-size: 0.85rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        height: auto;
+    }
+    
+    .form-control.form-control-lg:focus {
+        border-color: #0078D4;
+        box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+    }
+    
+    /* Badge para estado - Ahora con tamaño normal */
+    .badge {
+        font-size: 0.85rem;
+        font-weight: 500;
+        padding: 6px 12px;
+        display: inline-block;
+    }
+    
+    /* Paginación */
+    .pagination {
+        margin-top: 15px;
+        margin-bottom: 0;
+        justify-content: flex-end;
+    }
+    
+    .pagination .page-link {
+        color: #0078D4;
+        border-radius: 6px;
+        margin: 0 2px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .pagination .active .page-link {
+        background-color: #0078D4;
+        border-color: #0078D4;
+    }
+    
+    /* Text truncate para correo */
+    .text-truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* D-flex para acciones */
+    .d-flex {
+        display: flex !important;
+    }
+    
+    .justify-content-center {
+        justify-content: center !important;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .btn-action {
+            width: 28px;
+            height: 28px;
+            font-size: 0.7rem;
+        }
+        
+        .table th, .table td {
+            padding: 6px 4px;
+            font-size: 0.75rem;
+        }
+        
+        .form-control.form-control-lg {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .badge {
+            font-size: 0.7rem;
+            padding: 4px 8px;
         }
     }
-});
-
-// Ajustar el tamaño del canvas cuando la ventana cambie
-$(window).on('resize', function() {
-    progressChart.resize();
-});
-
-JS;
-$this->registerJs($js);
+");
 ?>
-

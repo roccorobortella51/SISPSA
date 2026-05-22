@@ -12,18 +12,20 @@ $this->params['breadcrumbs'][] = ['label' => 'AGENCIAS', 'url' => ['index']];
 $this->params['breadcrumbs'][] = Html::encode($model->nom);
 \yii\web\YiiAsset::register($this);
 
-function formatPercentage($value) {
+function formatPercentage($value)
+{
     // show percentages with 2 decimals (e.g. 12.34%)
     return Yii::$app->formatter->asPercent((float)$value / 100, 2);
 }
 
-function formatDateTime($value) {
+function formatDateTime($value)
+{
     return $value ? Yii::$app->formatter->asDatetime($value) : 'N/A';
 }
 
 $ownerContactInfo = UserHelper::getAgenteOwnerContactInfo($model->id);
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol =='DIRECTOR-COMERCIALIZACIÓN');
+$permisos = ($rol == 'superadmin' || $rol == 'GERENTE-COMERCIALIZACION');
 
 // --- DATOS DE EJEMPLO PARA LA GRÁFICA ---
 $gananciasPorMes = [
@@ -45,38 +47,40 @@ $datosJs = json_encode($datos);
 
 ?>
 <style>
-/* Make text in "Información General de la Agencia" as large as the percentage numbers (h4) */
-.agente-view .info-general .text-lg-18 {
-    font-size: 1.5rem; /* matches .h4 size used for percentages */
-    line-height: 1.1;
-}
-.agente-view .info-general .text-lg-18 strong {
-    font-size: 1.5rem;
-}
+    /* Make text in "Información General de la Agencia" as large as the percentage numbers (h4) */
+    .agente-view .info-general .text-lg-18 {
+        font-size: 1.5rem;
+        /* matches .h4 size used for percentages */
+        line-height: 1.1;
+    }
 
-/* New: make only the field values match the title/percentage size */
-.agente-view .info-general .field-value {
-    font-size: 1.5rem;
-    line-height: 1.1;
-    font-weight: 400;
-    margin-left: 6px;
-    color: #2c3e50;
-    display: inline-block;
-}
+    .agente-view .info-general .text-lg-18 strong {
+        font-size: 1.5rem;
+    }
 
-/* Also enlarge Fechas de Gestión values to match percentages */
-.agente-view .ms-panel .info-card-body p.h5,
-.agente-view .ms-panel .info-card-body .field-value-date {
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: #212529;
-    margin: 0;
-}
+    /* New: make only the field values match the title/percentage size */
+    .agente-view .info-general .field-value {
+        font-size: 1.5rem;
+        line-height: 1.1;
+        font-weight: 400;
+        margin-left: 6px;
+        color: #2c3e50;
+        display: inline-block;
+    }
+
+    /* Also enlarge Fechas de Gestión values to match percentages */
+    .agente-view .ms-panel .info-card-body p.h5,
+    .agente-view .ms-panel .info-card-body .field-value-date {
+        font-size: 1.5rem;
+        font-weight: 400;
+        color: #212529;
+        margin: 0;
+    }
 </style>
 
-<div class="main-container agente-view"> 
-   
-    <div class="header-section"> 
+<div class="main-container agente-view">
+
+    <div class="header-section">
         <div class="d-flex justify-content-between align-items-center w-100">
             <h1><?= Html::encode($this->title) ?></h1>
             <?= Html::a(
@@ -88,21 +92,21 @@ $datosJs = json_encode($datos);
                 ]
             ) ?>
         </div>
-       
+
         <div class="header-buttons-group">
-            <?php 
-            if($permisos){
+            <?php
+            if ($permisos) {
                 echo Html::a(
                     '<i class="fas fa-edit mr-2"></i> Actualizar',
                     ['update', 'id' => $model->id],
-                    ['class' => 'btn-base btn-blue'] 
+                    ['class' => 'btn-base btn-blue']
                 );
             } ?>
             <?= Html::a(
                 '<i class="fas fa-undo mr-2"></i> Volver',
                 ['index'],
                 [
-                    'class' => 'btn-base btn-gray', 
+                    'class' => 'btn-base btn-gray',
                     'title' => 'Volver a la lista de agencias',
                 ]
             ) ?>
@@ -110,38 +114,38 @@ $datosJs = json_encode($datos);
     </div>
 
     <div class="ms-panel info-general">
-<div class="ms-panel-body">
-    <h3 class="section-title">
-        <i class="fas fa-building text-blue-600 mr-3"></i> Información General de la Agencia
-    </h3>
-    <div class="row">
-        <div class="col-md-6">
-            <p class="text-gray-700 mb-2 text-lg-18">
-                <strong>Nombre del Propietario:</strong>
-                <span class="field-value"><?= Html::encode(($model->propietario->nombres ?? 'N/A') . ' ' . ($model->propietario->apellidos ?? '')) ?></span>
-            </p>
-            <p class="text-gray-700 mb-2 text-lg-18">
-                <strong>RIF:</strong>
-                <span class="field-value"><?= Html::encode($ownerContactInfo['rif']) ?></span>
-            </p>
-        </div>
-        <div class="col-md-6">
-            <p class="text-gray-700 mb-2 text-lg-18">
-                <strong>Email:</strong>
-                <span class="field-value"><?= Html::a(Html::encode($ownerContactInfo['email']), 'mailto:' . Html::encode($ownerContactInfo['email']), ['class' => 'text-primary']) ?></span>
-            </p>
-            <p class="text-gray-700 mb-2 text-lg-18">
-                <strong>Teléfono:</strong>
-                <span class="field-value"><?= Html::encode($ownerContactInfo['telefono']) ?></span>
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-building text-blue-600 mr-3"></i> Información General de la Agencia
+            </h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-gray-700 mb-2 text-lg-18">
+                        <strong>Nombre del Propietario:</strong>
+                        <span class="field-value"><?= Html::encode(($model->propietario->nombres ?? 'N/A') . ' ' . ($model->propietario->apellidos ?? '')) ?></span>
+                    </p>
+                    <p class="text-gray-700 mb-2 text-lg-18">
+                        <strong>RIF:</strong>
+                        <span class="field-value"><?= Html::encode($ownerContactInfo['rif']) ?></span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-gray-700 mb-2 text-lg-18">
+                        <strong>Email:</strong>
+                        <span class="field-value"><?= Html::a(Html::encode($ownerContactInfo['email']), 'mailto:' . Html::encode($ownerContactInfo['email']), ['class' => 'text-primary']) ?></span>
+                    </p>
+                    <p class="text-gray-700 mb-2 text-lg-18">
+                        <strong>Teléfono:</strong>
+                        <span class="field-value"><?= Html::encode($ownerContactInfo['telefono']) ?></span>
+                    </p>
+                </div>
+            </div>
+            <p class="text-gray-700 mt-4 pt-4 border-top text-lg-18">
+                <strong>Dirección:</strong>
+                <span class="field-value"><?= nl2br(Html::encode($ownerContactInfo['direccion'])) ?></span>
             </p>
         </div>
     </div>
-    <p class="text-gray-700 mt-4 pt-4 border-top text-lg-18">
-        <strong>Dirección:</strong>
-        <span class="field-value"><?= nl2br(Html::encode($ownerContactInfo['direccion'])) ?></span>
-    </p>
-</div>
-</div>
 
     <div class="ms-panel">
         <div class="ms-panel-body">

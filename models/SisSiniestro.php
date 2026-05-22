@@ -37,6 +37,8 @@ class SisSiniestro extends \yii\db\ActiveRecord
 
     public $imagenRecipeFile;
     public $imagenInformeFile;
+    public $otrosDocumentosFile = []; // Array for multiple documents
+
 
 
     /**
@@ -47,6 +49,44 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return 'sis_siniestro';
     }
 
+    /**
+     * {@inheritdoc}
+     * This method is CRITICAL for making new database columns accessible
+     */
+    public function attributes()
+    {
+        return [
+            'id',
+            'idclinica',
+            'fecha',
+            'hora',
+            'idbaremo',
+            'atendido',
+            'fecha_atencion',
+            'hora_atencion',
+            'iduser',
+            'descripcion',
+            'es_cita',
+            'costo_total',
+            'imagen_recipe',
+            'imagen_informe',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+            'admission_analyst',
+            'otros_documentos',
+            'nombre_doctor',  // ← CRITICAL: Add this line
+        ];
+    }
+    /**
+     * {@inheritdoc}
+     */
+    public function fields()
+    {
+        $fields = parent::fields();
+        $fields[] = 'nombre_doctor';
+        return $fields;
+    }
     /**
      * {@inheritdoc}
      */
@@ -60,17 +100,90 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['idclinica', 'atendido', 'iduser', 'es_cita'], 'default', 'value' => null],
             [['idbaremo'], 'default', 'value' => ''],
             [['idclinica', 'atendido', 'iduser', 'es_cita'], 'integer'],
-            [['idbaremo'], 'safe'], // Aceptamos cualquier valor y lo manejamos en beforeValidate
+            [['idbaremo'], 'safe'],
             [['fecha', 'fecha_atencion', 'created_at', 'updated_at', 'deleted_at'], 'safe'],
             [['descripcion'], 'string'],
-            [['hora', 'hora_atencion'], 'string', 'max' => 10],
+            [['nombre_doctor'], 'safe'],
+            [['nombre_doctor'], 'string', 'max' => 255],
+            [['nombre_doctor'], 'default', 'value' => null],
+
+            // Time validation without seconds (HH:MM format)
+            [
+                ['hora', 'hora_atencion'],
+                'match',
+                'pattern' => '/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/',
+                'message' => 'Formato inválido. Use HH:MM (ejemplo: 14:30)'
+            ],
+
             [['idclinica'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['idclinica' => 'id']],
+            [['admission_analyst'], 'safe'],
+            [['admission_analyst'], 'string', 'max' => 255],
+            [['admission_analyst'], 'default', 'value' => null],
 
             [['imagen_recipe', 'imagen_informe'], 'string', 'max' => 255],
-            // ADD THESE FILE VALIDATION RULES:
-            [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'El archivo no debe exceder 10MB.'],
-            [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10, 'tooBig' => 'La imagen no debe exceder 10MB.'],
+            [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10],
+            [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10],
+            [['otrosDocumentosFile'], 'each', 'rule' => ['file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf, doc, docx', 'maxSize' => 1024 * 1024 * 10]],
         ];
+    }
+
+    /**
+     * Normalize time from any format to 24-hour HH:MM
+     * @param string $timeStr Time string (e.g., "10:02 AM", "14:30:45", "2:30 PM")
+     * @return string Time in 24-hour format HH:MM
+     */
+    private function normalizeTime($timeStr)
+    {
+        if (empty($timeStr)) {
+            return null;
+        }
+
+        // Trim whitespace
+        $timeStr = trim($timeStr);
+
+        // Check if already in 24-hour format (HH:MM)
+        if (preg_match('/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/', $timeStr)) {
+            return $timeStr;
+        }
+
+        // Handle format with seconds (HH:MM:SS)
+        if (preg_match('/^(\d{1,2}):(\d{2}):\d{2}$/', $timeStr, $matches)) {
+            return sprintf('%02d:%02d', (int)$matches[1], (int)$matches[2]);
+        }
+
+        // Handle format without leading zeros (e.g., "9:05")
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', $timeStr, $matches)) {
+            $hour = (int)$matches[1];
+            $minute = (int)$matches[2];
+            if ($hour >= 0 && $hour <= 23 && $minute >= 0 && $minute <= 59) {
+                return sprintf('%02d:%02d', $hour, $minute);
+            }
+        }
+
+        // Handle 12-hour format with AM/PM (e.g., "10:02 AM" or "02:30 PM")
+        if (preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i', $timeStr, $matches)) {
+            $hour = (int)$matches[1];
+            $minute = (int)$matches[2];
+            $ampm = strtoupper($matches[3]);
+
+            // Convert to 24-hour format
+            if ($ampm === 'PM' && $hour !== 12) {
+                $hour += 12;
+            } elseif ($ampm === 'AM' && $hour === 12) {
+                $hour = 0;
+            }
+
+            // Validate ranges
+            if ($hour < 0) $hour = 0;
+            if ($hour > 23) $hour = 23;
+            if ($minute < 0) $minute = 0;
+            if ($minute > 59) $minute = 59;
+
+            return sprintf('%02d:%02d', $hour, $minute);
+        }
+
+        // Return original as fallback (will be caught by validation)
+        return $timeStr;
     }
 
     /**
@@ -78,19 +191,94 @@ class SisSiniestro extends \yii\db\ActiveRecord
      */
     public function beforeValidate()
     {
-        // Si es un array, validar cada elemento y convertirlo a string
-        if (is_array($this->idbaremo)) {
-            // Filtrar valores vacíos
-            $this->idbaremo = array_filter($this->idbaremo);
-            // Si no hay valores, establecer como string vacío
-            $this->idbaremo = !empty($this->idbaremo) ? implode(',', $this->idbaremo) : '';
-        } 
-        // Si es string vacío, asegurarse de que sea un string vacío
-        elseif (empty($this->idbaremo)) {
-            $this->idbaremo = '';
+        // Normalize hora to 24-hour HH:MM format
+        if ($this->hora) {
+            $this->hora = $this->normalizeTime($this->hora);
         }
-        
+
+        // Normalize hora_atencion to 24-hour HH:MM format
+        if ($this->hora_atencion) {
+            $this->hora_atencion = $this->normalizeTime($this->hora_atencion);
+        }
+
+        // Strip any remaining seconds (just in case)
+        if ($this->hora && strpos($this->hora, ':') !== false) {
+            $parts = explode(':', $this->hora);
+            if (count($parts) >= 2) {
+                $this->hora = $parts[0] . ':' . $parts[1];
+            }
+        }
+
+        if ($this->hora_atencion && strpos($this->hora_atencion, ':') !== false) {
+            $parts = explode(':', $this->hora_atencion);
+            if (count($parts) >= 2) {
+                $this->hora_atencion = $parts[0] . ':' . $parts[1];
+            }
+        }
+
+        // If idbaremo is a string and not empty, convert it to array for validation
+        if (is_string($this->idbaremo) && !empty($this->idbaremo)) {
+            $this->idbaremo = explode(',', $this->idbaremo);
+        }
+        // If idbaremo is null or empty string, convert it to empty array
+        if (empty($this->idbaremo)) {
+            $this->idbaremo = [];
+        }
+
         return parent::beforeValidate();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function beforeSave($insert)
+    {
+        // Ensure time is in HH:MM format before adding seconds
+        if ($this->hora) {
+            $this->hora = $this->normalizeTime($this->hora);
+        }
+        if ($this->hora_atencion) {
+            $this->hora_atencion = $this->normalizeTime($this->hora_atencion);
+        }
+
+        // Add :00 seconds for database compatibility
+        if ($this->hora && strlen($this->hora) == 5) { // HH:MM format
+            $this->hora .= ':00';
+        }
+        if ($this->hora_atencion && strlen($this->hora_atencion) == 5) {
+            $this->hora_atencion .= ':00';
+        }
+
+        // Convert idbaremo array to string for database storage
+        if (is_array($this->idbaremo)) {
+            $this->idbaremo = !empty($this->idbaremo) ? implode(',', $this->idbaremo) : '';
+        }
+
+        return parent::beforeSave($insert);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function afterFind()
+    {
+        parent::afterFind();
+
+        // Convert hora from HH:MM:SS to HH:MM for display
+        if (!empty($this->hora)) {
+            $parts = explode(':', $this->hora);
+            if (count($parts) >= 2) {
+                $this->hora = $parts[0] . ':' . $parts[1];
+            }
+        }
+
+        // Convert hora_atencion from HH:MM:SS to HH:MM for display
+        if (!empty($this->hora_atencion)) {
+            $parts = explode(':', $this->hora_atencion);
+            if (count($parts) >= 2) {
+                $this->hora_atencion = $parts[0] . ':' . $parts[1];
+            }
+        }
     }
 
     /**
@@ -109,6 +297,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
             'hora_atencion' => 'Hora Atención',
             'iduser' => 'ID Usuario',
             'descripcion' => 'Descripción',
+            'admission_analyst' => 'Analista de Admisión',
             'es_cita' => 'Es Cita',
             'costo_total' => 'Costo Total',
             'imagen_recipe' => 'URL Receta Médica',
@@ -116,6 +305,9 @@ class SisSiniestro extends \yii\db\ActiveRecord
             'created_at' => 'Creado El',
             'updated_at' => 'Actualizado El',
             'deleted_at' => 'Eliminado El',
+            'otros_documentos' => 'Documentos Adicionales',
+            'nombre_doctor' => 'Nombre del Doctor',
+
         ];
     }
 
@@ -128,7 +320,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         return $this->hasMany(SisSiniestroBaremo::class, ['siniestro_id' => 'id']);
     }
-    
+
     /**
      * Gets query for [[Baremos]] (relación con múltiples baremos)
      *
@@ -139,7 +331,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return $this->hasMany(Baremo::class, ['id' => 'baremo_id'])
             ->viaTable('sis_siniestro_baremo', ['siniestro_id' => 'id']);
     }
-    
+
     /**
      * Obtiene los IDs de los baremos como array
      * @return array
@@ -148,7 +340,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         return !empty($this->idbaremo) ? explode(',', $this->idbaremo) : [];
     }
-    
+
     /**
      * @deprecated Mantenido por compatibilidad
      */
@@ -178,104 +370,86 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return $this->hasMany(SisConsulta::class, ['idsiniestro' => 'id']);
     }
 
+    /**
+     * Gets query for [[Afiliado]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
     public function getAfiliado()
     {
         return $this->hasOne(UserDatos::class, ['id' => 'iduser']);
     }
-    
+
     /**
      * Guarda la relación con los baremos
      * @param array $baremoIds Array de IDs de baremos a guardar
      * @return bool
      */
     public function saveBaremos($baremoIds)
-{
-    if (!is_array($baremoIds)) {
-        $baremoIds = [];
-    }
-    
-    // 1. Eliminar las relaciones existentes
-    SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
-    
-    // 2. Agregar las nuevas relaciones
-    foreach ($baremoIds as $baremoId) {
-        if (empty($baremoId)) {
-            continue;
+    {
+        if (!is_array($baremoIds)) {
+            $baremoIds = [];
         }
 
-        // Es más eficiente usar scalar() si solo necesitas un campo
-        $baremocosto = Baremo::find()->select('precio')->where(['id' => $baremoId])->scalar();
+        // 1. Eliminar las relaciones existentes
+        SisSiniestroBaremo::deleteAll(['siniestro_id' => $this->id]);
 
-        if ($baremocosto === null) {
-            // Manejar caso donde el Baremo no existe
-            continue;
-        }
-
-        $relacion = new SisSiniestroBaremo([
-            'siniestro_id' => $this->id,
-            'baremo_id' => $baremoId,
-            'costo' => $baremocosto // El precio del baremo
-        ]);
-        
-        if (!$relacion->save()) {
-            // Retorna false si falla la inserción de una relación
-            return false; 
-        }
-        
-        // ============ ADD THIS NEW CODE: Decrement cantidad_limite ============
-        // Only decrement for Siniestros (not Citas)
-        if ($this->es_cita == 0) {
-            // Find the PlanesItemsCobertura record for this baremo and plan
-            $planItemCobertura = PlanesItemsCobertura::findOne([
-                'plan_id' => $this->afiliado->plan_id,
-                'baremo_id' => $baremoId
-            ]);
-            
-            if ($planItemCobertura && $planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
-                // Decrement the limit
-                $planItemCobertura->cantidad_limite -= 1;
-                
-                // Ensure it doesn't go below 0
-                if ($planItemCobertura->cantidad_limite < 0) {
-                    $planItemCobertura->cantidad_limite = 0;
-                }
-                
-                // Save the updated limit
-                if (!$planItemCobertura->save()) {
-                    Yii::error("Failed to decrement cantidad_limite for baremo {$baremoId}. Errors: " . print_r($planItemCobertura->errors, true));
-                    // Don't return false here - the siniestro should still save even if limit update fails
-                } else {
-                    Yii::info("Decremented cantidad_limite for baremo {$baremoId} from plan {$this->afiliado->plan_id}. New limit: {$planItemCobertura->cantidad_limite}");
-                }
+        // 2. Agregar las nuevas relaciones
+        foreach ($baremoIds as $baremoId) {
+            if (empty($baremoId)) {
+                continue;
             }
+
+            // Es más eficiente usar scalar() si solo necesitas un campo
+            $baremocosto = Baremo::find()->select('precio')->where(['id' => $baremoId])->scalar();
+
+            if ($baremocosto === null) {
+                // Manejar caso donde el Baremo no existe
+                continue;
+            }
+
+            $relacion = new SisSiniestroBaremo([
+                'siniestro_id' => $this->id,
+                'baremo_id' => $baremoId,
+                'costo' => $baremocosto // El precio del baremo
+            ]);
+
+            if (!$relacion->save()) {
+                // Retorna false si falla la inserción de una relación
+                return false;
+            }
+
+            // ============ DECREMENT LOGIC - COMPLETELY REMOVED ============
+            // The cantidad_limite is NEVER modified in the database.
+            // Availability is calculated dynamically in _form.php as:
+            // remaining = original_limit - veces_usado
+            // ============ END REMOVED LOGIC ============
         }
-        // ============ END NEW CODE ============
+
+        // ====================================================================
+        // 3. Lógica para actualizar el costo_total en SisSiniestro
+        // ====================================================================
+
+        // a) Calcular la suma total de los costos de los baremos para este siniestro
+        $totalCosto = SisSiniestroBaremo::find()
+            ->where(['siniestro_id' => $this->id])
+            ->sum('costo');
+
+        // b) Asignar el total al campo costo_total del modelo actual ($this es SisSiniestro)
+        // Se usa (float) para asegurar que el valor sea numérico (sum() puede devolver NULL o un string)
+        $this->costo_total = (float) $totalCosto;
+
+        // c) Guardar el modelo SisSiniestro
+        if (!$this->save(false)) { // Usamos save(false) para omitir la validación de otros campos del SisSiniestro
+            // Retorna false si falla la actualización del costo_total
+            return false;
+        }
+
+        // ====================================================================
+
+        return true;
     }
 
-    // ====================================================================
-    // 3. Lógica para actualizar el costo_total en SisSiniestro
-    // ====================================================================
-
-    // a) Calcular la suma total de los costos de los baremos para este siniestro
-    $totalCosto = SisSiniestroBaremo::find()
-        ->where(['siniestro_id' => $this->id])
-        ->sum('costo');
-
-    // b) Asignar el total al campo costo_total del modelo actual ($this es SisSiniestro)
-    // Se usa (float) para asegurar que el valor sea numérico (sum() puede devolver NULL o un string)
-    $this->costo_total = (float) $totalCosto;
-    
-    // c) Guardar el modelo SisSiniestro
-    if (!$this->save(false)) { // Usamos save(false) para omitir la validación de otros campos del SisSiniestro
-        // Retorna false si falla la actualización del costo_total
-        return false;
-    }
-
-    // ====================================================================
-
-    return true;
-}
-    
     /**
      * Valida los baremos seleccionados contra las restricciones del plan
      * @param array $baremoIds Array de IDs de baremos a validar
@@ -286,54 +460,52 @@ class SisSiniestro extends \yii\db\ActiveRecord
     public static function validarBaremosConPlan($baremoIds, $userId, $esCita = 0, $model = null)
     {
         $errors = [];
-        
+
         if (empty($baremoIds) || !is_array($baremoIds)) {
             return ['valid' => true, 'errors' => []];
         }
-        
+
         // Obtener datos del afiliado
         $afiliado = UserDatos::findOne($userId);
         if (!$afiliado || !$afiliado->plan_id) {
             $errors[] = 'No se pudo obtener la información del plan del afiliado.';
             return ['valid' => false, 'errors' => $errors];
         }
-        
+
         // Obtener el contrato del afiliado para la fecha de inicio
         $contrato = Contratos::find()
             ->where(['user_id' => $userId])
             ->andWhere(['estatus' => 'Activo'])
             ->orderBy(['created_at' => SORT_DESC])
             ->one();
-        
+
         if (!$contrato) {
-            // Nota: Podrías relajar esta validación si una Cita puede hacerse sin contrato activo, 
-            // pero por ahora, la mantenemos como crítica.
             $errors[] = 'No se encontró un contrato activo para el afiliado.';
             return ['valid' => false, 'errors' => $errors];
         }
-        
+
         $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
         $fechaActual = new \DateTime();
-        
+
         // Validar cada baremo
         foreach ($baremoIds as $baremoId) {
             if (empty($baremoId)) continue;
-            
+
             // Obtener la configuración del baremo en el plan
             $planItemCobertura = PlanesItemsCobertura::find()
                 ->where(['plan_id' => $afiliado->plan_id, 'baremo_id' => $baremoId])
                 ->one();
-            
+
             if (!$planItemCobertura) {
                 $baremo = Baremo::findOne($baremoId);
                 $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
                 $errors[] = "El baremo '$nombreBaremo' no está configurado en el plan del afiliado.";
                 continue;
             }
-            
+
             $baremo = Baremo::findOne($baremoId);
             $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
-            
+
             // ----------------------------------------------------------------------------------
             // APLICACIÓN DEL MODO CITA
             // Si el registro es una Cita (es_cita = 1), omitimos todas las validaciones de 
@@ -344,18 +516,18 @@ class SisSiniestro extends \yii\db\ActiveRecord
                 if (!empty($planItemCobertura->plazo_espera) && $planItemCobertura->plazo_espera > 0) {
                     $diff = $fechaInicioContrato->diff($fechaActual);
                     $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                    
+
                     if ($mesesTranscurridos < $planItemCobertura->plazo_espera) {
                         $errors[] = "No se puede agendar la cita para '$nombreBaremo'. Aún no ha cumplido el plazo de espera de {$planItemCobertura->plazo_espera} meses desde la fecha de inicio del contrato.";
                         continue;
                     }
                 }
-            
+
                 // Validar límite de uso para citas
                 if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
                     $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
                     list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
-                    
+
                     // Contar usos en el período actual (excluyendo la cita actual si es una actualización)
                     $siniestrosUsados = self::find()
                         ->alias('s')
@@ -364,38 +536,38 @@ class SisSiniestro extends \yii\db\ActiveRecord
                         ->andWhere(['sb.baremo_id' => $baremoId])
                         ->andWhere(['>=', 's.fecha', $inicioAnioVigencia->format('Y-m-d')])
                         ->andWhere(['<=', 's.fecha', $finAnioVigencia->format('Y-m-d')]);
-                    
-                        if ($model && !$model->isNewRecord) {
-                            $siniestrosUsados->andWhere(['<>', 's.id', $model->id]);
-                        }
-                    
+
+                    if ($model && !$model->isNewRecord) {
+                        $siniestrosUsados->andWhere(['<>', 's.id', $model->id]);
+                    }
+
                     $vecesUsado = $siniestrosUsados->count();
-                    
+
                     // Verificar si excede el límite
                     if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
                         $errors[] = "No se puede agendar la cita para '$nombreBaremo'. "
-                                  . "Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos en el período actual. "
-                                  . "Ya se ha utilizado $vecesUsado veces.";
+                            . "Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos en el período actual. "
+                            . "Ya se ha utilizado $vecesUsado veces.";
                         continue;
                     }
                 }
-                
+
                 continue; // Continuar con el siguiente baremo
             }
-            
+
             // ----------------------------------------------------------------------------------
             // LÓGICA DE VALIDACIÓN EXISTENTE (SOLO PARA SINIESTRO: es_cita = 0)
             // ----------------------------------------------------------------------------------
 
             continue; // Continuar con el siguiente baremo sin validaciones adicionales
         }
-        
+
         return [
             'valid' => empty($errors),
             'errors' => $errors
         ];
     }
-    
+
     /**
      * Parsea el plazo de espera en formato texto a número de meses
      * @param string $plazoEspera Ej: "4 meses", "1 mes", "6 months"
@@ -406,17 +578,17 @@ class SisSiniestro extends \yii\db\ActiveRecord
         if (empty($plazoEspera)) {
             return 0;
         }
-        
+
         // Extraer el número del texto
         preg_match('/\d+/', $plazoEspera, $matches);
-        
+
         if (!empty($matches)) {
             return (int)$matches[0];
         }
-        
+
         return 0;
     }
-    
+
     /**
      * Calcula en qué año de vigencia se encuentra el afiliado
      * @param \DateTime $fechaInicio Fecha de inicio del contrato
@@ -429,7 +601,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return $diferencia->y; // Retorna el número de años completos
     }
 
-        /**
+    /**
      * Calcula el período de vigencia (fecha de inicio y fin) para un año específico
      * @param \DateTime $fechaInicio Fecha de inicio del contrato
      * @param int $anioVigencia Año de vigencia (0 = primer año, 1 = segundo año, etc.)
@@ -439,10 +611,10 @@ class SisSiniestro extends \yii\db\ActiveRecord
     {
         $inicio = clone $fechaInicio;
         $inicio->modify("+{$anioVigencia} years");
-        
+
         $fin = clone $inicio;
         $fin->modify('+1 year -1 day');
-        
+
         return [$inicio, $fin];
     }
 }

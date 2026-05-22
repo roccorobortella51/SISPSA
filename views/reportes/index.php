@@ -1402,43 +1402,110 @@ $this->registerJs(
         return date.toISOString().split('T')[0];
     }
     
-    // =============================================
-    // EXCEL EXPORT FUNCTIONALITY
-    // =============================================
-    function performExcelExport() {
-        console.log('Starting Excel export process...');
-        
-        const status = $(config.selectors.status).val();
-        const clinicasSeleccionadas = getSelectedClinicas();
-        const dateRange = $(config.selectors.dateRange).val();
-        const dateFrom = $(config.selectors.dateFrom).val();
-        const dateTo = $(config.selectors.dateTo).val();
-        
-        if (dateRange === 'custom' && (!dateFrom || !dateTo)) {
-            alert('Por favor seleccione ambas fechas para el rango personalizado.');
+// =============================================
+// EXCEL EXPORT FUNCTION - CORREGIDA 100%
+// =============================================
+function performExcelExport() {
+    console.log('=== EXCEL EXPORT DEBUG ===');
+    
+    const status = $(config.selectors.status).val();
+    const dateRange = $(config.selectors.dateRange).val();
+    const dateFrom = $(config.selectors.dateFrom).val();
+    const dateTo = $(config.selectors.dateTo).val();
+    let clinicasSeleccionadas = getSelectedClinicas();
+    
+    console.log('Status:', status);
+    console.log('Date Range type:', dateRange);
+    console.log('Date From:', dateFrom);
+    console.log('Date To:', dateTo);
+    console.log('Clinicas:', clinicasSeleccionadas);
+    
+    // Validación para rango personalizado
+    if (dateRange === 'custom') {
+        if (!dateFrom || !dateTo) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Fechas incompletas',
+                text: 'Por favor seleccione ambas fechas para el rango personalizado.',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#0078d4'
+            });
             return;
         }
         
-        let exportUrl = config.ajaxUrl.replace('get-pagos-detail', 'export-excel') + '?';
-        exportUrl += 'range=' + encodeURIComponent(dateRange);
-        exportUrl += '&status=' + encodeURIComponent(status);
-        exportUrl += '&clinicas=' + (clinicasSeleccionadas.length ? clinicasSeleccionadas.join(',') : 'todas');
-        
-        if (dateRange === 'custom' && dateFrom && dateTo) {
-            exportUrl += '&date_from=' + encodeURIComponent(dateFrom);
-            exportUrl += '&date_to=' + encodeURIComponent(dateTo);
-            exportUrl += '&custom_range=true';
+        if (dateFrom > dateTo) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Fechas inválidas',
+                text: 'La fecha inicial no puede ser mayor a la fecha final.',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#0078d4'
+            });
+            return;
         }
-        
-        const csrfToken = $('meta[name="csrf-token"]').attr('content');
-        if (csrfToken) {
-            exportUrl += '&_csrf=' + encodeURIComponent(csrfToken);
-        }
-        
-        console.log('Export URL:', exportUrl);
-        window.open(exportUrl, '_blank');
     }
     
+    // Construir URL correctamente - USAR LA MISMA URL QUE EL PDF
+    const baseUrl = window.location.href.split('?')[0];
+    const exportUrl = baseUrl.replace(/\/reportes(\/index)?.*$/, '/reportes/export-excel');
+    
+    // Crear parámetros
+    const params = new URLSearchParams();
+    
+    // Parámetros básicos
+    params.append('status', status);
+    
+    // Manejo de clínicas
+    if (clinicasSeleccionadas && clinicasSeleccionadas.length > 0) {
+        params.append('clinicas', clinicasSeleccionadas.join(','));
+    } else {
+        params.append('clinicas', 'todas');
+    }
+    
+    // MANEJO DE FECHAS - CRÍTICO
+    if (dateRange === 'custom') {
+        // Para rango personalizado, enviar custom_range=true y las fechas
+        params.append('custom_range', 'true');
+        params.append('date_from', dateFrom);
+        params.append('date_to', dateTo);
+        params.append('range', 'custom');
+        console.log('Custom range - sending date_from:', dateFrom, 'date_to:', dateTo);
+    } else {
+        // Para rangos predefinidos
+        params.append('range', dateRange);
+        console.log('Preset range - sending range:', dateRange);
+    }
+    
+    // Agregar CSRF token
+    const csrfToken = $('meta[name="csrf-token"]').attr('content');
+    if (csrfToken) {
+        params.append('_csrf', csrfToken);
+    }
+    
+    const finalUrl = exportUrl + '?' + params.toString();
+    console.log('Final Excel Export URL:', finalUrl);
+    console.log('Params string:', params.toString());
+    
+    // Mostrar indicador de carga
+    Swal.fire({
+        title: 'Generando Excel...',
+        text: 'Por favor espere mientras se genera el archivo para el período seleccionado',
+        icon: 'info',
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Abrir en nueva ventana/descarga
+    window.open(finalUrl, '_blank');
+    
+    // Cerrar el Swal después de un momento
+    setTimeout(() => {
+        Swal.close();
+    }, 2000);
+}
     // =============================================
     // MANEJADORES DE EVENTOS
     // =============================================

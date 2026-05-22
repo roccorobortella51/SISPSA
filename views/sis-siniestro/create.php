@@ -5,9 +5,15 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\SisSiniestro $model */
 /** @var app\models\UserDatos $afiliado */
+/** @var int $es_cita */  // Add this line
 
-// Get es_cita parameter from URL
-$esCita = (int)Yii::$app->request->get('es_cita', 0);
+// Get es_cita parameter from URL if not passed from controller
+if (!isset($es_cita)) {
+    $esCita = (int)Yii::$app->request->get('es_cita', 0);
+} else {
+    $esCita = (int)$es_cita;
+}
+
 $termino = $esCita === 1 ? 'Cita' : 'Atención';
 
 $this->title = 'Crear ' . $termino . ' Médica: ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
@@ -34,6 +40,8 @@ $this->params['breadcrumbs'][] = $this->title;
             <?= $this->render('_form', [
                 'model' => $model,
                 'afiliado' => $afiliado,
+                'es_cita' => $esCita,  // ADD THIS LINE - Pass es_cita to _form
+                'user_id' => $model->iduser ?? Yii::$app->request->get('user_id'),
             ]) ?>
         </div>
     </div>

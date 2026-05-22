@@ -541,11 +541,25 @@ CSS
 $this->registerJs(
     <<<JS
 $(document).ready(function() {
-    // Store cuota amounts
+    // Store cuota amounts for each checkbox
     $('.checkbox-cuota').each(function() {
-        var amountText = $(this).closest('tr').find('.cuota-amount').text();
-        var amount = parseCurrency(amountText);
-        $(this).data('amount', amount);
+        var currentCheckbox = $(this);
+        var rowElement = currentCheckbox.closest('tr');
+        var amountText = rowElement.find('.cuota-amount').text();
+        
+        // Parse currency properly
+        var amount = 0;
+        if (amountText) {
+            // Remove currency symbol and convert
+            var cleaned = amountText.replace('$', '').replace('USD', '').trim();
+            cleaned = cleaned.replace(/[^0-9.,-]/g, '');
+            cleaned = cleaned.replace(',', '');
+            amount = parseFloat(cleaned);
+            if (isNaN(amount)) amount = 0;
+        }
+        currentCheckbox.data('amount', amount);
+        // Also store amount as a data attribute on the checkbox
+        currentCheckbox.attr('data-amount', amount);
     });
     
     // Toggle month content (expand/collapse)
@@ -590,7 +604,29 @@ $(document).ready(function() {
             monthAccordion.removeClass('selected');
         }
         
-        $('.checkbox-cuota[data-month-key="' + monthKey + '"]').prop('checked', isChecked);
+        $('.checkbox-cuota[data-month-key="' + monthKey + '"]').prop('checked', isChecked).trigger('change');
+        updateSelectionInfo();
+    });
+    
+    // Individual cuota checkbox change event
+    $(document).on('change', '.checkbox-cuota', function() {
+        var monthKey = $(this).data('month-key');
+        var monthCheckbox = $('.month-checkbox[data-month-key="' + monthKey + '"]');
+        var allCuotasInMonth = $('.checkbox-cuota[data-month-key="' + monthKey + '"]');
+        var checkedCuotasInMonth = $('.checkbox-cuota[data-month-key="' + monthKey + '"]:checked');
+        
+        // Update month checkbox state
+        if (checkedCuotasInMonth.length === allCuotasInMonth.length && allCuotasInMonth.length > 0) {
+            monthCheckbox.prop('checked', true);
+            monthCheckbox.closest('.month-accordion').addClass('selected');
+        } else if (checkedCuotasInMonth.length === 0) {
+            monthCheckbox.prop('checked', false);
+            monthCheckbox.closest('.month-accordion').removeClass('selected');
+        } else {
+            monthCheckbox.prop('checked', false);
+            monthCheckbox.closest('.month-accordion').addClass('selected');
+        }
+        
         updateSelectionInfo();
     });
     
@@ -625,7 +661,26 @@ $(document).ready(function() {
         var selectedTotal = 0;
         
         selectedCuotas.each(function() {
-            var amount = $(this).data('amount') || 0;
+            var currentCheckbox = $(this);
+            // Try to get amount from data attribute first
+            var amount = currentCheckbox.data('amount');
+            
+            // If not found, try to get from the cuota-amount cell
+            if (amount === undefined || isNaN(amount)) {
+                var rowElement = currentCheckbox.closest('tr');
+                var amountText = rowElement.find('.cuota-amount').text();
+                if (amountText) {
+                    var cleaned = amountText.replace('$', '').replace('USD', '').trim();
+                    cleaned = cleaned.replace(/[^0-9.,-]/g, '');
+                    cleaned = cleaned.replace(',', '');
+                    amount = parseFloat(cleaned);
+                    if (isNaN(amount)) amount = 0;
+                    currentCheckbox.data('amount', amount);
+                } else {
+                    amount = 0;
+                }
+            }
+            
             if (!isNaN(amount)) {
                 selectedTotal += amount;
             }
@@ -640,13 +695,27 @@ $(document).ready(function() {
             var paymentBtn = $('#pago-parcial-btn');
             paymentBtn.html('<i class="fas fa-credit-card me-2"></i> Pagar ' + selectedCount + ' cuota(s) de ' + selectedMonths.length + ' mes(es) por $' + selectedTotal.toFixed(2) + ' USD');
             
+            // Collect selected cuota IDs
             var selectedIds = [];
             selectedCuotas.each(function() {
-                selectedIds.push($(this).val());
+                var cuotaId = $(this).val();
+                if (cuotaId && cuotaId !== '') {
+                    selectedIds.push(cuotaId);
+                }
             });
             
-            var baseUrl = $('#pago-parcial-base-url').val();
-            paymentBtn.attr('href', baseUrl + '&cuotas=' + selectedIds.join(','));
+            // Build URL with cuota IDs
+            if (selectedIds.length > 0) {
+                var baseUrl = $('#pago-parcial-base-url').val();
+                var newUrl = baseUrl + '&cuotas=' + selectedIds.join(',');
+                paymentBtn.attr('href', newUrl);
+                paymentBtn.removeClass('disabled');
+                paymentBtn.prop('disabled', false);
+            } else {
+                paymentBtn.addClass('disabled');
+                paymentBtn.prop('disabled', true);
+                paymentBtn.attr('href', '#');
+            }
         } else {
             $('#selection-info-panel').removeClass('active');
         }
@@ -659,7 +728,10 @@ $(document).ready(function() {
         return isNaN(result) ? 0 : result;
     }
     
+    // Initialize selection info
     updateSelectionInfo();
+    
+    // Expand first month by default for better UX
     $('.month-header').first().trigger('click');
 });
 JS
@@ -796,16 +868,11 @@ JS
                                                     <?php
                                                     $paymentCounter = 1;
                                                     foreach ($paymentHistory as $payment):
-                                                        // Extract month from payment date
                                                         $paymentDate = new \DateTime($payment->fecha_pago);
                                                         $paidMonth = $paymentDate->format('F Y');
                                                         $paidCuotas = $paymentCuotasCount[$payment->id] ?? 0;
-
-                                                        // Get values directly from database
-                                                        $montoPagadoUSD = floatval($payment->monto_pagado);  // USD
-                                                        $montoBs = floatval($payment->monto_usd);            // Bs
-
-                                                        // Calculate tasa: Monto Bs / Monto Pagado USD
+                                                        $montoPagadoUSD = floatval($payment->monto_pagado);
+                                                        $montoBs = floatval($payment->monto_usd);
                                                         $tasaCalculada = ($montoPagadoUSD > 0) ? $montoBs / $montoPagadoUSD : 0;
                                                     ?>
                                                         <tr>
@@ -859,7 +926,6 @@ JS
                                                         </tr>
                                                     <?php endforeach; ?>
                                                 </tbody>
-
                                             </table>
                                         </div>
                                     </div>
@@ -867,8 +933,6 @@ JS
                             </div>
                         </div>
                     <?php endif; ?>
-
-
 
                     <!-- Selection Controls -->
                     <div class="row mb-4">
@@ -991,8 +1055,8 @@ JS
                                                                                             </td>
                                                                                             <td colspan="2">
                                                                                                 <small class="text-muted">Cuota #<?= $cuota->numero_cuota ?></small>
-                                                                                            </td>
-                                                                                            <td class="text-end cuota-amount">
+                                                                                                穷
+                                                                                            <td class="text-end cuota-amount" data-amount="<?= $cuota->monto ?>">
                                                                                                 <strong>$<?= number_format($cuota->monto, 2, '.', ',') ?> USD</strong>
                                                                                             </td>
                                                                                             <td>

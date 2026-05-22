@@ -782,7 +782,10 @@ class UserHelper
             "ADMISIÓN",
             "ATENCIÓN",
             "COORDINADOR-CLINICA",
-            "GERENTE-CLINICA"
+            "GERENTE-CLINICA",
+            "ADMINISTRACION-CLINICA",
+            "OPERACIONES-BOSQUE",
+            "INFORMACIÓN"  // Add if this role should also have clinic access
         ];
 
         $rol = self::getMyRol();
@@ -794,7 +797,7 @@ class UserHelper
             }
         }
 
-        return ''; // Return empty string if no clinic found
+        return null; // Return null instead of empty string
     }
 
     public static function getMyClinicaName()
@@ -804,7 +807,11 @@ class UserHelper
             "CONTROL DE CITAS",
             "ADMISIÓN",
             "ATENCIÓN",
-            "COORDINADOR-CLINICA"
+            "COORDINADOR-CLINICA",
+            "OPERACIONES-BOSQUE",
+            "GERENTE-CLINICA",
+            "INFORMACIÓN",
+            "ADMINISTRACION-CLINICA"
         ];
 
         $rol = self::getMyRol();
@@ -885,7 +892,10 @@ class UserHelper
             "ADMISIÓN",
             "ATENCIÓN",
             "COORDINADOR-CLINICA",
-            "GERENTE-CLINICA"
+            "GERENTE-CLINICA",
+            "ADMINISTRACION-CLINICA",
+            "OPERACIONES-BOSQUE",
+            "INFORMACIÓN"
         ];
 
         $rol = self::getMyRol();
@@ -912,30 +922,33 @@ class UserHelper
 
     /**
      * Get clinics accessible to the current user
-     * @return array Array of clinic IDs
+     * @return array|null Array of clinic IDs or null if all clinics are accessible
      */
     public static function getAccessibleClinicaIds()
     {
         if (self::hasClinicAccess()) {
             $clinicId = self::getMyClinicaId();
-            return $clinicId ? [$clinicId] : [];
+            if ($clinicId) {
+                return [$clinicId];
+            }
+            return []; // No clinics accessible (should not happen for clinic roles)
         }
 
-        // For superadmin, admin, etc., return empty array meaning "all clinics"
-        // But we need to distinguish between "all" and "none"
-        return null; // null means all clinics are accessible
+        // For superadmin, admin, etc., return null meaning "all clinics"
+        return null;
     }
 
     /**
      * Get clinics accessible to the current user with names
-     * @return array Array of clinic models or empty array
+     * @return array Array of clinic models
      */
     public static function getAccessibleClinicas()
     {
         if (self::hasClinicAccess()) {
             $clinicId = self::getMyClinicaId();
             if ($clinicId) {
-                return RmClinica::find()->where(['id' => $clinicId])->all();
+                $clinica = RmClinica::find()->where(['id' => $clinicId])->andWhere(['IS', 'deleted_at', null])->one();
+                return $clinica ? [$clinica] : [];
             }
             return [];
         }

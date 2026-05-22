@@ -1,5 +1,20 @@
 <?php
 
+/**
+ * @var yii\web\View $this
+ * @var app\models\AfiliadosReportSearch $searchModel
+ * @var array $summaryByClinic
+ * @var array $summaryByPlan
+ * @var array $timelineData
+ * @var array $topClinics
+ * @var array $totals
+ * @var array $chartData
+ * @var array $clinicaList
+ * @var array $clinicas
+ * @var array $planList
+ * @var array $tipoAfiliadoList
+ */
+
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
@@ -85,6 +100,9 @@ foreach ($summaryByClinic as $clinic) {
     $totalSuspendidos += $clinic['contratos_suspendidos'] ?? 0;
     $totalAnulados += $clinic['contratos_anulados'] ?? 0;
 }
+
+// Get meta achievement data
+$metaSummary = $searchModel->getMetaAchievementSummary(Yii::$app->request->queryParams);
 
 // Custom CSS with Microsoft styles
 $this->registerCss("
@@ -354,6 +372,43 @@ $this->registerCss("
         color: #0078d4;
         margin-left: 10px;
     }
+    
+    /* Meta Goals Card Styles */
+    .small-stat-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        transition: all 0.2s ease;
+        border: 1px solid #e0e0e0;
+        height: 100%;
+    }
+    
+    .small-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .small-stat-icon {
+        font-size: 2rem;
+        margin-bottom: 8px;
+    }
+    
+    .small-stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .small-stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+    }
+    
+    .text-success { color: #28a745 !important; }
+    .text-warning { color: #ffc107 !important; }
+    .text-danger { color: #dc3545 !important; }
 ");
 ?>
 
@@ -388,9 +443,9 @@ $this->registerCss("
             ) ?>
 
             <?= Html::a(
-                '<i class="fas fa-chart-pie mr-2"></i>Exportar Resumen PDF',
+                '<i class="fas fa-file-pdf mr-2"></i>Exportar Resumen PDF',
                 ['exportar-resumen-pdf', 'AfiliadosReportSearch' => Yii::$app->request->get('AfiliadosReportSearch', [])],
-                ['class' => 'btn btn-outline-warning', 'target' => '_blank']
+                ['class' => 'btn btn-danger', 'target' => '_blank']
             ) ?>
         </div>
     </div>
@@ -540,6 +595,151 @@ $this->registerCss("
         </div>
     </div>
 
+    <!-- ============================================ -->
+    <!-- META GOALS CARD - NEW SECTION -->
+    <!-- ============================================ -->
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <i class="fas fa-bullseye mr-2"></i> Cumplimiento de Metas Mensuales por Clínica
+        </div>
+        <div class="card-body">
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="small-stat-card text-center">
+                        <div class="small-stat-icon">
+                            <i class="fas fa-chart-line" style="color: #667eea;"></i>
+                        </div>
+                        <div class="small-stat-value"><?= number_format($metaSummary['porcentaje_global_cumplimiento']) ?>%</div>
+                        <div class="small-stat-label">Cumplimiento Global</div>
+                        <small class="text-muted"><?= number_format($metaSummary['total_afiliados_actual']) ?> / <?= number_format($metaSummary['total_meta_objetivo']) ?> afiliados</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="small-stat-card text-center">
+                        <div class="small-stat-icon text-success">
+                            <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        </div>
+                        <div class="small-stat-value"><?= $metaSummary['clinicas_que_alcanzaron_meta'] ?></div>
+                        <div class="small-stat-label">Clínicas que Alcanzaron Meta</div>
+                        <small class="text-muted">(≥100%)</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="small-stat-card text-center">
+                        <div class="small-stat-icon text-warning">
+                            <i class="fas fa-chart-simple" style="color: #ffc107;"></i>
+                        </div>
+                        <div class="small-stat-value"><?= $metaSummary['clinicas_cerca_meta'] ?></div>
+                        <div class="small-stat-label">Clínicas Cerca de Meta</div>
+                        <small class="text-muted">(75-99%)</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="small-stat-card text-center">
+                        <div class="small-stat-icon text-danger">
+                            <i class="fas fa-hourglass-half" style="color: #dc3545;"></i>
+                        </div>
+                        <div class="small-stat-value"><?= $metaSummary['clinicas_lejos_meta'] ?></div>
+                        <div class="small-stat-label">Clínicas Lejos de Meta</div>
+                        <small class="text-muted">(&lt;75%)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meta Achievement Table -->
+            <?php if (!empty($metaSummary['detalle_por_clinica'])): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th class="text-white">Clínica</th>
+                                <th class="text-white text-center">Meta Mensual</th>
+                                <th class="text-white text-center">Afiliados Actuales</th>
+                                <th class="text-white text-center">Cumplimiento</th>
+                                <th class="text-white text-center">Faltante/Excedente</th>
+                                <th class="text-white text-center">Estado</th>
+                                <th class="text-white text-center">Barra de Progreso</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($metaSummary['detalle_por_clinica'] as $clinica): ?>
+                                <?php
+                                $progressClass = 'bg-success';
+                                if ($clinica['porcentaje'] < 50) {
+                                    $progressClass = 'bg-danger';
+                                } elseif ($clinica['porcentaje'] < 75) {
+                                    $progressClass = 'bg-warning';
+                                } elseif ($clinica['porcentaje'] < 100) {
+                                    $progressClass = 'bg-info';
+                                }
+
+                                $statusBadge = '';
+                                if ($clinica['estado'] == 'alcanzada') {
+                                    $statusBadge = '<span class="badge badge-success"><i class="fas fa-trophy mr-1"></i> Meta Alcanzada</span>';
+                                } elseif ($clinica['estado'] == 'cerca') {
+                                    $statusBadge = '<span class="badge badge-warning"><i class="fas fa-chart-line mr-1"></i> Cerca de Meta</span>';
+                                } else {
+                                    $statusBadge = '<span class="badge badge-danger"><i class="fas fa-exclamation-triangle mr-1"></i> Meta Pendiente</span>';
+                                }
+                                ?>
+                                <tr>
+                                    <td class="font-weight-bold"><?= Html::encode($clinica['nombre']) ?></td>
+                                    <td class="text-center">
+                                        <span class="badge badge-primary"><?= number_format($clinica['meta']) ?> afiliados</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-info"><?= number_format($clinica['total_afiliados']) ?> afiliados</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong><?= $clinica['porcentaje'] ?>%</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($clinica['faltante'] > 0): ?>
+                                            <span class="text-danger">Faltan - <?= number_format($clinica['faltante']) ?></span>
+                                        <?php else: ?>
+                                            <span class="text-success">Excedente + <?= number_format($clinica['excedente']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center"><?= $statusBadge ?></td>
+                                    <td style="min-width: 150px;">
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar <?= $progressClass ?> progress-bar-striped"
+                                                role="progressbar"
+                                                style="width: <?= min(100, $clinica['porcentaje']) ?>%;"
+                                                aria-valuenow="<?= $clinica['porcentaje'] ?>"
+                                                aria-valuemin="0"
+                                                aria-valuemax="100">
+                                                <?= $clinica['porcentaje'] ?>%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    No hay datos de metas disponibles. Configure las metas mensuales en la sección de Clínicas.
+                </div>
+            <?php endif; ?>
+
+            <!-- Legend -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <small class="text-muted">
+                        <i class="fas fa-chart-line text-success"></i> Meta Alcanzada (≥100%) &nbsp;&nbsp;
+                        <i class="fas fa-chart-simple text-info"></i> Cerca de Meta (75-99%) &nbsp;&nbsp;
+                        <i class="fas fa-exclamation-triangle text-warning"></i> En Progreso (50-74%) &nbsp;&nbsp;
+                        <i class="fas fa-hourglass-start text-danger"></i> Lejos de Meta (&lt;50%)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Chart: Affiliates by Clinic -->
         <div class="col-lg-8">
@@ -679,6 +879,7 @@ $this->registerCss("
                     <thead class="bg-primary">
                         <tr class="text-white">
                             <th class="text-white">Clínica</th>
+                            <th class="text-white text-center">Meta</th>
                             <th class="text-white text-center">Total Afiliados</th>
                             <th class="text-white text-center">Individual</th>
                             <th class="text-white text-center">Corporativo</th>
@@ -693,9 +894,36 @@ $this->registerCss("
                             // Only make row clickable if user is superadmin
                             $rowClass = $isSuperAdmin ? 'clickable-row' : 'non-clickable-row';
                             $onClick = $isSuperAdmin ? "window.location='" . Url::to(['user-datos/index-clinicas', 'clinica_id' => $clinic['clinica_id']]) . "'" : '';
+
+                            // Calculate meta compliance
+                            $meta = (int)($clinic['clinica_meta'] ?? 0);
+                            $totalAfiliadosClinica = $clinic['total_afiliados'];
+                            $metaPorcentaje = $meta > 0 ? round(($totalAfiliadosClinica / $meta) * 100) : 0;
+                            $metaBadgeClass = 'secondary';
+                            if ($meta > 0) {
+                                if ($metaPorcentaje >= 100) {
+                                    $metaBadgeClass = 'success';
+                                } elseif ($metaPorcentaje >= 75) {
+                                    $metaBadgeClass = 'warning';
+                                } elseif ($metaPorcentaje >= 50) {
+                                    $metaBadgeClass = 'info';
+                                } else {
+                                    $metaBadgeClass = 'danger';
+                                }
+                            }
                             ?>
                             <tr class="<?= $rowClass ?>" <?= $onClick ? "onclick=\"{$onClick}\"" : '' ?>>
                                 <td class="clinic-name"><strong><?= Html::encode($clinic['clinica_nombre']) ?></strong></td>
+                                <td class="text-center">
+                                    <?php if ($meta > 0): ?>
+                                        <span class="badge badge-<?= $metaBadgeClass ?>" title="<?= $metaPorcentaje ?>% de cumplimiento">
+                                            <?= number_format($meta) ?>
+                                            <small>(<?= $metaPorcentaje ?>%)</small>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge badge-secondary">No definida</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-center"><span class="badge badge-primary"><?= number_format($clinic['total_afiliados']) ?></span></td>
                                 <td class="text-center"><span class="badge badge-info"><?= number_format($clinic['tipo_individual']) ?></span></td>
                                 <td class="text-center"><span class="badge badge-warning"><?= number_format($clinic['tipo_corporativo']) ?></span></td>
@@ -707,7 +935,7 @@ $this->registerCss("
 
                         <?php if (empty($summaryByClinic)): ?>
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">No hay datos disponibles para los filtros seleccionados</td>
+                                <td colspan="8" class="text-center py-4 text-muted">No hay datos disponibles para los filtros seleccionados</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>

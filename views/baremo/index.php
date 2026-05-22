@@ -26,7 +26,7 @@ if (!isset($clinica)) {
     $clinica = (object)['id' => null, 'nombre' => 'Clínica Desconocida'];
 }
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'COORDINADOR-CLINICA');
+$permisos = ($rol == 'superadmin' || $rol == 'COORDINADOR-CLINICA' || $rol == 'GERENTE-OPERACIONES' || $rol == 'GERENTE-COMERCIALIZACION');
 $isReadOnly = ($rol == 'COORDINADOR-CLINICA' || $rol == 'Asesor');
 
 // --- BREADCRUMBS ---

@@ -58,6 +58,7 @@ body {
     border-collapse: collapse;
     margin-bottom: 20px;
     font-size: 10px;
+
 }
 
 .family-table th,
@@ -69,9 +70,11 @@ body {
 }
 
 .family-table th {
-    background-color: #f0f0f0;
+    background-color: #2B3371;
     font-weight: bold;
     text-align: center;
+        color: white; /* WHITE TEXT FOR ALL SECTION TITLES */
+
 }
 
 .family-table .underline {
@@ -122,4 +125,42 @@ body {
     .family-table td {
         padding: 3px;
     }
+    /* Additional styles for contract number and checkmarks */
+.contract-number-box {
+    background-color: #2c3e50;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.contract-number-box strong {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.checkbox-group .checkbox {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #000;
+    text-align: center;
+    font-size: 10px;
+    line-height: 14px;
+    margin-right: 3px;
+}
+
+/* Style for pending contract message */
+small[style*="color: #ff0000"] {
+    font-size: 8px;
+}
+/* Special style for INTERMEDIARIO DE LA ACTIVIDAD ASEGURADORA */
+.family-table .intermediario-title {
+    background-color: #1a3a6b;
+    font-weight: bold;
+    text-align: center;
+    color: white;
+    font-size: 11px;
+    padding: 8px;
+}
 }

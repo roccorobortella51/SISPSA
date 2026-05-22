@@ -351,24 +351,21 @@ class ContractHelper
                         'data-toggle' => 'tooltip',
                         'data-placement' => 'top',
                         'data-html' => 'true',
-                        'style' => 'cursor: help;'
+                        'style' => 'cursor: help; margin-left: 5px;'
                     ]
                 );
             }
 
+            // FIXED: Return just the badge without flex wrapper
             // Return badge with detailed tooltip
-            return Html::tag(
-                'div',
-                Html::tag('span', $statusIcon . ' ' . $statusText, [
-                    'class' => $statusClass,
-                    'title' => $tooltip,
-                    'data-toggle' => 'tooltip',
-                    'data-html' => 'true',
-                    'data-placement' => 'top',
-                    'style' => 'cursor: help; white-space: nowrap; display: inline-block;'
-                ]) . ' ' . $pendingIndicator,
-                ['style' => 'display: flex; align-items: center; gap: 5px;']
-            );
+            return Html::tag('span', $statusIcon . ' ' . $statusText, [
+                'class' => $statusClass,
+                'title' => $tooltip,
+                'data-toggle' => 'tooltip',
+                'data-html' => 'true',
+                'data-placement' => 'top',
+                'style' => 'cursor: help; white-space: nowrap; display: inline-block;'
+            ]) . ($pendingIndicator ? ' ' . $pendingIndicator : '');
         }
 
         // No contract found - show "Sin Contrato" with pending payment info if any
@@ -394,7 +391,7 @@ class ContractHelper
                 'data-toggle' => 'tooltip',
                 'data-html' => 'true',
                 'data-placement' => 'top',
-                'style' => 'cursor: help; white-space: nowrap;'
+                'style' => 'cursor: help; white-space: nowrap; display: inline-block;'
             ]);
         }
 
@@ -405,7 +402,7 @@ class ContractHelper
             'data-toggle' => 'tooltip',
             'data-html' => 'true',
             'data-placement' => 'top',
-            'style' => 'cursor: help;'
+            'style' => 'cursor: help; display: inline-block;'
         ]);
     }
 

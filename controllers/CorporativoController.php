@@ -40,6 +40,7 @@ class CorporativoController extends Controller
     private $estadoNameToIdMap = [];
     private $estadoNormToCanonicalName = [];
     private $estadoCanonicalNamesText = '';
+
     // ========== NEW PROPERTY: Allowed roles with clinic access ==========
     private $allowedClinicaRoles = [
         "Administrador-clinica",
@@ -49,7 +50,8 @@ class CorporativoController extends Controller
         "COORDINADOR-CLINICA",
         "GERENTE-CLINICA"
     ];
-    // ========== END OF NEW PROPERTY ==========
+// ========== END OF NEW PROPERTY ==========
+
     /**
      * @inheritDoc
      */
@@ -241,7 +243,7 @@ class CorporativoController extends Controller
                         ->select('cuotas.*')
                         ->innerJoinWith(['contrato'])
                         ->where(['contratos.user_id' => $userId])
-                        ->andWhere(['cuotas.estatus' => 'pendiente'])
+                        ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias']])
                         ->orderBy(['cuotas.fecha_vencimiento' => SORT_ASC])
                         ->all();
 
@@ -318,6 +320,7 @@ class CorporativoController extends Controller
                         if ($model->save(false)) {
                             $mainPaymentId = $model->id;
                             $affiliatePaymentsCount = 0;
+                            $affiliatePaymentMap = []; // userId => affiliatePaymentId
 
                             // Create individual payment records for each affiliate
                             foreach ($userAmounts as $userId => $userAmount) {
@@ -345,7 +348,8 @@ class CorporativoController extends Controller
 
                                     if ($affiliatePayment->save(false)) {
                                         $affiliatePaymentsCount++;
-                                        \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}");
+                                        $affiliatePaymentMap[$userId] = $affiliatePayment->id;
+                                        \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}, ID: {$affiliatePayment->id}");
                                     } else {
                                         \Yii::error("Failed to create affiliate payment for user {$userId}: " . print_r($affiliatePayment->errors, true));
                                         throw new \Exception("Failed to create affiliate payment for user {$userId}");
@@ -356,12 +360,22 @@ class CorporativoController extends Controller
                             $contratosActualizados = [];
                             $cuotasUpdatedCount = 0;
 
+                            // Update cuotas - NOW USING INDIVIDUAL PAYMENT IDs
                             foreach ($allCuotas as $cuota) {
                                 if ($cuota->estatus === 'pendiente') {
+                                    $userId = $cuota->contrato->user_id;
+
+                                    // Use the individual payment ID for this specific affiliate
+                                    $affiliatePaymentId = $affiliatePaymentMap[$userId] ?? $mainPaymentId;
+
+                                    // Get the individual payment for its specific rate
+                                    $individualPayment = Pagos::findOne($affiliatePaymentId);
+                                    $tasaCuota = $individualPayment ? ($individualPayment->monto_usd / $individualPayment->monto_pagado) : $model->tasa;
+
                                     $cuota->estatus = 'pagado';
-                                    $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
-                                    $cuota->rate_usd_bs = $model->tasa;
-                                    $cuota->id_pago = $mainPaymentId;
+                                    $cuota->fecha_pago = $individualPayment->fecha_pago ?? $model->fecha_pago;
+                                    $cuota->rate_usd_bs = $tasaCuota;
+                                    $cuota->id_pago = $affiliatePaymentId; // Link to INDIVIDUAL payment
 
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;
@@ -659,18 +673,28 @@ class CorporativoController extends Controller
     /**
      * Lógica principal para leer el archivo CSV y procesar los afiliados,
      * asegurando el cumplimiento de las reglas de validación de UserDatos.
-     * * SE HAN AÑADIDO: nacionalidad, estado_civil, lugar_nacimiento, profesion, ocupacion,
+     * SE HAN AÑADIDO: nacionalidad, estado_civil, lugar_nacimiento, profesion, ocupacion,
      * actividad_economica, ramo_comercial, descripcion_actividad, ingreso_anual,
      * direccion_cobro, y telefono_residencia.
-     * * @param string $filePath Ruta temporal del archivo CSV.
+     * 
+     * ACTUALIZACIÓN IMPORTANTE: Ahora genera 12 cuotas por afiliado utilizando
+     * el método Cuotas::generateCuotasAnniversaryBased() en lugar de una sola cuota.
+     * 
+     * @param string $filePath Ruta temporal del archivo CSV.
      * @param int $corporativoId ID del corporativo destino.
-     * @return array Array con el conteo de éxitos y los errores encontrados.
+     * @param string $fechaIniGlobal Fecha de inicio del contrato.
+     * @param string $fechaVenGlobal Fecha de vencimiento del contrato.
+     * @return array Array con el conteo de éxitos, los errores encontrados y detalles de éxito.
      */
     private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal)
     {
         $handle = fopen($filePath, "r");
         if ($handle === false) {
-            return ['successCount' => 0, 'errors' => ['No se pudo abrir el archivo.']];
+            return [
+                'successCount' => 0,
+                'errors' => ['No se pudo abrir el archivo.'],
+                'successDetails' => []
+            ];
         }
 
         // Campos requeridos originales
@@ -699,10 +723,15 @@ class CorporativoController extends Controller
 
         $successCount = 0;
         $errors = [];
+        $successDetails = []; // Array para almacenar detalles de afiliados exitosos
         $lineNumber = 1;
 
         if ($headers === false) {
-            return ['successCount' => 0, 'errors' => ['El archivo CSV está vacío o ilegible.']];
+            return [
+                'successCount' => 0,
+                'errors' => ['El archivo CSV está vacío o ilegible.'],
+                'successDetails' => []
+            ];
         }
         $headerMap = array_flip(array_map('trim', $headers));
 
@@ -711,7 +740,8 @@ class CorporativoController extends Controller
         if (!empty($missingHeaders)) {
             return [
                 'successCount' => 0,
-                'errors' => ['Línea 1 (Cabecera): Faltan las siguientes columnas requeridas: ' . implode(', ', $missingHeaders)]
+                'errors' => ['Línea 1 (Cabecera): Faltan las siguientes columnas requeridas: ' . implode(', ', $missingHeaders)],
+                'successDetails' => []
             ];
         }
 
@@ -785,6 +815,12 @@ class CorporativoController extends Controller
                 $direccionCobro = trim($data[$headerMap['direccion_cobro']] ?? '');
                 $telefonoResidenciaCsv = trim($data[$headerMap['telefono_residencia']] ?? '');
 
+                // Campos opcionales existentes
+                $asesorIdData = isset($headerMap['asesor_id']) ? trim($data[$headerMap['asesor_id']] ?? '') : null;
+                $direccionOficina = isset($headerMap['direccion_oficina']) ? trim($data[$headerMap['direccion_oficina']] ?? '') : null;
+                $telefonoOficinaCsv = isset($headerMap['telefono_oficina']) ? trim($data[$headerMap['telefono_oficina']] ?? '') : null;
+                $tipoSangre = isset($headerMap['tipo_sangre']) ? trim($data[$headerMap['tipo_sangre']] ?? '') : null;
+
                 // Validación de datos principales
                 if (empty($cedulaLimpia) || empty($email) || $planId <= 0 || $clinicaId <= 0) {
                     throw new \Exception('Datos principales (cédula, email, plan_id, o clinica_id) están incompletos o inválidos.');
@@ -795,6 +831,9 @@ class CorporativoController extends Controller
 
                 // Validación del Teléfono de Residencia
                 $telefonoResidenciaLimpio = !empty($telefonoResidenciaCsv) ? $this->limpiarTelefono($telefonoResidenciaCsv) : null;
+
+                // Validación del Teléfono de Oficina
+                $telefonoOficinaLimpio = !empty($telefonoOficinaCsv) ? $this->limpiarTelefono($telefonoOficinaCsv) : null;
 
                 // Validación de Estado (Nombre a ID)
                 if (empty($estadoNameCsv)) {
@@ -810,7 +849,7 @@ class CorporativoController extends Controller
                 // Nombre del estado para asignación a UserDatos (canónico desde rm_estado)
                 $estadoNombreParaUserDatos = $this->estadoNormToCanonicalName[$normalizedCsvName] ?? $estadoNameCsv;
 
-                // 2. Validar relaciones y existencia de Plan
+                // 2. Validar relaciones y existencia de Plan y Clínica
                 if (!CorporativoClinica::find()->where(['corporativo_id' => $corporativoId])->andWhere(['clinica_id' => $clinicaId])->exists()) {
                     throw new \Exception("La Clínica ID {$clinicaId} NO está vinculada al Corporativo ID {$corporativoId} seleccionado.");
                 }
@@ -907,17 +946,15 @@ class CorporativoController extends Controller
                 $afiliado->direccion_cobro = $direccionCobro ?: null;
                 $afiliado->telefono_residencia = $telefonoResidenciaLimpio; // Limpiado o null
 
+                // Campos opcionales existentes
+                $afiliado->direccion_oficina = $direccionOficina ?: null;
+                $afiliado->telefono_oficina = $telefonoOficinaLimpio;
+                $afiliado->tipo_sangre = $tipoSangre ?: null;
+
                 // Campos Fijos y Opcionales (si existen en el CSV)
                 $afiliado->user_datos_type_id = 2; // Tipo: Afiliado Corporativo
                 $afiliado->afiliado_corporativo_id = $corporativoId;
                 $afiliado->email = $email;
-
-                $afiliado->direccion_oficina = (isset($headerMap['direccion_oficina']) && !empty(trim($data[$headerMap['direccion_oficina']] ?? ''))) ? trim($data[$headerMap['direccion_oficina']]) : null;
-
-                $telefonoOficinaCsv = (isset($headerMap['telefono_oficina']) && !empty(trim($data[$headerMap['telefono_oficina']] ?? ''))) ? trim($data[$headerMap['telefono_oficina']]) : null;
-                $afiliado->telefono_oficina = $telefonoOficinaCsv ? $this->limpiarTelefono($telefonoOficinaCsv) : null;
-
-                $afiliado->tipo_sangre = (isset($headerMap['tipo_sangre']) && !empty(trim($data[$headerMap['tipo_sangre']] ?? ''))) ? trim($data[$headerMap['tipo_sangre']]) : null;
 
                 $afiliado->role = 'afiliado';
                 $afiliado->estatus = 'Creado';
@@ -940,7 +977,7 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al crear UserDatos (Validación): ' . implode('; ', $errorMessages));
                 }
 
-                // 7. Creación de Contrato, Cuota, CorporativoUser y Asignación de Rol
+                // 7. Creación de Contrato
                 $modelContrato = new Contratos();
                 $modelContrato->user_id = $afiliado->id;
                 $modelContrato->estatus = 'Registrado';
@@ -956,6 +993,7 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al crear Contrato: ' . implode(', ', ArrayHelper::flatten($modelContrato->getErrors())));
                 }
 
+                // Generar número de contrato
                 $anio_actual = date('Y');
                 $modelContrato->nrocontrato = $afiliado->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
                 $afiliado->contrato_id = $modelContrato->id;
@@ -964,24 +1002,34 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al guardar NroContrato o contrato_id.');
                 }
 
-                $modelCuota = new Cuotas();
-                $modelCuota->contrato_id = $modelContrato->id;
-                $modelCuota->fecha_vencimiento = $modelContrato->fecha_ini;
-                $modelCuota->monto = $modelContrato->monto;
-                $modelCuota->estatus = 'pendiente';
-                $modelCuota->rate_usd_bs = TasaCambio::find()->where(['fecha' => date('Y-m-d')])->one()->tasa_cambio ?? 1;
+                // ========== NUEVA FUNCIONALIDAD: Generar 12 cuotas en lugar de una sola ==========
+                // Esto asegura que cada afiliado tenga un año completo de cobertura
+                Yii::info("Generando 12 cuotas para el contrato #{$modelContrato->id} del afiliado {$afiliado->cedula}", __METHOD__);
 
-                if (!$modelCuota->save()) {
-                    Yii::error(['Error_Cuota' => $modelCuota->getErrors()], __METHOD__);
-                    throw new \Exception('Error al crear Cuota inicial: ' . implode(', ', ArrayHelper::flatten($modelCuota->getErrors())));
+                $cuotaGenerationResult = Cuotas::generateCuotasAnniversaryBased(
+                    $modelContrato->id,
+                    $modelContrato->fecha_ini,
+                    $modelContrato->monto
+                );
+
+                if (!$cuotaGenerationResult['success']) {
+                    throw new \Exception('Error al generar las 12 cuotas: ' . $cuotaGenerationResult['error']);
                 }
 
+                $cuotasGeneradas = count($cuotaGenerationResult['cuotas']);
+                Yii::info(
+                    "✅ Generadas {$cuotasGeneradas} cuotas para el contrato #{$modelContrato->id} " .
+                        "(Afiliado: {$afiliado->cedula} - {$afiliado->nombres} {$afiliado->apellidos})",
+                    __METHOD__
+                );
+                // ========== FIN DE LA NUEVA FUNCIONALIDAD ==========
+
+                // 8. Crear relación CorporativoUser
                 $corporativoUser = new CorporativoUser();
                 $corporativoUser->corporativo_id = $corporativoId;
                 $corporativoUser->user_id = $afiliado->id;
                 $corporativoUser->fecha_vinculacion = new Expression('NOW()');
 
-                $asesorIdData = isset($headerMap['asesor_id']) ? trim($data[$headerMap['asesor_id']] ?? '') : null;
                 if (!empty($asesorIdData)) {
                     $corporativoUser->asesor_id = (int) $asesorIdData;
                 }
@@ -991,12 +1039,30 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al vincular con CorporativoUser: ' . implode(', ', ArrayHelper::flatten($corporativoUser->getErrors())));
                 }
 
-                // Asignar rol 'afiliado'
+                // 9. Asignar rol 'afiliado'
                 $auth = Yii::$app->authManager;
                 $role = $auth->getRole('afiliado');
                 if ($role) {
                     $auth->assign($role, $userLogin->id);
                 }
+
+                // ========== RECOLECTAR DETALLES PARA EL RESUMEN ==========
+                $successDetails[] = [
+                    'user_datos_id' => $afiliado->id,
+                    'user_login_id' => $userLogin->id,
+                    'tipo_cedula' => $afiliado->tipo_cedula,
+                    'cedula' => $afiliado->cedula,
+                    'nombres' => $afiliado->nombres,
+                    'apellidos' => $afiliado->apellidos,
+                    'email' => $afiliado->email,
+                    'nrocontrato' => $modelContrato->nrocontrato,
+                    'created_at' => $afiliado->created_at,
+                    'plan_id' => $planId,
+                    'plan_nombre' => $plan->nombre,
+                    'clinica_id' => $clinicaId,
+                    'cuotas_generadas' => $cuotasGeneradas
+                ];
+                // ========== FIN DE RECOLECCIÓN ==========
 
                 $transaction->commit();
                 $successCount++;
@@ -1016,13 +1082,20 @@ class CorporativoController extends Controller
         }
 
         fclose($handle);
-        return ['successCount' => $successCount, 'errors' => $errors];
+
+        // ========== RETORNAR CON DETALLES DE ÉXITO ==========
+        return [
+            'successCount' => $successCount,
+            'errors' => $errors,
+            'successDetails' => $successDetails
+        ];
+        // ========== FIN DEL RETORNO ==========
     }
 
     /**
      * Genera y fuerza la descarga de un archivo CSV de ejemplo (plantilla).
-     * Se han añadido los campos: nacionalidad, estado_civil, lugar_nacimiento, profesion, 
-     * ocupacion, actividad_economica, ramo_comercial, descripcion_actividad, 
+     * Se han añadido los campos: nacionalidad, estado_civil, lugar_nacimiento, profesion,
+     * ocupacion, actividad_economica, ramo_comercial, descripcion_actividad,
      * ingreso_anual, direccion_cobro, y telefono_residencia.
      * @return \yii\web\Response
      */
@@ -1074,7 +1147,7 @@ class CorporativoController extends Controller
             'CALLE SOL #123',
             '2',
             '2',
-            'MIRANDA', // ESTADO (NOMBRE)
+            'MIRANDA',
 
             // Datos de muestra para nuevos campos
             'VENEZOLANA',
@@ -1159,7 +1232,7 @@ class CorporativoController extends Controller
         // 1. Quitar todos los caracteres que no sean dígitos
         $numeroLimpio = preg_replace('/[^0-9]/', '', $telefono);
 
-        // 2. Si tiene 10 dígitos y no empieza con '0', se asume que le falta el '0' inicial 
+        // 2. Si tiene 10 dígitos y no empieza con '0', se asume que le falta el '0' inicial
         if (strlen($numeroLimpio) === 10 && substr($numeroLimpio, 0, 1) !== '0') {
             $numeroLimpio = '0' . $numeroLimpio;
         }
@@ -1213,32 +1286,6 @@ class CorporativoController extends Controller
         ];
 
         return strtr($string, $unwanted_array);
-    }
-
-
-    public function actionObtenerClinicasPorCorporativo($id)
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-
-        // 1. Obtener los modelos CorporativoClinica asociados
-        $asociaciones = CorporativoClinica::find()
-            ->where(['corporativo_id' => $id])
-            ->all();
-
-        $clinicasData = [];
-
-        // 2. Iterar sobre las asociaciones para obtener los datos de la clínica
-        foreach ($asociaciones as $asociacion) {
-            // Asumiendo que el modelo CorporativoClinica tiene una relación 'clinica'
-            // y que el modelo de Clínica tiene las propiedades 'id' y 'nombre'.
-            $clinicasData[] = [
-                'id' => $asociacion->clinica->id,
-                'nombre' => $asociacion->clinica->nombre, // Asegúrate de que 'nombre' es el atributo correcto.
-            ];
-        }
-
-        // Devolver el array JSON
-        return $clinicasData;
     }
 
     /**
@@ -1297,7 +1344,7 @@ class CorporativoController extends Controller
     }
 
 
-    /** ----------------------------------------  Fin de Carga Masiva -------------------------------------- */
+    /** ---------------------------------------- Fin de Carga Masiva -------------------------------------- */
 
 
     /**
@@ -1397,14 +1444,14 @@ class CorporativoController extends Controller
         $grandTotal = 0;
 
         if (!empty($allUserIds)) {
-            // Use INNER JOIN approach (same as actionPagos())
+            // Use INNER JOIN approach - NOW INCLUDING 'pendiente' AND 'en_gracias'
             $allCuotas = \app\models\Cuotas::find()
                 ->select('cuotas.*')
                 ->innerJoinWith(['contrato' => function ($query) {
                     $query->innerJoinWith(['user']);
                 }])
                 ->where(['contratos.user_id' => $allUserIds])
-                ->andWhere(['cuotas.estatus' => 'pendiente'])
+                ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias']])  // <-- MODIFIED HERE
                 ->andWhere(['>', 'cuotas.monto', 0])
                 ->orderBy([
                     'cuotas.fecha_vencimiento' => SORT_ASC,
@@ -1419,7 +1466,7 @@ class CorporativoController extends Controller
             }
         }
 
-        // ===== NEW: Get payment history for this corporation =====
+        // ===== Get payment history for this corporation =====
         $paymentHistory = \app\models\Pagos::find()
             ->where(['corporativo_id' => $id])
             ->andWhere(['tipo_pago' => 'corporativo'])
@@ -1491,6 +1538,7 @@ class CorporativoController extends Controller
 
         return array_unique(array_merge($directUserIds, $indirectUserIds));
     }
+
     /**
      * Realiza un pago corporativo PARCIAL para cuotas específicas seleccionadas.
      * @param int $id Corporativo ID
@@ -1521,7 +1569,7 @@ class CorporativoController extends Controller
                     ->select('cuotas.*')
                     ->innerJoinWith(['contrato'])
                     ->where(['cuotas.id' => $cuotaId])
-                    ->andWhere(['cuotas.estatus' => 'pendiente'])
+                    ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias']])
                     ->one();
 
                 if ($cuota && $cuota->contrato) {
@@ -1600,6 +1648,7 @@ class CorporativoController extends Controller
                         if ($model->save(false)) {
                             $mainPaymentId = $model->id;
                             $affiliatePaymentsCount = 0;
+                            $affiliatePaymentMap = []; // userId => affiliatePaymentId
 
                             // Create individual payment records for each affiliate
                             foreach ($userAmounts as $userId => $userAmount) {
@@ -1627,7 +1676,8 @@ class CorporativoController extends Controller
 
                                     if ($affiliatePayment->save(false)) {
                                         $affiliatePaymentsCount++;
-                                        \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}");
+                                        $affiliatePaymentMap[$userId] = $affiliatePayment->id;
+                                        \Yii::info("Created affiliate payment for user {$userId} with amount {$userAmount}, ID: {$affiliatePayment->id}");
                                     } else {
                                         \Yii::error("Failed to create affiliate payment for user {$userId}: " . print_r($affiliatePayment->errors, true));
                                         throw new \Exception("Failed to create affiliate payment for user {$userId}");
@@ -1638,12 +1688,22 @@ class CorporativoController extends Controller
                             $contratosActualizados = [];
                             $cuotasUpdatedCount = 0;
 
+                            // Update cuotas - NOW USING INDIVIDUAL PAYMENT IDs
                             foreach ($allCuotas as $cuota) {
                                 if ($cuota->estatus === 'pendiente') {
+                                    $userId = $cuota->contrato->user_id;
+
+                                    // Use the individual payment ID for this specific affiliate
+                                    $affiliatePaymentId = $affiliatePaymentMap[$userId] ?? $mainPaymentId;
+
+                                    // Get the individual payment for its specific rate
+                                    $individualPayment = Pagos::findOne($affiliatePaymentId);
+                                    $tasaCuota = $individualPayment ? ($individualPayment->monto_usd / $individualPayment->monto_pagado) : $model->tasa;
+
                                     $cuota->estatus = 'pagado';
-                                    $cuota->fecha_pago = $model->fecha_pago ?: date('Y-m-d');
-                                    $cuota->rate_usd_bs = $model->tasa;
-                                    $cuota->id_pago = $mainPaymentId;
+                                    $cuota->fecha_pago = $individualPayment->fecha_pago ?? $model->fecha_pago;
+                                    $cuota->rate_usd_bs = $tasaCuota;
+                                    $cuota->id_pago = $affiliatePaymentId; // Link to INDIVIDUAL payment
 
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;

@@ -11,6 +11,11 @@ use yii\web\JsExpression;
 use kartik\depdrop\DepDrop;
 
 // --- Calcula los IDs de los campos antes del bloque JS ---
+// Ensure $model2 is defined so the form can render even if only one model is passed.
+if (!isset($model2)) {
+    $model2 = $model;
+}
+
 $firstEmailFieldId = Html::getInputId($model, 'username');
 $secondEmailFieldId = Html::getInputId($model, 'email');
 $tEmailFieldId = Html::getInputId($model2, 'email');
@@ -363,7 +368,9 @@ function toggleClinicaByRole() {
         'ATENCIÓN',
         'Administrador-clinica',
         'afiliado',
-        'Afiliado corporativo'
+        'Afiliado corporativo',
+        'OPERACIONES-BOSQUE',
+        'ADMINISTRACION-CLINICA'
     ];
     var match = (val && allowed.indexOf(val) !== -1) || (text && allowed.indexOf(text) !== -1);
     if (match) {

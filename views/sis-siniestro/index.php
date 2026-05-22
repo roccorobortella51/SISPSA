@@ -5,6 +5,7 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use app\components\UserHelper;
 use yii\bootstrap4\Alert;
+use yii\web\View;
 
 /**
  * @var yii\web\View $this
@@ -19,8 +20,10 @@ use yii\bootstrap4\Alert;
 // 1. LÓGICA DE MODO Y BOTONES
 // ----------------------------------------------------------------------
 $rol = UserHelper::getMyRol();
-// ADD COORDINADOR-CLINICA TO PERMISSIONS
 $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "Administrador-clinica" || $rol == "COORDINADOR-CLINICA");
+
+// Define si puede actualizar
+$canUpdate = $permisos;
 
 // Definir variables basadas en el modo
 $esCita = ($modo === 'cita') ? 1 : 0;
@@ -28,18 +31,15 @@ $tituloModo = ($modo === 'cita') ? 'Citas' : 'Atenciones';
 $textoBoton = ($modo === 'cita') ? 'Crear Nueva Cita' : 'Crear Nueva Atención';
 
 $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id]];
-// Título ahora refleja el modo
 $this->title = $tituloModo . ' para ' . Html::encode($afiliado->nombres . " " . $afiliado->apellidos . " " . $afiliado->tipo_cedula . "-" . $afiliado->cedula);
 
 // ----------------------------------------------------------------------
 // 2. DETECTAR SI HAY MENSAJE DE CONTRATO SUSPENDIDO
 // ----------------------------------------------------------------------
 $contratoSuspendido = false;
-$allFlashMessages = Yii::$app->session->getAllFlashes(); // Store in variable
-// Force session save to remove flash messages immediately
+$allFlashMessages = Yii::$app->session->getAllFlashes();
 Yii::$app->session->close();
 Yii::$app->session->open();
-// Create a copy for display (to prevent duplicate display)
 $flashMessagesToDisplay = $allFlashMessages;
 
 // Check for suspended contract message
@@ -57,9 +57,11 @@ $volverBtnIcon = $contratoSuspendido ? 'fas fa-exclamation-triangle' : 'fas fa-u
 $volverBtnTitle = $contratoSuspendido ? 'Volver (Contrato Suspendido)' : 'Volver a la lista de afiliados';
 // ----------------------------------------------------------------------
 
-// Register CSS for professional styling
+// Register CSS for professional styling with Bootstrap 4 compatibility
 $this->registerCss("
-    /* Header Section Styling */
+    /* ============================================
+       HEADER SECTION STYLING
+       ============================================ */
     .ms-panel-header {
         padding: 20px 25px;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -75,7 +77,9 @@ $this->registerCss("
         text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
     }
     
-    /* Button styling */
+    /* ============================================
+       BUTTON STYLING
+       ============================================ */
     .btn-create {
         background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         color: white;
@@ -123,14 +127,16 @@ $this->registerCss("
         color: #212529;
     }
     
-    /* Consecutive counter badge styling */
+    /* ============================================
+       CONSECUTIVE COUNTER BADGE
+       ============================================ */
     .consecutive-badge {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 38px;
         height: 38px;
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,249,250,0.9) 100%);
         color: #1e3c72;
         font-weight: 700;
         font-size: 0.95rem;
@@ -166,17 +172,19 @@ $this->registerCss("
         background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
     }
     
-    /* Services column styling */
+    /* ============================================
+       SERVICES COLUMN STYLING
+       ============================================ */
     .services-container {
         scrollbar-width: thin;
         scrollbar-color: #2a5298 #e9ecef;
-        max-height: 200px;
+        max-height: 250px;
         overflow-y: auto;
-        padding-right: 5px;
+        padding-right: 8px;
     }
     
     .services-container::-webkit-scrollbar {
-        width: 5px;
+        width: 6px;
     }
     
     .services-container::-webkit-scrollbar-track {
@@ -196,8 +204,8 @@ $this->registerCss("
     .service-item {
         transition: all 0.2s ease;
         border-bottom: 1px solid #e9ecef;
-        padding-bottom: 6px;
-        margin-bottom: 6px;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
     }
     
     .service-item:last-child {
@@ -209,10 +217,34 @@ $this->registerCss("
     .service-item:hover {
         background-color: #f8f9fa;
         transform: translateX(2px);
-        padding-left: 4px;
+        padding-left: 6px;
     }
     
-    /* Status badges styling */
+    /* Larger text for service name */
+    .service-name {
+        font-weight: 700;
+        color: #1e3c72;
+        font-size: 1rem;
+        line-height: 1.4;
+    }
+    
+    /* Larger text for service details */
+    .service-details {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    .service-description {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 4px;
+        font-style: italic;
+    }
+    
+    /* ============================================
+       STATUS BADGES STYLING
+       ============================================ */
     .status-badge {
         display: inline-block;
         padding: 6px 14px;
@@ -243,11 +275,14 @@ $this->registerCss("
         color: white;
     }
     
-    /* Grid view header styling */
+    /* ============================================
+       GRID VIEW HEADER STYLING
+       ============================================ */
     .grid-view-container table {
         margin-bottom: 0;
         border-radius: 12px;
         overflow: hidden;
+        width: 100%;
     }
     
     .grid-view-container th {
@@ -264,13 +299,38 @@ $this->registerCss("
         vertical-align: middle;
         padding: 12px 10px !important;
         border-bottom: 1px solid #e9ecef;
+        background: transparent !important;
     }
     
-    .grid-view-container tr:hover td {
-        background-color: #f8f9fa;
+    /* ============================================
+       MINIMAL GRID ZEBRA STRIPING
+       ============================================ */
+    .grid-view-container table.kv-grid-table.custom-zebra > tbody > tr > td {
+        background: transparent !important;
+        background-color: transparent !important;
     }
-    
-    /* Action buttons styling - Improved spacing and centering */
+    .grid-view-container table.kv-grid-table.custom-zebra > tbody > tr:nth-child(odd) > td {
+        background-color: #ffffff !important;
+        background-image: none !important;
+    }
+    .grid-view-container table.kv-grid-table.custom-zebra > tbody > tr:nth-child(even) > td {
+        background-color: #f0f4f8 !important;
+        background-image: none !important;
+    }
+    .grid-view-container table.kv-grid-table.custom-zebra > tbody > tr:hover > td {
+        background-color: #e3f2fd !important;
+        background-image: none !important;
+    }
+    .grid-view-container .consecutive-badge,
+    .grid-view-container .consecutive-badge span,
+    .grid-view-container .consecutive-badge * {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+    /* ============================================
+       ACTION BUTTONS STYLING
+       ============================================ */
     .action-buttons-cell {
         text-align: center !important;
         vertical-align: middle !important;
@@ -337,7 +397,26 @@ $this->registerCss("
         transform: translateY(0);
     }
     
-    /* Panel styling */
+    .btn-action.print {
+        background: linear-gradient(135deg, #e65100 0%, #bf360c 100%);
+        color: white;
+    }
+    
+    .btn-action.print:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(230, 81, 0, 0.4);
+        color: white;
+        text-decoration: none;
+        background: linear-gradient(135deg, #ff6d00 0%, #e65100 100%);
+    }
+    
+    .btn-action.print:active {
+        transform: translateY(0);
+    }
+    
+    /* ============================================
+       PANEL STYLING
+       ============================================ */
     .ms-panel {
         border-radius: 16px;
         box-shadow: 0 6px 20px rgba(0,0,0,0.08);
@@ -349,7 +428,9 @@ $this->registerCss("
         padding: 25px;
     }
     
-    /* Pagination styling */
+    /* ============================================
+       PAGINATION STYLING
+       ============================================ */
     .pagination {
         margin-top: 20px;
         justify-content: center;
@@ -376,7 +457,23 @@ $this->registerCss("
         transform: translateY(-2px);
     }
     
-    /* Keep existing flash message styles */
+    /* ============================================
+       ADMISSION ANALYST COLUMN STYLING
+       ============================================ */
+    .admission-analyst-cell {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .admission-analyst-cell i {
+        color: #6c757d;
+        margin-right: 6px;
+    }
+    
+    /* ============================================
+       FLASH MESSAGE STYLES
+       ============================================ */
     .contract-alert-header {
         background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
         padding: 18px 20px;
@@ -510,7 +607,6 @@ $this->registerCss("
                             </div>
                             <div class="flex-grow-1" style="font-size: 1.05rem;">
                                 <?php if ($type === 'error' && stripos($message, 'SUSPENDIDO') !== false): ?>
-                                    <!-- Special styling for suspended contract messages -->
                                     <div class="contract-alert-header mb-3 p-3">
                                         <h4 class="alert-title mb-2" style="color: #721c24; font-weight: 700; font-size: 1.4rem; letter-spacing: 0.5px;">
                                             <i class="fas fa-ban mr-2"></i>¡ATENCIÓN IMPORTANTE!
@@ -648,18 +744,14 @@ $this->registerCss("
                         <i class="fas fa-calendar-alt me-2" style="color: #2a5298;"></i>
                         <?= $this->title ?>
                     </h1>
-                    <p class="text-muted mb-0 mt-2" style="font-size: 0.9rem;">
-                        <i class="fas fa-info-circle me-1"></i>
-                        <?= $modo === 'cita' ? 'Gestión de citas médicas programadas' : 'Gestión de atenciones médicas realizadas' ?>
-                    </p>
                 </div>
-                <div class="d-flex gap-3">
+                <div class="d-flex">
                     <?php
                     if ($permisos) {
                         echo Html::a(
                             '<i class="fas fa-plus-circle me-2"></i>' . $textoBoton,
                             ['create', 'user_id' => $user_id, 'es_cita' => $esCita],
-                            ['class' => 'btn btn-create btn-lg', 'style' => 'font-size: 1rem; padding: 12px 24px; border-radius: 12px;']
+                            ['class' => 'btn btn-create btn-lg mr-5', 'style' => 'font-size: 1rem; padding: 12px 24px; border-radius: 12px;']
                         );
                     }
                     ?>
@@ -677,6 +769,7 @@ $this->registerCss("
             </div>
             <div class="ms-panel-body">
                 <div class="table-responsive">
+
                     <?= GridView::widget([
                         'id' => 'clinica-grid',
                         'dataProvider' => $dataProvider,
@@ -686,8 +779,10 @@ $this->registerCss("
                         'bordered' => false,
                         'responsiveWrap' => false,
                         'persistResize' => false,
+                        'striped' => false,
+                        'hover' => false,
                         'tableOptions' => [
-                            'class' => 'table table-striped table-hover'
+                            'class' => 'table kv-grid-table custom-zebra',
                         ],
                         'options' => [
                             'class' => 'grid-view-container',
@@ -698,7 +793,7 @@ $this->registerCss("
                                 'class' => 'yii\grid\DataColumn',
                                 'header' => '<i class="fas fa-hashtag me-1"></i> N°',
                                 'headerOptions' => [
-                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center; width: 70px; border-radius: 12px 0 0 0;'
+                                    'style' => 'width: 10px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center; width: 70px; border-radius: 12px 0 0 0;'
                                 ],
                                 'contentOptions' => [
                                     'style' => 'text-align: center; vertical-align: middle; padding: 8px 4px !important;'
@@ -724,22 +819,7 @@ $this->registerCss("
                                 'label' => 'Clínica',
                                 'contentOptions' => ['style' => 'font-size: 0.95rem; font-weight: 500;'],
                             ],
-                            [
-                                'attribute' => 'fecha',
-                                'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; font-size: 0.95rem;'],
-                                'value' => function ($model) {
-                                    return '<i class="fas fa-calendar-alt me-1" style="color: #6c757d;"></i> ' . Yii::$app->formatter->asDate($model->fecha);
-                                },
-                            ],
-                            [
-                                'attribute' => 'hora',
-                                'format' => 'Html',
-                                'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; font-size: 0.95rem;'],
-                                'value' => function ($model) {
-                                    return '<i class="fas fa-clock me-1" style="color: #6c757d;"></i> ' . Yii::$app->formatter->asTime($model->hora);
-                                },
-                            ],
+
                             // Columna para mostrar si es Cita o Atención
                             [
                                 'label' => 'Tipo',
@@ -749,60 +829,9 @@ $this->registerCss("
                                 'value' => function ($model) {
                                     return $model->es_cita == 1
                                         ? '<span class="status-badge cita"><i class="fas fa-calendar-check me-1"></i> Cita</span>'
-                                        : '<span class="status-badge atencion"><i class="fas fa-stethoscope me-1"></i> Atención</span>';
+                                        : '<span class="status-badge atencion"><i class="fas fa-heartbeat me-1" style="color: #ff6b6b;"></i> Atención</span>';
                                 },
                                 'filter' => [0 => 'Atención', 1 => 'Cita'],
-                            ],
-                            [
-                                'attribute' => 'baremos',
-                                'format' => 'raw',
-                                'contentOptions' => ['style' => 'max-width: 320px; white-space: normal; padding: 12px 8px;'],
-                                'value' => function ($model) {
-                                    $baremos = $model->baremos;
-                                    if (empty($baremos)) {
-                                        return '<span class="text-muted" style="font-size: 0.85rem; font-style: italic;">
-                                                    <i class="fas fa-info-circle me-1"></i> Sin servicios
-                                                </span>';
-                                    }
-
-                                    $items = [];
-                                    foreach ($baremos as $baremo) {
-                                        $serviceName = is_array($baremo) ? $baremo['nombre_servicio'] : $baremo->nombre_servicio;
-                                        $serviceArea = is_array($baremo) ? ($baremo['area_nombre'] ?? '') : ($baremo->area->nombre ?? '');
-                                        $servicePrice = is_array($baremo) ? ($baremo['precio'] ?? 0) : ($baremo->precio ?? 0);
-
-                                        if (!empty($serviceArea)) {
-                                            $areaDisplay = '<i class="fas fa-tag me-1" style="font-size: 0.65rem;"></i>' . Html::encode($serviceArea) . '<span class="mx-1">•</span>';
-                                        } else {
-                                            $areaDisplay = '<i class="fas fa-question-circle me-1" style="color: #ffc107; font-size: 0.65rem;"></i><span style="color: #856404;">Sin categoría</span><span class="mx-1">•</span>';
-                                        }
-
-                                        $items[] = Html::tag(
-                                            'div',
-                                            '<div class="d-flex align-items-start gap-2" style="margin-bottom: 8px;">' .
-                                                '<div class="flex-shrink-0" style="width: 28px; text-align: center;">' .
-                                                '<i class="fas fa-stethoscope" style="color: #2a5298; font-size: 13px;"></i>' .
-                                                '</div>' .
-                                                '<div class="flex-grow-1">' .
-                                                '<div style="font-weight: 600; color: #1e3c72; font-size: 0.85rem; line-height: 1.3;">' . Html::encode($serviceName) . '</div>' .
-                                                '<div style="font-size: 0.7rem; color: #6c757d; margin-top: 2px;">' .
-                                                $areaDisplay .
-                                                '<i class="fas fa-dollar-sign me-1" style="font-size: 0.7rem;"></i>$' . number_format($servicePrice, 2) .
-                                                '</div>' .
-                                                '</div>' .
-                                                '</div>',
-                                            ['class' => 'service-item']
-                                        );
-                                    }
-
-                                    return '<div class="services-container">' . implode('', $items) . '</div>';
-                                },
-                                'label' => '<i class="fas fa-notes-medical me-2"></i> Servicios Médicos',
-                                'encodeLabel' => false,
-                                'headerOptions' => [
-                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600;'
-                                ],
-                                'filter' => false,
                             ],
                             [
                                 'attribute' => 'fecha_atencion',
@@ -821,9 +850,112 @@ $this->registerCss("
                                 },
                             ],
                             [
+                                'attribute' => 'baremos',
+                                'format' => 'raw',
+                                'contentOptions' => ['style' => 'max-width: 400px; white-space: normal; padding: 12px 8px;'],
+                                'value' => function ($model) {
+                                    $baremos = $model->baremos;
+                                    if (empty($baremos)) {
+                                        return '<span class="text-muted" style="font-size: 0.95rem; font-style: italic;">
+                                                    <i class="fas fa-info-circle me-1"></i> Sin servicios
+                                                </span>';
+                                    }
+
+                                    $items = [];
+                                    foreach ($baremos as $baremo) {
+                                        $serviceName = is_array($baremo) ? $baremo['nombre_servicio'] : $baremo->nombre_servicio;
+                                        $serviceArea = is_array($baremo) ? ($baremo['area_nombre'] ?? '') : ($baremo->area->nombre ?? '');
+                                        $servicePrice = is_array($baremo) ? ($baremo['precio'] ?? 0) : ($baremo->precio ?? 0);
+                                        $serviceDesc = is_array($baremo) ? ($baremo['descripcion'] ?? '') : ($baremo->descripcion ?? '');
+
+                                        if (!empty($serviceArea)) {
+                                            $areaDisplay = '<i class="fas fa-tag me-1" style="font-size: 0.75rem;"></i>' . Html::encode($serviceArea);
+                                        } else {
+                                            $areaDisplay = '<span style="color: #856404;"><i class="fas fa-question-circle me-1" style="font-size: 0.75rem;"></i>Sin categoría</span>';
+                                        }
+
+                                        $descDisplay = '';
+                                        if (!empty($serviceDesc)) {
+                                            $descDisplay = '<div class="service-description">' .
+                                                '<i class="fas fa-align-left me-1"></i>' . Html::encode($serviceDesc) .
+                                                '</div>';
+                                        }
+
+                                        $items[] = Html::tag(
+                                            'div',
+                                            '<div class="d-flex align-items-start gap-2" style="margin-bottom: 10px;">' .
+                                                '<div class="flex-shrink-0" style="width: 32px; text-align: center;">' .
+                                                '<i class="fas fa-stethoscope" style="color: #2a5298; font-size: 18px;"></i>' .
+                                                '</div>' .
+                                                '<div class="flex-grow-1">' .
+                                                '<div class="service-name">' . Html::encode($serviceName) . '</div>' .
+                                                '<div class="service-details">' .
+                                                $areaDisplay .
+                                                '<span class="mx-2">•</span>' .
+                                                '<i class="fas fa-dollar-sign me-1" style="font-size: 0.7rem;"></i><strong>$' . number_format($servicePrice, 2) . '</strong>' .
+                                                '</div>' .
+                                                $descDisplay .
+                                                '</div>' .
+                                                '</div>',
+                                            ['class' => 'service-item']
+                                        );
+                                    }
+
+                                    return '<div class="services-container">' . implode('', $items) . '</div>';
+                                },
+                                'label' => '<i class="fas fa-notes-medical me-2"></i> Servicios Médicos',
+                                'encodeLabel' => false,
+                                'headerOptions' => [
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600;'
+                                ],
+                                'filter' => false,
+                            ],
+                            [
+                                'attribute' => 'nombre_doctor',
+                                'label' => 'Doctor',
+                                'format' => 'raw',
+                                'headerOptions' => ['style' => 'width:15%; min-width: 150px;'],
+                                'contentOptions' => ['style' => 'white-space: normal; word-wrap: break-word;'],
+                                'value' => function ($model) {
+                                    if (empty($model->nombre_doctor)) {
+                                        return '<span class="text-muted"><i class="fas fa-user-md"></i> No asignado</span>';
+                                    }
+                                    return '<i class="fas fa-user-md text-info mr-2"></i> ' . Html::encode($model->nombre_doctor);
+                                },
+                            ],
+                            // ADMISSION ANALYST COLUMN
+                            [
+                                'attribute' => 'admission_analyst',
+                                'label' => '<i class="fas fa-user-check me-2"></i> Analista',
+                                'encodeLabel' => false,
+                                'format' => 'raw',
+                                'contentOptions' => ['style' => 'text-align: left; vertical-align: middle; padding: 10px !important;', 'class' => 'admission-analyst-cell'],
+                                'headerOptions' => [
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center;'
+                                ],
+                                'value' => function ($model) {
+                                    if (empty($model->admission_analyst)) {
+                                        return '<span class="text-muted" style="font-size: 0.85rem; font-style: italic;">
+                                                    <i class="fas fa-user-slash me-1"></i> No asignado
+                                                </span>';
+                                    }
+                                    return '<i class="fas fa-user-check me-2" style="color: #28a745;"></i> ' . Html::encode($model->admission_analyst);
+                                },
+                                'filterInputOptions' => [
+                                    'class' => 'form-control',
+                                    'placeholder' => 'Buscar analista...'
+                                ],
+                            ],
+
+                            [
                                 'attribute' => 'costo_total',
                                 'format' => ['currency', 'USD'],
-                                'contentOptions' => ['style' => 'text-align: right; font-size: 0.95rem; font-weight: 700; color: #28a745;'],
+                                'headerOptions' => [
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: right;'
+                                ],
+                                'contentOptions' => [
+                                    'style' => 'text-align: right; font-size: 1.25rem; font-weight: 800; color: #28a745; padding: 10px !important;'
+                                ],
                                 'filter' => false
                             ],
                             [
@@ -841,10 +973,10 @@ $this->registerCss("
                             [
                                 'class' => 'yii\grid\ActionColumn',
                                 'header' => '<i class="fas fa-cog me-1"></i> ACCIONES',
-                                'template' => '<div class="action-buttons-container">{view}{update}</div>',
+                                'template' => '<div class="action-buttons-container">{view}{update}{print}</div>',
                                 'options' => ['class' => 'action-buttons-cell'],
                                 'headerOptions' => [
-                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center; width: 100px;'
+                                    'style' => 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important; font-weight: 600; text-align: center; width: 150px;'
                                 ],
                                 'contentOptions' => [
                                     'style' => 'text-align: center; vertical-align: middle; padding: 10px !important;'
@@ -860,8 +992,8 @@ $this->registerCss("
                                             ]
                                         );
                                     },
-                                    'update' => function ($url, $model, $key) use ($permisos) {
-                                        if ($permisos) {
+                                    'update' => function ($url, $model, $key) use ($canUpdate) {
+                                        if ($canUpdate) {
                                             return Html::a(
                                                 '<i class="fas fa-pencil-alt"></i>',
                                                 Url::to([
@@ -877,6 +1009,20 @@ $this->registerCss("
                                             );
                                         }
                                         return '';
+                                    },
+                                    'print' => function ($url, $model, $key) {
+                                        $esCita = $model->es_cita;
+                                        $termino = $esCita == 1 ? 'Cita' : 'Atención';
+                                        $printUrl = Url::to(['print', 'id' => $model->id]);
+                                        return Html::a(
+                                            '<i class="fas fa-print"></i>',
+                                            '#',
+                                            [
+                                                'title' => 'Imprimir ' . $termino,
+                                                'class' => 'btn-action print',
+                                                'onclick' => "window.open('{$printUrl}', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes,toolbar=yes,menubar=yes'); return false;",
+                                            ]
+                                        );
                                     },
                                 ],
                             ],

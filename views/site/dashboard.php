@@ -5,6 +5,13 @@ use yii\helpers\Html;
 use yii\web\View;
 use yii\bootstrap4\ActiveForm;
 
+/**
+ * @var yii\web\View $this
+ * @var int $clinicaId
+ * @var string $clinicaNombre
+ * @var string $activeTab
+ */
+
 $this->title = 'Panel de Control Gerencial - SISPSA';
 $this->params['breadcrumbs'][] = $this->title;
 
@@ -401,6 +408,7 @@ $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15
         border: 1px solid rgba(39, 174, 96, 0.2);
     }
 
+    /* FIXED: Suspendido badge - using standardized status */
     .dashboard-sispsa .status-suspendido {
         background: rgba(231, 76, 60, 0.1);
         color: #e74c3c;
@@ -773,359 +781,359 @@ $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15
                                 <td colspan="5" class="text-center">Cargando datos...</td>
                             </tr>
                         </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Status Summary Cards -->
-        <div class="row mt-4">
-            <div class="col-md-3">
-                <div class="stat-card" title="Afiliados con estatus 'Activo' - actualmente habilitados en el sistema">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-label">Activos</div>
-                            <div class="stat-value small" id="activos-count">-</div>
-                        </div>
-                        <div class="status-badge status-activo" title="Estatus actual del afiliado en el sistema">
-                            <i class="fas fa-check-circle"></i> Activo
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" title="Afiliados con estatus 'Suspendido' - temporalmente inhabilitados por falta de pago u otras razones">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-label">Suspendidos</div>
-                            <div class="stat-value small" id="suspendidos-count">-</div>
-                        </div>
-                        <div class="status-badge status-suspendido" title="Estatus actual del afiliado en el sistema">
-                            <i class="fas fa-ban"></i> Suspendido
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" title="Afiliados con estatus 'Pendiente' - en proceso de activación o esperando documentación">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-label">Pendientes</div>
-                            <div class="stat-value small" id="pendientes-count">-</div>
-                        </div>
-                        <div class="status-badge status-pendiente" title="Estatus actual del afiliado en el sistema">
-                            <i class="fas fa-clock"></i> Pendiente
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" title="Afiliados con estatus 'Inactivo' - ya no están en el sistema (dados de baja)">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-label">Inactivos</div>
-                            <div class="stat-value small" id="inactivos-count">-</div>
-                        </div>
-                        <div class="status-badge status-inactivo" title="Estatus actual del afiliado en el sistema">
-                            <i class="fas fa-user-slash"></i> Inactivo
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="atenciones-tab-content" style="display: <?= $activeTab === 'atenciones' ? 'block' : 'none' ?>;">
-        <!-- Filter Form -->
-        <div class="filter-card">
-            <h3 class="filter-title" title="Seleccione un rango de fechas para filtrar las estadísticas de atenciones médicas">
-                <i class="fas fa-filter mr-2"></i>Filtrar por período
+    <!-- Status Summary Cards -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="stat-card" title="Afiliados con estatus 'Activo' - actualmente habilitados en el sistema">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Activos</div>
+                        <div class="stat-value small" id="activos-count">-</div>
+                    </div>
+                    <div class="status-badge status-activo" title="Estatus actual del afiliado en el sistema">
+                        <i class="fas fa-check-circle"></i> Activo
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" title="Afiliados con estatus 'Suspendido' - temporalmente inhabilitados por falta de pago u otras razones">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Suspendidos</div>
+                        <div class="stat-value small" id="suspendidos-count">-</div>
+                    </div>
+                    <div class="status-badge status-suspendido" title="Estatus actual del afiliado en el sistema">
+                        <i class="fas fa-ban"></i> Suspendido
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" title="Afiliados con estatus 'Pendiente' - en proceso de activación o esperando documentación">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Pendientes</div>
+                        <div class="stat-value small" id="pendientes-count">-</div>
+                    </div>
+                    <div class="status-badge status-pendiente" title="Estatus actual del afiliado en el sistema">
+                        <i class="fas fa-clock"></i> Pendiente
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" title="Afiliados con estatus 'Inactivo' - ya no están en el sistema (dados de baja)">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Inactivos</div>
+                        <div class="stat-value small" id="inactivos-count">-</div>
+                    </div>
+                    <div class="status-badge status-inactivo" title="Estatus actual del afiliado en el sistema">
+                        <i class="fas fa-user-slash"></i> Inactivo
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="atenciones-tab-content" style="display: <?= $activeTab === 'atenciones' ? 'block' : 'none' ?>;">
+    <!-- Filter Form -->
+    <div class="filter-card">
+        <h3 class="filter-title" title="Seleccione un rango de fechas para filtrar las estadísticas de atenciones médicas">
+            <i class="fas fa-filter mr-2"></i>Filtrar por período
+            <i class="fas fa-info-circle"></i>
+        </h3>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="mr-2" title="Fecha inicial del período a analizar">Desde:</label>
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="<?= date('Y-m-01') ?>">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="mr-2" title="Fecha final del período a analizar">Hasta:</label>
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="<?= date('Y-m-t') ?>">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button type="button" id="apply-filter" class="btn btn-primary" title="Aplicar el filtro de fechas seleccionado">
+                    <i class="fas fa-sync-alt mr-2"></i>Aplicar filtro
+                </button>
+                <button type="button" id="reset-filter" class="btn btn-secondary ml-2" title="Restablecer al mes actual">
+                    <i class="fas fa-undo mr-2"></i>Reiniciar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Atenciones Stats Cards -->
+    <div class="row" id="atenciones-stats">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card loading" id="stat-total-atenciones"
+                title="Total de atenciones (siniestros + citas) en el período seleccionado">
+                <div class="stat-icon">
+                    <i class="fas fa-notes-medical"></i>
+                </div>
+                <div class="stat-label">
+                    Total Atenciones
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="stat-trend">
+                    <span class="badge badge-info" id="date-range-badge" title="Período de análisis actual">Cargando...</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card siniestro loading" id="stat-siniestros"
+                title="Siniestros (emergencias médicas) atendidos en el período">
+                <div class="stat-icon siniestro">
+                    <i class="fas fa-ambulance"></i>
+                </div>
+                <div class="stat-label">
+                    Siniestros
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="stat-trend">
+                    <span class="badge badge-danger" id="siniestros-pct" title="Porcentaje de siniestros sobre el total">0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card cita loading" id="stat-citas"
+                title="Citas médicas programadas en el período">
+                <div class="stat-icon cita">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stat-label">
+                    Citas
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="stat-trend">
+                    <span class="badge badge-success" id="citas-pct" title="Porcentaje de citas sobre el total">0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card loading" id="stat-pacientes-unicos"
+                title="Número de pacientes únicos atendidos en el período (sin duplicados)">
+                <div class="stat-icon">
+                    <i class="fas fa-user-injured"></i>
+                </div>
+                <div class="stat-label">
+                    Pacientes Únicos
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="stat-trend">
+                    <span class="badge badge-info" id="promedio-paciente" title="Promedio de atenciones por paciente">0 atenciones/paciente</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row - Status and Costs -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card loading" id="stat-atendidas"
+                title="Atenciones que ya fueron realizadas (completadas)">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                </div>
+                <div class="stat-label">
+                    Atendidas
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="progress" id="tasa-atencion-progress" title="Tasa de atención - porcentaje completado">
+                    <div class="progress-bar success" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card loading" id="stat-pendientes"
+                title="Atenciones pendientes por realizar (no completadas)">
+                <div constat-icon">
+                    <i class="fas fa-clock" style="color: var(--warning);"></i>
+                </div>
+                <div class="stat-label">
+                    Pendientes
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="stat-trend">
+                    <span class="badge badge-warning" id="pendientes-pct" title="Porcentaje de atenciones pendientes">0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card loading" id="stat-costo-total"
+                title="Costo total acumulado de todas las atenciones en el período">
+                <div class="stat-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-label">
+                    Costo Total
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">$ -</div>
+                <div class="stat-trend">
+                    <span class="badge badge-secondary" id="costo-promedio" title="Costo promedio por atención">Promedio: $0</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card loading" id="stat-tasa-atencion"
+                title="Tasa de atención = (Atendidas / Total) * 100. Indica el porcentaje de atenciones completadas">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line" style="color: var(--primary);"></i>
+                </div>
+                <div class="stat-label">
+                    Tasa de Atención
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="stat-value">-</div>
+                <div class="stat-trend">
+                    <span class="badge" id="tasa-atencion-badge" title="Excelente: ≥80%, Regular: 60-80%, Bajo: <60%">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Atenciones Charts Row 1 -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <h3 class="chart-title"
+                    title="Tendencia diaria de atenciones: compara siniestros (rojo) vs citas (verde) día por día">
+                    <i class="fas fa-chart-line mr-2"></i>Tendencia Diaria
+                    <i class="fas fa-info-circle"></i>
+                </h3>
+                <div class="chart-container">
+                    <canvas id="dailyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <h3 class="chart-title"
+                    title="Distribución porcentual entre Siniestros (emergencias) y Citas programadas">
+                    <i class="fas fa-chart-pie mr-2"></i>Distribución por Tipo
+                    <i class="fas fa-info-circle"></i>
+                </h3>
+                <div class="chart-container">
+                    <canvas id="typeDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Atenciones Charts Row 2 -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <h3 class="chart-title"
+                    title="Atenciones por día de la semana: identifica los días de mayor demanda">
+                    <i class="fas fa-calendar-week mr-2"></i>Atenciones por Día
+                    <i class="fas fa-info-circle"></i>
+                </h3>
+                <div class="chart-container">
+                    <canvas id="dayOfWeekChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <h3 class="chart-title"
+                    title="Costo diario de atenciones: permite identificar días con mayor impacto financiero">
+                    <i class="fas fa-chart-bar mr-2"></i>Costo Diario
+                    <i class="fas fa-info-circle"></i>
+                </h3>
+                <div class="chart-container">
+                    <canvas id="dailyCostChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Baremos Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="table-card">
+                <h3 class="table-title"
+                    title="Los 10 servicios/baremos más utilizados en las atenciones del período. Incluye frecuencia de uso y costos asociados">
+                    <i class="fas fa-crown mr-2"></i>Top 10 Baremos Más Utilizados
+                    <i class="fas fa-info-circle"></i>
+                </h3>
+                <table class="kpi-table" id="top-baremos-table">
+                    <thead>
+                        <tr>
+                            <th title="Posición en el ranking"># <i class="fas fa-info-circle"></i></th>
+                            <th title="Nombre del servicio o procedimiento médico">Baremo / Servicio <i class="fas fa-info-circle"></i></th>
+                            <th title="Número de veces que se utilizó este servicio">Veces Utilizado <i class="fas fa-info-circle"></i></th>
+                            <th title="Costo total acumulado del servicio en el período">Costo Total <i class="fas fa-info-circle"></i></th>
+                            <th title="Costo promedio por cada uso del servicio">Costo Promedio <i class="fas fa-info-circle"></i></th>
+                            <th title="Porcentaje que representa este servicio sobre el total de atenciones">% del Total <i class="fas fa-info-circle"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="text-center">Cargando datos...</td>
+                        </tr>
+                    </tbody>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Quick Actions (Visible in both tabs) -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="quick-actions">
+            <h3 class="table-title" title="Accesos directos a las funciones más utilizadas del sistema">
+                <i class="fas fa-bolt mr-2"></i>Acciones Rápidas
                 <i class="fas fa-info-circle"></i>
             </h3>
             <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label class="mr-2" title="Fecha inicial del período a analizar">Desde:</label>
-                        <input type="date" name="date_from" id="date_from" class="form-control" value="<?= date('Y-m-01') ?>">
-                    </div>
+                <div class="col-md-3">
+                    <a href="<?= Url::to(['/user-datos/create']) ?>" class="action-btn"
+                        title="Registrar un nuevo afiliado en el sistema">
+                        <i class="fas fa-user-plus"></i> Nuevo Afiliado
+                    </a>
                 </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label class="mr-2" title="Fecha final del período a analizar">Hasta:</label>
-                        <input type="date" name="date_to" id="date_to" class="form-control" value="<?= date('Y-m-t') ?>">
-                    </div>
+                <div class="col-md-3">
+                    <a href="<?= Url::to(['/user-datos/index']) ?>" class="action-btn"
+                        title="Ver y gestionar todos los afiliados de la clínica">
+                        <i class="fas fa-list"></i> Ver Afiliados
+                    </a>
                 </div>
-                <div class="col-md-4">
-                    <button type="button" id="apply-filter" class="btn btn-primary" title="Aplicar el filtro de fechas seleccionado">
-                        <i class="fas fa-sync-alt mr-2"></i>Aplicar filtro
-                    </button>
-                    <button type="button" id="reset-filter" class="btn btn-secondary ml-2" title="Restablecer al mes actual">
-                        <i class="fas fa-undo mr-2"></i>Reiniciar
-                    </button>
+                <div class="col-md-3">
+                    <a href="<?= Url::to(['/user-datos/reporte-afiliados']) ?>" class="action-btn"
+                        title="Generar reportes y exportar datos de afiliados">
+                        <i class="fas fa-file-pdf"></i> Generar Reportes
+                    </a>
                 </div>
-            </div>
-        </div>
-
-        <!-- Atenciones Stats Cards -->
-        <div class="row" id="atenciones-stats">
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card loading" id="stat-total-atenciones"
-                    title="Total de atenciones (siniestros + citas) en el período seleccionado">
-                    <div class="stat-icon">
-                        <i class="fas fa-notes-medical"></i>
-                    </div>
-                    <div class="stat-label">
-                        Total Atenciones
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="stat-trend">
-                        <span class="badge badge-info" id="date-range-badge" title="Período de análisis actual">Cargando...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card siniestro loading" id="stat-siniestros"
-                    title="Siniestros (emergencias médicas) atendidos en el período">
-                    <div class="stat-icon siniestro">
-                        <i class="fas fa-ambulance"></i>
-                    </div>
-                    <div class="stat-label">
-                        Siniestros
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="stat-trend">
-                        <span class="badge badge-danger" id="siniestros-pct" title="Porcentaje de siniestros sobre el total">0%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card cita loading" id="stat-citas"
-                    title="Citas médicas programadas en el período">
-                    <div class="stat-icon cita">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="stat-label">
-                        Citas
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="stat-trend">
-                        <span class="badge badge-success" id="citas-pct" title="Porcentaje de citas sobre el total">0%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card loading" id="stat-pacientes-unicos"
-                    title="Número de pacientes únicos atendidos en el período (sin duplicados)">
-                    <div class="stat-icon">
-                        <i class="fas fa-user-injured"></i>
-                    </div>
-                    <div class="stat-label">
-                        Pacientes Únicos
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="stat-trend">
-                        <span class="badge badge-info" id="promedio-paciente" title="Promedio de atenciones por paciente">0 atenciones/paciente</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Second Row - Status and Costs -->
-        <div class="row">
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card loading" id="stat-atendidas"
-                    title="Atenciones que ya fueron realizadas (completadas)">
-                    <div class="stat-icon">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    </div>
-                    <div class="stat-label">
-                        Atendidas
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="progress" id="tasa-atencion-progress" title="Tasa de atención - porcentaje completado">
-                        <div class="progress-bar success" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card loading" id="stat-pendientes"
-                    title="Atenciones pendientes por realizar (no completadas)">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock" style="color: var(--warning);"></i>
-                    </div>
-                    <div class="stat-label">
-                        Pendientes
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="stat-trend">
-                        <span class="badge badge-warning" id="pendientes-pct" title="Porcentaje de atenciones pendientes">0%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card loading" id="stat-costo-total"
-                    title="Costo total acumulado de todas las atenciones en el período">
-                    <div class="stat-icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="stat-label">
-                        Costo Total
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">$ -</div>
-                    <div class="stat-trend">
-                        <span class="badge badge-secondary" id="costo-promedio" title="Costo promedio por atención">Promedio: $0</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card loading" id="stat-tasa-atencion"
-                    title="Tasa de atención = (Atendidas / Total) * 100. Indica el porcentaje de atenciones completadas">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-line" style="color: var(--primary);"></i>
-                    </div>
-                    <div class="stat-label">
-                        Tasa de Atención
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <div class="stat-value">-</div>
-                    <div class="stat-trend">
-                        <span class="badge" id="tasa-atencion-badge" title="Excelente: ≥80%, Regular: 60-80%, Bajo: <60%">-</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Atenciones Charts Row 1 -->
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="chart-card">
-                    <h3 class="chart-title"
-                        title="Tendencia diaria de atenciones: compara siniestros (rojo) vs citas (verde) día por día">
-                        <i class="fas fa-chart-line mr-2"></i>Tendencia Diaria
-                        <i class="fas fa-info-circle"></i>
-                    </h3>
-                    <div class="chart-container">
-                        <canvas id="dailyTrendChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="chart-card">
-                    <h3 class="chart-title"
-                        title="Distribución porcentual entre Siniestros (emergencias) y Citas programadas">
-                        <i class="fas fa-chart-pie mr-2"></i>Distribución por Tipo
-                        <i class="fas fa-info-circle"></i>
-                    </h3>
-                    <div class="chart-container">
-                        <canvas id="typeDistributionChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Atenciones Charts Row 2 -->
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="chart-card">
-                    <h3 class="chart-title"
-                        title="Atenciones por día de la semana: identifica los días de mayor demanda">
-                        <i class="fas fa-calendar-week mr-2"></i>Atenciones por Día
-                        <i class="fas fa-info-circle"></i>
-                    </h3>
-                    <div class="chart-container">
-                        <canvas id="dayOfWeekChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="chart-card">
-                    <h3 class="chart-title"
-                        title="Costo diario de atenciones: permite identificar días con mayor impacto financiero">
-                        <i class="fas fa-chart-bar mr-2"></i>Costo Diario
-                        <i class="fas fa-info-circle"></i>
-                    </h3>
-                    <div class="chart-container">
-                        <canvas id="dailyCostChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top Baremos Table -->
-        <div class="row">
-            <div class="col-md-12">
-                <div class="table-card">
-                    <h3 class="table-title"
-                        title="Los 10 servicios/baremos más utilizados en las atenciones del período. Incluye frecuencia de uso y costos asociados">
-                        <i class="fas fa-crown mr-2"></i>Top 10 Baremos Más Utilizados
-                        <i class="fas fa-info-circle"></i>
-                    </h3>
-                    <table class="kpi-table" id="top-baremos-table">
-                        <thead>
-                            <tr>
-                                <th title="Posición en el ranking"># <i class="fas fa-info-circle"></i></th>
-                                <th title="Nombre del servicio o procedimiento médico">Baremo / Servicio <i class="fas fa-info-circle"></i></th>
-                                <th title="Número de veces que se utilizó este servicio">Veces Utilizado <i class="fas fa-info-circle"></i></th>
-                                <th title="Costo total acumulado del servicio en el período">Costo Total <i class="fas fa-info-circle"></i></th>
-                                <th title="Costo promedio por cada uso del servicio">Costo Promedio <i class="fas fa-info-circle"></i></th>
-                                <th title="Porcentaje que representa este servicio sobre el total de atenciones">% del Total <i class="fas fa-info-circle"></i></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="6" class="text-center">Cargando datos...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="col-md-3">
+                    <a href="<?= Url::to(['/sis-siniestro/por-clinica', 'clinica_id' => $clinicaId]) ?>" class="action-btn"
+                        title="Ver todas las atenciones médicas de la clínica">
+                        <i class="fas fa-heartbeat"></i> Ver Atenciones
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Quick Actions (Visible in both tabs) -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="quick-actions">
-                <h3 class="table-title" title="Accesos directos a las funciones más utilizadas del sistema">
-                    <i class="fas fa-bolt mr-2"></i>Acciones Rápidas
-                    <i class="fas fa-info-circle"></i>
-                </h3>
-                <div class="row">
-                    <div class="col-md-3">
-                        <a href="<?= Url::to(['/user-datos/create']) ?>" class="action-btn"
-                            title="Registrar un nuevo afiliado en el sistema">
-                            <i class="fas fa-user-plus"></i> Nuevo Afiliado
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="<?= Url::to(['/user-datos/index']) ?>" class="action-btn"
-                            title="Ver y gestionar todos los afiliados de la clínica">
-                            <i class="fas fa-list"></i> Ver Afiliados
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="<?= Url::to(['/user-datos/reporte-afiliados']) ?>" class="action-btn"
-                            title="Generar reportes y exportar datos de afiliados">
-                            <i class="fas fa-file-pdf"></i> Generar Reportes
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="<?= Url::to(['/sis-siniestro/por-clinica', 'clinica_id' => $clinicaId]) ?>" class="action-btn"
-                            title="Ver todas las atenciones médicas de la clínica">
-                            <i class="fas fa-heartbeat"></i> Ver Atenciones
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
 </div>
 
 <?php
@@ -1137,7 +1145,31 @@ $contractsUrl = Url::to(['/contratos/expiring-soon']);
 // Pass the active tab to JavaScript
 $activeTabJs = $activeTab;
 
+// Register SweetAlert2 for notifications (optional)
+$toastrCss = 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css';
+$toastrJs = 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js';
+$this->registerCssFile($toastrCss);
+$this->registerJsFile($toastrJs, ['depends' => [\yii\web\JqueryAsset::class]]);
+
 $js = <<<JS
+// Toastr configuration
+toastr.options = {
+    "closeButton": true,
+    "debug": false,
+    "newestOnTop": false,
+    "progressBar": true,
+    "positionClass": "toast-top-right",
+    "preventDuplicates": true,
+    "showDuration": "300",
+    "hideDuration": "1000",
+    "timeOut": "5000",
+    "extendedTimeOut": "1000",
+    "showEasing": "swing",
+    "hideEasing": "linear",
+    "showMethod": "fadeIn",
+    "hideMethod": "fadeOut"
+};
+
 // Global chart instances
 let statusChart, typeChart, genderChart, growthChart, plansChart;
 let dailyTrendChart, typeDistChart, dayOfWeekChart, dailyCostChart;
@@ -1151,7 +1183,7 @@ function initializeGeneralCharts(stats) {
     if (growthChart) growthChart.destroy();
     if (plansChart) plansChart.destroy();
 
-    // Contract Status Chart (Bar)
+    // Contract Status Chart (Bar) - FIXED: Using 'Suspendido' with capital S
     const contractData = stats.contract_status || { 
         activos: 0, 
         creados: 0, 
@@ -1677,24 +1709,6 @@ function initializeAtencionesCharts(data) {
 }
 
 function updateAtencionesStats(data) {
-    console.log('===== ATENCIONES DATA RECEIVED =====');
-    console.log('Full data object:', data);
-    console.log('Total atenciones:', data.total_atenciones);
-    console.log('Siniestros:', data.siniestros);
-    console.log('Citas:', data.citas);
-    console.log('Atendidas:', data.atendidas);
-    console.log('Pendientes:', data.pendientes);
-    console.log('Costo total:', data.costo_total);
-    console.log('Pacientes únicos:', data.pacientes_unicos);
-    console.log('Top baremos:', data.top_baremos);
-    console.log('Top baremos length:', data.top_baremos ? data.top_baremos.length : 0);
-    
-    if (data.top_baremos && data.top_baremos.length > 0) {
-        console.log('First baremo sample:', data.top_baremos[0]);
-        console.log('First baremo costo_total type:', typeof data.top_baremos[0].costo_total);
-        console.log('First baremo costo_total value:', data.top_baremos[0].costo_total);
-    }
-    
     // Update Total Atenciones
     $('#stat-total-atenciones .stat-value').text(data.total_atenciones || 0);
     $('#stat-total-atenciones').removeClass('loading');
@@ -1760,7 +1774,6 @@ function updateAtencionesStats(data) {
     $('#atenciones-badge').text((data.total_atenciones || 0) + ' atenciones');
 
     // ===== TOP BAREMOS TABLE =====
-    console.log('Rendering top baremos table...');
     const tableBody = $('#top-baremos-table tbody');
     
     if (!tableBody.length) {
@@ -1773,34 +1786,25 @@ function updateAtencionesStats(data) {
     
     // Check if we have baremos data
     if (data.top_baremos && Array.isArray(data.top_baremos) && data.top_baremos.length > 0) {
-        console.log('Rendering ' + (data.top_baremos ? data.top_baremos.length : 0) + ' baremos');
-        
         let html = '';
         data.top_baremos.forEach((b, idx) => {
-            // ===== FIX: Convert string values to numbers with parseFloat =====
             const baremoNombre = b.baremo_nombre || b.nombre_servicio || 'Sin nombre';
             const usoCount = parseInt(b.uso_count) || parseInt(b.count) || 0;
             
-            // CRITICAL FIX: Convert costo_total to number before using toFixed()
             let costoTotalValue = 0;
             if (b.costo_total !== undefined && b.costo_total !== null) {
                 costoTotalValue = parseFloat(b.costo_total);
                 if (isNaN(costoTotalValue)) costoTotalValue = 0;
             }
             
-            console.log('Baremo ' + (idx+1) + ': ' + baremoNombre + ', usos: ' + usoCount + ', costo: ' + costoTotalValue + ' (type: ' + (typeof costoTotalValue) + ')');
-            
-            // Calculate percentage
             const pct = data.total_atenciones > 0 
                 ? ((usoCount / data.total_atenciones) * 100).toFixed(1) 
                 : 0;
             
-            // Calculate average cost per use
             const avgCost = usoCount > 0 
                 ? (costoTotalValue / usoCount).toFixed(2) 
                 : '0.00';
             
-            // Format currency with thousand separators
             const formattedCostoTotal = '$ ' + costoTotalValue.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
             
             html += '<tr>' +
@@ -1817,28 +1821,17 @@ function updateAtencionesStats(data) {
                         '<span>' + pct + '%</span>' +
                     '</div>' +
                 '</td>' +
-            '</tr>';
+            '</table>';
         });
         
         tableBody.html(html);
-        console.log('Table rendered successfully');
     } else {
-        console.log('No baremos data available, showing empty state');
-        
-        // Show appropriate message based on whether there's any data at all
         if (data.total_atenciones > 0) {
-            // There are attentions but no baremos data - this might indicate an issue
-            console.warn('Total atenciones > 0 but no baremos data. This might indicate missing relationships.');
             tableBody.html('<tr><td colspan="6" class="text-center text-warning">Hay atenciones registradas pero no se encontraron baremos asociados. Verifique la configuración.</td></tr>');
         } else {
-            // No attentions at all
-            tableBody.html('<tr><td colspan="6" class="text-center">No hay datos de baremos para el período seleccionado</td></tr>');
+            tableBody.html('<td><td colspan="6" class="text-center">No hay datos de baremos para el período seleccionado</td></tr>');
         }
     }
-    
-    // Log final state
-    console.log('Table rows after render:', tableBody.find('tr').length);
-    console.log('===== ATENCIONES UPDATE COMPLETE =====');
 }
 
 function loadAtencionesDashboard() {
@@ -1869,35 +1862,6 @@ function loadAtencionesDashboard() {
 
 // ===== MANUAL TAB HANDLING =====
 $(document).ready(function() {
-
-    // ===== INICIALIZAR TOOLTIPS DE BOOTSTRAP =====
-function initTooltips() {
-    // Inicializar todos los elementos con atributo title
-    if (typeof $.fn.tooltip === 'function') {
-        $('[title]').tooltip({
-            placement: 'top',
-            trigger: 'hover',
-            delay: { show: 500, hide: 100 }
-        });
-        console.log('Tooltips initialized');
-    } else {
-        console.warn('Bootstrap tooltip function not available');
-    }
-}
-
-// Reinicializar tooltips después de cargar contenido dinámico
-function refreshTooltips() {
-    if (typeof $.fn.tooltip === 'function') {
-        $('[title]').tooltip('dispose'); // Eliminar tooltips existentes
-        $('[title]').tooltip({           // Recrear tooltips
-            placement: 'top',
-            trigger: 'hover',
-            delay: { show: 500, hide: 100 }
-        });
-    }
-}
-
-
     // Set default dates for atenciones tab
     if (!$('#date_from').val()) {
         const today = new Date();
@@ -1909,28 +1873,18 @@ function refreshTooltips() {
 
     // Tab click handlers
     $('#tab-general-btn').click(function() {
-        // Update button styles
         $('#tab-general-btn').addClass('active');
         $('#tab-atenciones-btn').removeClass('active');
-        
-        // Show/hide content
         $('#general-tab-content').show();
         $('#atenciones-tab-content').hide();
-        
-        // Load general dashboard data
         loadGeneralDashboard();
     });
 
     $('#tab-atenciones-btn').click(function() {
-        // Update button styles
         $('#tab-atenciones-btn').addClass('active');
         $('#tab-general-btn').removeClass('active');
-        
-        // Show/hide content
         $('#atenciones-tab-content').show();
         $('#general-tab-content').hide();
-        
-        // Load atenciones dashboard data
         loadAtencionesDashboard();
     });
 

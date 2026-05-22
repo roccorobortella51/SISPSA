@@ -10,8 +10,10 @@ use app\models\User;
 use app\models\Contratos;
 use app\models\Planes;
 use app\models\Cuotas;
+use app\models\PlanesItemsCobertura;
 use app\models\TasaCambio;
 use app\components\UserHelper;
+use app\models\SisSiniestroAuditLog;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -39,19 +41,11 @@ class SisSiniestroController extends Controller
         ];
     }
 
-    /**
-     * Lists all SisSiniestro models, filtered by user_id and 'modo' (siniestro/cita).
-     * @param integer $user_id El ID del usuario
-     * @return mixed
-     */
     public function actionIndex($user_id)
     {
         // 1. CAPTURAR EL MODO
-        // Obtener el modo de la URL, por defecto es 'siniestro'
         $modo = Yii::$app->request->get('modo', 'siniestro');
-
-        // Determinar el valor binario de es_cita para el filtro de la base de datos
-        $esCitaValue = ($modo === 'cita') ? 1 : 0; // 0 para siniestro, 1 para cita
+        $esCitaValue = ($modo === 'cita') ? 1 : 0;
 
         $searchModel = new SisSiniestroSearch();
         $searchModel->iduser = $user_id;
@@ -66,69 +60,28 @@ class SisSiniestroController extends Controller
         // Configurar el dataProvider
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
-        // 2. APLICAR FILTRO es_cita
+        // APLICAR FILTRO es_cita
         $dataProvider->query->andWhere(['es_cita' => $esCitaValue]);
-        // Nota: El filtro iduser ya está implícito en $searchModel->iduser = $user_id;
-        // Si la búsqueda no lo usa, se puede aplicar explícitamente:
-        // $dataProvider->query->andWhere(['iduser' => $user_id]); 
 
-
-        // Depurar la consulta principal (manteniendo tu código de debug)
+        // Cargar baremos usando eager loading cuando el query es ActiveQuery
         $query = $dataProvider->query;
-        $sql = Yii::$app->db->getQueryBuilder()->build($query)[0];
-        Yii::info('CONSULTA PRINCIPAL: ' . $sql, 'app');
+        if ($query instanceof \yii\db\ActiveQuery) {
+            $query->with('baremos');
+        }
 
-        // 3. CARGA MANUAL DE BAREMOS (MANTENIDO)
-        // Cargar todos los siniestros con sus baremos en una sola consulta
+        // Obtener modelos y volver a asignarlos si el provider no lo hace automáticamente.
         $models = $dataProvider->getModels();
-        $siniestroIds = [];
-
-        // Obtener todos los IDs de siniestros
-        foreach ($models as $model) {
-            $siniestroIds[] = $model->id;
-        }
-
-        // Cargar todos los baremos para estos siniestros en una sola consulta
-        $baremosPorSiniestro = [];
-        if (!empty($siniestroIds)) {
-            $baremos = (new \yii\db\Query())
-                ->select([
-                    'sb.siniestro_id',
-                    'b.*',
-                    'a.id as area_id',
-                    'a.nombre as area_nombre'
-                ])
-                ->from(['sb' => 'sis_siniestro_baremo'])
-                ->leftJoin(['b' => 'baremo'], 'sb.baremo_id = b.id')
-                ->leftJoin(['a' => 'area'], 'b.area_id = a.id')  // Add this join
-                ->where(['sb.siniestro_id' => $siniestroIds])
-                ->all();
-
-            // Organizar los baremos por siniestro_id
-            foreach ($baremos as $baremo) {
-                $baremosPorSiniestro[$baremo['siniestro_id']][] = $baremo;
-            }
-        }
-
-        // Asignar los baremos a cada modelo
-        foreach ($models as $model) {
-            $baremos = isset($baremosPorSiniestro[$model->id]) ? $baremosPorSiniestro[$model->id] : [];
-            $model->populateRelation('baremos', $baremos);
-        }
-
         $dataProvider->setModels($models);
 
-
-        // 4. RETORNAR VISTA CON EL MODO
+        // RETORNAR VISTA CON EL MODO
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'user_id' => $user_id,
             'afiliado' => $afiliado,
-            'modo' => $modo, // <-- PASAR EL MODO A LA VISTA
+            'modo' => $modo,
         ]);
     }
-
     /**
      * Displays a single SisSiniestro model.
      * @param integer $id
@@ -202,7 +155,7 @@ class SisSiniestroController extends Controller
         $model = new SisSiniestro();
         $model->iduser = $user_id;
         $model->fecha = date('Y-m-d');
-        $model->hora = date('H:i:s');
+        $model->hora = date('H:i');
 
         // 1. ASIGNAR VALOR DE es_cita AL MODELO
         $model->es_cita = (int) $es_cita;
@@ -210,6 +163,9 @@ class SisSiniestroController extends Controller
         $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
 
         if ($model->load($this->request->post())) {
+            // DEBUG: Check what is being received
+            $postData = Yii::$app->request->post('SisSiniestro');
+
             $transaction = Yii::$app->db->beginTransaction();
             try {
 
@@ -241,12 +197,33 @@ class SisSiniestroController extends Controller
                 // ... (Toda la lógica de guardado y subida de archivos sigue igual) ...
                 if ($model->save()) {
 
-                    // ... Lógica de subida de archivos (imagenRecipeFile, imagenInformeFile) ...
+                    // Force save admission_analyst directly to database
+                    Yii::$app->db->createCommand()
+                        ->update(
+                            'sis_siniestro',
+                            ['admission_analyst' => $model->admission_analyst],
+                            ['id' => $model->id]
+                        )
+                        ->execute();
+
+                    Yii::$app->db->createCommand()
+                        ->update(
+                            'sis_siniestro',
+                            ['nombre_doctor' => $model->nombre_doctor],
+                            ['id' => $model->id]
+                        )
+                        ->execute();
+
+                    file_put_contents(
+                        'C:\xampp\htdocs\sipsa\debug.txt',
+                        "FORCED UPDATE: admission_analyst = " . $model->admission_analyst . " for ID: " . $model->id . "\n\n",
+                        FILE_APPEND
+                    );
+                    // ===== END DEBUG =====
 
                     // --- Bloque de Subida de Recibo ---
-                    // Nota: Tu código usa $model->save(false) dentro de los IF de subida.
-                    // Esto está bien para mantener la coherencia con tu implementación original.
-                    // ...
+                    $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
+                    $model->imagenRecipeFile = !empty($imagenRecipeFile) ? reset($imagenRecipeFile) : null;
 
                     // Subir el recibo si existe
                     if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
@@ -286,6 +263,9 @@ class SisSiniestroController extends Controller
                     }
 
                     // --- Bloque de Subida de Informe ---
+                    $imagenInformeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenInformeFile]');
+                    $model->imagenInformeFile = !empty($imagenInformeFile) ? reset($imagenInformeFile) : null;
+
                     if (!empty($imagenInformeFile) && $imagenInformeFile[0]->size > 0) {
                         $folder = 'documentos';
                         $fileName = uniqid('selfie_') . '.' . $model->imagenInformeFile->extension;
@@ -320,8 +300,11 @@ class SisSiniestroController extends Controller
                             Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
                         }
                     }
-                    // ... (Fin de la lógica de subida) ...
 
+                    // ============ NEW: PROCESAR DOCUMENTOS ADICIONALES (OTROS) ============
+                    $otrosDocumentosData = Yii::$app->request->post('OtrosDocumentos', []);
+                    $this->processOtrosDocumentos($model, $otrosDocumentosData);
+                    // ============ END NEW CODE ============
 
                     // Guardar la relación muchos a muchos
                     $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
@@ -331,6 +314,7 @@ class SisSiniestroController extends Controller
                     if (!$model->saveBaremos($baremoIds)) {
                         throw new \Exception('Error al guardar los baremos');
                     }
+
                     $transaction->commit();
                     // Determine the correct success message based on es_cita value
                     $successMessage = $model->es_cita == 1 ? 'Cita creada correctamente.' : 'Atención creada correctamente.';
@@ -482,6 +466,17 @@ class SisSiniestroController extends Controller
                         }
                     }
 
+                    // ========== ADD THIS RIGHT HERE (after image uploads, before commit) ==========
+                    // Force save nombre_doctor directly to database
+                    Yii::$app->db->createCommand()
+                        ->update(
+                            'sis_siniestro',
+                            ['nombre_doctor' => $model->nombre_doctor],
+                            ['id' => $model->id]
+                        )
+                        ->execute();
+                    // ========== END OF ADDED CODE ==========
+
                     $transaction->commit();
 
                     // Dynamic success message
@@ -560,9 +555,9 @@ class SisSiniestroController extends Controller
             return round($size / 1048576, 2) . ' MB';
         }
     }
+
     /**
-     * Deletes an existing SisSiniestro model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
+     * Deletes an existing SisSiniestro model with audit logging.
      * @param integer $id
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
@@ -574,16 +569,125 @@ class SisSiniestroController extends Controller
         $termino = $esCita == 1 ? 'Cita' : 'Atención';
         $terminoLower = strtolower($termino);
 
-        // Delete the record
-        $model->delete();
+        // Get current user role
+        $userRole = UserHelper::getMyRol();
 
-        // Set dynamic success message
-        $successMessage = $esCita == 1 ? 'Cita eliminada correctamente.' : 'Atención eliminada correctamente.';
-        Yii::$app->session->setFlash('success', $successMessage);
+        // Define allowed roles for deletion
+        $allowedRoles = ['superadmin', 'GERENTE-OPERACIONES', 'GERENTE-CLINICA', 'COORDINADOR-CLINICA'];
 
-        // Redirect to index with the correct mode
-        $modo = $esCita == 1 ? 'cita' : 'siniestro';
-        return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => $modo]);
+        // Check if user has permission to delete
+        if (!in_array($userRole, $allowedRoles)) {
+            if (Yii::$app->request->isAjax) {
+                Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                return ['error' => true, 'message' => 'No tiene permisos para eliminar ' . $terminoLower . 's.'];
+            }
+
+            Yii::$app->session->setFlash('error', 'No tiene permisos para eliminar ' . $terminoLower . 's. Solo los Gerentes y Coordinadores pueden realizar esta acción.');
+            $modo = $esCita == 1 ? 'cita' : 'siniestro';
+            return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => $modo]);
+        }
+
+        // Handle GET request - show confirmation modal
+        if (Yii::$app->request->isGet && !Yii::$app->request->isPost) {
+            return $this->renderAjax('_delete_confirmation', [
+                'model' => $model,
+                'termino' => $termino,
+                'terminoLower' => $terminoLower,
+            ]);
+        }
+
+        // Handle POST request - process deletion
+        if (Yii::$app->request->isPost) {
+            // Get deletion reason from POST
+            $reason = Yii::$app->request->post('reason');
+
+            if (empty($reason)) {
+                if (Yii::$app->request->isAjax) {
+                    Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                    return ['error' => true, 'message' => 'Debe proporcionar un motivo para la eliminación.'];
+                }
+                Yii::$app->session->setFlash('error', 'Debe proporcionar un motivo para la eliminación.');
+                return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => $esCita == 1 ? 'cita' : 'siniestro']);
+            }
+
+            // Prepare data for audit log
+            $deletedData = [
+                'id' => $model->id,
+                'fecha' => $model->fecha,
+                'hora' => $model->hora,
+                'idclinica' => $model->idclinica,
+                'clinica_nombre' => $model->clinica ? $model->clinica->nombre : null,
+                'costo_total' => $model->costo_total,
+                'atendido' => $model->atendido,
+                'descripcion' => $model->descripcion,
+                'es_cita' => $model->es_cita,
+                'baremos' => [],
+            ];
+
+            // Get baremos information
+            foreach ($model->baremos as $baremo) {
+                $deletedData['baremos'][] = [
+                    'id' => $baremo->id,
+                    'nombre_servicio' => $baremo->nombre_servicio,
+                    'precio' => $baremo->precio,
+                ];
+            }
+
+            // Start transaction
+            $transaction = Yii::$app->db->beginTransaction();
+
+            try {
+                // Log the deletion
+                if (!SisSiniestroAuditLog::logDeletion($model->id, $deletedData, $reason)) {
+                    throw new \Exception('Error al registrar la auditoría de eliminación.');
+                }
+
+                // Get affected baremos before deletion (only for reference/audit)
+                $affectedBaremos = $model->baremos;
+
+                // Delete the record
+                if (!$model->delete()) {
+                    throw new \Exception('Error al eliminar el registro.');
+                }
+
+                // ============ RESTORE LOGIC - COMPLETELY REMOVED ============
+                // The cantidad_limite is NEVER modified in the database.
+                // Availability is calculated dynamically in _form.php as:
+                // remaining = original_limit - veces_usado
+                // When a siniestro is deleted, the veces_usado is automatically
+                // recalculated from the remaining records in sis_siniestro_baremo.
+                // No manual restore of cantidad_limite is needed.
+                // ============ END REMOVED LOGIC ============
+
+                $transaction->commit();
+
+                if (Yii::$app->request->isAjax) {
+                    Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                    return ['success' => true, 'message' => $termino . ' eliminada correctamente.'];
+                }
+
+                // Set dynamic success message
+                $successMessage = $esCita == 1 ? 'Cita eliminada correctamente.' : 'Atención eliminada correctamente.';
+                Yii::$app->session->setFlash('success', $successMessage);
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::error('Error al eliminar ' . $terminoLower . ': ' . $e->getMessage(), __METHOD__);
+
+                if (Yii::$app->request->isAjax) {
+                    Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                    return ['error' => true, 'message' => 'Error al eliminar la ' . $terminoLower . ': ' . $e->getMessage()];
+                }
+
+                Yii::$app->session->setFlash('error', 'Error al eliminar la ' . $terminoLower . ': ' . $e->getMessage());
+            }
+
+            // Redirect to index with the correct mode
+            $modo = $esCita == 1 ? 'cita' : 'siniestro';
+            return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => $modo]);
+        }
+
+        // If neither GET nor POST, return 405
+        throw new \yii\web\MethodNotAllowedHttpException('This action only supports GET and POST requests.');
     }
 
     /**
@@ -761,5 +865,119 @@ class SisSiniestroController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Display audit logs for deletions
+     * @return string
+     */
+    public function actionAuditLogs()
+    {
+        $userRole = UserHelper::getMyRol();
+        $allowedRoles = ['superadmin', 'GERENTE-OPERACIONES'];
+
+        if (!in_array($userRole, $allowedRoles)) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para ver los logs de auditoría.');
+            return $this->redirect(['index']);
+        }
+
+        $dataProvider = new \yii\data\ActiveDataProvider([
+            'query' => SisSiniestroAuditLog::find()->orderBy(['created_at' => SORT_DESC]),
+            'pagination' => ['pageSize' => 50],
+        ]);
+
+        return $this->render('audit-logs', [
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+
+    /**
+     * View audit log details
+     * @param int $id
+     * @return string
+     */
+    public function actionAuditDetails($id)
+    {
+        $auditLog = SisSiniestroAuditLog::findOne($id);
+        if (!$auditLog) {
+            return '<div class="alert alert-danger">Registro no encontrado.</div>';
+        }
+
+        $deletedData = json_decode($auditLog->deleted_data, true);
+
+        return $this->renderPartial('_audit_details', [
+            'auditLog' => $auditLog,
+            'deletedData' => $deletedData,
+        ]);
+    }
+    private function processOtrosDocumentos($model, $otrosDocumentos)
+    {
+        if (empty($otrosDocumentos) || !is_array($otrosDocumentos)) {
+            return true;
+        }
+
+        $uploadedDocs = [];
+        $uploadedFiles = UploadedFile::getInstances($model, 'otrosDocumentosFile');
+
+        if (empty($uploadedFiles)) {
+            return true;
+        }
+
+        $fileIndex = 0;
+        foreach ($otrosDocumentos as $index => $docInfo) {
+            if (!isset($uploadedFiles[$fileIndex]) || !($uploadedFiles[$fileIndex] instanceof UploadedFile) || $uploadedFiles[$fileIndex]->size == 0) {
+                $fileIndex++;
+                continue;
+            }
+
+            $file = $uploadedFiles[$fileIndex];
+            $folder = 'documentos/otros';
+            $fileName = uniqid('doc_otros_' . $model->id . '_') . '.' . $file->extension;
+            $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+
+            if ($file->saveAs($tempFilePath)) {
+                $publicUrl = UserHelper::uploadFileToSupabaseApi($tempFilePath, $file->type, $fileName, $folder);
+                if (file_exists($tempFilePath)) unlink($tempFilePath);
+
+                if ($publicUrl) {
+                    $uploadedDocs[] = [
+                        'url' => $publicUrl,
+                        'tipo' => $docInfo['tipo'] ?? 'Otro',
+                        'descripcion' => $docInfo['descripcion'] ?? '',
+                        'nombre_archivo' => $file->name,
+                        'tamano' => $file->size,
+                        'fecha_subida' => date('Y-m-d H:i:s'),
+                    ];
+                }
+            }
+            $fileIndex++;
+        }
+
+        $existingDocs = json_decode($model->otros_documentos, true) ?: [];
+        $model->otros_documentos = json_encode(array_merge($existingDocs, $uploadedDocs));
+        return $model->save(false);
+    }
+    /**
+     * Prints a medical attention/cita with all details
+     * @param integer $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionPrint($id)
+    {
+        $model = $this->findModel($id);
+        $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
+        $baremos = $model->baremos;
+
+        // Calculate total
+        $total = $model->costo_total ?: 0;
+
+        // Render a print-friendly view
+        return $this->renderPartial('print', [
+            'model' => $model,
+            'afiliado' => $afiliado,
+            'baremos' => $baremos,
+            'total' => $total,
+        ]);
     }
 }

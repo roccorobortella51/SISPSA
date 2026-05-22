@@ -35,6 +35,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use app\models\TasaCambio;
 use app\models\AgenteFuerza;
 use app\models\Dependientes;
+use app\models\Receipt;
 use yii\web\Response;
 
 
@@ -1652,6 +1653,89 @@ class UserDatosController extends Controller
     {
         $model = $this->findModel($id);
 
+        // ============================================
+        // FIX: Find the active contract by user_id, not contrato_id
+        // ============================================
+        $activeContract = Contratos::find()
+            ->where(['user_id' => $model->id])
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+            ->orderBy(['fecha_ini' => SORT_DESC])
+            ->one();
+
+        // ============================================
+        // GET RECEIPT AND CUOTAS INFORMATION
+        // ============================================
+        $receiptNumber = '';
+        $totalCuotas = 0;
+        $totalMontoCuotas = 0;
+
+        if ($activeContract) {
+            // Get all cuotas for this contract
+            $cuotasList = Cuotas::find()
+                ->where(['contrato_id' => $activeContract->id])
+                ->orderBy(['numero_cuota' => SORT_ASC])
+                ->all();
+
+            $totalCuotas = count($cuotasList);
+            if ($totalCuotas == 0) {
+                $totalCuotas = 12; // Default for annual contract
+            }
+
+            // Calculate total amount of all cuotas
+            foreach ($cuotasList as $cuota) {
+                $totalMontoCuotas += ($cuota->monto_usd ?: $cuota->monto);
+            }
+
+            // Find receipt by contract_id
+            $receipt = Receipt::find()
+                ->where(['contract_id' => $activeContract->id])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+
+            // If no receipt by contract_id, try by user_id
+            if (!$receipt && $model->id) {
+                $receipt = Receipt::find()
+                    ->where(['user_id' => $model->id])
+                    ->orderBy(['created_at' => SORT_DESC])
+                    ->one();
+            }
+
+            // If no receipt by user_id, try by payment through paid cuotas
+            if (!$receipt) {
+                $paidCuota = Cuotas::find()
+                    ->where(['contrato_id' => $activeContract->id])
+                    ->andWhere(['not', ['id_pago' => null]])
+                    ->one();
+
+                if ($paidCuota && $paidCuota->id_pago) {
+                    $receipt = Receipt::find()
+                        ->where(['payment_id' => $paidCuota->id_pago])
+                        ->one();
+                }
+            }
+
+            // If still no receipt, create a provisional one for display
+            if (!$receipt && $model->id) {
+                $receipt = new Receipt();
+                $receipt->contract_id = $activeContract->id;
+                $receipt->user_id = $model->id;
+                $receipt->amount = $activeContract->monto;
+                $receipt->currency = 'USD';
+                $receipt->issue_date = date('Y-m-d');
+                $receipt->status = Receipt::STATUS_GENERATED;
+                $receipt->payment_method = 'Contrato';
+                $receipt->receipt_number = Receipt::generateReceiptNumber();
+
+                if ($receipt->save()) {
+                    Yii::info("Provisional receipt generated: {$receipt->receipt_number} for contract #{$activeContract->id}", 'contrato-pdf');
+                }
+            }
+
+            if ($receipt) {
+                $receiptNumber = $receipt->receipt_number;
+            }
+        }
+
         // Inicializar variables para datos del corporativo
         $corporativo = null;
         $hasCorporateRelation = false;
@@ -1669,6 +1753,58 @@ class UserDatosController extends Controller
                 $hasCorporateRelation = true;
             }
         }
+
+        // ============================================
+        // FIXED: CONTRACT NUMBER GENERATION
+        // ============================================
+        $contractNumber = 'N/A';
+        $prefix = '';
+
+        // 1. Determine prefix based on user type
+        if ($model->user_datos_type_id == 1) {
+            $prefix = 'CI-';  // Individual
+        } elseif ($model->user_datos_type_id == 2) {
+            $prefix = 'CO-';  // Corporate/Colectivo
+        }
+
+        // 2. Try to get contract number from the active contract
+        if ($activeContract) {
+            if (!empty($activeContract->nrocontrato)) {
+                // Use existing contract number
+                $contractNumber = $prefix . $activeContract->nrocontrato;
+            } elseif ($activeContract->id) {
+                // Generate contract number on the fly if missing
+                $anio_actual = date('Y');
+                $generatedNumber = $model->cedula . '-' . $anio_actual . '-' . $activeContract->id;
+
+                // Save it to the contract for future use
+                $activeContract->nrocontrato = $generatedNumber;
+                $activeContract->save(false);
+
+                $contractNumber = $prefix . $generatedNumber;
+            }
+        } else {
+            // No active contract found - check if there's any contract at all
+            $anyContract = Contratos::find()
+                ->where(['user_id' => $model->id])
+                ->orderBy(['id' => SORT_DESC])
+                ->one();
+
+            if ($anyContract && !empty($anyContract->nrocontrato)) {
+                $contractNumber = $prefix . $anyContract->nrocontrato;
+            } elseif ($anyContract && $anyContract->id) {
+                $anio_actual = date('Y');
+                $contractNumber = $prefix . $model->cedula . '-' . $anio_actual . '-' . $anyContract->id;
+            } else {
+                // Ultimate fallback
+                $anio_actual = date('Y');
+                $contractNumber = $prefix . $model->cedula . '-' . $anio_actual . '-' . $model->id;
+            }
+        }
+
+        // Add debug logging
+        Yii::info("Contract Number generated: {$contractNumber} for user {$model->id}", 'contrato-pdf');
+        Yii::info("Receipt Number: {$receiptNumber}, Total Cuotas: {$totalCuotas}", 'contrato-pdf');
 
         // Obtener los IDs de ubicación del modelo
         $estadoId = (int) $model->estado;
@@ -1706,69 +1842,41 @@ class UserDatosController extends Controller
             }
         }
 
-        // Process family group to map Spanish keys to English
-        $family_group = [];
-        if ($model->grupo_familiar) {
-            $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
-            foreach ($grupoFamiliar as $member) {
-                $family_group[] = [
-                    'name' => $member['nombre'] ?? '',
-                    'ci' => $member['cedula'] ?? '',
-                    'relationship' => $member['parentesco'] ?? '',
-                    'sex' => $member['sexo'] ?? '',
-                    'birthdate' => $member['fecha_nacimiento'] ?? '',
-                ];
-            }
-        }
-
         // 💡 CÓDIGO PARA OBTENER LOS DATOS DEL ASESOR 💡
-        // -------------------------------------------------------------------------------------------------
-
         $agenteFuerza = null;
         $asesorUserDatos = null;
         $agente = null;
 
-
         if (!empty($model->asesor_id)) {
             $agenteFuerza = AgenteFuerza::findOne($model->asesor_id);
 
-            // Si encontramos el registro de AgenteFuerza, usamos su relación para obtener
-            // los datos del usuario (UserDatos) y del agente (Agente).
             if ($agenteFuerza) {
                 $asesorUserDatos = $agenteFuerza->userDatos;
                 $agente = $agenteFuerza->agente;
             }
         }
-        // -------------------------------------------------------------------------------------------------
-
-        // 💡 CÓDIGO PARA OBTENER EL NÚMERO DE CONTRATO REAL Y APLICAR EL PREFIJO 💡
-        $contractNumber = 'N/A';
-        $prefix = '';
-
-        // 1. Determinar el prefijo basado en el tipo de usuario
-        if ($model->user_datos_type_id == 1) {
-            // Si es tipo simple (1), usa el prefijo 'CI-'
-            $prefix = 'CI-';
-        } elseif ($model->user_datos_type_id == 2) {
-            // Si es tipo corporativo (2), usa el prefijo 'CO-'
-            $prefix = 'CO-';
-        }
-
-        // 2. Obtener el número de contrato real de la tabla 'contratos'
-        $realContractNumber = $model->contrato->nrocontrato ?? null;
-
-        if ($realContractNumber) {
-            // 3. Combinar prefijo y número real
-            $contractNumber = $prefix . $realContractNumber;
-        } else {
-            // Fallback: Si no se encuentra el nrocontrato, al menos se aplica el prefijo al ID
-            $contractNumber = $prefix . ($model->contrato_id ?? 'N/A');
-        }
 
         // Preparar los datos para el PDF
         $data = [
-            // Datos del Afiliado Propuesto
+            // Contract Information
             'contract_number' => $contractNumber,
+            'affiliation_type_id' => $model->user_datos_type_id,
+            'affiliation_type_name' => ($model->user_datos_type_id == 1) ? 'INDIVIDUAL' : 'COLECTIVO',
+            'has_active_contract' => ($activeContract !== null),
+            'contract_status' => $activeContract ? $activeContract->estatus : 'No activo',
+
+            // Contract Dates and Amount
+            'contract_start_date' => $activeContract ? $activeContract->fecha_ini : null,
+            'contract_end_date' => $activeContract ? $activeContract->fecha_ven : null,
+            'monthly_amount' => $activeContract ? $activeContract->monto : 0,
+            'clinica_name' => $model->clinica ? $model->clinica->nombre : 'No asignada',
+
+            // Receipt and Cuotas information
+            'receipt_number' => $receiptNumber,
+            'total_cuotas' => $totalCuotas,
+            'total_monto_cuotas' => $totalMontoCuotas,
+
+            // Datos del Afiliado Propuesto
             'affiliation_type' => $model->userDatosType ? $model->userDatosType->nombre : '',
             'proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
             'proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
@@ -1792,13 +1900,11 @@ class UserDatosController extends Controller
             'proposed_affiliate_email' => $model->email,
 
             // DATOS DEL ASESOR
-            // -------------------------------------------------------------------------------------------------
             'intermediary_name' => $asesorUserDatos ? $asesorUserDatos->nombres . ' ' . $asesorUserDatos->apellidos : '',
             'intermediary_code' => $agente ? $agente->sudeaseg : '',
             'intermediary_ci' => $asesorUserDatos ? $asesorUserDatos->tipo_cedula . '-' . $asesorUserDatos->cedula : '',
-            // -------------------------------------------------------------------------------------------------
 
-            // Datos de la Parte Contratante (se dejan vacíos si no hay campos en UserDatos)
+            // Datos de la Parte Contratante
             'contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
             'contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
             'contracting_party_nationality' => $model->nacionalidad_contratante,
@@ -1819,45 +1925,45 @@ class UserDatosController extends Controller
             'contracting_party_email' => $model->email_contratante,
             'contracting_party_billing_address' => $model->direccion_cobro_contratante ?: ($model->direccion_residencia_contratante ?: ''),
 
-            // Representante Legal (del contratante si no hay corporativo, del corporativo si existe)
+            // Representante Legal
             'legal_representative_name' => $hasCorporateRelation
                 ? ($corporativo->nombre_representante ?? '')
-                : (($model->nombre_representante ?? '') . " " . ($model->apellido_representante ?? '')),
+                : (($model->nombre_representante_contratante ?? '') . " " . ($model->apellido_representante_contratante ?? '')),
             'legal_representative_ci' => $hasCorporateRelation
                 ? ($corporativo->cedula_representante ?? '')
-                : (($model->tipo_cedula_representante ?? '') . "-" . ($model->cedula_representante ?? '')),
+                : (($model->tipo_cedula_representante_contratante ?? '') . "-" . ($model->cedula_representante_contratante ?? '')),
             'legal_representative_nationality' => $hasCorporateRelation
                 ? ($corporativo->nacionalidad_representante ?? '')
-                : ($model->nacionalidad_representante ?? ''),
+                : ($model->nacionalidad_representante_contratante ?? ''),
             'legal_representative_marital_status' => $hasCorporateRelation
                 ? ($corporativo->estado_civil_representante ?? '')
-                : ($model->estado_civil_representante ?? ''),
+                : ($model->estado_civil_representante_contratante ?? ''),
             'legal_representative_birthplace' => $hasCorporateRelation
                 ? ($corporativo->lugar_nacimiento_representante ?? '')
-                : ($model->lugar_nacimiento_representante ?? ''),
+                : ($model->lugar_nacimiento_representante_contratante ?? ''),
             'legal_representative_birthdate' => $hasCorporateRelation
                 ? ($corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'yyyy-MM-dd') : '')
                 : ($model->fecha_nacimiento_representante_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante_contratante, 'yyyy-MM-dd') : ''),
             'legal_representative_sex' => $hasCorporateRelation
                 ? ($corporativo->sexo_representante ?? '')
-                : ($model->sexo_representante ?? ''),
+                : ($model->sexo_representante_contratante ?? ''),
             'legal_representative_profession' => $hasCorporateRelation
                 ? ($corporativo->profesion_representante ?? '')
-                : ($model->profesion_representante ?? ''),
+                : ($model->profesion_representante_contratante ?? ''),
             'legal_representative_occupation' => $hasCorporateRelation
                 ? ($corporativo->ocupacion_representante ?? '')
-                : ($model->ocupacion_representante ?? ''),
+                : ($model->ocupacion_representante_contratante ?? ''),
             'legal_representative_activity_description' => $hasCorporateRelation
                 ? ($corporativo->descripcion_actividad_representante ?? '')
-                : ($model->descripcion_actividad_representante ?? ''),
+                : ($model->descripcion_actividad_representante_contratante ?? ''),
             'legal_representative_address' => $hasCorporateRelation
                 ? ($corporativo->direccion_representante ?? '')
-                : ($model->direccion_representante ?? ''),
+                : ($model->direccion_representante_contratante ?? ''),
             'legal_representative_phone' => $hasCorporateRelation
                 ? ($corporativo->telefono_representante ?? '')
-                : ($model->telefono_representante ?? ''),
+                : ($model->telefono_representante_contratante ?? ''),
 
-            // Datos del Plan (se usan del modelo Plan relacionado)
+            // Datos del Plan
             'plan_selected' => $model->plan ? $model->plan->nombre : '',
             'plan_currency' => $model->moneda,
             'plan_deductible' => $model->deducible,
@@ -1866,7 +1972,7 @@ class UserDatosController extends Controller
             'maternity_deductible' => $model->deducible_maternidad,
             'maternity_coverage_limit' => $model->limite_cobertura_maternidad,
 
-            // Grupo Familiar (se deja array vacío si no hay tabla o relación específica)
+            // Grupo Familiar
             'family_group' => (function () use ($model) {
                 if (!$model->grupo_familiar) return [];
                 $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
@@ -1883,14 +1989,14 @@ class UserDatosController extends Controller
                 return $family_group;
             })(),
 
-            // Beneficiario (se dejan vacíos si no hay campos en UserDatos)
+            // Beneficiario
             'beneficiary_name' => $model->nombre_beneficiario,
             'beneficiary_ci' => $model->cedula_beneficiario,
             'beneficiary_relationship' => $model->parentesco_beneficiario,
             'beneficiary_sex' => $model->sexo_beneficiario,
             'beneficiary_birthdate' => $model->fecha_nacimiento_beneficiario ? Yii::$app->formatter->asDate($model->fecha_nacimiento_beneficiario, 'yyyy-MM-dd') : '',
 
-            // Cuenta Bancaria (se dejan vacíos si no hay campos en UserDatos)
+            // Cuenta Bancaria
             'bank_account_holder_name' => $model->nombre_titular,
             'bank_account_ci' => $model->cedula_titular,
             'bank_account_number' => $model->numero_cuenta,
@@ -1905,7 +2011,7 @@ class UserDatosController extends Controller
             'declaration_place' => $ciudadNombre,
             'declaration_date' => date('d/m/Y'),
 
-            // Datos del Corporativo (solo si tiene relación)
+            // Datos del Corporativo
             'has_corporate_relation' => $hasCorporateRelation,
             'corporate_name' => $corporativo ? $corporativo->nombre : '',
             'corporate_rif' => $corporativo ? $corporativo->rif : '',
@@ -1961,7 +2067,6 @@ class UserDatosController extends Controller
                 'SetFooter' => ['{PAGENO}'],
             ]
         ]);
-
 
         return $pdf->render();
     }
@@ -2785,7 +2890,7 @@ class UserDatosController extends Controller
         ]);
     }
     /**
-     * Export Resumen Detallado por Clínica to Excel with Logo
+     * Export Resumen Detallado por Clínica to Excel with Logo and Meta Field
      */
     public function actionExportarResumenExcel()
     {
@@ -2803,7 +2908,7 @@ class UserDatosController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
         // ============================================
-        // SHEET 1: Resumen Detallado por Clínica
+        // SHEET 1: Resumen Detallado por Clínica (WITH META)
         // ============================================
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Resumen por Clínica');
@@ -2816,41 +2921,41 @@ class UserDatosController extends Controller
             $drawing->setName('Logo SISPSA');
             $drawing->setDescription('Logo SISPSA');
             $drawing->setPath($logoPath);
-            $drawing->setHeight(120); // Height in pixels (approx 1.6 inches)
+            $drawing->setHeight(120);
             $drawing->setCoordinates('A' . $currentRow);
             $drawing->setOffsetX(10);
             $drawing->setWorksheet($sheet);
 
-            // Merge cells for logo area
-            $sheet->mergeCells('A' . $currentRow . ':I' . ($currentRow + 5));
-            $sheet->getStyle('A' . $currentRow . ':I' . ($currentRow + 5))->getAlignment()
+            // Merge cells for logo area - Updated to J column (10 columns)
+            $sheet->mergeCells('A' . $currentRow . ':J' . ($currentRow + 5));
+            $sheet->getStyle('A' . $currentRow . ':J' . ($currentRow + 5))->getAlignment()
                 ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-            $currentRow += 6; // Move down after logo
+            $currentRow += 6;
         }
 
         // Title
         $sheet->setCellValue('A' . $currentRow, 'RESUMEN DE AFILIADOS POR CLÍNICA');
-        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->mergeCells('A' . $currentRow . ':J' . $currentRow);
         $sheet->getStyle('A' . $currentRow)->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $currentRow++;
 
         // Company Info
         $sheet->setCellValue('A' . $currentRow, 'Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013');
-        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->mergeCells('A' . $currentRow . ':J' . $currentRow);
         $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A' . $currentRow)->getFont()->setSize(10);
         $currentRow++;
 
         $sheet->setCellValue('A' . $currentRow, 'R.I.F.: J-50654922');
-        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->mergeCells('A' . $currentRow . ':J' . $currentRow);
         $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A' . $currentRow)->getFont()->setSize(10);
         $currentRow++;
 
         $sheet->setCellValue('A' . $currentRow, 'Generado: ' . date('d/m/Y H:i:s'));
-        $sheet->mergeCells('A' . $currentRow . ':I' . $currentRow);
+        $sheet->mergeCells('A' . $currentRow . ':J' . $currentRow);
         $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A' . $currentRow)->getFont()->setSize(9);
         $currentRow++;
@@ -2862,23 +2967,24 @@ class UserDatosController extends Controller
         if (!empty($filtros)) {
             $sheet->setCellValue('A' . $currentRow, 'Filtros aplicados:');
             $sheet->setCellValue('B' . $currentRow, implode(' | ', $filtros));
-            $sheet->mergeCells('B' . $currentRow . ':I' . $currentRow);
+            $sheet->mergeCells('B' . $currentRow . ':J' . $currentRow);
             $sheet->getStyle('A' . $currentRow)->getFont()->setBold(true);
             $currentRow++;
-            $currentRow++; // Add empty row after filters
+            $currentRow++;
         }
 
-        // Headers
+        // Headers - ADDED META COLUMN (Column B)
         $headers = [
             'A' => 'Clínica',
-            'B' => 'Total Afiliados',
-            'C' => 'Individual',
-            'D' => 'Corporativo',
-            'E' => 'Activos',
-            'F' => 'Suspendidos',
-            'G' => 'Anulados',
-            'H' => 'Vencidos',
-            'I' => 'Registrados',
+            'B' => 'Meta Mensual',
+            'C' => 'Total Afiliados',
+            'D' => 'Individual',
+            'E' => 'Corporativo',
+            'F' => 'Activos',
+            'G' => 'Suspendidos',
+            'H' => 'Anulados',
+            'I' => 'Vencidos',
+            'J' => 'Registrados',
         ];
 
         $headerRow = $currentRow;
@@ -2893,27 +2999,43 @@ class UserDatosController extends Controller
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '2c3e50'], // Dark blue-gray
+                'startColor' => ['rgb' => '2c3e50'],
             ],
             'alignment' => [
                 'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
                 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A' . $headerRow . ':I' . $headerRow)->applyFromArray($headerStyle);
+        $sheet->getStyle('A' . $headerRow . ':J' . $headerRow)->applyFromArray($headerStyle);
 
-        // Fill data
+        // Fill data - WITH META COLUMN
         $dataRow = $headerRow + 1;
         foreach ($summary as $clinic) {
+            $meta = (int)($clinic['clinica_meta'] ?? 0);
+            $metaDisplay = $meta > 0 ? number_format($meta) : 'No definida';
+
+            // Calculate meta compliance percentage for tooltip/color
+            $totalAfiliadosClinica = $clinic['total_afiliados'];
+            $metaPorcentaje = $meta > 0 ? round(($totalAfiliadosClinica / $meta) * 100) : 0;
+
             $sheet->setCellValue('A' . $dataRow, $clinic['clinica_nombre']);
-            $sheet->setCellValue('B' . $dataRow, $clinic['total_afiliados']);
-            $sheet->setCellValue('C' . $dataRow, $clinic['tipo_individual']);
-            $sheet->setCellValue('D' . $dataRow, $clinic['tipo_corporativo']);
-            $sheet->setCellValue('E' . $dataRow, $clinic['contratos_activos'] ?? 0);
-            $sheet->setCellValue('F' . $dataRow, $clinic['contratos_suspendidos'] ?? 0);
-            $sheet->setCellValue('G' . $dataRow, $clinic['contratos_anulados'] ?? 0);
-            $sheet->setCellValue('H' . $dataRow, $clinic['contratos_vencidos'] ?? 0);
-            $sheet->setCellValue('I' . $dataRow, $clinic['contratos_registrados'] ?? 0);
+            $sheet->setCellValue('B' . $dataRow, $metaDisplay);
+            $sheet->setCellValue('C' . $dataRow, $clinic['total_afiliados']);
+            $sheet->setCellValue('D' . $dataRow, $clinic['tipo_individual']);
+            $sheet->setCellValue('E' . $dataRow, $clinic['tipo_corporativo']);
+            $sheet->setCellValue('F' . $dataRow, $clinic['contratos_activos'] ?? 0);
+            $sheet->setCellValue('G' . $dataRow, $clinic['contratos_suspendidos'] ?? 0);
+            $sheet->setCellValue('H' . $dataRow, $clinic['contratos_anulados'] ?? 0);
+            $sheet->setCellValue('I' . $dataRow, $clinic['contratos_vencidos'] ?? 0);
+            $sheet->setCellValue('J' . $dataRow, $clinic['contratos_registrados'] ?? 0);
+
+            // Optional: Add comment to Meta cell showing compliance percentage
+            if ($meta > 0) {
+                $sheet->getComment('B' . $dataRow)
+                    ->getText()
+                    ->createTextRun("Cumplimiento: {$metaPorcentaje}%\nAfiliados: {$totalAfiliadosClinica} / {$meta}");
+            }
+
             $dataRow++;
         }
 
@@ -2921,17 +3043,18 @@ class UserDatosController extends Controller
         $totalRow = $dataRow;
         $sheet->setCellValue('A' . $totalRow, 'TOTAL GENERAL');
         $sheet->getStyle('A' . $totalRow)->getFont()->setBold(true);
-        $sheet->setCellValue('B' . $totalRow, $totals['total_afiliados']);
-        $sheet->setCellValue('C' . $totalRow, $totals['total_individual']);
-        $sheet->setCellValue('D' . $totalRow, $totals['total_corporativo']);
-        $sheet->setCellValue('E' . $totalRow, $totals['total_contratos_activos']);
-        $sheet->setCellValue('F' . $totalRow, $totals['total_contratos_suspendidos']);
-        $sheet->setCellValue('G' . $totalRow, $totals['total_contratos_anulados'] ?? 0);
-        $sheet->setCellValue('H' . $totalRow, $totals['total_contratos_vencidos'] ?? 0);
-        $sheet->setCellValue('I' . $totalRow, $totals['total_contratos_registrados'] ?? 0);
+        $sheet->setCellValue('B' . $totalRow, '');
+        $sheet->setCellValue('C' . $totalRow, $totals['total_afiliados']);
+        $sheet->setCellValue('D' . $totalRow, $totals['total_individual']);
+        $sheet->setCellValue('E' . $totalRow, $totals['total_corporativo']);
+        $sheet->setCellValue('F' . $totalRow, $totals['total_contratos_activos']);
+        $sheet->setCellValue('G' . $totalRow, $totals['total_contratos_suspendidos']);
+        $sheet->setCellValue('H' . $totalRow, $totals['total_contratos_anulados'] ?? 0);
+        $sheet->setCellValue('I' . $totalRow, $totals['total_contratos_vencidos'] ?? 0);
+        $sheet->setCellValue('J' . $totalRow, $totals['total_contratos_registrados'] ?? 0);
 
-        $sheet->getStyle('A' . $totalRow . ':I' . $totalRow)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $totalRow . ':I' . $totalRow)->getFill()
+        $sheet->getStyle('A' . $totalRow . ':J' . $totalRow)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $totalRow . ':J' . $totalRow)->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setARGB('FFE8F4FD');
 
@@ -2944,22 +3067,27 @@ class UserDatosController extends Controller
                 ],
             ],
         ];
-        $sheet->getStyle('A' . $headerRow . ':I' . $totalRow)->applyFromArray($styleArray);
+        $sheet->getStyle('A' . $headerRow . ':J' . $totalRow)->applyFromArray($styleArray);
 
         // Center align numeric columns
-        foreach (range('B', 'I') as $col) {
+        foreach (range('B', 'J') as $col) {
             $sheet->getStyle($col . $headerRow . ':' . $col . $totalRow)
                 ->getAlignment()
                 ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
 
+        // Left align clinic name column
+        $sheet->getStyle('A' . ($headerRow + 1) . ':A' . $totalRow)
+            ->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+
         // Auto-size columns
-        foreach (range('A', 'I') as $col) {
+        foreach (range('A', 'J') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
         // ============================================
-        // SHEET 2: Resumen General de Todas las Clínicas
+        // SHEET 2: Resumen General de Todas las Clínicas (WITH META INFO)
         // ============================================
         $spreadsheet->createSheet();
         $spreadsheet->setActiveSheetIndex(1);
@@ -3008,6 +3136,37 @@ class UserDatosController extends Controller
         } else {
             $currentRow2 += 2;
         }
+
+        // Add Meta Summary Section
+        $sheet2->setCellValue('A' . $currentRow2, 'META DE AFILIADOS - RESUMEN');
+        $sheet2->mergeCells('A' . $currentRow2 . ':D' . $currentRow2);
+        $sheet2->getStyle('A' . $currentRow2)->getFont()->setBold(true)->setSize(12);
+        $sheet2->getStyle('A' . $currentRow2)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE8F4FD');
+        $currentRow2++;
+
+        // Meta Statistics
+        $metaTotals = $totals['meta'] ?? [];
+        $metaData = [
+            ['Clínicas con Meta Definida', number_format($metaTotals['clinicas_con_meta'] ?? 0)],
+            ['Clínicas sin Meta Definida', number_format($metaTotals['clinicas_sin_meta'] ?? 0)],
+            ['Clínicas que Alcanzaron Meta (≥100%)', number_format($metaTotals['clinicas_que_alcanzaron_meta'] ?? 0)],
+            ['Clínicas Cerca de Meta (75-99%)', number_format($metaTotals['clinicas_cerca_meta'] ?? 0)],
+            ['Clínicas Lejos de Meta (<75%)', number_format($metaTotals['clinicas_lejos_meta'] ?? 0)],
+            ['Total Meta Objetivo (Afiliados)', number_format($metaTotals['total_meta_objetivo'] ?? 0)],
+            ['Total Afiliados Actuales', number_format($metaTotals['total_afiliados_actual'] ?? 0)],
+            ['Cumplimiento Global', ($metaTotals['porcentaje_global_cumplimiento'] ?? 0) . '%'],
+        ];
+
+        foreach ($metaData as $item) {
+            $sheet2->setCellValue('A' . $currentRow2, $item[0]);
+            $sheet2->setCellValue('B' . $currentRow2, $item[1]);
+            $sheet2->getStyle('A' . $currentRow2)->getFont()->setBold(true);
+            $currentRow2++;
+        }
+
+        $currentRow2 += 2;
 
         // Totals cards - using styled cells
         $totalsData = [
@@ -3070,7 +3229,7 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Export Resumen Detallado por Clínica to PDF - BULLETPROOF VERSION
+     * Export Resumen Detallado por Clínica to PDF - BULLETPROOF VERSION WITH META FIELD
      */
     public function actionExportarResumenPdf()
     {
@@ -3083,14 +3242,16 @@ class UserDatosController extends Controller
             $searchModel = new AfiliadosReportSearch();
             $summary = $searchModel->getSummaryByClinic(Yii::$app->request->queryParams);
             $totals = $searchModel->getTotals(Yii::$app->request->queryParams);
+            $metaSummary = $searchModel->getMetaAchievementSummary(Yii::$app->request->queryParams);
 
             $filtros = $this->getFilterLabels(Yii::$app->request->get('AfiliadosReportSearch', []));
             $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
 
-            // Use the new template WITHOUT complex CSS
+            // Use the updated template WITH META FIELD
             $content = $this->renderPartial('_reporte_resumen_pdf_v2', [
                 'summary' => $summary,
                 'totals' => $totals,
+                'metaSummary' => $metaSummary,
                 'filtros' => $filtros,
                 'logo' => $logo,
             ]);

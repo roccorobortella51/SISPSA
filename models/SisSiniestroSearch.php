@@ -14,6 +14,9 @@ class SisSiniestroSearch extends SisSiniestro
     public $iduser;
     public $afiliado_nombre;
     public $afiliado_cedula;
+    public $admission_analyst;
+    public $nombre_doctor;  // ← ADD THIS LINE
+
 
     /**
      * {@inheritdoc}
@@ -22,7 +25,7 @@ class SisSiniestroSearch extends SisSiniestro
     {
         return [
             [['id', 'idclinica', 'idbaremo', 'atendido', 'iduser'], 'integer'],
-            [['fecha', 'hora', 'fecha_atencion', 'hora_atencion', 'descripcion', 'created_at', 'updated_at', 'deleted_at', 'afiliado_nombre', 'afiliado_cedula'], 'safe'],
+            [['fecha', 'hora', 'fecha_atencion', 'hora_atencion', 'descripcion', 'created_at', 'updated_at', 'deleted_at', 'afiliado_nombre', 'afiliado_cedula', 'admission_analyst', 'nombre_doctor'], 'safe'],  // ← ADD nombre_doctor
         ];
     }
 
@@ -44,12 +47,8 @@ class SisSiniestroSearch extends SisSiniestro
      */
     public function search($params)
     {
-        // Primero obtenemos la consulta base con join a la tabla intermedia
-        $query = SisSiniestro::find()
-            ->select(['sis_siniestro.*'])
-            ->joinWith(['sisSiniestroBaremos sb'])
-            ->with(['baremos'])
-            ->groupBy('sis_siniestro.id');
+        // Simple query without GROUP BY to properly retrieve all fields including admission_analyst
+        $query = SisSiniestro::find();
 
         // Aplicamos las condiciones de búsqueda
         $this->load($params);
@@ -61,6 +60,20 @@ class SisSiniestroSearch extends SisSiniestro
                 'defaultOrder' => [
                     'fecha' => SORT_DESC,
                     'hora' => SORT_DESC,
+                ],
+                'attributes' => [
+                    'id',
+                    'idclinica',
+                    'fecha',
+                    'hora',
+                    'atendido',
+                    'fecha_atencion',
+                    'hora_atencion',
+                    'costo_total',
+                    'admission_analyst',
+                    'nombre_doctor',  // ← ADD THIS LINE
+
+                    'created_at',
                 ]
             ],
         ]);
@@ -82,15 +95,23 @@ class SisSiniestroSearch extends SisSiniestro
             $query->andFilterWhere(['>=', 'sis_siniestro.fecha', $this->fecha]);
         }
 
-        // Filtro por baremo si se especifica
+        // Filtro por baremo si se especifica - using EXISTS subquery instead of JOIN + GROUP BY
         if ($this->idbaremo) {
-            $query->andFilterWhere(['sb.baremo_id' => $this->idbaremo]);
+            $query->andWhere([
+                'exists',
+                (new \yii\db\Query())
+                    ->select('1')
+                    ->from('sis_siniestro_baremo sb')
+                    ->where('sb.siniestro_id = sis_siniestro.id')
+                    ->andWhere(['sb.baremo_id' => $this->idbaremo])
+            ]);
         }
 
         // Filtros de texto
         $query->andFilterWhere(['ilike', 'sis_siniestro.hora', $this->hora])
             ->andFilterWhere(['ilike', 'sis_siniestro.hora_atencion', $this->hora_atencion])
-            ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion]);
+            ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion])
+            ->andFilterWhere(['ilike', 'sis_siniestro.admission_analyst', $this->admission_analyst]);
 
         // Filtros de fecha adicionales
         $query->andFilterWhere(['>=', 'sis_siniestro.fecha_atencion', $this->fecha_atencion])
@@ -103,7 +124,8 @@ class SisSiniestroSearch extends SisSiniestro
 
     public function searchClinica($params)
     {
-        $query = SisSiniestro::find()->joinWith(['clinica', 'afiliado']);
+        $query = SisSiniestro::find()
+            ->joinWith(['clinica', 'afiliado']);
 
         $this->load($params);
 
@@ -137,29 +159,37 @@ class SisSiniestroSearch extends SisSiniestro
 
         // Filtro por baremo si se especifica
         if ($this->idbaremo) {
-            $query->andFilterWhere(['sb.baremo_id' => $this->idbaremo]);
+            $query->andWhere([
+                'exists',
+                (new \yii\db\Query())
+                    ->select('1')
+                    ->from('sis_siniestro_baremo sb')
+                    ->where('sb.siniestro_id = sis_siniestro.id')
+                    ->andWhere(['sb.baremo_id' => $this->idbaremo])
+            ]);
         }
 
         if (!empty($this->afiliado_nombre)) {
             $query->andFilterWhere([
                 'or',
-                ['like', 'user_datos.nombres', $this->afiliado_nombre],
-                ['like', 'user_datos.apellidos', $this->afiliado_nombre]
+                ['ilike', 'user_datos.nombres', $this->afiliado_nombre],
+                ['ilike', 'user_datos.apellidos', $this->afiliado_nombre]
             ]);
         }
 
         if (!empty($this->afiliado_cedula)) {
             $query->andFilterWhere([
                 'or',
-                ['like', 'user_datos.cedula', $this->afiliado_cedula],
-                ['like', 'user_datos.tipo_cedula', $this->afiliado_cedula]
+                ['ilike', 'user_datos.cedula', $this->afiliado_cedula],
+                ['ilike', 'user_datos.tipo_cedula', $this->afiliado_cedula]
             ]);
         }
 
         // Filtros de texto
         $query->andFilterWhere(['ilike', 'sis_siniestro.hora', $this->hora])
             ->andFilterWhere(['ilike', 'sis_siniestro.hora_atencion', $this->hora_atencion])
-            ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion]);
+            ->andFilterWhere(['ilike', 'sis_siniestro.descripcion', $this->descripcion])
+            ->andFilterWhere(['ilike', 'sis_siniestro.admission_analyst', $this->admission_analyst]);
 
         // Filtros de fecha adicionales
         $query->andFilterWhere(['>=', 'sis_siniestro.fecha_atencion', $this->fecha_atencion])

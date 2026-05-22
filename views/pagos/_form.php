@@ -63,21 +63,20 @@ $this->registerJs(
             $('#pagos-monto_usd').val(montoBs.toFixed(4));
         }
 
-        // Function to update field visibility
+        // Function to update field visibility and show info message
         function updateFieldsVisibility() {
             var metodo = $('#pagos-metodo_pago').val();
             var isCashDollar = (metodo === 'Efectivo - Dólar ($)');
-
+            
+            // Handle reference number field
             if (isCashDollar) {
                 $('.field-pagos-numero_referencia_pago').hide();
-                $('.field-pagos-imagen_prueba_file').hide();
-                $('#comprobante-title').hide();
                 $('#pagos-numero_referencia_pago').val('');
-                $('#pagos-imagen_prueba_file').val('');
+                // Show cash info message
+                $('#cash-info-message').show();
             } else {
                 $('.field-pagos-numero_referencia_pago').show();
-                $('.field-pagos-imagen_prueba_file').show();
-                $('#comprobante-title').show();
+                $('#cash-info-message').hide();
             }
         }
 
@@ -112,16 +111,6 @@ $this->registerJs(
         $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', updateMontoBs);
         $('#pagos-metodo_pago').on('change', updateFieldsVisibility);
         $(document).on('change', '.cuota-checkbox', updateMontoSelected);
-
-        // Auto-select first selectable cuota
-        setTimeout(function() {
-            var firstCheckbox = $('.cuota-checkbox:not(:disabled)').first();
-            if (firstCheckbox.length > 0) {
-                firstCheckbox.prop('checked', true);
-                firstCheckbox.closest('tr').addClass('selected-row');
-                updateMontoSelected();
-            }
-        }, 500);
 
         // Initialize
         updateMontoSelected();
@@ -301,64 +290,8 @@ JS
         border: 1px solid #545b62;
     }
 
-    /* ===== ROW STYLES ===== */
-    /* Grace Period Row */
-    .grace-row {
-        background-color: #fff9e6 !important;
-        border-left: 4px solid #ffc107;
-    }
-
-    .grace-row:hover {
-        background-color: #fff3cd !important;
-    }
-
-    /* Urgent Grace Period Row */
-    .grace-urgent-row {
-        background-color: #fff3e0 !important;
-        border-left: 4px solid #fd7e14;
-        animation: row-pulse 2s infinite;
-    }
-
-    .grace-urgent-row:hover {
-        background-color: #ffe0b2 !important;
-    }
-
-    /* Overdue Row */
-    .overdue-row {
-        background-color: #ffebee !important;
-        border-left: 4px solid #dc3545;
-    }
-
-    .overdue-row:hover {
-        background-color: #ffcdd2 !important;
-    }
-
-    /* Approaching Row */
-    .approaching-row {
-        background-color: #e3f2fd !important;
-        border-left: 4px solid #17a2b8;
-    }
-
-    .approaching-row:hover {
-        background-color: #bbdef5 !important;
-    }
-
-    /* Paid Row */
-    .paid-row {
-        background-color: #e8f5e9 !important;
-        border-left: 4px solid #28a745;
-    }
-
-    /* Selected Row */
-    .selected-row {
-        background-color: #d4edda !important;
-        border-left: 4px solid #28a745 !important;
-        box-shadow: inset 0 0 0 1px #28a745;
-    }
-
-    .selected-row td {
-        font-weight: 600;
-    }
+    /* ===== NO ROW HIGHLIGHTING CLASSES - Removed all background color classes ===== */
+    /* grace-row, grace-urgent-row, overdue-row, approaching-row, paid-row, selected-row have been removed */
 
     /* ===== ANIMATIONS ===== */
     @keyframes pulse-urgent {
@@ -372,20 +305,6 @@ JS
 
         100% {
             box-shadow: 0 0 0 0 rgba(253, 126, 20, 0);
-        }
-    }
-
-    @keyframes row-pulse {
-        0% {
-            background-color: #fff3e0;
-        }
-
-        50% {
-            background-color: #ffe0b2;
-        }
-
-        100% {
-            background-color: #fff3e0;
         }
     }
 
@@ -694,13 +613,12 @@ JS
                                         $status = $cuota->estatus;
                                         $dueDateStr = $dueDate->format('Y-m-d');
 
-                                        // Determine status display
+                                        // Determine status display (NO ROW HIGHLIGHTING - rowClass always empty)
                                         $statusBadge = '';
-                                        $rowClass = '';
+                                        $rowClass = ''; // No row highlighting classes
 
                                         if ($status == 'pagada') {
                                             $statusBadge = '<span class="status-badge status-paid"><i class="fas fa-check-circle"></i>PAGADA</span>';
-                                            $rowClass = 'paid-row';
                                         } elseif ($status == 'en_gracias') {
                                             $dueDateObj = new DateTime($dueDateStr);
                                             $todayObj = new DateTime($today);
@@ -710,16 +628,11 @@ JS
 
                                             if ($daysRemaining <= 2) {
                                                 $statusBadge = '<span class="status-badge status-urgent"><i class="fas fa-exclamation-circle"></i> PERÍODO DE GRACIA (' . $daysRemaining . ' días)</span>';
-                                                $rowClass = 'grace-urgent-row';
                                             } else {
                                                 $statusBadge = '<span class="status-badge status-grace"><i class="fas fa-hourglass-half"></i> PERÍODO DE GRACIA (' . $daysRemaining . ' días)</span>';
-                                                $rowClass = 'grace-row';
                                             }
                                         } elseif ($status == 'vencida') {
                                             $statusBadge = '<span class="status-badge status-overdue"><i class="fas fa-exclamation-circle"></i>VENCIDA - PAGAR AHORA</span>';
-                                            $rowClass = 'overdue-row';
-                                            // Add a subtle indicator that it's selectable
-                                            $selectableHint = 'data-tooltip="Esta cuota vencida puede ser pagada"';
                                         } else {
                                             $dueDateObj = new DateTime($dueDateStr);
                                             $todayObj = new DateTime($today);
@@ -727,10 +640,8 @@ JS
 
                                             if ($dueDateStr >= $today && $daysUntilDue <= 3) {
                                                 $statusBadge = '<span class="status-badge status-approaching"><i class="fas fa-clock"></i>PRÓXIMO (' . $daysUntilDue . ' días)</span>';
-                                                $rowClass = 'approaching-row';
                                             } else {
                                                 $statusBadge = '<span class="status-badge status-pending"><i class="fas fa-clock"></i>PENDIENTE</span>';
-                                                $rowClass = '';
                                             }
                                         }
 
@@ -772,7 +683,7 @@ JS
                                                         'id' => 'cuota-' . $cuota->id,
                                                         'class' => 'custom-control-input cuota-checkbox',
                                                         'data-monto' => $monto,
-                                                        // Only disable if already paid - vencidas MUST be selectable!
+                                                        // Only disable if already paid - vencidas ARE selectable
                                                         'disabled' => ($status == 'pagada') ? true : false
                                                     ]) ?>
                                                     <label class="custom-control-label" for="cuota-<?= $cuota->id ?>"></label>
@@ -799,12 +710,8 @@ JS
                     function updateSelectedTotal() {
                         let total = 0;
                         $('.cuota-checkbox').each(function() {
-                            let row = $(this).closest('tr');
                             if ($(this).is(':checked')) {
                                 total += parseFloat($(this).data('monto')) || 0;
-                                row.addClass('selected-row'); 
-                            } else {
-                                row.removeClass('selected-row');
                             }
                         });
                         $('#selected-total').text('$' + total.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));

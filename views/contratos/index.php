@@ -8,8 +8,10 @@ use yii\helpers\Url;
 \yii\bootstrap4\BootstrapAsset::register($this);
 
 $this->title = 'Contratos';
+$dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProvider) ? $contratosDataProvider : null);
 
 ?>
+
 <?php $afiliado_datos = (isset($afiliado) && is_object($afiliado)) ? $afiliado->nombres . ' ' . $afiliado->apellidos . " " . $afiliado->tipo_cedula . ' ' . $afiliado->cedula : ''; ?>
 
 <div class="view-main-container">
@@ -20,10 +22,9 @@ $this->title = 'Contratos';
                 <h2 class="mb-0 font-weight-bold">
                     <i class="fas fa-file-contract mr-2"></i><?= Html::encode($this->title) ?>
                 </h2>
-
             </div>
             <div class="d-flex">
-                <?php if ($searchModel->estatus == 'Anulado'): ?>
+                <?php if (isset($searchModel) && $searchModel->estatus === 'Anulado'): ?>
                     <?= Html::a(
                         '<i class="fas fa-plus mr-2"></i> Nuevo Contrato',
                         ['create'],
@@ -31,17 +32,14 @@ $this->title = 'Contratos';
                     ) ?>
                 <?php endif; ?>
 
-
-
                 <?= Html::a(
                     '<i class="fas fa-undo-alt mr-2"></i> Volver',
                     Url::to(['user-datos/update', 'id' => (is_object($afiliado) ? $afiliado->id : '')]),
                     ['class' => 'btn btn-light btn-sm']
                 ); ?>
-
             </div>
         </div>
-        <?php if ($afiliado_datos): ?>
+        <?php if ($afiliado_datos && $dataProvider): ?>
             <div class="card-body bg-light py-3">
                 <div class="row align-items-center">
                     <div class="col-md-6 mb-3 mb-md-0">
@@ -59,7 +57,7 @@ $this->title = 'Contratos';
                         <div class="text-center">
                             <div class="text-muted small mb-1">Total Contratos</div>
                             <div class="font-weight-bold text-primary display-4">
-                                <?= $dataProvider->getTotalCount() ?>
+                                <?= $dataProvider ? $dataProvider->getTotalCount() : 0 ?>
                             </div>
                         </div>
                     </div>
@@ -85,7 +83,7 @@ $this->title = 'Contratos';
     </div>
 
     <!-- Contracts List -->
-    <?php if ($dataProvider->getTotalCount() > 0): ?>
+    <?php if ($dataProvider && $dataProvider->getTotalCount() > 0): ?>
         <div class="mb-4">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="text-dark mb-0">
@@ -102,7 +100,7 @@ $this->title = 'Contratos';
         <?php foreach ($dataProvider->getModels() as $index => $model): ?>
             <?php
             // Calculate payment statistics for this contract
-            $pagosDelContrato = $model->getPagosDelContrato()->all();
+            $pagosDelContrato = $model->getPagosDelContrato()->orderBy(['fecha_pago' => SORT_ASC])->all();
             $totalPagado = 0;
             $totalPagos = count($pagosDelContrato);
             $lastPaymentDate = null;
@@ -111,6 +109,28 @@ $this->title = 'Contratos';
                 $totalPagado += floatval($pago->monto_pagado);
                 if (!$lastPaymentDate || strtotime($pago->fecha_pago) > strtotime($lastPaymentDate)) {
                     $lastPaymentDate = $pago->fecha_pago;
+                }
+            }
+
+            // Calculate remaining time for contract
+            $remainingDays = null;
+            $remainingStatus = '';
+            $remainingColor = '';
+            if ($model->fecha_ven) {
+                $today = new DateTime();
+                $endDate = new DateTime($model->fecha_ven);
+                if ($today < $endDate) {
+                    $remainingDays = $today->diff($endDate)->days;
+                    $remainingStatus = 'días restantes';
+                    $remainingColor = '#28a745';
+                } elseif ($today > $endDate) {
+                    $remainingDays = $endDate->diff($today)->days;
+                    $remainingStatus = 'días vencido';
+                    $remainingColor = '#dc3545';
+                } else {
+                    $remainingDays = 0;
+                    $remainingStatus = 'finaliza hoy';
+                    $remainingColor = '#ffc107';
                 }
             }
 
@@ -154,12 +174,12 @@ $this->title = 'Contratos';
                                         // Status badges with appropriate colors for dark background
                                         $status = $model->estatus ?: 'Registrado';
                                         $badgeClasses = [
-                                            'Registrado' => 'badge-info',        // Blue for registered
-                                            'Activo' => 'badge-success',         // Green for active
-                                            'Anulado' => 'badge-danger',         // Red for cancelled
-                                            'Vencido' => 'badge-warning',        // Yellow for expired
-                                            'Pendiente' => 'badge-primary',      // Primary blue for pending
-                                            'suspendido' => 'badge-secondary',   // Gray for suspended
+                                            'Registrado' => 'badge-info',
+                                            'Activo' => 'badge-success',
+                                            'Anulado' => 'badge-danger',
+                                            'Vencido' => 'badge-warning',
+                                            'Pendiente' => 'badge-primary',
+                                            'suspendido' => 'badge-secondary',
                                         ];
                                         $class = $badgeClasses[$status] ?? 'badge-light';
                                         echo '<span class="badge ' . $class . ' font-weight-bold text-white">' . $status . '</span>';
@@ -229,7 +249,7 @@ $this->title = 'Contratos';
                 <!-- Contract Details (Collapsible) -->
                 <div id="contractDetails<?= $model->id ?>" class="collapse">
                     <div class="card-body pt-4">
-                        <!-- Contract Summary Cards -->
+                        <!-- Contract Summary Cards - Removed Duración card, added Tiempo Restante -->
                         <div class="row mb-4">
                             <div class="col-md-3 mb-3">
                                 <div class="card border-0 bg-primary text-white h-100 shadow-sm">
@@ -261,37 +281,19 @@ $this->title = 'Contratos';
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div class="card border-0 bg-info text-white h-100 shadow-sm">
+                                <div class="card border-0 h-100 shadow-sm" style="background: linear-gradient(135deg, <?= $remainingColor ?> 0%, <?= $remainingColor ?>cc 100%); color: white;">
                                     <div class="card-body text-center py-4">
                                         <div class="mb-3">
-                                            <i class="fas fa-clock fa-2x"></i>
+                                            <i class="fas fa-hourglass-half fa-2x"></i>
                                         </div>
-                                        <h6 class="card-title font-weight-bold mb-1">Duración</h6>
-                                        <h5 class="mb-0">
-                                            <?php
-                                            if ($model->fecha_ini && $model->fecha_ven) {
-                                                $start = new DateTime($model->fecha_ini);
-                                                $end = new DateTime($model->fecha_ven);
-                                                $interval = $start->diff($end);
-
-                                                $years = $interval->y;
-                                                $months = $interval->m;
-
-                                                if ($years > 0) {
-                                                    echo $years . ' año' . ($years > 1 ? 's' : '');
-                                                    if ($months > 0) {
-                                                        echo ', ' . $months . ' mes' . ($months > 1 ? 'es' : '');
-                                                    }
-                                                } elseif ($months > 0) {
-                                                    echo $months . ' mes' . ($months > 1 ? 'es' : '');
-                                                } else {
-                                                    echo $interval->days . ' días';
-                                                }
-                                            } else {
-                                                echo 'Indefinido';
-                                            }
-                                            ?>
-                                        </h5>
+                                        <h6 class="card-title font-weight-bold mb-1">Tiempo Restante</h6>
+                                        <?php if ($remainingDays !== null): ?>
+                                            <h2 class="mb-0 font-weight-bold"><?= $remainingDays ?></h2>
+                                            <h5 class="mb-2"><?= $remainingStatus ?></h5>
+                                        <?php else: ?>
+                                            <h5 class="mb-0">Contrato Indefinido</h5>
+                                            <small class="opacity-8">Sin fecha de vencimiento</small>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -310,239 +312,381 @@ $this->title = 'Contratos';
                             </div>
                         </div>
 
-                        <!-- Payment Statistics -->
-                        <?php if ($totalPagos > 0): ?>
-                            <div class="row mb-4">
-                                <div class="col-md-12">
-                                    <h5 class="text-dark mb-3">
-                                        <i class="fas fa-chart-bar mr-2 text-info"></i>Estadísticas de Pagos
-                                    </h5>
-                                    <div class="row">
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light h-100 border-0 shadow-sm">
-                                                <div class="card-body text-center py-4">
-                                                    <h6 class="card-title text-muted mb-1">Total Pagos</h6>
-                                                    <h3 class="text-primary"><?= $totalPagos ?></h3>
-                                                    <small class="text-muted">registros</small>
-                                                </div>
-                                            </div>
+                        <!-- Payment History -->
+                        <div class="mb-4">
+                            <!-- Eye-catching Header Section with Collapsible Arrow -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <div style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px; box-shadow: 0 4px 10px rgba(40,167,69,0.2);">
+                                            <i class="fas fa-credit-card" style="color: white; font-size: 22px;"></i>
                                         </div>
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light h-100 border-0 shadow-sm">
-                                                <div class="card-body text-center py-4">
-                                                    <h6 class="card-title text-muted mb-1">Monto Total</h6>
-                                                    <h3 class="text-success"><?= Yii::$app->formatter->asCurrency($totalPagado, 'USD') ?></h3>
-                                                    <small class="text-muted">acumulado</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light h-100 border-0 shadow-sm">
-                                                <div class="card-body text-center py-4">
-                                                    <h6 class="card-title text-muted mb-1">Último Pago</h6>
-                                                    <h5 class="text-info">
-                                                        <?= $lastPaymentDate ? Yii::$app->formatter->asDate($lastPaymentDate, 'php:d/m/Y') : 'N/A' ?>
-                                                    </h5>
-                                                    <small class="text-muted">fecha</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bg-light h-100 border-0 shadow-sm">
-                                                <div class="card-body text-center py-4">
-                                                    <h6 class="card-title text-dark fw-bold mb-1">Promedio</h6>
-
-                                                    <h5 class="text-dark fw-bold">
-                                                        <?= $totalPagos > 0 ? Yii::$app->formatter->asCurrency($totalPagado / $totalPagos, 'USD') : 'N/A' ?>
-                                                    </h5>
-
-                                                    <small class="text-dark">por pago</small>
-                                                </div>
-                                            </div>
+                                        <div>
+                                            <h5 class="mb-0 font-weight-bold" style="color: #2c3e50; font-size: 18px;">
+                                                Historial de Pagos
+                                                <span class="badge ml-2" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); padding: 6px 12px; border-radius: 20px; font-size: 12px;">
+                                                    <i class="fas fa-chart-line mr-1"></i> <?= $totalPagos ?> registro<?= $totalPagos !== 1 ? 's' : '' ?>
+                                                </span>
+                                            </h5>
+                                            <p class="mb-0 mt-1" style="font-size: 12px; color: #6c757d;">
+                                                <i class="fas fa-info-circle mr-1"></i>
+                                                Registro detallado de todas las transacciones realizadas para este contrato
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        <?php endif; ?>
+                                <div class="d-flex align-items-center">
+                                    <?php if ($model->estatus !== 'Anulado'): ?>
+                                        <?= Html::a(
+                                            '<i class="fas fa-plus-circle mr-2"></i> Registrar Nuevo Pago',
+                                            Url::to(['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id]),
+                                            [
+                                                'class' => 'btn btn-success mr-3',
+                                                'style' => 'background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; box-shadow: 0 2px 6px rgba(40,167,69,0.3);',
+                                                'title' => 'Registrar nuevo pago'
+                                            ]
+                                        ) ?>
+                                    <?php endif; ?>
 
-                        <!-- Payment History -->
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="text-dark mb-0">
-                                    <i class="fas fa-credit-card mr-2 text-success"></i>Historial de Pagos
-                                    <span class="badge badge-success ml-2"><?= $totalPagos ?> registro<?= $totalPagos !== 1 ? 's' : '' ?></span>
-                                </h5>
-                                <?php if ($model->estatus !== 'Anulado'): ?>
-                                    <?= Html::a(
-                                        '<i class="fas fa-plus-circle mr-1"></i> Registrar Pago',
-                                        Url::to(['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id]),
-                                        [
-                                            'class' => 'btn btn-success btn-sm',
-                                            'title' => 'Registrar nuevo pago'
-                                        ]
-                                    ) ?>
-                                <?php endif; ?>
+                                    <?php if ($totalPagos > 1): ?>
+                                        <!-- Collapsible Arrow Button -->
+                                        <div class="collapse-arrow" style="cursor: pointer;" data-toggle="collapse" data-target="#paymentHistoryCollapse<?= $model->id ?>" aria-expanded="true">
+                                            <div style="background: #f8f9fa; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                                <i class="fas fa-chevron-up" style="color: #0078d4; font-size: 18px; transition: transform 0.3s ease;"></i>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
 
                             <?php if (!empty($pagosDelContrato)): ?>
-                                <div class="card border-0 shadow-sm">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover mb-0">
-                                            <thead style="background-color: #007bff !important;">
-                                                <tr>
-                                                    <th style="width: 100px;" class="text-center align-middle text-white font-weight-bold">Fecha</th>
-                                                    <th style="width: 120px;" class="text-center align-middle text-white font-weight-bold">Monto USD</th>
-                                                    <th style="width: 120px;" class="text-center align-middle text-white font-weight-bold">Monto Bs</th>
-                                                    <th style="width: 100px;" class="text-center align-middle text-white font-weight-bold">Método</th>
-                                                    <th style="width: 120px;" class="text-center align-middle text-white font-weight-bold">Referencia</th>
-                                                    <th style="width: 80px;" class="text-center align-middle text-white font-weight-bold">Tasa</th>
-                                                    <th style="width: 100px;" class="text-center align-middle text-white font-weight-bold">Comprobante</th>
-                                                    <th style="width: 120px;" class="text-center align-middle text-white font-weight-bold">Estatus</th>
-                                                    <th style="width: 90px;" class="text-center align-middle text-white font-weight-bold">Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($pagosDelContrato as $pago): ?>
+                                <!-- Collapsible Content - Expanded by default -->
+                                <div class="collapse show" id="paymentHistoryCollapse<?= $model->id ?>">
+                                    <!-- Payment Table -->
+                                    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover mb-0" style="font-size: 13px;">
+                                                <thead style="background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);">
                                                     <tr>
-                                                        <td class="text-center align-middle">
-                                                            <span class="font-weight-medium text-dark">
-                                                                <?= Yii::$app->formatter->asDate($pago->fecha_pago, 'php:d/m/Y') ?>
-                                                            </span>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <span class="font-weight-bold text-success">
-                                                                <?= Yii::$app->formatter->asDecimal($pago->monto_pagado, 2) ?> USD
-                                                            </span>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <span class="text-primary">
-                                                                <?= Yii::$app->formatter->asDecimal($pago->monto_usd, 2) ?> Bs
-                                                            </span>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <?php
-                                                            $methods = [
-                                                                'transferencia' => '<i class="fas fa-university mr-1 text-primary"></i>Transferencia',
-                                                                'efectivo' => '<i class="fas fa-money-bill-wave mr-1 text-success"></i>Efectivo',
-                                                                'pago_movil' => '<i class="fas fa-mobile-alt mr-1 text-info"></i>Pago Móvil',
-                                                                'zelle' => '<i class="fas fa-exchange-alt mr-1 text-warning"></i>Zelle',
-                                                                'paypal' => '<i class="fab fa-paypal mr-1 text-danger"></i>PayPal',
-                                                            ];
-                                                            echo isset($methods[$pago->metodo_pago]) ?
-                                                                $methods[$pago->metodo_pago] :
-                                                                '<span class="text-muted">' . ($pago->metodo_pago ?: 'N/A') . '</span>';
-                                                            ?>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <?php if ($pago->numero_referencia_pago): ?>
-                                                                <span class="font-monospace small bg-light py-1 px-2 rounded text-dark">
-                                                                    <?= $pago->numero_referencia_pago ?>
-                                                                </span>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small">Sin ref.</span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <?php if ($pago->tasa): ?>
-                                                                <span class="badge badge-light text-dark">
-                                                                    <?= Yii::$app->formatter->asDecimal($pago->tasa, 2) ?>
-                                                                </span>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small">N/A</span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <?php if ($pago->imagen_prueba): ?>
-                                                                <?= Html::a(
-                                                                    '<i class="fas fa-file-invoice-dollar mr-1"></i>Ver',
-                                                                    $pago->imagen_prueba,
-                                                                    [
-                                                                        'target' => '_blank',
-                                                                        'title' => 'Ver comprobante de pago',
-                                                                        'class' => 'btn btn-sm btn-outline-primary'
-                                                                    ]
-                                                                ) ?>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small"><i class="fas fa-ban mr-1"></i>Sin comp.</span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <?php
-                                                            $badges = [
-                                                                'Conciliado' => 'badge-success',
-                                                                'Por Conciliar' => 'badge-warning',
-                                                                'pendiente' => 'badge-info',
-                                                                'cancelado' => 'badge-danger',
-                                                                'verificado' => 'badge-primary',
-                                                            ];
-                                                            $estatus = $pago->estatus ?? 'Por Conciliar';
-                                                            $class = $badges[$estatus] ?? 'badge-secondary';
-                                                            $icons = [
-                                                                'Conciliado' => 'fas fa-check-circle',
-                                                                'Por Conciliar' => 'fas fa-clock',
-                                                                'pendiente' => 'fas fa-hourglass-half',
-                                                                'cancelado' => 'fas fa-times-circle',
-                                                                'verificado' => 'fas fa-check-double',
-                                                            ];
-                                                            $icon = isset($icons[$estatus]) ? '<i class="' . $icons[$estatus] . ' mr-1"></i>' : '';
-                                                            echo Html::tag('span', $icon . $estatus, [
-                                                                'class' => "badge $class py-1 px-2"
-                                                            ]);
-                                                            ?>
-                                                        </td>
-                                                        <td class="text-center align-middle">
-                                                            <div class="btn-group btn-group-sm">
-                                                                <?= Html::a(
-                                                                    '<i class="fas fa-eye"></i>',
-                                                                    Url::to(['pagos/view', 'id' => $pago->id]),
-                                                                    [
-                                                                        'title' => 'Ver detalles del pago',
-                                                                        'class' => 'btn btn-outline-info'
-                                                                    ]
-                                                                ) ?>
-                                                                <?= Html::a(
-                                                                    '<i class="fas fa-edit"></i>',
-                                                                    Url::to(['pagos/update', 'id' => $pago->id]),
-                                                                    [
-                                                                        'title' => 'Editar pago',
-                                                                        'class' => 'btn btn-outline-warning'
-                                                                    ]
-                                                                ) ?>
-                                                            </div>
-                                                        </td>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 50px; padding: 15px 8px; color: #ffffff !important;">#</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 100px; padding: 15px 8px; color: #ffffff !important;">Fecha</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 110px; padding: 15px 8px; color: #ffffff !important;">Monto USD</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 110px; padding: 15px 8px; color: #ffffff !important;">Monto Bs</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 90px; padding: 15px 8px; color: #ffffff !important;">Tasa</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 100px; padding: 15px 8px; color: #ffffff !important;">Método</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 120px; padding: 15px 8px; color: #ffffff !important;">Referencia</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 100px; padding: 15px 8px; color: #ffffff !important;">Comprobante</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 110px; padding: 15px 8px; color: #ffffff !important;">Estatus</th>
+                                                        <th class="text-center align-middle text-white font-weight-bold" style="width: 100px; padding: 15px 8px; color: #ffffff !important;">Acciones</th>
                                                     </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div class="card-footer bg-light border-top py-2">
-                                        <div class="row">
-                                            <div class="col-md-8">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-info-circle mr-1"></i>
-                                                    <?php if ($model->estatus === 'Anulado'): ?>
-                                                        Se muestran solo los pagos realizados antes de la anulación (<?= $model->anulado_fecha ? Yii::$app->formatter->asDate($model->anulado_fecha, 'php:d/m/Y') : 'N/A' ?>).
-                                                    <?php else: ?>
-                                                        Se muestran los pagos realizados durante la vigencia del contrato.
-                                                    <?php endif; ?>
-                                                </small>
+                                                </thead>
+                                                <tbody>
+                                                    <?php $paymentCounter = 1; ?>
+                                                    <?php foreach ($pagosDelContrato as $pago): ?>
+                                                        <?php
+                                                        // Calculate Tasa = Monto Bs / Monto USD
+                                                        $tasaCalculada = '';
+                                                        if ($pago->monto_pagado > 0 && $pago->monto_usd > 0) {
+                                                            $tasaCalculada = number_format($pago->monto_usd / $pago->monto_pagado, 2);
+                                                        } elseif ($pago->tasa) {
+                                                            $tasaCalculada = number_format($pago->tasa, 2);
+                                                        } else {
+                                                            $tasaCalculada = 'N/A';
+                                                        }
+                                                        ?>
+                                                        <tr style="border-bottom: 1px solid #f0f0f0; transition: all 0.2s ease;">
+                                                            <td class="text-center align-middle" style="background-color: #f8f9fa;">
+                                                                <span class="badge" style="background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%); color: white; padding: 6px 10px; border-radius: 8px; font-size: 12px; min-width: 40px; display: inline-block;">
+                                                                    <?= str_pad($paymentCounter, 2, '0', STR_PAD_LEFT) ?>
+                                                                </span>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <span class="font-weight-medium text-dark">
+                                                                    <i class="fas fa-calendar-day text-muted mr-1" style="font-size: 11px;"></i>
+                                                                    <?= Yii::$app->formatter->asDate($pago->fecha_pago, 'php:d/m/Y') ?>
+                                                                </span>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <span class="font-weight-bold text-success" style="font-size: 15px;">
+                                                                    <i class="fas fa-dollar-sign mr-1" style="font-size: 11px;"></i>
+                                                                    <?= Yii::$app->formatter->asDecimal($pago->monto_pagado, 2) ?>
+                                                                </span>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <span class="font-weight-bold text-primary">
+                                                                    <i class="fas fa-chart-line mr-1" style="font-size: 11px;"></i>
+                                                                    <?= Yii::$app->formatter->asDecimal($pago->monto_usd, 2) ?>
+                                                                </span>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <?php if ($tasaCalculada !== 'N/A'): ?>
+                                                                    <span class="badge" style="background-color: #e9ecef; color: #495057; padding: 5px 8px; font-size: 11px; font-weight: 600; border-radius: 6px;">
+                                                                        <i class="fas fa-exchange-alt mr-1"></i> <?= $tasaCalculada ?>
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <span class="text-muted small">N/A</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <?php
+                                                                $methods = [
+                                                                    'transferencia' => '<span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-university mr-1"></i>Transferencia</span>',
+                                                                    'transferencia_bancaria' => '<span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-university mr-1"></i>Transferencia</span>',
+                                                                    'efectivo' => '<span class="badge" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-money-bill-wave mr-1"></i>Efectivo</span>',
+                                                                    'efectivo_dolar' => '<span class="badge" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-dollar-sign mr-1"></i>Efectivo USD</span>',
+                                                                    'Efectivo - Dólar ($)' => '<span class="badge" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-dollar-sign mr-1"></i>Efectivo USD</span>',
+                                                                    'pago_movil' => '<span class="badge" style="background: linear-gradient(135deg, #17a2b8 0%, #0f6c7a 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-mobile-alt mr-1"></i>Pago Móvil</span>',
+                                                                    'pagomovil' => '<span class="badge" style="background: linear-gradient(135deg, #17a2b8 0%, #0f6c7a 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-mobile-alt mr-1"></i>Pago Móvil</span>',
+                                                                    'zelle' => '<span class="badge" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fab fa-zelle mr-1"></i>Zelle</span>',
+                                                                    'paypal' => '<span class="badge" style="background: linear-gradient(135deg, #003087 0%, #001f6b 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fab fa-paypal mr-1"></i>PayPal</span>',
+                                                                ];
+                                                                $methodKey = strtolower(trim($pago->metodo_pago));
+                                                                echo isset($methods[$methodKey]) ? $methods[$methodKey] : '<span class="badge badge-secondary">' . ($pago->metodo_pago ?: 'N/A') . '</span>';
+                                                                ?>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <?php if ($pago->numero_referencia_pago): ?>
+                                                                    <code class="font-monospace small" style="background: #f5f5f5; padding: 4px 8px; border-radius: 6px; font-size: 11px;">
+                                                                        <i class="fas fa-hashtag mr-1" style="color: #6c757d;"></i>
+                                                                        <?= $pago->numero_referencia_pago ?>
+                                                                    </code>
+                                                                <?php else: ?>
+                                                                    <span class="text-muted small"><i class="fas fa-ban mr-1"></i>Sin ref.</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <?php if ($pago->imagen_prueba): ?>
+                                                                    <?= Html::a(
+                                                                        '<i class="fas fa-file-invoice-dollar mr-1"></i>Ver',
+                                                                        $pago->imagen_prueba,
+                                                                        [
+                                                                            'target' => '_blank',
+                                                                            'title' => 'Ver comprobante de pago',
+                                                                            'class' => 'btn btn-sm btn-outline-primary',
+                                                                            'style' => 'border-radius: 6px; padding: 4px 10px; font-size: 11px;'
+                                                                        ]
+                                                                    ) ?>
+                                                                <?php else: ?>
+                                                                    <span class="text-muted small"><i class="fas fa-ban mr-1"></i>Sin comp.</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <?php
+                                                                $badges = [
+                                                                    'Conciliado' => '<span class="badge" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-check-circle mr-1"></i>Conciliado</span>',
+                                                                    'Por Conciliar' => '<span class="badge" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-clock mr-1"></i>Por Conciliar</span>',
+                                                                    'pendiente' => '<span class="badge" style="background: linear-gradient(135deg, #17a2b8 0%, #0f6c7a 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-hourglass-half mr-1"></i>Pendiente</span>',
+                                                                    'cancelado' => '<span class="badge" style="background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-times-circle mr-1"></i>Cancelado</span>',
+                                                                    'verificado' => '<span class="badge" style="background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px;"><i class="fas fa-check-double mr-1"></i>Verificado</span>',
+                                                                ];
+                                                                $estatus = $pago->estatus ?? 'Por Conciliar';
+                                                                echo isset($badges[$estatus]) ? $badges[$estatus] : '<span class="badge badge-secondary">' . $estatus . '</span>';
+                                                                ?>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                <div class="btn-group btn-group-sm" role="group">
+                                                                    <?= Html::a(
+                                                                        '<i class="fas fa-eye"></i>',
+                                                                        Url::to(['pagos/view', 'id' => $pago->id]),
+                                                                        [
+                                                                            'title' => 'Ver detalles del pago',
+                                                                            'class' => 'btn btn-outline-info btn-sm',
+                                                                            'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
+                                                                        ]
+                                                                    ) ?>
+                                                                    <?= Html::a(
+                                                                        '<i class="fas fa-edit"></i>',
+                                                                        Url::to(['pagos/update', 'id' => $pago->id]),
+                                                                        [
+                                                                            'title' => 'Editar pago',
+                                                                            'class' => 'btn btn-outline-warning btn-sm',
+                                                                            'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
+                                                                        ]
+                                                                    ) ?>
+                                                                    <?php
+                                                                    $receipts = \app\components\ReceiptGenerator::getReceiptsForPayment($pago->id);
+                                                                    if (!empty($receipts)):
+                                                                    ?>
+                                                                        <?php if (count($receipts) == 1): ?>
+                                                                            <?= Html::a(
+                                                                                '<i class="fas fa-receipt"></i>',
+                                                                                Url::to(['receipts/print', 'id' => $receipts[0]->id, 'auto_print' => 1]),
+                                                                                [
+                                                                                    'title' => 'Imprimir Recibo',
+                                                                                    'class' => 'btn btn-outline-success btn-sm',
+                                                                                    'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;',
+                                                                                    'target' => '_blank'
+                                                                                ]
+                                                                            ) ?>
+                                                                        <?php else: ?>
+                                                                            <div class="btn-group">
+                                                                                <?= Html::a(
+                                                                                    '<i class="fas fa-receipt"></i>',
+                                                                                    '#',
+                                                                                    [
+                                                                                        'title' => 'Imprimir Recibos (' . count($receipts) . ')',
+                                                                                        'class' => 'btn btn-outline-success btn-sm dropdown-toggle',
+                                                                                        'data-toggle' => 'dropdown',
+                                                                                        'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;',
+                                                                                    ]
+                                                                                ) ?>
+                                                                                <div class="dropdown-menu">
+                                                                                    <?= Html::a(
+                                                                                        '<i class="fas fa-print mr-2"></i> Imprimir todos (' . count($receipts) . ')',
+                                                                                        Url::to(['receipts/print-all', 'paymentId' => $pago->id, 'auto_print' => 1]),
+                                                                                        ['class' => 'dropdown-item', 'target' => '_blank']
+                                                                                    ) ?>
+                                                                                    <div class="dropdown-divider"></div>
+                                                                                    <?php foreach ($receipts as $receipt): ?>
+                                                                                        <?= Html::a(
+                                                                                            '<i class="fas fa-receipt mr-2"></i> ' . $receipt->receipt_number,
+                                                                                            Url::to(['receipts/print', 'id' => $receipt->id, 'auto_print' => 1]),
+                                                                                            ['class' => 'dropdown-item', 'target' => '_blank']
+                                                                                        ) ?>
+                                                                                    <?php endforeach; ?>
+                                                                                </div>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    <?php else: ?>
+                                                                        <?= Html::a(
+                                                                            '<i class="fas fa-receipt"></i>',
+                                                                            '#',
+                                                                            [
+                                                                                'title' => 'Sin recibos generados',
+                                                                                'class' => 'btn btn-outline-secondary btn-sm disabled',
+                                                                                'style' => 'opacity: 0.5; cursor: not-allowed; border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
+                                                                            ]
+                                                                        ) ?>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <?php $paymentCounter++; ?>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                                <tfoot style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-top: 2px solid #dee2e6;">
+                                                    <tr>
+                                                        <td colspan="2" class="text-right font-weight-bold" style="padding: 12px;">
+                                                            <i class="fas fa-chart-line mr-1 text-primary"></i> Totales:
+                                                        </td>
+                                                        <td class="text-center font-weight-bold text-success" style="padding: 12px; font-size: 16px;">
+                                                            <i class="fas fa-dollar-sign mr-1"></i> <?= number_format(array_sum(array_map(function ($p) {
+                                                                                                        return $p->monto_pagado;
+                                                                                                    }, $pagosDelContrato)), 2) ?>
+                                                        </td>
+                                                        <td class="text-center font-weight-bold text-primary" style="padding: 12px; font-size: 16px;">
+                                                            <i class="fas fa-chart-line mr-1"></i> <?= number_format(array_sum(array_map(function ($p) {
+                                                                                                        return $p->monto_usd;
+                                                                                                    }, $pagosDelContrato)), 2) ?>
+                                                        </td>
+                                                        <td colspan="6"></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+
+                                        <!-- Summary Cards Row - MOVED TO THE END AFTER THE TABLE -->
+                                        <div class="row p-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-top: 1px solid #e1e1e1;">
+                                            <div class="col-md-3">
+                                                <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                                    <div class="card-body text-center py-3">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <small class="text-white-50" style="font-size: 11px;">TOTAL PAGOS</small>
+                                                                <h3 class="text-white mb-0 font-weight-bold" style="font-size: 28px;"><?= $totalPagos ?></h3>
+                                                            </div>
+                                                            <div class="bg-white rounded-circle p-2" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="fas fa-receipt" style="color: #667eea; font-size: 20px;"></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="col-md-4 text-right">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-sync-alt mr-1"></i>
-                                                    Actualizado: <?= date('d/m/Y H:i') ?>
-                                                </small>
+                                            <div class="col-md-3">
+                                                <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);">
+                                                    <div class="card-body text-center py-3">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <small class="text-white-50" style="font-size: 11px;">TOTAL USD</small>
+                                                                <h3 class="text-white mb-0 font-weight-bold" style="font-size: 28px;">$ <?= number_format(array_sum(array_map(function ($p) {
+                                                                                                                                            return $p->monto_pagado;
+                                                                                                                                        }, $pagosDelContrato)), 0) ?></h3>
+                                                            </div>
+                                                            <div class="bg-white rounded-circle p-2" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="fas fa-dollar-sign" style="color: #28a745; font-size: 20px;"></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #17a2b8 0%, #0f6c7a 100%);">
+                                                    <div class="card-body text-center py-3">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <small class="text-white-50" style="font-size: 11px;">TOTAL BS</small>
+                                                                <h3 class="text-white mb-0 font-weight-bold" style="font-size: 28px;">Bs <?= number_format(array_sum(array_map(function ($p) {
+                                                                                                                                                return $p->monto_usd;
+                                                                                                                                            }, $pagosDelContrato)), 0) ?></h3>
+                                                            </div>
+                                                            <div class="bg-white rounded-circle p-2" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="fas fa-chart-line" style="color: #17a2b8; font-size: 20px;"></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);">
+                                                    <div class="card-body text-center py-3">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <small class="text-dark-50" style="font-size: 11px; color: rgba(0,0,0,0.6);">PROMEDIO PAGO</small>
+                                                                <h3 class="mb-0 font-weight-bold" style="font-size: 28px; color: #212529;">$ <?= number_format(array_sum(array_map(function ($p) {
+                                                                                                                                                    return $p->monto_pagado;
+                                                                                                                                                }, $pagosDelContrato)) / $totalPagos, 2) ?></h3>
+                                                            </div>
+                                                            <div class="bg-white rounded-circle p-2" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="fas fa-calculator" style="color: #ffc107; font-size: 20px;"></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card-footer" style="background: #f8f9fa; border-top: 1px solid #e1e1e1; padding: 12px 20px;">
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle mr-1"></i>
+                                                        <?php if ($model->estatus === 'Anulado'): ?>
+                                                            Se muestran solo los pagos realizados antes de la anulación (<?= $model->anulado_fecha ? Yii::$app->formatter->asDate($model->anulado_fecha, 'php:d/m/Y') : 'N/A' ?>).
+                                                        <?php else: ?>
+                                                            <i class="fas fa-check-circle text-success mr-1"></i> Historial completo de pagos realizados durante la vigencia del contrato.
+                                                        <?php endif; ?>
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4 text-right">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-sync-alt mr-1"></i>
+                                                        Actualizado: <?= date('d/m/Y H:i') ?>
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             <?php else: ?>
-                                <div class="card border-warning">
+                                <!-- Empty State -->
+                                <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);">
                                     <div class="card-body text-center py-5">
                                         <div class="mb-4">
-                                            <i class="fas fa-credit-card fa-4x text-muted mb-3"></i>
-                                            <h5 class="text-muted">No hay pagos registrados para este contrato</h5>
-                                            <p class="text-muted mb-0">No se han registrado pagos durante el periodo activo del contrato.</p>
+                                            <div style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                                <i class="fas fa-credit-card fa-3x text-white"></i>
+                                            </div>
+                                            <h5 class="text-dark mb-2 font-weight-bold" style="font-size: 18px;">No hay pagos registrados</h5>
+                                            <p class="text-muted mb-0" style="font-size: 13px;">No se han registrado pagos para este contrato hasta el momento.</p>
                                         </div>
                                         <?php if ($model->estatus !== 'Anulado'): ?>
                                             <div class="mt-4">
@@ -550,7 +694,8 @@ $this->title = 'Contratos';
                                                     '<i class="fas fa-plus-circle mr-2"></i> Registrar Primer Pago',
                                                     Url::to(['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id]),
                                                     [
-                                                        'class' => 'btn btn-success',
+                                                        'class' => 'btn btn-success btn-lg py-2 px-4',
+                                                        'style' => 'background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); border: none; border-radius: 10px; font-weight: 600; box-shadow: 0 4px 10px rgba(40,167,69,0.3);',
                                                         'title' => 'Registrar el primer pago para este contrato'
                                                     ]
                                                 ) ?>
@@ -582,12 +727,21 @@ $this->title = 'Contratos';
                                         ['class' => 'btn btn-success btn-sm mr-2']
                                     ) ?>
 
-                                    <!-- ANULAR BUTTON - Only for Superadmin and GERENTE-COMERCIALIZACION -->
-                                    <?php if (Yii::$app->user->can('superadmin') || Yii::$app->user->can('GERENTE-COMERCIALIZACION')): ?>
+                                    <!-- ANULAR BUTTON - Available for Superadmin, GERENTE-COMERCIALIZACION, and GERENTE-CLINICA -->
+                                    <?php if (
+                                        Yii::$app->user->can('superadmin') ||
+                                        Yii::$app->user->can('GERENTE-COMERCIALIZACION') ||
+                                        Yii::$app->user->can('GERENTE-CLINICA')
+                                    ): ?>
                                         <?= Html::a(
                                             '<i class="fas fa-ban mr-1"></i> Anular Contrato',
                                             ['contratos/anular-form', 'id' => $model->id],
-                                            ['class' => 'btn btn-danger btn-sm']
+                                            [
+                                                'class' => 'btn btn-danger btn-sm',
+                                                'style' => 'transition: all 0.2s ease;',
+                                                'data-toggle' => 'tooltip',
+                                                'title' => 'Anular este contrato (acción irreversible)'
+                                            ]
                                         ) ?>
                                     <?php endif; ?>
 
@@ -792,495 +946,181 @@ $this->title = 'Contratos';
     <?php endif; ?>
 </div>
 
-<!-- Custom CSS for Bootstrap 4 -->
-<style>
-    .view-main-container {
-        padding: 20px;
-        background-color: #f8f9fa;
-        min-height: 100vh;
-    }
-
-    /* Card styling */
-    .card {
-        border-radius: 0.5rem;
-        border: 1px solid #e9ecef;
-        margin-bottom: 1rem;
-        overflow: hidden;
-    }
-
-    .card-header {
-        border-radius: 0.5rem 0.5rem 0 0 !important;
-        border-bottom: 1px solid #e9ecef;
-    }
-
-    /* Left border for contract cards */
-    .border-left-success {
-        border-left: 4px solid #28a745 !important;
-    }
-
-    .border-left-danger {
-        border-left: 4px solid #dc3545 !important;
-    }
-
-    .border-left-secondary {
-        border-left: 4px solid #6c757d !important;
-    }
-
-    /* Contract card specific styling */
-    .contract-card {
-        transition: all 0.3s ease;
-    }
-
-    .contract-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    .contract-toggle-icon {
-        transition: transform 0.3s ease;
-    }
-
-    .contract-card .card-header:hover {
-        background-color: #f8f9fa;
-    }
-
-    /* Table styling */
-    .table thead th {
-        border-bottom: 2px solid #dee2e6;
-        vertical-align: middle;
-        background-color: #343a40;
-        color: white;
-    }
-
-    .table tbody tr {
-        transition: background-color 0.2s ease;
-    }
-
-    .table tbody tr:hover {
-        background-color: rgba(0, 123, 255, 0.05);
-    }
-
-    /* Badge styling */
-    .badge {
-        font-size: 0.85em;
-        font-weight: 500;
-        padding: 0.35em 0.65em;
-        border-radius: 0.25rem;
-    }
-
-    /* Button styling */
-    .btn-group-sm>.btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    /* Font monospace for references */
-    .font-monospace {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 0.85em;
-    }
-
-    /* Display classes */
-    .display-4 {
-        font-size: 2.5rem;
-        font-weight: 300;
-        line-height: 1.2;
-    }
-
-    /* Background colors for summary cards */
-    .bg-primary {
-        background-color: #007bff !important;
-    }
-
-    .bg-success {
-        background-color: #28a745 !important;
-    }
-
-    .bg-info {
-        background-color: #17a2b8 !important;
-    }
-
-    .bg-warning {
-        background-color: #ffc107 !important;
-        color: #212529;
-    }
-
-    .bg-danger {
-        background-color: #dc3545 !important;
-    }
-
-    /* Text colors */
-    .text-white {
-        color: #fff !important;
-    }
-
-    .text-muted {
-        color: #6c757d !important;
-    }
-
-    .text-dark {
-        color: #343a40 !important;
-    }
-
-    .text-primary {
-        color: #007bff !important;
-    }
-
-    .text-success {
-        color: #28a745 !important;
-    }
-
-    .text-info {
-        color: #17a2b8 !important;
-    }
-
-    .text-warning {
-        color: #ffffff !important;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .view-main-container {
-            padding: 10px;
-        }
-
-        .d-flex.justify-content-between.align-items-start {
-            flex-direction: column;
-        }
-
-        .d-flex.align-items-start.w-75 {
-            width: 100% !important;
-            margin-bottom: 15px;
-        }
-
-        .d-flex.flex-column.align-items-end {
-            width: 100%;
-            align-items: flex-start !important;
-        }
-
-        .d-flex.flex-column.align-items-end>div {
-            text-align: left !important;
-        }
-
-        .display-4 {
-            font-size: 2rem;
-        }
-
-        .d-flex.flex-wrap>div {
-            margin-bottom: 5px;
-        }
-
-        .table-responsive {
-            font-size: 0.85em;
-        }
-
-        .table th,
-        .table td {
-            padding: 0.5rem;
-        }
-
-        .card-body .row>div[class^="col-"] {
-            margin-bottom: 15px;
-        }
-
-        .card-header .d-flex {
-            flex-direction: column;
-        }
-
-        .card-header .d-flex>div {
-            width: 100%;
-        }
-    }
-
-    /* Print styles */
-    @media print {
-        .contract-card .card-header {
-            background-color: #fff !important;
-            color: #000 !important;
-        }
-
-        .btn {
-            display: none !important;
-        }
-
-        .contract-card {
-            break-inside: avoid;
-        }
-    }
-
-    /* Contract Header Styles */
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #0069d9 0%, #0056b3 100%) !important;
-    }
-
-    .text-white-80 {
-        color: rgba(255, 255, 255, 0.85) !important;
-    }
-
-    .text-white-60 {
-        color: rgba(255, 255, 255, 0.6) !important;
-    }
-
-    .contract-card .card-header {
-        border-radius: 0.5rem 0.5rem 0 0 !important;
-        transition: all 0.3s ease;
-    }
-
-    .contract-card .card-header:hover {
-        background: linear-gradient(135deg, #0056b3 0%, #004085 100%) !important;
-    }
-
-    .status-badge .badge {
-        font-size: 0.75rem;
-        padding: 0.35rem 0.65rem;
-        font-weight: 600;
-        border-radius: 4px;
-    }
-
-    /* Contract toggle icon animation */
-    .contract-toggle-icon {
-        transition: transform 0.3s ease;
-    }
-
-    .contract-card .card-header:hover .contract-toggle-icon {
-        transform: scale(1.1);
-    }
-
-    /* Left border colors */
-    .border-left-success {
-        border-left: 4px solid #28a745 !important;
-    }
-
-    .border-left-danger {
-        border-left: 4px solid #dc3545 !important;
-    }
-
-    .border-left-secondary {
-        border-left: 4px solid #6c757d !important;
-    }
-
-    /* Responsive adjustments for contract header */
-    @media (max-width: 992px) {
-        .contract-card .card-header .d-flex {
-            flex-direction: column;
-            align-items: flex-start !important;
-        }
-
-        .contract-card .card-header .d-flex>div:last-child {
-            margin-top: 15px;
-            width: 100%;
-            justify-content: space-between !important;
-        }
-
-        .d-flex.flex-wrap>div {
-            margin-bottom: 5px;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .contract-card .card-header .d-flex.justify-content-between {
-            flex-direction: column;
-        }
-
-        .contract-card .card-header .d-flex.align-items-center {
-            flex-direction: column;
-            align-items: flex-start !important;
-            width: 100%;
-        }
-
-        .contract-card .card-header .d-flex.align-items-center>div:last-child {
-            margin-top: 15px;
-            width: 100%;
-            flex-direction: column;
-            align-items: flex-start !important;
-        }
-
-        .contract-card .card-header .d-flex.align-items-center>div:last-child>div {
-            margin-bottom: 10px;
-            margin-right: 0 !important;
-            text-align: left !important;
-        }
-    }
-
-    /* Status badge styling for dark background */
-    .status-badge .badge-info {
-        background-color: #17a2b8 !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge-success {
-        background-color: #28a745 !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge-danger {
-        background-color: #dc3545 !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge-warning {
-        background-color: #ffc107 !important;
-        color: #212529 !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge-primary {
-        background-color: #007bff !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge-secondary {
-        background-color: #6c757d !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge-light {
-        background-color: #f8f9fa !important;
-        color: #212529 !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .status-badge .badge {
-        font-size: 0.75rem;
-        padding: 0.35rem 0.65rem;
-        font-weight: 600;
-        border-radius: 4px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Payment history table styling */
-    .table-dark {
-        background-color: #343a40;
-        color: white;
-    }
-
-    .table-dark thead th {
-        background-color: #212529;
-        border-color: #454d55;
-        color: white !important;
-    }
-
-    .table-dark tbody tr {
-        background-color: #343a40;
-        border-color: #454d55;
-    }
-
-    .table-dark tbody tr:hover {
-        background-color: #3e444a;
-    }
-
-    /* Ensure all text in table is white */
-    .table-dark td,
-    .table-dark th,
-    .table-dark span,
-    .table-dark small {
-        color: white !important;
-    }
-
-    /* Override specific text colors to ensure visibility */
-    .table-dark .text-success {
-        color: #75b798 !important;
-        /* Lighter green for dark background */
-        font-weight: bold;
-    }
-
-    .table-dark .text-primary {
-        color: #8bb9fe !important;
-        /* Lighter blue for dark background */
-    }
-
-    .table-dark .text-warning {
-        color: #ffd351 !important;
-        /* Lighter yellow for dark background */
-    }
-
-    /* Button styling for dark table */
-    .btn-outline-light {
-        color: white;
-        border-color: #6c757d;
-    }
-
-    .btn-outline-light:hover {
-        color: #212529;
-        background-color: white;
-        border-color: white;
-    }
-
-    /* Badge styling for dark background */
-    .table-dark .badge-light {
-        background-color: #e9ecef;
-        color: #212529 !important;
-    }
-
-    /* Text opacity classes */
-    .text-white-80 {
-        color: rgba(255, 255, 255, 0.8) !important;
-    }
-
-    /* Card footer for payment history */
-    .card-footer.bg-dark {
-        background-color: #212529 !important;
-        border-top: 1px solid #495057;
-    }
-
-    /* Force white text in table header */
-    .table thead th.text-white {
-        color: white !important;
-        background-color: #007bff !important;
-    }
-
-    /* Specific styling for payment history table header */
-    .card .table thead {
-        background-color: #007bff !important;
-    }
-
-    .card .table thead th {
-        color: white !important;
-        border-bottom: 2px solid #0056b3;
-    }
-
-    /* Ensure the header background stays primary blue */
-    .table thead.bg-primary {
-        background-color: #007bff !important;
-    }
-
-    /* Remove any conflicting Bootstrap styles */
-    .table thead th {
-        color: white !important;
-    }
-
-    /* Modal styles */
-    .modal-lg {
-        max-width: 800px;
-    }
-
-    .required-field::after {
-        content: " *";
-        color: #dc3545;
-        font-weight: bold;
-    }
-
-    .table-borderless th,
-    .table-borderless td {
-        border: none;
-        padding: 0.25rem 0.5rem;
-    }
-
-    .table-borderless th {
-        font-weight: 600;
-        color: #495057;
-    }
-</style>
-
-<!-- JavaScript for Bootstrap 4 interactions and Anular functionality -->
+<!-- JavaScript for Bootstrap 4 interactions and Collapsible functionality -->
 <?php
 // Register Bootstrap 4 JavaScript properly
 \yii\bootstrap4\BootstrapPluginAsset::register($this);
+
+$this->registerCss(
+    <<<CSS
+    /* Microsoft Fluent Design System */
+    :root {
+        --ms-blue: #0078d4;
+        --ms-blue-dark: #005a9e;
+        --ms-gray-100: #f3f2f1;
+        --ms-gray-200: #e1dfdd;
+        --ms-gray-300: #c8c6c4;
+        --ms-red: #d13438;
+        --ms-green: #107c10;
+        --ms-yellow: #ffb900;
+    }
+    
+    /* Card styling with subtle borders and shadows */
+    .card {
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+        transition: box-shadow 0.2s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    /* Microsoft-inspired badge styling */
+    .badge {
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        padding: 6px 12px;
+        border-radius: 16px;
+    }
+    
+    /* Button styling with Fluent Design */
+    .btn {
+        border-radius: 6px;
+        font-weight: 500;
+        padding: 6px 16px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-sm {
+        padding: 4px 12px;
+        font-size: 12px;
+    }
+    
+    /* Table header styling */
+    .table thead th {
+        border-bottom: 2px solid var(--ms-gray-200);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Status badges specific colors */
+    .badge-success {
+        background: linear-gradient(135deg, var(--ms-green) 0%, #0b5e0b 100%);
+    }
+    
+    .badge-danger {
+        background: linear-gradient(135deg, var(--ms-red) 0%, #a80000 100%);
+    }
+    
+    .badge-warning {
+        background: linear-gradient(135deg, var(--ms-yellow) 0%, #e6a700 100%);
+        color: #212529;
+    }
+    
+    .badge-info {
+        background: linear-gradient(135deg, var(--ms-blue) 0%, var(--ms-blue-dark) 100%);
+    }
+    
+    /* Form control styling */
+    .form-control {
+        border-radius: 6px;
+        border: 1px solid var(--ms-gray-200);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .form-control:focus {
+        border-color: var(--ms-blue);
+        box-shadow: 0 0 0 2px rgba(0,120,212,0.25);
+    }
+    
+    /* Modal styling */
+    .modal-content {
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid var(--ms-gray-200);
+        padding: 16px 24px;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid var(--ms-gray-200);
+        padding: 16px 24px;
+    }
+    
+    /* Page header styling */
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, var(--ms-blue) 0%, var(--ms-blue-dark) 100%) !important;
+        border-bottom: none;
+    }
+    
+    /* Icon circles */
+    .rounded-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Hover effects for interactive elements */
+    .contract-card .card-header {
+        transition: background 0.2s ease;
+    }
+    
+    .contract-card .card-header:hover {
+        filter: brightness(1.05);
+    }
+    
+    /* Code styling for reference numbers */
+    code {
+        background: var(--ms-gray-100);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 12px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .display-4 {
+            font-size: 2rem;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+        
+        .table {
+            font-size: 11px;
+        }
+    }
+    
+    /* Microsoft-themed scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--ms-gray-100);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--ms-gray-300);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--ms-gray-200);
+    }
+CSS
+);
 
 $this->registerJs(
     <<<JS
@@ -1305,29 +1145,63 @@ $(document).ready(function() {
         }
     });
 
-    /* Auto-expand the first contract
-    if ($('.contract-card').length > 0 && $('.collapse.show').length === 0) {
-        const firstContract = $('.contract-card:first');
-        const firstHeader = firstContract.find('.card-header');
-        const firstCollapse = firstContract.find('.collapse');
-
-        firstCollapse.addClass('show');
-        firstHeader.attr('aria-expanded', 'true');
-        firstHeader.find('.contract-toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-    }*/
-
-    // Add smooth hover effects to buttons
+    // Toggle arrow icon when collapsing/expanding payment history
+    $('[id^="paymentHistoryCollapse"]').on('show.bs.collapse', function () {
+        $(this).closest('.mb-4').find('.collapse-arrow i').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        $(this).closest('.mb-4').find('.collapse-arrow div').css('transform', 'rotate(0deg)');
+    });
+    
+    $('[id^="paymentHistoryCollapse"]').on('hide.bs.collapse', function () {
+        $(this).closest('.mb-4').find('.collapse-arrow i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        $(this).closest('.mb-4').find('.collapse-arrow div').css('transform', 'rotate(180deg)');
+    });
+    
+    // Hover effect for collapse arrow
+    $('.collapse-arrow').hover(
+        function() {
+            $(this).find('div').css({
+                'background': '#e9ecef',
+                'transform': 'scale(1.1)',
+                'box-shadow': '0 4px 10px rgba(0,0,0,0.15)'
+            });
+        },
+        function() {
+            $(this).find('div').css({
+                'background': '#f8f9fa',
+                'transform': 'scale(1)',
+                'box-shadow': '0 2px 5px rgba(0,0,0,0.1)'
+            });
+        }
+    );
+    
+    // Add smooth hover effects to buttons (Microsoft Fluent Design)
     $('.btn').hover(
         function() {
             $(this).css({
                 'transform': 'translateY(-2px)',
-                'transition': 'transform 0.2s ease',
-                'box-shadow': '0 4px 8px rgba(0,0,0,0.1)'
+                'transition': 'transform 0.2s ease, box-shadow 0.2s ease',
+                'box-shadow': '0 4px 12px rgba(0,0,0,0.15)'
             });
         },
         function() {
             $(this).css({
                 'transform': 'translateY(0)',
+                'box-shadow': 'none'
+            });
+        }
+    );
+
+    // Specific styling for danger buttons
+    $('.btn-danger').hover(
+        function() {
+            $(this).css({
+                'background': '#dc3545',
+                'box-shadow': '0 4px 12px rgba(220,53,69,0.3)'
+            });
+        },
+        function() {
+            $(this).css({
+                'background': '',
                 'box-shadow': 'none'
             });
         }
@@ -1359,6 +1233,21 @@ $(document).ready(function() {
     } else {
         console.error('Bootstrap modal function is NOT available');
     }
+    
+    // Add Microsoft Fluent Design card hover effects
+    $('.contract-card').hover(
+        function() {
+            $(this).find('.card').css({
+                'box-shadow': '0 8px 20px rgba(0,0,0,0.12)',
+                'transition': 'box-shadow 0.3s ease'
+            });
+        },
+        function() {
+            $(this).find('.card').css({
+                'box-shadow': ''
+            });
+        }
+    );
 });
 JS
 );

@@ -24,7 +24,7 @@ class PagosSearch extends Pagos
     public function rules()
     {
         return [
-            [['id', 'recibo_id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
+            [['id', 'user_id', 'conciliador_id', 'conciliado'], 'integer'],
             [['fecha_pago', 'monto_pagado', 'monto_usd'], 'number'],
             [['metodo_pago', 'estatus', 'numero_referencia_pago', 'nombre_conciliador', 'fecha_conciliacion', 'fecha_registro', 'nombreUsuario', 'cedulaUsuario', 'observacion', 'clinica_nombre', 'tipo_filter'], 'safe'],
         ];
@@ -72,7 +72,6 @@ class PagosSearch extends Pagos
             'user_datos.estatus_solvente',
             't.user_id',
             't.conciliador_id',
-            't.recibo_id',
             't.conciliado',
             't.created_at',
             // Campos críticos para ordenamiento
@@ -122,10 +121,9 @@ class PagosSearch extends Pagos
             return $dataProvider;
         }
 
-        // Filtros existentes...
+        // Filtros existentes
         $query->andFilterWhere([
             't.id' => $this->id,
-            'recibo_id' => $this->recibo_id,
             'fecha_pago' => $this->fecha_pago,
             'monto_pagado' => $this->monto_pagado,
             'user_id' => $this->user_id,
@@ -158,39 +156,63 @@ class PagosSearch extends Pagos
             ]);
         }
 
-        // Filter by tipo
+        // ============================================================
+        // FILTER BY TIPO DE PAGO - UPDATED WITH NEW CLASSIFICATION
+        // ============================================================
         if (!empty($this->tipo_filter)) {
             switch ($this->tipo_filter) {
                 case 'corporativo':
-                    $query->andWhere(['t.tipo_pago' => 'corporativo'])
-                        ->andWhere(['not', ['t.corporativo_id' => null]]);
+                    // CORPORATE MASTER PAYMENT
+                    // tipo_pago = 'corporativo' AND corporativo_id IS NOT NULL AND no user_id (master payment)
+                    $query->andWhere([
+                        't.tipo_pago' => 'corporativo',
+                        't.user_id' => null,
+                    ])->andWhere(['not', ['t.corporativo_id' => null]]);
                     break;
+
+                case 'cubierto':
+                    // COMPANY COVERED PAYMENT (CUBIERTO POR EMPRESA)
+                    // Company paid for specific employee: corporativo_id IS NOT NULL, user_id IS NOT NULL, tipo_pago != 'corporativo'
+                    $query->andWhere([
+                        'and',
+                        ['not', ['t.corporativo_id' => null]],
+                        ['not', ['t.user_id' => null]],
+                        ['<>', 't.tipo_pago', 'corporativo'],
+                    ]);
+                    break;
+
                 case 'afiliado':
+                    // AFFILIATE PAYMENT (Linked to master corporate payment)
                     $query->andWhere(['not', ['t.pago_corporativo_id' => null]]);
                     break;
+
                 case 'individual':
+                    // PERSONAL PAYMENT (Self-paid, no corporate involvement)
                     $query->andWhere([
                         'or',
                         ['t.tipo_pago' => null],
                         ['t.tipo_pago' => ''],
-                        [
-                            'and',
-                            ['t.tipo_pago' => 'individual'],
-                            ['t.pago_corporativo_id' => null]
-                        ]
-                    ]);
+                        ['t.tipo_pago' => 'individual'],
+                    ])->andWhere(['t.pago_corporativo_id' => null])
+                        ->andWhere(['t.corporativo_id' => null]);
+                    break;
+
+                default:
+                    // Handle any other values gracefully
                     break;
             }
         }
 
         // ===========================================================================
         // ORDENAMIENTO JERÁRQUICO QUE MANTIENE EL ORDEN CRONOLÓGICO
+        // UPDATED to include COMPANY COVERED payments in correct hierarchy
         // ===========================================================================
 
         $query->orderBy(new \yii\db\Expression("
         -- NIVEL 1: Ordenar por la FECHA/HORA del GRUPO PADRE (más importante)
         -- Para pagos corporativos: usar su propio created_at
         -- Para afiliados: usar el created_at de su pago corporativo padre
+        -- Para pagos CUBIERTOS POR EMPRESA: usar su propio created_at (son independientes)
         (
             SELECT COALESCE(padre.created_at, t.created_at)
             FROM pagos AS padre
@@ -200,10 +222,12 @@ class PagosSearch extends Pagos
         -- NIVEL 2: Agrupar por 'padre' para mantener juntos los afiliados con su corporación
         COALESCE(t.pago_corporativo_id, t.id) ASC,
         
-        -- NIVEL 3: Dentro de cada grupo, el pago corporativo primero
+        -- NIVEL 3: Dentro de cada grupo, prioridad: PAGO CORPORATIVO primero, luego CUBIERTO, luego AFILIADO
         CASE 
-            WHEN t.tipo_pago = 'corporativo' AND t.corporativo_id IS NOT NULL THEN 1
-            ELSE 2
+            WHEN t.tipo_pago = 'corporativo' AND t.corporativo_id IS NOT NULL AND t.user_id IS NULL THEN 1
+            WHEN t.corporativo_id IS NOT NULL AND t.user_id IS NOT NULL AND t.tipo_pago != 'corporativo' THEN 2
+            WHEN t.pago_corporativo_id IS NOT NULL THEN 3
+            ELSE 4
         END ASC,
         
         -- NIVEL 4: Dentro de cada subgrupo, ordenar por fecha de creación (más reciente primero)
@@ -240,7 +264,7 @@ class PagosSearch extends Pagos
         // Also join with corporate clinics for completeness
         $query->joinWith(['corporativo.clinicas']);
 
-        // 2. Proyección de columnas: Seleccionamos solo las necesarias para el GridView
+        // 2. Proyección de columnas
         $query->select([
             't.id',
             't.fecha_pago',
@@ -258,9 +282,11 @@ class PagosSearch extends Pagos
             'user_datos.estatus_solvente',
             't.user_id',
             't.conciliador_id',
-            't.recibo_id',
             't.conciliado',
             't.created_at',
+            't.tipo_pago',
+            't.corporativo_id',
+            't.pago_corporativo_id',
         ]);
 
         $dataProvider = new ActiveDataProvider([
@@ -300,7 +326,6 @@ class PagosSearch extends Pagos
         // grid filtering conditions
         $query->andFilterWhere([
             't.id' => $this->id,
-            'recibo_id' => $this->recibo_id,
             'fecha_pago' => $this->fecha_pago,
             'monto_pagado' => $this->monto_pagado,
             'user_id' => $this->user_id,
@@ -323,6 +348,38 @@ class PagosSearch extends Pagos
             ])
             ->andFilterWhere(['ilike', 'CAST(user_datos.cedula AS TEXT)', $this->cedulaUsuario]);
 
+        // Filter by tipo_pago for clinica view (simplified)
+        if (!empty($this->tipo_filter)) {
+            switch ($this->tipo_filter) {
+                case 'corporativo':
+                    $query->andWhere([
+                        't.tipo_pago' => 'corporativo',
+                        't.user_id' => null,
+                    ])->andWhere(['not', ['t.corporativo_id' => null]]);
+                    break;
+                case 'cubierto':
+                    $query->andWhere([
+                        'and',
+                        ['not', ['t.corporativo_id' => null]],
+                        ['not', ['t.user_id' => null]],
+                        ['<>', 't.tipo_pago', 'corporativo'],
+                    ]);
+                    break;
+                case 'afiliado':
+                    $query->andWhere(['not', ['t.pago_corporativo_id' => null]]);
+                    break;
+                case 'individual':
+                    $query->andWhere([
+                        'or',
+                        ['t.tipo_pago' => null],
+                        ['t.tipo_pago' => ''],
+                        ['t.tipo_pago' => 'individual'],
+                    ])->andWhere(['t.pago_corporativo_id' => null])
+                        ->andWhere(['t.corporativo_id' => null]);
+                    break;
+            }
+        }
+
         return $dataProvider;
     }
 
@@ -341,7 +398,7 @@ class PagosSearch extends Pagos
 
         $query->where(['t.user_id' => $user_id]);
 
-        // 2. Proyección de columnas: Solo necesitamos las de Pagos
+        // 2. Proyección de columnas
         $query->select([
             't.id',
             't.fecha_pago',
@@ -356,8 +413,10 @@ class PagosSearch extends Pagos
             't.created_at',
             't.user_id',
             't.conciliador_id',
-            't.recibo_id',
             't.conciliado',
+            't.tipo_pago',
+            't.corporativo_id',
+            't.pago_corporativo_id',
         ]);
 
         $dataProvider = new ActiveDataProvider([
@@ -389,10 +448,9 @@ class PagosSearch extends Pagos
             return $dataProvider;
         }
 
-        // grid filtering conditions (usamos el alias 't')
+        // grid filtering conditions
         $query->andFilterWhere([
             't.id' => $this->id,
-            'recibo_id' => $this->recibo_id,
             'fecha_pago' => $this->fecha_pago,
             'monto_pagado' => $this->monto_pagado,
             'conciliador_id' => $this->conciliador_id,

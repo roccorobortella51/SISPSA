@@ -59,68 +59,98 @@ class CuotaController extends Controller
         return ExitCode::OK;
     }
 
+    // In CuotaController.php - modify the checkContractsToSuspend() method
+
     private function checkContractsToSuspend()
     {
-        // Find contracts with vencidas cuotas (after grace period)
+        $this->stdout("   🔍 Looking for contracts with vencidas cuotas...\n");
+
+        // Debug: Count vencidas cuotas first
+        $vencidasCount = Cuotas::find()->where(['estatus' => 'vencida'])->count();
+        $this->stdout("   📊 Total vencidas cuotas: {$vencidasCount}\n");
+
+        // Find contracts with vencidas cuotas - FIXED CASE INSENSITIVE
         $contratosConVencidas = Contratos::find()
             ->alias('c')
             ->innerJoin(['cu' => Cuotas::tableName()], 'c.id = cu.contrato_id')
-            ->where(['cu.estatus' => Cuotas::ESTADO_VENCIDA]) // Solo vencidas, no pendientes
-            ->andWhere(['!=', 'c.estatus', 'suspendido'])
-            ->andWhere(['!=', 'c.estatus', 'Anulado'])
+            ->where(['cu.estatus' => Cuotas::ESTADO_VENCIDA])
+            ->andWhere(['not like', 'c.estatus', 'suspendido'])  // ← Case-insensitive!
+            ->andWhere(['not like', 'c.estatus', 'anulado'])     // ← Case-insensitive!
             ->groupBy('c.id')
             ->all();
 
+        $this->stdout("   📊 Found " . count($contratosConVencidas) . " contracts to check\n");
+
         $suspendidos = 0;
         foreach ($contratosConVencidas as $contrato) {
-            $contrato->estatus = 'suspendido';
-            if ($contrato->save()) {
+            $oldStatus = $contrato->estatus;
+            $this->stdout("      ⚠️ Contract #{$contrato->id} (current: {$oldStatus}) - has vencidas\n");
+
+            $result = $contrato->updateStatus();
+
+            if ($result && $contrato->estatus === 'Suspendido') {
                 $suspendidos++;
-                $this->stdout("      ⚠️  Contrato #{$contrato->id} suspendido por cuotas vencidas\n");
+                $this->stdout("      ✅ Contract #{$contrato->id} SUSPENDIDO\n");
 
                 if ($contrato->user) {
                     $contrato->user->estatus_solvente = 'No';
                     $contrato->user->save(false);
+                    $this->stdout("      👤 User #{$contrato->user_id} marked as No solvente\n");
                 }
+            } else {
+                $this->stdout("      ⚠️ Contract #{$contrato->id} remained as {$contrato->estatus}\n");
             }
         }
+
+        $this->stdout("   📊 Contracts suspended: {$suspendidos}\n\n");
         return $suspendidos;
     }
 
     private function checkContractsToReactivate()
     {
-        // Get ALL suspended contracts, not just those with vencidas
+        $this->stdout("   🔍 Looking for suspended contracts to reactivate...\n");
+
+        // FIXED: Case-insensitive search for suspended contracts
         $contratosSuspendidos = Contratos::find()
-            ->where(['estatus' => 'suspendido'])
+            ->where(['like', 'estatus', 'suspendido', false])  // ← Case-insensitive
             ->all();
+
+        $this->stdout("   📊 Found " . count($contratosSuspendidos) . " suspended contracts\n");
 
         $reactivados = 0;
         foreach ($contratosSuspendidos as $contrato) {
-            // Check for ANY cuotas that are NOT paid AND overdue
-            $hasUnpaidOverdue = Cuotas::find()
+            // Check for ANY cuotas that are NOT paid (including vencidas!)
+            $hasUnpaidOrVencidas = Cuotas::find()
                 ->where(['contrato_id' => $contrato->id])
-                ->andWhere(['in', 'estatus', ['pendiente', 'en_gracias']])
-                ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
+                ->andWhere([
+                    'or',
+                    ['estatus' => 'vencida'],           // ← ADD THIS!
+                    ['estatus' => 'pendiente'],
+                    ['estatus' => 'en_gracias']
+                ])
                 ->exists();
 
-            // If NO unpaid overdue cuotas, reactivate
-            if (!$hasUnpaidOverdue) {
+            // Only reactivate if NO unpaid or vencidas cuotas exist
+            if (!$hasUnpaidOrVencidas) {
                 $oldStatus = $contrato->estatus;
                 $contrato->estatus = 'Activo';
 
-                if ($contrato->save()) {
+                if ($contrato->save(false)) {
                     $reactivados++;
                     $this->stdout("      🔄 Contrato #{$contrato->id} REACTIVADO (was: {$oldStatus})\n");
 
-                    // Update user solvent status
                     if ($contrato->user) {
                         $contrato->user->estatus_solvente = 'Si';
                         $contrato->user->save(false);
                         $this->stdout("      👤 Usuario #{$contrato->user_id} marcado como solvente\n");
                     }
                 }
+            } else {
+                $this->stdout("      ⏸️  Contrato #{$contrato->id} remains suspended (has unpaid/vencidas)\n");
             }
         }
+
+        $this->stdout("   📊 Contracts reactivated: {$reactivados}\n\n");
         return $reactivados;
     }
 

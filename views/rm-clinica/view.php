@@ -105,9 +105,9 @@ function formatUpdatedAt($value)
             </div>
             <div align="center">
                 <?= Html::a(
-                    '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                    '<i class="fas fa-file-medical mr-2"></i> Atenciones de la Clínica',
                     ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-indigo']
+                    ['class' => 'nav-btn-base btn-red']
                 ) ?>
             </div>
         </div>
@@ -116,9 +116,9 @@ function formatUpdatedAt($value)
         <div class="nav-buttons-grid">
             <div align="center">
                 <?= Html::a(
-                    '<i class="fas fa-file-medical"></i> Siniestros de la Clínica',
+                    '<i class="fas fa-file-medical mr-2"></i> Atenciones de la Clínica',
                     ['sis-siniestro/por-clinica', 'clinica_id' => $model->id],
-                    ['class' => 'nav-btn-base nav-btn-indigo text-white-hover']
+                    ['class' => 'nav-btn-base btn-red text-white-hover']
                 ) ?>
             </div>
             <div>
@@ -131,7 +131,6 @@ function formatUpdatedAt($value)
         </div>
     <?php endif; ?>
 
-    <!-- Rest of your cards remain the same -->
     <!-- Tarjeta de Información General de la Clínica -->
     <div class="info-card info-card-border-blue">
         <h3>
@@ -150,6 +149,9 @@ function formatUpdatedAt($value)
         <div class="info-grid border-top-section">
             <div>
                 <h5><strong>Código de Clínica:</strong> <?= Html::encode($model->codigo_clinica) ?></h5>
+            </div>
+            <div>
+                <h5><strong>Meta Mensual:</strong> <span class="badge badge-primary"><?= $model->meta ? number_format($model->meta, 0, ',', '.') . ' afiliados' : 'No establecida' ?></span></h5>
             </div>
             <div>
                 <h5><strong>Estatus:</strong> <span class="status-badge <?= $model->estatus == 'Activo' ? 'active' : 'inactive' ?>"><?= Html::encode($listaEstatus[$model->estatus] ?? $model->estatus) ?></span></h5>

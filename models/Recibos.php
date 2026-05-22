@@ -124,5 +124,4 @@ class Recibos extends \yii\db\ActiveRecord
     {
         return $this->hasOne(UserDatos::class, ['id' => 'id_titular']);
     }
-
 }

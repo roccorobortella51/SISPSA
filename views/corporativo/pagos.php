@@ -6,6 +6,8 @@ use yii\helpers\Html;
 /** @var app\models\Pagos $model */
 /** @var app\models\Corporativo $corporativo */
 /** @var array $afiliados */
+/** @var array $allCuotas */
+/** @var float $grandTotal */
 
 $this->title = 'Pago Corporativo: ' . Html::encode($corporativo->nombre);
 $this->params['breadcrumbs'][] = ['label' => 'Corporativos', 'url' => ['index']];

@@ -1655,3 +1655,354 @@
 .ms-panel:last-child .ms-panel-header .section-title i {
     color: white !important;
 }
+/* ============================================ */
+/* DISPONIBLES MODAL WITH CHECKBOXES            */
+/* ============================================ */
+
+.disponibles-modal {
+    max-width: 900px;
+    width: 90%;
+}
+
+.select-toolbar {
+    padding: 12px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.selected-count {
+    font-size: 13px;
+    color: #6c757d;
+    padding: 5px 10px;
+    background-color: #e9ecef;
+    border-radius: 20px;
+}
+
+.items-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.items-table th,
+.items-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.items-table th {
+    background-color: #f1f3f5;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.items-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.usage-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    background-color: #28a745;
+}
+
+.service-checkbox {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+#checkbox-select-all {
+    cursor: pointer;
+}
+
+.restricted-agotados-modal.disponibles-modal {
+    width: 90%;
+    max-width: 1000px;
+}
+
+.time-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    background-color: #ffc107;
+    color: #856404;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    .disponibles-modal {
+        width: 95%;
+        max-width: 95%;
+    }
+    
+    .items-table th,
+    .items-table td {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    
+    .select-toolbar {
+        padding: 8px 12px;
+    }
+    
+    .select-toolbar .btn-sm {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    /* ============================================ */
+/* FIXES FOR PROFESSIONAL MODALS - DARK HEADERS & WHITE TEXT */
+/* ============================================ */
+
+/* Fix for modal headers - ensure white text on gradient background */
+.servicios-modal-header,
+.servicios-modal-header *,
+.servicios-modal-header .servicios-modal-header-title h3,
+.servicios-modal-header .servicios-modal-header-title p {
+    color: white !important;
+}
+
+.servicios-modal-header i,
+.servicios-modal-header .fas,
+.servicios-modal-header .far {
+    color: white !important;
+}
+
+/* Fix for table headers in disponibles modal - make them DARK (black/dark gray) */
+.servicios-table thead th {
+    background: #f8f9fa !important;
+    color: #212529 !important;  /* Dark gray/black */
+    font-weight: 700 !important;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Alternative: Use gradient but with dark text */
+.servicios-table thead th {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%) !important;
+    color: #1a1a1a !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+
+/* Ensure all table header text is dark */
+.servicios-table thead th span,
+.servicios-table thead th strong,
+.servicios-table thead th div {
+    color: #212529 !important;
+}
+
+/* Fix for the subtitle text "X servicio(s) disponible(s) para agregar" - make it WHITE */
+.servicios-modal-header-title p {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 14px !important;
+    margin-top: 4px !important;
+}
+
+/* Additional fix for any dark text in modal header */
+.servicios-modal-header,
+.servicios-modal-header .servicios-modal-header-icon,
+.servicios-modal-header .servicios-modal-header-title,
+.servicios-modal-header .servicios-modal-header-title h3,
+.servicios-modal-header .servicios-modal-header-title p {
+    color: white !important;
+}
+
+/* Fix for modal close button */
+.servicios-modal-close,
+.servicios-modal-close i,
+.servicios-modal-close .fas,
+.servicios-modal-close .far {
+    color: white !important;
+}
+
+/* Ensure the modal body has proper background */
+.servicios-modal-body {
+    background: white !important;
+}
+
+/* Fix for info banner text */
+.servicios-info-banner .info-text,
+.servicios-info-banner .info-text strong,
+.servicios-info-banner .info-text span {
+    color: #2c3e50 !important;
+}
+
+/* Fix for selection info text */
+.servicios-selection-info,
+.servicios-selection-info span,
+.servicios-selection-info strong {
+    color: #2e7d32 !important;
+}
+
+/* Fix for footer summary text */
+.servicios-modal-footer .footer-summary .summary-item .summary-label {
+    color: #6c757d !important;
+}
+
+.servicios-modal-footer .footer-summary .summary-item .summary-value {
+    color: #2c3e50 !important;
+}
+
+.servicios-modal-footer .footer-summary .summary-item .summary-price {
+    color: #28a745 !important;
+}
+
+/* Specific fix for the modal subtitle (count text) */
+.servicios-modal-header .servicios-modal-header-title p {
+    color: #f0f0f0 !important;
+    opacity: 1 !important;
+}
+
+/* For restricted/agotados modals - ensure headers are readable */
+.servicios-modal-header.header-warning,
+.servicios-modal-header.header-warning *,
+.servicios-modal-header.header-danger,
+.servicios-modal-header.header-danger * {
+    color: white !important;
+}
+
+.servicios-modal-header.header-warning .servicios-modal-header-title p,
+.servicios-modal-header.header-danger .servicios-modal-header-title p {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Ensure table rows have proper contrast */
+.servicios-table tbody td {
+    color: #212529 !important;
+    background: white !important;
+}
+
+.servicios-table tbody tr:hover td {
+    background: #f8f9fa !important;
+}
+
+/* Fix for checkbox labels */
+.checkbox-wrapper label {
+    background: white !important;
+    border: 2px solid #cbd5e0 !important;
+}
+
+.checkbox-wrapper input[type="checkbox"]:checked + label {
+    background: #1e3c72 !important;
+    border-color: #1e3c72 !important;
+}
+
+/* Fix for area badges */
+.servicio-area .area-badge {
+    color: #1e3c72 !important;
+    background: #e8f4fd !important;
+}
+
+/* Fix for precio text */
+.servicio-precio {
+    color: #28a745 !important;
+    font-weight: 600 !important;
+}
+
+/* Fix for servicio nombre */
+.servicio-nombre strong {
+    color: #2c3e50 !important;
+}
+
+/* Fix for disponible badge in table */
+.disponibilidad-badge.disponible {
+    color: #2e7d32 !important;
+    background: #e8f5e9 !important;
+}
+
+/* Fix for toolbar buttons text */
+.btn-toolbar {
+    color: #495057 !important;
+}
+
+.btn-toolbar:hover {
+    color: #212529 !important;
+}
+
+/* Fix for modal footer buttons */
+.btn-modal-primary {
+    color: white !important;
+}
+
+.btn-modal-secondary {
+    color: #495057 !important;
+}
+/* Custom File Input Styles */
+.custom-file {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.custom-file-input {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: calc(1.5em + 0.75rem + 2px);
+    margin: 0;
+    opacity: 0;
+}
+
+.custom-file-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.custom-file-label::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    display: block;
+    height: calc(1.5em + 0.75rem);
+    padding: 0.375rem 0.75rem;
+    line-height: 1.5;
+    color: #495057;
+    content: "Examinar" !important;
+    background-color: #e9ecef;
+    border-left: inherit;
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.custom-file-label.selected {
+    background-color: #e8f5e9;
+    border-color: #4caf50;
+    color: #2e7d32;
+}
+
+.custom-file-label i {
+    margin-right: 5px;
+}
+}

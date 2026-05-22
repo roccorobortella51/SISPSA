@@ -1,10 +1,11 @@
 <?php
 
 namespace app\models;
+
 use app\components\UserHelper;
-use app\models\RmEstado; 
+use app\models\RmEstado;
 use app\models\RmMunicipio;
-use app\models\RmParroquia; 
+use app\models\RmParroquia;
 use app\models\RmCiudad;
 use app\models\Planes;
 
@@ -32,6 +33,7 @@ use Yii;
  * @property string|null $municipio
  * @property string|null $parroquia
  * @property string|null $ciudad
+ * @property int|null $meta
  *
  * @property ClinicaContactos[] $clinicaContactos
  * @property Contratos[] $contratos
@@ -41,7 +43,6 @@ use Yii;
  */
 class RmClinica extends \yii\db\ActiveRecord
 {
-
 
     /**
      * {@inheritdoc}
@@ -60,14 +61,14 @@ class RmClinica extends \yii\db\ActiveRecord
             [['QRCode', 'codigo_clinica', 'deleted_at', 'updated_at', 'private_key'], 'default', 'value' => null],
             [['rs_instagram'], 'default', 'value' => ''],
             [['created_at', 'deleted_at', 'updated_at', 'municipio', 'parroquia', 'ciudad'], 'safe'],
-            [['rif', 'nombre', 'estado', 'ciudad', 'municipio', 'parroquia','direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
+            [['rif', 'nombre', 'estado', 'ciudad', 'municipio', 'parroquia', 'direccion', 'telefono', 'correo', 'estatus', 'webpage', 'rs_instagram', 'QRCode', 'codigo_clinica'], 'string'],
             [['private_key'], 'string', 'max' => 64],
             [['rif', 'nombre', 'estado', 'direccion', 'telefono', 'correo', 'codigo_clinica'], 'required'],
             [['correo'], 'email'],
             [['rif'], 'unique', 'message' => 'El RIF ya está en uso. Por favor, ingrese un valor único.'],
             [['municipio', 'parroquia'], 'string', 'max' => 255],
-            
-
+            [['meta'], 'integer', 'min' => 0, 'max' => 999999],
+            [['meta'], 'default', 'value' => 0],
         ];
     }
 
@@ -92,10 +93,11 @@ class RmClinica extends \yii\db\ActiveRecord
             'codigo_clinica' => 'CÓDIGO DE LA CLINICA',
             'deleted_at' => 'Deleted At',
             'updated_at' => 'Updated At',
-            'private_key' => 'Private Key', 
+            'private_key' => 'Private Key',
             'municipio' => 'MUNICIPIO',
             'parroquia' => 'PARROQUIA',
             'ciudad' => 'CIUDAD',
+            'meta' => 'META MENSUAL DE AFILIADOS',
         ];
     }
 
@@ -128,7 +130,7 @@ class RmClinica extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Planes::class, ['clinica_id' => 'id']);
     }
-    
+
 
     /**
      * Gets query for [[Qrs]].
@@ -161,6 +163,75 @@ class RmClinica extends \yii\db\ActiveRecord
         return $this->hasMany(\app\models\CorporativoClinica::class, ['clinica_id' => 'id']);
     }
 
-    
+    /**
+     * Gets the formatted meta value with label
+     * @return string
+     */
+    public function getFormattedMeta()
+    {
+        if ($this->meta === null || $this->meta === 0) {
+            return '<span class="badge badge-secondary">No establecida</span>';
+        }
 
+        return '<span class="badge badge-success">' . number_format($this->meta, 0, ',', '.') . ' afiliados/mes</span>';
+    }
+
+    /**
+     * Gets the meta value as integer
+     * @return int
+     */
+    public function getMetaValue()
+    {
+        return (int)($this->meta ?? 0);
+    }
+
+    /**
+     * Checks if the clinic has a meta goal set
+     * @return bool
+     */
+    public function hasMetaGoal()
+    {
+        return $this->meta !== null && $this->meta > 0;
+    }
+
+    /**
+     * Checks if the clinic has met its monthly goal (to be used with actual sales data)
+     * @param int $actualSales
+     * @return array
+     */
+    public function checkGoalStatus($actualSales = 0)
+    {
+        if ($this->meta === null || $this->meta === 0) {
+            return [
+                'percentage' => 0,
+                'status' => 'sin_meta',
+                'class' => 'secondary',
+                'message' => 'Meta no establecida'
+            ];
+        }
+
+        $percentage = ($actualSales / $this->meta) * 100;
+        $percentage = min(100, round($percentage, 1));
+
+        if ($percentage >= 100) {
+            $status = 'alcanzada';
+            $class = 'success';
+            $message = 'Meta alcanzada';
+        } elseif ($percentage >= 75) {
+            $status = 'cercana';
+            $class = 'warning';
+            $message = 'Cerca de alcanzar la meta';
+        } else {
+            $status = 'pendiente';
+            $class = 'danger';
+            $message = 'Meta pendiente';
+        }
+
+        return [
+            'percentage' => $percentage,
+            'status' => $status,
+            'class' => $class,
+            'message' => $message
+        ];
+    }
 }

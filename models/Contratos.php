@@ -43,7 +43,7 @@ class Contratos extends \yii\db\ActiveRecord
     const STATUS_ANULADO = 'Anulado';
     const STATUS_VENCIDO = 'Vencido';
     const STATUS_PENDIENTE = 'Pendiente';
-    const STATUS_SUSPENDIDO = 'suspendido';
+    const STATUS_SUSPENDIDO = 'Suspendido';
     const STATUS_CREADO_MANUAL = 'Creado Manual';  // Match database exactly (lowercase 'm')
 
     /**
@@ -209,7 +209,7 @@ class Contratos extends \yii\db\ActiveRecord
             self::STATUS_ANULADO => 'Anulado',
             self::STATUS_VENCIDO => 'Vencido',
             self::STATUS_PENDIENTE => 'Pendiente',
-            self::STATUS_SUSPENDIDO => 'suspendido',
+            self::STATUS_SUSPENDIDO => 'Suspendido',  // Will now output 'Suspendido'
             self::STATUS_CREADO_MANUAL => 'Creado Manual',
         ];
     }
@@ -518,11 +518,10 @@ class Contratos extends \yii\db\ActiveRecord
         return self::find()
             ->where(['user_id' => $user_id])
             ->andWhere(['!=', 'estatus', self::STATUS_ANULADO])
-            // IMPORTANT: Only return contracts that are truly ACTIVE
             ->andWhere(['in', 'estatus', [
-                'Activo',        // Active status
-                'Registrado',    // Registered (pending start)
-                'Creado Manual'  // Manually created
+                self::STATUS_ACTIVO,      // 'Activo'
+                self::STATUS_REGISTRADO,  // 'Registrado'
+                self::STATUS_CREADO_MANUAL // 'Creado Manual'
             ]])
             ->andWhere(['<=', 'fecha_ini', $today])
             ->andWhere([

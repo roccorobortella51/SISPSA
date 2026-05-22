@@ -5,25 +5,59 @@ use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
 use yii\web\View;
 use yii\bootstrap4\Modal;
-
-$this->registerCssFile(Yii::getAlias('@web') . "/css/_formsiniestros.css", ['position' => View::POS_HEAD]);
+use kartik\file\FileInput;  // Add this if not already there
+use kartik\file\FileInputAsset;  // Add this line
 
 /* @var $this yii\web\View */
 /* @var $model app\models\SisSiniestro */
 /* @var $form yii\widgets\ActiveForm */
 /* @var $afiliado app\models\UserDatos */
+/* @var $es_cita int */
+
+$this->registerCssFile(Yii::getAlias('@web') . "/css/_formsiniestros.css", ['position' => View::POS_HEAD]);
+
+FileInputAsset::register($this);
+
+
+// ============================================================
+// GUARDS: Ensure variables are defined
+// ============================================================
+if (!isset($model) || $model === null) {
+    $model = new \app\models\SisSiniestro();
+}
+
+if (!isset($afiliado) || $afiliado === null) {
+    if (isset($model) && $model->iduser) {
+        $afiliado = \app\models\UserDatos::findOne($model->iduser);
+    } else {
+        $afiliado = null;
+    }
+}
+
+if (!isset($es_cita)) {
+    $es_cita = 0;
+}
 
 // Obtener información del plan del afiliado
-if (is_object($afiliado)) {
+if ($afiliado && is_object($afiliado)) {
     $planId = $afiliado->plan_id;
     $afiliadoObj = $afiliado;
 } elseif (is_array($afiliado) && isset($afiliado['plan_id'])) {
     $planId = $afiliado['plan_id'];
     $afiliadoObj = (object)$afiliado;
-} else {
+} elseif ($afiliado && is_numeric($afiliado)) {
     $planId = (int)$afiliado;
     $afiliadoObj = \app\models\UserDatos::findOne($planId);
+} else {
+    $planId = null;
+    $afiliadoObj = null;
 }
+
+if (!$afiliadoObj) {
+    echo '<div class="alert alert-danger">Error: No se pudo cargar la información del afiliado.</div>';
+    return;
+}
+
 $plan = \app\models\Planes::findOne($planId);
 $afiliado = $afiliadoObj;
 $precioPlan = $plan ? $plan->cobertura : 0;
@@ -38,7 +72,7 @@ $sumatoriaSiniestros = \app\models\SisSiniestro::find()
 $totalDisponible = $precioPlan - $sumatoriaSiniestros;
 
 // OBTENER el parámetro 'es_cita'
-$esCita = (int)Yii::$app->request->get('es_cita', 0);
+$esCita = (int)$es_cita;
 
 // Definir los modos y términos
 $esCitaMode = ($esCita === 1);
@@ -182,7 +216,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             </h3>
         </div>
         <div class="ms-panel-body" id="historial-content" style="display: none;">
-            <!-- Historical Data Tables FIRST -->
             <?php if ($esCita == 1 && !empty($baremosCitas)): ?>
                 <div class="card mb-4">
                     <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
@@ -299,7 +332,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 </div>
             <?php endif; ?>
 
-            <!-- Stats Summary Card AFTER the tables -->
             <div class="card">
                 <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                     <i class="fas fa-chart-bar me-2"></i> Resumen Estadístico
@@ -346,12 +378,10 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             </h3>
         </div>
         <div class="ms-panel-body">
-            <!-- Hidden field -->
             <div style="display: none;">
                 <?= $form->field($model, 'idclinica')->textInput(['value' => $afiliado->clinica_id]) ?>
             </div>
 
-            <!-- Basic Information Card -->
             <div class="card mb-4">
                 <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                     <i class="fas fa-info-circle me-2"></i> Información Básica
@@ -372,9 +402,15 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         <div class="col-md-6 field-with-icon">
                             <i class="fas fa-clock"></i>
                             <?= $form->field($model, 'hora')->textInput([
-                                'type' => 'time',
-                                'class' => 'form-control form-control-lg'
+                                'type' => 'text',
+                                'class' => 'form-control form-control-lg time-input',
+                                'placeholder' => 'HH:MM (ejemplo: 14:30)',
+                                'maxlength' => 5,
+                                'autocomplete' => 'off'
                             ])->label('Hora del Evento de Salud') ?>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Use formato 24 horas (HH:MM). Ejemplo: 14:30 o 09:15
+                            </small>
                         </div>
 
                         <div class="col-md-12">
@@ -390,10 +426,9 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 </div>
             </div>
 
-            <!-- Attention Details Card -->
             <div class="card mb-4">
                 <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
-                    <i class="fas fa-stethoscope me-2"></i> Detalles de la <?= $terminoPrincipal ?>
+                    <i class="fas fa-stethoscope me-2"></i> Detalles de la Atención
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
@@ -404,16 +439,22 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Seleccione la fecha',
                                 'autocomplete' => 'off',
-                                'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
+                                'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha_atencion, 'yyyy-MM-dd')
                             ])->label('Fecha de la ' . $terminoPrincipal) ?>
                         </div>
 
                         <div class="col-md-6 field-with-icon">
                             <i class="fas fa-clock"></i>
                             <?= $form->field($model, 'hora_atencion')->textInput([
-                                'type' => 'time',
-                                'class' => 'form-control form-control-lg'
+                                'type' => 'text',
+                                'class' => 'form-control form-control-lg time-input',
+                                'placeholder' => 'HH:MM (ejemplo: 14:30)',
+                                'maxlength' => 5,
+                                'autocomplete' => 'off'
                             ])->label('Hora de la ' . $terminoPrincipal) ?>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-clock"></i> Use formato 24 horas (HH:MM). Ejemplo: 14:30 o 09:15
+                            </small>
                         </div>
 
                         <div class="col-md-12 field-with-icon">
@@ -423,6 +464,35 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                 'class' => 'form-control form-control-lg',
                                 'placeholder' => 'Describa los detalles de la ' . strtolower($terminoPrincipal) . '...'
                             ])->label('Descripción de la ' . $terminoPrincipal) ?>
+                        </div>
+
+                        <!-- ===== DOCTOR AND ADMISSION ANALYST FIELDS - SAME ROW ===== -->
+                        <div class="row">
+                            <div class="col-md-6 field-with-icon">
+                                <i class="fas fa-user-md"></i>
+                                <?= $form->field($model, 'nombre_doctor')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'placeholder' => 'Médico Tratante',
+                                    'maxlength' => true,
+                                    'autocomplete' => 'off'
+                                ])->label('Nombre del Doctor') ?>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-user-md"></i> Médico que atendió al paciente
+                                </small>
+                            </div>
+
+                            <div class="col-md-6 field-with-icon">
+                                <i class="fas fa-user-tie"></i>
+                                <?= $form->field($model, 'admission_analyst')->textInput([
+                                    'class' => 'form-control form-control-lg',
+                                    'placeholder' => 'Nombre del analista de admisión',
+                                    'maxlength' => true,
+                                    'autocomplete' => 'off'
+                                ])->label('Analista de Admisión') ?>
+                                <small class="form-text text-muted" style="white-space: nowrap; overflow: visible;">
+                                    <i class="fas fa-user-tie"></i> Persona responsable del registro de esta <?= strtolower($terminoPrincipal) ?>
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -439,100 +509,119 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     </p>
 
                     <div class="row">
+                        <!-- Récipe Médico -->
                         <div class="col-md-6">
-                            <?= $form->field($model, 'imagenRecipeFile')->widget(\kartik\file\FileInput::classname(), [
-                                'options' => [
-                                    'accept' => 'image/*, application/pdf',
-                                ],
-                                'pluginOptions' => [
-                                    'theme' => 'fa5',
-                                    'browseClass' => 'btn btn-primary',
-                                    'removeClass' => 'btn btn-secondary',
-                                    'removeIcon' => '<i class="fas fa-trash"></i> ',
-                                    'showUpload' => false,
-                                    'showCancel' => false,
-                                    'showCaption' => true,
-                                    'previewFileType' => 'image',
-                                    'allowedFileExtensions' => ['jpg', 'jpeg', 'png', 'pdf'],
-                                    'maxFileSize' => 10240,
-                                    'dropZoneEnabled' => false,
-                                    'showClose' => false,
-                                    'browseLabel' => 'Subir Recipe',
-                                    'removeLabel' => 'Quitar',
-                                    'fileActionSettings' => [
-                                        'showZoom' => false,
-                                        'showDrag' => false,
-                                    ],
-                                    'previewSettings' => [
-                                        'image' => ['width' => '150px', 'height' => 'auto'],
-                                    ],
-                                    'layoutTemplates' => [
-                                        'main1' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
-                                        'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
-                                    ],
-                                ],
-                            ])->label('Récipe Médico'); ?>
+                            <div class="form-group">
+                                <label class="form-label font-weight-bold">
+                                    <i class="fas fa-file-prescription text-primary"></i> Récipe Médico
+                                </label>
+                                <div class="custom-file">
+                                    <?= Html::fileInput('SisSiniestro[imagenRecipeFile]', null, [
+                                        'class' => 'custom-file-input',
+                                        'accept' => 'image/*,application/pdf',
+                                        'id' => 'recipe-file-input'
+                                    ]) ?>
+                                    <label class="custom-file-label" for="recipe-file-input" id="recipe-file-label">
+                                        <i class="fas fa-upload"></i> Seleccionar archivo...
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
+                                </small>
+                                <?php if ($model->imagen_recipe && !$model->isNewRecord): ?>
+                                    <div class="mt-2">
+                                        <a href="<?= $model->imagen_recipe ?>" target="_blank" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-eye"></i> Ver archivo actual
+                                        </a>
+                                        <span class="text-muted ml-2">
+                                            <i class="fas fa-check-circle text-success"></i> Archivo guardado
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
+                        <!-- Informe Médico -->
                         <div class="col-md-6">
-                            <?= $form->field($model, 'imagenInformeFile')->widget(\kartik\file\FileInput::classname(), [
-                                'options' => [
-                                    'accept' => 'image/*, application/pdf',
-                                ],
-                                'pluginOptions' => [
-                                    'theme' => 'fa5',
-                                    'browseClass' => 'btn btn-primary',
-                                    'removeClass' => 'btn btn-secondary',
-                                    'removeIcon' => '<i class="fas fa-trash"></i> ',
-                                    'previewFileType' => 'image',
-                                    'showUpload' => false,
-                                    'showCancel' => false,
-                                    'showCaption' => true,
-                                    'allowedFileExtensions' => ['jpg', 'jpeg', 'png', 'pdf'],
-                                    'maxFileSize' => 10240,
-                                    'dropZoneEnabled' => false,
-                                    'showClose' => false,
-                                    'browseLabel' => 'Subir Informe Médico',
-                                    'removeLabel' => 'Quitar',
-                                    'fileActionSettings' => [
-                                        'showZoom' => false,
-                                        'showDrag' => false,
-                                    ],
-                                    'previewSettings' => [
-                                        'image' => ['width' => '150px', 'height' => 'auto'],
-                                    ],
-                                    'layoutTemplates' => [
-                                        'main1' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
-                                        'main2' => "{preview}\n{remove}\n{upload}\n{browse}\n{caption}",
-                                    ],
-                                ],
-                            ])->label('Informe Médico'); ?>
+                            <div class="form-group">
+                                <label class="form-label font-weight-bold">
+                                    <i class="fas fa-file-medical text-info"></i> Informe Médico
+                                </label>
+                                <div class="custom-file">
+                                    <?= Html::fileInput('SisSiniestro[imagenInformeFile]', null, [
+                                        'class' => 'custom-file-input',
+                                        'accept' => 'image/*,application/pdf',
+                                        'id' => 'informe-file-input'
+                                    ]) ?>
+                                    <label class="custom-file-label" for="informe-file-input" id="informe-file-label">
+                                        <i class="fas fa-upload"></i> Seleccionar archivo...
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
+                                </small>
+                                <?php if ($model->imagen_informe && !$model->isNewRecord): ?>
+                                    <div class="mt-2">
+                                        <a href="<?= $model->imagen_informe ?>" target="_blank" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-eye"></i> Ver archivo actual
+                                        </a>
+                                        <span class="text-muted ml-2">
+                                            <i class="fas fa-check-circle text-success"></i> Archivo guardado
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Additional info about existing files -->
+                    <?php if (($model->imagen_recipe || $model->imagen_informe) && !$model->isNewRecord): ?>
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Nota:</strong> Si selecciona nuevos archivos, reemplazarán los existentes.
+                            Deje el campo vacío para mantener los archivos actuales.
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 
+    <style>
+        /* Change file input browse button to Spanish */
+        .custom-file-label::after {
+            content: "Buscar" !important;
+        }
+
+        /* Optional: Style the file input when a file is selected */
+        .custom-file-label.selected {
+            background-color: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .custom-file-label.selected i {
+            color: #2e7d32;
+        }
+    </style>
+
+    <?= $this->render('_form_documentos_adicionales', ['model' => $model, 'form' => $form]) ?>
 
     <!-- ===== SECTION 4: SELECCIÓN DE SERVICIOS MÉDICOS ===== -->
     <?php
-    // Initialize variables
+    // Initialize ALL variables
     $baremosTotales = [];
     $baremosHtml = [];
     $baremosInfo = [];
     $baremosRestringidosIDs = [];
-
     $baremosForzados = [];
     $baremosSinPlazo = [];
     $baremosConPlazoCumplido = [];
     $baremosPendientesPlazo = [];
     $baremosAgotados = [];
-
-    // NEW: Array for available services info
     $baremosDisponiblesInfo = [];
+    $selectedBaremos = [];
 
-    // Calculate baremos data
     if ($contrato && $contrato->estatus === 'Activo') {
         $query = \app\models\PlanesItemsCobertura::find()
             ->joinWith('baremo')
@@ -543,20 +632,16 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             ->andWhere(['planes.id' => $afiliado->plan_id]);
 
         if ($esCitaMode) {
-            // Modo Cita: Mostrar solo servicios con restricciones
             $query->andWhere([
                 'or',
                 ['>', 'planes_items_cobertura.plazo_espera', 0],
                 ['>', 'planes_items_cobertura.cantidad_limite', 0]
             ]);
-        } else {
-            // MODIFICACIÓN: Modo Siniestro - INCLUIR TODOS los servicios sin filtrar
         }
 
         $planesItemsCobertura = $query->all();
 
-        $selectedBaremos = [];
-        if (!$model->isNewRecord) {
+        if (isset($model) && $model !== null && !$model->isNewRecord && $model->id) {
             $baremosDirectos = (new \yii\db\Query())
                 ->select(['baremo_id'])
                 ->from('sis_siniestro_baremo')
@@ -571,14 +656,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
         $fechaActual = new \DateTime();
 
         foreach ($planesItemsCobertura as $item) {
-            // Initialize variables at the start of each iteration
-            $precioBaremo = 0;
-            $area = 'Sin área';
-            $servicio = '';
-            $descripcion = '';
-            $textoPlano = '';
-            $isRestrictedByPlazo = false;
-
             if ($item->baremo) {
                 $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
                 $precioBaremo = $item->baremo->precio ?? 0;
@@ -586,77 +663,68 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 $servicio = $item->baremo->nombre_servicio;
                 $descripcion = $item->baremo->descripcion ?? '';
 
-                // TEXT FOR DROPDOWN VALUE
                 $textoPlano = $servicio . " (" . $area . ")";
                 if (!empty($descripcion)) {
                     $textoPlano .= " - " . $descripcion;
                 }
 
-                $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
-
-                // Count usage differently based on mode
                 $queryCount = \app\models\SisSiniestroBaremo::find()
                     ->joinWith('siniestro')
                     ->where(['baremo_id' => $item->baremo_id])
                     ->andWhere(['iduser' => $afiliado->id]);
 
-                // For Siniestro mode, only count actual siniestros (not citas)
                 if (!$esCitaMode) {
                     $queryCount->andWhere(['sis_siniestro.es_cita' => 0]);
                 }
 
                 $vecesUsado = $queryCount->count();
 
-                // Verificar si excede el límite (siempre verificar, incluso si cantidad_limite = 0)
+                $remainingUses = 0;
                 $excedeLimite = false;
+
                 if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
-                    // Si tiene un límite positivo, verificamos si se alcanzó
-                    if ($vecesUsado >= $item->cantidad_limite) {
+                    $remainingUses = $item->cantidad_limite - $vecesUsado;
+                    if ($remainingUses <= 0) {
                         $excedeLimite = true;
                     }
+                } else {
+                    $remainingUses = 999;
                 }
 
-                // Verificar si este baremo está entre los seleccionados (solo para update)
                 $esBaremoGuardado = !$model->isNewRecord && in_array($item->baremo_id, $selectedBaremos);
+                $isRestrictedByPlazo = false;
 
-                // Lógica de plazo de espera
-                if ($contrato) {
+                if ($contrato && $hasPlazoEver) {
                     $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+                    $diff = $fechaContratoIni->diff($fechaActual);
+                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                    $plazoRequerido = (int)$item->plazo_espera;
 
-                    // Lógica de plazo de espera
-                    if ($hasPlazoEver) {
-                        $diff = $fechaContratoIni->diff($fechaActual);
-                        $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                        $plazoRequerido = (int)$item->plazo_espera;
-
-                        if ($mesesTranscurridos < $plazoRequerido) {
-                            $isRestrictedByPlazo = true; // Plazo PENDIENTE
-                        }
+                    if ($mesesTranscurridos < $plazoRequerido) {
+                        $isRestrictedByPlazo = true;
                     }
                 }
 
-                // MODO SINIESTRO MODIFICADO: Clasificar servicios según su estado real
+                $hasValidLimit = ($item->cantidad_limite !== null && $item->cantidad_limite > 0);
+                $hasValidPlazo = ($item->plazo_espera !== null && $item->plazo_espera > 0);
 
-                // Determinar si el servicio debe incluirse en el dropdown (para selección)
+                if (!$hasValidLimit && !$hasValidPlazo) {
+                    continue;
+                }
+
                 $debeIncluirse = true;
 
-                // CLASIFICACIÓN POR ESTADO
                 if ($excedeLimite) {
-                    // Servicio AGOTADO - ha alcanzado su límite de uso
                     $baremosAgotados[$item->baremo_id] = $textoPlano;
                     $baremosInfo[$item->baremo_id]['es_agotado'] = true;
-
-                    // Si NO es un servicio guardado históricamente, no debe ser seleccionable
                     if (!$esBaremoGuardado) {
                         $debeIncluirse = false;
                     }
                 } elseif ($isRestrictedByPlazo) {
-                    // Servicio RESTRINGIDO - aún en período de espera
                     $baremosPendientesPlazo[$item->baremo_id] = $textoPlano;
                     $baremosRestringidosIDs[] = $item->baremo_id;
                     $baremosInfo[$item->baremo_id]['is_restricted_by_plazo'] = true;
 
-                    // Calcular tiempo restante para mostrar
                     if ($contrato) {
                         $fechaContratoIni = new \DateTime($contrato->fecha_ini);
                         $plazoRequerido = (int)$item->plazo_espera;
@@ -667,14 +735,11 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         $mesesRestantes = ($diff->y * 12) + $diff->m;
                         $diasRestantes = $diff->d;
 
-                        // Guardar información de tiempo restante
                         $baremosInfo[$item->baremo_id]['remaining_months'] = $mesesRestantes;
                         $baremosInfo[$item->baremo_id]['remaining_days'] = $diasRestantes;
 
-                        // Build text representation
                         if ($mesesRestantes > 0 && $diasRestantes > 0) {
-                            $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "") .
-                                " y " . $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
+                            $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "") . " y " . $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
                         } elseif ($mesesRestantes > 0) {
                             $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "");
                         } elseif ($diasRestantes > 0) {
@@ -685,27 +750,26 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         $baremosInfo[$item->baremo_id]['remaining_text'] = $tiempoRestanteTexto;
                     }
 
-                    // Si NO es un servicio guardado históricamente, no debe ser seleccionable
                     if (!$esBaremoGuardado) {
                         $debeIncluirse = false;
                     }
                 } else {
-                    // Servicio DISPONIBLE - cumple todos los criterios
-                    $baremosSinPlazo[$item->baremo_id] = $textoPlano;
-
-                    // NEW: Add to disponibles info array
-                    $baremosDisponiblesInfo[$item->baremo_id] = [
-                        'nombre' => $servicio,
-                        'area' => $area,
-                        'descripcion' => $descripcion,
-                        'precio' => $precioBaremo,
-                        'cantidad_limite' => (int)$item->cantidad_limite,
-                        'veces_usado' => (int)$vecesUsado,
-                        'disponibles' => $item->cantidad_limite > 0 ? $item->cantidad_limite - $vecesUsado : 'Ilimitado',
-                    ];
+                    $hasRemainingUses = ($remainingUses > 0) || ($item->cantidad_limite === null || $item->cantidad_limite == 0);
+                    if ($hasRemainingUses) {
+                        $baremosSinPlazo[$item->baremo_id] = $textoPlano;
+                        $baremosDisponiblesInfo[$item->baremo_id] = [
+                            'nombre' => $servicio,
+                            'area' => $area,
+                            'descripcion' => $descripcion,
+                            'precio' => $precioBaremo,
+                            'cantidad_limite' => (int)$item->cantidad_limite,
+                            'veces_usado' => (int)$vecesUsado,
+                            'disponibles' => ($remainingUses > 0 && $remainingUses < 999) ? $remainingUses : ($item->cantidad_limite > 0 ? $remainingUses : 'Ilimitado'),
+                            'remaining' => $remainingUses,
+                        ];
+                    }
                 }
 
-                // Guardar información del servicio para el template HTML
                 $baremosInfo[$item->baremo_id] = array_merge($baremosInfo[$item->baremo_id] ?? [], [
                     'nombre' => $servicio,
                     'area' => $area,
@@ -717,22 +781,14 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     'has_plazo_ever' => $hasPlazoEver,
                     'excede_limite' => $excedeLimite,
                     'es_historico' => $esBaremoGuardado,
+                    'remaining_uses' => $remainingUses,
                 ]);
 
-                // TEXT FOR DROPDOWN VALUE (recalculate in case it changed)
-                $textoPlano = $servicio . " (" . $area . ")";
-                if (!empty($descripcion)) {
-                    $textoPlano .= " - " . $descripcion;
-                }
-
-                // AVAILABILITY CALCULATION
-                $disponibles = 0;
+                $disponibles = $remainingUses;
                 $availabilityClass = '';
                 $availabilityText = '';
 
                 if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
-                    $disponibles = $item->cantidad_limite - $vecesUsado;
-
                     if ($disponibles <= 0) {
                         $availabilityClass = 'none';
                         $availabilityText = 'Agotado';
@@ -745,28 +801,20 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     }
                 } else {
                     $availabilityClass = '';
-                    $availabilityText = 'Sin límite';
+                    if ($vecesUsado > 0) {
+                        $availabilityText = 'Usado ' . $vecesUsado . ' vez/veces (sin límite)';
+                    } else {
+                        $availabilityText = 'Sin límite';
+                    }
                 }
 
-                // HTML para el template del dropdown
                 $htmlFormateado = "<div class='baremo-dropdown-option'>";
                 $htmlFormateado .= "<div class='baremo-first-row'>";
                 $htmlFormateado .= "<div class='baremo-content-main'>";
-                $htmlFormateado .= "<div class='baremo-area'>";
-                $htmlFormateado .= "<div class='baremo-area-label'>Área</div>";
-                $htmlFormateado .= "<div class='baremo-area-value'>" . $area . "</div>";
+                $htmlFormateado .= "<div class='baremo-area'><div class='baremo-area-label'>Área</div><div class='baremo-area-value'>" . Html::encode($area) . "</div></div>";
+                $htmlFormateado .= "<div class='baremo-servicio'><div class='baremo-servicio-label'>Servicio</div><div class='baremo-servicio-value'>" . Html::encode($servicio) . "</div></div>";
+                $htmlFormateado .= "<div class='baremo-descripcion'><div class='baremo-descripcion-label'>Descripción</div><div class='baremo-descripcion-value' title='" . Html::encode($descripcion ?: 'Sin descripción') . "'>" . Html::encode($descripcion ?: 'Sin descripción') . "</div></div>";
                 $htmlFormateado .= "</div>";
-                $htmlFormateado .= "<div class='baremo-servicio'>";
-                $htmlFormateado .= "<div class='baremo-servicio-label'>Servicio</div>";
-                $htmlFormateado .= "<div class='baremo-servicio-value'>" . $servicio . "</div>";
-                $htmlFormateado .= "</div>";
-                $htmlFormateado .= "<div class='baremo-descripcion'>";
-                $htmlFormateado .= "<div class='baremo-descripcion-label'>Descripción</div>";
-                $htmlFormateado .= "<div class='baremo-descripcion-value' title='" . htmlspecialchars($descripcion ?: 'Sin descripción', ENT_QUOTES) . "'>" . ($descripcion ?: 'Sin descripción') . "</div>";
-                $htmlFormateado .= "</div>";
-                $htmlFormateado .= "</div>"; // Close content-main
-
-                // Status badge
                 $htmlFormateado .= "<div class='baremo-status'>";
                 if ($esBaremoGuardado && !$debeIncluirse) {
                     $htmlFormateado .= "<span class='historico'>Histórico</span>";
@@ -777,36 +825,21 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 } else {
                     $htmlFormateado .= "<span class='disponible'>Disponible</span>";
                 }
-                $htmlFormateado .= "</div>"; // Close status
-                $htmlFormateado .= "</div>"; // Close first-row
-
-                // ROW 2: Price and Availability
+                $htmlFormateado .= "</div></div>";
                 $htmlFormateado .= "<div class='baremo-second-row'>";
-                $htmlFormateado .= "<div class='baremo-price-container'>";
-                $htmlFormateado .= "<span class='baremo-price'>" . number_format($precioBaremo, 2) . "</span>";
-                $htmlFormateado .= "</div>";
-
-                // For restricted items, show waiting period instead of availability
+                $htmlFormateado .= "<div class='baremo-price-container'><span class='baremo-price'>$" . number_format($precioBaremo, 2) . "</span></div>";
                 if ($isRestrictedByPlazo && isset($baremosInfo[$item->baremo_id]['remaining_text'])) {
-                    $htmlFormateado .= "<div class='baremo-waiting-period'>";
-                    $htmlFormateado .= "<i class='fas fa-clock me-1'></i>";
-                    $htmlFormateado .= "<span>Disponible en " . $baremosInfo[$item->baremo_id]['remaining_text'] . "</span>";
-                    $htmlFormateado .= "</div>";
+                    $htmlFormateado .= "<div class='baremo-waiting-period'><i class='fas fa-clock me-1'></i><span>Disponible en " . $baremosInfo[$item->baremo_id]['remaining_text'] . "</span></div>";
                 } else {
                     $htmlFormateado .= "<div class='baremo-availability " . $availabilityClass . "'>" . $availabilityText . "</div>";
                 }
-                $htmlFormateado .= "</div>"; // Close second-row
-                $htmlFormateado .= "</div>"; // Close baremo-dropdown-option
+                $htmlFormateado .= "</div></div>";
 
-                // Si el servicio debe incluirse (es seleccionable O es histórico), agregar al HTML
                 if ($debeIncluirse || $esBaremoGuardado) {
                     $baremosHtml[$item->baremo_id] = $htmlFormateado;
-
-                    // Add to appropriate totals array for selection
                     if (!$excedeLimite && !$isRestrictedByPlazo) {
                         $baremosTotales[$item->baremo_id] = $textoPlano;
                     } elseif ($esBaremoGuardado) {
-                        // For historical items that are no longer available, add to forzados
                         $baremosForzados[$item->baremo_id] = $textoPlano;
                         $baremosTotales[$item->baremo_id] = $textoPlano;
                     }
@@ -814,7 +847,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             }
         }
 
-        // Merge all selectable items
         $baremosTotales = $baremosForzados + $baremosSinPlazo;
     }
     ?>
@@ -832,11 +864,10 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     </div>
                 </div>
                 <div class="section-badge-white d-flex flex-wrap gap-2 align-items-center">
-                    <!-- MODIFIED: Disponibles badge is now clickable -->
                     <span class="badge badge-pill stat-badge disponible clickable-badge"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="<?= htmlspecialchars('Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo. Click para ver detalles.', ENT_QUOTES) ?>">
+                        title="Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo. Click para ver detalles.">
                         <i class="fas fa-check-circle me-3"></i>
                         <?php
                         $totalDisponibles = count($baremosSinPlazo);
@@ -848,11 +879,9 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         <span class="badge badge-pill stat-badge restringido clickable-badge"
                             data-toggle="tooltip"
                             data-placement="top"
-                            title="<?= htmlspecialchars('Servicios con plazo de espera pendiente. No disponibles para selección. Click para ver detalles.', ENT_QUOTES) ?>">
+                            title="Servicios con plazo de espera pendiente. No disponibles para selección. Click para ver detalles.">
                             <i class="fas fa-clock me-3"></i>
-                            <span>
-                                <?= count($baremosPendientesPlazo) ?> Restringidos
-                            </span>
+                            <span><?= count($baremosPendientesPlazo) ?> Restringidos</span>
                         </span>
                     <?php endif; ?>
 
@@ -863,11 +892,9 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         <span class="badge badge-pill stat-badge agotado clickable-badge"
                             data-toggle="tooltip"
                             data-placement="top"
-                            title="<?= htmlspecialchars('Servicios que han alcanzado su límite máximo de usos. No disponibles para selección. Click para ver detalles.', ENT_QUOTES) ?>">
+                            title="Servicios que han alcanzado su límite máximo de usos. No disponibles para selección. Click para ver detalles.">
                             <i class="fas fa-ban me-3"></i>
-                            <span>
-                                <?= $totalAgotados ?> Agotados
-                            </span>
+                            <span><?= $totalAgotados ?> Agotados</span>
                         </span>
                     <?php endif; ?>
 
@@ -875,18 +902,16 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                         <span class="badge badge-pill stat-badge historico"
                             data-toggle="tooltip"
                             data-placement="top"
-                            title="<?= htmlspecialchars('Servicios previamente guardados que ya no cumplen criterios actuales, mostrados solo para referencia histórica.', ENT_QUOTES) ?>">
+                            title="Servicios previamente guardados que ya no cumplen criterios actuales, mostrados solo para referencia histórica.">
                             <i class="fas fa-history me-3"></i>
-                            <span>
-                                <?= count($baremosForzados) ?> Históricos
-                            </span>
+                            <span><?= count($baremosForzados) ?> Históricos</span>
                         </span>
                     <?php endif; ?>
 
                     <span class="badge badge-pill stat-badge total"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="<?= htmlspecialchars('Cantidad total de servicios médicos incluidos en el plan, independientemente de su disponibilidad.', ENT_QUOTES) ?>">
+                        title="Cantidad total de servicios médicos incluidos en el plan, independientemente de su disponibilidad.">
                         <i class="fas fa-layer-group me-3"></i>
                         <span>
                             <?php
@@ -942,7 +967,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                 <span class="total-amount" id="summary-total-amount">$0.00</span>
                             </div>
                         </div>
-
                         <div class="table-responsive">
                             <table class="table table-hover table-summary">
                                 <thead class="table-light">
@@ -954,8 +978,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                         <th width="10%" class="text-end">Costo</th>
                                     </tr>
                                 </thead>
-                                <tbody id="baremos-tabla-body">
-                                </tbody>
+                                <tbody id="baremos-tabla-body"></tbody>
                             </table>
                         </div>
                     </div>
@@ -979,7 +1002,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                 </button>
                             </div>
                         </div>
-
                         <div id="cobertura-warning" class="coverage-warning mt-3" style="display: none;">
                             <div class="warning-content">
                                 <div class="warning-icon">
@@ -991,7 +1013,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                 </div>
                             </div>
                         </div>
-
                         <?php if ($esCitaMode): ?>
                             <div id="cita-warning" class="info-message mt-3">
                                 <div class="info-content">
@@ -1005,7 +1026,6 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                             </div>
                         <?php endif; ?>
                     </div>
-
                 </div>
             <?php else: ?>
                 <div id="contrato-error-message" class="alert alert-warning alert-dismissible fade show" style="margin-top: 1.5rem;">
@@ -1053,23 +1073,19 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                             </div>
                         </div>
                     </div>
-
                     <div class="form-group text-center mt-4">
                         <?= Html::submitButton('<i class="fas fa-save"></i> Guardar ' . $terminoPrincipal, [
                             'class' => 'btn btn-success btn-lg me-3 px-5'
                         ]) ?>
-
                         <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'user_id' => $afiliado->id], [
                             'class' => 'btn btn-warning btn-lg me-3 px-5'
                         ]); ?>
-
                         <?php if ($model->isNewRecord): ?>
                             <?= Html::a('<i class="fas fa-eraser"></i> Limpiar', ['create', 'user_id' => $afiliado->id], [
                                 'class' => 'btn btn-outline-dark btn-lg px-5'
                             ]); ?>
                         <?php endif; ?>
                     </div>
-
                     <div class="text-center mt-3">
                         <p class="text-muted">
                             <i class="fas fa-info-circle me-1"></i>
@@ -1084,33 +1100,26 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
     <?php ActiveForm::end(); ?>
 </div>
 
-<!-- ===== MODALS ===== -->
 <?php
 Modal::begin([
     'title' => '<h4>Detalles del Afiliado <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></h4>',
     'id' => 'afiliado-modal',
     'size' => Modal::SIZE_LARGE,
-    'options' => [
-        'tabindex' => false,
-        'class' => 'fade',
-        'role' => 'dialog',
-    ],
+    'options' => ['tabindex' => false, 'class' => 'fade', 'role' => 'dialog'],
     'dialogOptions' => ['class' => 'modal-dialog-centered'],
 ]);
-
 echo $this->render('/user-datos/view', ['model' => $afiliado]);
-
 Modal::end();
 ?>
 
 <?php
-// Add JavaScript for collapsible historial section
-$this->registerJs(
-    <<<JS
-// Toggle historial section
+$this->registerJs(<<<'JS'
+// ============================================
+// TOGGLE HISTORIAL SECTION
+// ============================================
 $('#historial-toggle-header').on('click', function() {
-    const content = $('#historial-content');
-    const chevron = $('#historial-chevron');
+    var content = $('#historial-content');
+    var chevron = $('#historial-chevron');
     
     if (content.is(':visible')) {
         content.slideUp(300);
@@ -1121,19 +1130,177 @@ $('#historial-toggle-header').on('click', function() {
     }
 });
 
-// Afiliado modal trigger
+// ============================================
+// AFILIADO MODAL TRIGGER
+// ============================================
 $('#btn-abrir-afiliado-modal').on('click', function(e) {
     e.preventDefault();
-    
     setTimeout(function() {
         $('#afiliado-modal').modal('show');
-    }, 50); 
+    }, 50);
 });
-JS,
-    View::POS_END
-);
 
-// Include the original baremos JavaScript
+// ============================================
+// TIME INPUT FORMATTING AND VALIDATION
+// ============================================
+
+// Validate time format (HH:MM with 00-23:00-59)
+function validateTimeFormat(timeStr) {
+    if (!timeStr || timeStr === '') return true;
+    return /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
+}
+
+// Convert any time format to 24-hour HH:MM
+function convertTo24Hour(timeStr) {
+    if (!timeStr) return '';
+    
+    // Already in 24-hour format (HH:MM)
+    if (/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr)) {
+        return timeStr;
+    }
+    
+    // Handle 12-hour format with AM/PM
+    var match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+        var hour = parseInt(match[1]);
+        var minute = match[2];
+        var ampm = match[3].toUpperCase();
+        
+        if (ampm === 'PM' && hour !== 12) {
+            hour += 12;
+        } else if (ampm === 'AM' && hour === 12) {
+            hour = 0;
+        }
+        
+        return hour.toString().padStart(2, '0') + ':' + minute;
+    }
+    
+    // Handle format with seconds (HH:MM:SS)
+    match = timeStr.match(/^(\d{1,2}):(\d{2}):\d{2}$/);
+    if (match) {
+        return match[1].padStart(2, '0') + ':' + match[2];
+    }
+    
+    return timeStr;
+}
+
+// Auto-format time when user leaves the field (on blur)
+function autoFormatTime(input) {
+    var value = input.value;
+    if (!value) return;
+    
+    // Remove any non-digit characters for processing
+    var digits = value.replace(/[^0-9]/g, '');
+    
+    if (digits.length >= 3) {
+        var hour = digits.slice(0, 2);
+        var minute = digits.slice(2, 4);
+        
+        // Validate ranges
+        var hourInt = parseInt(hour);
+        var minuteInt = parseInt(minute);
+        
+        if (hourInt > 23) hour = '23';
+        if (hourInt < 0 || isNaN(hourInt)) hour = '00';
+        if (minuteInt > 59) minute = '59';
+        if (minuteInt < 0 || isNaN(minuteInt)) minute = '00';
+        
+        input.value = hour + ':' + minute;
+    } else if (digits.length === 2) {
+        input.value = digits;
+    }
+}
+
+// Initialize time inputs when document is ready
+$(document).ready(function() {
+    // Convert existing values to 24-hour format on page load
+    $('.time-input').each(function() {
+        var converted = convertTo24Hour($(this).val());
+        if (converted !== $(this).val()) {
+            $(this).val(converted);
+        }
+    });
+    
+    // Auto-format when user leaves the field (NOT while typing)
+    $('.time-input').on('blur', function() {
+        autoFormatTime(this);
+        
+        var $this = $(this);
+        var isValid = validateTimeFormat($this.val());
+        
+        if (!isValid && $this.val() !== '') {
+            $this.addClass('is-invalid');
+            if ($this.next('.invalid-feedback').length === 0) {
+                $this.after('<div class="invalid-feedback">Formato inválido. Use HH:MM en formato 24 horas (ejemplo: 14:30)</div>');
+            }
+        } else {
+            $this.removeClass('is-invalid');
+            $this.next('.invalid-feedback').remove();
+        }
+    });
+    
+    // Allow normal typing - only validate, don't reformat
+    $('.time-input').on('input', function() {
+        // Remove the invalid class while user is typing
+        $(this).removeClass('is-invalid');
+        $(this).next('.invalid-feedback').remove();
+    });
+    
+    // Convert to 24-hour format before form submission
+    $('form').on('beforeSubmit', function() {
+        var isValid = true;
+        
+        $('.time-input').each(function() {
+            var $thisField = $(this);
+            
+            // Auto-format before validation
+            autoFormatTime(this);
+            
+            var converted = convertTo24Hour($thisField.val());
+            if (converted !== $thisField.val()) {
+                $thisField.val(converted);
+            }
+            
+            if (!validateTimeFormat($thisField.val()) && $thisField.val() !== '') {
+                $thisField.addClass('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            if ($('#time-validation-error').length === 0) {
+                $('.sis-siniestro-form').prepend('<div id="time-validation-error" class="alert alert-danger alert-dismissible fade show" role="alert"><i class="fas fa-exclamation-circle"></i> <strong>Error de validación:</strong> Por favor, corrija los errores en los campos de hora antes de guardar.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            }
+            return false;
+        }
+        
+        $('#time-validation-error').remove();
+        return true;
+    });
+});
+
+// ============================================
+// END TIME INPUT FORMATTING AND VALIDATION
+// ============================================
+
+// ============================================
+// CUSTOM FILE INPUT - Show selected file name
+// ============================================
+$('#recipe-file-input, #informe-file-input').on('change', function() {
+    var fileName = $(this).val().split('\\').pop();
+    var labelId = $(this).attr('id') === 'recipe-file-input' ? '#recipe-file-label' : '#informe-file-label';
+    
+    if (fileName) {
+        $(labelId).html('<i class="fas fa-file"></i> ' + fileName);
+        $(labelId).addClass('selected');
+    } else {
+        $(labelId).html('<i class="fas fa-upload"></i> Seleccionar archivo...');
+        $(labelId).removeClass('selected');
+    }
+});
+
+JS, View::POS_END);
+
 if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isset($baremosRestringidosIDs)) {
     $baremosTotalesJson = json_encode($baremosTotales);
     $baremosHtmlJson = json_encode($baremosHtml);
@@ -1149,7 +1316,6 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
 (function() {
     'use strict';
     
-    // Capture variables from PHP
     const baremosTotales = {$baremosTotalesJson};
     const baremosHtml = {$baremosHtmlJson};
     const baremosInfo = {$baremosInfoJson};
@@ -1160,245 +1326,347 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     const baremosPendientesInfo = {$baremosPendientesInfoJson};
     const baremosAgotadosInfo = {$baremosAgotadosInfoJson};
     
-    // DOM elements cache
-    const baremosSelect = \$('#baremos-select');
+    const baremosSelect = $('#baremos-select');
     const form = baremosSelect.closest('form');
-    const citaWarning = \$('#cita-warning');
+    const citaWarning = $('#cita-warning');
     
-    // NEW: Function to show modal for available services
-    function showDisponiblesModal() {
-        const items = baremosDisponiblesInfo;
-        const count = Object.keys(items).length;
-        
-        if (count === 0) {
-            return;
-        }
-        
-        // Create modal HTML
-        let modalHtml = '<div class="restricted-agotados-modal-overlay">';
-        modalHtml += '<div class="restricted-agotados-modal">';
-        
-        // Header
-        modalHtml += '<div class="modal-header">';
-        modalHtml += '<div class="modal-icon"><i class="fas fa-check-circle" style="color: #28a745;"></i></div>';
-        modalHtml += '<h3 class="modal-title">Servicios Disponibles (' + count + ')</h3>';
-        modalHtml += '<button type="button" class="modal-close" id="close-details-modal">&times;</button>';
-        modalHtml += '</div>';
-        
-        // Content
-        modalHtml += '<div class="modal-content">';
-        
-        modalHtml += '<div class="modal-explanation">';
-        modalHtml += '<p><strong>¿Qué significa "Disponible"?</strong></p>';
-        modalHtml += '<p>Estos servicios cumplen todos los criterios y pueden ser seleccionados ahora mismo. Muestran el límite disponible y el precio.</p>';
-        modalHtml += '</div>';
-        
-        // Items table
-        modalHtml += '<div class="items-table-container">';
-        modalHtml += '<table class="items-table">';
-        modalHtml += '<thead>';
-        modalHtml += '<tr>';
-        modalHtml += '<th width="25%">Servicio</th>';
-        modalHtml += '<th width="20%">Área</th>';
-        modalHtml += '<th width="30%">Descripción</th>';
-        modalHtml += '<th width="15%">Disponibles</th>';
-        modalHtml += '<th width="10%">Precio</th>';
-        modalHtml += '</tr>';
-        modalHtml += '</thead>';
-        modalHtml += '<tbody>';
-        
-        // Add each item
-        Object.keys(items).forEach(function(baremoId) {
-            const item = items[baremoId];
-            if (!item) return;
-            
-            modalHtml += '<tr>';
-            modalHtml += '<td><strong>' + (item.nombre || 'Sin nombre') + '</strong></td>';
-            modalHtml += '<td>' + (item.area || 'Sin área') + '</td>';
-            modalHtml += '<td>' + (item.descripcion || 'Sin descripción') + '</td>';
-            modalHtml += '<td class="text-center"><span class="usage-badge" style="background-color: #28a745;">' + (item.disponibles || 'Ilimitado') + '</span></td>';
-            modalHtml += '<td class="text-end"><strong>$' + parseFloat(item.precio).toFixed(2) + '</strong></td>';
-            modalHtml += '</tr>';
-        });
-        
-        modalHtml += '</tbody>';
-        modalHtml += '</table>';
-        modalHtml += '</div>';
-        
-        // Footer
-        modalHtml += '<div class="modal-footer">';
-        modalHtml += '<button type="button" class="btn btn-secondary" id="close-details-modal-btn">';
-        modalHtml += '<i class="fas fa-times me-1"></i> Cerrar';
-        modalHtml += '</button>';
-        modalHtml += '</div>';
-        
-        modalHtml += '</div>';
-        modalHtml += '</div>';
-        modalHtml += '</div>';
-        
-        // Remove any existing modal
-        \$('.restricted-agotados-modal-overlay').remove();
-        
-        // Add to DOM
-        \$('body').append(modalHtml);
-        
-        // Add click handlers
-        \$('#close-details-modal, #close-details-modal-btn').off('click').on('click', function() {
-            \$('.restricted-agotados-modal-overlay').fadeOut(300, function() {
-                \$(this).remove();
-            });
-        });
-        
-        // Close when clicking outside
-        \$('.restricted-agotados-modal-overlay').off('click').on('click', function(e) {
-            if (\$(e.target).hasClass('restricted-agotados-modal-overlay')) {
-                \$(this).fadeOut(300, function() {
-                    \$(this).remove();
-                });
-            }
-        });
-        
-        // Show modal
-        \$('.restricted-agotados-modal-overlay').fadeIn(300);
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
-    // Function to show detailed modal for restricted/agotados items
-    function showRestrictedAgotadosModal(type) {
-        const isRestringidos = (type === 'restringidos');
-        const title = isRestringidos ? 'Servicios con Plazo de Espera Pendiente' : 'Servicios Agotados (Límite Alcanzado)';
-        const icon = isRestringidos ? '<i class="fas fa-clock"></i>' : '<i class="fas fa-ban"></i>';
-        const items = isRestringidos ? baremosPendientesInfo : baremosAgotadosInfo;
-        const count = isRestringidos ? baremosRestringidosIDs.length : Object.keys(baremosAgotadosInfo).length;
+    // Add CSS styles for modals (only once)
+    function addModalStyles() {
+        if ($('#servicios-modal-styles').length) return;
+        var styles = '<style id="servicios-modal-styles">' +
+            '.servicios-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:center;z-index:10000;animation:fadeIn 0.2s ease;}' +
+            '.servicios-modal{background:white;border-radius:12px;width:90%;max-width:1100px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.3);animation:slideIn 0.3s ease;}' +
+            '.servicios-modal-header{display:flex;align-items:center;padding:20px 24px;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:white;border-radius:12px 12px 0 0;gap:16px;}' +
+            '.servicios-modal-header.header-warning{background:linear-gradient(135deg,#f0ad4e 0%,#ec971f 100%);}' +
+            '.servicios-modal-header.header-danger{background:linear-gradient(135deg,#d9534f 0%,#c9302c 100%);}' +
+            '.servicios-modal-header-icon{width:48px;height:48px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;}' +
+            '.servicios-modal-header-title h3{margin:0;font-size:20px;font-weight:600;}' +
+            '.servicios-modal-header-title p{margin:4px 0 0;font-size:13px;opacity:0.85;}' +
+            '.servicios-modal-close{margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}' +
+            '.servicios-modal-close:hover{background:rgba(255,255,255,0.3);transform:scale(1.05);}' +
+            '.servicios-modal-body{flex:1;overflow-y:auto;padding:20px 24px;}' +
+            '.servicios-info-banner{background:#e8f4fd;border-left:4px solid #1e3c72;padding:12px 16px;border-radius:8px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;}' +
+            '.servicios-info-banner i{color:#1e3c72;font-size:18px;margin-top:2px;}' +
+            '.servicios-info-banner .info-text{font-size:13px;color:#2c3e50;line-height:1.4;}' +
+            '.servicios-info-banner.info-warning{background:#fff8e7;border-left-color:#f0ad4e;}' +
+            '.servicios-info-banner.info-warning i{color:#f0ad4e;}' +
+            '.servicios-info-banner.info-danger{background:#fdf0ef;border-left-color:#d9534f;}' +
+            '.servicios-info-banner.info-danger i{color:#d9534f;}' +
+            '.servicios-selection-info{background:#e8f5e9;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#2e7d32;}' +
+            '.servicios-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e9ecef;margin-bottom:16px;}' +
+            '.toolbar-actions{display:flex;gap:8px;}' +
+            '.btn-toolbar{padding:6px 12px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;font-size:12px;cursor:pointer;transition:all 0.2s;}' +
+            '.btn-toolbar:hover{background:#e9ecef;}' +
+            '.toolbar-stats{font-size:13px;color:#6c757d;font-weight:500;}' +
+            '.servicios-table-container{overflow-x:auto;border-radius:8px;border:1px solid #e9ecef;}' +
+            '.servicios-table{width:100%;border-collapse:collapse;font-size:13px;}' +
+            '.servicios-table thead th{background:#f8f9fa;padding:12px;text-align:left;font-weight:600;color:#495057;border-bottom:2px solid #dee2e6;}' +
+            '.servicios-table tbody tr{border-bottom:1px solid #f0f0f0;transition:background 0.2s;cursor:pointer;}' +
+            '.servicios-table tbody tr:hover{background:#f8f9fa;}' +
+            '.servicios-table tbody td{padding:12px;vertical-align:middle;}' +
+            '.checkbox-wrapper{position:relative;display:inline-block;}' +
+            '.checkbox-wrapper input[type="checkbox"]{position:absolute;opacity:0;cursor:pointer;}' +
+            '.checkbox-wrapper label{display:inline-block;width:18px;height:18px;border:2px solid #cbd5e0;border-radius:4px;background:white;cursor:pointer;transition:all 0.2s;}' +
+            '.checkbox-wrapper input[type="checkbox"]:checked + label{background:#1e3c72;border-color:#1e3c72;}' +
+            '.checkbox-wrapper input[type="checkbox"]:checked + label::after{content:"✓";display:block;color:white;font-size:12px;line-height:14px;text-align:center;}' +
+            '.area-badge{background:#e8f4fd;color:#1e3c72;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:500;display:inline-block;}' +
+            '.disponibilidad-badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;}' +
+            '.disponibilidad-badge.disponible{background:#e8f5e9;color:#2e7d32;}' +
+            '.servicio-nombre{font-weight:500;color:#2c3e50;}' +
+            '.servicio-precio{font-weight:600;color:#28a745;text-align:right;}' +
+            '.detail-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:12px;}' +
+            '.detail-badge.detail-warning{background:#fff8e7;color:#856404;}' +
+            '.usage-progress{width:100%;}' +
+            '.usage-stats{text-align:center;margin-bottom:4px;font-size:12px;}' +
+            '.usage-used{font-weight:700;color:#dc3545;}' +
+            '.progress-bar-container{background:#e9ecef;border-radius:4px;height:4px;overflow:hidden;}' +
+            '.progress-bar-fill{height:100%;border-radius:4px;transition:width 0.3s;}' +
+            '.servicios-modal-footer{padding:16px 24px;border-top:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center;background:#fafbfc;border-radius:0 0 12px 12px;}' +
+            '.footer-summary{display:flex;gap:24px;}' +
+            '.summary-item{display:flex;align-items:baseline;gap:6px;}' +
+            '.summary-label{font-size:12px;color:#6c757d;}' +
+            '.summary-value{font-size:18px;font-weight:700;color:#2c3e50;}' +
+            '.summary-price{color:#28a745;}' +
+            '.footer-actions{display:flex;gap:12px;}' +
+            '.btn-modal{padding:8px 20px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;border:none;}' +
+            '.btn-modal-primary{background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:white;}' +
+            '.btn-modal-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(30,60,114,0.3);}' +
+            '.btn-modal-secondary{background:#f8f9fa;border:1px solid #dee2e6;color:#495057;}' +
+            '.btn-modal-secondary:hover{background:#e9ecef;}' +
+            '@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}' +
+            '@keyframes slideIn{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:translateY(0);}}' +
+            '@media (max-width:768px){.servicios-modal{width:95%;max-height:90vh;}.servicios-modal-header{padding:16px;}.servicios-modal-body{padding:16px;}.footer-summary{flex-direction:column;gap:8px;}.summary-value{font-size:14px;}.servicios-table thead th{font-size:11px;padding:8px;}.servicios-table tbody td{padding:8px;font-size:11px;}}' +
+        '</style>';
+        $('head').append(styles);
+    }
+    
+    // Professional Modal for Available Services
+    function showDisponiblesModal() {
+        var currentlySelected = baremosSelect.val() || [];
+        var items = {};
+        Object.keys(baremosDisponiblesInfo).forEach(function(baremoId) {
+            if (!currentlySelected.includes(baremoId.toString())) {
+                items[baremoId] = baremosDisponiblesInfo[baremoId];
+            }
+        });
+        var count = Object.keys(items).length;
         
         if (count === 0) {
+            if (typeof toastr !== 'undefined') {
+                toastr.info('No hay servicios disponibles adicionales. Todos los servicios ya han sido seleccionados.');
+            } else {
+                alert('No hay servicios disponibles adicionales. Todos los servicios ya han sido seleccionados.');
+            }
             return;
         }
         
-        // Create modal HTML
-        let modalHtml = '<div class="restricted-agotados-modal-overlay">';
-        modalHtml += '<div class="restricted-agotados-modal">';
+        var totalAvailablePrice = 0;
+        Object.keys(items).forEach(function(baremoId) {
+            totalAvailablePrice += parseFloat(items[baremoId].precio || 0);
+        });
         
-        // Header
-        modalHtml += '<div class="modal-header">';
-        modalHtml += '<div class="modal-icon">' + icon + '</div>';
-        modalHtml += '<h3 class="modal-title">' + title + ' (' + count + ')</h3>';
-        modalHtml += '<button type="button" class="modal-close" id="close-details-modal">&times;</button>';
-        modalHtml += '</div>';
+        var modalHtml = '<div class="servicios-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); display: flex; justify-content: center; align-items: center; z-index: 10000;">' +
+    '<div class="servicios-modal servicios-disponibles-modal" style="background: white; border-radius: 12px; width: 90%; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);">' +
+        '<div class="servicios-modal-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 20px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px; color: white;">' +
+            '<div class="servicios-modal-header-icon" style="width: 48px; height: 48px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-check-circle" style="color: white; font-size: 24px;"></i></div>' +
+            '<div class="servicios-modal-header-title" style="flex: 1;">' +
+                '<h3 style="color: white; margin: 0; font-size: 20px; font-weight: 600;">Servicios Médicos Disponibles</h3>' +
+                '<p style="color: rgba(255, 255, 255, 0.9); margin: 4px 0 0; font-size: 13px;">' + count + ' servicio(s) disponible(s) para agregar</p>' +
+            '</div>' +
+            '<button type="button" class="servicios-modal-close" id="close-available-modal" style="background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fas fa-times" style="color: white;"></i></button>' +
+        '</div>' +
+        '<div class="servicios-modal-body" style="flex: 1; overflow-y: auto; padding: 20px 24px; background: white;">' +
+            '<div class="servicios-info-banner" style="background: #e8f4fd; border-left: 4px solid #1e3c72; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 12px;">' +
+                '<i class="fas fa-info-circle" style="color: #1e3c72; font-size: 18px;"></i>' +
+                '<div class="info-text" style="font-size: 13px; color: #2c3e50; line-height: 1.4;">' +
+                    '<strong style="color: #2c3e50;">¿Qué significa "Disponible"?</strong>' +
+                    ' Estos servicios cumplen con los criterios (sin plazo de espera pendiente y con usos disponibles) ' +
+                '</div>' +
+            '</div>';
         
-        // Content
-        modalHtml += '<div class="modal-content">';
-        
-        if (isRestringidos) {
-            modalHtml += '<div class="modal-explanation">';
-            modalHtml += '<p><strong>¿Qué significa "Plazo de Espera Pendiente"?</strong></p>';
-            modalHtml += '<p>Estos servicios requieren que haya transcurrido un período mínimo desde el inicio del contrato antes de poder ser utilizados. El plazo varía según el servicio.</p>';
-            modalHtml += '</div>';
-        } else {
-            modalHtml += '<div class="modal-explanation">';
-            modalHtml += '<p><strong>¿Qué significa "Agotado"?</strong></p>';
-            modalHtml += '<p>Estos servicios han alcanzado su límite máximo de usos permitidos por el plan. No pueden ser seleccionados nuevamente.</p>';
-            modalHtml += '</div>';
+        if (currentlySelected.length > 0) {
+            modalHtml += '<div class="servicios-selection-info">' +
+                '<i class="fas fa-check-square"></i>' +
+                '<span>Actualmente tienes <strong>' + currentlySelected.length + '</strong> servicio(s) seleccionado(s). Los servicios que ya están agregados no se muestran en esta lista.</span>' +
+            '</div>';
         }
         
-        // Items table
-        modalHtml += '<div class="items-table-container">';
-        modalHtml += '<table class="items-table">';
-        modalHtml += '<thead>';
-        modalHtml += '<tr>';
-        modalHtml += '<th width="25%">Servicio</th>';
-        modalHtml += '<th width="20%">Área</th>';
-        modalHtml += '<th width="35%">Descripción</th>';
-        modalHtml += '<th width="20%">' + (isRestringidos ? 'Tiempo Restante' : 'Uso Actual') + '</th>';
-        modalHtml += '</tr>';
-        modalHtml += '</thead>';
-        modalHtml += '<tbody>';
+        modalHtml += '<div class="servicios-toolbar">' +
+    
+'<div class="servicios-table-container">' +
+    '<table class="servicios-table">' +
+        '<thead>' +
+            '<tr style="background: #e9ecef !important;">' +
+                '<th width="5%" style="background: #e9ecef !important; color: #1a1a1a !important; font-weight: 700 !important; padding: 12px !important;"><div class="checkbox-wrapper"><input type="checkbox" id="available-select-all-checkbox"><label for="available-select-all-checkbox"></label></div></th>' +
+                '<th width="25%" style="background: #e9ecef !important; color: #1a1a1a !important; font-weight: 700 !important; padding: 12px !important;">Servicio</th>' +
+                '<th width="18%" style="background: #e9ecef !important; color: #1a1a1a !important; font-weight: 700 !important; padding: 12px !important;">Área</th>' +
+                '<th width="30%" style="background: #e9ecef !important; color: #1a1a1a !important; font-weight: 700 !important; padding: 12px !important;">Descripción</th>' +
+                '<th width="12%" style="background: #e9ecef !important; color: #1a1a1a !important; font-weight: 700 !important; padding: 12px !important;">Disponibles</th>' +
+                '<th width="10%" style="background: #e9ecef !important; color: #1a1a1a !important; font-weight: 700 !important; padding: 12px !important;">Precio</th>' +
+            '</tr>' +
+        '</thead>' +
+        '<tbody>';
         
-        // Add each item
         Object.keys(items).forEach(function(baremoId) {
-            const item = items[baremoId];
+            var item = items[baremoId];
             if (!item) return;
+            var disponibles = item.disponibles === 'Ilimitado' ? '∞' : item.disponibles;
+            var precio = parseFloat(item.precio || 0).toFixed(2);
+            var nombre = escapeHtml(item.nombre || 'Sin nombre');
+            var area = escapeHtml(item.area || 'Sin área');
+            var descripcion = escapeHtml(item.descripcion || 'Sin descripción');
             
-            modalHtml += '<tr>';
-            modalHtml += '<td><strong>' + (item.nombre || 'Sin nombre') + '</strong></td>';
-            modalHtml += '<td>' + (item.area || 'Sin área') + '</td>';
-            modalHtml += '<td>' + (item.descripcion || 'Sin descripción') + '</td>';
+            modalHtml += '<tr>' +
+                '<td class="text-center"><div class="checkbox-wrapper"><input type="checkbox" class="service-checkbox-available" id="chk_' + baremoId + '" data-baremo-id="' + baremoId + '" data-price="' + precio + '"><label for="chk_' + baremoId + '"></label></div></td>' +
+                '<td class="servicio-nombre"><strong>' + nombre + '</strong></td>' +
+                '<td class="servicio-area"><span class="area-badge">' + area + '</span></td>' +
+                '<td class="servicio-descripcion">' + descripcion + '</td>' +
+                '<td class="text-center"><span class="disponibilidad-badge disponible">' + disponibles + '</span></td>' +
+                '<td class="servicio-precio">$' + precio + '</td>' +
+            '</tr>';
+        });
+        
+        modalHtml += '</tbody>' +
+                        '</table>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="servicios-modal-footer">' +
+                    '<div class="footer-summary">' +
+                        '<div class="summary-item"><span class="summary-label">Total de servicios:</span><span class="summary-value" id="available-total-services">' + count + '</span></div>' +
+                        '<div class="summary-item"><span class="summary-label">Valor total:</span><span class="summary-value summary-price">$' + totalAvailablePrice.toFixed(2) + '</span></div>' +
+                        '<div class="summary-item"><span class="summary-label">Seleccionados:</span><span class="summary-value" id="available-selected-summary">0</span></div>' +
+                    '</div>' +
+                    '<div class="footer-actions">' +
+                        '<button type="button" class="btn-modal btn-modal-secondary" id="cancel-available-modal"><i class="fas fa-times"></i> Cancelar</button>' +
+                        '<button type="button" class="btn-modal btn-modal-primary" id="add-selected-available"><i class="fas fa-plus-circle"></i> Agregar Seleccionados</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+        
+        $('.servicios-modal-overlay').remove();
+        $('body').append(modalHtml);
+        addModalStyles();
+        
+        function updateAvailableSelectedCount() {
+            var selectedCount = $('.service-checkbox-available:checked').length;
+            $('#available-selected-count').text(selectedCount + ' seleccionado' + (selectedCount !== 1 ? 's' : ''));
+            $('#available-selected-summary').text(selectedCount);
+            $('#available-select-all-checkbox').prop('checked', selectedCount === count && count > 0);
+        }
+        
+        $('#available-select-all-checkbox').off('change').on('change', function() {
+            $('.service-checkbox-available').prop('checked', $(this).prop('checked'));
+            updateAvailableSelectedCount();
+        });
+        $(document).off('change', '.service-checkbox-available').on('change', '.service-checkbox-available', function() { updateAvailableSelectedCount(); });
+        $('#select-all-available').off('click').on('click', function() { $('.service-checkbox-available').prop('checked', true); updateAvailableSelectedCount(); });
+        $('#deselect-all-available').off('click').on('click', function() { $('.service-checkbox-available').prop('checked', false); updateAvailableSelectedCount(); });
+        
+        $('#add-selected-available').off('click').on('click', function() {
+            var selectedServices = [];
+            $('.service-checkbox-available:checked').each(function() {
+                var baremoId = $(this).data('baremo-id');
+                if (baremoId && baremosTotales[baremoId]) selectedServices.push(baremoId);
+            });
+            if (selectedServices.length === 0) {
+                if (typeof toastr !== 'undefined') toastr.warning('Por favor, seleccione al menos un servicio.');
+                else alert('Por favor, seleccione al menos un servicio.');
+                return;
+            }
+            var currentValues = baremosSelect.val() || [];
+            var addedCount = 0;
+            selectedServices.forEach(function(baremoId) {
+                if (!currentValues.includes(baremoId.toString())) {
+                    currentValues.push(baremoId.toString());
+                    addedCount++;
+                }
+            });
+            if (addedCount > 0) {
+                baremosSelect.val(currentValues).trigger('change');
+                if (typeof toastr !== 'undefined') toastr.success(addedCount + ' servicio(s) agregado(s) correctamente.');
+            } else {
+                if (typeof toastr !== 'undefined') toastr.info('Los servicios seleccionados ya están agregados.');
+            }
+            $('.servicios-modal-overlay').fadeOut(300, function() { $(this).remove(); });
+        });
+        
+        $('#close-available-modal, #cancel-available-modal').off('click').on('click', function() {
+            $('.servicios-modal-overlay').fadeOut(300, function() { $(this).remove(); });
+        });
+        $('.servicios-modal-overlay').off('click').on('click', function(e) {
+            if ($(e.target).hasClass('servicios-modal-overlay')) {
+                $(this).fadeOut(300, function() { $(this).remove(); });
+            }
+        });
+        $('.servicios-modal-overlay').fadeIn(300);
+    }
+    
+    // Professional Modal for Restricted/Agotados Services
+    function showRestrictedAgotadosModal(type) {
+        var isRestringidos = (type === 'restringidos');
+        var title = isRestringidos ? 'Servicios con Plazo de Espera Pendiente' : 'Servicios Agotados';
+        var icon = isRestringidos ? 'fa-clock' : 'fa-ban';
+        var items = isRestringidos ? baremosPendientesInfo : baremosAgotadosInfo;
+        var count = Object.keys(items).length;
+        
+        if (count === 0) return;
+        
+        var headerClass = isRestringidos ? 'header-warning' : 'header-danger';
+        var bannerClass = isRestringidos ? 'info-warning' : 'info-danger';
+        var iconClass2 = isRestringidos ? 'fa-hourglass-half' : 'fa-exclamation-triangle';
+        var statusText = isRestringidos ? 'en período de espera' : 'con límite de uso alcanzado';
+        var infoText = isRestringidos ? '<strong>¿Qué significa "Plazo de Espera Pendiente"?</strong> Estos servicios requieren que haya transcurrido un período mínimo desde el inicio del contrato antes de poder ser utilizados. No están disponibles para selección hasta que se cumpla el plazo.' : '<strong>¿Qué significa "Agotado"?</strong> Estos servicios han alcanzado su límite máximo de usos permitidos por el plan. No pueden ser seleccionados nuevamente.';
+        
+        var modalHtml = '<div class="servicios-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); display: flex; justify-content: center; align-items: center; z-index: 10000;">' +
+    '<div class="servicios-modal servicios-' + (isRestringidos ? 'restringidos' : 'agotados') + '-modal" style="background: white; border-radius: 12px; width: 90%; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);">' +
+        '<div class="servicios-modal-header ' + headerClass + '" style="padding: 20px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px; color: white;">' +
+            '<div class="servicios-modal-header-icon" style="width: 48px; height: 48px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas ' + icon + '" style="color: white; font-size: 24px;"></i></div>' +
+            '<div class="servicios-modal-header-title" style="flex: 1;">' +
+                '<h3 style="color: white; margin: 0; font-size: 20px; font-weight: 600;">' + title + '</h3>' +
+                '<p style="color: rgba(255, 255, 255, 0.9); margin: 4px 0 0; font-size: 13px;">' + count + ' servicio(s) ' + statusText + '</p>' +
+            '</div>' +
+            '<button type="button" class="servicios-modal-close" id="close-restricted-modal" style="background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fas fa-times" style="color: white;"></i></button>' +
+        '</div>' +
+        '<div class="servicios-modal-body" style="flex: 1; overflow-y: auto; padding: 20px 24px; background: white;">' +
+            '<div class="servicios-info-banner ' + bannerClass + '" style="padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 12px;">' +
+                '<i class="fas ' + iconClass2 + '" style="font-size: 18px;"></i>' +
+                '<div class="info-text" style="font-size: 13px; line-height: 1.4; color: #2c3e50;">' + infoText + '</div>' +
+            '</div>' +
+            '<div class="servicios-table-container" style="overflow-x: auto; border-radius: 8px; border: 1px solid #e9ecef;">' +
+                '<table class="servicios-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">' +
+                    '<thead>' +
+                        '<tr style="background: #e9ecef;">' +
+                            '<th width="25%" style="background: #58bef5; color: #1a1a1a; font-weight: 700; padding: 12px; text-align: left;">Servicio</th>' +
+                            '<th width="18%" style="background: #58bef5; color: #1a1a1a; font-weight: 700; padding: 12px; text-align: left;">Área</th>' +
+                            '<th width="37%" style="background: #58bef5; color: #1a1a1a; font-weight: 700; padding: 12px; text-align: left;">Descripción</th>' +
+                            '<th width="20%" style="background: #58bef5; color: #1a1a1a; font-weight: 700; padding: 12px; text-align: center;">' + (isRestringidos ? 'Tiempo Restante' : 'Uso Actual / Límite') + '</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>';
+        
+        Object.keys(items).forEach(function(baremoId) {
+            var item = items[baremoId];
+            if (!item) return;
+            var nombre = escapeHtml(item.nombre || 'Sin nombre');
+            var area = escapeHtml(item.area || 'Sin área');
+            var descripcion = escapeHtml(item.descripcion || 'Sin descripción');
+            var detailHtml = '';
             
             if (isRestringidos) {
-                let remainingText = '';
-                if (item.remaining_text) {
-                    remainingText = item.remaining_text;
-                } else if (item.plazo_espera) {
-                    remainingText = 'Plazo: ' + item.plazo_espera + ' meses';
-                    if (item.remaining_months || item.remaining_days) {
-                        const months = item.remaining_months || 0;
-                        const days = item.remaining_days || 0;
-                        if (months > 0 && days > 0) {
-                            remainingText += '<br><small>Faltan: ' + months + ' mes' + (months > 1 ? 'es' : '') + ' y ' + days + ' día' + (days > 1 ? 's' : '') + '</small>';
-                        } else if (months > 0) {
-                            remainingText += '<br><small>Faltan: ' + months + ' mes' + (months > 1 ? 'es' : '') + '</small>';
-                        }
-                    }
-                }
-                modalHtml += '<td class="text-center"><span class="time-badge">' + (remainingText || 'No disponible') + '</span></td>';
+                detailHtml = '<span class="detail-badge detail-warning"><i class="fas fa-hourglass-half"></i> ' + (item.remaining_text || 'No disponible') + '</span>';
             } else {
-                const used = parseInt(item.veces_usado) || 0;
-                const limit = parseInt(item.cantidad_limite) || 0;
-                modalHtml += '<td class="text-center"><span class="usage-badge">' + used + ' / ' + limit + '</span></td>';
+                var used = parseInt(item.veces_usado) || 0;
+                var limit = parseInt(item.cantidad_limite) || 0;
+                var percentage = limit > 0 ? (used / limit) * 100 : 0;
+                detailHtml = '<div class="usage-progress"><div class="usage-stats"><span class="usage-used">' + used + '</span> / ' + limit + '</div><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ' + percentage + '%; background-color: #dc3545;"></div></div></div>';
             }
             
-            modalHtml += '</tr>';
+            modalHtml += '<tr>' +
+                '<td class="servicio-nombre"><strong>' + nombre + '</strong></td>' +
+                '<td class="servicio-area"><span class="area-badge">' + area + '</span></td>' +
+                '<td class="servicio-descripcion">' + descripcion + '</td>' +
+                '<td class="text-center">' + detailHtml + '</td>' +
+            '</tr>';
         });
         
-        modalHtml += '</tbody>';
-        modalHtml += '</table>';
-        modalHtml += '</div>';
+        modalHtml += '</tbody>' +
+                        '</table>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="servicios-modal-footer">' +
+                    '<div class="footer-summary"><div class="summary-item"><span class="summary-label">Total de servicios:</span><span class="summary-value">' + count + '</span></div></div>' +
+                    '<div class="footer-actions"><button type="button" class="btn-modal btn-modal-secondary" id="close-restricted-modal-btn"><i class="fas fa-check"></i> Entendido</button></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
         
-        // Footer
-        modalHtml += '<div class="modal-footer">';
-        modalHtml += '<button type="button" class="btn btn-secondary" id="close-details-modal-btn">';
-        modalHtml += '<i class="fas fa-times me-1"></i> Cerrar';
-        modalHtml += '</button>';
-        modalHtml += '</div>';
+        $('.servicios-modal-overlay').remove();
+        $('body').append(modalHtml);
+        addModalStyles();
         
-        modalHtml += '</div>';
-        modalHtml += '</div>';
-        modalHtml += '</div>';
-        
-        // Remove any existing modal
-        \$('.restricted-agotados-modal-overlay').remove();
-        
-        // Add to DOM
-        \$('body').append(modalHtml);
-        
-        // Add click handlers
-        \$('#close-details-modal, #close-details-modal-btn').off('click').on('click', function() {
-            \$('.restricted-agotados-modal-overlay').fadeOut(300, function() {
-                \$(this).remove();
-            });
+        $('#close-restricted-modal, #close-restricted-modal-btn').off('click').on('click', function() {
+            $('.servicios-modal-overlay').fadeOut(300, function() { $(this).remove(); });
         });
-        
-        // Close when clicking outside
-        \$('.restricted-agotados-modal-overlay').off('click').on('click', function(e) {
-            if (\$(e.target).hasClass('restricted-agotados-modal-overlay')) {
-                \$(this).fadeOut(300, function() {
-                    \$(this).remove();
-                });
+        $('.servicios-modal-overlay').off('click').on('click', function(e) {
+            if ($(e.target).hasClass('servicios-modal-overlay')) {
+                $(this).fadeOut(300, function() { $(this).remove(); });
             }
         });
-        
-        // Show modal
-        \$('.restricted-agotados-modal-overlay').fadeIn(300);
+        $('.servicios-modal-overlay').fadeIn(300);
     }
     
-    // Initialize Select2 with enhanced templates
     function initializeSelect2() {
-        // Destroy existing instance if any
-        if (\$('#baremos-select').data('select2')) {
-            \$('#baremos-select').select2('destroy');
-        }
-        
-        // Initialize Select2 with custom templates
-        \$('#baremos-select').select2({
+        if ($('#baremos-select').data('select2')) $('#baremos-select').select2('destroy');
+        $('#baremos-select').select2({
             multiple: true,
             placeholder: 'Busca o selecciona los servicios del Baremo...',
             allowClear: true,
@@ -1407,240 +1675,104 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             tokenSeparators: [',', ' '],
             minimumInputLength: 0,
             templateResult: function(data) {
-                if (data.id && baremosHtml[data.id]) {
-                    const html = \$(baremosHtml[data.id]);
-                    html.data('baremo-id', data.id);
-                    return html;
-                }
+                if (data.id && baremosHtml[data.id]) return $(baremosHtml[data.id]);
                 return data.text;
             },
             templateSelection: function(data) {
-                if (data.id && baremosInfo[data.id]) {
-                    const item = baremosInfo[data.id];
-                    return item.nombre + ' (' + item.area + ')';
-                }
+                if (data.id && baremosInfo[data.id]) return baremosInfo[data.id].nombre + ' (' + baremosInfo[data.id].area + ')';
                 return data.text;
             },
-            escapeMarkup: function(markup) {
-                return markup;
-            }
+            escapeMarkup: function(markup) { return markup; }
         });
-        
-        // Calculate initial total if there are selections
         calcularTotalYTabla();
     }
     
-    // Function to calculate total and update table
     function calcularTotalYTabla() {
-        const baremosSeleccionados = baremosSelect.val() || [];
-        let total = 0.00;
-        let tablaHtml = '';
-        
+        var baremosSeleccionados = baremosSelect.val() || [];
+        var total = 0;
+        var tablaHtml = '';
         if (baremosSeleccionados.length === 0) {
-            \$('#costo-total-container').hide();
-            \$('#baremos-tabla-container').hide();
-            \$('#costo-total-input').val('0.00');
-            \$('#cobertura-warning').hide();
+            $('#costo-total-container, #baremos-tabla-container').hide();
+            $('#costo-total-input').val('0.00');
+            $('#cobertura-warning').hide();
             return;
         }
-
         baremosSeleccionados.forEach(function(baremoId) {
-            const item = baremosInfo[baremoId];
-            
+            var item = baremosInfo[baremoId];
             if (item && item.precio !== undefined) {
-                const precio = parseFloat(item.precio);
+                var precio = parseFloat(item.precio);
                 total += precio;
-                
-                let restricciones = [];
-                if (item.plazo_espera) {
-                    restricciones.push('Plazo: ' + item.plazo_espera + ' meses');
-                }
+                var restricciones = [];
+                if (item.plazo_espera) restricciones.push('Plazo: ' + item.plazo_espera + ' meses');
                 if (item.cantidad_limite > 0) {
-                    restricciones.push('Límite: ' + item.veces_usado + '/' + item.cantidad_limite + ' usos');
+                    var remaining = item.remaining_uses !== undefined ? item.remaining_uses : (item.cantidad_limite - item.veces_usado);
+                    restricciones.push('Límite: ' + item.veces_usado + '/' + item.cantidad_limite + ' usos' + (remaining > 0 ? ' (' + remaining + ' restantes)' : ''));
                 }
-                const restriccionesHtml = restricciones.join('<br>');
-                
-                tablaHtml += '<tr>';
-                tablaHtml += '<td>' + item.nombre + '</td>';
-                tablaHtml += '<td>' + item.area + '</td>';
-                tablaHtml += '<td>' + (item.descripcion || 'Sin descripción') + '</td>';
-                tablaHtml += '<td class="text-center">' + (restriccionesHtml || 'Ninguna') + '</td>';
-                tablaHtml += '<td class="cost-col">\$' + precio.toFixed(2) + '</td>';
-                tablaHtml += '</tr>';
+                tablaHtml += '<tr><td>' + item.nombre + '</td><td>' + item.area + '</td><td>' + (item.descripcion || 'Sin descripción') + '</td><td class="text-center">' + (restricciones.join('<br>') || 'Ninguna') + '</td><td class="text-end">$' + precio.toFixed(2) + '</td></tr>';
             }
         });
-
-        \$('#baremos-tabla-body').html(tablaHtml);
-        \$('#baremos-tabla-container').show();
-        
-        \$('#costo-total-value').html('\$' + total.toFixed(2));
-        \$('#summary-total-amount').html('\$' + total.toFixed(2));
-        \$('#costo-total-input').val(total.toFixed(2));
-        \$('#costo-total-container').show();
-        
-        const totalDisponible = $totalDisponible;
-        const warningContainer = \$('#cobertura-warning');
-        
-        warningContainer.hide();
-        
+        $('#baremos-tabla-body').html(tablaHtml);
+        $('#baremos-tabla-container').show();
+        $('#costo-total-value, #summary-total-amount').html('$' + total.toFixed(2));
+        $('#costo-total-input').val(total.toFixed(2));
+        $('#costo-total-container').show();
+        var totalDisponible = parseFloat({$totalDisponible});
         if (total > totalDisponible) {
-            const difference = total - totalDisponible;
-            \$('#cobertura-difference-text').text('Excede por \$' + difference.toFixed(2));
-            warningContainer.show();
+            $('#cobertura-difference-text').text('Excede por $' + (total - totalDisponible).toFixed(2));
+            $('#cobertura-warning').show();
+        } else {
+            $('#cobertura-warning').hide();
         }
-    }
-    
-    // Form validation
-    function validateFormBeforeSubmit() {
-        const selectedValues = baremosSelect.val() || [];
-        
-        if (selectedValues.length === 0) {
-            if (!\$('#empty-selection-error').length) {
-                const errorHtml = '<div id="empty-selection-error" class="alert alert-danger alert-dismissible fade show" style="margin-top: 1rem;">' +
-                    '<div class="d-flex">' +
-                        '<div class="alert-icon">' +
-                            '<i class="fas fa-exclamation-circle"></i>' +
-                        '</div>' +
-                        '<div class="alert-content">' +
-                            '<h5 class="alert-heading">¡Atención!</h5>' +
-                            '<p class="mb-0"><strong>Debe seleccionar al menos un servicio médico</strong> para registrar la atención.</p>' +
-                        '</div>' +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-                    '</div>' +
-                '</div>';
-                
-                \$('.baremo-select-container').after(errorHtml);
-            }
-            
-            \$('html, body').animate({
-                scrollTop: \$('#empty-selection-error').offset().top - 100
-            }, 500);
-            
-            return false;
-        }
-        
-        // Check coverage warning
-        const totalDisponible = $totalDisponible;
-        const selectedTotal = calculateTotal();
-        
-        if (selectedTotal > totalDisponible) {
-            \$('#cobertura-warning').show();
-            \$('html, body').animate({
-                scrollTop: \$('#cobertura-warning').offset().top - 100
-            }, 500);
-            return false;
-        }
-        
-        // Remove any errors
-        \$('#empty-selection-error').remove();
-        
-        return true;
     }
     
     function calculateTotal() {
-        const selectedValues = baremosSelect.val() || [];
-        let total = 0;
-        
+        var selectedValues = baremosSelect.val() || [];
+        var total = 0;
         selectedValues.forEach(function(baremoId) {
-            const item = baremosInfo[baremoId];
-            if (item && item.precio !== undefined) {
-                total += parseFloat(item.precio);
-            }
+            var item = baremosInfo[baremoId];
+            if (item && item.precio !== undefined) total += parseFloat(item.precio);
         });
-        
         return total;
     }
     
-    // Event handlers setup
-    function setupEventHandlers() {
-        // NEW: Make disponibles badge clickable
-        \$('.stat-badge.disponible').off('click').on('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            showDisponiblesModal();
-        });
-        
-        // Make restricted/agotados badges clickable
-        \$('.stat-badge.restringido').off('click').on('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            showRestrictedAgotadosModal('restringidos');
-        });
-        
-        \$('.stat-badge.agotado').off('click').on('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            showRestrictedAgotadosModal('agotados');
-        });
-        
-        // Select2 change handler
-        baremosSelect.off('change').on('change', function() {
-            calcularTotalYTabla();
-        });
-        
-        // Recalculate total button
-        \$('#recalculate-total').off('click').on('click', function() {
-            calcularTotalYTabla();
-            \$(this).html('<i class="fas fa-check me-1"></i> ¡Recalculado!');
-            setTimeout(() => {
-                \$(this).html('<i class="fas fa-redo me-1"></i> Recalcular');
-            }, 2000);
-        });
-        
-        // Form submission validation
-        form.off('beforeSubmit').on('beforeSubmit', function(e) {
-            if (!validateFormBeforeSubmit()) {
-                e.preventDefault();
-                return false;
+    function validateFormBeforeSubmit() {
+        var selectedValues = baremosSelect.val() || [];
+        if (selectedValues.length === 0) {
+            if (!$('#empty-selection-error').length) {
+                $('.baremo-select-container').after('<div id="empty-selection-error" class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> <strong>¡Atención!</strong> Debe seleccionar al menos un servicio médico para registrar la atención.</div>');
             }
-            
-            return true;
-        });
+            $('html, body').animate({ scrollTop: $('#empty-selection-error').offset().top - 100 }, 500);
+            return false;
+        }
+        var totalDisponible = parseFloat({$totalDisponible});
+        if (calculateTotal() > totalDisponible) {
+            $('#cobertura-warning').show();
+            $('html, body').animate({ scrollTop: $('#cobertura-warning').offset().top - 100 }, 500);
+            return false;
+        }
+        $('#empty-selection-error').remove();
+        return true;
     }
     
-    // Initialize everything when DOM is ready
-    \$(document).ready(function() {
-        // Initialize Select2
+    function setupEventHandlers() {
+        $('.stat-badge.disponible').off('click').on('click', function(e) { e.preventDefault(); e.stopPropagation(); showDisponiblesModal(); });
+        $('.stat-badge.restringido').off('click').on('click', function(e) { e.preventDefault(); e.stopPropagation(); showRestrictedAgotadosModal('restringidos'); });
+        $('.stat-badge.agotado').off('click').on('click', function(e) { e.preventDefault(); e.stopPropagation(); showRestrictedAgotadosModal('agotados'); });
+        baremosSelect.off('change').on('change', function() { calcularTotalYTabla(); });
+        $('#recalculate-total').off('click').on('click', function() { calcularTotalYTabla(); $(this).html('<i class="fas fa-check me-1"></i> ¡Recalculado!'); setTimeout(function() { $('#recalculate-total').html('<i class="fas fa-redo me-1"></i> Recalcular'); }, 2000); });
+        form.off('beforeSubmit').on('beforeSubmit', function(e) { if (!validateFormBeforeSubmit()) { e.preventDefault(); return false; } return true; });
+    }
+    
+    $(document).ready(function() {
         setTimeout(function() {
             initializeSelect2();
-            
-            // Show/hide cita warning based on mode
-            if ({$esCita} == 1) {
-                citaWarning.show();
-            } else {
-                citaWarning.hide();
-            }
-            
-            // Setup event handlers
+            if ({$esCita} == 1) citaWarning.show(); else citaWarning.hide();
             setupEventHandlers();
-            
-            // Initialize Bootstrap tooltips
-            \$('[data-toggle="tooltip"]').tooltip({
-                trigger: 'hover',
-                placement: 'top',
-                html: true,
-                container: 'body'
-            });
+            $('[data-toggle="tooltip"]').tooltip({ trigger: 'hover', placement: 'top', html: true });
         }, 300);
     });
-    
 })();
 JS;
-
     $this->registerJs($jsCode, \yii\web\View::POS_END);
 }
-?>
-<?php
-$this->registerJs(
-    <<<JS
-    \$('#btn-abrir-afiliado-modal').on('click', function(e) {
-        e.preventDefault();
-        
-        setTimeout(function() {
-            \$('#afiliado-modal').modal('show');
-        }, 50); 
-    });
-JS,
-    View::POS_END
-);
 ?>

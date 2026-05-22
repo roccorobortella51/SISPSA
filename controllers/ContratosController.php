@@ -418,8 +418,12 @@ class ContratosController extends Controller
     {
         $model = $this->findModel($id);
 
-        // Check if user has permission (Superadmin or GERENTE-COMERCIALIZACION)
-        if (!Yii::$app->user->can('superadmin') && !Yii::$app->user->can('GERENTE-COMERCIALIZACION')) {
+        // Check if user has permission (Superadmin, GERENTE-COMERCIALIZACION, or GERENTE-CLINICA)
+        if (
+            !Yii::$app->user->can('superadmin') &&
+            !Yii::$app->user->can('GERENTE-COMERCIALIZACION') &&
+            !Yii::$app->user->can('GERENTE-CLINICA')
+        ) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
             return $this->redirect(['index', 'user_id' => $model->user_id]);
         }
@@ -496,8 +500,12 @@ class ContratosController extends Controller
     {
         $model = $this->findModel($id);
 
-        // Check if user has permission
-        if (!Yii::$app->user->can('superadmin') && !Yii::$app->user->can('GERENTE-COMERCIALIZACION')) {
+        // Check if user has permission (Superadmin, GERENTE-COMERCIALIZACION, or GERENTE-CLINICA)
+        if (
+            !Yii::$app->user->can('superadmin') &&
+            !Yii::$app->user->can('GERENTE-COMERCIALIZACION') &&
+            !Yii::$app->user->can('GERENTE-CLINICA')
+        ) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
             return $this->redirect(['index', 'user_id' => $model->user_id]);
         }

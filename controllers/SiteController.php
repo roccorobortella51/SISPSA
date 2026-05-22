@@ -13,6 +13,7 @@ use app\models\RmMunicipio;
 use app\models\RmParroquia;
 use app\models\RmCiudad;
 use app\models\Planes;
+use app\models\Contratos;
 use yii\helpers\Json;
 use app\models\TasaCambio;
 use app\models\UserDatos;
@@ -88,9 +89,24 @@ class SiteController extends Controller
             if (isset($roles['GERENTE-CLINICA'])) {
                 return $this->redirect(['site/dashboard']);
             }
+
+            // If user has COORDINADOR-CLINICA role, redirect to coordinador dashboard
+            if (isset($roles['COORDINADOR-CLINICA'])) {
+                return $this->redirect(['site/dashboard-coordinador']);
+            }
+
+            // If user has ASESOR role, redirect to asesor dashboard
+            if (isset($roles['Asesor'])) {
+                return $this->redirect(['site/dashboard-asesor']);
+            }
+
+            // ADD THIS: If user has FINANZAS role, redirect to finanzas dashboard
+            if (isset($roles['FINANZAS'])) {
+                return $this->redirect(['site/dashboard-finanzas']);
+            }
         }
 
-        // Otherwise show the regular welcome page
+        // Otherwise show the regular welcome page for guests
         return $this->render('welcome');
     }
 
@@ -121,12 +137,228 @@ class SiteController extends Controller
                 return $this->redirect(['site/dashboard']);
             }
 
+            if (isset($roles['COORDINADOR-CLINICA'])) {
+                return $this->redirect(['site/dashboard-coordinador']);
+            }
+
+            if (isset($roles['Asesor'])) {
+                return $this->redirect(['site/dashboard-asesor']);
+            }
+
+            // ADD THIS: Redirect FINANZAS role to finanzas dashboard
+            if (isset($roles['FINANZAS'])) {
+                return $this->redirect(['site/dashboard-finanzas']);
+            }
+
             return $this->goBack();
         }
 
         $model->password = '';
         return $this->render('login', [
             'model' => $model,
+        ]);
+    }
+
+    /**
+     * Dashboard for FINANZAS role
+     * Shows financial statistics, payments, invoices, and reports
+     * @return string
+     */
+    public function actionDashboardFinanzas()
+    {
+        // Check if user has FINANZAS role
+        $user = Yii::$app->user->identity;
+
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['site/login']);
+        }
+
+        $authManager = Yii::$app->authManager;
+        $roles = $authManager->getRolesByUser($user->id);
+
+        if (!isset($roles['FINANZAS'])) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
+            return $this->goHome();
+        }
+
+        // Get the clinic ID for the logged-in user (if applicable)
+        $userDatos = UserDatos::findOne(['user_login_id' => $user->id]);
+        $clinicaId = $userDatos ? $userDatos->clinica_id : null;
+        $clinica = $clinicaId ? RmClinica::findOne($clinicaId) : null;
+
+        // ========== FINANCIAL KPIs ==========
+
+        // Total revenue from all contracts (active contracts)
+        $totalRevenue = Contratos::find()
+            ->where(['estatus' => 'Activo'])
+            ->sum('monto') ?? 0;
+
+        // Monthly recurring revenue - sum of all active contract amounts
+        $mrr = Contratos::find()
+            ->where(['estatus' => 'Activo'])
+            ->sum('monto') ?? 0;
+
+        // Count DISTINCT users with active contracts
+        $activeAffiliateIds = Contratos::find()
+            ->select(['user_id'])
+            ->where(['estatus' => 'Activo'])
+            ->andWhere(['is not', 'user_id', null])
+            ->distinct()
+            ->column();
+
+        $totalActiveAffiliates = count($activeAffiliateIds);
+
+        // Contracts expiring in next 30 days
+        $expiringContracts = Contratos::find()
+            ->where(['estatus' => 'Activo'])
+            ->andWhere(['>=', 'fecha_ven', date('Y-m-d')])
+            ->andWhere(['<=', 'fecha_ven', date('Y-m-d', strtotime('+30 days'))])
+            ->count();
+
+        // Expired contracts
+        $expiredContracts = Contratos::find()
+            ->where(['estatus' => 'Activo'])
+            ->andWhere(['<', 'fecha_ven', date('Y-m-d')])
+            ->count();
+
+        // Calculate average contract value
+        $avgContractValue = Contratos::find()
+            ->where(['estatus' => 'Activo'])
+            ->average('monto') ?? 0;
+
+        // ========== FIXED: Get revenue by plan with specific colors for each plan type ==========
+        // First, get all active contracts with their plan information
+        $planRevenueData = Contratos::find()
+            ->select(['planes.nombre as plan_name', 'SUM(contratos.monto) as total_revenue', 'COUNT(*) as contract_count'])
+            ->innerJoin('planes', 'contratos.plan_id = planes.id')
+            ->where(['contratos.estatus' => 'Activo'])
+            ->groupBy('planes.id', 'planes.nombre')
+            ->orderBy(['total_revenue' => SORT_DESC])
+            ->asArray()
+            ->all();
+
+        // Define plan categories and their display names
+        $planCategories = [
+            'Bronce' => ['display' => 'Bronce', 'color' => '#cd7f32', 'order' => 1],      // Bronze color
+            'Plata' => ['display' => 'Plata', 'color' => '#c0c0c0', 'order' => 2],        // Silver color
+            'Oro' => ['display' => 'Oro', 'color' => '#ffc107', 'order' => 3],            // Yellow/Gold color
+            'Esmeralda Plus' => ['display' => 'Esmeralda Plus', 'color' => '#2ecc71', 'order' => 4], // Emerald green
+        ];
+
+        // Group and aggregate revenue by plan category
+        $revenueByPlan = [];
+        foreach ($planRevenueData as $item) {
+            $planName = $item['plan_name'];
+            $found = false;
+
+            // Check if this plan belongs to one of our categories
+            foreach ($planCategories as $key => $category) {
+                if (stripos($planName, $key) !== false) {
+                    if (!isset($revenueByPlan[$key])) {
+                        $revenueByPlan[$key] = [
+                            'plan_name' => $category['display'],
+                            'total_revenue' => 0,
+                            'contract_count' => 0,
+                            'color' => $category['color'],
+                            'order' => $category['order']
+                        ];
+                    }
+                    $revenueByPlan[$key]['total_revenue'] += $item['total_revenue'];
+                    $revenueByPlan[$key]['contract_count'] += $item['contract_count'];
+                    $found = true;
+                    break;
+                }
+            }
+
+            // If plan doesn't match categories, group as "Otros"
+            if (!$found) {
+                if (!isset($revenueByPlan['Otros'])) {
+                    $revenueByPlan['Otros'] = [
+                        'plan_name' => 'Otros Planes',
+                        'total_revenue' => 0,
+                        'contract_count' => 0,
+                        'color' => '#95a5a6',
+                        'order' => 99
+                    ];
+                }
+                $revenueByPlan['Otros']['total_revenue'] += $item['total_revenue'];
+                $revenueByPlan['Otros']['contract_count'] += $item['contract_count'];
+            }
+        }
+
+        // Sort by order
+        usort($revenueByPlan, function ($a, $b) {
+            return $a['order'] - $b['order'];
+        });
+
+        // Convert to indexed array for view
+        $revenueByPlan = array_values($revenueByPlan);
+
+        // Monthly revenue data for chart (last 12 months)
+        $monthlyRevenue = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $monthStart = date('Y-m-01', strtotime("-$i months"));
+            $monthEnd = date('Y-m-t', strtotime("-$i months"));
+            $monthName = date('M Y', strtotime($monthStart));
+
+            $revenue = Contratos::find()
+                ->where(['estatus' => 'Activo'])
+                ->andWhere(['>=', 'fecha_ini', $monthStart])
+                ->andWhere(['<=', 'fecha_ini', $monthEnd])
+                ->sum('monto') ?? 0;
+
+            $monthlyRevenue[] = [
+                'month' => $monthName,
+                'revenue' => (float)$revenue
+            ];
+        }
+
+        // Contract status distribution
+        $contractStatus = [
+            'activos' => (int)Contratos::find()->where(['estatus' => 'Activo'])->count(),
+            'registrados' => (int)Contratos::find()->where(['estatus' => 'Registrado'])->count(),
+            'suspendidos' => (int)Contratos::find()->where(['estatus' => 'Suspendido'])->count(),
+            'creados' => (int)Contratos::find()->where(['estatus' => 'Creado Manual'])->count(),
+            'vencidos' => (int)Contratos::find()->where(['estatus' => 'Vencido'])->count(),
+            'anulados' => (int)Contratos::find()->where(['estatus' => 'Anulado'])->count(),
+        ];
+
+        // Get recent contracts (last 10)
+        $recentContracts = Contratos::find()
+            ->with(['plan', 'user'])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->limit(10)
+            ->all();
+
+        // Ensure $recentContracts is an array
+        if (empty($recentContracts)) {
+            $recentContracts = [];
+        }
+
+        // Attention needed = expiring contracts + expired contracts
+        $attentionNeeded = $expiringContracts + $expiredContracts;
+
+        // Total active contracts
+        $totalActiveContracts = (int)Contratos::find()->where(['estatus' => 'Activo'])->count();
+
+        $kpis = [
+            'total_revenue' => $totalRevenue,
+            'mrr' => $mrr,
+            'total_active_affiliates' => $totalActiveAffiliates,
+            'expiring_contracts' => $expiringContracts,
+            'expired_contracts' => $expiredContracts,
+            'avg_contract_value' => $avgContractValue,
+            'attention_needed' => $attentionNeeded,
+            'total_contracts' => $totalActiveContracts,
+        ];
+
+        return $this->render('dashboard-finanzas', [
+            'clinica' => $clinica,
+            'kpis' => $kpis,
+            'revenueByPlan' => $revenueByPlan,
+            'monthlyRevenue' => $monthlyRevenue,
+            'contractStatus' => $contractStatus,
+            'recentContracts' => $recentContracts,
         ]);
     }
 
@@ -277,7 +509,7 @@ class SiteController extends Controller
             ->alias('c')
             ->innerJoin('user_datos ud', 'ud.id = c.user_id')
             ->where(['ud.clinica_id' => $clinicaId])
-            ->andWhere(['c.estatus' => 'suspendido']) // Assuming 'Suspendido' is the status value
+            ->andWhere(['c.estatus' => 'Suspendido'])
             ->count();
 
         $contratosAnulados = \app\models\Contratos::find()
@@ -298,7 +530,7 @@ class SiteController extends Controller
         $contractStatus = [
             'activos' => (int)$contratosActivos,
             'creados' => (int)$contratosCreados,
-            'suspendidos' => (int)$contratosSuspendidos, // NEW
+            'suspendidos' => (int)$contratosSuspendidos,
             'anulados' => (int)$contratosAnulados,
             'vencidos' => (int)$contratosVencidos,
         ];
@@ -1030,9 +1262,299 @@ class SiteController extends Controller
                 'tasa_actividad' => $totalAfiliados > 0 ? round(($activos / $totalAfiliados) * 100, 1) : 0,
                 'tasa_solvencia' => $totalAfiliados > 0 ? round(($solventes / $totalAfiliados) * 100, 1) : 0,
             ],
-            'contract_status' => $contractStatus, // New contract status data
+            'contract_status' => $contractStatus,
             'monthly_growth' => $monthlyData,
             'plan_distribution' => $planData
         ];
+    }
+
+    /**
+     * Dashboard for COORDINADOR-CLINICA role
+     * @return string
+     */
+    public function actionDashboardCoordinador()
+    {
+        // Check if user has COORDINADOR-CLINICA role
+        $user = Yii::$app->user->identity;
+
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['site/login']);
+        }
+
+        $authManager = Yii::$app->authManager;
+        $roles = $authManager->getRolesByUser($user->id);
+
+        if (!isset($roles['COORDINADOR-CLINICA'])) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
+            return $this->goHome();
+        }
+
+        // Get the clinic ID for the logged-in user
+        $userDatos = UserDatos::findOne(['user_login_id' => $user->id]);
+
+        if (!$userDatos || !$userDatos->clinica_id) {
+            Yii::$app->session->setFlash('error', 'No tiene una clínica asociada.');
+            return $this->goHome();
+        }
+
+        $clinicaId = $userDatos->clinica_id;
+        $clinica = RmClinica::findOne($clinicaId);
+
+        // Fetch KPIs
+        $totalAfiliados = UserDatos::find()
+            ->where(['clinica_id' => $clinicaId])
+            ->andWhere(['role' => 'afiliado'])
+            ->count();
+
+        // Get contract status counts from the contratos table
+        $contratosActivos = Contratos::find()
+            ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['contratos.estatus' => 'Activo'])
+            ->count();
+
+        // FIXED: Use 'Suspendido' with capital S
+        $contratosSuspendidos = Contratos::find()
+            ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['contratos.estatus' => 'Suspendido'])  // ← FIXED HERE
+            ->count();
+
+        // Get affiliate type counts
+        $individuales = UserDatos::find()
+            ->where(['clinica_id' => $clinicaId])
+            ->andWhere(['role' => 'afiliado'])
+            ->andWhere(['user_datos_type_id' => 1])
+            ->count();
+
+        $corporativos = UserDatos::find()
+            ->where(['clinica_id' => $clinicaId])
+            ->andWhere(['role' => 'afiliado'])
+            ->andWhere(['user_datos_type_id' => 2])
+            ->count();
+
+        // Get contract expiration counts
+        $expiringSoon = Contratos::find()
+            ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['>=', 'contratos.fecha_ven', date('Y-m-d')])
+            ->andWhere(['<=', 'contratos.fecha_ven', date('Y-m-d', strtotime('+30 days'))])
+            ->count();
+
+        $expired = Contratos::find()
+            ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['<', 'contratos.fecha_ven', date('Y-m-d')])
+            ->count();
+
+        // Get new affiliates this month
+        $newThisMonth = UserDatos::find()
+            ->where(['clinica_id' => $clinicaId])
+            ->andWhere(['role' => 'afiliado'])
+            ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
+            ->count();
+
+        $kpis = [
+            'total' => $totalAfiliados,
+            'contratosActivos' => $contratosActivos,
+            'contratosSuspendidos' => $contratosSuspendidos,
+            'individuales' => $individuales,
+            'corporativos' => $corporativos,
+            'expiringSoon' => $expiringSoon,
+            'expired' => $expired,
+            'newThisMonth' => $newThisMonth,
+        ];
+
+        return $this->render('dashboard-coordinador', [
+            'clinicaId' => $clinicaId,
+            'clinicaNombre' => $clinica ? $clinica->nombre : 'Su clínica',
+            'kpis' => $kpis,
+        ]);
+    }
+
+    /**
+     * Dashboard for ASESOR role
+     * Shows affiliate statistics and plan information
+     * @return string
+     */
+    public function actionDashboardAsesor()
+    {
+        // Check if user has ASESOR role
+        $user = Yii::$app->user->identity;
+
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['site/login']);
+        }
+
+        $authManager = Yii::$app->authManager;
+        $roles = $authManager->getRolesByUser($user->id);
+
+        // Fix: Use 'Asesor' (capital A) instead of 'ASESOR'
+        if (!isset($roles['Asesor'])) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
+            return $this->goHome();
+        }
+
+        // Get the Asesor's own UserDatos record to find their 'asesor_id'
+        $asesorUser = UserDatos::findOne(['user_login_id' => $user->id]);
+
+        if (!$asesorUser) {
+            Yii::$app->session->setFlash('error', 'No se encontró su perfil de asesor.');
+            return $this->goHome();
+        }
+
+        $asesorId = $asesorUser->id;
+        $clinicaId = $asesorUser->clinica_id;
+
+        // ============================================
+        // CLINIC-WIDE STATISTICS (for the clinic the Asesor belongs to)
+        // ============================================
+
+        // Total affiliates in the clinic
+        $clinicaTotalAfiliados = UserDatos::find()
+            ->where(['clinica_id' => $clinicaId, 'role' => 'afiliado'])
+            ->count();
+
+        // Active affiliates in the clinic (with active contracts)
+        $clinicaActivos = UserDatos::find()
+            ->alias('ud')
+            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
+            ->where(['ud.clinica_id' => $clinicaId, 'ud.role' => 'afiliado', 'c.estatus' => 'Activo'])
+            ->count();
+
+        // Suspended affiliates in the clinic
+        $clinicaSuspendidos = UserDatos::find()
+            ->alias('ud')
+            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
+            ->where(['ud.clinica_id' => $clinicaId, 'ud.role' => 'afiliado', 'c.estatus' => 'suspendido'])
+            ->count();
+
+        // Affiliates with expired contracts in the clinic
+        $clinicaConContratosVencidos = UserDatos::find()
+            ->alias('ud')
+            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
+            ->where(['ud.clinica_id' => $clinicaId, 'ud.role' => 'afiliado'])
+            ->andWhere(['<', 'c.fecha_ven', date('Y-m-d')])
+            ->count();
+
+        // New affiliates this month in the clinic
+        $clinicaNuevosEsteMes = UserDatos::find()
+            ->where(['clinica_id' => $clinicaId, 'role' => 'afiliado'])
+            ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
+            ->count();
+
+        // ============================================
+        // ASESOR'S PERSONAL STATISTICS (only affiliates created by this Asesor)
+        // ============================================
+
+        // Total affiliates created by this Asesor
+        $asesorTotalAfiliados = UserDatos::find()
+            ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
+            ->count();
+
+        // Active affiliates created by this Asesor
+        $asesorActivos = UserDatos::find()
+            ->alias('ud')
+            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
+            ->where(['ud.asesor_id' => $asesorId, 'ud.role' => 'afiliado', 'c.estatus' => 'Activo'])
+            ->count();
+
+        // Suspended affiliates created by this Asesor
+        $asesorSuspendidos = UserDatos::find()
+            ->alias('ud')
+            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
+            ->where(['ud.asesor_id' => $asesorId, 'ud.role' => 'afiliado', 'c.estatus' => 'suspendido'])
+            ->count();
+
+        // Affiliates with expired contracts created by this Asesor
+        $asesorConContratosVencidos = UserDatos::find()
+            ->alias('ud')
+            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
+            ->where(['ud.asesor_id' => $asesorId, 'ud.role' => 'afiliado'])
+            ->andWhere(['<', 'c.fecha_ven', date('Y-m-d')])
+            ->count();
+
+        // New affiliates this month created by this Asesor
+        $asesorNuevosEsteMes = UserDatos::find()
+            ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
+            ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
+            ->count();
+
+        // Monthly performance data for chart (Asesor's personal)
+        $monthlyData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $startDate = date('Y-m-01', strtotime("-$i months"));
+            $endDate = date('Y-m-t', strtotime("-$i months"));
+            $monthName = date('M Y', strtotime($startDate));
+
+            $count = UserDatos::find()
+                ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
+                ->andWhere(['>=', 'created_at', $startDate . ' 00:00:00'])
+                ->andWhere(['<=', 'created_at', $endDate . ' 23:59:59'])
+                ->count();
+
+            $monthlyData[] = ['month' => $monthName, 'count' => $count];
+        }
+
+        // Plan data based on SISPSA website information
+        $planesData = [
+            'individual' => [
+                ['name' => 'Plan Básico', 'price' => 16, 'currency' => 'USD', 'coverage' => 10000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
+                ['name' => 'Plan Estándar', 'price' => 20, 'currency' => 'USD', 'coverage' => 15000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
+                ['name' => 'Plan Premium', 'price' => 24, 'currency' => 'USD', 'coverage' => 20000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
+            ],
+            'senior' => [
+                ['name' => 'Plan Senior Básico', 'price' => 13, 'currency' => 'USD', 'coverage' => 14000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
+                ['name' => 'Plan Senior Estándar', 'price' => 29, 'currency' => 'USD', 'coverage' => 16000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
+                ['name' => 'Plan Senior Premium', 'price' => 34, 'currency' => 'USD', 'coverage' => 50000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
+            ],
+            'benefits_summary' => [
+                'emergency' => 'Sin plazos de espera. Atención primaria, exámenes diagnósticos (Hematología, Glicemia, Rayos X), medicación analgésica, sala de cura menor, hospitalización por 48 hrs.',
+                'consultas_basicas' => 'Sin plazos de espera. Medicina General y Pediatría.',
+                'consultas_especializadas' => 'Con plazos de espera de 2 a 4 meses. Especialidades como Cardiología, Ginecología, Traumatología, etc.',
+                'examenes' => 'Laboratorio, Rayos X, Ecogramas. Con plazos de espera variables.',
+                'cirugias_electivas' => 'A partir de 12 meses de espera. Cubre procedimientos como hernia umbilical, vesícula, etc. (En planes Premium).',
+                'maternidad' => 'Opcional en planes individuales. 12 meses de espera. Cubre consultas, ecografías, parto/cesárea y atención del recién nacido.',
+            ]
+        ];
+
+        // Get recent affiliates (last 5) for the Asesor
+        $recientes = UserDatos::find()
+            ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->limit(5)
+            ->all();
+
+        // Get clinic name
+        $clinica = RmClinica::findOne($clinicaId);
+        $clinicaNombre = $clinica ? $clinica->nombre : 'Su clínica';
+
+        return $this->render('dashboard-asesor', [
+            'asesorName' => $asesorUser->nombres . ' ' . $asesorUser->apellidos,
+            'clinicaNombre' => $clinicaNombre,
+            'clinicaStats' => [
+                'total_afiliados' => $clinicaTotalAfiliados,
+                'activos' => $clinicaActivos,
+                'suspendidos' => $clinicaSuspendidos,
+                'con_contratos_vencidos' => $clinicaConContratosVencidos,
+                'nuevos_este_mes' => $clinicaNuevosEsteMes,
+                'tasa_actividad' => $clinicaTotalAfiliados > 0 ? round(($clinicaActivos / $clinicaTotalAfiliados) * 100, 1) : 0,
+            ],
+            'asesorStats' => [
+                'total_afiliados' => $asesorTotalAfiliados,
+                'activos' => $asesorActivos,
+                'suspendidos' => $asesorSuspendidos,
+                'con_contratos_vencidos' => $asesorConContratosVencidos,
+                'nuevos_este_mes' => $asesorNuevosEsteMes,
+                'tasa_actividad' => $asesorTotalAfiliados > 0 ? round(($asesorActivos / $asesorTotalAfiliados) * 100, 1) : 0,
+            ],
+            'monthlyData' => $monthlyData,
+            'planesData' => $planesData,
+            'recientes' => $recientes,
+        ]);
     }
 }
