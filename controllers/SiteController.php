@@ -1557,4 +1557,60 @@ class SiteController extends Controller
             'recientes' => $recientes,
         ]);
     }
+    /**
+     * Get municipios by estado id - GET method (for profile update)
+     */
+    public function actionGetMunicipios($estado_id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $out = [];
+        if ($estado_id) {
+            $out = RmMunicipio::find()
+                ->select(['codigo_muni as id', 'nombre as name'])
+                ->where(['estado_codigo' => $estado_id])
+                ->orderBy('nombre')
+                ->asArray()
+                ->all();
+        }
+        return ['output' => $out, 'selected' => ''];
+    }
+
+    /**
+     * Get parroquias by municipio id - GET method (for profile update)
+     */
+    public function actionGetParroquias($municipio_id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $out = [];
+        if ($municipio_id) {
+            $out = RmParroquia::find()
+                ->select(['id', 'nombre as name'])
+                ->where(['muni_codigo' => $municipio_id])
+                ->orderBy('nombre')
+                ->asArray()
+                ->all();
+        }
+        return ['output' => $out, 'selected' => ''];
+    }
+
+    /**
+     * Get ciudades by estado id - GET method (for profile update)
+     */
+    public function actionGetCiudades($estado_id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $out = [];
+        if ($estado_id) {
+            $out = RmCiudad::find()
+                ->select(['codigo_ciudad as id', 'nombre as name'])
+                ->where(['estado_codigo' => $estado_id])
+                ->orderBy('nombre')
+                ->asArray()
+                ->all();
+        }
+        return ['output' => $out, 'selected' => ''];
+    }
 }

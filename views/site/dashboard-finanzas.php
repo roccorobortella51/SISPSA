@@ -96,36 +96,39 @@ function formatMoney($amount)
         </div>
 
         <!-- ============================================ -->
-        <!-- SECTION 1: KPI CARDS - Key Performance Indicators -->
+        <!-- SECTION 1: KPI CARDS - Key Performance Indicators (Compact) -->
         <!-- ============================================ -->
         <div class="mb-4">
-            <div class="d-flex align-items-center mb-3">
-                <div class="bg-primary rounded p-2 mr-2">
-                    <i class="fas fa-chart-simple text-white"></i>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary rounded p-2 mr-2">
+                        <i class="fas fa-chart-simple text-white"></i>
+                    </div>
+                    <h5 class="mb-0 text-dark font-weight-bold">Indicadores Clave de Rendimiento</h5>
+                    <span class="badge badge-primary ml-2">KPI's</span>
                 </div>
-                <h5 class="mb-0 text-dark font-weight-bold">Indicadores Clave de Rendimiento</h5>
-                <span class="badge badge-primary ml-2">KPI's</span>
+                <i class="fas fa-info-circle text-secondary" data-toggle="tooltip" data-placement="left" title="Métricas fundamentales para evaluar el desempeño financiero"></i>
             </div>
+
             <div class="row">
                 <!-- Total Revenue Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-primary shadow h-100 py-2"
+                <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card border-left-primary shadow h-100"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Suma total de todos los contratos activos. Representa el ingreso bruto generado por la venta de planes.">
-                        <div class="card-body">
+                        title="Suma total de todos los contratos activos">
+                        <div class="card-body py-2">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                         Ingresos Totales
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
                                     </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
                                         <?= formatMoney($kpis['total_revenue']) ?>
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-dollar-sign fa-2x text-secondary"></i>
+                                    <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -133,24 +136,23 @@ function formatMoney($amount)
                 </div>
 
                 <!-- MRR Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-success shadow h-100 py-2"
+                <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card border-left-success shadow h-100"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Ingresos Mensuales Recurrentes. Suma de los montos de todos los contratos activos. Indica el flujo de caja mensual garantizado.">
-                        <div class="card-body">
+                        title="Ingresos Mensuales Recurrentes. Flujo de caja mensual garantizado">
+                        <div class="card-body py-2">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                        Ingresos Mensuales (MRR)
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
+                                        MRR
                                     </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
                                         <?= formatMoney($kpis['mrr']) ?>
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-calendar-week fa-2x text-secondary"></i>
+                                    <i class="fas fa-calendar-week fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -158,27 +160,26 @@ function formatMoney($amount)
                 </div>
 
                 <!-- Active Affiliates Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-info shadow h-100 py-2"
+                <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card border-left-info shadow h-100"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Número de afiliados con al menos un contrato activo. Un afiliado puede tener múltiples contratos, pero se cuenta una sola vez.">
-                        <div class="card-body">
+                        title="Afiliados con al menos un contrato activo">
+                        <div class="card-body py-2">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                         Afiliados Activos
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
                                     </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
                                         <?= number_format($kpis['total_active_affiliates']) ?>
                                     </div>
-                                    <div class="small text-secondary">
-                                        <i class="fas fa-chart-line"></i> Contratos activos: <?= number_format($kpis['total_contracts'] ?? 0) ?>
+                                    <div class="small text-muted">
+                                        <i class="fas fa-file-contract"></i> <?= number_format($kpis['total_contracts'] ?? 0) ?> contratos
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-users fa-2x text-secondary"></i>
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -186,127 +187,74 @@ function formatMoney($amount)
                 </div>
 
                 <!-- Avg Contract Value Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-warning shadow h-100 py-2"
+                <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card border-left-warning shadow h-100"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Valor promedio de los contratos activos. Se calcula dividiendo el ingreso total entre el número de contratos activos.">
-                        <div class="card-body">
+                        title="Valor promedio de los contratos activos">
+                        <div class="card-body py-2">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                        Valor Promedio por Contrato
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
+                                        Promedio x Contrato
                                     </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
                                         <?= formatMoney($kpis['avg_contract_value']) ?>
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-file-invoice-dollar fa-2x text-secondary"></i>
+                                    <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Second Row KPIs -->
-            <div class="row">
                 <!-- Expiring Contracts Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-danger shadow h-100 py-2"
+                <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card border-left-danger shadow h-100"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Contratos activos que vencen en los próximos 30 días. Requieren atención para renovación.">
-                        <div class="card-body">
+                        title="Contratos activos que vencen en los próximos 30 días">
+                        <div class="card-body py-2">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                        Contratos por Vencer (30 días)
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
+                                        Por Vencer
                                     </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
                                         <?= number_format($kpis['expiring_contracts']) ?>
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-hourglass-half fa-2x text-secondary"></i>
+                                    <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Expired Contracts Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-danger shadow h-100 py-2"
+                <!-- Expired + Attention Card -->
+                <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card border-left-dark shadow h-100"
                         data-toggle="tooltip"
                         data-placement="top"
-                        title="Contratos activos que ya han superado su fecha de vencimiento. Deben ser gestionados urgentemente.">
-                        <div class="card-body">
-                            <div class="row no-gutters align-items-center">
-                                <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                        Contratos Vencidos
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
-                                    </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
-                                        <?= number_format($kpis['expired_contracts']) ?>
-                                    </div>
-                                </div>
-                                <div class="col-auto">
-                                    <i class="fas fa-exclamation-triangle fa-2x text-secondary"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Attention Needed Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-dark shadow h-100 py-2"
-                        data-toggle="tooltip"
-                        data-placement="top"
-                        title="Suma de contratos por vencer y vencidos. Total de casos que requieren atención inmediata.">
-                        <div class="card-body">
+                        title="Contratos vencidos que requieren atención inmediata">
+                        <div class="card-body py-2">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
-                                        Requiere Atención
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
+                                        Vencidos
                                     </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
-                                        <?= number_format($kpis['attention_needed']) ?>
+                                    <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                        <?= number_format($kpis['expired_contracts']) ?>
                                     </div>
-                                </div>
-                                <div class="col-auto">
-                                    <i class="fas fa-bell fa-2x text-secondary"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Total Active Contracts Card -->
-                <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-secondary shadow h-100 py-2"
-                        data-toggle="tooltip"
-                        data-placement="top"
-                        title="Número total de contratos con estado 'Activo'. Incluye contratos de todos los afiliados.">
-                        <div class="card-body">
-                            <div class="row no-gutters align-items-center">
-                                <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
-                                        Contratos Activos
-                                        <i class="fas fa-info-circle text-secondary ml-1"></i>
-                                    </div>
-                                    <div class="h5 mb-0 font-weight-bold text-dark">
-                                        <?= number_format($kpis['total_contracts'] ?? 0) ?>
+                                    <div class="small text-muted">
+                                        <i class="fas fa-bell"></i> <?= number_format($kpis['attention_needed']) ?> requieren atención
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-file-signature fa-2x text-secondary"></i>
+                                    <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -597,36 +545,43 @@ function formatMoney($amount)
                         <i class="fas fa-bolt mr-2 text-white fa-lg"></i>
                         <div>
                             <h6 class="m-0 font-weight-bold text-white">Acciones Rápidas</h6>
-                            <small class="text-white-50">Generación de reportes y documentos financieros</small>
+                            <small class="text-white-50">Acceso directo a reportes y módulos financieros</small>
                         </div>
-                        <i class="fas fa-info-circle text-white-50 ml-2" data-toggle="tooltip" data-placement="right" title="Haga clic en cualquier botón para generar el reporte correspondiente"></i>
+                        <i class="fas fa-info-circle text-white-50 ml-2" data-toggle="tooltip" data-placement="right" title="Haga clic en cualquier botón para acceder al módulo correspondiente"></i>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="btn-group flex-wrap" role="group">
-                        <?= Html::a('<i class="fas fa-file-invoice mr-1"></i> Reporte de Ingresos', '#', [
-                            'class' => 'btn btn-outline-primary mb-2 mr-2 font-weight-medium',
+                        <?= Html::a('<i class="fas fa-file-invoice-dollar mr-1"></i> Cartera Vigente', ['/cartera-vigente/index'], [
+                            'class' => 'btn mb-2 mr-2 font-weight-medium',
+                            'style' => 'background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); border: none; color: white; padding: 0.375rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; transition: transform 0.2s, box-shadow 0.2s;',
                             'data-toggle' => 'tooltip',
                             'data-placement' => 'top',
-                            'title' => 'Generar reporte detallado de ingresos'
+                            'title' => 'Visualizar cartera de contratos vigentes'
                         ]) ?>
-                        <?= Html::a('<i class="fas fa-chart-line mr-1"></i> Reporte de Contratos', '#', [
-                            'class' => 'btn btn-outline-success mb-2 mr-2 font-weight-medium',
+
+                        <?= Html::a('<i class="fas fa-chart-line mr-1"></i> Dashboard Afiliados', ['/user-datos/reporte-afiliados-dashboard'], [
+                            'class' => 'btn mb-2 mr-2 font-weight-medium',
+                            'style' => 'background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); border: none; color: white; padding: 0.375rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; transition: transform 0.2s, box-shadow 0.2s;',
                             'data-toggle' => 'tooltip',
                             'data-placement' => 'top',
-                            'title' => 'Generar reporte de contratos activos y vencidos'
+                            'title' => 'Ver dashboard de afiliados por plan'
                         ]) ?>
-                        <?= Html::a('<i class="fas fa-dollar-sign mr-1"></i> Reporte de Pagos', '#', [
-                            'class' => 'btn btn-outline-info mb-2 mr-2 font-weight-medium',
+
+                        <?= Html::a('<i class="fas fa-percent mr-1"></i> Comisiones', ['/reportes/comisiones'], [
+                            'class' => 'btn mb-2 mr-2 font-weight-medium',
+                            'style' => 'background: linear-gradient(135deg, #f6c23e 0%, #d3851a 100%); border: none; color: white; padding: 0.375rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; transition: transform 0.2s, box-shadow 0.2s;',
                             'data-toggle' => 'tooltip',
                             'data-placement' => 'top',
-                            'title' => 'Generar reporte de pagos y transacciones'
+                            'title' => 'Generar reporte de comisiones'
                         ]) ?>
-                        <?= Html::a('<i class="fas fa-print mr-1"></i> Estado Financiero', '#', [
-                            'class' => 'btn btn-outline-secondary mb-2 mr-2 font-weight-medium',
+
+                        <?= Html::a('<i class="fas fa-hospital-user mr-1"></i> Afiliados por Clínica', ['/user-datos/reporte-afiliados'], [
+                            'class' => 'btn mb-2 mr-2 font-weight-medium',
+                            'style' => 'background: linear-gradient(135deg, #36b9cc 0%, #258391 100%); border: none; color: white; padding: 0.375rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; transition: transform 0.2s, box-shadow 0.2s;',
                             'data-toggle' => 'tooltip',
                             'data-placement' => 'top',
-                            'title' => 'Generar estado financiero consolidado'
+                            'title' => 'Ver reporte de afiliados por clínica'
                         ]) ?>
                     </div>
                 </div>

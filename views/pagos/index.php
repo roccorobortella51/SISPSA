@@ -12,7 +12,7 @@ use yii\helpers\ArrayHelper;
 /** @var app\models\PagosSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-$this->title = 'PAGOS';
+$this->title = 'GESTIÓN DE PAGOS';
 $this->params['breadcrumbs'][] = $this->title;
 
 // List of statuses for the 'estatus' filter
@@ -32,6 +32,171 @@ $metodoPagoList = [
 ];
 
 $css = <<<CSS
+/* ============================================================
+   MICROSOFT FLUENT DESIGN SYSTEM - PROFESSIONAL STYLES
+   ============================================================ */
+
+/* Global Microsoft-inspired variables */
+:root {
+    --ms-blue: #0078d4;
+    --ms-dark-blue: #106ebe;
+    --ms-green: #107c10;
+    --ms-red: #d13438;
+    --ms-purple: #6b69d6;
+    --ms-teal: #00b7c3;
+    --ms-gold: #ffaa44;
+    --ms-gray-100: #f3f2f1;
+    --ms-gray-200: #e1dfdd;
+    --ms-gray-300: #c8c6c4;
+    --ms-gray-600: #605e5c;
+    --ms-gray-800: #323130;
+}
+
+/* Page Header - Microsoft Style */
+.pagos-index .page-header-modern {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 0px;
+    padding: 32px 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pagos-index .page-header-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ms-blue), var(--ms-teal), var(--ms-purple));
+}
+
+.pagos-index .page-header-modern::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.pagos-index .page-title-modern {
+    font-size: 28px;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+.pagos-index .page-title-modern i {
+    font-size: 32px;
+    background: linear-gradient(135deg, var(--ms-blue), #00b7c3);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.pagos-index .page-title-modern small {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-left: 10px;
+}
+
+.pagos-index .stats-badge-modern {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+    border-radius: 30px;
+    padding: 8px 20px;
+    display: flex;
+    gap: 25px;
+    position: relative;
+    z-index: 1;
+}
+
+.pagos-index .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+}
+
+.pagos-index .stat-number {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.pagos-index .stat-label {
+    font-size: 12px;
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Card Styles - Microsoft Fluent */
+.pagos-index .ms-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.pagos-index .ms-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.pagos-index .ms-card-header {
+    padding: 16px 20px;
+    background: var(--ms-gray-100);
+    border-bottom: 1px solid var(--ms-gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Legend Container */
+.pagos-index .legend-container {
+    background: var(--ms-gray-100);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-top: 20px;
+    border-left: 4px solid var(--ms-blue);
+}
+
+.pagos-index .legend-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ms-gray-800);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pagos-index .legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.pagos-index .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ms-gray-600);
+}
+
 /* ============================================================
    PROFESSIONAL COLOR SCHEME FOR PAYMENT TYPES
    ============================================================ */
@@ -170,6 +335,17 @@ $css = <<<CSS
     font-size: 0.7em;
     opacity: 0.9;
     margin-top: 2px;
+}
+
+/* Payment Method Badge inside Tipo de Pago */
+.payment-method-badge {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7em;
+    margin-top: 6px;
+    font-weight: normal;
 }
 
 /* ============================================================
@@ -454,27 +630,188 @@ $css = <<<CSS
 .table tbody tr:hover td {
     background-color: rgba(0, 0, 0, 0.02);
 }
+
+/* GridView filter improvements */
+.kv-grid-table .filters td {
+    background-color: var(--ms-gray-100);
+    border-bottom: 1px solid var(--ms-gray-200);
+}
+
+.kv-grid-table thead td {
+    background-color: var(--ms-gray-100);
+    font-weight: 600;
+    color: var(--ms-gray-800);
+}
+
+/* ============================================================
+   ACTIONS COLUMN FIXES
+   ============================================================ */
+.kv-grid-table .kv-action-column {
+    white-space: nowrap;
+    min-width: 100px;
+    width: 100px;
+}
+
+.kv-grid-table .kv-action-column a {
+    display: inline-block;
+    margin: 0 4px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.kv-grid-table .kv-action-column a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
+}
+
+.kv-grid-table .kv-action-column a i {
+    font-size: 18px;
+}
+
+/* Action buttons container */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.action-btn-view {
+    color: #17a2b8;
+    background-color: rgba(23, 162, 184, 0.1);
+}
+
+.action-btn-view:hover {
+    color: #0f6674;
+    background-color: rgba(23, 162, 184, 0.2);
+}
+
+.action-btn-update {
+    color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.action-btn-update:hover {
+    color: #e0a800;
+    background-color: rgba(255, 193, 7, 0.2);
+}
+
+.action-btn-delete {
+    color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.action-btn-delete:hover {
+    color: #bd2130;
+    background-color: rgba(220, 53, 69, 0.2);
+}
 CSS;
 
 $this->registerCss($css);
+
+// Get accurate totals from the entire database (not just current page)
+$totalPayments = Pagos::find()->count();
+$totalCorporate = Pagos::find()
+    ->where(['tipo_pago' => 'corporativo'])
+    ->andWhere(['is not', 'corporativo_id', null])
+    ->andWhere(['user_id' => null])
+    ->count();
+$totalConciliated = Pagos::find()
+    ->where(['estatus' => 'Conciliado'])
+    ->orWhere(['estatus' => '1'])
+    ->count();
+$totalPending = Pagos::find()
+    ->where(['estatus' => 'Por Conciliar'])
+    ->orWhere(['estatus' => '0'])
+    ->orWhere(['estatus' => 'Inactivo'])
+    ->count();
 ?>
 
 <div class="pagos-index">
-    <div class="card">
-        <div class="card-header bg-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="card-title mb-0">
-                    <i class="fas fa-credit-card text-primary mr-2"></i>
+    <!-- Microsoft Fluent Design Page Header -->
+    <div class="page-header-modern">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <div class="page-title-modern">
+                    <i class="fas fa-credit-card"></i>
                     <?= Html::encode($this->title) ?>
-                </h3>
-                <div>
-                    <?= Html::a('<i class="fas fa-plus-circle"></i> Nuevo Pago', ['create'], [
-                        'class' => 'btn btn-primary btn-sm'
-                    ]) ?>
+                    <small>Gestión y conciliación de pagos</small>
+                </div>
+                <?php if (!empty($this->params['breadcrumbs'])): ?>
+                    <nav aria-label="breadcrumb" class="mt-3">
+                        <ol class="breadcrumb bg-transparent p-0 mb-0" style="background: transparent !important;">
+                            <li class="breadcrumb-item"><a href="<?= Url::to(['/site/index']) ?>" class="text-white-50"><i class="fas fa-home"></i> Inicio</a></li>
+                            <li class="breadcrumb-item active text-white-50" aria-current="page"><?= Html::encode($this->title) ?></li>
+                        </ol>
+                    </nav>
+                <?php endif; ?>
+            </div>
+            <div class="stats-badge-modern mt-3 mt-md-0">
+                <div class="stat-item">
+                    <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                    <div>
+                        <div class="stat-number"><?= number_format($totalPayments) ?></div>
+                        <div class="stat-label">Total Pagos</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-building fa-2x opacity-75"></i>
+                    <div>
+                        <div class="stat-number"><?= number_format($totalCorporate) ?></div>
+                        <div class="stat-label">Corporativos</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    <div>
+                        <div class="stat-number"><?= number_format($totalConciliated) ?></div>
+                        <div class="stat-label">Conciliados</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-clock fa-2x opacity-75"></i>
+                    <div>
+                        <div class="stat-number"><?= number_format($totalPending) ?></div>
+                        <div class="stat-label">Pendientes</div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card-body p-0">
+    </div>
+
+    <!-- Main Card -->
+    <div class="ms-card">
+        <div class="ms-card-header">
+            <div>
+                <i class="fas fa-table text-primary mr-2"></i>
+                <strong>Listado de Pagos</strong>
+                <span class="badge badge-secondary ml-2"><?= number_format($totalPayments) ?> registros totales</span>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-primary" onclick="window.location.reload();">
+                    <i class="fas fa-sync-alt"></i> Refrescar
+                </button>
+            </div>
+        </div>
+        <div class="p-0">
 
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
@@ -745,46 +1082,86 @@ $this->registerCss($css);
                     ],
 
                     // ============================================================
-                    // TIPO DE PAGO COLUMN - UPDATED WITH NEW CLASSIFICATION
+                    // TIPO DE PAGO COLUMN - WITH PAYMENT METHOD APPENDED
                     // ============================================================
                     [
                         'label' => 'TIPO DE PAGO',
                         'attribute' => 'tipo_filter',
                         'value' => function ($model) {
+                            $paymentMethod = $model->metodo_pago ?? 'No especificado';
+                            $methodIcon = '';
+
+                            // Map payment method to icon
+                            switch (strtolower($paymentMethod)) {
+                                case 'efectivo':
+                                    $methodIcon = '<i class="fas fa-money-bill-wave"></i> ';
+                                    break;
+                                case 'pago móvil':
+                                case 'pago movil':
+                                    $methodIcon = '<i class="fas fa-mobile-alt"></i> ';
+                                    break;
+                                case 'paypal':
+                                    $methodIcon = '<i class="fab fa-paypal"></i> ';
+                                    break;
+                                case 'punto de venta':
+                                    $methodIcon = '<i class="fas fa-credit-card"></i> ';
+                                    break;
+                                case 'transferencia':
+                                    $methodIcon = '<i class="fas fa-exchange-alt"></i> ';
+                                    break;
+                                case 'zelle':
+                                    $methodIcon = '<i class="fas fa-university"></i> ';
+                                    break;
+                                default:
+                                    $methodIcon = '<i class="fas fa-receipt"></i> ';
+                            }
+
                             // 1. CORPORATE MASTER PAYMENT (PAGO CORPORATIVO MAESTRO)
                             if ($model->tipo_pago === 'corporativo' && $model->corporativo_id && !$model->user_id) {
                                 return '<div class="corporate-type-badge" title="Pago realizado directamente por la corporación para cubrir múltiples empleados">
-                        <i class="fas fa-building"></i>
-                        <div>PAGO CORPORATIVO</div>
-                        <small>Maestro</small>
-                    </div>';
+                                        <i class="fas fa-building"></i>
+                                        <div>PAGO CORPORATIVO</div>
+                                        <small>Maestro</small>
+                                        <div class="payment-method-badge">
+                                            ' . $methodIcon . Html::encode($paymentMethod) . '
+                                        </div>
+                                    </div>';
                             }
 
                             // 2. COMPANY COVERED PAYMENT (CUBIERTO POR EMPRESA)
                             if ($model->corporativo_id && $model->user_id && $model->tipo_pago !== 'corporativo') {
                                 $companyName = $model->corporativo ? $model->corporativo->nombre : '';
                                 return '<div class="company-covered-badge" title="Pago cubierto por la empresa en nombre del empleado">
-                        <i class="fas fa-hand-holding-usd"></i>
-                        <div>CUBIERTO POR EMPRESA</div>
-                        <small>' . Html::encode($companyName) . '</small>
-                    </div>';
+                                        <i class="fas fa-hand-holding-usd"></i>
+                                        <div>CUBIERTO POR EMPRESA</div>
+                                        <small>' . Html::encode($companyName) . '</small>
+                                        <div class="payment-method-badge">
+                                            ' . $methodIcon . Html::encode($paymentMethod) . '
+                                        </div>
+                                    </div>';
                             }
 
                             // 3. AFFILIATE PAYMENT (Vinculado a Pago Corporativo)
                             if ($model->pago_corporativo_id) {
                                 return '<div class="affiliate-type-badge" title="Pago vinculado a un pago corporativo maestro">
-                        <i class="fas fa-user-friends"></i>
-                        <div>AFILIADO</div>
-                        <small>Vinculado a Corporativo</small>
-                    </div>';
+                                        <i class="fas fa-user-friends"></i>
+                                        <div>AFILIADO</div>
+                                        <small>Vinculado a Corporativo</small>
+                                        <div class="payment-method-badge">
+                                            ' . $methodIcon . Html::encode($paymentMethod) . '
+                                        </div>
+                                    </div>';
                             }
 
                             // 4. INDIVIDUAL PAYMENT (PAGO PERSONAL)
                             return '<div class="individual-type-badge" title="Pago realizado directamente por el usuario">
-                    <i class="fas fa-user"></i>
-                    <div>PAGO PERSONAL</div>
-                    <small>Directo</small>
-                </div>';
+                                    <i class="fas fa-user"></i>
+                                    <div>PAGO PERSONAL</div>
+                                    <small>Directo</small>
+                                    <div class="payment-method-badge">
+                                        ' . $methodIcon . Html::encode($paymentMethod) . '
+                                    </div>
+                                </div>';
                         },
                         'format' => 'raw',
                         'contentOptions' => function ($model) {
@@ -826,25 +1203,25 @@ $this->registerCss($css);
                             if ($model->pago_corporativo_id && $model->pagoCorporativo) {
                                 $parentRef = $model->pagoCorporativo->numero_referencia_pago ?? 'N/A';
                                 return '<div class="payment-connection">
-                        <div><small>' . Html::encode($ref) . '</small></div>
-                        <div class="connection-line">
-                            <i class="fas fa-arrow-up text-success"></i>
-                            <small class="text-muted">Vinculado a: ' . Html::encode($parentRef) . '</small>
-                        </div>
-                    </div>';
+                                        <div><small>' . Html::encode($ref) . '</small></div>
+                                        <div class="connection-line">
+                                            <i class="fas fa-arrow-up text-success"></i>
+                                            <small class="text-muted">Vinculado a: ' . Html::encode($parentRef) . '</small>
+                                        </div>
+                                    </div>';
                             }
 
                             // Corporate master payment - show affiliate count
                             if ($model->tipo_pago === 'corporativo' && $model->corporativo_id && !$model->user_id) {
                                 $affiliateCount = count($model->pagosAfiliados);
                                 return '<div class="parent-payment-ref">
-                        <div><strong>' . Html::encode($ref) . '</strong></div>
-                        <div>
-                            <small class="text-success">
-                                <i class="fas fa-sitemap"></i> ' . $affiliateCount . ' empleado(s) vinculado(s)
-                            </small>
-                        </div>
-                    </div>';
+                                        <div><strong>' . Html::encode($ref) . '</strong></div>
+                                        <div>
+                                            <small class="text-success">
+                                                <i class="fas fa-sitemap"></i> ' . $affiliateCount . ' empleado(s) vinculado(s)
+                                            </small>
+                                        </div>
+                                    </div>';
                             }
 
                             return '<span class="text-muted">' . Html::encode($ref) . '</span>';
@@ -935,32 +1312,32 @@ $this->registerCss($css);
                                 ],
                                 'pluginEvents' => [
                                     'switchChange.bootstrapSwitch' => "function(event, state) {
-                            var currentRow = $(event.target).closest('tr');
-                            var solventeCell = currentRow.find('td').eq(6);
-                            
-                            $.ajax({
-                                url: '" . Url::to(['/pagos/updatestatus']) . "',
-                                type: 'POST',
-                                data: {
-                                    id: " . $model->id . ",
-                                    status: state ? 1 : 0,
-                                    _csrf: '" . Yii::$app->request->getCsrfToken() . "'
-                                },
-                                success: function(response) {
-                                    if (response.success) {
-                                        var newSolventeStatus = state ? '<span class=\"badge badge-success\"><i class=\"fas fa-check-circle\"></i> SI</span>' : '<span class=\"badge badge-danger\"><i class=\"fas fa-times-circle\"></i> NO</span>';
-                                        solventeCell.html(newSolventeStatus);
-                                    } else {
-                                        $(event.target).bootstrapSwitch('state', !state, true);
-                                        alert('Error: ' + response.error);
-                                    }
-                                },
-                                error: function(xhr) {
-                                    $(event.target).bootstrapSwitch('state', !state, true);
-                                    alert('Error del servidor: ' + xhr.responseText);
-                                }
-                            });
-                        }"
+                                        var currentRow = $(event.target).closest('tr');
+                                        var solventeCell = currentRow.find('td').eq(6);
+                                        
+                                        $.ajax({
+                                            url: '" . Url::to(['/pagos/updatestatus']) . "',
+                                            type: 'POST',
+                                            data: {
+                                                id: " . $model->id . ",
+                                                status: state ? 1 : 0,
+                                                _csrf: '" . Yii::$app->request->getCsrfToken() . "'
+                                            },
+                                            success: function(response) {
+                                                if (response.success) {
+                                                    var newSolventeStatus = state ? '<span class=\"badge badge-success\"><i class=\"fas fa-check-circle\"></i> SI</span>' : '<span class=\"badge badge-danger\"><i class=\"fas fa-times-circle\"></i> NO</span>';
+                                                    solventeCell.html(newSolventeStatus);
+                                                } else {
+                                                    $(event.target).bootstrapSwitch('state', !state, true);
+                                                    alert('Error: ' + response.error);
+                                                }
+                                            },
+                                            error: function(xhr) {
+                                                $(event.target).bootstrapSwitch('state', !state, true);
+                                                alert('Error del servidor: ' + xhr.responseText);
+                                            }
+                                        });
+                                    }"
                                 ]
                             ]);
                         },
@@ -977,34 +1354,43 @@ $this->registerCss($css);
                         ],
                     ],
 
-                    // Actions Column
+                    // Actions Column - FIXED with proper spacing and styling
                     [
                         'class' => ActionColumn::class,
                         'header' => 'ACCIONES',
-                        'template' => '{view}&nbsp;&nbsp;{update}&nbsp;&nbsp;&nbsp;&nbsp;{delete}',
-                        'headerOptions' => ['style' => 'width: 120px; text-align: center;'],
-                        'contentOptions' => ['style' => 'width: 120px; min-width: 120px; text-align: center; vertical-align: middle;'],
+                        'headerOptions' => [
+                            'style' => 'width: 100px; text-align: center;',
+                            'class' => 'kv-action-column'
+                        ],
+                        'contentOptions' => [
+                            'style' => 'text-align: center; vertical-align: middle;',
+                            'class' => 'kv-action-column'
+                        ],
                         'buttons' => [
                             'view' => function ($url, $model, $key) {
-                                return Html::a('<i class="fas fa-eye text-info"></i>', $url, [
+                                return Html::a('<i class="fas fa-eye"></i>', $url, [
                                     'title' => 'Ver Pago',
                                     'data-pjax' => '0',
-                                    'class' => 'mr-2',
+                                    'class' => 'action-btn action-btn-view',
+                                    'style' => 'margin: 0 4px;',
                                 ]);
                             },
                             'update' => function ($url, $model, $key) {
-                                return Html::a('<i class="fas fa-edit text-warning"></i>', $url, [
+                                return Html::a('<i class="fas fa-edit"></i>', $url, [
                                     'title' => 'Editar Pago',
                                     'data-pjax' => '0',
-                                    'class' => 'mr-2',
+                                    'class' => 'action-btn action-btn-update',
+                                    'style' => 'margin: 0 4px;',
                                 ]);
                             },
                             'delete' => function ($url, $model, $key) {
-                                return Html::a('<i class="fas fa-trash-alt text-danger"></i>', $url, [
+                                return Html::a('<i class="fas fa-trash-alt"></i>', $url, [
                                     'title' => 'Eliminar Pago',
                                     'data-confirm' => '¿Está seguro de que desea eliminar este pago?',
                                     'data-method' => 'post',
                                     'data-pjax' => '0',
+                                    'class' => 'action-btn action-btn-delete',
+                                    'style' => 'margin: 0 4px;',
                                 ]);
                             },
                         ],
@@ -1015,17 +1401,28 @@ $this->registerCss($css);
                 ],
             ]); ?>
         </div>
-        <div class="card-footer bg-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Leyenda:</strong>
-                        <span class="badge" style="background:#6610f2; color:white; margin:0 5px;">PAGO CORPORATIVO</span> - Pago maestro que cubre múltiples empleados
-                        <span class="badge" style="background:#20c997; color:white; margin:0 5px;">CUBIERTO POR EMPRESA</span> - Empresa pagó por empleado específico
-                        <span class="badge" style="background:#ffc107; color:#212529; margin:0 5px;">AFILIADO</span> - Vinculado a pago corporativo
-                        <span class="badge" style="background:#17a2b8; color:white; margin:0 5px;">PAGO PERSONAL</span> - Usuario pagó directamente
-                    </small>
+        <div class="card-footer bg-white border-top">
+            <div class="legend-container">
+                <div class="legend-title">
+                    <i class="fas fa-tags mr-2"></i> Leyenda de Tipos de Pago
+                </div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="badge" style="background:#6610f2; width:40px; height:24px;"></span>
+                        <span><strong>PAGO CORPORATIVO</strong> - Pago maestro que cubre múltiples empleados</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge" style="background:#20c997; width:40px; height:24px;"></span>
+                        <span><strong>CUBIERTO POR EMPRESA</strong> - Empresa pagó por empleado específico</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge" style="background:#ffc107; width:40px; height:24px;"></span>
+                        <span><strong>AFILIADO</strong> - Vinculado a pago corporativo</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge" style="background:#17a2b8; width:40px; height:24px;"></span>
+                        <span><strong>PAGO PERSONAL</strong> - Usuario pagó directamente</span>
+                    </div>
                 </div>
             </div>
         </div>
