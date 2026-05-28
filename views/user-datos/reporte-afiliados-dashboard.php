@@ -55,16 +55,17 @@ if (empty($userClinicaIds) && !$isSuperAdmin) {
 $filteredClinicas = $isSuperAdmin ? $clinicas : $userClinicas;
 
 // Set default selected clinics based on user's access
+// MODIFIED: By default, no clinics are selected unless explicitly chosen by the user
 $defaultClinicaIds = [];
-if (!$isSuperAdmin && !empty($userClinicaIds)) {
-    // For non-superadmins, automatically select their assigned clinics
-    $defaultClinicaIds = $userClinicaIds;
-} elseif (empty($searchModel->clinica_ids)) {
-    $defaultClinicaIds = $userClinicaIds;
-} else {
+
+// Only pre-select clinics if user has submitted filters
+if (!empty($searchModel->clinica_ids)) {
     // If user submitted filters, respect them but ensure they only include accessible clinics
     $submittedClinicaIds = is_array($searchModel->clinica_ids) ? $searchModel->clinica_ids : [$searchModel->clinica_ids];
     $defaultClinicaIds = array_intersect($submittedClinicaIds, $userClinicaIds);
+} else {
+    // On initial page load, no clinics are selected
+    $defaultClinicaIds = [];
 }
 
 // Register Chart.js CDN
@@ -72,16 +73,14 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.mi
 
 // Define plan colors for pie chart
 $planColors = [
-    'rgba(205, 127, 50, 0.8)',   // Bronze
-    'rgba(192, 192, 192, 0.8)',   // Silver
-    'rgba(255, 215, 0, 0.8)',     // Gold
-    'rgba(80, 200, 120, 0.8)',    // Emerald
-    'rgba(155, 89, 182, 0.8)',    // Purple
-    'rgba(52, 152, 219, 0.8)',    // Blue
-    'rgba(46, 204, 113, 0.8)',    // Green
-    'rgba(241, 196, 15, 0.8)',    // Yellow
-    'rgba(230, 126, 34, 0.8)',    // Orange
-    'rgba(231, 76, 60, 0.8)',     // Red
+    'Oro' => 'rgba(255, 215, 0, 0.85)',
+    'Plata' => 'rgba(128, 128, 128, 0.85)',
+    'Bronce' => 'rgba(205, 127, 50, 0.85)',
+    'Esmeralda' => 'rgba(128, 0, 128, 0.85)',
+    'Diamante' => 'rgba(0, 191, 255, 0.85)',
+    'Básico' => 'rgba(46, 204, 113, 0.85)',
+    'Premium' => 'rgba(231, 76, 60, 0.85)',
+    'Default' => 'rgba(52, 152, 219, 0.85)',
 ];
 
 // Calculate totals for the summary table
@@ -104,12 +103,363 @@ foreach ($summaryByClinic as $clinic) {
 // Get meta achievement data
 $metaSummary = $searchModel->getMetaAchievementSummary(Yii::$app->request->queryParams);
 
-// Custom CSS with Microsoft styles
+// Sort meta summary by actual affiliates (Afiliados Actuales) descending
+if (!empty($metaSummary['detalle_por_clinica'])) {
+    usort($metaSummary['detalle_por_clinica'], function ($a, $b) {
+        return $b['total_afiliados'] - $a['total_afiliados'];
+    });
+}
+
+// Get selected clinic IDs for checkboxes
+// MODIFIED: Only use submitted values, not defaults on initial load
+$selectedClinicaIds = [];
+
+// Check if there are submitted clinic IDs from the form
+if (!empty($searchModel->clinica_ids)) {
+    $selectedClinicaIds = is_array($searchModel->clinica_ids) ? $searchModel->clinica_ids : [$searchModel->clinica_ids];
+    $selectedClinicaIds = array_map('intval', $selectedClinicaIds);
+} else {
+    // On initial load, no clinics are selected
+    $selectedClinicaIds = [];
+}
+
+// Determine which clinics to show for checkboxes
+if ($hasClinicAccess) {
+    $displayClinicas = UserHelper::getAccessibleClinicas();
+    $isRestricted = true;
+} elseif ($isSuperAdmin) {
+    $displayClinicas = $clinicas;
+    $isRestricted = false;
+} else {
+    $displayClinicas = $clinicas;
+    $isRestricted = true;
+}
+
+// Convert to array if it's an ActiveQuery result
+if (!is_array($displayClinicas)) {
+    $displayClinicas = $displayClinicas->all();
+}
+
 $this->registerCss("
     /* Microsoft-style layout */
     body {
         background-color: #f5f5f5;
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Three Cards Row - Microsoft Style */
+    .kpi-cards-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .kpi-card {
+        flex: 1;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        transition: all 0.2s ease;
+        border: 1px solid #e0e0e0;
+        position: relative;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .kpi-card-header {
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .kpi-card-header h6 {
+        margin: 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .kpi-card-header i {
+        font-size: 1.5rem;
+        opacity: 0.8;
+    }
+    
+    .kpi-card-body {
+        padding: 0 20px 20px 20px;
+    }
+    
+    .kpi-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+    }
+    
+    .kpi-label {
+        font-size: 0.7rem;
+        opacity: 0.8;
+        margin-top: 8px;
+    }
+    
+    .kpi-card.primary {
+        background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+        color: white;
+    }
+    
+    .kpi-card.success {
+        background: linear-gradient(135deg, #107c10 0%, #0a5e0a 100%);
+        color: white;
+    }
+    
+    .kpi-card.danger {
+        background: linear-gradient(135deg, #d13438 0%, #a80000 100%);
+        color: white;
+    }
+    
+    /* Filter Section Styles */
+    .filter-section {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 24px;
+    }
+    
+    .filter-section .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        padding: 12px 20px;
+    }
+    
+    .filter-section .card-header h5 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .filter-row {
+        padding: 16px 20px;
+    }
+    
+    .filter-row:first-child {
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .filter-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+    
+    .filter-label i {
+        margin-right: 6px;
+        color: #0078d4;
+    }
+    
+    /* Clinic Checkbox Group Styles */
+    .clinics-checkbox-group {
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        background: #ffffff;
+    }
+    
+    .clinics-checkbox-group .checkbox-item {
+        margin-bottom: 10px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    }
+    
+    .clinics-checkbox-group .checkbox-item:hover {
+        background-color: #f0f7ff;
+    }
+    
+    .clinics-checkbox-group .checkbox-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .clinics-checkbox-group .custom-control-label {
+        font-size: 0.85rem;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 500;
+    }
+    
+    .clinics-checkbox-group .custom-control-input:checked ~ .custom-control-label::before {
+        background-color: #0078d4;
+        border-color: #0078d4;
+    }
+    
+    .checkbox-actions {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .checkbox-actions .btn-link {
+        padding: 0;
+        font-size: 0.75rem;
+        color: #0078d4;
+        font-weight: 500;
+    }
+    
+    .checkbox-actions .btn-link:hover {
+        color: #005a9e;
+        text-decoration: none;
+    }
+    
+    .selected-count-badge {
+        background: #0078d4;
+        color: white;
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+    
+    .clinics-info {
+        margin-top: 8px;
+        font-size: 0.7rem;
+    }
+    
+    .clinics-info i {
+        margin-right: 4px;
+    }
+    
+    /* Professional Totals Section */
+    .totals-section {
+        background: #ffffff;
+        border-radius: 12px;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+    
+    .totals-section-header {
+        background: #2c3e50;
+        padding: 16px 24px;
+        border-bottom: 1px solid #34495e;
+    }
+    
+    .totals-section-header h4 {
+        margin: 0;
+        color: #ecf0f1;
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .totals-section-header h4 i {
+        margin-right: 10px;
+        color: #3498db;
+    }
+    
+    .totals-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0;
+        padding: 0;
+    }
+    
+    .total-card {
+        padding: 20px;
+        text-align: center;
+        transition: all 0.2s ease;
+        position: relative;
+        background: #ffffff;
+    }
+    
+    .total-card:hover {
+        background: #f8f9fa;
+    }
+    
+    .total-card:not(:last-child) {
+        border-right: 1px solid #e0e0e0;
+    }
+    
+    .total-card-icon {
+        font-size: 2rem;
+        margin-bottom: 12px;
+    }
+    
+    .total-card-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .total-card-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2c3e50;
+        line-height: 1.2;
+    }
+    
+    .total-card-sub {
+        font-size: 0.65rem;
+        color: #6c757d;
+        margin-top: 6px;
+    }
+    
+    .total-card.active .total-card-value {
+        color: #28a745;
+    }
+    
+    .total-card.suspended .total-card-value {
+        color: #dc3545;
+    }
+    
+    .total-card.individual .total-card-icon {
+        color: #0078d4;
+    }
+    
+    .total-card.corporate .total-card-icon {
+        color: #ff8c00;
+    }
+    
+    @media (max-width: 768px) {
+        .kpi-cards-row {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .totals-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .total-card {
+            border-right: none;
+        }
+        
+        .total-card:nth-child(odd) {
+            border-right: 1px solid #e0e0e0;
+        }
+        
+        .filter-row .row {
+            flex-direction: column;
+        }
+        
+        .filter-row .col-md-4 {
+            margin-bottom: 15px;
+        }
     }
     
     .stat-card {
@@ -121,22 +471,6 @@ $this->registerCss("
     .stat-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-    }
-    .stat-card.bg-primary, .stat-card.bg-success, .stat-card.bg-danger {
-        color: white !important;
-    }
-    .stat-card.bg-primary .card-title,
-    .stat-card.bg-success .card-title,
-    .stat-card.bg-danger .card-title,
-    .stat-card.bg-primary .card-body,
-    .stat-card.bg-success .card-body,
-    .stat-card.bg-danger .card-body {
-        color: white !important;
-    }
-    .stat-card.bg-primary small,
-    .stat-card.bg-success small,
-    .stat-card.bg-danger small {
-        color: rgba(255,255,255,0.8) !important;
     }
     .card-header.bg-primary, .card-header.bg-success, .card-header.bg-info, .card-header.bg-warning {
         color: white !important;
@@ -201,124 +535,10 @@ $this->registerCss("
         cursor: default;
     }
     
-    /* Microsoft-style Totals Section */
-    .totals-container {
-        background: #ffffff;
-        border-radius: 8px;
-        padding: 0;
-        margin-top: 25px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e0e0e0;
-        overflow: hidden;
-    }
-    
-    .totals-header {
-        background: #f8f9fa;
-        padding: 12px 20px;
-        border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .totals-header h4 {
-        margin: 0;
-        color: #333;
-        font-weight: 600;
-        font-size: 1rem;
-    }
-    
-    .totals-header h4 i {
-        margin-right: 8px;
-        color: #0078d4;
-    }
-    
-    .totals-grid {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-        padding: 20px;
-    }
-    
-    .total-item {
-        text-align: center;
-        padding: 15px 20px;
-        flex: 1;
-        min-width: 130px;
-        transition: all 0.2s ease;
-        position: relative;
-    }
-    
-    .total-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .total-item:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        height: 50px;
-        width: 1px;
-        background: #e0e0e0;
-    }
-    
-    .total-icon {
-        font-size: 1.5rem;
-        margin-bottom: 8px;
-        color: #0078d4;
-    }
-    
-    .total-label {
-        color: #6c757d;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 500;
-        margin-bottom: 6px;
-    }
-    
-    .total-number {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #333;
-        line-height: 1;
-        margin-bottom: 4px;
-    }
-    
-    .total-sub {
-        font-size: 0.65rem;
-        color: #6c757d;
-        margin-top: 4px;
-    }
-    
-    @media (max-width: 768px) {
-        .total-item {
-            flex-basis: 50%;
-            padding: 12px;
-        }
-        .total-item:nth-child(even)::after {
-            display: none;
-        }
-        .total-number {
-            font-size: 1.2rem;
-        }
-    }
-    
-    /* Special styling for specific totals */
-    .total-item.total-activos .total-number {
-        color: #28a745;
-    }
-    .total-item.total-suspendidos .total-number {
-        color: #dc3545;
-    }
-    
     .table td {
         vertical-align: middle;
         padding: 10px 8px;
         font-size: 0.9rem;
-    }
-    .table td:first-child {
-        font-weight: 600;
-        font-size: 0.95rem;
     }
     .clinic-name {
         font-weight: 600;
@@ -326,7 +546,6 @@ $this->registerCss("
         color: #2c3e50;
     }
     
-    /* Microsoft-style cards */
     .card {
         border-radius: 8px;
         border: 1px solid #e0e0e0;
@@ -344,24 +563,26 @@ $this->registerCss("
         font-weight: 500;
     }
     
-    .btn-light {
-        background-color: #ffffff;
-        border-color: #d0d0d0;
+    .btn-primary {
+        background-color: #0078d4;
+        border-color: #0078d4;
     }
     
-    .btn-light:hover {
-        background-color: #f8f9fa;
-        border-color: #b0b0b0;
+    .btn-primary:hover {
+        background-color: #005a9e;
+        border-color: #005a9e;
     }
     
-    /* Filter section */
-    .filter-section {
-        background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
+    .btn-outline-primary {
+        color: #0078d4;
+        border-color: #0078d4;
     }
     
-    /* Access restriction badge */
+    .btn-outline-primary:hover {
+        background-color: #0078d4;
+        border-color: #0078d4;
+    }
+    
     .access-badge {
         display: inline-block;
         padding: 3px 10px;
@@ -373,7 +594,6 @@ $this->registerCss("
         margin-left: 10px;
     }
     
-    /* Meta Goals Card Styles */
     .small-stat-card {
         background: #f8f9fa;
         border-radius: 8px;
@@ -406,9 +626,71 @@ $this->registerCss("
         color: #6c757d;
     }
     
+    .counter-badge {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        text-align: center;
+        background: #0078d4;
+        color: white;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    
+    .counter-number {
+        font-weight: 700;
+        color: #0078d4;
+        font-size: 1rem;
+    }
+    
+    .form-control-sm {
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .form-control-sm:focus {
+        border-color: #0078d4;
+        box-shadow: 0 0 0 0.2rem rgba(0, 120, 212, 0.25);
+    }
+    
     .text-success { color: #28a745 !important; }
     .text-warning { color: #ffc107 !important; }
     .text-danger { color: #dc3545 !important; }
+");
+
+// JavaScript for checkbox handling
+$this->registerJs("
+    function updateSelectedCount() {
+        var checked = $('.clinic-checkbox:checked').length;
+        $('#selected-count').text(checked);
+        if (checked === 0) {
+            $('#selected-count-badge').hide();
+        } else {
+            $('#selected-count-badge').show();
+        }
+    }
+    
+    function selectAllClinicas() {
+        $('.clinic-checkbox').prop('checked', true);
+        updateSelectedCount();
+    }
+    
+    function clearAllClinicas() {
+        $('.clinic-checkbox').prop('checked', false);
+        updateSelectedCount();
+    }
+    
+    // Initialize on document ready
+    $(document).ready(function() {
+        updateSelectedCount();
+        
+        // Debug: Log when checkboxes change
+        $('.clinic-checkbox').on('change', function() {
+            console.log('Checkbox changed. Selected count: ' + $('.clinic-checkbox:checked').length);
+        });
+    });
 ");
 ?>
 
@@ -450,157 +732,198 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- Filter Section -->
-    <div class="card mb-4 filter-section">
-        <div class="card-body">
-            <?php $form = ActiveForm::begin([
-                'method' => 'get',
-                'action' => ['reporte-afiliados-dashboard'],
-                'options' => ['class' => 'row align-items-end', 'id' => 'filter-form']
-            ]); ?>
+    <!-- Filter Section - Reorganized -->
+    <div class="filter-section">
+        <div class="card-header">
+            <h5><i class="fas fa-sliders-h mr-2" style="color: #0078d4;"></i>Filtros de Búsqueda</h5>
+        </div>
 
-            <!-- Clinica selection - Limited by user's permissions -->
-            <div class="col-lg-3 col-md-6 mb-3">
-                <?php if ($hasClinicAccess): ?>
-                    <?php
-                    // User has clinic-level access - show their assigned clinics (read-only or disabled)
-                    $accessibleClinicas = UserHelper::getAccessibleClinicas();
-                    $accessibleClinicaIds = ArrayHelper::getColumn($accessibleClinicas, 'id');
-                    ?>
-                    <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
-                        ArrayHelper::map($accessibleClinicas, 'id', 'nombre'),
-                        [
-                            'multiple' => true,
-                            'size' => count($accessibleClinicas) > 1 ? 4 : 1,
-                            'class' => 'form-control form-control-sm',
-                            'disabled' => count($accessibleClinicas) === 1,
-                            'value' => $accessibleClinicaIds,
-                        ]
-                    )->label('<i class="fas fa-hospital mr-1"></i> Clínicas') ?>
-                    <?php if (count($accessibleClinicas) === 1): ?>
-                        <small class="text-muted">Acceso restringido a su clínica asignada</small>
-                    <?php else: ?>
-                        <small class="text-muted">Seleccione una o más clínicas (solo sus asignadas)</small>
-                    <?php endif; ?>
-                <?php elseif ($isSuperAdmin): ?>
-                    <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
-                        ArrayHelper::map($clinicas, 'id', 'nombre'),
-                        [
-                            'multiple' => true,
-                            'size' => 4,
-                            'class' => 'form-control form-control-sm',
-                            'prompt' => 'Todas las clínicas...',
-                            'value' => $defaultClinicaIds
-                        ]
-                    )->label('<i class="fas fa-hospital mr-1"></i> Clínicas') ?>
-                    <small class="text-muted">Ctrl + clic para seleccionar múltiples</small>
-                <?php else: ?>
-                    <?= $form->field($searchModel, 'clinica_ids')->dropDownList(
-                        ArrayHelper::map($clinicas, 'id', 'nombre'),
-                        [
-                            'multiple' => true,
-                            'size' => count($clinicas) > 1 ? 4 : 1,
-                            'class' => 'form-control form-control-sm',
-                            'disabled' => count($clinicas) === 1,
-                            'value' => $defaultClinicaIds
-                        ]
-                    )->label('<i class="fas fa-hospital mr-1"></i> Clínicas') ?>
-                    <?php if (count($clinicas) === 1): ?>
-                        <small class="text-muted">Acceso restringido a su clínica asignada</small>
-                    <?php else: ?>
-                        <small class="text-muted">Seleccione una o más clínicas (solo sus asignadas)</small>
-                    <?php endif; ?>
+        <?php $form = ActiveForm::begin([
+            'method' => 'get',
+            'action' => ['reporte-afiliados-dashboard'],
+            'options' => ['id' => 'filter-form']
+        ]); ?>
+
+        <!-- First Row: Tipo de Afiliado, Plan, Estado -->
+        <div class="filter-row">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="filter-label">
+                        <i class="fas fa-user-tag"></i> Tipo de Afiliado
+                    </div>
+                    <?= $form->field($searchModel, 'user_datos_type_id', ['options' => ['class' => 'mb-0']])
+                        ->dropDownList(
+                            ['' => 'Todos los tipos'] + $tipoAfiliadoList,
+                            ['class' => 'form-control form-control-sm']
+                        )->label(false) ?>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="filter-label">
+                        <i class="fas fa-file-invoice-dollar"></i> Plan Médico
+                    </div>
+                    <?= $form->field($searchModel, 'plan_id', ['options' => ['class' => 'mb-0']])
+                        ->dropDownList(
+                            ['' => 'Todos los planes'] + $planList,
+                            ['class' => 'form-control form-control-sm']
+                        )->label(false) ?>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="filter-label">
+                        <i class="fas fa-circle"></i> Estado del Afiliado
+                    </div>
+                    <?= $form->field($searchModel, 'estatus', ['options' => ['class' => 'mb-0']])
+                        ->dropDownList(
+                            ['' => 'Todos los estados', 'Registrado' => 'Activos', 'Inactivo' => 'Inactivos'],
+                            ['class' => 'form-control form-control-sm']
+                        )->label(false) ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Second Row: Clínicas with Checkboxes -->
+        <div class="filter-row">
+            <div class="filter-label" style="font-size: 0.85rem;">
+                <i class="fas fa-hospital"></i> Gestión de Clínicas
+                <?php if ((!$hasClinicAccess || count($displayClinicas) > 1) && count($displayClinicas) > 1): ?>
+                    <span id="selected-count-badge" class="selected-count-badge" style="display: none;">
+                        <span id="selected-count">0</span> seleccionadas
+                    </span>
                 <?php endif; ?>
             </div>
 
-            <div class="col-lg-2 col-md-6 mb-3">
-                <?= $form->field($searchModel, 'user_datos_type_id')->dropDownList(
-                    ['' => 'Todos'] + $tipoAfiliadoList,
-                    ['class' => 'form-control form-control-sm']
-                )->label('<i class="fas fa-user-tag mr-1"></i> Tipo de Afiliado') ?>
-            </div>
+            <?php if ($isRestricted && count($displayClinicas) === 1): ?>
+                <!-- Single clinic - show as static text with icon -->
+                <?php $singleClinic = is_object($displayClinicas[0]) ? $displayClinicas[0] : (object)$displayClinicas[0]; ?>
+                <div class="alert alert-info mb-0 py-2">
+                    <i class="fas fa-lock mr-2"></i>
+                    <strong><?= Html::encode($singleClinic->nombre ?? $displayClinicas[0]['nombre'] ?? 'Mi Clínica') ?></strong>
+                    <small class="text-muted ml-2">(Acceso restringido a su clínica)</small>
+                </div>
+                <!-- For single clinic, create a hidden input with the clinic ID -->
+                <input type="hidden" name="AfiliadosReportSearch[clinica_ids][]" value="<?= $singleClinic->id ?? $displayClinicas[0]['id'] ?? 0 ?>">
+            <?php else: ?>
+                <!-- Multiple clinics - show as checkbox group -->
+                <div class="clinics-checkbox-group">
+                    <div class="checkbox-actions d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-check-double mr-1"></i> Seleccione las clínicas a filtrar
+                        </small>
+                        <div>
+                            <a href="javascript:void(0)" onclick="selectAllClinicas()" class="btn-link mr-3" style="font-size: 0.8rem;">
+                                <i class="fas fa-check-circle mr-1"></i> Seleccionar todas
+                            </a>
+                            <a href="javascript:void(0)" onclick="clearAllClinicas()" class="btn-link" style="font-size: 0.8rem;">
+                                <i class="fas fa-times-circle mr-1"></i> Limpiar selección
+                            </a>
+                        </div>
+                    </div>
 
-            <div class="col-lg-2 col-md-6 mb-3">
-                <?= $form->field($searchModel, 'plan_id')->dropDownList(
-                    ['' => 'Todos los planes'] + $planList,
-                    ['class' => 'form-control form-control-sm']
-                )->label('<i class="fas fa-file-invoice-dollar mr-1"></i> Plan') ?>
-            </div>
-
-            <div class="col-lg-2 col-md-6 mb-3">
-                <?= $form->field($searchModel, 'estatus')->dropDownList(
-                    ['' => 'Todos', 'Registrado' => 'Activos', 'Inactivo' => 'Inactivos'],
-                    ['class' => 'form-control form-control-sm']
-                )->label('<i class="fas fa-circle mr-1"></i> Estado') ?>
-            </div>
-
-            <div class="col-lg-3 col-md-12 mb-3">
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <div class="d-flex">
-                        <?= Html::submitButton('<i class="fas fa-filter mr-2"></i>Aplicar Filtros', ['class' => 'btn btn-primary mr-2 flex-grow-1']) ?>
-                        <?= Html::a('<i class="fas fa-sync-alt"></i>', ['reporte-afiliados-dashboard'], ['class' => 'btn btn-outline-secondary', 'title' => 'Limpiar filtros']) ?>
+                    <div class="row">
+                        <?php
+                        foreach ($displayClinicas as $clinica):
+                            // Handle both object and array formats
+                            if (is_object($clinica)) {
+                                $clinicaId = $clinica->id;
+                                $clinicaNombre = $clinica->nombre;
+                                $clinicaMeta = $clinica->meta ?? 0;
+                            } else {
+                                $clinicaId = $clinica['id'];
+                                $clinicaNombre = $clinica['nombre'];
+                                $clinicaMeta = $clinica['meta'] ?? 0;
+                            }
+                            $isChecked = in_array((int)$clinicaId, $selectedClinicaIds);
+                        ?>
+                            <div class="col-md-6">
+                                <div class="checkbox-item custom-control custom-checkbox">
+                                    <input type="checkbox"
+                                        class="custom-control-input clinic-checkbox"
+                                        name="AfiliadosReportSearch[clinica_ids][]"
+                                        id="clinica_<?= $clinicaId ?>"
+                                        value="<?= $clinicaId ?>"
+                                        <?= $isChecked ? 'checked' : '' ?>>
+                                    <label class="custom-control-label" for="clinica_<?= $clinicaId ?>" style="font-size: 0.9rem;">
+                                        <?= Html::encode($clinicaNombre) ?>
+                                        <?php if ($clinicaMeta && $clinicaMeta > 0): ?>
+                                            <small class="text-muted">(Meta: <?= number_format($clinicaMeta) ?>)</small>
+                                        <?php endif; ?>
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
-            </div>
 
-            <?php ActiveForm::end(); ?>
+                <div class="clinics-info">
+                    <i class="fas fa-info-circle text-info"></i>
+                    <small>Seleccione una o más clínicas para filtrar los datos. Puede usar "Seleccionar todas" para incluir todas las clínicas.</small>
+                </div>
+            <?php endif; ?>
+
+            <div class="text-right mt-3">
+                <?= Html::submitButton('<i class="fas fa-filter mr-2"></i>Aplicar Filtros', ['class' => 'btn btn-primary px-4']) ?>
+                <?= Html::a('<i class="fas fa-sync-alt mr-2"></i>Limpiar Filtros', ['reporte-afiliados-dashboard'], ['class' => 'btn btn-outline-secondary ml-2']) ?>
+            </div>
         </div>
+
+        <?php ActiveForm::end(); ?>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-4 col-md-6 mb-3">
-            <div class="card stat-card bg-primary text-white h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-white">
-                        <i class="fas fa-users mr-1"></i>
-                        <?= $hasClinicAccess ? 'Afiliados en su Clínica' : 'Total Afiliados en Clínicas' ?>
-                    </h6>
-                    <h2 class="mb-0 text-white" style="font-size: 2rem;"><?= number_format($totals['total_afiliados'] ?? 0) ?></h2>
-                    <small class="text-white-50">
-                        <?php if ($hasClinicAccess): ?>
-                            <?php $clinicaCount = count($userClinicas); ?>
-                            En <?= $clinicaCount ?> <?= $clinicaCount == 1 ? 'clínica' : 'clínicas' ?>
-                        <?php else: ?>
-                            En <?= $totals['total_clinicas'] ?? 0 ?> clínicas
-                        <?php endif; ?>
-                    </small>
+    <!-- KPI CARDS - Single Row with 3 cards -->
+    <div class="kpi-cards-row">
+        <div class="kpi-card primary">
+            <div class="kpi-card-header">
+                <h6><i class="fas fa-users mr-2"></i> <?= $hasClinicAccess ? 'Afiliados en su Clínica' : 'Total Afiliados' ?></h6>
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="kpi-card-body">
+                <div class="kpi-number"><?= number_format($totals['total_afiliados'] ?? 0) ?></div>
+                <div class="kpi-label">
+                    <i class="fas fa-building mr-1"></i>
+                    <?php if ($hasClinicAccess): ?>
+                        <?= count($userClinicas) ?> <?= count($userClinicas) == 1 ? 'clínica' : 'clínicas' ?>
+                    <?php else: ?>
+                        <?= $totals['total_clinicas'] ?? 0 ?> clínicas
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4 col-md-6 mb-3">
-            <div class="card stat-card bg-success text-white h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-white">
-                        <i class="fas fa-check-circle mr-1"></i> Activos
-                    </h6>
-                    <h2 class="mb-0 text-white" style="font-size: 2rem;"><?= number_format($totals['total_contratos_activos'] ?? 0) ?></h2>
-                    <small class="text-white-50">Contratos en vigencia</small>
+        <div class="kpi-card success">
+            <div class="kpi-card-header">
+                <h6><i class="fas fa-check-circle mr-2"></i> Contratos Activos</h6>
+                <i class="fas fa-chart-simple"></i>
+            </div>
+            <div class="kpi-card-body">
+                <div class="kpi-number"><?= number_format($totals['total_contratos_activos'] ?? 0) ?></div>
+                <div class="kpi-label">
+                    <i class="fas fa-calendar-check mr-1"></i> En vigencia
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4 col-md-6 mb-3">
-            <div class="card stat-card bg-danger text-white h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-white">
-                        <i class="fas fa-pause-circle mr-1"></i> Suspendidos
-                    </h6>
-                    <h2 class="mb-0 text-white" style="font-size: 2rem;"><?= number_format($totals['total_contratos_suspendidos'] ?? 0) ?></h2>
-                    <small class="text-white-50">Con cuotas vencidas</small>
+        <div class="kpi-card danger">
+            <div class="kpi-card-header">
+                <h6><i class="fas fa-pause-circle mr-2"></i> Contratos Suspendidos</h6>
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="kpi-card-body">
+                <div class="kpi-number"><?= number_format($totals['total_contratos_suspendidos'] ?? 0) ?></div>
+                <div class="kpi-label">
+                    <i class="fas fa-clock mr-1"></i> Con cuotas vencidas
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- META GOALS CARD - NEW SECTION -->
+    <!-- META GOALS CARD - WITH COUNTER -->
     <!-- ============================================ -->
     <div class="card mb-4">
         <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <i class="fas fa-bullseye mr-2"></i> Cumplimiento de Metas Mensuales por Clínica
+            <small class="ml-2">(Ordenado por Afiliados Actuales)</small>
         </div>
         <div class="card-body">
             <!-- Summary Stats -->
@@ -647,12 +970,13 @@ $this->registerCss("
                 </div>
             </div>
 
-            <!-- Meta Achievement Table -->
+            <!-- Meta Achievement Table - With Counter -->
             <?php if (!empty($metaSummary['detalle_por_clinica'])): ?>
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="bg-primary text-white">
                             <tr>
+                                <th class="text-white text-center" style="width: 50px;">#</th>
                                 <th class="text-white">Clínica</th>
                                 <th class="text-white text-center">Meta Mensual</th>
                                 <th class="text-white text-center">Afiliados Actuales</th>
@@ -663,6 +987,7 @@ $this->registerCss("
                             </tr>
                         </thead>
                         <tbody>
+                            <?php $counter = 1; ?>
                             <?php foreach ($metaSummary['detalle_por_clinica'] as $clinica): ?>
                                 <?php
                                 $progressClass = 'bg-success';
@@ -684,6 +1009,9 @@ $this->registerCss("
                                 }
                                 ?>
                                 <tr>
+                                    <td class="text-center">
+                                        <span class="counter-badge"><?= $counter ?></span>
+                                    </td>
                                     <td class="font-weight-bold"><?= Html::encode($clinica['nombre']) ?></td>
                                     <td class="text-center">
                                         <span class="badge badge-primary"><?= number_format($clinica['meta']) ?> afiliados</span>
@@ -715,6 +1043,7 @@ $this->registerCss("
                                         </div>
                                     </td>
                                 </tr>
+                                <?php $counter++; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -777,7 +1106,7 @@ $this->registerCss("
             <div class="card">
                 <div class="card-header bg-warning text-white">
                     <i class="fas fa-trophy mr-2"></i>
-                    <?= $hasClinicAccess ? 'Top Afiliados por Categoría' : 'Top Clínicas por Afiliados' ?>
+                    <?= $hasClinicAccess ? 'Top Afiliados por Categoría' : 'Top Clínicas por Afiliados Activos' ?>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -786,31 +1115,36 @@ $this->registerCss("
                                 <tr class="text-white">
                                     <th class="text-white">#</th>
                                     <th class="text-white"><?= $hasClinicAccess ? 'Categoría' : 'Clínica' ?></th>
-                                    <th class="text-white text-right">Afiliados</th>
+                                    <th class="text-white text-right">Activos</th>
                                     <th class="text-white text-center">%</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php
                                 $rank = 1;
-                                $total = $totals['total_afiliados'] ?? 0;
-                                foreach ($topClinics as $clinic):
-                                    $percentage = $total > 0 ? round(($clinic['total_afiliados'] / $total) * 100) : 0;
+                                $total = $totals['total_contratos_activos'] ?? 0;
+                                $sortedTopClinics = $topClinics;
+                                usort($sortedTopClinics, function ($a, $b) {
+                                    return ($b['contratos_activos'] ?? 0) - ($a['contratos_activos'] ?? 0);
+                                });
+                                foreach ($sortedTopClinics as $clinic):
+                                    $activos = $clinic['contratos_activos'] ?? 0;
+                                    $percentage = $total > 0 ? round(($activos / $total) * 100) : 0;
                                 ?>
                                     <tr>
                                         <td class="text-center">
                                             <?php if ($rank == 1): ?>
-                                                <i class="fas fa-medal text-warning"></i>
+                                                <i class="fas fa-medal text-warning" style="font-size: 1.2rem;"></i>
                                             <?php elseif ($rank == 2): ?>
-                                                <i class="fas fa-medal text-secondary"></i>
+                                                <i class="fas fa-medal text-secondary" style="font-size: 1.2rem;"></i>
                                             <?php elseif ($rank == 3): ?>
-                                                <i class="fas fa-medal text-danger"></i>
+                                                <i class="fas fa-medal text-danger" style="font-size: 1.2rem;"></i>
                                             <?php else: ?>
-                                                <?= $rank ?>
+                                                <span class="counter-number"><?= $rank ?></span>
                                             <?php endif; ?>
                                         </td>
                                         <td><strong><?= Html::encode($clinic['clinica_nombre']) ?></strong></td>
-                                        <td class="text-right"><?= number_format($clinic['total_afiliados']) ?></td>
+                                        <td class="text-right"><?= number_format($activos) ?></td>
                                         <td class="text-center">
                                             <div class="progress" style="height: 5px;">
                                                 <div class="progress-bar" style="width: <?= $percentage ?>%"></div>
@@ -840,11 +1174,12 @@ $this->registerCss("
                             <?php
                             $planIndex = 0;
                             foreach ($summaryByPlan as $planCategory):
-                                $colorIndex = $planIndex % count($planColors);
+                                $category = $planCategory['plan_category'];
+                                $color = isset($planColors[$category]) ? $planColors[$category] : $planColors['Default'];
                             ?>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span>
-                                        <i class="fas fa-circle" style="color: <?= $planColors[$colorIndex] ?>; font-size: 0.7rem;"></i>
+                                        <i class="fas fa-circle" style="color: <?= $color ?>; font-size: 0.7rem;"></i>
                                         <strong><?= Html::encode($planCategory['plan_category']) ?></strong>
                                         <?php if (count($planCategory['plans']) > 1): ?>
                                             <small class="text-muted">(<?= count($planCategory['plans']) ?> variantes)</small>
@@ -858,7 +1193,11 @@ $this->registerCss("
                             ?>
                         </div>
                         <div class="alert alert-info mt-3 small">
-                            <i class="fas fa-info-circle"></i> Los planes han sido agrupados por categoría (Bronce, Plata, Oro, Esmeralda, etc.)
+                            <i class="fas fa-info-circle"></i> Colores por categoría:
+                            <span style="color:#FFD700;">Oro</span>,
+                            <span style="color:#808080;">Plata</span>,
+                            <span style="color:#CD7F32;">Bronce</span>,
+                            <span style="color:#800080;">Esmeralda</span>
                         </div>
                     <?php else: ?>
                         <div class="alert alert-info text-center">No hay datos de planes disponibles</div>
@@ -868,16 +1207,18 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- Detailed Clinic Summary Table -->
+    <!-- Detailed Clinic Summary Table - WITH COUNTER -->
     <div class="card mt-4">
         <div class="card-header bg-primary text-white">
             <i class="fas fa-table mr-2"></i> Resumen Detallado por Clínica
+            <small class="ml-2">(Ordenado por Afiliados Activos)</small>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="bg-primary">
                         <tr class="text-white">
+                            <th class="text-white text-center" style="width: 50px;">#</th>
                             <th class="text-white">Clínica</th>
                             <th class="text-white text-center">Meta</th>
                             <th class="text-white text-center">Total Afiliados</th>
@@ -889,7 +1230,15 @@ $this->registerCss("
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($summaryByClinic as $clinic): ?>
+                        <?php
+                        // Sort summaryByClinic by contratos_activos descending
+                        $sortedSummary = $summaryByClinic;
+                        usort($sortedSummary, function ($a, $b) {
+                            return ($b['contratos_activos'] ?? 0) - ($a['contratos_activos'] ?? 0);
+                        });
+                        $counter = 1;
+                        foreach ($sortedSummary as $clinic):
+                        ?>
                             <?php
                             // Only make row clickable if user is superadmin
                             $rowClass = $isSuperAdmin ? 'clickable-row' : 'non-clickable-row';
@@ -913,6 +1262,9 @@ $this->registerCss("
                             }
                             ?>
                             <tr class="<?= $rowClass ?>" <?= $onClick ? "onclick=\"{$onClick}\"" : '' ?>>
+                                <td class="text-center">
+                                    <span class="counter-badge"><?= $counter ?></span>
+                                </td>
                                 <td class="clinic-name"><strong><?= Html::encode($clinic['clinica_nombre']) ?></strong></td>
                                 <td class="text-center">
                                     <?php if ($meta > 0): ?>
@@ -931,11 +1283,12 @@ $this->registerCss("
                                 <td class="text-center"><span class="badge badge-danger"><?= number_format($clinic['contratos_suspendidos'] ?? 0) ?></span></td>
                                 <td class="text-center"><span class="badge badge-secondary"><?= number_format($clinic['contratos_anulados'] ?? 0) ?></span></td>
                             </tr>
+                            <?php $counter++; ?>
                         <?php endforeach; ?>
 
-                        <?php if (empty($summaryByClinic)): ?>
+                        <?php if (empty($sortedSummary)): ?>
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">No hay datos disponibles para los filtros seleccionados</td>
+                                <td colspan="9" class="text-center py-4 text-muted">No hay datos disponibles para los filtros seleccionados</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -944,67 +1297,66 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- BEAUTIFUL TOTALS SECTION -->
-    <div class="totals-container">
-        <div class="totals-header">
+    <!-- PROFESSIONAL TOTALS SECTION -->
+    <div class="totals-section">
+        <div class="totals-section-header">
             <h4>
-                <i class="fas fa-chart-line"></i>
-                Resumen General de Todas las Clínicas
+                <i class="fas fa-chart-pie"></i> Resumen General de Todas las Clínicas
             </h4>
         </div>
         <div class="totals-grid">
-            <div class="total-item total-afiliados">
-                <div class="total-icon">
-                    <i class="fas fa-users"></i>
+            <div class="total-card">
+                <div class="total-card-icon">
+                    <i class="fas fa-users" style="color: #0078d4;"></i>
                 </div>
-                <div class="total-label">TOTAL AFILIADOS</div>
-                <div class="total-number"><?= number_format($totalAfiliados) ?></div>
-                <div class="total-sub">en todas las clínicas</div>
+                <div class="total-card-label">TOTAL AFILIADOS</div>
+                <div class="total-card-value"><?= number_format($totalAfiliados) ?></div>
+                <div class="total-card-sub">en todas las clínicas</div>
             </div>
 
-            <div class="total-item">
-                <div class="total-icon">
-                    <i class="fas fa-user"></i>
+            <div class="total-card individual">
+                <div class="total-card-icon">
+                    <i class="fas fa-user" style="color: #0078d4;"></i>
                 </div>
-                <div class="total-label">INDIVIDUALES</div>
-                <div class="total-number"><?= number_format($totalIndividual) ?></div>
-                <div class="total-sub"><?= round(($totalIndividual / max($totalAfiliados, 1)) * 100) ?>% del total</div>
+                <div class="total-card-label">INDIVIDUALES</div>
+                <div class="total-card-value"><?= number_format($totalIndividual) ?></div>
+                <div class="total-card-sub"><?= round(($totalIndividual / max($totalAfiliados, 1)) * 100) ?>% del total</div>
             </div>
 
-            <div class="total-item">
-                <div class="total-icon">
-                    <i class="fas fa-building"></i>
+            <div class="total-card corporate">
+                <div class="total-card-icon">
+                    <i class="fas fa-building" style="color: #ff8c00;"></i>
                 </div>
-                <div class="total-label">CORPORATIVOS</div>
-                <div class="total-number"><?= number_format($totalCorporativo) ?></div>
-                <div class="total-sub"><?= round(($totalCorporativo / max($totalAfiliados, 1)) * 100) ?>% del total</div>
+                <div class="total-card-label">CORPORATIVOS</div>
+                <div class="total-card-value"><?= number_format($totalCorporativo) ?></div>
+                <div class="total-card-sub"><?= round(($totalCorporativo / max($totalAfiliados, 1)) * 100) ?>% del total</div>
             </div>
 
-            <div class="total-item total-activos">
-                <div class="total-icon">
-                    <i class="fas fa-check-circle"></i>
+            <div class="total-card active">
+                <div class="total-card-icon">
+                    <i class="fas fa-check-circle" style="color: #28a745;"></i>
                 </div>
-                <div class="total-label">ACTIVOS</div>
-                <div class="total-number"><?= number_format($totalActivos) ?></div>
-                <div class="total-sub">contratos vigentes</div>
+                <div class="total-card-label">ACTIVOS</div>
+                <div class="total-card-value"><?= number_format($totalActivos) ?></div>
+                <div class="total-card-sub">contratos vigentes</div>
             </div>
 
-            <div class="total-item total-suspendidos">
-                <div class="total-icon">
-                    <i class="fas fa-pause-circle"></i>
+            <div class="total-card suspended">
+                <div class="total-card-icon">
+                    <i class="fas fa-pause-circle" style="color: #dc3545;"></i>
                 </div>
-                <div class="total-label">SUSPENDIDOS</div>
-                <div class="total-number"><?= number_format($totalSuspendidos) ?></div>
-                <div class="total-sub">con cuotas vencidas</div>
+                <div class="total-card-label">SUSPENDIDOS</div>
+                <div class="total-card-value"><?= number_format($totalSuspendidos) ?></div>
+                <div class="total-card-sub">con cuotas vencidas</div>
             </div>
 
-            <div class="total-item">
-                <div class="total-icon">
-                    <i class="fas fa-ban"></i>
+            <div class="total-card">
+                <div class="total-card-icon">
+                    <i class="fas fa-ban" style="color: #6c757d;"></i>
                 </div>
-                <div class="total-label">ANULADOS</div>
-                <div class="total-number"><?= number_format($totalAnulados) ?></div>
-                <div class="total-sub">contratos cancelados</div>
+                <div class="total-card-label">ANULADOS</div>
+                <div class="total-card-value"><?= number_format($totalAnulados) ?></div>
+                <div class="total-card-sub">contratos cancelados</div>
             </div>
         </div>
     </div>
@@ -1040,9 +1392,17 @@ $timelineChartData = json_encode([
     'corporativo' => $chartData['timelineCorporativo'] ?? [],
 ]);
 
+// Prepare plan chart data with custom colors
+$planLabels = array_column($summaryByPlan, 'plan_category');
+$planTotals = array_column($summaryByPlan, 'total_afiliados');
+$planColorArray = [];
+foreach ($planLabels as $category) {
+    $planColorArray[] = isset($planColors[$category]) ? $planColors[$category] : $planColors['Default'];
+}
 $planChartData = json_encode([
-    'labels' => array_column($summaryByPlan, 'plan_category'),
-    'totals' => array_column($summaryByPlan, 'total_afiliados'),
+    'labels' => $planLabels,
+    'totals' => $planTotals,
+    'colors' => $planColorArray,
 ]);
 
 $this->registerJs("
@@ -1155,20 +1515,18 @@ $this->registerJs("
         });
     }
     
-    // Plan Pie Chart
+    // Plan Pie Chart with custom colors
     const planCtx = document.getElementById('planChart').getContext('2d');
     const planData = $planChartData;
     
     if (planData.labels && planData.labels.length > 0) {
-        const planColors = " . json_encode($planColors) . ";
-        
         new Chart(planCtx, {
             type: 'pie',
             data: {
                 labels: planData.labels,
                 datasets: [{
                     data: planData.totals,
-                    backgroundColor: planColors.slice(0, planData.labels.length),
+                    backgroundColor: planData.colors,
                     borderWidth: 2,
                     borderColor: '#fff'
                 }]

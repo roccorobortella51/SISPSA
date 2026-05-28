@@ -56,10 +56,16 @@ $config = [
             'errorAction' => 'site/error',
         ],
         'mailer' => [
-            'class' => \yii\symfonymailer\Mailer::class,
-            'viewPath' => '@app/mail',
-            // send all mails to a file by default.
-            'useFileTransport' => true,
+            'class' => 'yii\symfonymailer\Mailer',
+            'useFileTransport' => false,
+            'transport' => [
+                'scheme' => 'smtp',
+                'host' => 'smtp.gmail.com',
+                'username' => 'sispsa.notificaciones@gmail.com',
+                'password' => 'wdeqdspikycwtjqf',
+                'port' => 465,
+                'encryption' => 'ssl',
+            ],
         ],
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
@@ -142,6 +148,8 @@ $config = [
             'cuota-web/resumen-atrasadas',
             'cuota-web/verificar-contratos-vencidos',
             'cuota-web/verificar-espera',
+            'site/test-email',        // Add this
+            'site/test-notification', // Add this
         ]
     ],
     'params' => $params,

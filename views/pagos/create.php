@@ -139,78 +139,80 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                     </div>
                 </div>
 
-                <!-- Contract Details Grid - Microsoft Fluent Design -->
+                <!-- Contract Details Cards - LARGE TEXT VERSION -->
                 <div class="row mt-4">
-                    <!-- Left Column -->
-                    <div class="col-md-6">
-                        <!-- Period Card -->
-                        <div class="fluent-section">
-                            <div class="section-header">
-                                <i class="fas fa-calendar-alt section-icon"></i>
-                                <h3 class="section-title">Período del Contrato</h3>
-                            </div>
-                            <div class="section-content">
-                                <div class="date-range">
-                                    <div class="date-box">
-                                        <span class="date-label">INICIO</span>
-                                        <span class="date-value"><?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:d/m/Y') ?></span>
-                                    </div>
-                                    <div class="date-arrow">
-                                        <i class="fas fa-arrow-right"></i>
-                                    </div>
-                                    <div class="date-box">
-                                        <span class="date-label">FIN</span>
-                                        <span class="date-value"><?= $selectedContrato->fecha_ven ? Yii::$app->formatter->asDate($selectedContrato->fecha_ven, 'php:d/m/Y') : 'INDEFINIDO' ?></span>
-                                    </div>
+                    <!-- BLUE CARD - Período del Contrato -->
+                    <div class="col-md-3">
+                        <div class="info-card card-blue">
+                            <div class="info-card-content">
+                                <div class="info-card-icon">
+                                    <i class="fas fa-calendar-alt"></i>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Plan Card -->
-                        <div class="fluent-section">
-                            <div class="section-header">
-                                <i class="fas fa-clipboard-list section-icon"></i>
-                                <h3 class="section-title">Plan Contratado</h3>
-                            </div>
-                            <div class="section-content">
-                                <div class="d-flex align-items-center">
-                                    <span class="plan-name"><?= $selectedContrato->plan ? $selectedContrato->plan->nombre : 'N/A' ?></span>
+                                <div class="info-card-text">
+                                    <span class="info-card-label">PERÍODO DEL CONTRATO</span>
+                                    <span class="info-card-value">
+                                        <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:d/m/Y') ?>
+                                        <i class="fas fa-arrow-right mx-1"></i>
+                                        <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ven, 'php:d/m/Y') ?>
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right Column -->
-                    <div class="col-md-6">
-                        <!-- Clinic Card -->
-                        <div class="fluent-section">
-                            <div class="section-header">
-                                <i class="fas fa-hospital section-icon"></i>
-                                <h3 class="section-title">Clínica Asignada</h3>
-                            </div>
-                            <div class="section-content">
-                                <div class="d-flex align-items-center">
-                                    <span class="clinic-name"><?= $selectedContrato->clinica ? $selectedContrato->clinica->nombre : 'N/A' ?></span>
+                    <!-- GREEN CARD - Clínica Asignada -->
+                    <div class="col-md-3">
+                        <div class="info-card card-green">
+                            <div class="info-card-content">
+                                <div class="info-card-icon">
+                                    <i class="fas fa-hospital"></i>
+                                </div>
+                                <div class="info-card-text">
+                                    <span class="info-card-label">CLÍNICA ASIGNADA</span>
+                                    <span class="info-card-value">
+                                        <?= $selectedContrato->clinica ? Html::encode($selectedContrato->clinica->nombre) : 'N/A' ?>
+                                    </span>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Amount Card -->
-                        <div class="fluent-section">
-                            <div class="section-header">
-                                <i class="fas fa-dollar-sign section-icon"></i>
-                                <h3 class="section-title">Monto Mensual</h3>
+                    <!-- TEAL CARD - Plan Contratado -->
+                    <div class="col-md-3">
+                        <div class="info-card card-teal">
+                            <div class="info-card-content">
+                                <div class="info-card-icon">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="info-card-text">
+                                    <span class="info-card-label">PLAN CONTRATADO</span>
+                                    <span class="info-card-value">
+                                        <?= $selectedContrato->plan ? Html::encode($selectedContrato->plan->nombre) : 'N/A' ?>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="section-content">
-                                <div class="amount-fluent">
-                                    <?= Yii::$app->formatter->asCurrency($selectedContrato->monto ?: 0, 'USD') ?>
+                        </div>
+                    </div>
+
+                    <!-- PURPLE CARD - Monto Mensual -->
+                    <div class="col-md-3">
+                        <div class="info-card card-purple">
+                            <div class="info-card-content">
+                                <div class="info-card-icon">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <div class="info-card-text">
+                                    <span class="info-card-label">MONTO MENSUAL</span>
+                                    <span class="info-card-value">
+                                        $<?= number_format($selectedContrato->monto, 2) ?>
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- First Payment Reminder - Microsoft Info Bar Style -->
+                <!-- SINGLE ROW EYE-CATCHING REMINDER -->
                 <?php
                 $showReminder = false;
                 if (!empty($cuotas)) {
@@ -224,11 +226,17 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
 
                 if ($showReminder):
                 ?>
-                    <div class="info-bar-warning">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <div class="info-content">
-                            <strong>Recordatorio:</strong> La fecha de pago debe ser igual a la fecha de inicio del contrato
-                            <span class="highlight-date"><?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:d/m/Y') ?></span>
+                    <div class="reminder-single-row">
+                        <div class="reminder-icon-small">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="reminder-text">
+                            <span class="reminder-label">⚠️ IMPORTANTE: La fecha de pago debe ser igual a la fecha de inicio del contrato</span>
+
+                        </div>
+                        <div class="reminder-date-single">
+                            <i class="fas fa-calendar-check mr-1"></i>
+                            <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:l, d \d\e F \d\e Y') ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -276,10 +284,10 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
         background: white;
         border: 1px solid #8a8886;
         color: #323130;
-        padding: 6px 16px;
-        font-size: 13px;
-        font-weight: 400;
-        border-radius: 2px;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 4px;
         transition: all 0.1s ease;
     }
 
@@ -296,15 +304,15 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
     .fluent-container {
         background: white;
         border: 1px solid #edebe9;
-        border-radius: 4px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         overflow: hidden;
     }
 
     /* Header - Microsoft 365 Style */
     .fluent-header {
         background: #0078d4;
-        padding: 20px 24px;
+        padding: 24px 28px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -326,48 +334,48 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
     }
 
     .avatar-fluent {
-        width: 48px;
-        height: 48px;
+        width: 56px;
+        height: 56px;
         background: rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 20px;
+        font-size: 24px;
     }
 
     .header-title {
-        font-size: 20px;
+        font-size: 24px;
         font-weight: 600;
         line-height: 1.3;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
 
     .header-subtitle {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 400;
     }
 
     .header-badge {
         background: rgba(255, 255, 255, 0.2);
         color: white;
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-size: 13px;
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-size: 14px;
         font-weight: 500;
     }
 
     /* Content Area */
     .fluent-content {
-        padding: 24px;
+        padding: 28px;
     }
 
     /* Status Banner */
     .status-banner-fluent {
-        padding: 16px 24px;
-        border-radius: 4px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px 28px;
+        border-radius: 8px;
+        margin-bottom: 28px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
     .status-active {
@@ -399,216 +407,295 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
     }
 
     .status-icon-fluent {
-        width: 48px;
-        height: 48px;
+        width: 56px;
+        height: 56px;
         background: rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 28px;
         color: white;
     }
 
     .status-text {
         color: white;
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 600;
         line-height: 1.2;
     }
 
     .status-desc {
         color: rgba(255, 255, 255, 0.9);
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 400;
     }
 
     .contract-number-fluent {
         background: rgba(255, 255, 255, 0.2);
-        padding: 8px 16px;
-        border-radius: 4px;
+        padding: 10px 20px;
+        border-radius: 6px;
         text-align: right;
     }
 
     .contract-label {
         color: rgba(255, 255, 255, 0.8);
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 500;
         letter-spacing: 0.5px;
     }
 
     .contract-value {
         color: white;
-        font-size: 18px;
-        font-weight: 600;
-    }
-
-    /* Fluent Sections */
-    .fluent-section {
-        background: #faf9f8;
-        border: 1px solid #edebe9;
-        border-radius: 4px;
-        margin-bottom: 16px;
-        overflow: hidden;
-    }
-
-    .section-header {
-        background: #f3f2f1;
-        padding: 12px 16px;
-        border-bottom: 1px solid #edebe9;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .section-icon {
-        color: #0078d4;
-        font-size: 16px;
-        width: 20px;
-    }
-
-    .section-title {
-        color: #323130;
-        font-size: 15px;
-        font-weight: 600;
-        margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-
-    .section-content {
-        padding: 16px;
-    }
-
-    /* Date Range */
-    .date-range {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .date-box {
-        flex: 1;
-        background: white;
-        border: 1px solid #e1dfdd;
-        border-radius: 4px;
-        padding: 12px;
-        text-align: center;
-    }
-
-    .date-label {
-        display: block;
-        color: #605e5c;
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 0.3px;
-        margin-bottom: 4px;
-    }
-
-    .date-value {
-        display: block;
-        color: #323130;
-        font-size: 15px;
-        font-weight: 600;
-    }
-
-    .date-arrow {
-        color: #8a8886;
-        font-size: 16px;
-    }
-
-    /* Plan and Clinic Names */
-    .plan-name,
-    .clinic-name {
-        font-size: 16px;
-        font-weight: 500;
-        color: #323130;
-    }
-
-    /* Amount Display */
-    .amount-fluent {
-        font-size: 24px;
-        font-weight: 600;
-        color: #107c10;
-        line-height: 1.2;
-    }
-
-    /* Info Bar Warning */
-    .info-bar-warning {
-        background: #fff4ce;
-        border: 1px solid #ffd966;
-        border-left: 4px solid #ffb900;
-        padding: 12px 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-top: 16px;
-        border-radius: 4px;
-    }
-
-    .info-bar-warning i {
-        color: #ffb900;
         font-size: 20px;
-    }
-
-    .info-content {
-        color: #323130;
-        font-size: 13px;
-    }
-
-    .highlight-date {
-        background: white;
-        padding: 2px 8px;
-        border-radius: 2px;
         font-weight: 600;
-        margin-left: 8px;
-        color: #323130;
+    }
+
+    /* ===== LARGE TEXT INFO CARDS ===== */
+    .info-card {
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+
+    .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .info-card-content {
+        padding: 1.5rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .info-card-icon {
+        width: 70px;
+        height: 70px;
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+    }
+
+    .info-card-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-card-label {
+        font-size: 1.55rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .info-card-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    /* Subtle Blue Card */
+    .card-blue {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdef5 100%);
+        border: 1px solid #90caf9;
+    }
+
+    .card-blue .info-card-icon,
+    .card-blue .info-card-label,
+    .card-blue .info-card-value {
+        color: #0d47a1;
+    }
+
+    /* Subtle Green Card */
+    .card-green {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        border: 1px solid #a5d6a7;
+    }
+
+    .card-green .info-card-icon,
+    .card-green .info-card-label,
+    .card-green .info-card-value {
+        color: #1b5e20;
+    }
+
+    /* Subtle Teal Card */
+    .card-teal {
+        background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+        border: 1px solid #80cbc4;
+    }
+
+    .card-teal .info-card-icon,
+    .card-teal .info-card-label,
+    .card-teal .info-card-value {
+        color: #004d40;
+    }
+
+    /* Subtle Purple Card */
+    .card-purple {
+        background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+        border: 1px solid #ce93d8;
+    }
+
+    .card-purple .info-card-icon,
+    .card-purple .info-card-label,
+    .card-purple .info-card-value {
+        color: #4a148c;
     }
 
     /* Error Message */
     .error-fluent {
         background: #fef1f0;
         border: 1px solid #f3b9b4;
-        border-left: 4px solid #d83b01;
-        padding: 16px;
+        border-left: 6px solid #d83b01;
+        padding: 20px;
         display: flex;
         align-items: center;
-        gap: 16px;
-        border-radius: 4px;
+        gap: 20px;
+        border-radius: 8px;
     }
 
     .error-fluent i {
         color: #d83b01;
-        font-size: 24px;
+        font-size: 32px;
     }
 
     .error-title {
         color: #323130;
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 4px;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 6px;
     }
 
     .error-message {
         color: #605e5c;
-        font-size: 13px;
+        font-size: 15px;
+    }
+
+    /* ===== SINGLE ROW REMINDER ===== */
+    .reminder-single-row {
+        background: linear-gradient(135deg, #c6c2bf 0%, #ffecb3 100%);
+        border-left: 5px solid #e65100;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        margin-top: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        box-shadow: 0 2px 8px rgba(230, 81, 0, 0.15);
+    }
+
+    .reminder-icon-small {
+        background: #e65100;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        animation: ring 1.5s ease infinite;
+    }
+
+    .reminder-icon-small i {
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .reminder-text {
+        flex: 1;
+        font-size: 1rem;
+        color: #bf360c;
+        font-weight: 500;
+    }
+
+    .reminder-label {
+        font-weight: 800;
+        margin-right: 0.5rem;
+        color: #e65100;
+        font-size: 2.05rem;
+    }
+
+    .reminder-date-single {
+        background: #e65100;
+        color: white;
+        padding: 0.5rem 1.2rem;
+        border-radius: 30px;
+        font-size: 1.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .reminder-date-single i {
+        font-size: 0.85rem;
+    }
+
+    @keyframes ring {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        10% {
+            transform: rotate(10deg);
+        }
+
+        20% {
+            transform: rotate(-8deg);
+        }
+
+        30% {
+            transform: rotate(6deg);
+        }
+
+        40% {
+            transform: rotate(-4deg);
+        }
+
+        50% {
+            transform: rotate(2deg);
+        }
+
+        60% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(0deg);
+        }
     }
 
     /* Responsive */
+    @media (max-width: 992px) {
+        .reminder-single-row {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .reminder-date-single {
+            white-space: normal;
+        }
+    }
+
     @media (max-width: 768px) {
         .fluent-header {
             flex-direction: column;
             text-align: center;
-            gap: 12px;
+            gap: 16px;
         }
 
-        .date-range {
+        .info-card-content {
             flex-direction: column;
-        }
-
-        .date-arrow {
-            transform: rotate(90deg);
+            text-align: center;
         }
 
         .status-banner-fluent .d-flex {
@@ -626,20 +713,9 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
         }
     }
 
-    /* Microsoft Hover Effects */
-    .fluent-section:hover {
-        border-color: #0078d4;
-        transition: border-color 0.2s ease;
-    }
-
-    .btn-command:active {
-        background: #edebe9;
-        transform: none;
-    }
-
     /* Focus States */
     .btn-command:focus,
-    .fluent-section:focus-within {
+    .info-card:focus-within {
         outline: 2px solid #0078d4;
         outline-offset: 2px;
     }

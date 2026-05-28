@@ -498,14 +498,7 @@ class AfiliadosReportSearch extends Model
             ];
         }
 
-        // Sort by total_afiliados DESC, then by clinic name
-        usort($result, function ($a, $b) {
-            if ($a['total_afiliados'] != $b['total_afiliados']) {
-                return $b['total_afiliados'] - $a['total_afiliados'];
-            }
-            return strcmp($a['clinica_nombre'], $b['clinica_nombre']);
-        });
-
+        // Return WITHOUT sorting here - sorting will be done in the view as needed
         return $result;
     }
 
@@ -808,15 +801,23 @@ class AfiliadosReportSearch extends Model
     }
 
     /**
-     * Get top clinics by affiliates count (including meta information)
+     * Get top clinics by active affiliates count (contratos_activos)
+     * MODIFIED: Now sorts by active affiliates instead of total affiliates
      */
     public function getTopClinics($limit = 10, $params = [])
     {
         $summary = $this->getSummaryByClinic($params);
-        // Filter out clinics with zero affiliates for top clinics
+
+        // Filter out clinics with zero active affiliates for top clinics
         $nonZeroClinics = array_filter($summary, function ($clinic) {
-            return $clinic['total_afiliados'] > 0;
+            return ($clinic['contratos_activos'] ?? 0) > 0;
         });
+
+        // Sort by contratos_activos descending
+        usort($nonZeroClinics, function ($a, $b) {
+            return ($b['contratos_activos'] ?? 0) - ($a['contratos_activos'] ?? 0);
+        });
+
         return array_slice(array_values($nonZeroClinics), 0, $limit);
     }
 

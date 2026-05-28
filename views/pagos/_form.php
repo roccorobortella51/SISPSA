@@ -68,11 +68,9 @@ $this->registerJs(
             var metodo = $('#pagos-metodo_pago').val();
             var isCashDollar = (metodo === 'Efectivo - Dólar ($)');
             
-            // Handle reference number field
             if (isCashDollar) {
                 $('.field-pagos-numero_referencia_pago').hide();
                 $('#pagos-numero_referencia_pago').val('');
-                // Show cash info message
                 $('#cash-info-message').show();
             } else {
                 $('.field-pagos-numero_referencia_pago').show();
@@ -80,15 +78,46 @@ $this->registerJs(
             }
         }
 
-        // Calculate selected cuotas total
+        // Calculate selected cuotas total with row highlighting
         function updateMontoSelected() {
             var sum = 0;
+            var selectedCount = 0;
+            
             $('.cuota-checkbox:checked').each(function() {
                 sum += parseFloat($(this).data('monto')) || 0;
+                selectedCount++;
             });
+            
             $('#pagos-monto_pagado').val(sum.toFixed(2));
             updateMontoBs();
+            
+            // Update total display
+            const totalElement = $('#selected-total');
+            totalElement.html('<i class="fas fa-dollar-sign mr-1"></i>' + sum.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+            
+            // Update selected counter badge
+            let counterBadge = $('.selected-counter');
+            if (selectedCount > 0) {
+                if (counterBadge.length === 0) {
+                    $('.badge-warning').after('<span class="selected-counter"><i class="fas fa-check-circle mr-1"></i>' + selectedCount + ' seleccionada(s)</span>');
+                } else {
+                    counterBadge.html('<i class="fas fa-check-circle mr-1"></i>' + selectedCount + ' seleccionada(s)');
+                }
+            } else {
+                counterBadge.remove();
+            }
         }
+
+        // IMMEDIATE ROW HIGHLIGHTING ON CHECKBOX CHANGE
+        $(document).on('change', '.cuota-checkbox', function() {
+            var $row = $(this).closest('tr');
+            if ($(this).is(':checked')) {
+                $row.addClass('selected-cuota-row');
+            } else {
+                $row.removeClass('selected-cuota-row');
+            }
+            updateMontoSelected();
+        });
 
         // Event handlers
         $('#fecha-pago').on('change', function() {
@@ -110,9 +139,12 @@ $this->registerJs(
 
         $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', updateMontoBs);
         $('#pagos-metodo_pago').on('change', updateFieldsVisibility);
-        $(document).on('change', '.cuota-checkbox', updateMontoSelected);
 
-        // Initialize
+        // Initialize any pre-checked checkboxes (for edit mode)
+        $('.cuota-checkbox:checked').each(function() {
+            $(this).closest('tr').addClass('selected-cuota-row');
+        });
+        
         updateMontoSelected();
         updateFieldsVisibility();
         updateMontoBs();
@@ -162,7 +194,7 @@ JS
         font-size: 1.2rem;
     }
 
-    /* ===== CUOTAS TABLE - LARGER FONTS ===== */
+    /* ===== CUOTAS TABLE - WHITE HEADERS (FORCED) ===== */
     .cuotas-table {
         font-size: 1.1rem;
     }
@@ -171,13 +203,42 @@ JS
         font-size: 1.2rem;
         font-weight: 600;
         padding: 1rem 0.75rem;
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #dee2e6;
+        background-color: #2c3e50 !important;
+        border-bottom: 2px solid #1a252f;
+        color: #ffffff !important;
+        text-align: center;
     }
 
     .cuotas-table tbody td {
         padding: 1rem 0.75rem;
         vertical-align: middle;
+    }
+
+    /* Ensure MONTO column alignment */
+    .cuotas-table tbody td:nth-child(6) {
+        text-align: center;
+    }
+
+    /* ===== SELECTED CUOTA ROW HIGHLIGHT - IMMEDIATE EFFECT ===== */
+    .cuotas-table tbody tr.selected-cuota-row {
+        background: linear-gradient(135deg, #bbdef5 0%, #90caf9 100%) !important;
+        border-left: 4px solid #1565c0 !important;
+        border-right: 1px solid #64b5f6 !important;
+        box-shadow: 0 2px 8px rgba(21, 101, 192, 0.2) !important;
+        transition: all 0.1s ease !important;
+    }
+
+    .cuotas-table tbody tr.selected-cuota-row:hover {
+        background: linear-gradient(135deg, #a5d6f7 0%, #7bb8e8 100%) !important;
+        box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3) !important;
+    }
+
+    /* Royal blue for the cuota number when selected - immediate */
+    .cuotas-table tbody tr.selected-cuota-row .cuota-number {
+        background: linear-gradient(135deg, #1565c0, #0d47a1) !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(21, 101, 192, 0.45) !important;
+        transition: all 0.1s ease !important;
     }
 
     /* Circular Number Indicator */
@@ -193,6 +254,7 @@ JS
         font-size: 1.3rem;
         font-weight: 600;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.1s ease;
     }
 
     /* Month/Year Text */
@@ -290,9 +352,6 @@ JS
         border: 1px solid #545b62;
     }
 
-    /* ===== NO ROW HIGHLIGHTING CLASSES - Removed all background color classes ===== */
-    /* grace-row, grace-urgent-row, overdue-row, approaching-row, paid-row, selected-row have been removed */
-
     /* ===== ANIMATIONS ===== */
     @keyframes pulse-urgent {
         0% {
@@ -360,6 +419,48 @@ JS
         cursor: not-allowed;
     }
 
+    /* Ensure checkbox change triggers immediately */
+    .cuota-checkbox {
+        cursor: pointer;
+    }
+
+    .cuota-checkbox:checked {
+        accent-color: #28a745;
+    }
+
+    /* Enhanced Checkbox Styling when checked */
+    .custom-checkbox .custom-control-input:checked~.custom-control-label::before {
+        background-color: #28a745 !important;
+        border-color: #1e7e34 !important;
+        box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3);
+    }
+
+    .custom-checkbox .custom-control-input:checked~.custom-control-label::after {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23fff' d='M6.564.75l-3.59 3.612-1.538-1.55L0 4.26 2.974 7.25 8 2.193z'/%3e%3c/svg%3e") !important;
+    }
+
+    /* Checkbox pulse animation when checked */
+    .custom-checkbox .custom-control-input:checked~.custom-control-label::before {
+        animation: checkboxPulse 0.3s ease;
+    }
+
+    @keyframes checkboxPulse {
+        0% {
+            transform: scale(0.9);
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+        }
+
+        70% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+        }
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+
     /* Status Summary Container */
     .status-summary {
         display: flex;
@@ -368,20 +469,78 @@ JS
         margin-bottom: 1.5rem;
     }
 
-    /* Total Row */
+    /* ===== TOTAL SELECCIONADO - EYE CATCHING ===== */
     .total-row {
-        background-color: #e9ecef;
-        font-size: 1.2rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-top: 2px solid #28a745;
+        border-bottom: 2px solid #28a745;
     }
 
     .total-row td {
         padding: 1rem;
+        vertical-align: middle;
     }
 
     .total-amount {
-        font-size: 1.6rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 800;
         color: #28a745;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        letter-spacing: 1px;
+        animation: pulse-green 1.5s ease-in-out infinite;
+        display: inline-block;
+        text-align: center;
+        width: 100%;
+    }
+
+    .total-label {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1e7e34;
+    }
+
+    @keyframes pulse-green {
+        0% {
+            text-shadow: 0 0 0 rgba(40, 167, 69, 0);
+            transform: scale(1);
+        }
+
+        50% {
+            text-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
+            transform: scale(1.02);
+        }
+
+        100% {
+            text-shadow: 0 0 0 rgba(40, 167, 69, 0);
+            transform: scale(1);
+        }
+    }
+
+    /* Selected counter badge */
+    .selected-counter {
+        background: #28a745;
+        color: white;
+        border-radius: 20px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+        animation: fadeIn 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 
     /* Empty State Alert */
@@ -390,21 +549,95 @@ JS
         padding: 1.5rem;
     }
 
-    /* File Input Styling */
-    .file-input .btn {
-        font-size: 1rem;
-        padding: 0.75rem 1rem;
+    /* ===== FILE INPUT BUTTONS - COLORED STYLES ===== */
+    /* Browse (Examinar) button */
+    .file-input .btn-file {
+        background: linear-gradient(135deg, #b5d1e6 0%, #657989 100%) !important;
+        border: none !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1.5rem !important;
+        transition: all 0.2s ease !important;
     }
 
-    .file-preview {
-        max-width: 250px;
-        margin: 0 auto;
+    .file-input .btn-file:hover {
+        background: linear-gradient(135deg, #005a9e 0%, #004578 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 120, 212, 0.3);
+    }
+
+    .file-input .btn-file:active {
+        transform: translateY(0);
+    }
+
+    /* Remove (Quitar) button */
+    .file-input .btn-remove {
+        background: linear-gradient(135deg, #d83b01 0%, #b02a00 100%) !important;
+        border: none !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1.5rem !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .file-input .btn-remove:hover {
+        background: linear-gradient(135deg, #b02a00 0%, #8a1f00 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(216, 59, 1, 0.3);
+    }
+
+    .file-input .btn-remove:active {
+        transform: translateY(0);
+    }
+
+    /* File Input container styling */
+    .file-input {
+        margin-top: 0.5rem;
+    }
+
+    .file-input .file-preview {
+        border-radius: 8px;
+        border: 1px dashed #ced4da;
+        background: #f8f9fa;
     }
 
     /* Button Styling */
     .btn-lg {
         font-size: 1.2rem;
         padding: 0.75rem 2rem;
+    }
+
+    /* ===== SPACE BETWEEN FILE INPUT BUTTONS ===== */
+    .file-input .btn-group {
+        gap: 10px !important;
+    }
+
+    .file-input .btn-group .btn {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Alternative: Add space directly to the buttons */
+    .file-input .btn-file {
+        margin-right: 10px !important;
+    }
+
+    .file-input .btn-remove {
+        margin-left: 10px !important;
+    }
+
+    /* For the file input action buttons container */
+    .file-input .file-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    /* If using kv-plugin-init wrapper */
+    .file-input .kv-fileinput-remove,
+    .file-input .fileinput-remove-button,
+    .file-input .btn-kv-remove {
+        margin-left: 10px !important;
     }
 </style>
 
@@ -613,9 +846,9 @@ JS
                                         $status = $cuota->estatus;
                                         $dueDateStr = $dueDate->format('Y-m-d');
 
-                                        // Determine status display (NO ROW HIGHLIGHTING - rowClass always empty)
+                                        // Determine status display
                                         $statusBadge = '';
-                                        $rowClass = ''; // No row highlighting classes
+                                        $rowClass = '';
 
                                         if ($status == 'pagada') {
                                             $statusBadge = '<span class="status-badge status-paid"><i class="fas fa-check-circle"></i>PAGADA</span>';
@@ -647,7 +880,7 @@ JS
 
                                         $dueDateClass = ($dueDateStr < $today && $status != 'pagada') ? 'overdue' : '';
                                         ?>
-                                        <tr class="<?= $rowClass ?>">
+                                        <tr>
                                             <td class="text-center">
                                                 <span class="cuota-number"><?= str_pad($cuotaNumero, 2, '0', STR_PAD_LEFT) ?></span>
                                             </td>
@@ -683,7 +916,6 @@ JS
                                                         'id' => 'cuota-' . $cuota->id,
                                                         'class' => 'custom-control-input cuota-checkbox',
                                                         'data-monto' => $monto,
-                                                        // Only disable if already paid - vencidas ARE selectable
                                                         'disabled' => ($status == 'pagada') ? true : false
                                                     ]) ?>
                                                     <label class="custom-control-label" for="cuota-<?= $cuota->id ?>"></label>
@@ -692,37 +924,30 @@ JS
                                         </tr>
                                     <?php endforeach; ?>
 
-                                    <!-- Total Row -->
+                                    <!-- Total Row - Aligned with MONTO column -->
                                     <tr class="total-row">
-                                        <td colspan="5" class="text-right font-weight-bold">TOTAL SELECCIONADO:</td>
-                                        <td class="text-center total-amount" id="selected-total">$0.00</td>
-                                        <td class="text-center"></td>
+                                        <td colspan="4" class="text-right">
+                                            <span class="total-label">
+                                                <i class="fas fa-chart-line mr-2"></i>TOTAL SELECCIONADO
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span style="opacity: 0.5;">—</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="total-amount" id="selected-total">
+                                                <i class="fas fa-dollar-sign mr-1"></i>0.00
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <i class="fas fa-arrow-right text-success" style="font-size: 1.2rem;"></i>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-
-                <?php
-                $this->registerJs(
-                    <<<JS
-                    function updateSelectedTotal() {
-                        let total = 0;
-                        $('.cuota-checkbox').each(function() {
-                            if ($(this).is(':checked')) {
-                                total += parseFloat($(this).data('monto')) || 0;
-                            }
-                        });
-                        $('#selected-total').text('$' + total.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
-                        $('#pagos-monto_pagado').val(total.toFixed(2));
-                        if (typeof updateMontoBs === 'function') updateMontoBs();
-                    }
-                    $(document).on('change', '.cuota-checkbox', updateSelectedTotal);
-                    setTimeout(updateSelectedTotal, 100);
-JS
-                );
-                ?>
 
             <?php else: ?>
                 <div class="alert alert-success d-flex align-items-center alert-empty">
@@ -746,6 +971,7 @@ JS
                 'class' => 'form-control',
                 'placeholder' => 'Ingrese el monto pagado',
                 'id' => 'pagos-monto_pagado',
+                'readonly' => true,
             ])->label('Monto a Pagar en USD' . '<span class="required-field"></span>') ?>
         </div>
         <div class="col-md-4">
@@ -789,17 +1015,30 @@ JS
                 'options' => ['accept' => 'image/*', 'disabled' => $disabled, 'id' => 'pagos-imagen_prueba_file'],
                 'pluginOptions' => [
                     'theme' => 'fa5',
-                    'browseClass' => 'btn btn-light',
-                    'removeClass' => 'btn btn-outline-danger',
+                    'browseClass' => 'btn btn-primary',
+                    'removeClass' => 'btn btn-danger',
                     'uploadClass' => 'btn btn-info',
+                    'browseIcon' => '<i class="fas fa-folder-open"></i> ',
                     'removeIcon' => '<i class="fas fa-trash"></i> ',
+                    'browseLabel' => ' Examinar',
+                    'removeLabel' => ' Quitar',
                     'showUpload' => false,
                     'showCancel' => false,
                     'previewFileType' => 'image',
                     'maxFileSize' => 2800,
                     'msgSizeTooLarge' => 'El archivo "{name}" ({size} KB) excede el tamaño máximo permitido de {maxSize} KB.',
-                    'layoutTemplates' => ['main1' => '{preview}{browse}{remove}', 'main2' => '{preview}{browse}{remove}'],
-                    'previewSettings' => ['image' => ['width' => '100%', 'height' => 'auto', 'max-width' => '250px']],
+                    'layoutTemplates' => [
+                        'main1' => '{preview}{browse}{remove}',
+                        'main2' => '{preview}{browse}{remove}',
+                        'actions' => '<div class="file-actions" style="display: flex; gap: 12px;">{browse}{remove}</div>',
+                    ],
+                    'previewSettings' => [
+                        'image' => [
+                            'width' => '100%',
+                            'height' => 'auto',
+                            'max-width' => '250px'
+                        ]
+                    ],
                 ],
             ])->label('Adjuntar Comprobante (JPG, PNG)' . '<span class="required-field"></span>') ?>
         </div>

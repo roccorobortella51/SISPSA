@@ -1,8 +1,8 @@
 <?php
 return [
-    'adminEmail' => 'admin@example.com',
-    'senderName' => 'Example.com mailer',
-    'senderEmail' => 'noreply@example.com',
+    'adminEmail' => 'notification@sispsatest.com',
+    'senderName' => 'SISPSA - Sistema de Protección de Salud',
+    'senderEmail' => 'notification@sispsatest.com',
     'hail812/yii2-adminlte3' => [
         'pluginMap' => [
             'sweetalert2' => [

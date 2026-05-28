@@ -8,6 +8,7 @@ use yii\web\Controller;
 use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
+use app\models\AgenteFuerza;
 use app\models\ContactForm;
 use app\models\RmMunicipio;
 use app\models\RmParroquia;
@@ -1379,6 +1380,7 @@ class SiteController extends Controller
     /**
      * Dashboard for ASESOR role
      * Shows affiliate statistics and plan information
+     * 
      * @return string
      */
     public function actionDashboardAsesor()
@@ -1393,13 +1395,12 @@ class SiteController extends Controller
         $authManager = Yii::$app->authManager;
         $roles = $authManager->getRolesByUser($user->id);
 
-        // Fix: Use 'Asesor' (capital A) instead of 'ASESOR'
         if (!isset($roles['Asesor'])) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
             return $this->goHome();
         }
 
-        // Get the Asesor's own UserDatos record to find their 'asesor_id'
+        // Get the Asesor's own UserDatos record
         $asesorUser = UserDatos::findOne(['user_login_id' => $user->id]);
 
         if (!$asesorUser) {
@@ -1407,84 +1408,177 @@ class SiteController extends Controller
             return $this->goHome();
         }
 
-        $asesorId = $asesorUser->id;
-        $clinicaId = $asesorUser->clinica_id;
+        // Get the agente_fuerza record to find the asesor_id
+        $agenteFuerza = AgenteFuerza::findOne(['idusuario' => $asesorUser->id]);
+
+        if (!$agenteFuerza) {
+            Yii::$app->session->setFlash('error', 'No se encontró su registro como asesor en el sistema.');
+            return $this->goHome();
+        }
+
+        $asesorId = $agenteFuerza->id;
+        $asesorName = $asesorUser->nombres . ' ' . $asesorUser->apellidos;
 
         // ============================================
-        // CLINIC-WIDE STATISTICS (for the clinic the Asesor belongs to)
+        // Get ALL affiliates for this asesor (regardless of contract status)
         // ============================================
-
-        // Total affiliates in the clinic
-        $clinicaTotalAfiliados = UserDatos::find()
-            ->where(['clinica_id' => $clinicaId, 'role' => 'afiliado'])
-            ->count();
-
-        // Active affiliates in the clinic (with active contracts)
-        $clinicaActivos = UserDatos::find()
-            ->alias('ud')
-            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
-            ->where(['ud.clinica_id' => $clinicaId, 'ud.role' => 'afiliado', 'c.estatus' => 'Activo'])
-            ->count();
-
-        // Suspended affiliates in the clinic
-        $clinicaSuspendidos = UserDatos::find()
-            ->alias('ud')
-            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
-            ->where(['ud.clinica_id' => $clinicaId, 'ud.role' => 'afiliado', 'c.estatus' => 'suspendido'])
-            ->count();
-
-        // Affiliates with expired contracts in the clinic
-        $clinicaConContratosVencidos = UserDatos::find()
-            ->alias('ud')
-            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
-            ->where(['ud.clinica_id' => $clinicaId, 'ud.role' => 'afiliado'])
-            ->andWhere(['<', 'c.fecha_ven', date('Y-m-d')])
-            ->count();
-
-        // New affiliates this month in the clinic
-        $clinicaNuevosEsteMes = UserDatos::find()
-            ->where(['clinica_id' => $clinicaId, 'role' => 'afiliado'])
-            ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
-            ->count();
-
-        // ============================================
-        // ASESOR'S PERSONAL STATISTICS (only affiliates created by this Asesor)
-        // ============================================
-
-        // Total affiliates created by this Asesor
-        $asesorTotalAfiliados = UserDatos::find()
+        $allAffiliates = UserDatos::find()
             ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
-            ->count();
+            ->all();
 
-        // Active affiliates created by this Asesor
-        $asesorActivos = UserDatos::find()
-            ->alias('ud')
-            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
-            ->where(['ud.asesor_id' => $asesorId, 'ud.role' => 'afiliado', 'c.estatus' => 'Activo'])
-            ->count();
+        $totalAfiliados = count($allAffiliates);
 
-        // Suspended affiliates created by this Asesor
-        $asesorSuspendidos = UserDatos::find()
-            ->alias('ud')
-            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
-            ->where(['ud.asesor_id' => $asesorId, 'ud.role' => 'afiliado', 'c.estatus' => 'suspendido'])
-            ->count();
+        // ============================================
+        // Get contract statuses for debugging and counting
+        // ============================================
+        $activos = 0;
+        $registrados = 0;
+        $suspendidos = 0;
+        $vencidos = 0;
+        $anulados = 0;
+        $sinContrato = 0;
+        $contractStatusDebug = [];
 
-        // Affiliates with expired contracts created by this Asesor
-        $asesorConContratosVencidos = UserDatos::find()
-            ->alias('ud')
-            ->innerJoin('contratos c', 'ud.contrato_id = c.id')
-            ->where(['ud.asesor_id' => $asesorId, 'ud.role' => 'afiliado'])
-            ->andWhere(['<', 'c.fecha_ven', date('Y-m-d')])
-            ->count();
+        foreach ($allAffiliates as $affiliate) {
+            $contract = Contratos::find()
+                ->where(['user_id' => $affiliate->id])
+                ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
 
-        // New affiliates this month created by this Asesor
-        $asesorNuevosEsteMes = UserDatos::find()
-            ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
-            ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
-            ->count();
+            if ($contract) {
+                $status = $contract->estatus;
+                $contractStatusDebug[] = [
+                    'affiliate_id' => $affiliate->id,
+                    'affiliate_name' => $affiliate->nombres . ' ' . $affiliate->apellidos,
+                    'contract_id' => $contract->id,
+                    'contract_status' => $status,
+                    'fecha_ini' => $contract->fecha_ini,
+                    'fecha_ven' => $contract->fecha_ven,
+                ];
 
-        // Monthly performance data for chart (Asesor's personal)
+                switch ($status) {
+                    case 'Activo':
+                        $activos++;
+                        break;
+                    case 'Registrado':
+                        $registrados++;
+                        break;
+                    case 'Suspendido':
+                        $suspendidos++;
+                        break;
+                    case 'Vencido':
+                        $vencidos++;
+                        break;
+                    case 'Anulado':
+                        $anulados++;
+                        break;
+                    default:
+                        // Other status
+                        break;
+                }
+            } else {
+                $sinContrato++;
+                $contractStatusDebug[] = [
+                    'affiliate_id' => $affiliate->id,
+                    'affiliate_name' => $affiliate->nombres . ' ' . $affiliate->apellidos,
+                    'contract_status' => 'SIN CONTRATO',
+                ];
+            }
+        }
+
+        // ============================================
+        // Get clinics where this Asesor has affiliates
+        // ============================================
+        $clinicasConAfiliados = UserDatos::find()
+            ->select(['clinica_id', 'rm_clinica.nombre as clinica_nombre'])
+            ->innerJoin('rm_clinica', 'user_datos.clinica_id = rm_clinica.id')
+            ->where(['user_datos.asesor_id' => $asesorId])
+            ->andWhere(['user_datos.role' => 'afiliado'])
+            ->andWhere(['IS NOT', 'user_datos.clinica_id', null])
+            ->groupBy(['clinica_id', 'rm_clinica.nombre'])
+            ->orderBy(['rm_clinica.nombre' => SORT_ASC])
+            ->asArray()
+            ->all();
+
+        $clinicaIds = array_column($clinicasConAfiliados, 'clinica_id');
+        $clinicas = RmClinica::find()
+            ->where(['id' => $clinicaIds])
+            ->andWhere(['IS', 'deleted_at', null])
+            ->orderBy(['nombre' => SORT_ASC])
+            ->all();
+
+        $clinicaNombre = !empty($clinicas) ? (count($clinicas) == 1 ? $clinicas[0]->nombre : 'Múltiples Clínicas') : 'Sin clínicas asignadas';
+
+        // ============================================
+        // STATISTICS BY CLINIC (for chart)
+        // ============================================
+        $statsByClinic = [];
+        foreach ($clinicas as $clinica) {
+            // Get affiliates for this clinic
+            $clinicAffiliates = UserDatos::find()
+                ->where(['asesor_id' => $asesorId, 'clinica_id' => $clinica->id, 'role' => 'afiliado'])
+                ->all();
+
+            $total = count($clinicAffiliates);
+            $activosCount = 0;
+            $suspendidosCount = 0;
+
+            foreach ($clinicAffiliates as $affiliate) {
+                $contract = Contratos::find()
+                    ->where(['user_id' => $affiliate->id])
+                    ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                    ->orderBy(['created_at' => SORT_DESC])
+                    ->one();
+
+                if ($contract) {
+                    if ($contract->estatus == 'Activo') {
+                        $activosCount++;
+                    } elseif ($contract->estatus == 'Suspendido') {
+                        $suspendidosCount++;
+                    }
+                }
+            }
+
+            $statsByClinic[] = [
+                'clinica_nombre' => $clinica->nombre,
+                'total' => $total,
+                'activos' => $activosCount,
+                'suspendidos' => $suspendidosCount,
+            ];
+        }
+
+        // ============================================
+        // Build statistics arrays
+        // ============================================
+        $clinicaStats = [
+            'total_afiliados' => $totalAfiliados,
+            'activos' => $activos,
+            'registrados' => $registrados,
+            'suspendidos' => $suspendidos,
+            'vencidos' => $vencidos,
+            'anulados' => $anulados,
+            'sin_contrato' => $sinContrato,
+            'nuevos_este_mes' => UserDatos::find()
+                ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
+                ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
+                ->count(),
+            'tasa_actividad' => $totalAfiliados > 0 ? round(($activos / $totalAfiliados) * 100, 1) : 0,
+        ];
+
+        $asesorStats = [
+            'total_afiliados' => $totalAfiliados,
+            'activos' => $activos,
+            'registrados' => $registrados,
+            'suspendidos' => $suspendidos,
+            'vencidos' => $vencidos,
+            'anulados' => $anulados,
+            'sin_contrato' => $sinContrato,
+            'nuevos_este_mes' => $clinicaStats['nuevos_este_mes'],
+            'tasa_actividad' => $totalAfiliados > 0 ? round(($activos / $totalAfiliados) * 100, 1) : 0,
+        ];
+
+        // Monthly performance data for chart
         $monthlyData = [];
         for ($i = 5; $i >= 0; $i--) {
             $startDate = date('Y-m-01', strtotime("-$i months"));
@@ -1500,17 +1594,17 @@ class SiteController extends Controller
             $monthlyData[] = ['month' => $monthName, 'count' => $count];
         }
 
-        // Plan data based on SISPSA website information
+        // Plan data
         $planesData = [
             'individual' => [
-                ['name' => 'Plan Básico', 'price' => 16, 'currency' => 'USD', 'coverage' => 10000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
-                ['name' => 'Plan Estándar', 'price' => 20, 'currency' => 'USD', 'coverage' => 15000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
-                ['name' => 'Plan Premium', 'price' => 24, 'currency' => 'USD', 'coverage' => 20000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
+                ['name' => 'Plan Bronce', 'price' => 16, 'currency' => 'USD', 'coverage' => 10000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
+                ['name' => 'Plan Plata', 'price' => 20, 'currency' => 'USD', 'coverage' => 15000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
+                ['name' => 'Plan Oro', 'price' => 24, 'currency' => 'USD', 'coverage' => 20000, 'age_range' => '0 a 59 años', 'maternity' => '+$11 (Opcional)'],
             ],
             'senior' => [
-                ['name' => 'Plan Senior Básico', 'price' => 13, 'currency' => 'USD', 'coverage' => 14000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
-                ['name' => 'Plan Senior Estándar', 'price' => 29, 'currency' => 'USD', 'coverage' => 16000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
-                ['name' => 'Plan Senior Premium', 'price' => 34, 'currency' => 'USD', 'coverage' => 50000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
+                ['name' => 'Plan Esmeralda Básico', 'price' => 13, 'currency' => 'USD', 'coverage' => 14000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
+                ['name' => 'Plan Esmeralda Plus', 'price' => 29, 'currency' => 'USD', 'coverage' => 16000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
+                ['name' => 'Plan Diamante', 'price' => 34, 'currency' => 'USD', 'coverage' => 50000, 'age_range' => '60 a 80 años', 'maternity' => 'No aplica'],
             ],
             'benefits_summary' => [
                 'emergency' => 'Sin plazos de espera. Atención primaria, exámenes diagnósticos (Hematología, Glicemia, Rayos X), medicación analgésica, sala de cura menor, hospitalización por 48 hrs.',
@@ -1522,41 +1616,66 @@ class SiteController extends Controller
             ]
         ];
 
-        // Get recent affiliates (last 5) for the Asesor
+        // Get recent affiliates (last 10) with their contract status
         $recientes = UserDatos::find()
-            ->where(['asesor_id' => $asesorId, 'role' => 'afiliado'])
-            ->orderBy(['created_at' => SORT_DESC])
-            ->limit(5)
+            ->select([
+                'user_datos.id',
+                'user_datos.nombres',
+                'user_datos.apellidos',
+                'user_datos.tipo_cedula',
+                'user_datos.cedula',
+                'user_datos.email',
+                'user_datos.telefono',
+                'user_datos.created_at',
+                'user_datos.clinica_id',
+                'rm_clinica.nombre as clinica_nombre',
+                'user_datos.asesor_id'
+            ])
+            ->leftJoin('rm_clinica', 'user_datos.clinica_id = rm_clinica.id')
+            ->where(['user_datos.asesor_id' => $asesorId, 'user_datos.role' => 'afiliado'])
+            ->orderBy(['user_datos.created_at' => SORT_DESC])
+            ->limit(10)
+            ->asArray()
             ->all();
 
-        // Get clinic name
-        $clinica = RmClinica::findOne($clinicaId);
-        $clinicaNombre = $clinica ? $clinica->nombre : 'Su clínica';
+        // Add contract status to each recent affiliate
+        foreach ($recientes as &$afiliado) {
+            $contract = Contratos::find()
+                ->where(['user_id' => $afiliado['id']])
+                ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+
+            $afiliado['contrato_estatus'] = $contract ? $contract->estatus : 'Sin Contrato';
+        }
+
+        // Debug info
+        $debugInfo = [
+            'asesor_id_used' => $asesorId,
+            'user_login_id' => $user->id,
+            'user_datos_id' => $asesorUser->id,
+            'total_affiliates' => $totalAfiliados,
+            'activos_count' => $activos,
+            'sin_contrato_count' => $sinContrato,
+            'contract_status_debug' => $contractStatusDebug,
+            'clinicas_count' => count($clinicas),
+            'recientes_count' => count($recientes),
+        ];
 
         return $this->render('dashboard-asesor', [
-            'asesorName' => $asesorUser->nombres . ' ' . $asesorUser->apellidos,
+            'asesorName' => $asesorName,
             'clinicaNombre' => $clinicaNombre,
-            'clinicaStats' => [
-                'total_afiliados' => $clinicaTotalAfiliados,
-                'activos' => $clinicaActivos,
-                'suspendidos' => $clinicaSuspendidos,
-                'con_contratos_vencidos' => $clinicaConContratosVencidos,
-                'nuevos_este_mes' => $clinicaNuevosEsteMes,
-                'tasa_actividad' => $clinicaTotalAfiliados > 0 ? round(($clinicaActivos / $clinicaTotalAfiliados) * 100, 1) : 0,
-            ],
-            'asesorStats' => [
-                'total_afiliados' => $asesorTotalAfiliados,
-                'activos' => $asesorActivos,
-                'suspendidos' => $asesorSuspendidos,
-                'con_contratos_vencidos' => $asesorConContratosVencidos,
-                'nuevos_este_mes' => $asesorNuevosEsteMes,
-                'tasa_actividad' => $asesorTotalAfiliados > 0 ? round(($asesorActivos / $asesorTotalAfiliados) * 100, 1) : 0,
-            ],
+            'clinicas' => $clinicas,
+            'statsByClinic' => $statsByClinic,
+            'clinicaStats' => $clinicaStats,
+            'asesorStats' => $asesorStats,
             'monthlyData' => $monthlyData,
             'planesData' => $planesData,
             'recientes' => $recientes,
+            'debugInfo' => $debugInfo,
         ]);
     }
+
     /**
      * Get municipios by estado id - GET method (for profile update)
      */
@@ -1612,5 +1731,147 @@ class SiteController extends Controller
                 ->all();
         }
         return ['output' => $out, 'selected' => ''];
+    }
+    /**
+     * Test email configuration
+     * Access: https://sispsatest.com/index.php?r=site/test-email
+     * or http://localhost/sipsa/web/index.php?r=site/test-email
+     */
+    public function actionTestEmail($email = null)
+    {
+        // Only allow in production for users with admin role
+        if (YII_ENV_PROD && !Yii::$app->user->isGuest) {
+            $roles = Yii::$app->authManager->getRolesByUser(Yii::$app->user->id);
+            if (!isset($roles['Administrador']) && !isset($roles['admin']) && !isset($roles['ADMIN'])) {
+                return 'Email test is disabled in production. Contact administrator.';
+            }
+        } elseif (YII_ENV_PROD) {
+            return 'Email test is disabled in production. Contact administrator.';
+        }
+
+        // Use provided email or default test email
+        $testEmail = $email ?: 'your-email@gmail.com'; // Change this to your email
+
+        // Get user info if logged in
+        $userEmail = !Yii::$app->user->isGuest ? Yii::$app->user->identity->email : null;
+
+        $result = Yii::$app->mailer->compose()
+            ->setFrom('sispsa.notificaciones@gmail.com')
+            ->setTo($testEmail)
+            ->setSubject('SISPSA Test Email - ' . date('Y-m-d H:i:s'))
+            ->setHtmlBody('
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #f4f7fc; padding: 20px; }
+                    .container { max-width: 500px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .header { background: #1a3a6e; color: white; padding: 15px; border-radius: 8px 8px 0 0; margin: -20px -20px 20px -20px; text-align: center; }
+                    .success { color: #28a745; font-weight: bold; }
+                    .info { background: #e8f5e9; padding: 10px; border-radius: 5px; margin: 15px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>SISPSA - Prueba de Correo</h2>
+                    </div>
+                    <p>✅ <strong class="success">¡Configuración de correo funcionando correctamente!</strong></p>
+                    <div class="info">
+                        <p><strong>Detalles de la prueba:</strong></p>
+                        <p>📅 Fecha y hora: ' . date('d/m/Y H:i:s') . '</p>
+                        <p>🌐 Servidor: ' . $_SERVER['SERVER_NAME'] . '</p>
+                        <p>📧 Email de destino: ' . $testEmail . '</p>
+                        ' . ($userEmail ? '<p>👤 Usuario autenticado: ' . $userEmail . '</p>' : '') . '
+                    </div>
+                    <p>Este es un mensaje de prueba para verificar que el sistema de notificaciones por correo electrónico está funcionando correctamente.</p>
+                    <hr>
+                    <p style="font-size: 12px; color: #666;">SISPSA - Sistema Integral de Salud Programado</p>
+                </div>
+            </body>
+            </html>
+        ')
+            ->setTextBody("SISPSA Test Email\n\n" .
+                "✅ Configuración de correo funcionando correctamente!\n\n" .
+                "Fecha y hora: " . date('d/m/Y H:i:s') . "\n" .
+                "Servidor: " . $_SERVER['SERVER_NAME'] . "\n" .
+                "Email de destino: " . $testEmail . "\n\n" .
+                "Este es un mensaje de prueba para verificar que el sistema de notificaciones por correo electrónico está funcionando correctamente.\n\n" .
+                "SISPSA - Sistema Integral de Salud Programado")
+            ->send();
+
+        if ($result) {
+            Yii::$app->session->setFlash('success', "✓ Email sent successfully to {$testEmail}! Check your inbox (and spam folder).");
+        } else {
+            Yii::$app->session->setFlash('error', "✗ Failed to send email. Check logs at runtime/logs/app.log");
+        }
+
+        // Redirect back to dashboard or show result page
+        if (!Yii::$app->user->isGuest) {
+            return $this->redirect(Yii::$app->request->referrer ?: ['site/dashboard-finanzas']);
+        } else {
+            return $this->renderContent("
+            <html>
+            <head><title>Email Test Result</title></head>
+            <body style='font-family: Arial, sans-serif; padding: 50px; text-align: center;'>
+                <div style='max-width: 500px; margin: 0 auto; background: " . ($result ? "#d4edda" : "#f8d7da") . "; padding: 20px; border-radius: 8px;'>
+                    <h2>" . ($result ? "✅ Email Sent!" : "❌ Email Failed") . "</h2>
+                    <p>" . ($result ? "Test email sent to {$testEmail}" : "Failed to send email to {$testEmail}") . "</p>
+                    <p><a href='/'>Return to Home</a></p>
+                </div>
+            </body>
+            </html>
+        ");
+        }
+    }
+
+    /**
+     * Test notification helper with a real receipt
+     * Access: https://sispsatest.com/index.php?r=site/test-notification&receipt_id=1
+     */
+    public function actionTestNotification($receipt_id = null)
+    {
+        // Only allow in development or for logged-in users
+        if (YII_ENV_PROD && Yii::$app->user->isGuest) {
+            return 'Test notification is restricted. Please log in.';
+        }
+
+        if (!$receipt_id) {
+            // Get the most recent receipt
+            $receipt = \app\models\Receipt::find()->orderBy(['id' => SORT_DESC])->one();
+            if ($receipt) {
+                $receipt_id = $receipt->id;
+            } else {
+                return 'No receipt found. Please provide a receipt_id parameter. Example: ?r=site/test-notification&receipt_id=1';
+            }
+        }
+
+        $receipt = \app\models\Receipt::findOne($receipt_id);
+        if (!$receipt) {
+            return "Receipt not found with ID: {$receipt_id}";
+        }
+
+        $user = \app\models\UserDatos::findOne($receipt->user_id);
+        $payment = \app\models\Pagos::findOne($receipt->payment_id);
+
+        if (!$user || !$payment) {
+            return "User or payment not found for receipt {$receipt_id}";
+        }
+
+        echo "<h1>Testing Notification Helper</h1>";
+        echo "<p><strong>Receipt:</strong> {$receipt->receipt_number}</p>";
+        echo "<p><strong>User:</strong> {$user->nombres} {$user->apellidos} ({$user->email})</p>";
+        echo "<p><strong>Payment:</strong> {$payment->monto_pagado} USD / {$payment->monto_usd} Bs</p>";
+        echo "<hr>";
+
+        $result = \app\components\NotificationHelper::sendReceiptNotification($receipt, $user, $payment);
+
+        if ($result) {
+            echo "<p style='color: green; font-weight: bold;'>✓ Notification sent successfully to {$user->email}!</p>";
+        } else {
+            echo "<p style='color: red; font-weight: bold;'>✗ Failed to send notification. Check logs.</p>";
+        }
+
+        echo "<p><a href='" . Yii::$app->request->referrer . "'>Go Back</a></p>";
     }
 }

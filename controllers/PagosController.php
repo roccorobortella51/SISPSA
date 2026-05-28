@@ -980,10 +980,34 @@ class PagosController extends Controller
 
         // Generate receipts
         $receipts = \app\components\ReceiptGenerator::generateForPayment($payment);
+        $userEmail = $payment->userDatos->email ?? 'el usuario';
 
         if (!empty($receipts)) {
-            Yii::$app->session->setFlash('success', 'Se generaron ' . count($receipts) . ' recibos correctamente.');
-            // DO NOT set recibo_id - it doesn't exist
+            $count = count($receipts);
+            $emailSent = !empty($payment->userDatos->email);
+
+            if ($emailSent) {
+                // Create the success message with SPAM warning
+                $message = "✅ Se generaron {$count} recibo(s) correctamente. Se ha enviado un correo electrónico con el enlace de descarga a <strong>{$payment->userDatos->email}</strong>.";
+
+                // Add the SPAM warning with eye-catching HTML
+                $spamWarning = '<br><br>
+            <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin-top: 10px; border-radius: 5px; font-weight: bold; display: inline-block; width: 100%; box-sizing: border-box;">
+                <span style="font-size: 16px;">⚠️</span> 
+                <span style="color: #856404; font-size: 14px;">
+                    <strong>¡IMPORTANTE!</strong> El correo puede haber llegado a la carpeta de <strong style="background-color: #ffc107; padding: 2px 6px; border-radius: 3px; color: #000;">SPAM</strong>. 
+                    Por favor, revise su bandeja de correo no deseado y marque el mensaje como <strong>"No es spam"</strong> para asegurar la entrega de futuros recibos.
+                </span>
+                <span style="font-size: 16px;">📧</span>
+            </div>';
+
+                // Combine message with SPAM warning
+                $fullMessage = $message . $spamWarning;
+
+                Yii::$app->session->setFlash('success', $fullMessage);
+            } else {
+                Yii::$app->session->setFlash('success', "✅ Se generaron {$count} recibo(s) correctamente. El usuario no tiene email registrado para enviar la notificación.");
+            }
         } else {
             Yii::$app->session->setFlash('error', 'No se pudieron generar los recibos. Verifique que el pago tenga cuotas asociadas.');
         }

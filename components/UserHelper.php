@@ -860,13 +860,11 @@ class UserHelper
 
         if ($userdatos) {
             $agencia = AgenteFuerza::find()->where(['idusuario' => $userdatos->id])->one();
-            // ✅ Add null check before accessing id
             if ($agencia !== null) {
                 return $agencia->id;
             }
         }
 
-        // Return null if no agent found (instead of throwing error)
         return null;
     }
 

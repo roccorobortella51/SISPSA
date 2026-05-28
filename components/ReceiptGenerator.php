@@ -4,6 +4,8 @@
 namespace app\components;
 
 use Yii;
+use app\components\NotificationHelper;
+
 use app\models\Receipt;
 use app\models\Cuotas;
 use app\models\Pagos;
@@ -195,6 +197,8 @@ class ReceiptGenerator
         $receipt->html_content = $html;
 
         if ($receipt->save()) {
+            // Send notification to affiliate
+            NotificationHelper::sendReceiptNotification($receipt, $user, $payment);
             return $receipt;
         }
         return null;
@@ -348,12 +352,13 @@ class ReceiptGenerator
     
     /* Subtitle Styles */
     .subtitle {
-        background: #e8e8e8;
-        padding: 6px 10px;
-        margin: 15px 0 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
+    background: #e8e8e8 !important;
+    padding: 6px 10px;
+    margin: 15px 0 10px 0;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+}
     
     /* Utility Classes */
     .text-center {
@@ -478,11 +483,14 @@ class ReceiptGenerator
 
         
 
-        <table>
-            <tr><td width="33%"><strong>Contrato Nº.:</strong> {$contratoNumero}</td>
-            <td width="33%"><strong>Recibo Nº.:</strong> {$receiptNum}</td>
-            <td width="34%"><strong>Total Cuota de Afiliación a Cobrar:</strong> Bs. {$montoBsFormatted}</td></tr>
-        </table>
+        <table class="receipt-table">
+    <tr>
+        <td width="25%"><strong>Contrato Nº.:</strong> {$contratoNumero}</td
+        ><td width="25%"><strong>Recibo Nº.:</strong> {$receiptNum}</td
+        ><td width="25%"><strong>Cuota Nº.:</strong> {$installmentNumber} de {$totalCuotas}</td
+        ><td width="25%"><strong>Total Cuota de Afiliación a Cobrar:</strong> Bs. {$montoBsFormatted}</td>
+    </tr>
+</table>
 
         <div class="subtitle">CONTRATANTE</div>
         <table>

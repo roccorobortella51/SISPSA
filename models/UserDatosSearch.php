@@ -78,7 +78,20 @@ class UserDatosSearch extends UserDatos
         // ASESOR FILTERING - For Asesor role
         // ============================================================
         if ($rol == "Asesor") {
-            $query->andWhere(['user_datos.asesor_id' => UserHelper::getAgenteFuerzaId()]);
+            $asesorId = UserHelper::getAgenteFuerzaId();
+            if ($asesorId) {
+                // For Asesor role, show only affiliates they have created/assigned
+                $query->andWhere(['user_datos.asesor_id' => $asesorId]);
+            } else {
+                // If no asesor_id found, try to find by user_login_id
+                $userDatos = UserDatos::findOne(['user_login_id' => Yii::$app->user->id]);
+                if ($userDatos) {
+                    $query->andWhere(['user_datos.asesor_id' => $userDatos->id]);
+                } else {
+                    // No results if no asesor found
+                    $query->andWhere('1=0');
+                }
+            }
         }
 
         // ============================================================
