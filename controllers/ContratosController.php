@@ -422,7 +422,8 @@ class ContratosController extends Controller
         if (
             !Yii::$app->user->can('superadmin') &&
             !Yii::$app->user->can('GERENTE-COMERCIALIZACION') &&
-            !Yii::$app->user->can('GERENTE-CLINICA')
+            !Yii::$app->user->can('GERENTE-CLINICA') &&
+            !Yii::$app->user->can('GERENTE-OPERACIONES')
         ) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
             return $this->redirect(['index', 'user_id' => $model->user_id]);
@@ -504,7 +505,8 @@ class ContratosController extends Controller
         if (
             !Yii::$app->user->can('superadmin') &&
             !Yii::$app->user->can('GERENTE-COMERCIALIZACION') &&
-            !Yii::$app->user->can('GERENTE-CLINICA')
+            !Yii::$app->user->can('GERENTE-CLINICA') &&
+            !Yii::$app->user->can('GERENTE-OPERACIONES')
         ) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
             return $this->redirect(['index', 'user_id' => $model->user_id]);

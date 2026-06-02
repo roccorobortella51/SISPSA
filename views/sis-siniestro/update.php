@@ -15,15 +15,20 @@ $this->title = 'Actualizar datos de la ' . $termino . ': ' . $afiliado->nombres 
 $this->params['breadcrumbs'][] = ['label' => 'AFILIADOS', 'url' => ['index', 'user_id' => $afiliado->id]];
 $this->params['breadcrumbs'][] = 'Actualizar';
 
-// Debug: Check if nombre_doctor is loaded (remove after fixing)
-if (!empty($model->nombre_doctor)) {
-}
+// Determine icon based on es_cita (SAME PATTERN AS create.php)
+$isCitaMode = ($esCita === 1);
+$iconClass = $isCitaMode ? 'fa-calendar-alt' : 'fa-heartbeat';
+$iconColor = $isCitaMode ? '#28a745' : '#dc3545';
 ?>
 <div class="col-xl-12 col-md-12">
     <div class="ms-panel ms-panel-fh">
         <div class="ms-panel-header d-flex justify-content-between align-items-center">
-            <h1><?= Html::encode($this->title); ?></h1>
-
+            <div>
+                <h1 style="font-size: 1.8rem; font-weight: 700; letter-spacing: -0.3px; margin: 0; display: flex; align-items: center;">
+                    <i class="fas <?= $iconClass ?>" style="color: <?= $iconColor ?>; font-size: 4rem; margin-right: 12px; line-height: 1;"></i>
+                    <span style="line-height: 1.4;"><?= Html::encode($this->title); ?></span>
+                </h1>
+            </div>
             <div>
                 <?= Html::a(
                     '<i class="fas fa-undo"></i> Volver',
@@ -32,6 +37,7 @@ if (!empty($model->nombre_doctor)) {
                         'class' => 'btn btn-primary btn-lg',
                         'onclick' => 'window.history.back(); return false;',
                         'title' => 'Volver a la página anterior',
+                        'style' => 'font-size: 1rem; padding: 12px 24px; border-radius: 12px;'
                     ]
                 ) ?>
             </div>

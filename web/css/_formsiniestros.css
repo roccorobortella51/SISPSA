@@ -2005,4 +2005,29 @@
 .custom-file-label i {
     margin-right: 5px;
 }
+/* ============================================
+   SERVICES SECTION ICON COLORS - FINAL OVERRIDE
+   ============================================ */
+
+/* Use unique class names that won't be targeted by existing rules */
+.services-icon-heartbeat {
+    color: #ff6b6b !important;
+    font-size: 1.8rem !important;
+}
+
+.services-icon-calendar {
+    color: #ffc107 !important;
+    font-size: 1.8rem !important;
+}
+
+/* Override any possible parent inheritance */
+.services-icon-wrapper i {
+    color: inherit !important;
+}
+
+/* Ensure text stays white */
+.services-section-title,
+.services-section-subtitle {
+    color: white !important;
+}
 }

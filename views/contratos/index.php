@@ -731,7 +731,9 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
                                     <?php if (
                                         Yii::$app->user->can('superadmin') ||
                                         Yii::$app->user->can('GERENTE-COMERCIALIZACION') ||
-                                        Yii::$app->user->can('GERENTE-CLINICA')
+                                        Yii::$app->user->can('GERENTE-CLINICA') ||
+                                        Yii::$app->user->can('GERENTE-OPERACIONES')
+
                                     ): ?>
                                         <?= Html::a(
                                             '<i class="fas fa-ban mr-1"></i> Anular Contrato',

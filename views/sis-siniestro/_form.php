@@ -367,13 +367,18 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
 
     <!-- ===== SECTION 3: DATOS DE LA ATENCIÓN/CITA ===== -->
     <div class="ms-panel mb-4">
-        <div class="ms-panel-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
-            <h3 class="large-title section-title-white mb-0" id="titulo-datos-registro">
-                <i class="fas fa-file-alt me-2"></i> <?= $tituloSeccion ?>
+        <div class="ms-panel-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 16px 25px;">
+            <h3 class="large-title section-title-white mb-0" id="titulo-datos-registro" style="margin: 0; display: flex; align-items: center; gap: 12px;">
                 <?php if ($esCitaMode): ?>
-                    <span class="badge bg-warning ms-2">Modo Cita</span>
+                    <i class="fas fa-calendar-alt" style="color: #a8e6cf; font-size: 1.6rem; vertical-align: middle;"></i>
                 <?php else: ?>
-                    <span class="badge bg-info ms-2">Modo Atención</span>
+                    <i class="fas fa-heartbeat" style="color: #ff6b6b; font-size: 1.6rem; vertical-align: middle;"></i>
+                <?php endif; ?>
+                <span style="line-height: 1.4;"><?= $tituloSeccion ?></span>
+                <?php if ($esCitaMode): ?>
+                    <span class="badge bg-warning ms-2" style="font-size: 0.75rem; padding: 5px 12px;">Modo Cita</span>
+                <?php else: ?>
+                    <span class="badge bg-info ms-2" style="font-size: 0.75rem; padding: 5px 12px;">Modo Atención</span>
                 <?php endif; ?>
             </h3>
         </div>
@@ -382,738 +387,752 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 <?= $form->field($model, 'idclinica')->textInput(['value' => $afiliado->clinica_id]) ?>
             </div>
 
-            <div class="card mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
-                    <i class="fas fa-info-circle me-2"></i> Información Básica
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-calendar-day"></i>
-                            <?= $form->field($model, 'fecha')->textInput([
-                                'type' => 'date',
-                                'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Seleccione la fecha',
-                                'autocomplete' => 'off',
-                                'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
-                            ])->label('Fecha del Evento de Salud') ?>
-                        </div>
-
-                        <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-clock"></i>
-                            <?= $form->field($model, 'hora')->textInput([
-                                'type' => 'text',
-                                'class' => 'form-control form-control-lg time-input',
-                                'placeholder' => 'HH:MM (ejemplo: 14:30)',
-                                'maxlength' => 5,
-                                'autocomplete' => 'off'
-                            ])->label('Hora del Evento de Salud') ?>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle"></i> Use formato 24 horas (HH:MM). Ejemplo: 14:30 o 09:15
-                            </small>
-                        </div>
-
-                        <div class="col-md-12">
-                            <?= $form->field($model, 'atendido')->dropDownList(
-                                [0 => 'No', 1 => 'Sí'],
-                                [
-                                    'prompt' => 'Seleccione estado',
-                                    'class' => 'form-control form-control-lg'
-                                ]
-                            )->label('¿Fue atendido?') ?>
-                        </div>
+            <?php if (false): ?>
+                <div class="card mb-4">
+                    <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
+                        <i class="fas fa-info-circle me-2"></i> Información Básica
                     </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
-                    <i class="fas fa-stethoscope me-2"></i> Detalles de la Atención
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-calendar-check"></i>
-                            <?= $form->field($model, 'fecha_atencion')->textInput([
-                                'type' => 'date',
-                                'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Seleccione la fecha',
-                                'autocomplete' => 'off',
-                                'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha_atencion, 'yyyy-MM-dd')
-                            ])->label('Fecha de la ' . $terminoPrincipal) ?>
-                        </div>
-
-                        <div class="col-md-6 field-with-icon">
-                            <i class="fas fa-clock"></i>
-                            <?= $form->field($model, 'hora_atencion')->textInput([
-                                'type' => 'text',
-                                'class' => 'form-control form-control-lg time-input',
-                                'placeholder' => 'HH:MM (ejemplo: 14:30)',
-                                'maxlength' => 5,
-                                'autocomplete' => 'off'
-                            ])->label('Hora de la ' . $terminoPrincipal) ?>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-clock"></i> Use formato 24 horas (HH:MM). Ejemplo: 14:30 o 09:15
-                            </small>
-                        </div>
-
-                        <div class="col-md-12 field-with-icon">
-                            <i class="fas fa-align-left"></i>
-                            <?= $form->field($model, 'descripcion')->textarea([
-                                'rows' => 3,
-                                'class' => 'form-control form-control-lg',
-                                'placeholder' => 'Describa los detalles de la ' . strtolower($terminoPrincipal) . '...'
-                            ])->label('Descripción de la ' . $terminoPrincipal) ?>
-                        </div>
-
-                        <!-- ===== DOCTOR AND ADMISSION ANALYST FIELDS - SAME ROW ===== -->
-                        <div class="row">
+                    <div class="card-body">
+                        <div class="row g-3">
                             <div class="col-md-6 field-with-icon">
-                                <i class="fas fa-user-md"></i>
-                                <?= $form->field($model, 'nombre_doctor')->textInput([
+                                <i class="fas fa-calendar-day"></i>
+                                <?= $form->field($model, 'fecha')->textInput([
+                                    'type' => 'date',
                                     'class' => 'form-control form-control-lg',
-                                    'placeholder' => 'Médico Tratante',
-                                    'maxlength' => true,
-                                    'autocomplete' => 'off'
-                                ])->label('Nombre del Doctor') ?>
-                                <small class="form-text text-muted">
-                                    <i class="fas fa-user-md"></i> Médico que atendió al paciente
-                                </small>
+                                    'placeholder' => 'Seleccione la fecha',
+                                    'autocomplete' => 'off',
+                                    'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha, 'yyyy-MM-dd')
+                                ])->label('Fecha del Evento de Salud') ?>
                             </div>
 
                             <div class="col-md-6 field-with-icon">
-                                <i class="fas fa-user-tie"></i>
-                                <?= $form->field($model, 'admission_analyst')->textInput([
-                                    'class' => 'form-control form-control-lg',
-                                    'placeholder' => 'Nombre del analista de admisión',
-                                    'maxlength' => true,
+                                <i class="fas fa-clock"></i>
+                                <?= $form->field($model, 'hora')->textInput([
+                                    'type' => 'text',
+                                    'class' => 'form-control form-control-lg time-input',
+                                    'placeholder' => 'HH:MM (ejemplo: 14:30)',
+                                    'maxlength' => 5,
                                     'autocomplete' => 'off'
-                                ])->label('Analista de Admisión') ?>
-                                <small class="form-text text-muted" style="white-space: nowrap; overflow: visible;">
-                                    <i class="fas fa-user-tie"></i> Persona responsable del registro de esta <?= strtolower($terminoPrincipal) ?>
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== SUBSECTION: DOCUMENTACIÓN ADJUNTA ===== -->
-            <div class="card mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
-                    <i class="fas fa-paperclip me-2"></i> Documentación Adjunta
-                </div>
-                <div class="card-body">
-                    <p class="hint-block mb-4">
-                        <i class="fas fa-info-circle"></i> Adjunte los documentos relacionados con esta <?= strtolower($terminoPrincipal) ?>
-                    </p>
-
-                    <div class="row">
-                        <!-- Récipe Médico -->
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label font-weight-bold">
-                                    <i class="fas fa-file-prescription text-primary"></i> Récipe Médico
-                                </label>
-                                <div class="custom-file">
-                                    <?= Html::fileInput('SisSiniestro[imagenRecipeFile]', null, [
-                                        'class' => 'custom-file-input',
-                                        'accept' => 'image/*,application/pdf',
-                                        'id' => 'recipe-file-input'
-                                    ]) ?>
-                                    <label class="custom-file-label" for="recipe-file-input" id="recipe-file-label">
-                                        <i class="fas fa-upload"></i> Seleccionar archivo...
-                                    </label>
-                                </div>
+                                ])->label('Hora del Evento de Salud') ?>
                                 <small class="form-text text-muted">
-                                    <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
+                                    <i class="fas fa-info-circle"></i> Use formato 24 horas (HH:MM). Ejemplo: 14:30 o 09:15
                                 </small>
-                                <?php if ($model->imagen_recipe && !$model->isNewRecord): ?>
-                                    <div class="mt-2">
-                                        <a href="<?= $model->imagen_recipe ?>" target="_blank" class="btn btn-sm btn-outline-info">
-                                            <i class="fas fa-eye"></i> Ver archivo actual
-                                        </a>
-                                        <span class="text-muted ml-2">
-                                            <i class="fas fa-check-circle text-success"></i> Archivo guardado
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
                             </div>
-                        </div>
 
-                        <!-- Informe Médico -->
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label font-weight-bold">
-                                    <i class="fas fa-file-medical text-info"></i> Informe Médico
-                                </label>
-                                <div class="custom-file">
-                                    <?= Html::fileInput('SisSiniestro[imagenInformeFile]', null, [
-                                        'class' => 'custom-file-input',
-                                        'accept' => 'image/*,application/pdf',
-                                        'id' => 'informe-file-input'
-                                    ]) ?>
-                                    <label class="custom-file-label" for="informe-file-input" id="informe-file-label">
-                                        <i class="fas fa-upload"></i> Seleccionar archivo...
-                                    </label>
+                            <?php if (!$esCitaMode): ?>
+                                <div class="col-md-12">
+                                    <?= $form->field($model, 'atendido')->dropDownList(
+                                        [0 => 'No', 1 => 'Sí'],
+                                        [
+                                            'prompt' => 'Seleccione estado',
+                                            'class' => 'form-control form-control-lg'
+                                        ]
+                                    )->label('¿Fue atendido?') ?>
                                 </div>
-                                <small class="form-text text-muted">
-                                    <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
-                                </small>
-                                <?php if ($model->imagen_informe && !$model->isNewRecord): ?>
-                                    <div class="mt-2">
-                                        <a href="<?= $model->imagen_informe ?>" target="_blank" class="btn btn-sm btn-outline-info">
-                                            <i class="fas fa-eye"></i> Ver archivo actual
-                                        </a>
-                                        <span class="text-muted ml-2">
-                                            <i class="fas fa-check-circle text-success"></i> Archivo guardado
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    </div>
-
-                    <!-- Additional info about existing files -->
-                    <?php if (($model->imagen_recipe || $model->imagen_informe) && !$model->isNewRecord): ?>
-                        <div class="alert alert-info mt-3 mb-0">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Nota:</strong> Si selecciona nuevos archivos, reemplazarán los existentes.
-                            Deje el campo vacío para mantener los archivos actuales.
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        /* Change file input browse button to Spanish */
-        .custom-file-label::after {
-            content: "Buscar" !important;
-        }
-
-        /* Optional: Style the file input when a file is selected */
-        .custom-file-label.selected {
-            background-color: #e8f5e9;
-            border-color: #4caf50;
-            color: #2e7d32;
-        }
-
-        .custom-file-label.selected i {
-            color: #2e7d32;
-        }
-    </style>
-
-    <?= $this->render('_form_documentos_adicionales', ['model' => $model, 'form' => $form]) ?>
-
-    <!-- ===== SECTION 4: SELECCIÓN DE SERVICIOS MÉDICOS ===== -->
-    <?php
-    // Initialize ALL variables
-    $baremosTotales = [];
-    $baremosHtml = [];
-    $baremosInfo = [];
-    $baremosRestringidosIDs = [];
-    $baremosForzados = [];
-    $baremosSinPlazo = [];
-    $baremosConPlazoCumplido = [];
-    $baremosPendientesPlazo = [];
-    $baremosAgotados = [];
-    $baremosDisponiblesInfo = [];
-    $selectedBaremos = [];
-
-    if ($contrato && $contrato->estatus === 'Activo') {
-        $query = \app\models\PlanesItemsCobertura::find()
-            ->joinWith('baremo')
-            ->joinWith('plan')
-            ->joinWith('baremo.area')
-            ->where(['planes.clinica_id' => $afiliado->clinica_id])
-            ->andWhere(['baremo.estatus' => 'Activo'])
-            ->andWhere(['planes.id' => $afiliado->plan_id]);
-
-        if ($esCitaMode) {
-            $query->andWhere([
-                'or',
-                ['>', 'planes_items_cobertura.plazo_espera', 0],
-                ['>', 'planes_items_cobertura.cantidad_limite', 0]
-            ]);
-        }
-
-        $planesItemsCobertura = $query->all();
-
-        if (isset($model) && $model !== null && !$model->isNewRecord && $model->id) {
-            $baremosDirectos = (new \yii\db\Query())
-                ->select(['baremo_id'])
-                ->from('sis_siniestro_baremo')
-                ->where(['siniestro_id' => $model->id])
-                ->column();
-
-            if (!empty($baremosDirectos)) {
-                $selectedBaremos = $baremosDirectos;
-            }
-        }
-
-        $fechaActual = new \DateTime();
-
-        foreach ($planesItemsCobertura as $item) {
-            if ($item->baremo) {
-                $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
-                $precioBaremo = $item->baremo->precio ?? 0;
-                $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
-                $servicio = $item->baremo->nombre_servicio;
-                $descripcion = $item->baremo->descripcion ?? '';
-
-                $textoPlano = $servicio . " (" . $area . ")";
-                if (!empty($descripcion)) {
-                    $textoPlano .= " - " . $descripcion;
-                }
-
-                $queryCount = \app\models\SisSiniestroBaremo::find()
-                    ->joinWith('siniestro')
-                    ->where(['baremo_id' => $item->baremo_id])
-                    ->andWhere(['iduser' => $afiliado->id]);
-
-                if (!$esCitaMode) {
-                    $queryCount->andWhere(['sis_siniestro.es_cita' => 0]);
-                }
-
-                $vecesUsado = $queryCount->count();
-
-                $remainingUses = 0;
-                $excedeLimite = false;
-
-                if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
-                    $remainingUses = $item->cantidad_limite - $vecesUsado;
-                    if ($remainingUses <= 0) {
-                        $excedeLimite = true;
-                    }
-                } else {
-                    $remainingUses = 999;
-                }
-
-                $esBaremoGuardado = !$model->isNewRecord && in_array($item->baremo_id, $selectedBaremos);
-                $isRestrictedByPlazo = false;
-
-                if ($contrato && $hasPlazoEver) {
-                    $fechaContratoIni = new \DateTime($contrato->fecha_ini);
-                    $diff = $fechaContratoIni->diff($fechaActual);
-                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
-                    $plazoRequerido = (int)$item->plazo_espera;
-
-                    if ($mesesTranscurridos < $plazoRequerido) {
-                        $isRestrictedByPlazo = true;
-                    }
-                }
-
-                $hasValidLimit = ($item->cantidad_limite !== null && $item->cantidad_limite > 0);
-                $hasValidPlazo = ($item->plazo_espera !== null && $item->plazo_espera > 0);
-
-                if (!$hasValidLimit && !$hasValidPlazo) {
-                    continue;
-                }
-
-                $debeIncluirse = true;
-
-                if ($excedeLimite) {
-                    $baremosAgotados[$item->baremo_id] = $textoPlano;
-                    $baremosInfo[$item->baremo_id]['es_agotado'] = true;
-                    if (!$esBaremoGuardado) {
-                        $debeIncluirse = false;
-                    }
-                } elseif ($isRestrictedByPlazo) {
-                    $baremosPendientesPlazo[$item->baremo_id] = $textoPlano;
-                    $baremosRestringidosIDs[] = $item->baremo_id;
-                    $baremosInfo[$item->baremo_id]['is_restricted_by_plazo'] = true;
-
-                    if ($contrato) {
-                        $fechaContratoIni = new \DateTime($contrato->fecha_ini);
-                        $plazoRequerido = (int)$item->plazo_espera;
-                        $fechaTarget = clone $fechaContratoIni;
-                        $fechaTarget->modify("+{$plazoRequerido} months");
-                        $diff = $fechaActual->diff($fechaTarget);
-
-                        $mesesRestantes = ($diff->y * 12) + $diff->m;
-                        $diasRestantes = $diff->d;
-
-                        $baremosInfo[$item->baremo_id]['remaining_months'] = $mesesRestantes;
-                        $baremosInfo[$item->baremo_id]['remaining_days'] = $diasRestantes;
-
-                        if ($mesesRestantes > 0 && $diasRestantes > 0) {
-                            $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "") . " y " . $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
-                        } elseif ($mesesRestantes > 0) {
-                            $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "");
-                        } elseif ($diasRestantes > 0) {
-                            $tiempoRestanteTexto = $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
-                        } else {
-                            $tiempoRestanteTexto = "Próximamente";
-                        }
-                        $baremosInfo[$item->baremo_id]['remaining_text'] = $tiempoRestanteTexto;
-                    }
-
-                    if (!$esBaremoGuardado) {
-                        $debeIncluirse = false;
-                    }
-                } else {
-                    $hasRemainingUses = ($remainingUses > 0) || ($item->cantidad_limite === null || $item->cantidad_limite == 0);
-                    if ($hasRemainingUses) {
-                        $baremosSinPlazo[$item->baremo_id] = $textoPlano;
-                        $baremosDisponiblesInfo[$item->baremo_id] = [
-                            'nombre' => $servicio,
-                            'area' => $area,
-                            'descripcion' => $descripcion,
-                            'precio' => $precioBaremo,
-                            'cantidad_limite' => (int)$item->cantidad_limite,
-                            'veces_usado' => (int)$vecesUsado,
-                            'disponibles' => ($remainingUses > 0 && $remainingUses < 999) ? $remainingUses : ($item->cantidad_limite > 0 ? $remainingUses : 'Ilimitado'),
-                            'remaining' => $remainingUses,
-                        ];
-                    }
-                }
-
-                $baremosInfo[$item->baremo_id] = array_merge($baremosInfo[$item->baremo_id] ?? [], [
-                    'nombre' => $servicio,
-                    'area' => $area,
-                    'descripcion' => $descripcion,
-                    'plazo_espera' => $item->plazo_espera,
-                    'cantidad_limite' => (int)$item->cantidad_limite,
-                    'veces_usado' => (int)$vecesUsado,
-                    'precio' => $precioBaremo,
-                    'has_plazo_ever' => $hasPlazoEver,
-                    'excede_limite' => $excedeLimite,
-                    'es_historico' => $esBaremoGuardado,
-                    'remaining_uses' => $remainingUses,
-                ]);
-
-                $disponibles = $remainingUses;
-                $availabilityClass = '';
-                $availabilityText = '';
-
-                if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
-                    if ($disponibles <= 0) {
-                        $availabilityClass = 'none';
-                        $availabilityText = 'Agotado';
-                    } elseif ($disponibles == 1) {
-                        $availabilityClass = 'low';
-                        $availabilityText = '1 de ' . $item->cantidad_limite . ' disponible';
-                    } else {
-                        $availabilityClass = '';
-                        $availabilityText = $disponibles . ' de ' . $item->cantidad_limite . ' disponibles';
-                    }
-                } else {
-                    $availabilityClass = '';
-                    if ($vecesUsado > 0) {
-                        $availabilityText = 'Usado ' . $vecesUsado . ' vez/veces (sin límite)';
-                    } else {
-                        $availabilityText = 'Sin límite';
-                    }
-                }
-
-                $htmlFormateado = "<div class='baremo-dropdown-option'>";
-                $htmlFormateado .= "<div class='baremo-first-row'>";
-                $htmlFormateado .= "<div class='baremo-content-main'>";
-                $htmlFormateado .= "<div class='baremo-area'><div class='baremo-area-label'>Área</div><div class='baremo-area-value'>" . Html::encode($area) . "</div></div>";
-                $htmlFormateado .= "<div class='baremo-servicio'><div class='baremo-servicio-label'>Servicio</div><div class='baremo-servicio-value'>" . Html::encode($servicio) . "</div></div>";
-                $htmlFormateado .= "<div class='baremo-descripcion'><div class='baremo-descripcion-label'>Descripción</div><div class='baremo-descripcion-value' title='" . Html::encode($descripcion ?: 'Sin descripción') . "'>" . Html::encode($descripcion ?: 'Sin descripción') . "</div></div>";
-                $htmlFormateado .= "</div>";
-                $htmlFormateado .= "<div class='baremo-status'>";
-                if ($esBaremoGuardado && !$debeIncluirse) {
-                    $htmlFormateado .= "<span class='historico'>Histórico</span>";
-                } elseif ($isRestrictedByPlazo) {
-                    $htmlFormateado .= "<span class='restringido'>Restringido</span>";
-                } elseif ($excedeLimite) {
-                    $htmlFormateado .= "<span class='agotado'>Agotado</span>";
-                } else {
-                    $htmlFormateado .= "<span class='disponible'>Disponible</span>";
-                }
-                $htmlFormateado .= "</div></div>";
-                $htmlFormateado .= "<div class='baremo-second-row'>";
-                $htmlFormateado .= "<div class='baremo-price-container'><span class='baremo-price'>$" . number_format($precioBaremo, 2) . "</span></div>";
-                if ($isRestrictedByPlazo && isset($baremosInfo[$item->baremo_id]['remaining_text'])) {
-                    $htmlFormateado .= "<div class='baremo-waiting-period'><i class='fas fa-clock me-1'></i><span>Disponible en " . $baremosInfo[$item->baremo_id]['remaining_text'] . "</span></div>";
-                } else {
-                    $htmlFormateado .= "<div class='baremo-availability " . $availabilityClass . "'>" . $availabilityText . "</div>";
-                }
-                $htmlFormateado .= "</div></div>";
-
-                if ($debeIncluirse || $esBaremoGuardado) {
-                    $baremosHtml[$item->baremo_id] = $htmlFormateado;
-                    if (!$excedeLimite && !$isRestrictedByPlazo) {
-                        $baremosTotales[$item->baremo_id] = $textoPlano;
-                    } elseif ($esBaremoGuardado) {
-                        $baremosForzados[$item->baremo_id] = $textoPlano;
-                        $baremosTotales[$item->baremo_id] = $textoPlano;
-                    }
-                }
-            }
-        }
-
-        $baremosTotales = $baremosForzados + $baremosSinPlazo;
-    }
-    ?>
-
-    <div class="ms-panel mb-4">
-        <div class="combined-section-card">
-            <div class="d-flex align-items-center justify-content-between mb-0">
-                <div class="d-flex align-items-center">
-                    <div class="section-icon-white me-3">
-                        <i class="fas fa-stethoscope fa-2x" style="color: white;"></i>
-                    </div>
-                    <div>
-                        <h3 class="section-title-white mb-0">Selección de Servicios Médicos</h3>
-                        <p class="text-white-50 mb-0 mt-1" style="color: white !important; opacity: 0.9 !important;">Seleccione los servicios médicos aplicados en esta <?= strtolower($terminoPrincipal) ?></p>
-                    </div>
-                </div>
-                <div class="section-badge-white d-flex flex-wrap gap-2 align-items-center">
-                    <span class="badge badge-pill stat-badge disponible clickable-badge"
-                        data-toggle="tooltip"
-                        data-placement="top"
-                        title="Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo. Click para ver detalles.">
-                        <i class="fas fa-check-circle me-3"></i>
-                        <?php
-                        $totalDisponibles = count($baremosSinPlazo);
-                        echo $totalDisponibles;
-                        ?> Disponibles
-                    </span>
-
-                    <?php if (count($baremosPendientesPlazo) > 0): ?>
-                        <span class="badge badge-pill stat-badge restringido clickable-badge"
-                            data-toggle="tooltip"
-                            data-placement="top"
-                            title="Servicios con plazo de espera pendiente. No disponibles para selección. Click para ver detalles.">
-                            <i class="fas fa-clock me-3"></i>
-                            <span><?= count($baremosPendientesPlazo) ?> Restringidos</span>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php
-                    $totalAgotados = count($baremosAgotados);
-                    if ($totalAgotados > 0):
-                    ?>
-                        <span class="badge badge-pill stat-badge agotado clickable-badge"
-                            data-toggle="tooltip"
-                            data-placement="top"
-                            title="Servicios que han alcanzado su límite máximo de usos. No disponibles para selección. Click para ver detalles.">
-                            <i class="fas fa-ban me-3"></i>
-                            <span><?= $totalAgotados ?> Agotados</span>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php if (!empty($baremosForzados)): ?>
-                        <span class="badge badge-pill stat-badge historico"
-                            data-toggle="tooltip"
-                            data-placement="top"
-                            title="Servicios previamente guardados que ya no cumplen criterios actuales, mostrados solo para referencia histórica.">
-                            <i class="fas fa-history me-3"></i>
-                            <span><?= count($baremosForzados) ?> Históricos</span>
-                        </span>
-                    <?php endif; ?>
-
-                    <span class="badge badge-pill stat-badge total"
-                        data-toggle="tooltip"
-                        data-placement="top"
-                        title="Cantidad total de servicios médicos incluidos en el plan, independientemente de su disponibilidad.">
-                        <i class="fas fa-layer-group me-3"></i>
-                        <span>
-                            <?php
-                            $totalGeneral = count($baremosForzados) + $totalAgotados + count($baremosPendientesPlazo) + count($baremosSinPlazo);
-                            echo $totalGeneral;
-                            ?> Total
-                        </span>
-                    </span>
-                </div>
-            </div>
-
-            <?php if ($contrato && $contrato->estatus === 'Activo'): ?>
-                <div class="baremo-combined-container">
-                    <div class="field-with-icon baremo-select-container">
-                        <?php
-                        echo $form->field($model, 'idbaremo[]', [
-                            'options' => ['class' => 'm-0'],
-                            'template' => "{input}"
-                        ])->widget(Select2::class, [
-                            'data' => $baremosTotales,
-                            'options' => [
-                                'multiple' => true,
-                                'value' => $selectedBaremos,
-                                'placeholder' => 'Busca o selecciona los servicios del Baremo...',
-                                'class' => 'form-control form-control-lg baremo-master-select',
-                                'id' => 'baremos-select',
-                                'style' => 'padding-left: 0px;'
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => true,
-                                'closeOnSelect' => false,
-                                'tags' => false,
-                                'tokenSeparators' => [',', ' '],
-                                'minimumInputLength' => 0,
-                            ],
-                        ])->label(false)->hint(false);
-                        ?>
-                    </div>
-
-                    <div id="baremos-tabla-container" class="summary-container mt-4" style="display: none;">
-                        <div class="summary-header">
-                            <div class="d-flex align-items-center">
-                                <div class="summary-icon">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                </div>
-                                <div>
-                                    <h4 class="mb-1 text-dark">Resumen de servicios seleccionados</h4>
-                                    <p class="text-muted mb-0">Detalle de costos y restricciones</p>
-                                </div>
-                            </div>
-                            <div class="summary-total">
-                                <span class="total-label">Total:</span>
-                                <span class="total-amount" id="summary-total-amount">$0.00</span>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-summary">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th width="25%" class="text-start">Servicio</th>
-                                        <th width="20%" class="text-start">Área</th>
-                                        <th width="30%" class="text-start">Descripción</th>
-                                        <th width="15%" class="text-center">Restricciones</th>
-                                        <th width="10%" class="text-end">Costo</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="baremos-tabla-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="costo-total-container mt-4" id="costo-total-container" style="display: none;">
-                        <div class="total-card">
-                            <div class="total-content">
-                                <div class="total-icon">
-                                    <i class="fas fa-calculator"></i>
-                                </div>
-                                <div class="total-details">
-                                    <div class="total-label">Total estimado</div>
-                                    <div class="total-value" id="costo-total-value">$0.00</div>
-                                    <div class="total-hint">Esta cantidad será descontada de la cobertura disponible</div>
-                                </div>
-                            </div>
-                            <div class="total-actions">
-                                <?= $form->field($model, 'costo_total')->hiddenInput(['id' => 'costo-total-input'])->label(false) ?>
-                                <button type="button" class="btn btn-primary" id="recalculate-total">
-                                    <i class="fas fa-redo me-1"></i> Recalcular
-                                </button>
-                            </div>
-                        </div>
-                        <div id="cobertura-warning" class="coverage-warning mt-3" style="display: none;">
-                            <div class="warning-content">
-                                <div class="warning-icon">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                                <div class="warning-text">
-                                    <strong>¡Advertencia!</strong> El costo total estimado supera la cobertura disponible del afiliado.
-                                    <span id="cobertura-difference-text"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <?php if ($esCitaMode): ?>
-                            <div id="cita-warning" class="info-message mt-3">
-                                <div class="info-content">
-                                    <div class="info-icon">
-                                        <i class="fas fa-info-circle"></i>
-                                    </div>
-                                    <div class="info-text">
-                                        <strong>Registro como Cita:</strong> Los servicios con <strong>Plazo de Espera Pendiente</strong> no estarán disponibles para selección.
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php else: ?>
-                <div id="contrato-error-message" class="alert alert-warning alert-dismissible fade show" style="margin-top: 1.5rem;">
-                    <div class="d-flex">
-                        <div class="alert-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="alert-content">
-                            <h5 class="alert-heading">Contrato no activo</h5>
-                            <p class="mb-0">El contrato del afiliado no está activado. Por favor, active el contrato para poder seleccionar servicios médicos.</p>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 </div>
             <?php endif; ?>
-        </div>
-    </div>
 
-    <!-- ===== SECTION 5: ACCIONES FINALES ===== -->
-    <div class="ms-panel">
-        <div class="ms-panel-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important;">
-            <h3 class="large-title section-title-white mb-0" style="color: white !important;">
-                <i class="fas fa-check-circle me-2" style="color: white !important;"></i> Confirmación y Acciones Finales
-            </h3>
-        </div>
-        <div class="ms-panel-body">
-            <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important;">
-                    <i class="fas fa-exclamation-triangle me-2" style="color: white !important;"></i> Verificación Final
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning text-center">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="alert-icon mb-3">
-                                <i class="fas fa-info-circle fa-3x"></i>
-                            </div>
-                            <div class="alert-content">
-                                <h5 class="alert-heading mb-3">Antes de guardar, verifique que:</h5>
-                                <ul class="mb-0 text-start" style="display: inline-block;">
-                                    <li>Todos los datos del afiliado sean correctos</li>
-                                    <li>La fecha y hora del evento sean precisas</li>
-                                    <li>Los servicios médicos seleccionados sean los adecuados</li>
-                                    <li>Los documentos adjuntos sean legibles y correspondan a esta atención</li>
-                                </ul>
+            <div class="card mb-4">
+                <div class="card mb-4">
+                    <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
+                        <i class="fas fa-stethoscope me-2"></i> <?= $esCitaMode ? 'Detalles de la Cita' : 'Detalles de la Atención' ?>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6 field-with-icon">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <?= $form->field($model, 'fecha_atencion')->textInput([
+                                        'type' => 'date',
+                                        'class' => 'form-control form-control-lg',
+                                        'placeholder' => 'Seleccione la fecha',
+                                        'autocomplete' => 'off',
+                                        'value' => $model->isNewRecord ? date('Y-m-d') : Yii::$app->formatter->asDate($model->fecha_atencion, 'yyyy-MM-dd')
+                                    ])->label('Fecha de la ' . $terminoPrincipal) ?>
+                                </div>
+
+                                <div class="col-md-6 field-with-icon">
+                                    <i class="fas fa-clock"></i>
+                                    <?= $form->field($model, 'hora_atencion')->textInput([
+                                        'type' => 'text',
+                                        'class' => 'form-control form-control-lg time-input',
+                                        'placeholder' => 'HH:MM (ejemplo: 14:30)',
+                                        'maxlength' => 5,
+                                        'autocomplete' => 'off'
+                                    ])->label('Hora de la ' . $terminoPrincipal) ?>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-clock"></i> Use formato 24 horas (HH:MM). Ejemplo: 14:30 o 09:15
+                                    </small>
+                                </div>
+
+                                <div class="col-md-12 field-with-icon">
+                                    <i class="fas fa-align-left"></i>
+                                    <?= $form->field($model, 'descripcion')->textarea([
+                                        'rows' => 3,
+                                        'class' => 'form-control form-control-lg',
+                                        'placeholder' => 'Describa los detalles de la ' . strtolower($terminoPrincipal) . '...'
+                                    ])->label('Descripción de la ' . $terminoPrincipal) ?>
+                                </div>
+
+                                <!-- ===== DOCTOR AND ADMISSION ANALYST FIELDS - SAME ROW ===== -->
+                                <div class="row">
+                                    <div class="col-md-6 field-with-icon">
+                                        <i class="fas fa-user-md"></i>
+                                        <?= $form->field($model, 'nombre_doctor')->textInput([
+                                            'class' => 'form-control form-control-lg',
+                                            'placeholder' => 'Médico Tratante',
+                                            'maxlength' => true,
+                                            'autocomplete' => 'off'
+                                        ])->label('Nombre del Doctor') ?>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-user-md"></i> Médico que atendió al paciente
+                                        </small>
+                                    </div>
+
+                                    <div class="col-md-6 field-with-icon">
+                                        <i class="fas fa-user-tie"></i>
+                                        <?= $form->field($model, 'admission_analyst')->textInput([
+                                            'class' => 'form-control form-control-lg',
+                                            'placeholder' => $esCitaMode ? 'Nombre del analista de citas' : 'Nombre del analista de admisión',
+                                            'maxlength' => true,
+                                            'autocomplete' => 'off'
+                                        ])->label($esCitaMode ? 'Analista de Citas' : 'Analista de Admisión') ?>
+                                        <small class="form-text text-muted" style="white-space: nowrap; overflow: visible;">
+                                            <i class="fas fa-user-tie"></i> <?= $esCitaMode ? 'Persona responsable del registro de esta cita' : 'Persona responsable del registro de esta ' . strtolower($terminoPrincipal) ?>
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="form-group text-center mt-4">
-                        <?= Html::submitButton('<i class="fas fa-save"></i> Guardar ' . $terminoPrincipal, [
-                            'class' => 'btn btn-success btn-lg me-3 px-5'
-                        ]) ?>
-                        <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'user_id' => $afiliado->id], [
-                            'class' => 'btn btn-warning btn-lg me-3 px-5'
-                        ]); ?>
-                        <?php if ($model->isNewRecord): ?>
-                            <?= Html::a('<i class="fas fa-eraser"></i> Limpiar', ['create', 'user_id' => $afiliado->id], [
-                                'class' => 'btn btn-outline-dark btn-lg px-5'
-                            ]); ?>
-                        <?php endif; ?>
-                    </div>
-                    <div class="text-center mt-3">
-                        <p class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Revise que todos los datos estén correctos antes de guardar la <?= strtolower($terminoPrincipal) ?>.
-                        </p>
+
+                    <!-- ===== SUBSECTION: DOCUMENTACIÓN ADJUNTA ===== -->
+                    <div class="card mb-4">
+                        <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
+                            <i class="fas fa-paperclip me-2"></i> Documentación Adjunta
+                        </div>
+                        <div class="card-body">
+                            <p class="hint-block mb-4">
+                                <i class="fas fa-info-circle"></i> Adjunte los documentos relacionados con esta <?= strtolower($terminoPrincipal) ?>
+                            </p>
+
+                            <div class="row">
+                                <!-- Récipe Médico -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label font-weight-bold">
+                                            <i class="fas fa-file-prescription text-primary"></i> Récipe Médico
+                                        </label>
+                                        <div class="custom-file">
+                                            <?= Html::fileInput('SisSiniestro[imagenRecipeFile]', null, [
+                                                'class' => 'custom-file-input',
+                                                'accept' => 'image/*,application/pdf',
+                                                'id' => 'recipe-file-input'
+                                            ]) ?>
+                                            <label class="custom-file-label" for="recipe-file-input" id="recipe-file-label">
+                                                <i class="fas fa-upload"></i> Seleccionar archivo...
+                                            </label>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
+                                        </small>
+                                        <?php if ($model->imagen_recipe && !$model->isNewRecord): ?>
+                                            <div class="mt-2">
+                                                <a href="<?= $model->imagen_recipe ?>" target="_blank" class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-eye"></i> Ver archivo actual
+                                                </a>
+                                                <span class="text-muted ml-2">
+                                                    <i class="fas fa-check-circle text-success"></i> Archivo guardado
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Informe Médico -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label font-weight-bold">
+                                            <i class="fas fa-file-medical text-info"></i> Informe Médico
+                                        </label>
+                                        <div class="custom-file">
+                                            <?= Html::fileInput('SisSiniestro[imagenInformeFile]', null, [
+                                                'class' => 'custom-file-input',
+                                                'accept' => 'image/*,application/pdf',
+                                                'id' => 'informe-file-input'
+                                            ]) ?>
+                                            <label class="custom-file-label" for="informe-file-input" id="informe-file-label">
+                                                <i class="fas fa-upload"></i> Seleccionar archivo...
+                                            </label>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
+                                        </small>
+                                        <?php if ($model->imagen_informe && !$model->isNewRecord): ?>
+                                            <div class="mt-2">
+                                                <a href="<?= $model->imagen_informe ?>" target="_blank" class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-eye"></i> Ver archivo actual
+                                                </a>
+                                                <span class="text-muted ml-2">
+                                                    <i class="fas fa-check-circle text-success"></i> Archivo guardado
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional info about existing files -->
+                            <?php if (($model->imagen_recipe || $model->imagen_informe) && !$model->isNewRecord): ?>
+                                <div class="alert alert-info mt-3 mb-0">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Nota:</strong> Si selecciona nuevos archivos, reemplazarán los existentes.
+                                    Deje el campo vacío para mantener los archivos actuales.
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <style>
+                /* Change file input browse button to Spanish */
+                .custom-file-label::after {
+                    content: "Buscar" !important;
+                }
+
+                /* Optional: Style the file input when a file is selected */
+                .custom-file-label.selected {
+                    background-color: #e8f5e9;
+                    border-color: #4caf50;
+                    color: #2e7d32;
+                }
+
+                .custom-file-label.selected i {
+                    color: #2e7d32;
+                }
+            </style>
+
+            <?= $this->render('_form_documentos_adicionales', ['model' => $model, 'form' => $form]) ?>
+
+            <!-- ===== SECTION 4: SELECCIÓN DE SERVICIOS MÉDICOS ===== -->
+            <?php
+            // Initialize ALL variables
+            $baremosTotales = [];
+            $baremosHtml = [];
+            $baremosInfo = [];
+            $baremosRestringidosIDs = [];
+            $baremosForzados = [];
+            $baremosSinPlazo = [];
+            $baremosConPlazoCumplido = [];
+            $baremosPendientesPlazo = [];
+            $baremosAgotados = [];
+            $baremosDisponiblesInfo = [];
+            $selectedBaremos = [];
+
+            if ($contrato && $contrato->estatus === 'Activo') {
+                $query = \app\models\PlanesItemsCobertura::find()
+                    ->joinWith('baremo')
+                    ->joinWith('plan')
+                    ->joinWith('baremo.area')
+                    ->where(['planes.clinica_id' => $afiliado->clinica_id])
+                    ->andWhere(['baremo.estatus' => 'Activo'])
+                    ->andWhere(['planes.id' => $afiliado->plan_id]);
+
+                if ($esCitaMode) {
+                    $query->andWhere([
+                        'or',
+                        ['>', 'planes_items_cobertura.plazo_espera', 0],
+                        ['>', 'planes_items_cobertura.cantidad_limite', 0]
+                    ]);
+                }
+
+                $planesItemsCobertura = $query->all();
+
+                if (isset($model) && $model !== null && !$model->isNewRecord && $model->id) {
+                    $baremosDirectos = (new \yii\db\Query())
+                        ->select(['baremo_id'])
+                        ->from('sis_siniestro_baremo')
+                        ->where(['siniestro_id' => $model->id])
+                        ->column();
+
+                    if (!empty($baremosDirectos)) {
+                        $selectedBaremos = $baremosDirectos;
+                    }
+                }
+
+                $fechaActual = new \DateTime();
+
+                foreach ($planesItemsCobertura as $item) {
+                    if ($item->baremo) {
+                        $hasPlazoEver = (!empty($item->plazo_espera) && $item->plazo_espera > 0);
+                        $precioBaremo = $item->baremo->precio ?? 0;
+                        $area = $item->baremo->area ? $item->baremo->area->nombre : 'Sin área';
+                        $servicio = $item->baremo->nombre_servicio;
+                        $descripcion = $item->baremo->descripcion ?? '';
+
+                        $textoPlano = $servicio . " (" . $area . ")";
+                        if (!empty($descripcion)) {
+                            $textoPlano .= " - " . $descripcion;
+                        }
+
+                        $queryCount = \app\models\SisSiniestroBaremo::find()
+                            ->joinWith('siniestro')
+                            ->where(['baremo_id' => $item->baremo_id])
+                            ->andWhere(['iduser' => $afiliado->id]);
+
+                        if (!$esCitaMode) {
+                            $queryCount->andWhere(['sis_siniestro.es_cita' => 0]);
+                        }
+
+                        $vecesUsado = $queryCount->count();
+
+                        $remainingUses = 0;
+                        $excedeLimite = false;
+
+                        if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
+                            $remainingUses = $item->cantidad_limite - $vecesUsado;
+                            if ($remainingUses <= 0) {
+                                $excedeLimite = true;
+                            }
+                        } else {
+                            $remainingUses = 999;
+                        }
+
+                        $esBaremoGuardado = !$model->isNewRecord && in_array($item->baremo_id, $selectedBaremos);
+                        $isRestrictedByPlazo = false;
+
+                        if ($contrato && $hasPlazoEver) {
+                            $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+                            $diff = $fechaContratoIni->diff($fechaActual);
+                            $mesesTranscurridos = $diff->y * 12 + $diff->m;
+                            $plazoRequerido = (int)$item->plazo_espera;
+
+                            if ($mesesTranscurridos < $plazoRequerido) {
+                                $isRestrictedByPlazo = true;
+                            }
+                        }
+
+                        $hasValidLimit = ($item->cantidad_limite !== null && $item->cantidad_limite > 0);
+                        $hasValidPlazo = ($item->plazo_espera !== null && $item->plazo_espera > 0);
+
+                        if (!$hasValidLimit && !$hasValidPlazo) {
+                            continue;
+                        }
+
+                        $debeIncluirse = true;
+
+                        if ($excedeLimite) {
+                            $baremosAgotados[$item->baremo_id] = $textoPlano;
+                            $baremosInfo[$item->baremo_id]['es_agotado'] = true;
+                            if (!$esBaremoGuardado) {
+                                $debeIncluirse = false;
+                            }
+                        } elseif ($isRestrictedByPlazo) {
+                            $baremosPendientesPlazo[$item->baremo_id] = $textoPlano;
+                            $baremosRestringidosIDs[] = $item->baremo_id;
+                            $baremosInfo[$item->baremo_id]['is_restricted_by_plazo'] = true;
+
+                            if ($contrato) {
+                                $fechaContratoIni = new \DateTime($contrato->fecha_ini);
+                                $plazoRequerido = (int)$item->plazo_espera;
+                                $fechaTarget = clone $fechaContratoIni;
+                                $fechaTarget->modify("+{$plazoRequerido} months");
+                                $diff = $fechaActual->diff($fechaTarget);
+
+                                $mesesRestantes = ($diff->y * 12) + $diff->m;
+                                $diasRestantes = $diff->d;
+
+                                $baremosInfo[$item->baremo_id]['remaining_months'] = $mesesRestantes;
+                                $baremosInfo[$item->baremo_id]['remaining_days'] = $diasRestantes;
+
+                                if ($mesesRestantes > 0 && $diasRestantes > 0) {
+                                    $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "") . " y " . $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
+                                } elseif ($mesesRestantes > 0) {
+                                    $tiempoRestanteTexto = $mesesRestantes . " mes" . ($mesesRestantes > 1 ? "es" : "");
+                                } elseif ($diasRestantes > 0) {
+                                    $tiempoRestanteTexto = $diasRestantes . " día" . ($diasRestantes > 1 ? "s" : "");
+                                } else {
+                                    $tiempoRestanteTexto = "Próximamente";
+                                }
+                                $baremosInfo[$item->baremo_id]['remaining_text'] = $tiempoRestanteTexto;
+                            }
+
+                            if (!$esBaremoGuardado) {
+                                $debeIncluirse = false;
+                            }
+                        } else {
+                            $hasRemainingUses = ($remainingUses > 0) || ($item->cantidad_limite === null || $item->cantidad_limite == 0);
+                            if ($hasRemainingUses) {
+                                $baremosSinPlazo[$item->baremo_id] = $textoPlano;
+                                $baremosDisponiblesInfo[$item->baremo_id] = [
+                                    'nombre' => $servicio,
+                                    'area' => $area,
+                                    'descripcion' => $descripcion,
+                                    'precio' => $precioBaremo,
+                                    'cantidad_limite' => (int)$item->cantidad_limite,
+                                    'veces_usado' => (int)$vecesUsado,
+                                    'disponibles' => ($remainingUses > 0 && $remainingUses < 999) ? $remainingUses : ($item->cantidad_limite > 0 ? $remainingUses : 'Ilimitado'),
+                                    'remaining' => $remainingUses,
+                                ];
+                            }
+                        }
+
+                        $baremosInfo[$item->baremo_id] = array_merge($baremosInfo[$item->baremo_id] ?? [], [
+                            'nombre' => $servicio,
+                            'area' => $area,
+                            'descripcion' => $descripcion,
+                            'plazo_espera' => $item->plazo_espera,
+                            'cantidad_limite' => (int)$item->cantidad_limite,
+                            'veces_usado' => (int)$vecesUsado,
+                            'precio' => $precioBaremo,
+                            'has_plazo_ever' => $hasPlazoEver,
+                            'excede_limite' => $excedeLimite,
+                            'es_historico' => $esBaremoGuardado,
+                            'remaining_uses' => $remainingUses,
+                        ]);
+
+                        $disponibles = $remainingUses;
+                        $availabilityClass = '';
+                        $availabilityText = '';
+
+                        if ($item->cantidad_limite !== null && $item->cantidad_limite > 0) {
+                            if ($disponibles <= 0) {
+                                $availabilityClass = 'none';
+                                $availabilityText = 'Agotado';
+                            } elseif ($disponibles == 1) {
+                                $availabilityClass = 'low';
+                                $availabilityText = '1 de ' . $item->cantidad_limite . ' disponible';
+                            } else {
+                                $availabilityClass = '';
+                                $availabilityText = $disponibles . ' de ' . $item->cantidad_limite . ' disponibles';
+                            }
+                        } else {
+                            $availabilityClass = '';
+                            if ($vecesUsado > 0) {
+                                $availabilityText = 'Usado ' . $vecesUsado . ' vez/veces (sin límite)';
+                            } else {
+                                $availabilityText = 'Sin límite';
+                            }
+                        }
+
+                        $htmlFormateado = "<div class='baremo-dropdown-option'>";
+                        $htmlFormateado .= "<div class='baremo-first-row'>";
+                        $htmlFormateado .= "<div class='baremo-content-main'>";
+                        $htmlFormateado .= "<div class='baremo-area'><div class='baremo-area-label'>Área</div><div class='baremo-area-value'>" . Html::encode($area) . "</div></div>";
+                        $htmlFormateado .= "<div class='baremo-servicio'><div class='baremo-servicio-label'>Servicio</div><div class='baremo-servicio-value'>" . Html::encode($servicio) . "</div></div>";
+                        $htmlFormateado .= "<div class='baremo-descripcion'><div class='baremo-descripcion-label'>Descripción</div><div class='baremo-descripcion-value' title='" . Html::encode($descripcion ?: 'Sin descripción') . "'>" . Html::encode($descripcion ?: 'Sin descripción') . "</div></div>";
+                        $htmlFormateado .= "</div>";
+                        $htmlFormateado .= "<div class='baremo-status'>";
+                        if ($esBaremoGuardado && !$debeIncluirse) {
+                            $htmlFormateado .= "<span class='historico'>Histórico</span>";
+                        } elseif ($isRestrictedByPlazo) {
+                            $htmlFormateado .= "<span class='restringido'>Restringido</span>";
+                        } elseif ($excedeLimite) {
+                            $htmlFormateado .= "<span class='agotado'>Agotado</span>";
+                        } else {
+                            $htmlFormateado .= "<span class='disponible'>Disponible</span>";
+                        }
+                        $htmlFormateado .= "</div></div>";
+                        $htmlFormateado .= "<div class='baremo-second-row'>";
+                        $htmlFormateado .= "<div class='baremo-price-container'><span class='baremo-price'>$" . number_format($precioBaremo, 2) . "</span></div>";
+                        if ($isRestrictedByPlazo && isset($baremosInfo[$item->baremo_id]['remaining_text'])) {
+                            $htmlFormateado .= "<div class='baremo-waiting-period'><i class='fas fa-clock me-1'></i><span>Disponible en " . $baremosInfo[$item->baremo_id]['remaining_text'] . "</span></div>";
+                        } else {
+                            $htmlFormateado .= "<div class='baremo-availability " . $availabilityClass . "'>" . $availabilityText . "</div>";
+                        }
+                        $htmlFormateado .= "</div></div>";
+
+                        if ($debeIncluirse || $esBaremoGuardado) {
+                            $baremosHtml[$item->baremo_id] = $htmlFormateado;
+                            if (!$excedeLimite && !$isRestrictedByPlazo) {
+                                $baremosTotales[$item->baremo_id] = $textoPlano;
+                            } elseif ($esBaremoGuardado) {
+                                $baremosForzados[$item->baremo_id] = $textoPlano;
+                                $baremosTotales[$item->baremo_id] = $textoPlano;
+                            }
+                        }
+                    }
+                }
+
+                $baremosTotales = $baremosForzados + $baremosSinPlazo;
+            }
+            ?>
+
+            <div class="ms-panel mb-4">
+                <div class="combined-section-card">
+                    <div class="d-flex align-items-center justify-content-between mb-0">
+                        <div class="d-flex align-items-center" style="gap: 16px;">
+                            <div class="services-icon-wrapper" style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; background: rgba(255,255,255,0.15); border-radius: 12px;">
+                                <?php if ($esCitaMode): ?>
+                                    <i class="fas fa-calendar-alt services-icon-calendar"></i>
+                                <?php else: ?>
+                                    <i class="fas fa-heartbeat services-icon-heartbeat"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div>
+                                <h3 class="services-section-title" style="margin: 0; line-height: 1.3; font-weight: 600; font-size: 1.3rem; color: white !important;">
+                                    Selección de Servicios Médicos
+                                </h3>
+                                <p class="services-section-subtitle" style="margin: 4px 0 0 0; font-size: 0.9rem; color: rgba(255,255,255,0.85) !important;">
+                                    Seleccione los servicios médicos aplicados en esta <?= strtolower($terminoPrincipal) ?>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="section-badge-white d-flex flex-wrap gap-2 align-items-center">
+                            <span class="badge badge-pill stat-badge disponible clickable-badge"
+                                data-toggle="tooltip"
+                                data-placement="top"
+                                title="Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo. Click para ver detalles.">
+                                <i class="fas fa-check-circle me-3"></i>
+                                <?php
+                                $totalDisponibles = count($baremosSinPlazo);
+                                echo $totalDisponibles;
+                                ?> Disponibles
+                            </span>
+
+                            <?php if (count($baremosPendientesPlazo) > 0): ?>
+                                <span class="badge badge-pill stat-badge restringido clickable-badge"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Servicios con plazo de espera pendiente. No disponibles para selección. Click para ver detalles.">
+                                    <i class="fas fa-clock me-3"></i>
+                                    <span><?= count($baremosPendientesPlazo) ?> Restringidos</span>
+                                </span>
+                            <?php endif; ?>
+
+                            <?php
+                            $totalAgotados = count($baremosAgotados);
+                            if ($totalAgotados > 0):
+                            ?>
+                                <span class="badge badge-pill stat-badge agotado clickable-badge"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Servicios que han alcanzado su límite máximo de usos. No disponibles para selección. Click para ver detalles.">
+                                    <i class="fas fa-ban me-3"></i>
+                                    <span><?= $totalAgotados ?> Agotados</span>
+                                </span>
+                            <?php endif; ?>
+
+                            <?php if (!empty($baremosForzados)): ?>
+                                <span class="badge badge-pill stat-badge historico"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Servicios previamente guardados que ya no cumplen criterios actuales, mostrados solo para referencia histórica.">
+                                    <i class="fas fa-history me-3"></i>
+                                    <span><?= count($baremosForzados) ?> Históricos</span>
+                                </span>
+                            <?php endif; ?>
+
+                            <span class="badge badge-pill stat-badge total"
+                                data-toggle="tooltip"
+                                data-placement="top"
+                                title="Cantidad total de servicios médicos incluidos en el plan, independientemente de su disponibilidad.">
+                                <i class="fas fa-layer-group me-3"></i>
+                                <span>
+                                    <?php
+                                    $totalGeneral = count($baremosForzados) + $totalAgotados + count($baremosPendientesPlazo) + count($baremosSinPlazo);
+                                    echo $totalGeneral;
+                                    ?> Total
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <?php if ($contrato && $contrato->estatus === 'Activo'): ?>
+                        <div class="baremo-combined-container">
+                            <div class="field-with-icon baremo-select-container">
+                                <?php
+                                echo $form->field($model, 'idbaremo[]', [
+                                    'options' => ['class' => 'm-0'],
+                                    'template' => "{input}"
+                                ])->widget(Select2::class, [
+                                    'data' => $baremosTotales,
+                                    'options' => [
+                                        'multiple' => true,
+                                        'value' => $selectedBaremos,
+                                        'placeholder' => 'Busca o selecciona los servicios del Baremo...',
+                                        'class' => 'form-control form-control-lg baremo-master-select',
+                                        'id' => 'baremos-select',
+                                        'style' => 'padding-left: 0px;'
+                                    ],
+                                    'pluginOptions' => [
+                                        'allowClear' => true,
+                                        'closeOnSelect' => false,
+                                        'tags' => false,
+                                        'tokenSeparators' => [',', ' '],
+                                        'minimumInputLength' => 0,
+                                    ],
+                                ])->label(false)->hint(false);
+                                ?>
+                            </div>
+
+                            <div id="baremos-tabla-container" class="summary-container mt-4" style="display: none;">
+                                <div class="summary-header">
+                                    <div class="d-flex align-items-center">
+                                        <div class="summary-icon">
+                                            <i class="fas fa-file-invoice-dollar"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-1 text-dark">Resumen de servicios seleccionados</h4>
+                                            <p class="text-muted mb-0">Detalle de costos y restricciones</p>
+                                        </div>
+                                    </div>
+                                    <div class="summary-total">
+                                        <span class="total-label">Total:</span>
+                                        <span class="total-amount" id="summary-total-amount">$0.00</span>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-summary">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="25%" class="text-start">Servicio</th>
+                                                <th width="20%" class="text-start">Área</th>
+                                                <th width="30%" class="text-start">Descripción</th>
+                                                <th width="15%" class="text-center">Restricciones</th>
+                                                <th width="10%" class="text-end">Costo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="baremos-tabla-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="costo-total-container mt-4" id="costo-total-container" style="display: none;">
+                                <div class="total-card">
+                                    <div class="total-content">
+                                        <div class="total-icon">
+                                            <i class="fas fa-calculator"></i>
+                                        </div>
+                                        <div class="total-details">
+                                            <div class="total-label">Total estimado</div>
+                                            <div class="total-value" id="costo-total-value">$0.00</div>
+                                            <div class="total-hint">Esta cantidad será descontada de la cobertura disponible</div>
+                                        </div>
+                                    </div>
+                                    <div class="total-actions">
+                                        <?= $form->field($model, 'costo_total')->hiddenInput(['id' => 'costo-total-input'])->label(false) ?>
+                                        <button type="button" class="btn btn-primary" id="recalculate-total">
+                                            <i class="fas fa-redo me-1"></i> Recalcular
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="cobertura-warning" class="coverage-warning mt-3" style="display: none;">
+                                    <div class="warning-content">
+                                        <div class="warning-icon">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        </div>
+                                        <div class="warning-text">
+                                            <strong>¡Advertencia!</strong> El costo total estimado supera la cobertura disponible del afiliado.
+                                            <span id="cobertura-difference-text"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php if ($esCitaMode): ?>
+                                    <div id="cita-warning" class="info-message mt-3">
+                                        <div class="info-content">
+                                            <div class="info-icon">
+                                                <i class="fas fa-info-circle"></i>
+                                            </div>
+                                            <div class="info-text">
+                                                <strong>Registro como Cita:</strong> Los servicios con <strong>Plazo de Espera Pendiente</strong> no estarán disponibles para selección.
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div id="contrato-error-message" class="alert alert-warning alert-dismissible fade show" style="margin-top: 1.5rem;">
+                            <div class="d-flex">
+                                <div class="alert-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="alert-content">
+                                    <h5 class="alert-heading">Contrato no activo</h5>
+                                    <p class="mb-0">El contrato del afiliado no está activado. Por favor, active el contrato para poder seleccionar servicios médicos.</p>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- ===== SECTION 5: ACCIONES FINALES ===== -->
+            <div class="ms-panel">
+                <div class="ms-panel-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important;">
+                    <h3 class="large-title section-title-white mb-0" style="color: white !important;">
+                        <i class="fas fa-check-circle me-2" style="color: white !important;"></i> Confirmación y Acciones Finales
+                    </h3>
+                </div>
+                <div class="ms-panel-body">
+                    <div class="card">
+                        <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white !important;">
+                            <i class="fas fa-exclamation-triangle me-2" style="color: white !important;"></i> Verificación Final
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning text-center">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="alert-icon mb-3">
+                                        <i class="fas fa-info-circle fa-3x"></i>
+                                    </div>
+                                    <div class="alert-content">
+                                        <h5 class="alert-heading mb-3">Antes de guardar, verifique que:</h5>
+                                        <ul class="mb-0 text-start" style="display: inline-block;">
+                                            <li>Todos los datos del afiliado sean correctos</li>
+                                            <li>La fecha y hora del evento sean precisas</li>
+                                            <li>Los servicios médicos seleccionados sean los adecuados</li>
+                                            <li>Los documentos adjuntos sean legibles y correspondan a esta atención</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group text-center mt-4">
+                                <?= Html::submitButton('<i class="fas fa-save"></i> Guardar ' . $terminoPrincipal, [
+                                    'class' => 'btn btn-success btn-lg me-3 px-5'
+                                ]) ?>
+                                <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'user_id' => $afiliado->id], [
+                                    'class' => 'btn btn-warning btn-lg me-3 px-5'
+                                ]); ?>
+                                <?php if ($model->isNewRecord): ?>
+                                    <?= Html::a('<i class="fas fa-eraser"></i> Limpiar', ['create', 'user_id' => $afiliado->id], [
+                                        'class' => 'btn btn-outline-dark btn-lg px-5'
+                                    ]); ?>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-center mt-3">
+                                <p class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Revise que todos los datos estén correctos antes de guardar la <?= strtolower($terminoPrincipal) ?>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <?php ActiveForm::end(); ?>
         </div>
-    </div>
 
-    <?php ActiveForm::end(); ?>
-</div>
+        <?php
+        Modal::begin([
+            'title' => '<h4>Detalles del Afiliado <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></h4>',
+            'id' => 'afiliado-modal',
+            'size' => Modal::SIZE_LARGE,
+            'options' => ['tabindex' => false, 'class' => 'fade', 'role' => 'dialog'],
+            'dialogOptions' => ['class' => 'modal-dialog-centered'],
+        ]);
+        echo $this->render('/user-datos/view', ['model' => $afiliado]);
+        Modal::end();
+        ?>
 
-<?php
-Modal::begin([
-    'title' => '<h4>Detalles del Afiliado <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></h4>',
-    'id' => 'afiliado-modal',
-    'size' => Modal::SIZE_LARGE,
-    'options' => ['tabindex' => false, 'class' => 'fade', 'role' => 'dialog'],
-    'dialogOptions' => ['class' => 'modal-dialog-centered'],
-]);
-echo $this->render('/user-datos/view', ['model' => $afiliado]);
-Modal::end();
-?>
-
-<?php
-$this->registerJs(<<<'JS'
+        <?php
+        $this->registerJs(<<<'JS'
 // ============================================
 // TOGGLE HISTORIAL SECTION
 // ============================================
@@ -1301,18 +1320,18 @@ $('#recipe-file-input, #informe-file-input').on('change', function() {
 
 JS, View::POS_END);
 
-if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isset($baremosRestringidosIDs)) {
-    $baremosTotalesJson = json_encode($baremosTotales);
-    $baremosHtmlJson = json_encode($baremosHtml);
-    $baremosInfoJson = json_encode($baremosInfo);
-    $baremosRestringidosJson = json_encode($baremosRestringidosIDs);
-    $baremosPendientesPlazoJson = json_encode($baremosPendientesPlazo ?? []);
-    $baremosAgotadosJson = json_encode($baremosAgotados ?? []);
-    $baremosDisponiblesInfoJson = json_encode($baremosDisponiblesInfo ?? []);
-    $baremosPendientesInfoJson = json_encode(array_intersect_key($baremosInfo, $baremosPendientesPlazo));
-    $baremosAgotadosInfoJson = json_encode(array_intersect_key($baremosInfo, $baremosAgotados));
+        if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isset($baremosRestringidosIDs)) {
+            $baremosTotalesJson = json_encode($baremosTotales);
+            $baremosHtmlJson = json_encode($baremosHtml);
+            $baremosInfoJson = json_encode($baremosInfo);
+            $baremosRestringidosJson = json_encode($baremosRestringidosIDs);
+            $baremosPendientesPlazoJson = json_encode($baremosPendientesPlazo ?? []);
+            $baremosAgotadosJson = json_encode($baremosAgotados ?? []);
+            $baremosDisponiblesInfoJson = json_encode($baremosDisponiblesInfo ?? []);
+            $baremosPendientesInfoJson = json_encode(array_intersect_key($baremosInfo, $baremosPendientesPlazo));
+            $baremosAgotadosInfoJson = json_encode(array_intersect_key($baremosInfo, $baremosAgotados));
 
-    $jsCode = <<<JS
+            $jsCode = <<<JS
 (function() {
     'use strict';
     
@@ -1773,6 +1792,6 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     });
 })();
 JS;
-    $this->registerJs($jsCode, \yii\web\View::POS_END);
-}
-?>
+            $this->registerJs($jsCode, \yii\web\View::POS_END);
+        }
+        ?>

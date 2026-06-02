@@ -35,6 +35,14 @@ use yii\web\UploadedFile;
 class SisSiniestro extends \yii\db\ActiveRecord
 {
 
+    const APPOINTMENT_STATUS_SCHEDULED = 'scheduled';
+    const APPOINTMENT_STATUS_CONFIRMED = 'confirmed';
+    const APPOINTMENT_STATUS_CANCELLED = 'cancelled';
+    const APPOINTMENT_STATUS_COMPLETED = 'completed';
+    const APPOINTMENT_STATUS_NO_SHOW = 'no_show';
+
+    const CANCELLATION_WINDOW_HOURS = 48;
+
     public $imagenRecipeFile;
     public $imagenInformeFile;
     public $otrosDocumentosFile = []; // Array for multiple documents
@@ -75,6 +83,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
             'deleted_at',
             'admission_analyst',
             'otros_documentos',
+            'appointment_status',
+            'cancelled_at',
+            'cancelled_by',
+            'checked_in_at',     // ← ADD THIS
+            'checked_out_at',    // ← ADD THIS (for completeness)
+            'cancellation_reason',
+            'no_show_processed',
+            'reminder_24h_sent',
             'nombre_doctor',  // ← CRITICAL: Add this line
         ];
     }
@@ -106,6 +122,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['nombre_doctor'], 'safe'],
             [['nombre_doctor'], 'string', 'max' => 255],
             [['nombre_doctor'], 'default', 'value' => null],
+            [['appointment_status'], 'string', 'max' => 50],
+            [['cancelled_at', 'reminder_24h_sent'], 'safe'],
+            [['cancelled_by'], 'string', 'max' => 100],
+            [['cancellation_reason'], 'string'],
+            [['no_show_processed'], 'boolean'],
+            [['appointment_status'], 'default', 'value' => self::APPOINTMENT_STATUS_SCHEDULED],
+            [['checked_in_at', 'checked_out_at'], 'safe'],
+            [['no_show_processed'], 'default', 'value' => false],
 
             // Time validation without seconds (HH:MM format)
             [
@@ -454,7 +478,8 @@ class SisSiniestro extends \yii\db\ActiveRecord
      * Valida los baremos seleccionados contra las restricciones del plan
      * @param array $baremoIds Array de IDs de baremos a validar
      * @param int $userId ID del usuario/afiliado
-     * @param int $esCita 0=Siniestro, 1=Cita (Permite omitir ciertas validaciones)
+     * @param int $esCita 0=Siniestro, 1=Cita (AHORA AMBOS VALIDAN COBERTURA)
+     * @param SisSiniestro|null $model El modelo actual (para updates)
      * @return array ['valid' => bool, 'errors' => array]
      */
     public static function validarBaremosConPlan($baremoIds, $userId, $esCita = 0, $model = null)
@@ -472,7 +497,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
             return ['valid' => false, 'errors' => $errors];
         }
 
-        // Obtener el contrato del afiliado para la fecha de inicio
+        // Obtener el contrato activo del afiliado
         $contrato = Contratos::find()
             ->where(['user_id' => $userId])
             ->andWhere(['estatus' => 'Activo'])
@@ -487,11 +512,39 @@ class SisSiniestro extends \yii\db\ActiveRecord
         $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
         $fechaActual = new \DateTime();
 
-        // Validar cada baremo
+        // ============================================
+        // CALCULAR COSTO TOTAL SELECCIONADO Y COBERTURA DISPONIBLE
+        // ============================================
+        $costoTotalSeleccionado = 0;
+        foreach ($baremoIds as $baremoId) {
+            if (empty($baremoId)) continue;
+            $baremo = Baremo::findOne($baremoId);
+            if ($baremo) {
+                $costoTotalSeleccionado += (float)$baremo->precio;
+            }
+        }
+
+        // Obtener cobertura disponible (suma de TODAS las atenciones Y citas existentes)
+        $sumatoriaEventos = self::find()
+            ->where(['iduser' => $afiliado->id])
+            ->sum('costo_total');
+
+        // Si es una actualización, restar el costo actual del modelo
+        if ($model && !$model->isNewRecord && $model->costo_total) {
+            $sumatoriaEventos -= (float)$model->costo_total;
+        }
+
+        $plan = Planes::findOne($afiliado->plan_id);
+        $coberturaTotal = $plan ? (float)$plan->cobertura : 0;
+        $coberturaDisponible = $coberturaTotal - $sumatoriaEventos;
+
+        // ============================================
+        // VALIDAR CADA BAREMO INDIVIDUALMENTE
+        // ============================================
         foreach ($baremoIds as $baremoId) {
             if (empty($baremoId)) continue;
 
-            // Obtener la configuración del baremo en el plan
+            // Obtener configuración del baremo en el plan
             $planItemCobertura = PlanesItemsCobertura::find()
                 ->where(['plan_id' => $afiliado->plan_id, 'baremo_id' => $baremoId])
                 ->one();
@@ -499,73 +552,103 @@ class SisSiniestro extends \yii\db\ActiveRecord
             if (!$planItemCobertura) {
                 $baremo = Baremo::findOne($baremoId);
                 $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
-                $errors[] = "El baremo '$nombreBaremo' no está configurado en el plan del afiliado.";
+                $errors[] = "El servicio '$nombreBaremo' no está configurado en el plan del afiliado.";
                 continue;
             }
 
             $baremo = Baremo::findOne($baremoId);
             $nombreBaremo = $baremo ? $baremo->nombre_servicio : "ID: $baremoId";
+            $precioBaremo = $baremo ? (float)$baremo->precio : 0;
 
-            // ----------------------------------------------------------------------------------
-            // APLICACIÓN DEL MODO CITA
-            // Si el registro es una Cita (es_cita = 1), omitimos todas las validaciones de 
-            // Plazo y Límite de uso. El propósito de la cita es reservar el servicio.
-            // ----------------------------------------------------------------------------------
-            if ($esCita == 1) {
-                // Validar plazo de espera
-                if (!empty($planItemCobertura->plazo_espera) && $planItemCobertura->plazo_espera > 0) {
-                    $diff = $fechaInicioContrato->diff($fechaActual);
-                    $mesesTranscurridos = $diff->y * 12 + $diff->m;
+            // ============================================
+            // 1. VALIDACIÓN DE PLAZO DE ESPERA (APLICA PARA AMBOS)
+            // ============================================
+            if (!empty($planItemCobertura->plazo_espera) && $planItemCobertura->plazo_espera > 0) {
+                $diff = $fechaInicioContrato->diff($fechaActual);
+                $mesesTranscurridos = $diff->y * 12 + $diff->m;
 
-                    if ($mesesTranscurridos < $planItemCobertura->plazo_espera) {
-                        $errors[] = "No se puede agendar la cita para '$nombreBaremo'. Aún no ha cumplido el plazo de espera de {$planItemCobertura->plazo_espera} meses desde la fecha de inicio del contrato.";
-                        continue;
-                    }
+                if ($mesesTranscurridos < (int)$planItemCobertura->plazo_espera) {
+                    $tipoEvento = ($esCita == 1) ? 'cita' : 'atención';
+                    $errors[] = "No se puede registrar la $tipoEvento para '$nombreBaremo'. Aún no ha cumplido el plazo de espera de {$planItemCobertura->plazo_espera} meses.";
+                    continue;
                 }
-
-                // Validar límite de uso para citas
-                if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
-                    $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
-                    list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
-
-                    // Contar usos en el período actual (excluyendo la cita actual si es una actualización)
-                    $siniestrosUsados = self::find()
-                        ->alias('s')
-                        ->innerJoin('sis_siniestro_baremo sb', 'sb.siniestro_id = s.id')
-                        ->where(['s.iduser' => $afiliado->id])
-                        ->andWhere(['sb.baremo_id' => $baremoId])
-                        ->andWhere(['>=', 's.fecha', $inicioAnioVigencia->format('Y-m-d')])
-                        ->andWhere(['<=', 's.fecha', $finAnioVigencia->format('Y-m-d')]);
-
-                    if ($model && !$model->isNewRecord) {
-                        $siniestrosUsados->andWhere(['<>', 's.id', $model->id]);
-                    }
-
-                    $vecesUsado = $siniestrosUsados->count();
-
-                    // Verificar si excede el límite
-                    if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
-                        $errors[] = "No se puede agendar la cita para '$nombreBaremo'. "
-                            . "Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos en el período actual. "
-                            . "Ya se ha utilizado $vecesUsado veces.";
-                        continue;
-                    }
-                }
-
-                continue; // Continuar con el siguiente baremo
             }
 
-            // ----------------------------------------------------------------------------------
-            // LÓGICA DE VALIDACIÓN EXISTENTE (SOLO PARA SINIESTRO: es_cita = 0)
-            // ----------------------------------------------------------------------------------
+            // ============================================
+            // 2. VALIDACIÓN DE LÍMITE DE USO (APLICA PARA AMBOS)
+            // ============================================
+            if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
+                $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
+                list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
 
-            continue; // Continuar con el siguiente baremo sin validaciones adicionales
+                // Contar usos en el período actual
+                $eventosUsados = self::find()
+                    ->alias('s')
+                    ->innerJoin('sis_siniestro_baremo sb', 'sb.siniestro_id = s.id')
+                    ->where(['s.iduser' => $afiliado->id])
+                    ->andWhere(['sb.baremo_id' => $baremoId])
+                    ->andWhere(['>=', 's.fecha', $inicioAnioVigencia->format('Y-m-d')])
+                    ->andWhere(['<=', 's.fecha', $finAnioVigencia->format('Y-m-d')]);
+
+                if ($model && !$model->isNewRecord) {
+                    $eventosUsados->andWhere(['<>', 's.id', $model->id]);
+                }
+
+                $vecesUsado = $eventosUsados->count();
+
+                if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
+                    $tipoEvento = ($esCita == 1) ? 'cita' : 'atención';
+                    $errors[] = "No se puede registrar la $tipoEvento para '$nombreBaremo'. Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos. Ya se ha utilizado $vecesUsado veces.";
+                    continue;
+                }
+            }
+        }
+
+        // ============================================
+        // 3. VALIDACIÓN DE COBERTURA TOTAL (AHORA APLICA PARA AMBOS)
+        // ============================================
+        $tipoEvento = ($esCita == 1) ? 'cita' : 'atención';
+
+        if ($costoTotalSeleccionado > $coberturaDisponible) {
+            $errors[] = "No se puede crear la $tipoEvento. Cobertura insuficiente.\n" .
+                "Cobertura disponible: $" . number_format($coberturaDisponible, 2) . "\n" .
+                "Costo total de servicios: $" . number_format($costoTotalSeleccionado, 2) . "\n" .
+                "Diferencia: $" . number_format($costoTotalSeleccionado - $coberturaDisponible, 2);
         }
 
         return [
             'valid' => empty($errors),
             'errors' => $errors
         ];
+    }
+
+    /**
+     * Calcula en qué año de vigencia se encuentra el afiliado
+     * @param \DateTime $fechaInicio Fecha de inicio del contrato
+     * @param \DateTime $fechaActual Fecha actual
+     * @return int Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     */
+    private static function calcularAnioVigencia($fechaInicio, $fechaActual)
+    {
+        $diferencia = $fechaInicio->diff($fechaActual);
+        return $diferencia->y;
+    }
+
+    /**
+     * Calcula el período de vigencia (fecha de inicio y fin) para un año específico
+     * @param \DateTime $fechaInicio Fecha de inicio del contrato
+     * @param int $anioVigencia Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     * @return array [DateTime $inicio, DateTime $fin]
+     */
+    private static function calcularPeriodoVigencia($fechaInicio, $anioVigencia)
+    {
+        $inicio = clone $fechaInicio;
+        $inicio->modify("+{$anioVigencia} years");
+
+        $fin = clone $inicio;
+        $fin->modify('+1 year -1 day');
+
+        return [$inicio, $fin];
     }
 
     /**
@@ -588,33 +671,103 @@ class SisSiniestro extends \yii\db\ActiveRecord
 
         return 0;
     }
-
     /**
-     * Calcula en qué año de vigencia se encuentra el afiliado
-     * @param \DateTime $fechaInicio Fecha de inicio del contrato
-     * @param \DateTime $fechaActual Fecha actual
-     * @return int Año de vigencia (0 = primer año, 1 = segundo año, etc.)
+     * Get status options for dropdown
      */
-    private static function calcularAnioVigencia($fechaInicio, $fechaActual)
+    public static function getAppointmentStatusOptions()
     {
-        $diferencia = $fechaInicio->diff($fechaActual);
-        return $diferencia->y; // Retorna el número de años completos
+        return [
+            self::APPOINTMENT_STATUS_SCHEDULED => 'Agendada',
+            self::APPOINTMENT_STATUS_CONFIRMED => 'Confirmada',
+            self::APPOINTMENT_STATUS_CANCELLED => 'Cancelada',
+            self::APPOINTMENT_STATUS_COMPLETED => 'Completada',
+            self::APPOINTMENT_STATUS_NO_SHOW => 'No Asistió',
+        ];
     }
 
     /**
-     * Calcula el período de vigencia (fecha de inicio y fin) para un año específico
-     * @param \DateTime $fechaInicio Fecha de inicio del contrato
-     * @param int $anioVigencia Año de vigencia (0 = primer año, 1 = segundo año, etc.)
-     * @return array [DateTime $inicio, DateTime $fin]
+     * Get status badge HTML
      */
-    private static function calcularPeriodoVigencia($fechaInicio, $anioVigencia)
+    public function getAppointmentStatusBadge()
     {
-        $inicio = clone $fechaInicio;
-        $inicio->modify("+{$anioVigencia} years");
+        $badges = [
+            self::APPOINTMENT_STATUS_SCHEDULED => '<span class="badge badge-warning"><i class="fas fa-calendar"></i> Agendada</span>',
+            self::APPOINTMENT_STATUS_CONFIRMED => '<span class="badge badge-info"><i class="fas fa-check-circle"></i> Confirmada</span>',
+            self::APPOINTMENT_STATUS_CANCELLED => '<span class="badge badge-secondary"><i class="fas fa-ban"></i> Cancelada</span>',
+            self::APPOINTMENT_STATUS_COMPLETED => '<span class="badge badge-success"><i class="fas fa-check-double"></i> Completada</span>',
+            self::APPOINTMENT_STATUS_NO_SHOW => '<span class="badge badge-danger"><i class="fas fa-user-slash"></i> No Asistió</span>',
+        ];
 
-        $fin = clone $inicio;
-        $fin->modify('+1 year -1 day');
+        return $badges[$this->appointment_status] ?? $badges[self::APPOINTMENT_STATUS_SCHEDULED];
+    }
 
-        return [$inicio, $fin];
+    /**
+     * Check if appointment can be cancelled without penalty
+     */
+    public function canBeCancelledWithoutPenalty()
+    {
+        if (!$this->fecha_atencion) {
+            return false;
+        }
+
+        $appointmentDateTime = new \DateTime($this->fecha_atencion . ' ' . ($this->hora_atencion ?? '00:00:00'));
+        $now = new \DateTime();
+        $hoursDifference = ($now->diff($appointmentDateTime)->days * 24) + $now->diff($appointmentDateTime)->h;
+
+        return $hoursDifference >= self::CANCELLATION_WINDOW_HOURS;
+    }
+
+    /**
+     * Get hours until appointment
+     */
+    public function getHoursUntilAppointment()
+    {
+        if (!$this->fecha_atencion) {
+            return null;
+        }
+
+        $appointmentDateTime = new \DateTime($this->fecha_atencion . ' ' . ($this->hora_atencion ?? '00:00:00'));
+        $now = new \DateTime();
+        $diff = $now->diff($appointmentDateTime);
+
+        if ($now > $appointmentDateTime) {
+            return - ($diff->h + ($diff->days * 24));
+        }
+
+        return $diff->h + ($diff->days * 24);
+    }
+
+    /**
+     * Cancel appointment
+     */
+    public function cancelAppointment($reason, $cancelledBy = null)
+    {
+        if ($this->canBeCancelledWithoutPenalty()) {
+            // Early cancellation - restore coverage
+            $this->appointment_status = self::APPOINTMENT_STATUS_CANCELLED;
+            $this->costo_total = 0; // Remove cost to restore coverage
+        } else {
+            // Late cancellation - treat as no-show, keep deduction
+            $this->appointment_status = self::APPOINTMENT_STATUS_NO_SHOW;
+            $this->no_show_processed = true;
+        }
+
+        $this->cancelled_at = date('Y-m-d H:i:s');
+        $this->cancelled_by = $cancelledBy ?? Yii::$app->user->identity->username ?? 'system';
+        $this->cancellation_reason = $reason;
+
+        return $this->save(false);
+    }
+
+
+    /**
+     * Complete appointment
+     */
+    public function complete()
+    {
+        $this->checked_out_at = date('Y-m-d H:i:s');
+        $this->appointment_status = self::APPOINTMENT_STATUS_COMPLETED;
+        $this->atendido = 1;
+        return $this->save(false);
     }
 }

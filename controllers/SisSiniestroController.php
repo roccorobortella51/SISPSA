@@ -82,6 +82,7 @@ class SisSiniestroController extends Controller
             'modo' => $modo,
         ]);
     }
+
     /**
      * Displays a single SisSiniestro model.
      * @param integer $id
@@ -176,7 +177,6 @@ class SisSiniestroController extends Controller
                 }
 
                 // 2. PASAR es_cita A LA FUNCIÓN DE VALIDACIÓN DEL MODELO
-                // DEBES ASEGURARTE DE QUE SisSiniestro::validarBaremosConPlan ACEPTE ESTE TERCER PARÁMETRO
                 $validacion = SisSiniestro::validarBaremosConPlan($baremoIds, $user_id, $model->es_cita, $model);
 
                 if (!$validacion['valid']) {
@@ -184,7 +184,6 @@ class SisSiniestroController extends Controller
                     foreach ($validacion['errors'] as $error) {
                         Yii::$app->session->setFlash('error', $error);
                     }
-                    // 3. PASAR es_cita A LA VISTA EN CASO DE ERROR DE VALIDACIÓN
                     return $this->render('create', [
                         'model' => $model,
                         'afiliado' => $afiliado,
@@ -193,11 +192,13 @@ class SisSiniestroController extends Controller
                     ]);
                 }
 
-                // Guardar el modelo, incluyendo las URLs de las imágenes
-                // ... (Toda la lógica de guardado y subida de archivos sigue igual) ...
+                $model->appointment_status = SisSiniestro::APPOINTMENT_STATUS_SCHEDULED;
+                $model->no_show_processed = false;
+
+                // Guardar el modelo
                 if ($model->save()) {
 
-                    // Force save admission_analyst directly to database
+                    // Force save admission_analyst and nombre_doctor directly to database
                     Yii::$app->db->createCommand()
                         ->update(
                             'sis_siniestro',
@@ -213,13 +214,6 @@ class SisSiniestroController extends Controller
                             ['id' => $model->id]
                         )
                         ->execute();
-
-                    file_put_contents(
-                        'C:\xampp\htdocs\sipsa\debug.txt',
-                        "FORCED UPDATE: admission_analyst = " . $model->admission_analyst . " for ID: " . $model->id . "\n\n",
-                        FILE_APPEND
-                    );
-                    // ===== END DEBUG =====
 
                     // --- Bloque de Subida de Recibo ---
                     $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
@@ -250,7 +244,7 @@ class SisSiniestroController extends Controller
 
                             if ($publicUrl) {
                                 $model->imagen_recipe = $publicUrl;
-                                if (!$model->save(false)) { // Guarda solo el campo de URL
+                                if (!$model->save(false)) {
                                     Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
                                 }
                             } else {
@@ -289,7 +283,7 @@ class SisSiniestroController extends Controller
 
                             if ($publicUrl) {
                                 $model->imagen_informe = $publicUrl;
-                                if (!$model->save(false)) { // Guarda solo el campo de URL
+                                if (!$model->save(false)) {
                                     Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
                                 }
                             } else {
@@ -301,7 +295,7 @@ class SisSiniestroController extends Controller
                         }
                     }
 
-                    // ============ NEW: PROCESAR DOCUMENTOS ADICIONALES (OTROS) ============
+                    // ============ PROCESAR DOCUMENTOS ADICIONALES (OTROS) ============
                     $otrosDocumentosData = Yii::$app->request->post('OtrosDocumentos', []);
                     $this->processOtrosDocumentos($model, $otrosDocumentosData);
                     // ============ END NEW CODE ============
@@ -330,7 +324,6 @@ class SisSiniestroController extends Controller
             }
         }
 
-        // 4. PASAR es_cita A LA VISTA EN EL RENDERIZADO INICIAL
         return $this->render('create', [
             'model' => $model,
             'afiliado' => $afiliado,
@@ -466,7 +459,6 @@ class SisSiniestroController extends Controller
                         }
                     }
 
-                    // ========== ADD THIS RIGHT HERE (after image uploads, before commit) ==========
                     // Force save nombre_doctor directly to database
                     Yii::$app->db->createCommand()
                         ->update(
@@ -475,7 +467,6 @@ class SisSiniestroController extends Controller
                             ['id' => $model->id]
                         )
                         ->execute();
-                    // ========== END OF ADDED CODE ==========
 
                     $transaction->commit();
 
@@ -621,6 +612,7 @@ class SisSiniestroController extends Controller
                 'atendido' => $model->atendido,
                 'descripcion' => $model->descripcion,
                 'es_cita' => $model->es_cita,
+                'appointment_status' => $model->appointment_status,
                 'baremos' => [],
             ];
 
@@ -642,22 +634,10 @@ class SisSiniestroController extends Controller
                     throw new \Exception('Error al registrar la auditoría de eliminación.');
                 }
 
-                // Get affected baremos before deletion (only for reference/audit)
-                $affectedBaremos = $model->baremos;
-
                 // Delete the record
                 if (!$model->delete()) {
                     throw new \Exception('Error al eliminar el registro.');
                 }
-
-                // ============ RESTORE LOGIC - COMPLETELY REMOVED ============
-                // The cantidad_limite is NEVER modified in the database.
-                // Availability is calculated dynamically in _form.php as:
-                // remaining = original_limit - veces_usado
-                // When a siniestro is deleted, the veces_usado is automatically
-                // recalculated from the remaining records in sis_siniestro_baremo.
-                // No manual restore of cantidad_limite is needed.
-                // ============ END REMOVED LOGIC ============
 
                 $transaction->commit();
 
@@ -705,30 +685,6 @@ class SisSiniestroController extends Controller
 
         throw new NotFoundHttpException('The requested page does not exist.');
     }
-
-    /*public function actionCalcularTotal()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        
-        try {
-            $baremosIds = Yii::$app->request->post('baremos', []);
-            
-            if (empty($baremosIds)) {
-                return ['success' => true, 'total' => 0];
-            }
-            
-            // Calcular la suma de los precios de los baremos seleccionados
-            $total = \app\models\Baremo::find()
-                ->where(['id' => $baremosIds])
-                ->sum('precio');
-            
-            return ['success' => true, 'total' => $total ?: 0];
-            
-        } catch (\Exception $e) {
-            Yii::error("Error al calcular total: " . $e->getMessage());
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }*/
 
     public function actionCalcularTotal()
     {
@@ -910,6 +866,7 @@ class SisSiniestroController extends Controller
             'deletedData' => $deletedData,
         ]);
     }
+
     private function processOtrosDocumentos($model, $otrosDocumentos)
     {
         if (empty($otrosDocumentos) || !is_array($otrosDocumentos)) {
@@ -957,6 +914,7 @@ class SisSiniestroController extends Controller
         $model->otros_documentos = json_encode(array_merge($existingDocs, $uploadedDocs));
         return $model->save(false);
     }
+
     /**
      * Prints a medical attention/cita with all details
      * @param integer $id
@@ -979,5 +937,189 @@ class SisSiniestroController extends Controller
             'baremos' => $baremos,
             'total' => $total,
         ]);
+    }
+
+    /**
+     * Cancel an appointment (Cita only)
+     * @param int $id
+     * @return mixed
+     */
+    public function actionCancelAppointment($id)
+    {
+        $model = $this->findModel($id);
+
+        // Only allow cancellation for Citas
+        if ($model->es_cita != 1) {
+            Yii::$app->session->setFlash('error', 'Solo las citas pueden ser canceladas.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        // Only allow cancellation for scheduled appointments
+        if ($model->appointment_status != SisSiniestro::APPOINTMENT_STATUS_SCHEDULED) {
+            Yii::$app->session->setFlash('error', 'Esta cita ya fue procesada o cancelada anteriormente.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        // Calculate hours until appointment
+        $canCancelWithoutPenalty = $model->canBeCancelledWithoutPenalty();
+        $hoursUntil = $model->getHoursUntilAppointment();
+
+        if (Yii::$app->request->isPost) {
+            $reason = Yii::$app->request->post('reason');
+
+            if (empty($reason)) {
+                Yii::$app->session->setFlash('error', 'Debe especificar un motivo para la cancelación.');
+                return $this->render('cancel-appointment', [
+                    'model' => $model,
+                    'canCancelWithoutPenalty' => $canCancelWithoutPenalty,
+                    'hoursUntil' => $hoursUntil,
+                ]);
+            }
+
+            if ($model->cancelAppointment($reason, Yii::$app->user->identity->username)) {
+                $message = $canCancelWithoutPenalty
+                    ? 'Cita cancelada exitosamente. La cobertura ha sido restaurada.'
+                    : 'Cita cancelada fuera del período permitido. La cobertura no será restaurada.';
+
+                Yii::$app->session->setFlash('success', $message);
+            } else {
+                Yii::$app->session->setFlash('error', 'Error al cancelar la cita.');
+            }
+
+            return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => 'cita']);
+        }
+
+        return $this->render('cancel-appointment', [
+            'model' => $model,
+            'canCancelWithoutPenalty' => $canCancelWithoutPenalty,
+            'hoursUntil' => $hoursUntil,
+        ]);
+    }
+
+    /**
+     * Mark appointment as attended (simplified - one click)
+     * @param int $id
+     * @return mixed
+     */
+    public function actionAttend($id)
+    {
+        $model = $this->findModel($id);
+
+        // Only for Citas
+        if ($model->es_cita != 1) {
+            Yii::$app->session->setFlash('error', '⚠️ Solo aplicable para citas médicas.');
+            return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => 'cita']);
+        }
+
+        // Only for scheduled appointments
+        if ($model->appointment_status != SisSiniestro::APPOINTMENT_STATUS_SCHEDULED) {
+            $statusLabels = [
+                'scheduled' => 'Agendada',
+                'completed' => 'Completada',
+                'cancelled' => 'Cancelada',
+            ];
+            $statusText = $statusLabels[$model->appointment_status] ?? $model->appointment_status;
+            Yii::$app->session->setFlash('error', '⚠️ Esta cita no está en estado Agendada. Estado actual: ' . $statusText);
+            return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => 'cita']);
+        }
+
+        $patientName = $model->afiliado ? $model->afiliado->nombres . ' ' . $model->afiliado->apellidos : 'Paciente';
+        $serviceCount = count($model->baremos);
+
+        $model->appointment_status = SisSiniestro::APPOINTMENT_STATUS_COMPLETED;
+        $model->atendido = 1;
+        $model->checked_in_at = date('Y-m-d H:i:s');
+        $model->checked_out_at = date('Y-m-d H:i:s');
+
+        if ($model->save(false)) {
+            // Bootstrap 4 styled success message
+            $successMessage = '<div class="d-flex align-items-center">' .
+                '<div class="flex-shrink-0 mr-3">' .
+                '<i class="fas fa-check-circle fa-2x" style="color: #28a745;"></i>' .
+                '</div>' .
+                '<div class="flex-grow-1">' .
+                '<strong class="d-block" style="font-size: 1.6rem;">¡Cita Completada Exitosamente!</strong>' .
+                '<span>' . Html::encode($patientName) . ' - ' . $serviceCount . ' servicio(s) prestado(s)</span>' .
+                '</div>' .
+                '</div>';
+            Yii::$app->session->setFlash('success', $successMessage);
+        } else {
+            Yii::$app->session->setFlash('error', '❌ Error al marcar la cita como completada. Por favor, intente nuevamente.');
+        }
+
+        return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => 'cita']);
+    }
+
+    /**
+     * Build professional success message HTML
+     */
+    private function buildSuccessMessage($patientName, $date, $time, $serviceCount, $totalCost)
+    {
+        return '<div class="appointment-complete-message">
+        <div class="success-header">
+            <i class="fas fa-check-circle"></i>
+            <strong>Cita Completada Exitosamente</strong>
+        </div>
+        <div class="success-body">
+            <div class="patient-info">
+                <i class="fas fa-user"></i>
+                <span>' . Html::encode($patientName) . '</span>
+            </div>
+            <div class="appointment-details">
+                <div class="detail-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>' . $date . ' - ' . $time . '</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>' . $serviceCount . ' servicio(s) prestado(s)</span>
+                </div>
+                <div class="detail-item total-cost">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>Total: $' . number_format($totalCost, 2) . '</span>
+                </div>
+            </div>
+        </div>
+        <div class="success-footer">
+            <i class="fas fa-info-circle"></i>
+            <span>El paciente ha sido marcado como atendido. La cobertura ha sido descontada.</span>
+        </div>
+    </div>';
+    }
+
+    /**
+     * Build professional error message HTML
+     */
+    private function buildErrorMessage($patientName)
+    {
+        return '<div class="appointment-error-message">
+        <div class="error-header">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Error al Completar la Cita</strong>
+        </div>
+        <div class="error-body">
+            <i class="fas fa-user"></i>
+            <span>' . Html::encode($patientName) . '</span>
+        </div>
+        <div class="error-footer">
+            <i class="fas fa-info-circle"></i>
+            <span>No se pudo marcar la cita como completada. Por favor, intente nuevamente o contacte a soporte.</span>
+        </div>
+    </div>';
+    }
+
+    /**
+     * Get human-readable status label
+     */
+    private function getStatusLabel($status)
+    {
+        $labels = [
+            'scheduled' => 'Agendada',
+            'confirmed' => 'Confirmada',
+            'completed' => 'Completada',
+            'cancelled' => 'Cancelada',
+            'no_show' => 'No Asistió',
+        ];
+        return $labels[$status] ?? $status;
     }
 }

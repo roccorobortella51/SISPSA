@@ -145,12 +145,7 @@ $this->registerCss("
                         <p class="h5 text-dark"><?= Yii::$app->formatter->asTime($model->hora_atencion) ?></p>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="info-card-body text-center">
-                        <h5 class="text-muted">¿Fue atendido?</h5>
-                        <p class="h5 text-dark"><?= formatBooleanIcon($model->atendido) ?></p>
-                    </div>
-                </div>
+
                 <div class="col-md-6">
                     <div class="info-card-body text-center">
                         <h5 class="text-muted">Afiliado</h5>
