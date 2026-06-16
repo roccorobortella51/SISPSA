@@ -404,6 +404,13 @@ $currentRoute = Yii::$app->controller->getRoute();
                             </div>
                         </div>
                     </div>
+
+                    <?php if (!$model->isNewRecord) : ?>
+                        <?= $form->field($model, 'id')->hiddenInput(['id' => 'userdatos-id'])->label(false) ?>
+                    <?php endif; ?>
+
+                    <!-- Add this hidden field for agencia_id -->
+                    <?= $form->field($model, 'agencia_id')->hiddenInput()->label(false) ?>
                 </div>
             </div>
 

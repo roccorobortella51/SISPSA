@@ -6,11 +6,11 @@ use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use app\models\User;
 use kartik\select2\Select2;
-use yii\widgets\MaskedInput; 
-use app\models\Agente; 
+use yii\widgets\MaskedInput;
+use app\models\Agente;
 use app\components\UserHelper;
 use kartik\widgets\SwitchInput;
-use yii\web\View; 
+use yii\web\View;
 
 /** @var yii\web\View $this */
 /** @var app\models\AgenteFuerza $model */
@@ -41,12 +41,18 @@ if (!isset($agenciaNombre) || $agenciaNombre === null) {
 // --- Fin de la corrección de errores ---
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN'); 
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
+
+if (!isset($agente)) {
+    $agente = $model->agente ?? null;
+}
+$agenteId = $agente->id ?? $model->agente_id ?? null;
 ?>
 
 <div class="agente-fuerza-form">
     <div class="ms-panel-body">
-        <?php $form = ActiveForm::begin(['id' => 'agente-fuerza-form']); // ¡ID esencial para JavaScript! ?>
+        <?php $form = ActiveForm::begin(['id' => 'agente-fuerza-form']); // ¡ID esencial para JavaScript! 
+        ?>
 
         <?php if (!$model->isNewRecord) { ?>
             <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
@@ -60,15 +66,15 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
                 <div class="col">
                     <?= Html::a(
-                        '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL VENDEDOR/ASESOR',
+                        '<i class="fas fa-users-cog"></i> VER AFILIADOS DEL INTERMEDIARIO',
                         ['user-datos/index-by-afiliado', 'asesor_id' => $model->id],
                         ['class' => 'btn btn-success btn-lg w-100']
                     ) ?>
                 </div>
             </div>
-            <br> 
+            <br>
         <?php } ?>
-        
+
         <div class="card mb-3">
             <div class="card-header bg-info text-center">
                 <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">INFORMACIÓN GENERAL</h6>
@@ -93,36 +99,36 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     </div>
                     <div class="col-md-6">
                         <?= $form->field($model, 'idusuario')->widget(Select2::classname(), [
-                                'data' => UserHelper::getAsesor(),
-                                'options' => [
-                                    'placeholder' => 'Seleccione el asesor',
-                                    'class' => 'form-control form-control-lg',
-                                ],
-                                'pluginOptions' => [
-                                    'allowClear' => false,
-                                ],
-                        ])->label('NOMBRE DEL AGENTE') ?> 
+                            'data' => UserHelper::getAsesor(),
+                            'options' => [
+                                'placeholder' => 'Seleccione el Intermediario',
+                                'class' => 'form-control form-control-lg',
+                            ],
+                            'pluginOptions' => [
+                                'allowClear' => false,
+                            ],
+                        ])->label('NOMBRE DEL INTERMEDIARIO') ?>
                     </div>
                     <div class="col-md-12">
                         <?= $form->field($model, 'registro_corredor_actividad_aseguradora')->textInput([
                             'class' => 'form-control form-control-lg',
-                            'placeholder' => 'Registro corredor aseguradoras',
-                        ])->label('REGISTRO SUDEASEG') ?>
+                            'placeholder' => 'Código SUDEASEG',
+                        ])->label('CÓDIGO SUDEASEG') ?>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="card mb-3 porcentajes-section">
-             <div class="card-header bg-primary text-center"> 
-                 <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PORCENTAJES (%)</h6>
-             </div>
-             <div class="card-body">
+            <div class="card-header bg-primary text-center">
+                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PORCENTAJES (%)</h6>
+            </div>
+            <div class="card-body">
                 <div class="row g-2 justify-content-center align-items-end">
-                     <div class="col-6 col-sm-4 col-md-2">
-                         <?= $form->field($model, 'por_venta')->label('POR VENTA' . Html::tag('i', '', [
+                    <div class="col-6 col-sm-4 col-md-2">
+                        <?= $form->field($model, 'por_venta')->label('POR VENTA' . Html::tag('i', '', [
                             'class' => 'fas fa-info-circle ml-1 text-info',
-                            'data-toggle' => 'tooltip', 
+                            'data-toggle' => 'tooltip',
                             'title' => 'Porcentaje de comisión por venta.',
                             'data-placement' => 'top'
                         ]))->textInput([
@@ -135,7 +141,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     <div class="col-6 col-sm-4 col-md-2">
                         <?= $form->field($model, 'por_asesor')->label('ASESORÍA' . Html::tag('i', '', [
                             'class' => 'fas fa-info-circle ml-1 text-info',
-                            'data-toggle' => 'tooltip', 
+                            'data-toggle' => 'tooltip',
                             'title' => 'Porcentaje de comisión por servicios de asesoría.',
                             'data-placement' => 'top'
                         ]))->textInput([
@@ -148,7 +154,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     <div class="col-6 col-sm-4 col-md-2">
                         <?= $form->field($model, 'por_cobranza')->label('COBRANZA' . Html::tag('i', '', [
                             'class' => 'fas fa-info-circle ml-1 text-info',
-                            'data-toggle' => 'tooltip', 
+                            'data-toggle' => 'tooltip',
                             'title' => 'Porcentaje de comisión para la gestión de cobranza.',
                             'data-placement' => 'top'
                         ]))->textInput([
@@ -161,7 +167,7 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     <div class="col-6 col-sm-4 col-md-2">
                         <?= $form->field($model, 'por_post_venta')->label('POST VENTA' . Html::tag('i', '', [
                             'class' => 'fas fa-info-circle ml-1 text-info',
-                            'data-toggle' => 'tooltip', 
+                            'data-toggle' => 'tooltip',
                             'title' => 'Porcentaje para servicios de post-venta.',
                             'data-placement' => 'top'
                         ]))->textInput([
@@ -174,28 +180,28 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     <div class="col-6 col-sm-4 col-md-2">
                         <?= $form->field($model, 'por_registrar')->label('REGISTRO' . Html::tag('i', '', [
                             'class' => 'fas fa-info-circle ml-1 text-info',
-                            'data-toggle' => 'tooltip', 
+                            'data-toggle' => 'tooltip',
                             'title' => 'Porcentaje de comisión por registro.',
                             'data-placement' => 'top'
                         ]))->textInput([
-                            'class' => 'form-control form-control-lg', 
+                            'class' => 'form-control form-control-lg',
                             'placeholder' => '% Registro',
                             'type' => 'number',
                             'step' => '0.01',
                         ]) ?>
                     </div>
                 </div>
-             </div>
-         </div>
-        
+            </div>
+        </div>
+
         <div class="card mb-3 permisos-section">
-             <div class="card-header bg-primary text-center"> 
-                 <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL AGENTE</h6>
-             </div>
-             <div class="card-body">
+            <div class="card-header bg-primary text-center">
+                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL AGENTE</h6>
+            </div>
+            <div class="card-body">
                 <div class="d-flex justify-content-center flex-row flex-wrap gap-3 align-items-start" style="overflow-x:auto; padding-bottom:8px;">
-                     <div class="flex-shrink-0" style="min-width:180px;">
-                         <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
+                    <div class="flex-shrink-0" style="min-width:180px;">
+                        <?= $form->field($model, 'puede_vender')->widget(SwitchInput::class, [
                             'type' => SwitchInput::CHECKBOX,
                             'pluginOptions' => [
                                 'onText' => 'Si',
@@ -255,14 +261,16 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                         ])->label('Puede Registrar'); ?>
                     </div>
                 </div>
-             </div>
-         </div>
-        
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-12">
                 <div class="form-group text-end mt-4" style="margin-right:10px;">
-                    <?php if($permisos){ echo Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']); } ?>
-                    
+                    <?php if ($permisos) {
+                        echo Html::submitButton('<i class="fas fa-save"></i> Guardar', ['class' => 'btn btn-success btn-lg']);
+                    } ?>
+
                     <?php if (isset($agente) && $agente !== null): ?>
                         <?= Html::a('VOLVER', ['agente-fuerza/index-by-agente', 'agente_id' => $agente->id], ['class' => 'btn btn-info btn-lg ms-2']); ?>
                     <?php endif; ?>
@@ -300,28 +308,30 @@ JS;
 $this->registerJs($tooltipJs, View::POS_END);
 ?>
 <style>
-/* Center campos inside Porcentajes and Permisos cards */
-.porcentajes-section .form-group,
-.permisos-section .form-group {
-    text-align: center;
-}
-/* Limitar el ancho del input de porcentaje para que el centrado sea visible */
-.porcentajes-section .form-control {
-    max-width: 180px; 
-}
-.porcentajes-section .form-control,
-.permisos-section .form-control,
-.permisos-section .kv-switch {
-    margin-left: auto;
-    margin-right: auto;
-}
+    /* Center campos inside Porcentajes and Permisos cards */
+    .porcentajes-section .form-group,
+    .permisos-section .form-group {
+        text-align: center;
+    }
 
-/* Ensure labels are centered for these sections */
-.porcentajes-section .form-label,
-.permisos-section .form-label,
-.porcentajes-section label,
-.permisos-section label {
-    display: block;
-    text-align: center;
-}
+    /* Limitar el ancho del input de porcentaje para que el centrado sea visible */
+    .porcentajes-section .form-control {
+        max-width: 180px;
+    }
+
+    .porcentajes-section .form-control,
+    .permisos-section .form-control,
+    .permisos-section .kv-switch {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Ensure labels are centered for these sections */
+    .porcentajes-section .form-label,
+    .permisos-section .form-label,
+    .porcentajes-section label,
+    .permisos-section label {
+        display: block;
+        text-align: center;
+    }
 </style>

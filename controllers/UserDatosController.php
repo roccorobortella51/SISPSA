@@ -36,8 +36,8 @@ use app\models\TasaCambio;
 use app\models\AgenteFuerza;
 use app\models\Dependientes;
 use app\models\Receipt;
+use app\models\Agente;
 use yii\web\Response;
-
 
 
 /**
@@ -809,6 +809,19 @@ class UserDatosController extends Controller
         $model->role = 'afiliado';
         $model->estatus = 'Creado';
 
+        // ============================================
+        // AGENCIA_ID: Set automatically for Agente users
+        // ============================================
+        $rol = UserHelper::getMyRol();
+        if ($rol == "Agente") {
+            $agenteId = UserHelper::getAgenteId();
+            if ($agenteId) {
+                $model->agencia_id = $agenteId;
+                Yii::info("Automatically set agencia_id = {$agenteId} for Agente user creating affiliate", __METHOD__);
+            }
+        }
+        // ============================================
+
         if ($model->estatus_solvente == "" || $model->estatus_solvente == null) {
             $model->estatus_solvente = "No";
         }
@@ -816,7 +829,7 @@ class UserDatosController extends Controller
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
             // ============================================
-            // FIX 2: Calculate fecha_ven from fecha_ini BEFORE validation
+            // Calculate fecha_ven from fecha_ini BEFORE validation
             // ============================================
             if (!empty($modelContrato->fecha_ini)) {
                 $fechaIni = new \DateTime($modelContrato->fecha_ini);
@@ -974,9 +987,7 @@ class UserDatosController extends Controller
                     $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
                     $modelContrato->monto = $plan ? $plan->precio : 0;
 
-                    // ============================================
                     // Generate anniversary-based cuotas
-                    // ============================================
                     if ($modelContrato->save()) {
 
                         // ADD THIS DEBUG CODE
@@ -1083,6 +1094,12 @@ class UserDatosController extends Controller
     {
         $model = $this->findModel($id);
 
+        // ============================================
+        // AGENCIA_ID: Store original value to preserve it
+        // ============================================
+        $originalAgenciaId = $model->agencia_id;
+        // ============================================
+
         // CRITICAL: Clear invalid contrato_id BEFORE loading form data
         if ($model->contrato_id) {
             $existingContract = Contratos::findOne($model->contrato_id);
@@ -1139,6 +1156,15 @@ class UserDatosController extends Controller
         if ($this->request->isPost) {
             // Load model data
             if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
+
+                // ============================================
+                // AGENCIA_ID: Restore the original value if it was cleared
+                // ============================================
+                if ($originalAgenciaId && empty($model->agencia_id)) {
+                    $model->agencia_id = $originalAgenciaId;
+                    Yii::info("Restored agencia_id = {$originalAgenciaId} for user {$id} during update", __METHOD__);
+                }
+                // ============================================
 
                 // CRITICAL: Clear any validation errors for contrato_id
                 $model->clearErrors('contrato_id');
@@ -1636,15 +1662,60 @@ class UserDatosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 
+    /**
+     * Lists all UserDatos models associated with a specific Asesor (AgenteFuerza).
+     * ONLY shows affiliates that belong to THIS SPECIFIC asesor person.
+     * Does NOT show agency affiliates (agencia_id) because those are not linked to the asesor.
+     * 
+     * @param int $asesor_id The ID of the AgenteFuerza (asesor/intermediario)
+     * @return string
+     * @throws NotFoundHttpException if the asesor is not found
+     */
     public function actionIndexByAfiliado($asesor_id = "")
     {
-        $searchModel = new UserDatosSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-        $dataProvider->query->andFilterWhere(['=', 'user_datos.asesor_id', $asesor_id]);
+        if (empty($asesor_id)) {
+            throw new NotFoundHttpException('El ID del asesor no fue proporcionado.');
+        }
 
+        // Find the AgenteFuerza record
+        $agenteFuerza = AgenteFuerza::findOne($asesor_id);
+
+        if (!$agenteFuerza) {
+            throw new NotFoundHttpException('El asesor especificado no existe.');
+        }
+
+        // Get the actual UserDatos ID of this asesor person
+        $asesorUserDatosId = $agenteFuerza->idusuario;
+
+        // CRITICAL: Get ALL AgenteFuerza IDs for THIS asesor person (from ANY agency they belong to)
+        $allAgenteFuerzaIdsForThisAsesor = AgenteFuerza::find()
+            ->where(['idusuario' => $asesorUserDatosId])
+            ->select('id')
+            ->column();
+
+        // Create search model and apply filter
+        $searchModel = new UserDatosSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        // IMPORTANT: ONLY filter by asesor_id using ALL AgenteFuerza IDs of this asesor person
+        // Do NOT include agencia_id filter - that would show agency-created affiliates
+        $dataProvider->query->andWhere(['user_datos.asesor_id' => $allAgenteFuerzaIdsForThisAsesor]);
+
+        // Also filter by role = afiliado
+        $dataProvider->query->andWhere(['user_datos.role' => 'afiliado']);
+
+        // Get the asesor's name for the title
+        $asesorUser = UserDatos::findOne($asesorUserDatosId);
+        $asesorName = $asesorUser ? $asesorUser->nombres . ' ' . $asesorUser->apellidos : 'Asesor';
+
+        $this->view->title = 'Afiliados de: ' . $asesorName;
+
+        // Pass additional data to the view
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'asesor_id' => $asesor_id,
+            'asesor_name' => $asesorName,
         ]);
     }
 
@@ -3339,5 +3410,76 @@ class UserDatosController extends Controller
         }
 
         return $filtros;
+    }
+    /**
+     * Lists all UserDatos models associated with a specific Agente (Agency).
+     * Uses the same OR filtering logic as UserDatosSearch to show affiliates that:
+     * - Are assigned to asesores belonging to this agency, OR
+     * - Are directly assigned to this agency (agencia_id)
+     * 
+     * @param int $agente_id The ID of the Agente (agency)
+     * @return string
+     * @throws NotFoundHttpException if the agente is not found
+     */
+    public function actionIndexByAgente($agente_id)
+    {
+        // Verify the agency exists
+        $agente = Agente::findOne($agente_id);
+        if ($agente === null) {
+            throw new NotFoundHttpException('La agencia especificada no existe.');
+        }
+
+        // Get all AgenteFuerza IDs (asesores/intermediarios) belonging to this agency
+        $agenteFuerzaIds = AgenteFuerza::find()
+            ->where(['agente_id' => $agente_id])
+            ->select('id')
+            ->column();
+
+        // Get all UserDatos IDs of asesores belonging to this agency
+        $asesorUserIds = AgenteFuerza::find()
+            ->where(['agente_id' => $agente_id])
+            ->select('idusuario')
+            ->column();
+
+        // Get ALL AgenteFuerza IDs for these asesores (from ANY agency)
+        // This ensures we get affiliates created under ANY relationship of the asesor
+        $allAgenteFuerzaIds = [];
+        if (!empty($asesorUserIds)) {
+            $allAgenteFuerzaIds = AgenteFuerza::find()
+                ->where(['idusuario' => $asesorUserIds])
+                ->select('id')
+                ->column();
+        }
+
+        // Build the OR condition for filtering (SAME as UserDatosSearch)
+        $filterCondition = ['or'];
+
+        // Condition 1: Affiliates assigned to asesores of this agency (using ALL their AgenteFuerza IDs)
+        if (!empty($allAgenteFuerzaIds)) {
+            $filterCondition[] = ['user_datos.asesor_id' => $allAgenteFuerzaIds];
+        }
+
+        // Condition 2: Affiliates directly assigned to this agency (agencia_id)
+        $filterCondition[] = ['user_datos.agencia_id' => $agente_id];
+
+        // Create search model and apply filter
+        $searchModel = new UserDatosSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        // Apply the OR condition filter
+        $dataProvider->query->andWhere($filterCondition);
+
+        // Also filter by role = afiliado
+        $dataProvider->query->andWhere(['user_datos.role' => 'afiliado']);
+
+        // Set the title
+        $this->view->title = 'Afiliados de la Agencia: ' . $agente->nom;
+
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'agente' => $agente,
+            'agente_id' => $agente_id,
+        ]);
     }
 }

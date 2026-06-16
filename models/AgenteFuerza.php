@@ -24,16 +24,17 @@ use yii\db\ActiveRecord;
  * @property string|null $deleted_at
  * @property int|null $puede_registrar
  * @property float|null $por_registrar
+ * @property string|null $registro_corredor_actividad_aseguradora
  *
  * @property User $user
- * @property UserDatos $userDatos // Asumiendo que esta es una relación que tienes o planeas tener.
+ * @property UserDatos $userDatos
  * @property Agente $agente
  */
 class AgenteFuerza extends ActiveRecord
 {
     public $nombre_agente;
     public $asesor_id;
-    public $registro_corredor_actividad_aseguradora;
+
     /**
      * {@inheritdoc}
      */
@@ -52,24 +53,30 @@ class AgenteFuerza extends ActiveRecord
             [['idusuario', 'agente_id'], 'required'],
 
             // Reglas para unicidad se comento debido a que el cliente lo solicito asi
-           // ['idusuario', 'unique', 'message' => 'Este usuario ya tiene una asignación.'],
+            // ['idusuario', 'unique', 'message' => 'Este usuario ya tiene una asignación.'],
 
             // Reglas para enteros
             [['idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar', 'asesor_id'], 'integer'],
 
             // Reglas para números flotantes (porcentajes)
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'default', 'value' => 0.00], // Valor por defecto si no se especifica
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'default', 'value' => 0.00],
 
-            // Reglas para fechas (created_at, updated_at, deleted_at)
-            [['created_at', 'updated_at', 'deleted_at', 'nombre_agente'], 'safe'], // 'safe' porque se suelen manejar automáticamente por comportamientos o triggers
+            // Reglas para fechas
+            [['created_at', 'updated_at', 'deleted_at', 'nombre_agente'], 'safe'],
 
-            // Reglas de rangos para porcentajes (opcional, pero recomendado)
-            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar', 'registro_corredor_actividad_aseguradora'], 'number', 'min' => 0, 'max' => 100],
+            // Reglas de rangos para porcentajes
+            [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number', 'min' => 0, 'max' => 100],
 
             // Reglas para asegurar que 'puede_...' sean 0 o 1 (booleano)
             [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'in', 'range' => [0, 1]],
             [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'default', 'value' => 0],
+
+            // Regla para registro_corredor_actividad_aseguradora - AHORA ES STRING
+            [['registro_corredor_actividad_aseguradora'], 'string', 'max' => 50],
+
+            // Regla opcional: permite valores vacíos o nulos
+            [['registro_corredor_actividad_aseguradora'], 'default', 'value' => null],
 
             // Reglas para relaciones (foreign keys)
             [['idusuario'], 'exist', 'skipOnError' => true, 'targetClass' => UserDatos::class, 'targetAttribute' => ['idusuario' => 'id']],
@@ -99,6 +106,7 @@ class AgenteFuerza extends ActiveRecord
             'deleted_at' => 'Fecha de Eliminación',
             'puede_registrar' => 'Puede Registrar',
             'por_registrar' => 'Porcentaje de Registro',
+            'registro_corredor_actividad_aseguradora' => 'Código SUDEASEG',
         ];
     }
 
@@ -122,16 +130,6 @@ class AgenteFuerza extends ActiveRecord
         return $this->hasOne(Agente::class, ['id' => 'agente_id']);
     }
 
-    /**
-     * Gets query for [[UserDatos]].
-     *
-     * Asumo que tienes una tabla UserDatos relacionada con User o directamente con AgenteFuerza.
-     * Si no es el caso, puedes eliminar o ajustar esta relación.
-     * Si UserDatos es una extensión de User, la relación podría ser diferente.
-     *
-     * @return \yii\db\ActiveQuery
-     */
-
     public function getcodigoAgente()
     {
         return $this->hasOne(Agente::class, ['id' => 'agente_id']);
@@ -141,5 +139,4 @@ class AgenteFuerza extends ActiveRecord
     {
         return $this->hasOne(User::class, ['id' => 'idusuario']);
     }
-
 }

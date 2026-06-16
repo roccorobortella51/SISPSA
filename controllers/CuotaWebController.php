@@ -771,15 +771,12 @@ class CuotaWebController extends Controller
         }
     }
 
-    /**
-     * Reactiva un contrato si está suspendido
-     */
     private function reactivateContractIfNeeded($userId, &$output)
     {
         try {
             $contrato = Contratos::find()
                 ->where(['user_id' => $userId])
-                ->andWhere(['estatus' => 'suspendido'])
+                ->andWhere(['estatus' => 'Suspendido'])  // Uppercase S
                 ->one();
 
             if ($contrato) {
@@ -791,7 +788,7 @@ class CuotaWebController extends Controller
                     ->count();
 
                 if ($pendingCuotas == 0) {
-                    $contrato->estatus = 'Activo';
+                    $contrato->estatus = 'Activo';  // Uppercase A
                     if ($contrato->save()) {
                         $output .= "  🔄 Contrato #{$contrato->id} reactivado automáticamente\n";
 
@@ -1514,9 +1511,10 @@ class CuotaWebController extends Controller
             ];
         }
     }
+
     /**
-     * Execute daily check (grace period, suspensions, reactivations)
-     * This is the same as the cron job but can be triggered manually
+     * Execute daily check (grace period, suspensions, reactivations) - DIRECT DB IMPLEMENTATION
+     * This bypasses the need for exec() function or console application
      */
     public function actionDailyCheck()
     {
@@ -1524,39 +1522,228 @@ class CuotaWebController extends Controller
 
         try {
             $output = [];
-            $returnCode = 0;
+            $output[] = "═══════════════════════════════════════════════════════════";
+            $output[] = "     VERIFICACIÓN DIARIA DE CUOTAS Y CONTRATOS";
+            $output[] = "═══════════════════════════════════════════════════════════";
+            $output[] = "";
+            $output[] = "📅 Fecha de ejecución: " . date('Y-m-d H:i:s');
+            $output[] = "";
 
-            // Execute the console command
-            $command = "php " . Yii::getAlias('@app/yii') . " cuota/daily-check";
+            $today = date('Y-m-d');
+            $gracePeriodDays = 7;
+            $gracePeriodEnd = date('Y-m-d', strtotime('-' . $gracePeriodDays . ' days'));
 
-            // Run the command and capture output
-            exec($command . " 2>&1", $output, $returnCode);
+            $output[] = "📊 Configuración:";
+            $output[] = "   • Período de gracia: {$gracePeriodDays} días";
+            $output[] = "   • Fecha límite para gracia: {$gracePeriodEnd}";
+            $output[] = "";
 
-            // Format the output nicely for web display
+            // ============================================================
+            // PART 1: UPDATE CUOTA STATUSES
+            // ============================================================
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            $output[] = "🔄 ACTUALIZANDO ESTADOS DE CUOTAS";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+            // 1. Move from PENDIENTE to EN_GRACIAS when past due date (within grace period)
+            $toGrace = Yii::$app->db->createCommand("
+            UPDATE cuotas 
+            SET estatus = 'en_gracias'
+            WHERE estatus = 'pendiente' 
+            AND fecha_vencimiento < :today
+            AND fecha_vencimiento >= :gracePeriodEnd
+        ", [':today' => $today, ':gracePeriodEnd' => $gracePeriodEnd])->execute();
+
+            $output[] = "✅ {$toGrace} cuotas en período de gracia (pendiente → en_gracias)";
+
+            // 2. Move from EN_GRACIAS to VENCIDA after grace period ends
+            $toVencidaFromGrace = Yii::$app->db->createCommand("
+            UPDATE cuotas 
+            SET estatus = 'vencida'
+            WHERE estatus = 'en_gracias' 
+            AND fecha_vencimiento < :gracePeriodEnd
+        ", [':gracePeriodEnd' => $gracePeriodEnd])->execute();
+
+            $output[] = "✅ {$toVencidaFromGrace} cuotas marcadas como VENCIDAS (en_gracias → vencida)";
+
+            // 3. Directly from PENDIENTE to VENCIDA (if we missed grace period check)
+            $toVencidaDirect = Yii::$app->db->createCommand("
+            UPDATE cuotas 
+            SET estatus = 'vencida'
+            WHERE estatus = 'pendiente' 
+            AND fecha_vencimiento < :gracePeriodEnd
+        ", [':gracePeriodEnd' => $gracePeriodEnd])->execute();
+
+            $output[] = "✅ {$toVencidaDirect} cuotas marcadas directamente como VENCIDAS";
+
+            // ============================================================
+            // PART 2: SUSPEND CONTRACTS WITH OVERDUE CUOTAS
+            // ============================================================
+            $output[] = "";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            $output[] = "⏸️  SUSPENDIENDO CONTRATOS CON CUOTAS VENCIDAS";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+            // Get contracts with overdue cuotas (vencida status) - using uppercase 'Suspendido' for check
+            $contractsToSuspend = Yii::$app->db->createCommand("
+            SELECT DISTINCT c.id, c.user_id, c.nrocontrato, c.estatus
+            FROM contratos c
+            INNER JOIN cuotas cu ON c.id = cu.contrato_id
+            WHERE cu.estatus = 'vencida'
+            AND c.estatus != 'Suspendido'
+            AND c.estatus != 'Anulado'
+            AND c.estatus != 'anulado'
+        ")->queryAll();
+
+            $output[] = "🔍 Contratos con cuotas vencidas encontrados: " . count($contractsToSuspend);
+
+            $suspendedCount = 0;
+            foreach ($contractsToSuspend as $contract) {
+                // Update to 'Suspendido' with uppercase S
+                Yii::$app->db->createCommand("
+                UPDATE contratos 
+                SET estatus = 'Suspendido' 
+                WHERE id = :id AND estatus != 'Suspendido'
+            ", [':id' => $contract['id']])->execute();
+
+                $suspendedCount++;
+                $output[] = "   • Contrato #{$contract['id']} ({$contract['nrocontrato']}) → SUSPENDIDO";
+
+                // Update user solvent status (using 'No' for PostgreSQL case sensitivity)
+                Yii::$app->db->createCommand("
+                UPDATE user_datos 
+                SET estatus_solvente = 'No' 
+                WHERE id = :user_id
+            ", [':user_id' => $contract['user_id']])->execute();
+            }
+
+            $output[] = "";
+            $output[] = "✅ {$suspendedCount} contratos suspendidos por cuotas vencidas";
+
+            // ============================================================
+            // PART 3: REACTIVATE CONTRACTS WITH NO OVERDUE CUOTAS
+            // ============================================================
+            $output[] = "";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            $output[] = "🔄 REACTIVANDO CONTRATOS SIN CUOTAS VENCIDAS";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+            // Get suspended contracts with no vencida cuotas - checking for 'Suspendido' with uppercase S
+            $contractsToReactivate = Yii::$app->db->createCommand("
+            SELECT DISTINCT c.id, c.user_id, c.nrocontrato
+            FROM contratos c
+            WHERE c.estatus = 'Suspendido'
+            AND NOT EXISTS (
+                SELECT 1 FROM cuotas cu 
+                WHERE cu.contrato_id = c.id 
+                AND cu.estatus = 'vencida'
+            )
+            AND EXISTS (
+                SELECT 1 FROM cuotas cu 
+                WHERE cu.contrato_id = c.id 
+                AND cu.estatus IN ('pendiente', 'en_gracias')
+            )
+        ")->queryAll();
+
+            $output[] = "🔍 Contratos suspendidos sin cuotas vencidas: " . count($contractsToReactivate);
+
+            $reactivatedCount = 0;
+            foreach ($contractsToReactivate as $contract) {
+                // Update to 'Activo' with uppercase A
+                Yii::$app->db->createCommand("
+                UPDATE contratos 
+                SET estatus = 'Activo' 
+                WHERE id = :id
+            ", [':id' => $contract['id']])->execute();
+
+                $reactivatedCount++;
+                $output[] = "   • Contrato #{$contract['id']} ({$contract['nrocontrato']}) → ACTIVO";
+
+                // Update user solvent status to 'Si' if no other contracts have vencida cuotas
+                Yii::$app->db->createCommand("
+                UPDATE user_datos 
+                SET estatus_solvente = 'Si' 
+                WHERE id = :user_id
+                AND NOT EXISTS (
+                    SELECT 1 FROM contratos c2 
+                    INNER JOIN cuotas cu2 ON c2.id = cu2.contrato_id
+                    WHERE c2.user_id = user_datos.id 
+                    AND cu2.estatus = 'vencida'
+                    AND c2.estatus != 'Anulado'
+                    AND c2.estatus != 'anulado'
+                )
+            ", [':user_id' => $contract['user_id']])->execute();
+            }
+
+            $output[] = "";
+            $output[] = "✅ {$reactivatedCount} contratos reactivados";
+
+            // ============================================================
+            // PART 4: SUMMARY
+            // ============================================================
+            $output[] = "";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            $output[] = "📊 RESUMEN DE LA VERIFICACIÓN DIARIA";
+            $output[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+            // Get current statistics
+            $stats = Yii::$app->db->createCommand("
+            SELECT 
+                COUNT(CASE WHEN estatus = 'pendiente' THEN 1 END) as pendientes,
+                COUNT(CASE WHEN estatus = 'en_gracias' THEN 1 END) as en_gracias,
+                COUNT(CASE WHEN estatus = 'vencida' THEN 1 END) as vencidas,
+                COUNT(CASE WHEN estatus = 'pagada' THEN 1 END) as pagadas
+            FROM cuotas
+        ")->queryOne();
+
+            $contractStats = Yii::$app->db->createCommand("
+            SELECT 
+                COUNT(CASE WHEN estatus = 'Activo' THEN 1 END) as activos,
+                COUNT(CASE WHEN estatus = 'Suspendido' THEN 1 END) as suspendidos,
+                COUNT(CASE WHEN estatus = 'espera' THEN 1 END) as en_espera,
+                COUNT(CASE WHEN estatus = 'Anulado' THEN 1 END) as anulados
+            FROM contratos
+        ")->queryOne();
+
+            $output[] = "";
+            $output[] = "📈 CUOTAS:";
+            $output[] = "   • Pendientes: {$stats['pendientes']}";
+            $output[] = "   • En período de gracia: {$stats['en_gracias']}";
+            $output[] = "   • Vencidas: {$stats['vencidas']}";
+            $output[] = "   • Pagadas: {$stats['pagadas']}";
+            $output[] = "";
+            $output[] = "📋 CONTRATOS:";
+            $output[] = "   • Activos: {$contractStats['activos']}";
+            $output[] = "   • Suspendidos: {$contractStats['suspendidos']}";
+            $output[] = "   • En espera: {$contractStats['en_espera']}";
+            $output[] = "   • Anulados: {$contractStats['anulados']}";
+            $output[] = "";
+            $output[] = "═══════════════════════════════════════════════════════════";
+            $output[] = "🎉 VERIFICACIÓN DIARIA COMPLETADA EXITOSAMENTE";
+            $output[] = "═══════════════════════════════════════════════════════════";
+
             $formattedOutput = implode("\n", $output);
 
-            // Check if the command succeeded
-            $success = ($returnCode === 0);
-
             return [
-                'success' => $success,
+                'success' => true,
                 'output' => $formattedOutput,
-                'message' => $success ? '✅ Verificación diaria completada exitosamente' : '❌ Error ejecutando verificación diaria',
-                'returnCode' => $returnCode,
+                'message' => '✅ Verificación diaria completada exitosamente',
+                'returnCode' => 0,
                 'timestamp' => date('Y-m-d H:i:s')
             ];
         } catch (\Exception $e) {
-            Yii::error("Error in actionDailyCheck: " . $e->getMessage());
+            Yii::error("Error in actionDailyCheck: " . $e->getMessage() . "\n" . $e->getTraceAsString(), 'cuotas');
 
             return [
                 'success' => false,
-                'output' => "Error: " . $e->getMessage(),
-                'message' => '❌ Error ejecutando el comando',
+                'output' => "❌ Error: " . $e->getMessage(),
+                'message' => '❌ Error ejecutando verificación diaria',
                 'returnCode' => -1,
                 'timestamp' => date('Y-m-d H:i:s')
             ];
         }
     }
+
     /**
      * Displays the Daily Check page with the form
      */

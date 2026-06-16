@@ -11,6 +11,8 @@ use yii\helpers\Url;
  * @var int $es_cita
  */
 
+
+
 // Get es_cita parameter from the model or URL
 $esCita = isset($model->es_cita) ? (int)$model->es_cita : (int)Yii::$app->request->get('es_cita', 0);
 $termino = $esCita === 1 ? 'Cita' : 'Atención';
@@ -34,22 +36,22 @@ function formatBooleanIcon($value)
 
 // Register CSS for white text in table headers
 $this->registerCss("
-    .table-bordered thead th {
-        color: white !important;
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
-        text-align: center !important;
-        vertical-align: middle !important;
-        font-weight: 600 !important;
-    }
-    
-    .table-bordered thead th i {
-        color: white !important;
-    }
-    
-    .table-bordered tbody td {
-        vertical-align: middle !important;
-        text-align: center !important;
-    }
+.table-bordered thead th {
+    color: white !important;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    font-weight: 600 !important;
+}
+
+.table-bordered thead th i {
+    color: white !important;
+}
+
+.table-bordered tbody td {
+    vertical-align: middle !important;
+    text-align: center !important;
+}
 ");
 
 ?>

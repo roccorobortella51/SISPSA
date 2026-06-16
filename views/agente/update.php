@@ -22,15 +22,15 @@ $this->registerCss("
 
 <div class="col-xl-12 col-md-12">
     <div class="ms-panel ms-panel-fh">
-       <div class="ms-panel-header">
+        <div class="ms-panel-header">
             <div class="d-flex justify-content-between align-items-center w-100">
                 <h3>
-                    <?= Html::encode('ACTUALIZAR AGENCIA'); ?> 
+                    <?= Html::encode('ACTUALIZAR AGENCIA'); ?>
                     <span class="text-primary">#<?= $model->id ?></span>
                 </h3>
                 <?php if (!$model->isNewRecord) { ?>
                     <?= Html::a(
-                        '<i class="fas fa-users mr-2"></i> AGENTES DE ESTA AGENCIA',
+                        '<i class="fas fa-users mr-2"></i> INTERMEDIARIOS DE AGENCIA',
                         ['agente-fuerza/index-by-agente', 'agente_id' => $model->id],
                         [
                             'class' => 'btn btn-success btn-agencia-asesores',
@@ -40,10 +40,10 @@ $this->registerCss("
             </div>
         </div>
         <div class="ms-panel-body">
-            <?= $this->render('_form', [ 
+            <?= $this->render('_form', [
                 'model' => $model,
                 'isNewRecord' => false,
-            ]) ?>        
+            ]) ?>
         </div>
     </div>
 </div>

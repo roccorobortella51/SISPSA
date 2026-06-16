@@ -336,7 +336,7 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
     <div class="wrapper">
         <?= $this->render('navbar', ['assetDir' => $assetDir]) ?>
         <?= $this->render('sidebar', ['assetDir' => $assetDir]) ?>
-        <?= $this->render('content', ['content' => $content, 'assetDir' => $assetDir]) ?>
+        <?= $this->render('content', ['content' => $content ?? '', 'assetDir' => $assetDir]) ?>
         <?= $this->render('control-sidebar') ?>
         <?= $this->render('footer') ?>
     </div>

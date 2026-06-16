@@ -618,135 +618,89 @@ class UserHelper
     }
 
 
+    /**
+     * Uploads a file to local storage (Supabase fallback removed)
+     * 
+     * @param string $localFilePath Ruta completa del archivo temporal en el servidor.
+     * @param string $mimeType Tipo MIME del archivo (ej. 'image/png', 'application/pdf').
+     * @param string $fileKeyInBucket Nombre del archivo.
+     * @param string|null $folder Carpeta destino.
+     * @return string|null La URL pública del archivo si la subida fue exitosa, o null si hubo un error.
+     */
     public static function uploadFileToSupabaseApi(string $localFilePath, string $mimeType, string $fileKeyInBucket, string $folder = null): ?string
     {
+        // Supabase is no longer used - save directly to local storage
+        Yii::info("Saving file to local storage (Supabase disabled): " . $fileKeyInBucket, __METHOD__);
 
-        // 1. Intentar subir a Supabase
-        $supabaseUrl = null;
-        try {
-            $supabaseConfig = Yii::$app->params['supabase'];
-            $supabaseUrl = $supabaseConfig['url'];
-            $supabaseAnonKey = $supabaseConfig['anon_key'];
-            $bucketName = $supabaseConfig['bucket_name'];
-
-            $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}/{$fileKeyInBucket}";
-            $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/{$fileKeyInBucket}";
-
-            Yii::info("Supabase Upload URL: " . $uploadUrl, __METHOD__);
-
-            $client = new Client();
-            $response = $client->createRequest()
-                ->setMethod('POST')
-                ->setUrl($uploadUrl)
-                ->addHeaders([
-                    'Authorization' => "Bearer {$supabaseAnonKey}",
-                    'Content-Type' => $mimeType,
-                    'x-upsert' => 'true',
-                ])
-                ->setContent(file_get_contents($localFilePath))
-                ->send();
-
-            if ($response->isOk) {
-                Yii::info("Archivo subido exitosamente a Supabase Storage via API.", __METHOD__);
-                return $publicUrl;
-            } else {
-                $errorContent = $response->getContent();
-                Yii::error("Error al subir archivo a Supabase Storage. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
-                Yii::$app->session->setFlash('error', "Error al subir archivo a Supabase Storage: " . ($errorContent ?: "Desconocido"));
-                // El error de Supabase no es crítico, continuar al siguiente paso (guardado local)
-            }
-        } catch (\yii\httpclient\Exception $e) {
-            Yii::error("Excepción del cliente HTTP al subir a Supabase: " . $e->getMessage(), __METHOD__);
-            Yii::$app->session->setFlash('error', "Error de conexión al subir archivo: " . $e->getMessage());
-            // El error de conexión no es crítico, continuar al siguiente paso (guardado local)
-        } catch (\Throwable $e) {
-            Yii::error("Excepción general al subir a Supabase: " . $e->getMessage(), __METHOD__);
-            //Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al subir archivo: " . $e->getMessage());
-            // El error general no es crítico, continuar al siguiente paso (guardado local)
+        // Determine the upload path based on folder
+        if ($folder === 'documentos') {
+            $uploadPath = Yii::getAlias('@webroot/img/payment');
+        } elseif ($folder === 'documentos/otros') {
+            $uploadPath = Yii::getAlias('@webroot/img/payment/otros');
+        } else {
+            $uploadPath = Yii::getAlias('@webroot/img/payment');
         }
 
-        // 2. Si la subida a Supabase falló, guardar el archivo localmente
-        Yii::info("La subida a Supabase falló. Guardando el archivo localmente.", __METHOD__);
-        $localUploadPath = Yii::getAlias('@webroot/img/payment');
-
-        // Asegurarse de que el directorio existe, si no, crearlo.
-        if (!is_dir($localUploadPath)) {
-            FileHelper::createDirectory($localUploadPath, 0775, true);
+        // Ensure directory exists
+        if (!is_dir($uploadPath)) {
+            FileHelper::createDirectory($uploadPath, 0775, true);
         }
 
-        $localFileName = pathinfo($localFilePath, PATHINFO_BASENAME);
-        $destinationPath = $localUploadPath . '/' . $localFileName;
+        // Generate unique filename to prevent collisions
+        $extension = pathinfo($fileKeyInBucket, PATHINFO_EXTENSION);
+        $uniqueFileName = uniqid() . '.' . $extension;
+        $destinationPath = $uploadPath . '/' . $uniqueFileName;
 
+        // Copy the temporary file to the destination
         if (copy($localFilePath, $destinationPath)) {
             Yii::info("Archivo guardado localmente en: " . $destinationPath, __METHOD__);
-            // Retornar la ruta local para el acceso web
-            $webPath = Yii::getAlias('@web/img/payment') . '/' . $localFileName;
+
+            // Return the web-accessible URL
+            if ($folder === 'documentos') {
+                $webPath = Yii::getAlias('@web/img/payment') . '/' . $uniqueFileName;
+            } elseif ($folder === 'documentos/otros') {
+                $webPath = Yii::getAlias('@web/img/payment/otros') . '/' . $uniqueFileName;
+            } else {
+                $webPath = Yii::getAlias('@web/img/payment') . '/' . $uniqueFileName;
+            }
+
             return $webPath;
         } else {
             Yii::error("Error al guardar el archivo localmente en: " . $destinationPath, __METHOD__);
             Yii::$app->session->setFlash('error', "Error al guardar el archivo localmente.");
-            return null; // Si todo falla, retornar null
+            return null;
         }
     }
 
     /**
-     * Elimina un archivo de Supabase Storage usando su API REST.
-     *
-     * @param string $fileUrl La URL pública completa del archivo en Supabase.
+     * Deletes a file from local storage (Supabase fallback removed)
+     * 
+     * @param string $fileUrl La URL del archivo.
+     * @param string|null $folder Carpeta.
      * @return bool True si la eliminación fue exitosa, false en caso contrario.
      */
     public static function deleteFileFromSupabaseApi(string $fileUrl, string $folder = null): bool
     {
-        $supabaseConfig = Yii::$app->params['supabase'];
-        $supabaseUrl = $supabaseConfig['url'];
-        $supabaseAnonKey = $supabaseConfig['anon_key'];
-        $bucketName = $supabaseConfig['bucket_name'];
-
-        // Extraer la clave del archivo de la URL pública
-        // La URL es del tipo: [URL_PROYECTO]/storage/v1/object/public/[BUCKET]/[FOLDER]/[CLAVE_ARCHIVO]
-        // Necesitamos la parte [FOLDER]/[CLAVE_ARCHIVO]
-        $prefix = "{$supabaseUrl}/storage/v1/object/public/{$bucketName}/{$folder}/";
-        if (strpos($fileUrl, $prefix) === 0) {
-            $fileKeyToDelete = substr($fileUrl, strlen($prefix));
-        } else {
-            Yii::warning("No se pudo extraer la clave del archivo de la URL para eliminar: {$fileUrl}", __METHOD__);
-            return false; // La URL no tiene el formato esperado
-        }
-
-        // El endpoint correcto para eliminar es: [URL_PROYECTO]/storage/v1/object/[BUCKET]
-        $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucketName}/{$folder}";
-
-        Yii::info("Supabase Delete URL: " . $deleteUrl, __METHOD__);
-        Yii::info("File Key to Delete: " . $fileKeyToDelete, __METHOD__);
-
         try {
-            $client = new Client();
-            $response = $client->createRequest()
-                ->setMethod('DELETE')
-                ->setUrl($deleteUrl)
-                ->addHeaders([
-                    'Authorization' => "Bearer {$supabaseAnonKey}",
-                    'Content-Type' => 'application/json',
-                ])
-                ->setContent(json_encode(['prefixes' => [$fileKeyToDelete]])) // Usar 'prefixes' en lugar de 'name'
-                ->send();
+            // Convert web path to filesystem path
+            $webRoot = Yii::getAlias('@webroot');
+            $relativePath = str_replace(Yii::getAlias('@web'), '', $fileUrl);
+            $filePath = $webRoot . $relativePath;
 
-            if ($response->isOk) {
-                Yii::info("Archivo eliminado exitosamente de Supabase Storage. Respuesta: " . $response->getContent(), __METHOD__);
-                return true;
+            if (file_exists($filePath)) {
+                if (unlink($filePath)) {
+                    Yii::info("Archivo eliminado localmente: " . $filePath, __METHOD__);
+                    return true;
+                } else {
+                    Yii::error("No se pudo eliminar el archivo: " . $filePath, __METHOD__);
+                    return false;
+                }
             } else {
-                $errorContent = $response->getContent();
-                Yii::error("Error al eliminar archivo de Supabase Storage. Código: {$response->getStatusCode()}, Error: {$errorContent}", __METHOD__);
-                Yii::$app->session->setFlash('error', "Error al eliminar archivo de Supabase Storage: " . ($errorContent ?: "Desconocido"));
-                return false;
+                Yii::warning("Archivo no encontrado para eliminar: " . $filePath, __METHOD__);
+                return true; // Return true if file doesn't exist (already deleted)
             }
-        } catch (\yii\httpclient\Exception $e) {
-            Yii::error("Excepción del cliente HTTP al eliminar de Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
-            Yii::$app->session->setFlash('error', "Error de conexión al eliminar archivo: " . $e->getMessage());
-            return false;
         } catch (\Throwable $e) {
-            Yii::error("Excepción general al eliminar de Supabase: " . $e->getMessage() . " - Stack Trace: " . $e->getTraceAsString(), __METHOD__);
-            Yii::$app->session->setFlash('error', "Ocurrió un error inesperado al eliminar archivo: " . $e->getMessage());
+            Yii::error("Excepción al eliminar archivo: " . $e->getMessage(), __METHOD__);
             return false;
         }
     }

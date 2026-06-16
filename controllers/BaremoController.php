@@ -521,7 +521,14 @@ class BaremoController extends Controller
         // Create new Spreadsheet object
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Baremos ' . $clinica->nombre);
+
+        // Sanitize sheet title - remove invalid characters and limit length
+        $sheetTitle = 'Baremos_' . $clinica->nombre;
+        // Remove invalid characters: * : / \ ? [ ]
+        $sheetTitle = str_replace(['*', ':', '/', '\\', '?', '[', ']'], '_', $sheetTitle);
+        // Limit to 31 characters (Excel's maximum)
+        $sheetTitle = mb_substr($sheetTitle, 0, 31);
+        $sheet->setTitle($sheetTitle);
 
         // Set headers - removed Estatus and Fecha de Creación
         $headers = [
@@ -593,8 +600,11 @@ class BaremoController extends Controller
             $sheet->getStyle('A2:F' . $lastRow)->applyFromArray($dataStyle);
         }
 
-        // Create file
-        $fileName = 'baremos_' . str_replace(' ', '_', $clinica->nombre) . '_' . date('Y-m-d') . '.xlsx';
+        // Freeze the header row for better UX
+        $sheet->freezePane('A2');
+
+        // Create file with sanitized filename
+        $fileName = 'baremos_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $clinica->nombre) . '_' . date('Y-m-d') . '.xlsx';
         $tempFile = Yii::getAlias('@runtime/' . $fileName);
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);

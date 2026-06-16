@@ -26,7 +26,7 @@ class UserDatosSearch extends UserDatos
     public function rules()
     {
         return [
-            [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id', 'consecutivo_menor'], 'integer'],
+            [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id', 'consecutivo_menor', 'agencia_id'], 'integer'],
             [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'clinica_nombre', 'contrato_estatus'], 'safe'],
             [['paso'], 'number'],
         ];
@@ -66,7 +66,6 @@ class UserDatosSearch extends UserDatos
         // ============================================================
         // CLINIC FILTERING - Apply based on user role
         // ============================================================
-        // Users with clinic roles only see records from their own clinic
         if (UserHelper::hasClinicAccess()) {
             $clinicId = UserHelper::getMyClinicaId();
             if ($clinicId) {
@@ -80,17 +79,55 @@ class UserDatosSearch extends UserDatos
         if ($rol == "Asesor") {
             $asesorId = UserHelper::getAgenteFuerzaId();
             if ($asesorId) {
-                // For Asesor role, show only affiliates they have created/assigned
                 $query->andWhere(['user_datos.asesor_id' => $asesorId]);
             } else {
-                // If no asesor_id found, try to find by user_login_id
                 $userDatos = UserDatos::findOne(['user_login_id' => Yii::$app->user->id]);
                 if ($userDatos) {
                     $query->andWhere(['user_datos.asesor_id' => $userDatos->id]);
                 } else {
-                    // No results if no asesor found
                     $query->andWhere('1=0');
                 }
+            }
+        }
+
+        // ============================================================
+        // AGENTE FILTERING - For Agente role
+        // Show affiliates that EITHER:
+        // 1. Are assigned to an asesor belonging to this agency, OR
+        // 2. Are directly assigned to this agency (agencia_id)
+        // ============================================================
+        if ($rol == "Agente") {
+            $agenteId = UserHelper::getAgenteId();
+
+            if ($agenteId) {
+                $condition = ['or'];
+
+                // Get all asesores (persons) belonging to this agency
+                $asesorPersonIds = AgenteFuerza::find()
+                    ->where(['agente_id' => $agenteId])
+                    ->select('idusuario')
+                    ->distinct()
+                    ->column();
+
+                // Condition 1: Affiliates assigned to asesores of this agency
+                if (!empty($asesorPersonIds)) {
+                    $allAgenteFuerzaIds = AgenteFuerza::find()
+                        ->where(['idusuario' => $asesorPersonIds])
+                        ->select('id')
+                        ->column();
+
+                    if (!empty($allAgenteFuerzaIds)) {
+                        $condition[] = ['user_datos.asesor_id' => $allAgenteFuerzaIds];
+                    }
+                }
+
+                // Condition 2: Affiliates directly assigned to this agency
+                $condition[] = ['user_datos.agencia_id' => $agenteId];
+
+                // Apply the OR condition
+                $query->andWhere($condition);
+            } else {
+                $query->andWhere('1=0');
             }
         }
 
@@ -110,6 +147,7 @@ class UserDatosSearch extends UserDatos
             'user_datos.user_datos_type_id',
             'user_datos.clinica_id',
             'user_datos.asesor_id',
+            'user_datos.agencia_id',
             'user_datos.deleted_at',
             'user_datos.consecutivo_menor',
             'user_datos_type.nombre as userDatosTypeNombre',
@@ -144,6 +182,7 @@ class UserDatosSearch extends UserDatos
             'user_datos.user_datos_type_id',
             'user_datos.clinica_id',
             'user_datos.asesor_id',
+            'user_datos.agencia_id',
             'user_datos.deleted_at',
             'user_datos.consecutivo_menor',
             'user_datos_type.nombre',
@@ -194,7 +233,6 @@ class UserDatosSearch extends UserDatos
         // FILTERING CONDITIONS
         // ============================================================
 
-        // Exact match filters
         $query->andFilterWhere([
             'user_datos.id' => $this->id,
             'user_datos.paso' => $this->paso,
@@ -207,6 +245,7 @@ class UserDatosSearch extends UserDatos
             'user_datos.user_datos_type_id' => $this->user_datos_type_id,
             'user_datos.afiliado_corporativo_id' => $this->afiliado_corporativo_id,
             'user_datos.consecutivo_menor' => $this->consecutivo_menor,
+            'user_datos.agencia_id' => $this->agencia_id,
         ]);
 
         // Date range filter for created_at

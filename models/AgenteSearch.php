@@ -25,7 +25,7 @@ class AgenteSearch extends Agente
     {
         return [
             [['id', 'idusuariopropietario'], 'integer'],
-            [['nom', 'rif', 'created_at', 'updated_at', 'deleted_at', 'propietarioEmail', 'propietarioCedula', 'propietarioNombreCompleto'], 'safe'],
+            [['nom', 'rif', 'sudeaseg', 'created_at', 'updated_at', 'deleted_at', 'propietarioEmail', 'propietarioCedula', 'propietarioNombreCompleto'], 'safe'],
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_agente', 'por_max'], 'number'],
         ];
     }
@@ -44,11 +44,18 @@ class AgenteSearch extends Agente
         $filtro_gente = ($rol == 'Agente');
 
         $query = Agente::find()->alias('t');
-        $query->joinWith(['propietario userDatos', 'propietario.user', 'agenteFuerzas']);
+
+        // Add distinct to prevent duplicate records from joins
+        $query->distinct();
+
+        // Use leftJoin instead of joinWith to avoid multiple rows
+        $query->leftJoin(['userDatos' => 'user_datos'], '"userDatos"."id" = "t"."idusuariopropietario"');
+        $query->leftJoin(['user' => 'user'], '"user"."id" = "userDatos"."user_login_id"');
 
         $query->select([
             't.id',
             't.nom',
+            't.sudeaseg',
             't.idusuariopropietario',
             'user.email as propietarioEmail',
             'userDatos.cedula as propietarioCedula',
@@ -60,40 +67,42 @@ class AgenteSearch extends Agente
             $query->andFilterWhere(['t.idusuariopropietario' => UserHelper::getUserDatosId()]);
         }
 
+        // Create data provider WITHOUT pagination
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'pagination' => [
-                'pageSize' => 20,
-                'pageSizeLimit' => [1, 100],
-                'defaultPageSize' => 20,
-                'pageParam' => 'agente-page', // Unique page parameter
-            ],
+            'pagination' => false, // Completely disable pagination
             'sort' => [
-                'defaultOrder' => ['id' => SORT_DESC, 'nom' => SORT_ASC], // ✅ Two-column sort
+                'defaultOrder' => ['id' => SORT_ASC], // Force order by ID ascending
                 'attributes' => [
                     'id' => [
-                        'asc' => ['t.id' => SORT_ASC, 't.nom' => SORT_ASC],
-                        'desc' => ['t.id' => SORT_DESC, 't.nom' => SORT_ASC],
+                        'asc' => ['t.id' => SORT_ASC],
+                        'desc' => ['t.id' => SORT_DESC],
                         'label' => 'ID',
+                        'default' => SORT_ASC, // Set default to ascending
                     ],
                     'nom' => [
-                        'asc' => ['t.nom' => SORT_ASC, 't.id' => SORT_ASC],
-                        'desc' => ['t.nom' => SORT_DESC, 't.id' => SORT_ASC],
+                        'asc' => ['t.nom' => SORT_ASC],
+                        'desc' => ['t.nom' => SORT_DESC],
                         'label' => 'AGENCIAS',
                     ],
+                    'sudeaseg' => [
+                        'asc' => ['t.sudeaseg' => SORT_ASC],
+                        'desc' => ['t.sudeaseg' => SORT_DESC],
+                        'label' => 'Código SUDEASEG',
+                    ],
                     'propietarioEmail' => [
-                        'asc' => ['user.email' => SORT_ASC, 't.id' => SORT_ASC],
-                        'desc' => ['user.email' => SORT_DESC, 't.id' => SORT_ASC],
+                        'asc' => ['user.email' => SORT_ASC],
+                        'desc' => ['user.email' => SORT_DESC],
                         'label' => 'Correo del Propietario',
                     ],
                     'propietarioCedula' => [
-                        'asc' => ['userDatos.cedula' => SORT_ASC, 't.id' => SORT_ASC],
-                        'desc' => ['userDatos.cedula' => SORT_DESC, 't.id' => SORT_ASC],
+                        'asc' => ['userDatos.cedula' => SORT_ASC],
+                        'desc' => ['userDatos.cedula' => SORT_DESC],
                         'label' => 'Cédula del Propietario',
                     ],
                     'propietarioNombreCompleto' => [
-                        'asc' => ['userDatos.nombres' => SORT_ASC, 'userDatos.apellidos' => SORT_ASC, 't.id' => SORT_ASC],
-                        'desc' => ['userDatos.nombres' => SORT_DESC, 'userDatos.apellidos' => SORT_DESC, 't.id' => SORT_ASC],
+                        'asc' => ['userDatos.nombres' => SORT_ASC, 'userDatos.apellidos' => SORT_ASC],
+                        'desc' => ['userDatos.nombres' => SORT_DESC, 'userDatos.apellidos' => SORT_DESC],
                         'label' => 'Propietario',
                     ],
                 ],
@@ -106,17 +115,36 @@ class AgenteSearch extends Agente
             return $dataProvider;
         }
 
-        // Your existing filtering conditions...
+        // Apply filters
         $query->andFilterWhere(['t.id' => $this->id]);
-        $query->andFilterWhere(['ilike', 't.nom', $this->nom]);
-        $query->andFilterWhere(['ilike', 't.rif', $this->rif]);
-        $query->andFilterWhere(['ilike', 'user.email', $this->propietarioEmail])
-            ->andFilterWhere(['ilike', 'CAST("userDatos"."cedula" AS TEXT)', $this->propietarioCedula]);
+
+        if (!empty($this->nom)) {
+            $query->andFilterWhere(['ilike', 't.nom', $this->nom]);
+        }
+
+        if (!empty($this->rif)) {
+            $query->andFilterWhere(['ilike', 't.rif', $this->rif]);
+        }
+
+        if (!empty($this->sudeaseg)) {
+            $query->andFilterWhere(['ilike', 't.sudeaseg', $this->sudeaseg]);
+        }
+
+        if (!empty($this->propietarioEmail)) {
+            $query->andFilterWhere(['ilike', 'user.email', $this->propietarioEmail]);
+        }
+
+        if (!empty($this->propietarioCedula)) {
+            $query->andFilterWhere(['ilike', 'CAST("userDatos"."cedula" AS TEXT)', $this->propietarioCedula]);
+        }
 
         if (!empty($this->propietarioNombreCompleto)) {
             $search = '%' . strtolower($this->propietarioNombreCompleto) . '%';
             $query->andWhere(new Expression("LOWER(\"userDatos\".nombres || ' ' || \"userDatos\".apellidos) LIKE :search", [':search' => $search]));
         }
+
+        // Force ORDER BY ID ASC at the query level as a fallback
+        $query->orderBy(['t.id' => SORT_ASC]);
 
         return $dataProvider;
     }

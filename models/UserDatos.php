@@ -77,7 +77,7 @@ use yii\db\ActiveRecord;
  * @property string|null $limite_cobertura
  * @property bool|null $cobertura_maternidad
  * @property string|null $deducible_maternidad
- * @property string|null $limite_cobertura_maternidad
+ * @property string|null $limite_cobertura_maternidadf
  * @property string|null $grupo_familiar
  * @property string|null $nombre_beneficiario
  * @property string|null $cedula_beneficiario
@@ -149,6 +149,8 @@ use yii\db\ActiveRecord;
  * @property Agente $asesor
  * @property Contratos $contratos
  * @property User $userLogin
+ * @property int|null $agencia_id
+
  */
 class UserDatos extends ActiveRecord
 {
@@ -429,6 +431,8 @@ class UserDatos extends ActiveRecord
                 }",
                 'message' => 'El número consecutivo es obligatorio para menores sin cédula.'
             ],
+            [['agencia_id'], 'integer'],
+            [['agencia_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['agencia_id' => 'id']],
         ];
     }
 
@@ -555,6 +559,8 @@ class UserDatos extends ActiveRecord
             'plan_id' => 'Plan',
             'consecutivo_menor' => 'Número Consecutivo',
             'afiliado_corporativo_id' => 'Afiliado Corporativo',
+            'agencia_id' => 'Agencia Asociada',
+
         ]);
     }
 
@@ -732,5 +738,9 @@ class UserDatos extends ActiveRecord
                 }
             }
         }
+    }
+    public function getAgencia()
+    {
+        return $this->hasOne(Agente::class, ['id' => 'agencia_id']);
     }
 }

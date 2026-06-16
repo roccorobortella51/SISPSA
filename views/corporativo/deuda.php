@@ -28,7 +28,25 @@ $monthGroups = [];
 foreach ($allCuotas as $cuota) {
     $fechaVencimiento = new \DateTime($cuota->fecha_vencimiento);
     $monthKey = $fechaVencimiento->format('Y-m');
-    $monthName = $fechaVencimiento->format('F Y');
+
+    // Manual Spanish month mapping (works without intl extension)
+    $months = [
+        'January' => 'Enero',
+        'February' => 'Febrero',
+        'March' => 'Marzo',
+        'April' => 'Abril',
+        'May' => 'Mayo',
+        'June' => 'Junio',
+        'July' => 'Julio',
+        'August' => 'Agosto',
+        'September' => 'Septiembre',
+        'October' => 'Octubre',
+        'November' => 'Noviembre',
+        'December' => 'Diciembre',
+    ];
+
+    $englishMonth = $fechaVencimiento->format('F');
+    $monthName = $months[$englishMonth] . ' ' . $fechaVencimiento->format('Y');
     $monthNumber = $fechaVencimiento->format('m');
     $year = $fechaVencimiento->format('Y');
 

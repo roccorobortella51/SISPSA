@@ -526,16 +526,10 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                         <label class="form-label font-weight-bold">
                                             <i class="fas fa-file-prescription text-primary"></i> Récipe Médico
                                         </label>
-                                        <div class="custom-file">
-                                            <?= Html::fileInput('SisSiniestro[imagenRecipeFile]', null, [
-                                                'class' => 'custom-file-input',
-                                                'accept' => 'image/*,application/pdf',
-                                                'id' => 'recipe-file-input'
-                                            ]) ?>
-                                            <label class="custom-file-label" for="recipe-file-input" id="recipe-file-label">
-                                                <i class="fas fa-upload"></i> Seleccionar archivo...
-                                            </label>
-                                        </div>
+                                        <?= $form->field($model, 'imagenRecipeFile')->fileInput([
+                                            'accept' => 'image/*,application/pdf',
+                                            'class' => 'form-control-file',
+                                        ])->label(false) ?>
                                         <small class="form-text text-muted">
                                             <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
                                         </small>
@@ -558,16 +552,10 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                                         <label class="form-label font-weight-bold">
                                             <i class="fas fa-file-medical text-info"></i> Informe Médico
                                         </label>
-                                        <div class="custom-file">
-                                            <?= Html::fileInput('SisSiniestro[imagenInformeFile]', null, [
-                                                'class' => 'custom-file-input',
-                                                'accept' => 'image/*,application/pdf',
-                                                'id' => 'informe-file-input'
-                                            ]) ?>
-                                            <label class="custom-file-label" for="informe-file-input" id="informe-file-label">
-                                                <i class="fas fa-upload"></i> Seleccionar archivo...
-                                            </label>
-                                        </div>
+                                        <?= $form->field($model, 'imagenInformeFile')->fileInput([
+                                            'accept' => 'image/*,application/pdf',
+                                            'class' => 'form-control-file',
+                                        ])->label(false) ?>
                                         <small class="form-text text-muted">
                                             <i class="fas fa-info-circle"></i> Formatos permitidos: JPG, JPEG, PNG, PDF (máx. 10MB)
                                         </small>

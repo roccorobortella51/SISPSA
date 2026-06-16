@@ -329,7 +329,7 @@ class CorporativoController extends Controller
 
                                     // Copy only the safe attributes, excluding the ID
                                     $affiliatePayment->created_at = $model->created_at;
-                                    $affiliatePayment->recibo_id = $model->recibo_id;
+                                    //$affiliatePayment->recibo_id = $model->recibo_id;
                                     $affiliatePayment->fecha_pago = $model->fecha_pago;
                                     $affiliatePayment->monto_pagado = $userAmount; // User-specific amount
                                     $affiliatePayment->metodo_pago = $model->metodo_pago;
@@ -372,10 +372,10 @@ class CorporativoController extends Controller
                                     $individualPayment = Pagos::findOne($affiliatePaymentId);
                                     $tasaCuota = $individualPayment ? ($individualPayment->monto_usd / $individualPayment->monto_pagado) : $model->tasa;
 
-                                    $cuota->estatus = 'pagado';
+                                    $cuota->estatus = 'pagada';
                                     $cuota->fecha_pago = $individualPayment->fecha_pago ?? $model->fecha_pago;
                                     $cuota->rate_usd_bs = $tasaCuota;
-                                    $cuota->id_pago = $affiliatePaymentId; // Link to INDIVIDUAL payment
+                                    $cuota->id_pago = $mainPaymentId;; // Link to INDIVIDUAL payment
 
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;
@@ -390,15 +390,18 @@ class CorporativoController extends Controller
                             foreach ($contratosActualizados as $contratoId) {
                                 $contrato = Contratos::findOne($contratoId);
                                 if ($contrato) {
-                                    $cuotasPendientes = Cuotas::find()
-                                        ->where(['contrato_id' => $contratoId, 'estatus' => 'pendiente'])
-                                        ->count();
+                                    $oldStatus = $contrato->estatus;
 
-                                    if ($cuotasPendientes == 0 && $contrato->estatus !== 'activo') {
-                                        $contrato->estatus = 'activo';
-                                        if ($contrato->save(false)) {
-                                            $contractsActivatedCount++;
-                                        }
+                                    // Call updateStatus() to re-evaluate contract status
+                                    $contrato->updateStatus();
+
+                                    // Refresh to get the latest status
+                                    $contrato->refresh();
+
+                                    // Check if contract was activated (changed to Activo)
+                                    if ($contrato->estatus === 'Activo' && $oldStatus !== 'Activo') {
+                                        $contractsActivatedCount++;
+                                        Yii::info("Contract #{$contratoId} activated from {$oldStatus} to Activo", 'corporativo');
                                     }
                                 }
                             }
@@ -1449,9 +1452,11 @@ class CorporativoController extends Controller
                 ->select('cuotas.*')
                 ->innerJoinWith(['contrato' => function ($query) {
                     $query->innerJoinWith(['user']);
+                    $query->andWhere(['!=', 'contratos.estatus', 'Anulado']);  // <-- ADD THIS LINE
+
                 }])
                 ->where(['contratos.user_id' => $allUserIds])
-                ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias']])  // <-- MODIFIED HERE
+                ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias', 'vencida']])
                 ->andWhere(['>', 'cuotas.monto', 0])
                 ->orderBy([
                     'cuotas.fecha_vencimiento' => SORT_ASC,
@@ -1569,7 +1574,7 @@ class CorporativoController extends Controller
                     ->select('cuotas.*')
                     ->innerJoinWith(['contrato'])
                     ->where(['cuotas.id' => $cuotaId])
-                    ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias']])
+                    ->andWhere(['in', 'cuotas.estatus', ['pendiente', 'en_gracias', 'vencida']])
                     ->one();
 
                 if ($cuota && $cuota->contrato) {
@@ -1657,7 +1662,7 @@ class CorporativoController extends Controller
 
                                     // Copy only the safe attributes, excluding the ID
                                     $affiliatePayment->created_at = $model->created_at;
-                                    $affiliatePayment->recibo_id = $model->recibo_id;
+                                    //$affiliatePayment->recibo_id = $model->recibo_id;
                                     $affiliatePayment->fecha_pago = $model->fecha_pago;
                                     $affiliatePayment->monto_pagado = $userAmount; // User-specific amount
                                     $affiliatePayment->metodo_pago = $model->metodo_pago;
@@ -1690,7 +1695,8 @@ class CorporativoController extends Controller
 
                             // Update cuotas - NOW USING INDIVIDUAL PAYMENT IDs
                             foreach ($allCuotas as $cuota) {
-                                if ($cuota->estatus === 'pendiente') {
+                                // Update ANY unpaid cuota (pendiente, en_gracias, or vencida)
+                                if (in_array($cuota->estatus, ['pendiente', 'en_gracias', 'vencida'])) {
                                     $userId = $cuota->contrato->user_id;
 
                                     // Use the individual payment ID for this specific affiliate
@@ -1700,10 +1706,10 @@ class CorporativoController extends Controller
                                     $individualPayment = Pagos::findOne($affiliatePaymentId);
                                     $tasaCuota = $individualPayment ? ($individualPayment->monto_usd / $individualPayment->monto_pagado) : $model->tasa;
 
-                                    $cuota->estatus = 'pagado';
+                                    $cuota->estatus = 'pagada';
                                     $cuota->fecha_pago = $individualPayment->fecha_pago ?? $model->fecha_pago;
                                     $cuota->rate_usd_bs = $tasaCuota;
-                                    $cuota->id_pago = $affiliatePaymentId; // Link to INDIVIDUAL payment
+                                    $cuota->id_pago = $mainPaymentId;
 
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;
@@ -1714,19 +1720,23 @@ class CorporativoController extends Controller
                                 }
                             }
 
+                            // Update contract statuses using updateStatus() method
                             $contractsActivatedCount = 0;
                             foreach ($contratosActualizados as $contratoId) {
                                 $contrato = Contratos::findOne($contratoId);
                                 if ($contrato) {
-                                    $cuotasPendientes = Cuotas::find()
-                                        ->where(['contrato_id' => $contratoId, 'estatus' => 'pendiente'])
-                                        ->count();
+                                    $oldStatus = $contrato->estatus;
 
-                                    if ($cuotasPendientes == 0 && $contrato->estatus !== 'activo') {
-                                        $contrato->estatus = 'activo';
-                                        if ($contrato->save(false)) {
-                                            $contractsActivatedCount++;
-                                        }
+                                    // Let updateStatus() handle all the rules
+                                    $contrato->updateStatus();
+
+                                    // Refresh to get the updated status
+                                    $contrato->refresh();
+
+                                    // Check if contract was activated
+                                    if ($contrato->estatus === 'Activo' && $oldStatus !== 'Activo') {
+                                        $contractsActivatedCount++;
+                                        Yii::info("Contract #{$contratoId} activated from {$oldStatus} to Activo", 'corporativo');
                                     }
                                 }
                             }

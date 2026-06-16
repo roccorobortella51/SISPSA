@@ -81,6 +81,41 @@ class ReceiptGenerator
         $profesion = $user->profesion ?: 'N/A';
         $tipoPersona = 'Natural';
 
+
+        // ============================================================
+        // CHECK IF CONTRATANTE DIFERENTE IS ENABLED
+        // ============================================================
+        $tieneContratanteDiferente = $user->tiene_contratante_diferente;
+
+        // Default values (from the user itself)
+        $contratanteNombre = $fullName;
+        $contratanteApellido = '';
+        $contratanteIdNumber = $idNumber;
+        $contratanteNacionalidad = $nacionalidad;
+        $contratanteTipoPersona = $tipoPersona;
+        $contratanteRazonSocial = '-';
+        $contratanteDireccionCobro = $direccionCobro;
+        $contratanteTelefono = $telefono;
+        $contratanteEmail = $email;
+
+        // If contratante diferente is true, use the contratante fields
+        if ($tieneContratanteDiferente) {
+            $contratanteNombre = !empty($user->nombre_contratante) ? $user->nombre_contratante : $fullName;
+            $contratanteApellido = !empty($user->apellido_contratante) ? $user->apellido_contratante : '';
+            $contratanteIdNumber = $user->tipo_cedula_contratante && $user->cedula_contratante
+                ? $user->tipo_cedula_contratante . '-' . $user->cedula_contratante
+                : $idNumber;
+            $contratanteNacionalidad = $user->nacionalidad_contratante ?: $nacionalidad;
+            $contratanteTipoPersona = 'Natural'; // Could be from user_datos_type_id
+            $contratanteRazonSocial = $user->razon_social ?: '-';
+            $contratanteDireccionCobro = $user->direccion_cobro_contratante ?: $direccionCobro;
+            $contratanteTelefono = $user->telefono_celular_contratante ?: ($user->telefono_oficina_contratante ?: $telefono);
+            $contratanteEmail = $user->email_contratante ?: $email;
+        }
+
+        // Full contratante name
+        $contratanteFullName = trim($contratanteNombre . ' ' . $contratanteApellido);
+
         $intermediarioNombre = 'N/A';
         $intermediarioCodigo = 'N/A';
         if ($user && $user->asesor_id) {
@@ -159,7 +194,6 @@ class ReceiptGenerator
             $planNombre,
             $coberturaValor,
             $sucursal,
-            $fechaEmisionContrato,
             $fechaEmision,
             $fechaInicio,
             $fechaVencimiento,
@@ -176,7 +210,17 @@ class ReceiptGenerator
             $exclusionesTexto,
             $installmentNumber,
             $totalCuotas,
-            $receiptNumber
+            $receiptNumber,
+            // NEW PARAMETERS for contratante diferente
+            $tieneContratanteDiferente,
+            $contratanteFullName,
+            $contratanteIdNumber,
+            $contratanteNacionalidad,
+            $contratanteTipoPersona,
+            $contratanteRazonSocial,
+            $contratanteDireccionCobro,
+            $contratanteTelefono,
+            $contratanteEmail
         );
 
         $receipt = new Receipt();
@@ -240,7 +284,6 @@ class ReceiptGenerator
         $planNombre,
         $coberturaValor,
         $sucursal,
-        $fechaEmisionContrato,
         $fechaEmision,
         $fechaInicio,
         $fechaVencimiento,
@@ -257,7 +300,17 @@ class ReceiptGenerator
         $exclusionesTexto,
         $installmentNumber,
         $totalCuotas,
-        $receiptNum
+        $receiptNum,
+        // NEW PARAMETERS
+        $tieneContratanteDiferente,
+        $contratanteFullName,
+        $contratanteIdNumber,
+        $contratanteNacionalidad,
+        $contratanteTipoPersona,
+        $contratanteRazonSocial,
+        $contratanteDireccionCobro,
+        $contratanteTelefono,
+        $contratanteEmail
     ) {
         return <<<HTML
 <!DOCTYPE html>
@@ -493,15 +546,29 @@ class ReceiptGenerator
 </table>
 
         <div class="subtitle">CONTRATANTE</div>
-        <table>
-            <tr><td width="50%"><strong>Nombres y Apellidos:</strong> {$fullName}</td>
-            <td><strong>C.I. / R.I.F./ Pasaporte:</strong> {$idNumber}</td>
-            <td><strong>Nacionalidad:</strong> {$nacionalidad}</td>
-            <td><strong>Tipo de persona:</strong> {$tipoPersona}</td>
-            <td><strong>Razón Social:</strong> -</td></tr>
-            <tr><td colspan="5"><strong>Dirección de Cobro:</strong> {$direccionCobro}</td></tr>
-            <tr><td><strong>Teléfono:</strong> {$telefono}</td><td colspan="4"><strong>Correo Electrónico:</strong> {$email}</td></tr>
-        </table>
+<table class="receipt-table">
+    <table>
+        <td width="50%"><strong>Nombres y Apellidos:</strong> {$contratanteFullName}</td
+        ><td width="50%"><strong>C.I. / R.I.F./ Pasaporte:</strong> {$contratanteIdNumber}</td
+        ><td width="50%"><strong>Nacionalidad:</strong> {$contratanteNacionalidad}</td
+        ><td width="50%"><strong>Tipo de persona:</strong> {$contratanteTipoPersona}</td
+        ><td width="50%"><strong>Razón Social:</strong> {$contratanteRazonSocial}</td
+    </tr>
+    <tr>
+        <td colspan="5"><strong>Dirección de Cobro:</strong> {$contratanteDireccionCobro}</td
+    >
+    </tr>
+    <tr>
+        <td width="50%"><strong>Teléfono:</strong> {$contratanteTelefono}</td
+        ><td colspan="4"><strong>Correo Electrónico:</strong> {$contratanteEmail}</td
+    >
+    </tr>
+</table>
+
+<?php if ($tieneContratanteDiferente): ?>
+<div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 5px; margin-top: 5px; font-size: 9px; text-align: center; color: #856404;">
+    <i class="fas fa-info-circle"></i> El contratante es diferente al afiliado titular
+</div>
 
         <div class="subtitle">AFILIADO TITULAR</div>
         <table>
@@ -518,7 +585,7 @@ class ReceiptGenerator
 
         <div class="subtitle">DATOS DEL CONTRATO</div>
         <table>
-            <tr><td width="25%"><strong>Fecha Emisión:</strong> {$fechaEmisionContrato}</td>
+            <tr><td width="25%"><strong>Fecha Emisión:</strong> {$fechaEmision}</td>
             <td width="25%"><strong>Vigencia:</strong> Desde {$fechaInicio}</td>
             <td width="25%"><strong>Hasta:</strong> {$fechaVencimiento}</td>
             <td width="25%"><strong>Frecuencia de Pago:</strong> MENSUAL</td></tr>

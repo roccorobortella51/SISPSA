@@ -1,4 +1,5 @@
 <?php
+
 /* @var $content string */
 
 use yii\bootstrap4\Breadcrumbs; // O yii\widgets\Breadcrumbs; si usas Bootstrap 3
@@ -35,6 +36,6 @@ use app\widgets\Alert;
         </div>
     </div>
     <div class="content">
-        <?= $content ?>
+        <?= $content ?? '' ?>
     </div>
 </div>

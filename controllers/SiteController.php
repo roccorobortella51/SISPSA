@@ -22,8 +22,10 @@ use app\models\RmClinica;
 use app\models\SisSiniestro;
 use app\components\UserHelper;
 use app\models\Baremo;
-
 use app\models\SisSiniestroBaremo;
+use app\models\Agente;
+use app\models\Cuotas;
+use yii\db\Expression;
 
 
 
@@ -96,6 +98,11 @@ class SiteController extends Controller
                 return $this->redirect(['site/dashboard-coordinador']);
             }
 
+            // ADD THIS: If user has AGENTE role, redirect to agencia dashboard
+            if (isset($roles['Agente'])) {
+                return $this->redirect(['site/dashboard-agencia']);
+            }
+
             // If user has ASESOR role, redirect to asesor dashboard
             if (isset($roles['Asesor'])) {
                 return $this->redirect(['site/dashboard-asesor']);
@@ -146,6 +153,11 @@ class SiteController extends Controller
                 return $this->redirect(['site/dashboard-asesor']);
             }
 
+            // Redirect to agencia dashboard for Agente role - NEW
+            if (isset($roles['Agente'])) {
+                return $this->redirect(['site/dashboard-agencia']);
+            }
+
             // ADD THIS: Redirect FINANZAS role to finanzas dashboard
             if (isset($roles['FINANZAS'])) {
                 return $this->redirect(['site/dashboard-finanzas']);
@@ -161,13 +173,14 @@ class SiteController extends Controller
     }
 
     /**
-     * Dashboard for FINANZAS role
-     * Shows financial statistics, payments, invoices, and reports
+     * Dashboard for AGENTE role
+     * Shows agency statistics, asesor performance, and affiliate metrics
+     * 
      * @return string
      */
-    public function actionDashboardFinanzas()
+    public function actionDashboardAgencia()
     {
-        // Check if user has FINANZAS role
+        // Check if user has AGENTE role
         $user = Yii::$app->user->identity;
 
         if (Yii::$app->user->isGuest) {
@@ -177,189 +190,437 @@ class SiteController extends Controller
         $authManager = Yii::$app->authManager;
         $roles = $authManager->getRolesByUser($user->id);
 
-        if (!isset($roles['FINANZAS'])) {
+        if (!isset($roles['Agente'])) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
             return $this->goHome();
         }
 
-        // Get the clinic ID for the logged-in user (if applicable)
-        $userDatos = UserDatos::findOne(['user_login_id' => $user->id]);
-        $clinicaId = $userDatos ? $userDatos->clinica_id : null;
-        $clinica = $clinicaId ? RmClinica::findOne($clinicaId) : null;
+        // Get the agency ID for this agente
+        $agenteId = UserHelper::getAgenteId();
 
-        // ========== FINANCIAL KPIs ==========
+        if (!$agenteId) {
+            Yii::$app->session->setFlash('error', 'No se encontró la agencia asociada a su usuario.');
+            return $this->goHome();
+        }
 
-        // Total revenue from all contracts (active contracts)
-        $totalRevenue = Contratos::find()
-            ->where(['estatus' => 'Activo'])
-            ->sum('monto') ?? 0;
+        // Get agency details
+        $agencia = Agente::findOne($agenteId);
+        $agenciaName = $agencia ? $agencia->nom : 'Mi Agencia';
 
-        // Monthly recurring revenue - sum of all active contract amounts
-        $mrr = Contratos::find()
-            ->where(['estatus' => 'Activo'])
-            ->sum('monto') ?? 0;
-
-        // Count DISTINCT users with active contracts
-        $activeAffiliateIds = Contratos::find()
-            ->select(['user_id'])
-            ->where(['estatus' => 'Activo'])
-            ->andWhere(['is not', 'user_id', null])
-            ->distinct()
-            ->column();
-
-        $totalActiveAffiliates = count($activeAffiliateIds);
-
-        // Contracts expiring in next 30 days
-        $expiringContracts = Contratos::find()
-            ->where(['estatus' => 'Activo'])
-            ->andWhere(['>=', 'fecha_ven', date('Y-m-d')])
-            ->andWhere(['<=', 'fecha_ven', date('Y-m-d', strtotime('+30 days'))])
-            ->count();
-
-        // Expired contracts
-        $expiredContracts = Contratos::find()
-            ->where(['estatus' => 'Activo'])
-            ->andWhere(['<', 'fecha_ven', date('Y-m-d')])
-            ->count();
-
-        // Calculate average contract value
-        $avgContractValue = Contratos::find()
-            ->where(['estatus' => 'Activo'])
-            ->average('monto') ?? 0;
-
-        // ========== FIXED: Get revenue by plan with specific colors for each plan type ==========
-        // First, get all active contracts with their plan information
-        $planRevenueData = Contratos::find()
-            ->select(['planes.nombre as plan_name', 'SUM(contratos.monto) as total_revenue', 'COUNT(*) as contract_count'])
-            ->innerJoin('planes', 'contratos.plan_id = planes.id')
-            ->where(['contratos.estatus' => 'Activo'])
-            ->groupBy('planes.id', 'planes.nombre')
-            ->orderBy(['total_revenue' => SORT_DESC])
-            ->asArray()
+        // ============================================
+        // Get all AgenteFuerza records (asesores/intermediarios) belonging to this agency
+        // ============================================
+        $agenteFuerzaRecords = AgenteFuerza::find()
+            ->where(['agente_id' => $agenteId])
             ->all();
 
-        // Define plan categories and their display names
-        $planCategories = [
-            'Bronce' => ['display' => 'Bronce', 'color' => '#cd7f32', 'order' => 1],      // Bronze color
-            'Plata' => ['display' => 'Plata', 'color' => '#c0c0c0', 'order' => 2],        // Silver color
-            'Oro' => ['display' => 'Oro', 'color' => '#ffc107', 'order' => 3],            // Yellow/Gold color
-            'Esmeralda Plus' => ['display' => 'Esmeralda Plus', 'color' => '#2ecc71', 'order' => 4], // Emerald green
-        ];
+        $agenteFuerzaIds = array_column($agenteFuerzaRecords, 'id');
+        $asesorUserIds = array_column($agenteFuerzaRecords, 'idusuario');
 
-        // Group and aggregate revenue by plan category
-        $revenueByPlan = [];
-        foreach ($planRevenueData as $item) {
-            $planName = $item['plan_name'];
-            $found = false;
+        // ============================================
+        // Get ALL AgenteFuerza IDs for these asesores (from ANY agency)
+        // This ensures we get affiliates created under ANY relationship of the asesor
+        // ============================================
+        $allAgenteFuerzaIds = [];
+        if (!empty($asesorUserIds)) {
+            $allAgenteFuerzaIds = AgenteFuerza::find()
+                ->where(['idusuario' => $asesorUserIds])
+                ->select('id')
+                ->column();
+        }
 
-            // Check if this plan belongs to one of our categories
-            foreach ($planCategories as $key => $category) {
-                if (stripos($planName, $key) !== false) {
-                    if (!isset($revenueByPlan[$key])) {
-                        $revenueByPlan[$key] = [
-                            'plan_name' => $category['display'],
-                            'total_revenue' => 0,
-                            'contract_count' => 0,
-                            'color' => $category['color'],
-                            'order' => $category['order']
-                        ];
-                    }
-                    $revenueByPlan[$key]['total_revenue'] += $item['total_revenue'];
-                    $revenueByPlan[$key]['contract_count'] += $item['contract_count'];
-                    $found = true;
-                    break;
+        // ============================================
+        // Build the OR condition for affiliates (SAME as UserDatosSearch)
+        // ============================================
+        $affiliateCondition = ['or'];
+
+        // Condition 1: Affiliates assigned to asesores of this agency (using ALL their AgenteFuerza IDs)
+        if (!empty($allAgenteFuerzaIds)) {
+            $affiliateCondition[] = ['user_datos.asesor_id' => $allAgenteFuerzaIds];
+        }
+
+        // Condition 2: Affiliates directly assigned to this agency (agencia_id)
+        $affiliateCondition[] = ['user_datos.agencia_id' => $agenteId];
+
+        // Get ALL affiliates for this agency using the OR condition
+        $affiliatesQuery = UserDatos::find()
+            ->where(['role' => 'afiliado'])
+            ->andWhere($affiliateCondition);
+
+        $totalAfiliados = (clone $affiliatesQuery)->count();
+
+        // ============================================
+        // Get affiliates with contract statuses (including all statuses)
+        // ============================================
+        $activos = 0;
+        $suspendidos = 0;
+        $registrados = 0;
+        $vencidos = 0;
+        $anulados = 0;
+        $sinContrato = 0;
+
+        foreach ($affiliatesQuery->all() as $affiliate) {
+            $contract = Contratos::find()
+                ->where(['user_id' => $affiliate->id])
+                ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+
+            if ($contract) {
+                switch ($contract->estatus) {
+                    case 'Activo':
+                        $activos++;
+                        break;
+                    case 'Suspendido':
+                        $suspendidos++;
+                        break;
+                    case 'Registrado':
+                        $registrados++;
+                        break;
+                    case 'Vencido':
+                        $vencidos++;
+                        break;
+                    case 'Anulado':
+                        $anulados++;
+                        break;
+                    default:
+                        break;
                 }
-            }
-
-            // If plan doesn't match categories, group as "Otros"
-            if (!$found) {
-                if (!isset($revenueByPlan['Otros'])) {
-                    $revenueByPlan['Otros'] = [
-                        'plan_name' => 'Otros Planes',
-                        'total_revenue' => 0,
-                        'contract_count' => 0,
-                        'color' => '#95a5a6',
-                        'order' => 99
-                    ];
-                }
-                $revenueByPlan['Otros']['total_revenue'] += $item['total_revenue'];
-                $revenueByPlan['Otros']['contract_count'] += $item['contract_count'];
+            } else {
+                $sinContrato++;
             }
         }
 
-        // Sort by order
-        usort($revenueByPlan, function ($a, $b) {
-            return $a['order'] - $b['order'];
-        });
+        // New affiliates this month
+        $nuevosEsteMes = (clone $affiliatesQuery)
+            ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
+            ->count();
 
-        // Convert to indexed array for view
-        $revenueByPlan = array_values($revenueByPlan);
+        // Tasa de actividad (active contracts only)
+        $tasaActividad = $totalAfiliados > 0 ? round(($activos / $totalAfiliados) * 100, 1) : 0;
 
-        // Monthly revenue data for chart (last 12 months)
-        $monthlyRevenue = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $monthStart = date('Y-m-01', strtotime("-$i months"));
-            $monthEnd = date('Y-m-t', strtotime("-$i months"));
-            $monthName = date('M Y', strtotime($monthStart));
+        // ============================================
+        // ASESORES STATISTICS
+        // ============================================
+        $totalAsesores = count($agenteFuerzaIds);
 
-            $revenue = Contratos::find()
-                ->where(['estatus' => 'Activo'])
-                ->andWhere(['>=', 'fecha_ini', $monthStart])
-                ->andWhere(['<=', 'fecha_ini', $monthEnd])
-                ->sum('monto') ?? 0;
+        // Count asesores activos (have created at least one affiliate visible to this agency)
+        $asesoresActivos = 0;
+        foreach ($agenteFuerzaIds as $afId) {
+            $hasAffiliates = UserDatos::find()
+                ->where(['role' => 'afiliado'])
+                ->andWhere($affiliateCondition)
+                ->andWhere(['asesor_id' => $afId])
+                ->exists();
+            if ($hasAffiliates) {
+                $asesoresActivos++;
+            }
+        }
 
-            $monthlyRevenue[] = [
-                'month' => $monthName,
-                'revenue' => (float)$revenue
+        // ============================================
+        // Create a map of ALL AgenteFuerza IDs to Asesor name for quick lookup
+        // This includes IDs from ALL agencies these asesores belong to
+        // ============================================
+        $asesorNameMap = [];
+
+        // Get ALL AgenteFuerza records for these asesores (from ANY agency)
+        $allAgenteFuerzaRecordsForAsesores = AgenteFuerza::find()
+            ->where(['idusuario' => $asesorUserIds])
+            ->all();
+
+        foreach ($allAgenteFuerzaRecordsForAsesores as $afRecord) {
+            $asesorUser = UserDatos::findOne($afRecord->idusuario);
+            if ($asesorUser) {
+                $asesorNameMap[$afRecord->id] = $asesorUser->nombres . ' ' . $asesorUser->apellidos;
+            }
+        }
+
+        // ============================================
+        // FIXED: STATISTICS BY ASESOR - Using ALL AgenteFuerza IDs for each asesor
+        // This ensures we count ALL affiliates of the asesor person, not just those
+        // created under the specific agency relationship
+        // ============================================
+        $statsByAsesor = [];
+        $topAsesores = [];
+
+        foreach ($agenteFuerzaIds as $afId) {
+            $agenteFuerza = AgenteFuerza::findOne($afId);
+            if (!$agenteFuerza) continue;
+
+            $asesorUser = UserDatos::findOne($agenteFuerza->idusuario);
+            if (!$asesorUser) continue;
+
+            // CRITICAL FIX: Get ALL AgenteFuerza IDs for THIS asesor person
+            $thisAsesorAllAfIds = AgenteFuerza::find()
+                ->where(['idusuario' => $agenteFuerza->idusuario])
+                ->select('id')
+                ->column();
+
+            // Get ALL affiliates for THIS asesor person (using ALL their AgenteFuerza IDs)
+            // This matches the filtering logic from UserDatosSearch
+            $asesorAffiliates = UserDatos::find()
+                ->where(['role' => 'afiliado'])
+                ->andWhere($affiliateCondition)
+                ->andWhere(['asesor_id' => $thisAsesorAllAfIds])
+                ->all();
+
+            $totalAsesor = count($asesorAffiliates);
+            $activosAsesor = 0;
+            $suspendidosAsesor = 0;
+            $registradosAsesor = 0;
+            $vencidosAsesor = 0;
+
+            foreach ($asesorAffiliates as $affiliate) {
+                $contract = Contratos::find()
+                    ->where(['user_id' => $affiliate->id])
+                    ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                    ->orderBy(['created_at' => SORT_DESC])
+                    ->one();
+
+                if ($contract) {
+                    switch ($contract->estatus) {
+                        case 'Activo':
+                            $activosAsesor++;
+                            break;
+                        case 'Suspendido':
+                            $suspendidosAsesor++;
+                            break;
+                        case 'Registrado':
+                            $registradosAsesor++;
+                            break;
+                        case 'Vencido':
+                            $vencidosAsesor++;
+                            break;
+                    }
+                }
+            }
+
+            // Get last registration date for this asesor person
+            $ultimoRegistro = UserDatos::find()
+                ->where(['asesor_id' => $thisAsesorAllAfIds])
+                ->max('created_at');
+
+            // Calculate estimated commission (example: $5 per active affiliate)
+            $comisionEstimada = $activosAsesor * 5;
+
+            $statsByAsesor[] = [
+                'id' => $afId,
+                'user_id' => $agenteFuerza->idusuario,
+                'nombre_completo' => $asesorUser->nombres . ' ' . $asesorUser->apellidos,
+                'codigo_asesor' => 'AF-' . str_pad($afId, 4, '0', STR_PAD_LEFT),
+                'total' => $totalAsesor,
+                'activos' => $activosAsesor,
+                'suspendidos' => $suspendidosAsesor,
+                'registrados' => $registradosAsesor,
+                'vencidos' => $vencidosAsesor,
+                'ultimo_registro' => $ultimoRegistro,
+                'comision_estimada' => $comisionEstimada,
+            ];
+
+            $topAsesores[] = [
+                'id' => $afId,
+                'nombre_completo' => $asesorUser->nombres . ' ' . $asesorUser->apellidos,
+                'total' => $totalAsesor,
+                'activos' => $activosAsesor,
+                'comision_estimada' => $comisionEstimada,
             ];
         }
 
-        // Contract status distribution
-        $contractStatus = [
-            'activos' => (int)Contratos::find()->where(['estatus' => 'Activo'])->count(),
-            'registrados' => (int)Contratos::find()->where(['estatus' => 'Registrado'])->count(),
-            'suspendidos' => (int)Contratos::find()->where(['estatus' => 'Suspendido'])->count(),
-            'creados' => (int)Contratos::find()->where(['estatus' => 'Creado Manual'])->count(),
-            'vencidos' => (int)Contratos::find()->where(['estatus' => 'Vencido'])->count(),
-            'anulados' => (int)Contratos::find()->where(['estatus' => 'Anulado'])->count(),
-        ];
+        // Sort top asesores by total affiliates (descending)
+        usort($topAsesores, function ($a, $b) {
+            return $b['total'] - $a['total'];
+        });
+        $topAsesores = array_slice($topAsesores, 0, 5);
 
-        // Get recent contracts (last 10)
-        $recentContracts = Contratos::find()
-            ->with(['plan', 'user'])
-            ->orderBy(['created_at' => SORT_DESC])
-            ->limit(10)
-            ->all();
+        // Sort stats by asesor name
+        usort($statsByAsesor, function ($a, $b) {
+            return strcmp($a['nombre_completo'], $b['nombre_completo']);
+        });
 
-        // Ensure $recentContracts is an array
-        if (empty($recentContracts)) {
-            $recentContracts = [];
+        // ============================================
+        // FIXED: STATISTICS FOR CHART (Afiliados por Asesor)
+        // Using ALL AgenteFuerza IDs for each asesor to match filtering logic
+        // ============================================
+        $statsForChart = [];
+        foreach ($agenteFuerzaIds as $afId) {
+            $agenteFuerza = AgenteFuerza::findOne($afId);
+            if (!$agenteFuerza) continue;
+
+            $asesorUser = UserDatos::findOne($agenteFuerza->idusuario);
+            if (!$asesorUser) continue;
+
+            // Get ALL AgenteFuerza IDs for THIS asesor person
+            $thisAsesorAllAfIds = AgenteFuerza::find()
+                ->where(['idusuario' => $agenteFuerza->idusuario])
+                ->select('id')
+                ->column();
+
+            // Count affiliates for this asesor person using ALL their AgenteFuerza IDs
+            $totalForChart = UserDatos::find()
+                ->where(['role' => 'afiliado'])
+                ->andWhere($affiliateCondition)
+                ->andWhere(['asesor_id' => $thisAsesorAllAfIds])
+                ->count();
+
+            $activosForChart = 0;
+            $afiliadosQuery = UserDatos::find()
+                ->where(['role' => 'afiliado'])
+                ->andWhere($affiliateCondition)
+                ->andWhere(['asesor_id' => $thisAsesorAllAfIds])
+                ->all();
+
+            foreach ($afiliadosQuery as $affiliate) {
+                $contract = Contratos::find()
+                    ->where(['user_id' => $affiliate->id])
+                    ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                    ->orderBy(['created_at' => SORT_DESC])
+                    ->one();
+
+                if ($contract && $contract->estatus == 'Activo') {
+                    $activosForChart++;
+                }
+            }
+
+            $statsForChart[] = [
+                'nombre_completo' => $asesorUser->nombres . ' ' . $asesorUser->apellidos,
+                'total' => $totalForChart,
+                'activos' => $activosForChart,
+            ];
         }
 
-        // Attention needed = expiring contracts + expired contracts
-        $attentionNeeded = $expiringContracts + $expiredContracts;
+        // Sort stats for chart by name
+        usort($statsForChart, function ($a, $b) {
+            return strcmp($a['nombre_completo'], $b['nombre_completo']);
+        });
 
-        // Total active contracts
-        $totalActiveContracts = (int)Contratos::find()->where(['estatus' => 'Activo'])->count();
+        // ============================================
+        // MONTHLY GROWTH DATA (using the same OR condition)
+        // ============================================
+        $monthlyData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $startDate = date('Y-m-01', strtotime("-$i months"));
+            $endDate = date('Y-m-t', strtotime("-$i months"));
+            $monthName = date('M Y', strtotime($startDate));
 
-        $kpis = [
-            'total_revenue' => $totalRevenue,
-            'mrr' => $mrr,
-            'total_active_affiliates' => $totalActiveAffiliates,
-            'expiring_contracts' => $expiringContracts,
-            'expired_contracts' => $expiredContracts,
-            'avg_contract_value' => $avgContractValue,
-            'attention_needed' => $attentionNeeded,
-            'total_contracts' => $totalActiveContracts,
+            $count = (clone $affiliatesQuery)
+                ->andWhere(['>=', 'created_at', $startDate . ' 00:00:00'])
+                ->andWhere(['<=', 'created_at', $endDate . ' 23:59:59'])
+                ->count();
+
+            $monthlyData[] = ['month' => $monthName, 'count' => $count];
+        }
+
+        // ============================================
+        // RECENT AFFILIATES (with correct asesor name using the complete map)
+        // ============================================
+        $recientes = UserDatos::find()
+            ->select([
+                'user_datos.id',
+                'user_datos.nombres',
+                'user_datos.apellidos',
+                'user_datos.tipo_cedula',
+                'user_datos.cedula',
+                'user_datos.created_at',
+                'user_datos.clinica_id',
+                'user_datos.asesor_id',
+                'user_datos.agencia_id',
+                'rm_clinica.nombre as clinica_nombre',
+            ])
+            ->leftJoin('rm_clinica', 'user_datos.clinica_id = rm_clinica.id')
+            ->where(['user_datos.role' => 'afiliado'])
+            ->andWhere($affiliateCondition)
+            ->orderBy(['user_datos.created_at' => SORT_DESC])
+            ->limit(10)
+            ->asArray()
+            ->all();
+
+        // Add contract status and asesor name to each recent affiliate
+        foreach ($recientes as &$afiliado) {
+            $contract = Contratos::find()
+                ->where(['user_id' => $afiliado['id']])
+                ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+
+            $afiliado['contrato_estatus'] = $contract ? $contract->estatus : 'Sin Contrato';
+
+            // Get the asesor name from the COMPLETE map using asesor_id
+            $asesorId = $afiliado['asesor_id'];
+            if ($asesorId && isset($asesorNameMap[$asesorId])) {
+                $afiliado['asesor_nombre'] = $asesorNameMap[$asesorId];
+            } else {
+                $afiliado['asesor_nombre'] = null;
+            }
+        }
+
+        // ============================================
+        // AGENCY STATS ARRAY
+        // ============================================
+        $agenciaStats = [
+            'agencia_id' => $agenteId,
+            'total_afiliados' => $totalAfiliados,
+            'activos' => $activos,
+            'suspendidos' => $suspendidos,
+            'registrados' => $registrados,
+            'vencidos' => $vencidos,
+            'anulados' => $anulados,
+            'sin_contrato' => $sinContrato,
+            'nuevos_este_mes' => $nuevosEsteMes,
+            'tasa_actividad' => $tasaActividad,
+            'total_asesores' => $totalAsesores,
+            'asesores_activos' => $asesoresActivos,
+            'comision_estimada_mensual' => $activos * 5,
+            'comision_total_acumulada' => $activos * 5 * 12,
+            'meta_anual' => 500,
         ];
 
-        return $this->render('dashboard-finanzas', [
-            'clinica' => $clinica,
-            'kpis' => $kpis,
-            'revenueByPlan' => $revenueByPlan,
-            'monthlyRevenue' => $monthlyRevenue,
-            'contractStatus' => $contractStatus,
-            'recentContracts' => $recentContracts,
+        $asesoresStats = [
+            'total_asesores' => $totalAsesores,
+            'asesores_activos' => $asesoresActivos,
+        ];
+
+        // Get all clinics where this agency has affiliates (using OR condition)
+        $clinicaIds = UserDatos::find()
+            ->select(['clinica_id'])
+            ->where(['role' => 'afiliado'])
+            ->andWhere($affiliateCondition)
+            ->andWhere(['not', ['clinica_id' => null]])
+            ->distinct()
+            ->column();
+
+        $agencias = RmClinica::find()
+            ->where(['id' => $clinicaIds])
+            ->orderBy(['nombre' => SORT_ASC])
+            ->all();
+
+        // Debug info
+        $debugInfo = [
+            'agente_id' => $agenteId,
+            'agente_fuerza_ids' => $agenteFuerzaIds,
+            'all_agente_fuerza_ids' => $allAgenteFuerzaIds,
+            'asesor_name_map_keys' => array_keys($asesorNameMap),
+            'stats_for_chart' => $statsForChart,
+            'total_asesores' => $totalAsesores,
+            'total_afiliados' => $totalAfiliados,
+            'activos' => $activos,
+            'suspendidos' => $suspendidos,
+            'registrados' => $registrados,
+            'sin_contrato' => $sinContrato,
+            'stats_by_asesor_count' => count($statsByAsesor),
+        ];
+
+        // Render the view with all necessary data
+        return $this->render('dashboard-agencia', [
+            'agenciaName' => $agenciaName,
+            'agenciaStats' => $agenciaStats,
+            'asesoresStats' => $asesoresStats,
+            'statsByAsesor' => $statsByAsesor,
+            'statsForChart' => $statsForChart,
+            'monthlyData' => $monthlyData,
+            'topAsesores' => $topAsesores,
+            'recientes' => $recientes,
+            'agencias' => $agencias,
+            'debugInfo' => $debugInfo,
         ]);
     }
 
