@@ -483,8 +483,10 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
                                                                 echo isset($badges[$estatus]) ? $badges[$estatus] : '<span class="badge badge-secondary">' . $estatus . '</span>';
                                                                 ?>
                                                             </td>
+                                                            <!-- ========== ACCIONES COLUMN WITH RECEIPTS ========== -->
                                                             <td class="text-center align-middle">
                                                                 <div class="btn-group btn-group-sm" role="group">
+                                                                    <!-- View button -->
                                                                     <?= Html::a(
                                                                         '<i class="fas fa-eye"></i>',
                                                                         Url::to(['pagos/view', 'id' => $pago->id]),
@@ -494,6 +496,8 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
                                                                             'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
                                                                         ]
                                                                     ) ?>
+
+                                                                    <!-- Edit button -->
                                                                     <?= Html::a(
                                                                         '<i class="fas fa-edit"></i>',
                                                                         Url::to(['pagos/update', 'id' => $pago->id]),
@@ -503,60 +507,93 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
                                                                             'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
                                                                         ]
                                                                     ) ?>
+
+                                                                    <!-- ========== RECEIPT BUTTONS ========== -->
                                                                     <?php
+                                                                    // Get receipts for this payment
                                                                     $receipts = \app\components\ReceiptGenerator::getReceiptsForPayment($pago->id);
+
                                                                     if (!empty($receipts)):
                                                                     ?>
                                                                         <?php if (count($receipts) == 1): ?>
+                                                                            <!-- Single receipt - direct print with auto_print -->
                                                                             <?= Html::a(
                                                                                 '<i class="fas fa-receipt"></i>',
                                                                                 Url::to(['receipts/print', 'id' => $receipts[0]->id, 'auto_print' => 1]),
                                                                                 [
-                                                                                    'title' => 'Imprimir Recibo',
+                                                                                    'title' => 'Imprimir Recibo ' . $receipts[0]->receipt_number,
                                                                                     'class' => 'btn btn-outline-success btn-sm',
                                                                                     'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;',
                                                                                     'target' => '_blank'
                                                                                 ]
                                                                             ) ?>
                                                                         <?php else: ?>
+                                                                            <!-- Multiple receipts - dropdown -->
                                                                             <div class="btn-group">
                                                                                 <?= Html::a(
-                                                                                    '<i class="fas fa-receipt"></i>',
+                                                                                    '<i class="fas fa-receipt"></i> <span class="caret"></span>',
                                                                                     '#',
                                                                                     [
-                                                                                        'title' => 'Imprimir Recibos (' . count($receipts) . ')',
+                                                                                        'title' => 'Ver/Imprimir Recibos (' . count($receipts) . ')',
                                                                                         'class' => 'btn btn-outline-success btn-sm dropdown-toggle',
                                                                                         'data-toggle' => 'dropdown',
                                                                                         'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;',
+                                                                                        'aria-haspopup' => 'true',
+                                                                                        'aria-expanded' => 'false'
                                                                                     ]
                                                                                 ) ?>
-                                                                                <div class="dropdown-menu">
+                                                                                <div class="dropdown-menu dropdown-menu-right">
+                                                                                    <!-- Print all option -->
                                                                                     <?= Html::a(
                                                                                         '<i class="fas fa-print mr-2"></i> Imprimir todos (' . count($receipts) . ')',
                                                                                         Url::to(['receipts/print-all', 'paymentId' => $pago->id, 'auto_print' => 1]),
                                                                                         ['class' => 'dropdown-item', 'target' => '_blank']
                                                                                     ) ?>
                                                                                     <div class="dropdown-divider"></div>
+                                                                                    <!-- Individual receipts -->
                                                                                     <?php foreach ($receipts as $receipt): ?>
                                                                                         <?= Html::a(
-                                                                                            '<i class="fas fa-receipt mr-2"></i> ' . $receipt->receipt_number,
+                                                                                            '<i class="fas fa-file-pdf mr-2"></i> ' . $receipt->receipt_number,
                                                                                             Url::to(['receipts/print', 'id' => $receipt->id, 'auto_print' => 1]),
                                                                                             ['class' => 'dropdown-item', 'target' => '_blank']
                                                                                         ) ?>
                                                                                     <?php endforeach; ?>
+                                                                                    <div class="dropdown-divider"></div>
+                                                                                    <!-- View all receipts page -->
+                                                                                    <?= Html::a(
+                                                                                        '<i class="fas fa-list mr-2"></i> Ver todos los recibos',
+                                                                                        Url::to(['pagos/view-receipts', 'payment_id' => $pago->id]),
+                                                                                        ['class' => 'dropdown-item', 'target' => '_blank']
+                                                                                    ) ?>
                                                                                 </div>
                                                                             </div>
                                                                         <?php endif; ?>
                                                                     <?php else: ?>
-                                                                        <?= Html::a(
-                                                                            '<i class="fas fa-receipt"></i>',
-                                                                            '#',
-                                                                            [
-                                                                                'title' => 'Sin recibos generados',
-                                                                                'class' => 'btn btn-outline-secondary btn-sm disabled',
-                                                                                'style' => 'opacity: 0.5; cursor: not-allowed; border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
-                                                                            ]
-                                                                        ) ?>
+                                                                        <!-- No receipts - show disabled icon and generate button -->
+                                                                        <div class="btn-group">
+                                                                            <?= Html::a(
+                                                                                '<i class="fas fa-receipt"></i>',
+                                                                                '#',
+                                                                                [
+                                                                                    'title' => 'Sin recibos generados',
+                                                                                    'class' => 'btn btn-outline-secondary btn-sm disabled',
+                                                                                    'style' => 'opacity: 0.5; cursor: not-allowed; border-radius: 6px; margin: 0 2px; padding: 5px 8px;'
+                                                                                ]
+                                                                            ) ?>
+                                                                            <?= Html::a(
+                                                                                '<i class="fas fa-plus-circle"></i>',
+                                                                                Url::to(['pagos/generate-receipts', 'id' => $pago->id]),
+                                                                                [
+                                                                                    'title' => 'Generar Recibos para este pago',
+                                                                                    'class' => 'btn btn-outline-primary btn-sm',
+                                                                                    'style' => 'border-radius: 6px; margin: 0 2px; padding: 5px 8px;',
+                                                                                    'data' => [
+                                                                                        'method' => 'post',
+                                                                                        'confirm' => '¿Desea generar los recibos para este pago?'
+                                                                                    ]
+                                                                                ]
+                                                                            ) ?>
+                                                                        </div>
                                                                     <?php endif; ?>
                                                                 </div>
                                                             </td>

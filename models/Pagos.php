@@ -240,7 +240,7 @@ class Pagos extends \yii\db\ActiveRecord
     {
         parent::afterSave($insert, $changedAttributes);
 
-        if ($insert) {
+        /* if ($insert) {
             Yii::info("afterSave: New payment #{$this->id} created. Generating receipts...", 'pagos');
 
             // Use the component - generates ONE RECEIPT PER INSTALLMENT
@@ -251,7 +251,7 @@ class Pagos extends \yii\db\ActiveRecord
             } else {
                 Yii::warning("afterSave: No receipts generated for payment #{$this->id}", 'pagos');
             }
-        }
+        }*/
     }
 
     /**

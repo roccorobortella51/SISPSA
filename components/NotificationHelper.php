@@ -5,6 +5,7 @@ namespace app\components;
 use Yii;
 use kartik\mpdf\Pdf;
 use app\models\PlanServicios;
+use app\models\Cuotas;
 
 class NotificationHelper
 {
@@ -22,13 +23,16 @@ class NotificationHelper
             $planName = $contract && $contract->plan ? $contract->plan->nombre : 'N/A';
             $clinicaName = $contract && $contract->clinica ? $contract->clinica->nombre : 'N/A';
 
-            // Format data
+            // ===== FIX: Use INDIVIDUAL amounts from the receipt =====
             $fullName = trim($user->nombres . ' ' . $user->apellidos);
             $receiptNumber = $receipt->receipt_number;
 
-            // Convert to float
-            $amountUSD = (float)$payment->monto_pagado;
-            $amountBs = (float)$payment->monto_usd;
+            // Get the individual USD amount from the installment
+            $installment = Cuotas::findOne($receipt->installment_id);
+            $amountUSD = $installment ? ($installment->monto_usd ?: $installment->monto) : $payment->monto_pagado;
+
+            // Use the receipt's stored amount (individual Bs amount)
+            $amountBs = $receipt->amount;  // This is the INDIVIDUAL amount in Bs ✅
 
             $date = date('d/m/Y', strtotime($payment->fecha_pago));
             $coverageFrom = $receipt->coverage_start_date ? date('d/m/Y', strtotime($receipt->coverage_start_date)) : 'N/A';
@@ -50,15 +54,15 @@ class NotificationHelper
             $amountUSDFormatted = number_format($amountUSD, 2);
             $amountBsFormatted = number_format($amountBs, 2);
 
-            // Generate SIMPLE HTML for PDF (bulletproof version)
+            // Generate SIMPLE HTML for PDF using INDIVIDUAL amounts
             $pdfHtml = self::generateSimplePDFHtml(
                 $logoBase64,
                 $fullName,
                 $receiptNumber,
                 $contractNumber,
                 $installmentNumber,
-                $amountUSDFormatted,
-                $amountBsFormatted,
+                $amountUSDFormatted,   // INDIVIDUAL USD amount ✅
+                $amountBsFormatted,    // INDIVIDUAL Bs amount ✅
                 $date,
                 $coverageFrom,
                 $coverageTo,
@@ -71,6 +75,8 @@ class NotificationHelper
 
             // Generate PDF from simple HTML
             $pdfContent = self::generatePDFFromHtml($pdfHtml);
+
+            // ... rest of the code (HTML message, sending email, etc.)
 
             // HTML message for email body
             $htmlMessage = self::getHtmlMessage(
@@ -122,7 +128,7 @@ class NotificationHelper
         }
     }
 
-    private static function generateSimplePDFHtml($logoBase64, $fullName, $receiptNumber, $contractNumber, $installmentNumber, $amountUSDFormatted, $amountBsFormatted, $date, $coverageFrom, $coverageTo, $planName, $clinicaName, $user, $contract, $payment)
+    public static function generateSimplePDFHtml($logoBase64, $fullName, $receiptNumber, $contractNumber, $installmentNumber, $amountUSDFormatted, $amountBsFormatted, $date, $coverageFrom, $coverageTo, $planName, $clinicaName, $user, $contract, $payment)
     {
         // ============================================================
         // VERIFICAR SI HAY CONTRATANTE DIFERENTE
@@ -455,7 +461,7 @@ class NotificationHelper
         return $html;
     }
 
-    private static function generatePDFFromHtml($html)
+    public static function generatePDFFromHtml($html)
     {
         // Create mPDF instance with bulletproof settings
         $mpdf = new \Mpdf\Mpdf([

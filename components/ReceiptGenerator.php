@@ -24,7 +24,11 @@ class ReceiptGenerator
             return $generatedReceipts;
         }
 
-        $installments = Cuotas::find()->where(['id_pago' => $payment->id])->all();
+        // ===== FIX: Order by numero_cuota to ensure correct receipt order =====
+        $installments = Cuotas::find()
+            ->where(['id_pago' => $payment->id])
+            ->orderBy(['numero_cuota' => SORT_ASC])
+            ->all();
 
         if (empty($installments)) {
             return $generatedReceipts;
@@ -47,13 +51,20 @@ class ReceiptGenerator
 
     private static function generateSingleReceipt($payment, $installment, $contract, $user, $totalCuotas)
     {
-        $montoUSD = $payment->monto_pagado;
-        $montoBs = $payment->monto_usd;
+        // ===== CRITICAL: Calculate INDIVIDUAL cuota amount =====
+        // Get the individual cuota amount in USD
+        $cuotaMontoUSD = $installment->monto_usd ?: $installment->monto;
 
-        $tasa = 0;
-        if ($montoUSD > 0) {
-            $tasa = $montoBs / $montoUSD;
-        }
+        // Get the exchange rate from the payment
+        $tasa = $payment->tasa ?? 0;
+
+        // Calculate the individual cuota amount in Bs
+        $montoBs = $cuotaMontoUSD * $tasa;
+
+        // Total payment amounts (for reference/email only)
+        $montoUSDTotal = $payment->monto_pagado;
+        $montoTotalBs = $payment->monto_usd;
+
         $tasaFormatted = number_format($tasa, 2, ',', '.');
 
         $coverageStart = $installment->coverage_start ?: $contract->fecha_ini;
@@ -81,11 +92,11 @@ class ReceiptGenerator
         $profesion = $user->profesion ?: 'N/A';
         $tipoPersona = 'Natural';
 
-
         // ============================================================
         // CHECK IF CONTRATANTE DIFERENTE IS ENABLED
         // ============================================================
-        $tieneContratanteDiferente = $user->tiene_contratante_diferente;
+
+        $tieneContratanteDiferente = (bool) $user->tiene_contratante_diferente;
 
         // Default values (from the user itself)
         $contratanteNombre = $fullName;
@@ -106,7 +117,7 @@ class ReceiptGenerator
                 ? $user->tipo_cedula_contratante . '-' . $user->cedula_contratante
                 : $idNumber;
             $contratanteNacionalidad = $user->nacionalidad_contratante ?: $nacionalidad;
-            $contratanteTipoPersona = 'Natural'; // Could be from user_datos_type_id
+            $contratanteTipoPersona = 'Natural';
             $contratanteRazonSocial = $user->razon_social ?: '-';
             $contratanteDireccionCobro = $user->direccion_cobro_contratante ?: $direccionCobro;
             $contratanteTelefono = $user->telefono_celular_contratante ?: ($user->telefono_oficina_contratante ?: $telefono);
@@ -139,7 +150,8 @@ class ReceiptGenerator
         $coverageFrom = date('d/m/Y', strtotime($coverageStart));
         $coverageTo = date('d/m/Y', strtotime($coverageEnd));
 
-        $montoUSDFormatted = number_format($montoUSD, 2, ',', '.');
+        // ===== FIX: Use INDIVIDUAL cuota amounts =====
+        $montoUSDFormatted = number_format($cuotaMontoUSD, 2, ',', '.');
         $montoBsFormatted = number_format($montoBs, 2, ',', '.');
 
         $logoBase64 = '';
@@ -161,7 +173,6 @@ class ReceiptGenerator
                 ];
             }
         }
-        // If no data from database, use empty array (table will have no rows)
 
         $exclusionesTexto = $contract->plan && !empty($contract->plan->exclusiones)
             ? $contract->plan->exclusiones
@@ -169,58 +180,66 @@ class ReceiptGenerator
         $servicesHtml = '';
         foreach ($planServices as $service) {
             $servicesHtml .= '<tr>
-                <td style="border: 1px solid #000; padding: 6px; vertical-align: top;">' . htmlspecialchars($service['servicio']) . '</td>
-                <td style="border: 1px solid #000; padding: 6px; vertical-align: top; text-align: center;">' . htmlspecialchars($service['espera']) . '</td>
-                <td style="border: 1px solid #000; padding: 6px; vertical-align: top;">' . htmlspecialchars($service['descripcion']) . '</td>
-            </tr>';
+            <td style="border: 1px solid #000; padding: 6px; vertical-align: top;">' . htmlspecialchars($service['servicio']) . '</td>
+            <td style="border: 1px solid #000; padding: 6px; vertical-align: top; text-align: center;">' . htmlspecialchars($service['espera']) . '</td>
+            <td style="border: 1px solid #000; padding: 6px; vertical-align: top;">' . htmlspecialchars($service['descripcion']) . '</td>
+        </tr>';
         }
 
+        // Debug: Verify the values
+        Yii::info("=== RECEIPT DEBUG ===", 'receipt');
+        Yii::info("Cuota ID: {$installment->id}", 'receipt');
+        Yii::info("Cuota monto_usd: {$installment->monto_usd}", 'receipt');
+        Yii::info("Tasa: {$tasa}", 'receipt');
+        Yii::info("Individual Bs: {$montoBs}", 'receipt');
+        Yii::info("Total Bs (payment): {$montoTotalBs}", 'receipt');
+        Yii::info("=====================", 'receipt');
+
         $html = self::generateHTML(
-            $receiptNumber,
-            $contratoNumero,
-            $montoBsFormatted,
-            $fullName,
-            $idNumber,
-            $direccionCobro,
-            $telefono,
-            $email,
-            $sexo,
-            $nacionalidad,
-            $estadoCivil,
-            $profesion,
-            $tipoPersona,
-            $intermediarioNombre,
-            $intermediarioCodigo,
-            $planNombre,
-            $coberturaValor,
-            $sucursal,
-            $fechaEmision,
-            $fechaInicio,
-            $fechaVencimiento,
-            $fechaPago,
-            $coverageFrom,
-            $coverageTo,
-            $montoUSDFormatted,
-            $montoBsFormatted,
-            $tasaFormatted,
-            $payment->metodo_pago,
-            $payment->numero_referencia_pago,
-            $logoBase64,
-            $servicesHtml,
-            $exclusionesTexto,
-            $installmentNumber,
-            $totalCuotas,
-            $receiptNumber,
-            // NEW PARAMETERS for contratante diferente
-            $tieneContratanteDiferente,
-            $contratanteFullName,
-            $contratanteIdNumber,
-            $contratanteNacionalidad,
-            $contratanteTipoPersona,
-            $contratanteRazonSocial,
-            $contratanteDireccionCobro,
-            $contratanteTelefono,
-            $contratanteEmail
+            $receiptNumber,                    // 1
+            $contratoNumero,                   // 2
+            $montoBsFormatted,                 // 3 - INDIVIDUAL amount in Bs
+            $fullName,                         // 4
+            $idNumber,                         // 5
+            $direccionCobro,                   // 6
+            $telefono,                         // 7
+            $email,                            // 8
+            $sexo,                             // 9
+            $nacionalidad,                     // 10
+            $estadoCivil,                      // 11
+            $profesion,                        // 12
+            $tipoPersona,                      // 13
+            $intermediarioNombre,              // 14
+            $intermediarioCodigo,              // 15
+            $planNombre,                       // 16
+            $coberturaValor,                   // 17
+            $sucursal,                         // 18
+            $fechaEmision,                     // 19
+            $fechaInicio,                      // 20
+            $fechaVencimiento,                 // 21
+            $fechaPago,                        // 22
+            $coverageFrom,                     // 23
+            $coverageTo,                       // 24
+            $montoUSDFormatted,                // 25 - INDIVIDUAL amount in USD
+            $montoBsFormatted,                 // 26 - INDIVIDUAL amount in Bs (for Datos del Recibo)
+            $tasaFormatted,                    // 27
+            $payment->metodo_pago,             // 28
+            $payment->numero_referencia_pago,  // 29
+            $logoBase64,                       // 30
+            $servicesHtml,                     // 31
+            $exclusionesTexto,                 // 32
+            $installmentNumber,                // 33
+            $totalCuotas,                      // 34
+            $receiptNumber,                    // 35
+            $tieneContratanteDiferente,        // 36
+            $contratanteFullName,              // 37
+            $contratanteIdNumber,              // 38
+            $contratanteNacionalidad,          // 39
+            $contratanteTipoPersona,           // 40
+            $contratanteRazonSocial,           // 41
+            $contratanteDireccionCobro,        // 42
+            $contratanteTelefono,              // 43
+            $contratanteEmail                  // 44
         );
 
         $receipt = new Receipt();
@@ -232,7 +251,7 @@ class ReceiptGenerator
         $receipt->issue_date = date('Y-m-d');
         $receipt->coverage_start_date = $coverageStart;
         $receipt->coverage_end_date = $coverageEnd;
-        $receipt->amount = $montoBs;
+        $receipt->amount = $montoBs;  // INDIVIDUAL cuota amount in Bs
         $receipt->currency = 'Bs';
         $receipt->payment_method = self::mapPaymentMethod($payment->metodo_pago);
         $receipt->reference_number = $payment->numero_referencia_pago;
@@ -241,8 +260,7 @@ class ReceiptGenerator
         $receipt->html_content = $html;
 
         if ($receipt->save()) {
-            // Send notification to affiliate
-            NotificationHelper::sendReceiptNotification($receipt, $user, $payment);
+            // Email is now sent from PagosController after all receipts are generated
             return $receipt;
         }
         return null;
@@ -552,8 +570,7 @@ class ReceiptGenerator
         ><td width="50%"><strong>C.I. / R.I.F./ Pasaporte:</strong> {$contratanteIdNumber}</td
         ><td width="50%"><strong>Nacionalidad:</strong> {$contratanteNacionalidad}</td
         ><td width="50%"><strong>Tipo de persona:</strong> {$contratanteTipoPersona}</td
-        ><td width="50%"><strong>Razón Social:</strong> {$contratanteRazonSocial}</td
-    </tr>
+        ><td width="50%"><strong>Razón Social:</strong> {$contratanteRazonSocial}</td>
     <tr>
         <td colspan="5"><strong>Dirección de Cobro:</strong> {$contratanteDireccionCobro}</td
     >
@@ -564,11 +581,6 @@ class ReceiptGenerator
     >
     </tr>
 </table>
-
-<?php if ($tieneContratanteDiferente): ?>
-<div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 5px; margin-top: 5px; font-size: 9px; text-align: center; color: #856404;">
-    <i class="fas fa-info-circle"></i> El contratante es diferente al afiliado titular
-</div>
 
         <div class="subtitle">AFILIADO TITULAR</div>
         <table>
@@ -664,11 +676,11 @@ HTML;
 
     public static function getReceiptsForPayment($paymentId)
     {
-        return Receipt::find()->where(['payment_id' => $paymentId])->orderBy(['id' => SORT_ASC])->all();
-    }
-
-    public static function getReceiptForInstallment($installmentId)
-    {
-        return Receipt::findOne(['installment_id' => $installmentId]);
+        return Receipt::find()
+            ->select('receipts.*')
+            ->where(['payment_id' => $paymentId])
+            ->leftJoin('cuotas', 'cuotas.id = receipts.installment_id')
+            ->orderBy(['cuotas.numero_cuota' => SORT_ASC])  // ✅ Order by cuota number
+            ->all();
     }
 }

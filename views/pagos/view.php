@@ -3,8 +3,8 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 
-/* @var $this yii\web\View */
-/* @var $model app\models\Pagos */
+/** @var $this yii\web\View */
+/** @var \app\models\Pagos $model */
 
 $this->title = 'Detalle del Pago #' . $model->id;
 $this->params['breadcrumbs'][] = ['label' => 'Contratos', 'url' => ['/contratos/index', 'user_id' => $model->user_id]];
@@ -256,7 +256,10 @@ if (empty($payerId) || $payerId == '-') {
                             </thead>
                             <tbody>
                                 <?php foreach ($installments as $installment): ?>
-                                    <?php $receiptForInstallment = \app\components\ReceiptGenerator::getReceiptForInstallment($installment->id); ?>
+                                    <?php
+                                    // FIX: Use Receipt model directly instead of ReceiptGenerator
+                                    $receiptForInstallment = \app\models\Receipt::findOne(['installment_id' => $installment->id]);
+                                    ?>
                                     <tr style="border-bottom: 1px solid #f0f0f0;">
                                         <td class="text-center" style="padding: 12px; vertical-align: middle;">
                                             <span style="font-size: 18px; font-weight: 700; color: #0078d4;"><?= $installment->numero_cuota ?></span>

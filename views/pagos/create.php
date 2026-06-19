@@ -23,8 +23,8 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
 ?>
 
 <div class="pagos-create">
-    <!-- Command Bar - Microsoft Style -->
-    <div class="command-bar mb-4">
+    <!-- Command Bar - Microsoft Style (Smaller) -->
+    <div class="command-bar mb-3">
         <?= Html::a(
             '<i class="fas fa-arrow-left mr-2"></i> Volver a Contratos',
             Url::to(['contratos/index', 'user_id' => $model->user_id]),
@@ -35,7 +35,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
     <!-- SINGLE CLEAN FRAME - Microsoft Fluent Container -->
     <div class="fluent-container">
 
-        <!-- Header - Microsoft 365 Style with Affiliate Info -->
+        <!-- Header - Microsoft 365 Style with Affiliate Info (Smaller) -->
         <div class="fluent-header">
             <div class="d-flex align-items-center">
                 <div class="avatar-fluent">
@@ -120,7 +120,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                 }
                 ?>
 
-                <!-- Status Banner - Microsoft 365 Style -->
+                <!-- Status Banner - Microsoft 365 Style (Smaller) -->
                 <div class="status-banner-fluent <?= $config['class'] ?>">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
@@ -139,8 +139,8 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                     </div>
                 </div>
 
-                <!-- Contract Details Cards - LARGE TEXT VERSION -->
-                <div class="row mt-4">
+                <!-- Contract Details Cards - SMALLER VERSION -->
+                <div class="row mt-3">
                     <!-- BLUE CARD - Período del Contrato -->
                     <div class="col-md-3">
                         <div class="info-card card-blue">
@@ -149,7 +149,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                                     <i class="fas fa-calendar-alt"></i>
                                 </div>
                                 <div class="info-card-text">
-                                    <span class="info-card-label">PERÍODO DEL CONTRATO</span>
+                                    <span class="info-card-label">PERÍODO</span>
                                     <span class="info-card-value">
                                         <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:d/m/Y') ?>
                                         <i class="fas fa-arrow-right mx-1"></i>
@@ -168,7 +168,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                                     <i class="fas fa-hospital"></i>
                                 </div>
                                 <div class="info-card-text">
-                                    <span class="info-card-label">CLÍNICA ASIGNADA</span>
+                                    <span class="info-card-label">CLÍNICA</span>
                                     <span class="info-card-value">
                                         <?= $selectedContrato->clinica ? Html::encode($selectedContrato->clinica->nombre) : 'N/A' ?>
                                     </span>
@@ -185,7 +185,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                                     <i class="fas fa-file-alt"></i>
                                 </div>
                                 <div class="info-card-text">
-                                    <span class="info-card-label">PLAN CONTRATADO</span>
+                                    <span class="info-card-label">PLAN</span>
                                     <span class="info-card-value">
                                         <?= $selectedContrato->plan ? Html::encode($selectedContrato->plan->nombre) : 'N/A' ?>
                                     </span>
@@ -202,7 +202,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                                     <i class="fas fa-dollar-sign"></i>
                                 </div>
                                 <div class="info-card-text">
-                                    <span class="info-card-label">MONTO MENSUAL</span>
+                                    <span class="info-card-label">MONTO</span>
                                     <span class="info-card-value">
                                         $<?= number_format($selectedContrato->monto, 2) ?>
                                     </span>
@@ -212,37 +212,8 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
                     </div>
                 </div>
 
-                <!-- SINGLE ROW EYE-CATCHING REMINDER -->
-                <?php
-                $showReminder = false;
-                if (!empty($cuotas)) {
-                    foreach ($cuotas as $cuota) {
-                        if ($cuota->numero_cuota == 1 && $cuota->estatus == 'pendiente') {
-                            $showReminder = true;
-                            break;
-                        }
-                    }
-                }
-
-                if ($showReminder):
-                ?>
-                    <div class="reminder-single-row">
-                        <div class="reminder-icon-small">
-                            <i class="fas fa-bell"></i>
-                        </div>
-                        <div class="reminder-text">
-                            <span class="reminder-label">⚠️ IMPORTANTE: La fecha de pago debe ser igual a la fecha de inicio del contrato</span>
-
-                        </div>
-                        <div class="reminder-date-single">
-                            <i class="fas fa-calendar-check mr-1"></i>
-                            <?= Yii::$app->formatter->asDate($selectedContrato->fecha_ini, 'php:l, d \d\e F \d\e Y') ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
             <?php else: ?>
-                <!-- Error Message - Microsoft Style -->
+                <!-- Error Message - Microsoft Style (Smaller) -->
                 <div class="error-fluent">
                     <i class="fas fa-exclamation-circle"></i>
                     <div>
@@ -253,12 +224,13 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
             <?php endif; ?>
 
             <!-- Payment Form -->
-            <div class="mt-5">
+            <div class="mt-4">
                 <?= $this->render('_form', [
                     'model' => $model,
                     'cuotas' => $cuotas,
                     'user_id' => $model->user_id,
                     'isEditable' => true,
+                    'selectedContrato' => $selectedContrato,
                 ]) ?>
             </div>
         </div>
@@ -266,7 +238,7 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
 </div>
 
 <style>
-    /* ===== MICROSOFT ENTERPRISE STANDARD STYLES ===== */
+    /* ===== MICROSOFT ENTERPRISE STANDARD STYLES (COMPACT VERSION) ===== */
     /* Fluent UI Design System - Inspired by Microsoft 365 */
 
     /* Typography - Microsoft Segoe UI */
@@ -284,8 +256,8 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
         background: white;
         border: 1px solid #8a8886;
         color: #323130;
-        padding: 8px 20px;
-        font-size: 14px;
+        padding: 6px 16px;
+        font-size: 13px;
         font-weight: 500;
         border-radius: 4px;
         transition: all 0.1s ease;
@@ -309,10 +281,10 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
         overflow: hidden;
     }
 
-    /* Header - Microsoft 365 Style */
+    /* Header - Microsoft 365 Style (Compact) */
     .fluent-header {
         background: #0078d4;
-        padding: 24px 28px;
+        padding: 16px 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -334,48 +306,48 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
     }
 
     .avatar-fluent {
-        width: 56px;
-        height: 56px;
+        width: 44px;
+        height: 44px;
         background: rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 18px;
     }
 
     .header-title {
-        font-size: 24px;
+        font-size: 18px;
         font-weight: 600;
         line-height: 1.3;
-        margin-bottom: 6px;
+        margin-bottom: 3px;
     }
 
     .header-subtitle {
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 400;
     }
 
     .header-badge {
         background: rgba(255, 255, 255, 0.2);
         color: white;
-        padding: 8px 20px;
+        padding: 6px 16px;
         border-radius: 30px;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 500;
     }
 
     /* Content Area */
     .fluent-content {
-        padding: 28px;
+        padding: 20px 24px;
     }
 
-    /* Status Banner */
+    /* Status Banner (Compact) */
     .status-banner-fluent {
-        padding: 20px 28px;
-        border-radius: 8px;
-        margin-bottom: 28px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        padding: 14px 20px;
+        border-radius: 6px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     }
 
     .status-active {
@@ -407,100 +379,106 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
     }
 
     .status-icon-fluent {
-        width: 56px;
-        height: 56px;
+        width: 42px;
+        height: 42px;
         background: rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: 20px;
         color: white;
+        flex-shrink: 0;
     }
 
     .status-text {
         color: white;
-        font-size: 22px;
+        font-size: 17px;
         font-weight: 600;
         line-height: 1.2;
     }
 
     .status-desc {
         color: rgba(255, 255, 255, 0.9);
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 400;
     }
 
     .contract-number-fluent {
         background: rgba(255, 255, 255, 0.2);
-        padding: 10px 20px;
-        border-radius: 6px;
+        padding: 6px 16px;
+        border-radius: 4px;
         text-align: right;
+        flex-shrink: 0;
     }
 
     .contract-label {
         color: rgba(255, 255, 255, 0.8);
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 500;
         letter-spacing: 0.5px;
     }
 
     .contract-value {
         color: white;
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 600;
     }
 
-    /* ===== LARGE TEXT INFO CARDS ===== */
+    /* ===== COMPACT INFO CARDS ===== */
     .info-card {
-        border-radius: 16px;
+        border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         height: 100%;
     }
 
     .info-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
     }
 
     .info-card-content {
-        padding: 1.5rem 1.25rem;
+        padding: 0.9rem 1rem;
         display: flex;
         align-items: center;
-        gap: 1.25rem;
+        gap: 0.8rem;
     }
 
     .info-card-icon {
-        width: 70px;
-        height: 70px;
-        background: rgba(0, 0, 0, 0.08);
-        border-radius: 16px;
+        width: 44px;
+        height: 44px;
+        background: rgba(0, 0, 0, 0.06);
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 2.2rem;
+        font-size: 1.3rem;
+        flex-shrink: 0;
     }
 
     .info-card-text {
         flex: 1;
         display: flex;
         flex-direction: column;
+        min-width: 0;
     }
 
     .info-card-label {
-        font-size: 1.55rem;
+        font-size: 1.6rem;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
+        letter-spacing: 0.8px;
+        margin-bottom: 0.1rem;
+        font-weight: 700;
+        opacity: 0.7;
     }
 
     .info-card-value {
-        font-size: 1.35rem;
+        font-size: 1.5rem;
         font-weight: 700;
-        line-height: 1.4;
+        line-height: 1.3;
+        word-break: break-word;
     }
 
     /* Subtle Blue Card */
@@ -551,157 +529,59 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
         color: #4a148c;
     }
 
-    /* Error Message */
+    /* Error Message (Compact) */
     .error-fluent {
         background: #fef1f0;
         border: 1px solid #f3b9b4;
         border-left: 6px solid #d83b01;
-        padding: 20px;
+        padding: 14px 18px;
         display: flex;
         align-items: center;
-        gap: 20px;
-        border-radius: 8px;
+        gap: 16px;
+        border-radius: 6px;
     }
 
     .error-fluent i {
         color: #d83b01;
-        font-size: 32px;
+        font-size: 24px;
+        flex-shrink: 0;
     }
 
     .error-title {
         color: #323130;
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 700;
-        margin-bottom: 6px;
+        margin-bottom: 3px;
     }
 
     .error-message {
         color: #605e5c;
-        font-size: 15px;
-    }
-
-    /* ===== SINGLE ROW REMINDER ===== */
-    .reminder-single-row {
-        background: linear-gradient(135deg, #c6c2bf 0%, #ffecb3 100%);
-        border-left: 5px solid #e65100;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        margin-top: 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        box-shadow: 0 2px 8px rgba(230, 81, 0, 0.15);
-    }
-
-    .reminder-icon-small {
-        background: #e65100;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        animation: ring 1.5s ease infinite;
-    }
-
-    .reminder-icon-small i {
-        color: white;
-        font-size: 1.2rem;
-    }
-
-    .reminder-text {
-        flex: 1;
-        font-size: 1rem;
-        color: #bf360c;
-        font-weight: 500;
-    }
-
-    .reminder-label {
-        font-weight: 800;
-        margin-right: 0.5rem;
-        color: #e65100;
-        font-size: 2.05rem;
-    }
-
-    .reminder-date-single {
-        background: #e65100;
-        color: white;
-        padding: 0.5rem 1.2rem;
-        border-radius: 30px;
-        font-size: 1.9rem;
-        font-weight: 600;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    .reminder-date-single i {
-        font-size: 0.85rem;
-    }
-
-    @keyframes ring {
-        0% {
-            transform: rotate(0deg);
-        }
-
-        10% {
-            transform: rotate(10deg);
-        }
-
-        20% {
-            transform: rotate(-8deg);
-        }
-
-        30% {
-            transform: rotate(6deg);
-        }
-
-        40% {
-            transform: rotate(-4deg);
-        }
-
-        50% {
-            transform: rotate(2deg);
-        }
-
-        60% {
-            transform: rotate(0deg);
-        }
-
-        100% {
-            transform: rotate(0deg);
-        }
+        font-size: 13px;
     }
 
     /* Responsive */
-    @media (max-width: 992px) {
-        .reminder-single-row {
-            flex-direction: column;
-            text-align: center;
-        }
-
-        .reminder-date-single {
-            white-space: normal;
-        }
-    }
-
     @media (max-width: 768px) {
         .fluent-header {
             flex-direction: column;
             text-align: center;
-            gap: 16px;
+            gap: 12px;
+            padding: 14px 16px;
+        }
+
+        .fluent-content {
+            padding: 14px 16px;
         }
 
         .info-card-content {
             flex-direction: column;
             text-align: center;
+            padding: 0.7rem;
         }
 
         .status-banner-fluent .d-flex {
             flex-direction: column;
             text-align: center;
-            gap: 16px;
+            gap: 12px;
         }
 
         .status-icon-fluent {
@@ -710,6 +590,18 @@ $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $cedula : $cedula;
 
         .contract-number-fluent {
             text-align: center;
+        }
+
+        .header-title {
+            font-size: 16px;
+        }
+
+        .header-subtitle {
+            font-size: 12px;
+        }
+
+        .info-card-value {
+            font-size: 0.75rem;
         }
     }
 

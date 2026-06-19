@@ -64,19 +64,19 @@ $pieDataJson = json_encode($pieData);
                     ) ?>
                 </div>
             </div>
-            
+
             <div class="ms-panel-body">
                 <!-- Filtro por clínica -->
                 <div class="row mb-4">
-                     <?php if($permisos){?>
-                    <div class="col-md-6">
-                        <?php $form = ActiveForm::begin([
-                            'method' => 'get',
-                            'action' => ['/sis-siniestro/por-clinica'],
-                        ]); ?>
+                    <?php if ($permisos) { ?>
+                        <div class="col-md-6">
+                            <?php $form = ActiveForm::begin([
+                                'method' => 'get',
+                                'action' => ['/sis-siniestro/por-clinica'],
+                            ]); ?>
 
-                       
-                        
+
+
                             <div class="input-group">
                                 <?= Html::dropDownList(
                                     'clinica_id',
@@ -88,44 +88,44 @@ $pieDataJson = json_encode($pieData);
                                     <?= Html::submitButton('<i class="fas fa-filter"></i> Filtrar', ['class' => 'btn btn-primary btn-lg']) ?>
                                 </div>
                             </div>
-                        
-                        
-                        <?php ActiveForm::end(); ?>
-                    </div>
-                <?php }else{ ?>
-                     <div class="col-md-6">
-                        <h4>Clínica</h4>
-                    </div>
 
-            <?php } ?>
-                    
+
+                            <?php ActiveForm::end(); ?>
+                        </div>
+                    <?php } else { ?>
+                        <div class="col-md-6">
+                            <h4>Clínica</h4>
+                        </div>
+
+                    <?php } ?>
+
                     <div class="col-md-6 text-right">
                         <div class="alert alert-info">
                             <h3><strong>Resumen:</strong>
-                            Total: <?= $estadisticas['total'] ?> | 
-                            Atendidos: <span class="text-success"><?= $estadisticas['atendidos'] ?></span> | 
-                            No Atendidos: <span class="text-danger"><?= $estadisticas['no_atendidos'] ?></span></h3>
+                                Total: <?= $estadisticas['total'] ?> |
+                                Atendidos: <span class="text-success"><?= $estadisticas['atendidos'] ?></span> |
+                                No Atendidos: <span class="text-danger"><?= $estadisticas['no_atendidos'] ?></span></h3>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Gráficos - Tamaño reducido 50% -->
                 <div class="row mb-4">
                     <?php if (empty($clinicaSeleccionada) && !empty($estadisticas['por_clinica'])): ?>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title">Siniestros por Clínica (Comparativo)</h5>
-                            </div>
-                            <div class="card-body">
-                                <div style="height: 200px; width: 100%;"> <!-- Reducido de 400px a 200px (50%) -->
-                                    <canvas id="clinicaChart"></canvas>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Siniestros por Clínica (Comparativo)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div style="height: 200px; width: 100%;"> <!-- Reducido de 400px a 200px (50%) -->
+                                        <canvas id="clinicaChart"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                     <?php endif; ?>
-                    
+
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
@@ -139,7 +139,7 @@ $pieDataJson = json_encode($pieData);
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Tabla de siniestros -->
                 <div class="card">
                     <div class="card-header">
@@ -152,7 +152,7 @@ $pieDataJson = json_encode($pieData);
                                 'dataProvider' => $dataProvider,
                                 'filterModel' => $searchModel,
                                 'layout' => "{items}{pager}",
-                                
+
                                 'columns' => [
                                     [
                                         'attribute' => 'id',
@@ -166,9 +166,9 @@ $pieDataJson = json_encode($pieData);
                                     ],
                                     [
                                         'attribute' => 'afiliado_nombre',
-                                        'value' => function($model) {
-                                            return $model->afiliado ? 
-                                                Html::encode($model->afiliado->nombres . ' ' . $model->afiliado->apellidos) : 
+                                        'value' => function ($model) {
+                                            return $model->afiliado ?
+                                                Html::encode($model->afiliado->nombres . ' ' . $model->afiliado->apellidos) :
                                                 'N/A';
                                         },
                                         'label' => 'Nombre del Afiliado',
@@ -179,9 +179,9 @@ $pieDataJson = json_encode($pieData);
                                     ],
                                     [
                                         'attribute' => 'afiliado_cedula',
-                                        'value' => function($model) {
-                                            return $model->afiliado ? 
-                                                Html::encode(($model->afiliado->tipo_cedula ? $model->afiliado->tipo_cedula . '-' : '') . $model->afiliado->cedula) : 
+                                        'value' => function ($model) {
+                                            return $model->afiliado ?
+                                                Html::encode(($model->afiliado->tipo_cedula ? $model->afiliado->tipo_cedula . '-' : '') . $model->afiliado->cedula) :
                                                 'N/A';
                                         },
                                         'label' => 'Cédula del Afiliado',
@@ -207,17 +207,7 @@ $pieDataJson = json_encode($pieData);
                                         'format' => ['currency', 'USD'],
                                         'contentOptions' => ['style' => 'text-align: right;'],
                                     ],
-                                    [
-                                        'attribute' => 'atendido',
-                                        'format' => 'html',
-                                        'value' => function($model) {
-                                            return $model->atendido == 1 ? 
-                                                '<span class="badge badge-success">Atendido</span>' : 
-                                                '<span class="badge badge-danger">No Atendido</span>';
-                                        },
-                                        'filter' => [1 => 'Atendido', 0 => 'No Atendido'],
-                                        'contentOptions' => ['style' => 'text-align: center;'],
-                                    ],
+
                                     [
                                         'attribute' => 'fecha_atencion',
                                         'filter' => false,

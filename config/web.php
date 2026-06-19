@@ -7,54 +7,55 @@ $modules = require __DIR__ . '/modules.php';
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log', 'admin'], // 'admin' y 'as access' deben estar en bootstrap
+    'controllerNamespace' => 'app\\controllers',  // Tells Yii where to find controllers
+    'bootstrap' => ['log', 'admin'],
     'language' => 'es',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
-        '@kvgrid' => '@vendor/kartik-v/yii2-grid', // el GridView
+        '@kvgrid' => '@vendor/kartik-v/yii2-grid',
     ],
     'modules' => $modules,
     'components' => [
 
         'assetManager' => [
             'bundles' => [
-                'dmstr\web\AdminLteAsset' => [ // O el AssetBundle correcto de AdminLTE
-                    //'css' => [], // Comentado para no vaciar la lista de CSS originales de AdminLTE
-                    'depends' => [ // Mantener dependencias
+                'dmstr\web\AdminLteAsset' => [
+                    'depends' => [
                         'yii\web\YiiAsset',
-                        'yii\bootstrap4\BootstrapAsset', // Cambiado a Bootstrap 4
-                        //'rmrevin\yii\fontawesome\AssetBundle', // Comentado FontAwesome para evitar error
+                        'yii\bootstrap4\BootstrapAsset',
                     ],
                 ],
             ],
         ],
+
         'formatter' => [
-            'defaultTimeZone' => 'America/Caracas', // ¡Esta es la línea clave!
-            // Opcional: Puedes también configurar el locale si lo necesitas
+            'defaultTimeZone' => 'America/Caracas',
             'locale' => 'es-VE',
         ],
+
         'authManager' => [
-            'class' => 'yii\rbac\DbManager', // Correcto: Usando DbManager para RBAC en base de datos
-            // Puedes configurar un valor de caché si lo necesitas para entornos de producción:
-            // 'cache' => 'cache',
+            'class' => 'yii\rbac\DbManager',
         ],
+
         'user' => [
             'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true, // Habilitado para recordar al usuario
-            'authTimeout' => 3600 * 24 * 30, // Tiempo de duración de la sesión (ej. 30 días si enableAutoLogin es true)
-            // 'enableSession' => false, // Descomentar si usas token de autenticación sin sesión
+            'enableAutoLogin' => true,
+            'authTimeout' => 3600 * 24 * 30,
         ],
+
         'request' => [
-            // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
             'cookieValidationKey' => 'oqoctAFA1HZuDUMmYC4NcfCiL_X_NFph',
         ],
+
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],
+
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
+
         'mailer' => [
             'class' => 'yii\symfonymailer\Mailer',
             'useFileTransport' => false,
@@ -67,24 +68,31 @@ $config = [
                 'encryption' => 'ssl',
             ],
         ],
+
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
             'targets' => [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
-                    'logFile' => '@runtime/logs/app.log', // Ruta donde se guardará el "reporte"
-                    'maxFileSize' => 1024 * 2, // Tamaño máximo del archivo en KB
-                    'maxLogFiles' => 5, // Número de archivos de log a mantener
+                    'logFile' => '@runtime/logs/app.log',
+                    'maxFileSize' => 1024 * 2,
+                    'maxLogFiles' => 5,
                 ],
             ],
         ],
+
         'db' => $db,
 
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                // RTON Report Routes
+                'rton-report' => 'rton-report/index',
+                'rton-report/export-excel' => 'rton-report/export-excel',
+                'rton-report/export-csv' => 'rton-report/export-csv',
+
                 // Cuota Web Controller Routes
                 'v2/cuota/generar' => 'cuota-web/generar',
                 'v2/cuota/generar-mensual' => 'cuota-web/generar-mensual',
@@ -96,50 +104,46 @@ $config = [
                 'v2/cuota/verificar-espera' => 'cuota-web/verificar-espera',
                 'reportes/comisiones' => 'reportes/comisiones',
                 'reportes/get-comisiones-detail' => 'reportes/get-comisiones-detail',
-
-                // Puedes añadir tus reglas de URL aquí si necesitas URLs más amigables para tus propias rutas.
             ],
         ],
 
         // BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
         'i18n' => [
             'translations' => [
-                'kvgrid' => [ // Categoría para los mensajes de Kartik GridView
+                'kvgrid' => [
                     'class' => 'yii\i18n\PhpMessageSource',
-                    'basePath' => '@kvgrid/messages', // Ubicación de los archivos de traducción de Kartik
-                    'forceTranslation' => true, // Opcional, pero recomendado para asegurar que se traduzca
+                    'basePath' => '@kvgrid/messages',
+                    'forceTranslation' => true,
                 ],
-                // Si en el futuro tienes errores con 'kvdrange' o 'kvsfmsg',
-                // también los añadirías aquí siguiendo el mismo patrón:
-                // 'kvdrange' => [
-                //     'class' => 'yii\i18n\PhpMessageSource',
-                //     'basePath' => '@kvdrange/messages',
-                //     'forceTranslation' => true,
-                // ],
             ],
         ],
+
         'mpdf' => [
             'class' => 'kartik\mpdf\Pdf',
             'format' => \kartik\mpdf\Pdf::FORMAT_A4,
             'orientation' => \kartik\mpdf\Pdf::ORIENT_PORTRAIT,
             'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
         ],
-        // FIN BLOQUE DE CONFIGURACIÓN DE I18N PARA KARTIK
 
     ],
-    // 'as access' debe ir aquí, fuera de 'components'
+
+    // CONTROLLER MAP - This goes OUTSIDE of components (at the same level as 'components')
+    'controllerMap' => [
+        'rton-report' => [
+            'class' => 'app\controllers\RTONReportController',
+        ],
+    ],
+
     'as access' => [
         'class' => 'mdm\admin\components\AccessControl',
         'allowActions' => [
-            //'gii/*',
             'site/login',
             'site/logout',
             'site/error',
-            'site/tabs-data', // Permite acceso público a todas las acciones de SiteController (login, error, etc.)
-            'debug/*',             // Permite acceso público a Debug Toolbar (solo para desarrollo)
-
+            'site/tabs-data',
+            'debug/*',
             'reportes/*',
-            // TEMPORARY: Add cuota web actions for testing (remove in production for security)
+            'rton-report/*',  // Allows RTON report access
             'cuota-web/generar',
             'cuota-web/generar-mensual',
             'cuota-web/verificar-diario',
@@ -148,30 +152,28 @@ $config = [
             'cuota-web/resumen-atrasadas',
             'cuota-web/verificar-contratos-vencidos',
             'cuota-web/verificar-espera',
-            'site/test-email',        // Add this
-            'site/test-notification', // Add this
+            'site/test-email',
+            'site/test-notification',
         ]
     ],
+
     'params' => $params,
 ];
 
 if (YII_ENV_DEV) {
-    // configuration adjustments for 'dev' environment
     $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
         'class' => 'yii\debug\Module',
-        // uncomment the following to add your IP if you are not connecting from localhost.
-        // 'allowedIPs' => ['127.0.0.1', '::1'], // DESCOMENTA Y AJUSTA SI ES NECESARIO
     ];
 
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [
         'class' => 'yii\gii\Module',
-        'generators' => [ // here
-            'crud' => [ // generator name
-                'class' => 'yii\gii\generators\crud\Generator', // generator class
-                'templates' => [ // setting for our templates
-                    'yii2-adminlte3' => '@vendor/hail812/yii2-adminlte3/src/gii/generators/crud/default' // template name => path to template
+        'generators' => [
+            'crud' => [
+                'class' => 'yii\gii\generators\crud\Generator',
+                'templates' => [
+                    'yii2-adminlte3' => '@vendor/hail812/yii2-adminlte3/src/gii/generators/crud/default'
                 ]
             ]
         ]
