@@ -302,10 +302,8 @@ if (!empty($summaryPorClinica)):
                     <div class="col-lg-6">
                         <div class="d-flex align-items-center justify-content-lg-end flex-wrap gap-3">
                             <!-- Analytics Button Added Here -->
-                            <a href="#analytics-section" class="ms-btn ms-btn-primary px-3 py-2 shadow btn-analytics"
-                                style="font-size: 1.3rem !important;">
-                                <i class="fas fa-chart-bar me-2"></i>Ver Análisis Gráfico
-                            </a>
+                            <!-- In _pagos-resumen-clinicas.php - Replace the analytics button -->
+                            >
 
                             <div class="d-flex align-items-center">
                                 <div class="rounded-circle me-2"

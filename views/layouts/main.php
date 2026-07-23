@@ -17,7 +17,6 @@ if (YII_ENV_PROD) {
     };
 }
 
-
 AppAsset::register($this);
 
 // --- START: CUSTOM CSS FOR NESTED MENU ---
@@ -43,7 +42,7 @@ $customCss = '
 
 /* Level 1: Main menu items (Agencia, Dashboard, etc.) */
 .nav-sidebar > .nav-item > .nav-link:hover {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important; /* RESTORED: Dark Gray/Slate */
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%) !important;
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -57,15 +56,15 @@ $customCss = '
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Level 3: Second-level sub-menu items (Indicadores de Ventas children) */
+/* Level 3: Second-level sub-menu items */
 .nav-sidebar .nav-treeview .nav-treeview .nav-link:hover {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; /* RESTORED: Blue */
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     color: #ffffff !important;
     transform: translateX(8px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ===== HOVER EFFECTS FOR ICONS - NO CHANGE ===== */
+/* ===== HOVER EFFECTS FOR ICONS ===== */
 
 /* Main menu icons */
 .nav-sidebar > .nav-item > .nav-link:hover > .nav-icon {
@@ -75,7 +74,7 @@ $customCss = '
 
 /* First-level sub-menu icons */
 .nav-sidebar .nav-treeview .nav-link:hover > .nav-icon {
-    color: #333333 !important;  /* Cambiado a negro para que coincida con el texto */
+    color: #333333 !important;
     transform: scale(1.1) !important;
 }
 
@@ -85,7 +84,7 @@ $customCss = '
     transform: scale(1.1) !important;
 }
 
-/* ===== HOVER EFFECTS FOR TEXT - NO CHANGE ===== */
+/* ===== HOVER EFFECTS FOR TEXT ===== */
 
 .nav-sidebar .nav-link:hover > .menu-text {
     color: #f7fafc !important;
@@ -93,7 +92,7 @@ $customCss = '
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* ===== ACTIVE STATE STYLING FOR ALL LEVELS - NO CHANGE ===== */
+/* ===== ACTIVE STATE STYLING FOR ALL LEVELS ===== */
 
 .nav-sidebar .nav-link.active {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
@@ -126,7 +125,7 @@ $customCss = '
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* ===== PULSE ANIMATION FOR ACTIVE ITEMS - NO CHANGE ===== */
+/* ===== PULSE ANIMATION FOR ACTIVE ITEMS ===== */
 
 .nav-sidebar .nav-link.active::before {
     content: "";
@@ -141,15 +140,15 @@ $customCss = '
 
 /* Different pulse colors for different levels */
 .nav-sidebar > .nav-item > .nav-link.active::before {
-    background: rgba(99, 179, 237, 0.15); /* Blue pulse for main menu */
+    background: rgba(99, 179, 237, 0.15);
 }
 
 .nav-sidebar .nav-treeview .nav-link.active::before {
-    background: rgba(52, 206, 87, 0.15); /* Green pulse for first-level */
+    background: rgba(52, 206, 87, 0.15);
 }
 
 .nav-sidebar .nav-treeview .nav-treeview .nav-link.active::before {
-    background: rgba(93, 173, 226, 0.15); /* Light blue pulse for second-level */
+    background: rgba(93, 173, 226, 0.15);
 }
 
 @keyframes pulse-submenu {
@@ -164,17 +163,14 @@ $customCss = '
     }
 }
 
-/* ===== REMOVED: RIPPLED EFFECT FOR ALL MENU ITEMS - NO CHANGE ===== */
-/* This section intentionally left blank to remove the arrow/ripple effect */
-
-/* ===== FOCUS STATES FOR ACCESSIBILITY - NO CHANGE ===== */
+/* ===== FOCUS STATES FOR ACCESSIBILITY ===== */
 
 .nav-sidebar .nav-link:focus {
     outline: none;
     box-shadow: 0 0 0 2px #63b3ed, 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ===== MENU STRUCTURE FIXES - NO CHANGE ===== */
+/* ===== MENU STRUCTURE FIXES ===== */
 
 /* Ensure menus stay open and show sub-items */
 .nav-sidebar > .nav-item.menu-open > .nav-treeview {
@@ -260,12 +256,11 @@ $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
     <meta name="msapplication-TileImage" content=<?= $logo_pestana ?> />
     <meta name="csrf-token" content="<?= Yii::$app->request->getCsrfToken() ?>">
 
-    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- ============================================ -->
+    <!-- FONT AWESOME - UNCOMMENTED FOR PRODUCTION   -->
+    <!-- ============================================ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
--->
     <!-- Load Chart.js for charts and graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
 

@@ -5,14 +5,21 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use yii\grid\GridView;
 use yii\widgets\Pjax;
+use yii\data\ArrayDataProvider;
 use kartik\select2\Select2;
 use app\components\UserHelper;
+use app\models\RmClinica;
 
 /* @var $this yii\web\View */
 /* @var $searchModel app\models\AfiliadosReportSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 /* @var $clinicaList array */
 /* @var $tipoAfiliadoList array */
+
+// Ensure $searchModel is defined to prevent undefined variable notices in views
+if (!isset($searchModel) || !$searchModel) {
+    $searchModel = new \app\models\AfiliadosReportSearch();
+}
 
 $this->title = 'Reporte de Afiliados';
 $this->params['breadcrumbs'][] = $this->title;
@@ -30,6 +37,36 @@ if ($hasClinicAccess) {
     $accessibleClinicas = [];
     $accessibleClinicaIds = [];
     $hasMultipleClinicas = true;
+}
+
+// Ensure $clinicaList is defined to prevent undefined variable notices
+if (!isset($clinicaList) || !is_array($clinicaList)) {
+    if ($hasClinicAccess && !empty($accessibleClinicas)) {
+        $clinicaList = \yii\helpers\ArrayHelper::map($accessibleClinicas, 'id', 'nombre');
+    } else {
+        // Fallback: try to load all clinics for admins or when no access restriction
+        $clinicaList = [];
+        try {
+            $clinicas = RmClinica::find()->select(['id', 'nombre'])->orderBy('nombre')->all();
+            $clinicaList = \yii\helpers\ArrayHelper::map($clinicas, 'id', 'nombre');
+        } catch (\Throwable $e) {
+            // keep empty list on failure
+            $clinicaList = [];
+        }
+    }
+}
+
+// Ensure $dataProvider is defined to prevent undefined variable notices
+if (!isset($dataProvider) || !$dataProvider) {
+    $dataProvider = new ArrayDataProvider([
+        'allModels' => [],
+        'pagination' => ['pageSize' => 10],
+    ]);
+}
+
+// Ensure $tipoAfiliadoList is defined to prevent undefined variable notices
+if (!isset($tipoAfiliadoList) || !is_array($tipoAfiliadoList)) {
+    $tipoAfiliadoList = [];
 }
 ?>
 <div class="user-datos-index">
@@ -123,8 +160,6 @@ if ($hasClinicAccess) {
                                 ],
                             ]) ?>
                         </div>
-
-                        <!-- REMOVED: Estatus Solvente filter -->
                     </div>
 
                     <div class="form-group">
@@ -173,12 +208,16 @@ if ($hasClinicAccess) {
                 'columns' => [
                     [
                         'header' => '#',
-                        'value' => function ($model, $key, $index, $column) use ($dataProvider) {
-                            $page = $dataProvider->pagination->page;
-                            $pageSize = $dataProvider->pagination->pageSize;
-                            return ($page * $pageSize) + $index + 1;
+                        'value' => function ($model, $key, $index, $column) {
+                            $dataProvider = isset($column->grid->dataProvider) ? $column->grid->dataProvider : null;
+                            if ($dataProvider && $dataProvider->pagination) {
+                                $page = $dataProvider->pagination->page;
+                                $pageSize = $dataProvider->pagination->pageSize;
+                                return ($page * $pageSize) + $index + 1;
+                            }
+                            return $index + 1;
                         },
-                        'headerOptions' => ['style' => 'width: 5%'],
+                        'headerOptions' => ['style' => 'width: 4%'],
                         'contentOptions' => ['style' => 'text-align: center; font-weight: bold;'],
                         'enableSorting' => false,
                     ],
@@ -187,7 +226,7 @@ if ($hasClinicAccess) {
                         'value' => function ($model) {
                             return $model->nombres . ' ' . $model->apellidos;
                         },
-                        'headerOptions' => ['style' => 'width: 35%'],
+                        'headerOptions' => ['style' => 'width: 18%'],
                         'enableSorting' => false,
                     ],
                     [
@@ -195,7 +234,55 @@ if ($hasClinicAccess) {
                         'value' => function ($model) {
                             return $model->tipo_cedula . '-' . $model->cedula;
                         },
-                        'headerOptions' => ['style' => 'width: 20%'],
+                        'headerOptions' => ['style' => 'width: 10%'],
+                        'contentOptions' => ['style' => 'text-align: center;'],
+                        'enableSorting' => false,
+                    ],
+                    [
+                        'label' => 'Fecha de Afiliación',
+                        'value' => function ($model) {
+                            // Get the most recent active contract (non-annulled)
+                            $contrato = $model->getContratos()
+                                ->where(['!=', 'estatus', 'Anulado'])
+                                ->orderBy(['fecha_ini' => SORT_DESC])
+                                ->one();
+
+                            // Check if contract exists and has fecha_ini
+                            if ($contrato && !empty($contrato->fecha_ini)) {
+                                return Yii::$app->formatter->asDate($contrato->fecha_ini, 'dd/MM/yyyy');
+                            } elseif ($contrato && !empty($contrato->created_at)) {
+                                // Fallback to created_at if fecha_ini is not set
+                                return Yii::$app->formatter->asDate($contrato->created_at, 'dd/MM/yyyy');
+                            }
+                            return 'No definida';
+                        },
+                        'headerOptions' => ['style' => 'width: 10%'],
+                        'contentOptions' => ['style' => 'text-align: center;'],
+                        'enableSorting' => false,
+                    ],
+                    [
+                        'label' => 'Plan',
+                        'value' => function ($model) {
+                            return $model->plan ? $model->plan->nombre : '';
+                        },
+                        'headerOptions' => ['style' => 'width: 12%'],
+                        'contentOptions' => ['style' => 'text-align: center;'],
+                        'enableSorting' => false,
+                    ],
+                    [
+                        'label' => 'Cuotas Pagadas',
+                        'value' => function ($model) {
+                            // Count paid cuotas across ALL contracts (excluding annulled)
+                            $totalPaid = \app\models\Cuotas::find()
+                                ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
+                                ->where(['contratos.user_id' => $model->id])
+                                ->andWhere(['!=', 'contratos.estatus', 'Anulado'])
+                                ->andWhere(['cuotas.estatus' => 'pagada'])
+                                ->count();
+                            return $totalPaid > 0 ? $totalPaid : '0';
+                        },
+                        'headerOptions' => ['style' => 'width: 8%'],
+                        'contentOptions' => ['style' => 'text-align: center;'],
                         'enableSorting' => false,
                     ],
                     [
@@ -203,7 +290,8 @@ if ($hasClinicAccess) {
                         'value' => function ($model) {
                             return $model->clinica ? $model->clinica->nombre : '';
                         },
-                        'headerOptions' => ['style' => 'width: 40%'],
+                        'headerOptions' => ['style' => 'width: 38%'],
+                        'contentOptions' => ['style' => 'text-align: center;'],
                         'enableSorting' => false,
                     ],
                 ],
@@ -227,16 +315,21 @@ if ($hasClinicAccess) {
                 <div class="row">
                     <div class="col-md-4">
                         <strong><i class="fas fa-info-circle"></i> Total de Afiliados:</strong>
-                        <span class="badge badge-pill badge-primary"><?= number_format($dataProvider->getTotalCount()) ?></span>
+                        <span class="badge badge-pill badge-primary"><?=
+                                                                        (isset($dataProvider) && is_object($dataProvider) && method_exists($dataProvider, 'getTotalCount'))
+                                                                            ? number_format($dataProvider->getTotalCount()) : '0'
+                                                                        ?>
+                        </span>
                     </div>
                     <div class="col-md-4">
                         <strong><i class="fas fa-hospital"></i> Clínicas:</strong>
                         <?php
-                        // Get unique clinic IDs from the current page
                         $clinicaIds = [];
-                        foreach ($dataProvider->getModels() as $model) {
-                            if ($model->clinica_id) {
-                                $clinicaIds[$model->clinica_id] = true;
+                        if (isset($dataProvider) && is_object($dataProvider) && method_exists($dataProvider, 'getModels')) {
+                            foreach ($dataProvider->getModels() as $model) {
+                                if (isset($model->clinica_id) && $model->clinica_id) {
+                                    $clinicaIds[$model->clinica_id] = true;
+                                }
                             }
                         }
                         $uniqueClinicas = count($clinicaIds);
@@ -278,7 +371,6 @@ if ($hasClinicAccess) {
 </div>
 
 <?php
-// Add CSS styles
 $this->registerCss('
     .card {
         box-shadow: 0 2px 4px rgba(0,0,0,.1);

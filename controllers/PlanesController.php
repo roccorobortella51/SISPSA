@@ -66,13 +66,14 @@ class PlanesController extends Controller
             $model->clinica_id = $clinica_id;
             $model->estatus = "Activo";
             if ($model->save()) {
+                Yii::$app->session->setFlash('success', 'El plan ha sido creado exitosamente.');
             } else {
-                var_dump($model->errors);
-                die();
+                Yii::$app->session->setFlash('error', 'Error al crear el plan: ' . implode(', ', $model->firstErrors));
+                // Keep debug for development but with proper message
+                Yii::error('Error creating plan: ' . print_r($model->errors, true));
             };
             return $this->redirect(['index', 'clinica_id' => $clinica->id]);
         }
-
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -298,20 +299,26 @@ class PlanesController extends Controller
                     $item->baremo_id = $itemData['baremo_id'];
 
                     if (!$item->save()) {
-                        echo "MODEL NOT SAVED";
-                        print_r($item->getAttributes());
-                        print_r($item->getErrors());
-                        exit;
+                        Yii::error("Error saving coverage item: " . print_r($item->getErrors(), true));
+                        Yii::$app->session->setFlash('error', 'Error al guardar la cobertura para el servicio: ' . $itemData['nombre_servicio']);
+                        return $this->render('create', [
+                            'model' => $model,
+                            'itemsModels' => $itemsModels,
+                            'clinica' => $clinica
+                        ]);
                     }
                 }
 
+                Yii::$app->session->setFlash('success', 'El plan ha sido creado exitosamente con sus coberturas.');
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
-
-                echo "MODEL NOT SAVED";
-                print_r($model->getAttributes());
-                print_r($model->getErrors());
-                exit;
+                Yii::error("Error saving plan: " . print_r($model->getErrors(), true));
+                Yii::$app->session->setFlash('error', 'Error al guardar el plan: ' . implode(', ', $model->firstErrors));
+                return $this->render('create', [
+                    'model' => $model,
+                    'itemsModels' => $itemsModels,
+                    'clinica' => $clinica
+                ]);
             }
         }
 
@@ -336,22 +343,6 @@ class PlanesController extends Controller
         // ONLY get existing coverage items - NOT missing ones
         $itemsModels = $model->planesItemsCoberturas;
         $clinica = RmClinica::find()->where(['id' => $model->clinica_id])->one();
-
-        // ===== REMOVED: This block that adds ALL missing baremos =====
-        // $baremosFaltantes = Baremo::find()
-        //     ->where(['clinica_id' => $model->clinica_id])
-        //     ->andWhere(['not in', 'id', ArrayHelper::getColumn($itemsModels, 'baremo_id')])
-        //     ->all();
-        //
-        // foreach ($baremosFaltantes as $baremo) {
-        //     $item = new PlanesItemsCobertura([
-        //         'baremo_id' => $baremo->id,
-        //         'nombre_servicio' => $baremo->nombre_servicio,
-        //         'porcentaje_cobertura' => 80,
-        //     ]);
-        //     $itemsModels[] = $item;
-        // }
-        // ===== END REMOVED BLOCK =====
 
         if ($model->load(Yii::$app->request->post())) {
             $transaction = Yii::$app->db->beginTransaction();
@@ -384,7 +375,7 @@ class PlanesController extends Controller
                         if (!$item->save()) {
                             $transaction->rollBack();
                             Yii::error("Failed to save coverage item: " . print_r($item->getErrors(), true));
-                            Yii::$app->session->setFlash('error', 'Error saving coverage for service: ' . $itemData['nombre_servicio']);
+                            Yii::$app->session->setFlash('error', 'Error al guardar la cobertura para el servicio: ' . $itemData['nombre_servicio']);
                             return $this->render('update', [
                                 'model' => $model,
                                 'itemsModels' => $itemsModels,
@@ -394,12 +385,13 @@ class PlanesController extends Controller
                     }
 
                     $transaction->commit();
-                    Yii::$app->session->setFlash('success', 'Plan updated successfully');
+                    Yii::$app->session->setFlash('success', 'El plan ha sido actualizado exitosamente.');
                     return $this->redirect(['view', 'id' => $model->id]);
                 }
             } catch (\Exception $e) {
                 $transaction->rollBack();
-                Yii::$app->session->setFlash('error', 'Update error: ' . $e->getMessage());
+                Yii::error('Update error: ' . $e->getMessage());
+                Yii::$app->session->setFlash('error', 'Error al actualizar el plan: ' . $e->getMessage());
             }
         }
 
@@ -428,10 +420,11 @@ class PlanesController extends Controller
             PlanesItemsCobertura::deleteAll(['plan_id' => $id]);
             $model->delete();
             $transaction->commit();
-            Yii::$app->session->setFlash('success', 'Plan deleted successfully.');
+            Yii::$app->session->setFlash('success', 'El plan ha sido eliminado exitosamente.');
         } catch (\Exception $e) {
             $transaction->rollBack();
-            Yii::$app->session->setFlash('error', 'Error deleting plan: ' . $e->getMessage());
+            Yii::error('Error deleting plan: ' . $e->getMessage());
+            Yii::$app->session->setFlash('error', 'Error al eliminar el plan: ' . $e->getMessage());
         }
 
         return $this->redirect(['index', 'clinica_id' => $clinica_id]);
@@ -449,7 +442,7 @@ class PlanesController extends Controller
             return $model;
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        throw new NotFoundHttpException('La página solicitada no existe.');
     }
 
     /**
@@ -486,12 +479,12 @@ class PlanesController extends Controller
         $baremo = Baremo::findOne($baremo_id);
 
         if (!$baremo) {
-            Yii::$app->session->setFlash('error', 'The requested service does not exist in the system.');
+            Yii::$app->session->setFlash('error', 'El servicio solicitado no existe en el sistema.');
             return $this->redirect(['view', 'id' => $plan_id]);
         }
 
         if ($baremo->clinica_id != $plan->clinica_id) {
-            Yii::$app->session->setFlash('warning', 'The service does not belong to the clinic associated with this plan.');
+            Yii::$app->session->setFlash('warning', 'El servicio no pertenece a la clínica asociada a este plan.');
             return $this->redirect(['view', 'id' => $plan_id]);
         }
 
@@ -500,7 +493,7 @@ class PlanesController extends Controller
             ->one();
 
         if ($existente) {
-            Yii::$app->session->setFlash('info', 'This service is already included in the plan.');
+            Yii::$app->session->setFlash('info', 'Este servicio ya está incluido en el plan.');
             return $this->redirect(['view', 'id' => $plan_id]);
         }
 
@@ -517,13 +510,13 @@ class PlanesController extends Controller
                 if ($model->save()) {
                     Yii::$app->session->setFlash(
                         'success',
-                        "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan successfully."
+                        "El servicio <strong>{$baremo->nombre_servicio}</strong> ha sido agregado al plan exitosamente."
                     );
                     return $this->redirect(['view', 'id' => $plan_id]);
                 } else {
                     Yii::$app->session->setFlash(
                         'error',
-                        'Error saving coverage: ' . implode(', ', $model->firstErrors)
+                        'Error al guardar la cobertura: ' . implode(', ', $model->firstErrors)
                     );
                 }
             }
@@ -531,12 +524,12 @@ class PlanesController extends Controller
             if ($model->save()) {
                 Yii::$app->session->setFlash(
                     'success',
-                    "The service <strong>{$baremo->nombre_servicio}</strong> was added to the plan with default values."
+                    "El servicio <strong>{$baremo->nombre_servicio}</strong> ha sido agregado al plan con valores predeterminados."
                 );
             } else {
                 Yii::$app->session->setFlash(
                     'error',
-                    'Error adding service to the plan: ' . implode(', ', $model->firstErrors)
+                    'Error al agregar el servicio al plan: ' . implode(', ', $model->firstErrors)
                 );
             }
             return $this->redirect(['view', 'id' => $plan_id]);
@@ -700,12 +693,12 @@ class PlanesController extends Controller
 
         $clinica_id = Yii::$app->request->post('clinica_id');
         if (empty($clinica_id)) {
-            return ['success' => false, 'message' => 'Clinic ID not specified'];
+            return ['success' => false, 'message' => 'ID de clínica no especificado'];
         }
 
         $file = UploadedFile::getInstanceByName('excelFile');
         if (!$file) {
-            return ['success' => false, 'message' => 'No file selected'];
+            return ['success' => false, 'message' => 'No se ha seleccionado ningún archivo'];
         }
 
         $taskId = 'import_' . uniqid();
@@ -719,7 +712,7 @@ class PlanesController extends Controller
 
         $cache->set($taskId, [
             'progress' => 5,
-            'message' => 'Uploading file...',
+            'message' => 'Subiendo archivo...',
             'finished' => false,
             'result' => null,
             'details' => [
@@ -735,7 +728,7 @@ class PlanesController extends Controller
         if ($file->saveAs($filePath)) {
             $cache->set($taskId, [
                 'progress' => 10,
-                'message' => 'File uploaded. Starting import process...',
+                'message' => 'Archivo subido exitosamente. Iniciando proceso de importación...',
                 'finished' => false,
                 'result' => null,
                 'details' => [
@@ -748,7 +741,7 @@ class PlanesController extends Controller
                 ]
             ], 3600);
         } else {
-            return ['success' => false, 'message' => 'Failed to save uploaded file'];
+            return ['success' => false, 'message' => 'Error al guardar el archivo subido'];
         }
 
         $this->startBackgroundImport($taskId, $filePath, $clinica_id);
@@ -778,10 +771,10 @@ class PlanesController extends Controller
             ini_set('max_execution_time', 300);
             ini_set('memory_limit', '512M');
 
-            Yii::info("=== STARTING DYNAMIC IMPORT (Task: $taskId) ===", 'import');
+            Yii::info("=== INICIANDO IMPORTACIÓN DINÁMICA (Tarea: $taskId) ===", 'import');
 
-            $this->updateProgress($taskId, 15, 'Loading spreadsheet...', [
-                'current_sheet' => 'Loading file...'
+            $this->updateProgress($taskId, 15, 'Cargando hoja de cálculo...', [
+                'current_sheet' => 'Cargando archivo...'
             ]);
 
             sleep(1);
@@ -790,15 +783,15 @@ class PlanesController extends Controller
 
             $plansWorksheet = $spreadsheet->getSheetByName('Plans');
             if (!$plansWorksheet) {
-                throw new \Exception('Sheet "Plans" not found');
+                throw new \Exception('La hoja "Plans" no fue encontrada');
             }
 
             $plansRows = $plansWorksheet->toArray();
             if (count($plansRows) < 2) {
-                throw new \Exception('Plans sheet is empty');
+                throw new \Exception('La hoja de planes está vacía');
             }
 
-            $this->updateProgress($taskId, 20, 'Processing plans...', [
+            $this->updateProgress($taskId, 20, 'Procesando planes...', [
                 'current_sheet' => 'Plans'
             ]);
 
@@ -817,7 +810,7 @@ class PlanesController extends Controller
             ];
 
             $totalPlans = count($plansRows) - 1;
-            $this->updateProgress($taskId, 20, "Processing $totalPlans plans...", [
+            $this->updateProgress($taskId, 20, "Procesando $totalPlans plan(es)...", [
                 'plans_total' => $totalPlans,
                 'plans_processed' => 0
             ]);
@@ -830,17 +823,17 @@ class PlanesController extends Controller
 
                     $nombrePlan = trim($row[$headerMap['nombre']] ?? '');
                     if (empty($nombrePlan)) {
-                        Yii::info("Skipping empty plan name at row $rowNumber", 'import');
+                        Yii::info("Omitiendo nombre de plan vacío en la fila $rowNumber", 'import');
                         continue;
                     }
 
                     $progress = 20 + round((($i / $totalPlans) * 25));
-                    $this->updateProgress($taskId, $progress, "Processing plan: " . $nombrePlan, [
+                    $this->updateProgress($taskId, $progress, "Procesando plan: " . $nombrePlan, [
                         'plans_processed' => $i,
                         'current_plan' => $nombrePlan
                     ]);
 
-                    Yii::info("Processing plan: $nombrePlan", 'import');
+                    Yii::info("Procesando plan: $nombrePlan", 'import');
 
                     $plan = Planes::find()
                         ->where(['clinica_id' => $clinica_id, 'nombre' => $nombrePlan])
@@ -848,9 +841,9 @@ class PlanesController extends Controller
 
                     if (!$plan) {
                         $plan = new Planes();
-                        Yii::info("Creating new plan: $nombrePlan", 'import');
+                        Yii::info("Creando nuevo plan: $nombrePlan", 'import');
                     } else {
-                        Yii::info("Updating existing plan: $nombrePlan", 'import');
+                        Yii::info("Actualizando plan existente: $nombrePlan", 'import');
                     }
 
                     $plan->nombre = $nombrePlan;
@@ -866,11 +859,11 @@ class PlanesController extends Controller
                     if ($plan->save()) {
                         $importedPlans[$plan->nombre] = $plan->id;
                         $planNamesForServices[] = $plan->nombre;
-                        Yii::info("✅ Saved plan: {$plan->nombre} (ID: {$plan->id})", 'import');
+                        Yii::info("✅ Plan guardado: {$plan->nombre} (ID: {$plan->id})", 'import');
                     } else {
                         $errors = implode(', ', $plan->getFirstErrors());
-                        Yii::error("❌ Failed to save plan {$plan->nombre}: $errors", 'import');
-                        throw new \Exception("Error saving plan {$plan->nombre}: $errors");
+                        Yii::error("❌ Error al guardar el plan {$plan->nombre}: $errors", 'import');
+                        throw new \Exception("Error al guardar el plan {$plan->nombre}: $errors");
                     }
 
                     if ($i % 2 === 0) {
@@ -884,7 +877,7 @@ class PlanesController extends Controller
                 throw $e;
             }
 
-            $this->updateProgress($taskId, 45, 'Starting service processing...', [
+            $this->updateProgress($taskId, 45, 'Iniciando procesamiento de servicios...', [
                 'plans_processed' => $totalPlans,
                 'services_total' => 0,
                 'services_processed' => 0
@@ -909,7 +902,7 @@ class PlanesController extends Controller
                 }
             }
 
-            $this->updateProgress($taskId, 45, "Processing $totalServices services...", [
+            $this->updateProgress($taskId, 45, "Procesando $totalServices servicio(s)...", [
                 'services_total' => $totalServices,
                 'services_processed' => 0
             ]);
@@ -920,17 +913,17 @@ class PlanesController extends Controller
                 $sheetName = $planName;
                 $planCounter++;
 
-                Yii::info("Looking for service sheet: '$sheetName' for plan: '$planName'", 'import');
+                Yii::info("Buscando hoja de servicios: '$sheetName' para el plan: '$planName'", 'import');
 
                 $worksheet = $spreadsheet->getSheetByName($sheetName);
 
                 if (!$worksheet) {
-                    $servicesResult['warnings'][] = "Worksheet '$sheetName' for plan '$planName' not found in Excel file";
-                    Yii::warning("Worksheet '$sheetName' for plan '$planName' not found", 'import');
+                    $servicesResult['warnings'][] = "La hoja de cálculo '$sheetName' para el plan '$planName' no fue encontrada";
+                    Yii::warning("La hoja de cálculo '$sheetName' para el plan '$planName' no fue encontrada", 'import');
                     continue;
                 }
 
-                Yii::info("Processing services for plan: $planName from sheet: $sheetName", 'import');
+                Yii::info("Procesando servicios para el plan: $planName desde la hoja: $sheetName", 'import');
 
                 $servicesRows = $worksheet->toArray();
                 $servicesInThisSheet = max(0, count($servicesRows) - 1);
@@ -953,10 +946,10 @@ class PlanesController extends Controller
                 $servicesResult['warnings'] = array_merge($servicesResult['warnings'], $planServicesResult['warnings']);
 
                 $this->cleanupMemory();
-                Yii::info("Completed $planName from $sheetName: " . json_encode($planServicesResult), 'import');
+                Yii::info("Completado $planName desde $sheetName: " . json_encode($planServicesResult), 'import');
             }
 
-            $message = "¡Importación completada!<br>";
+            $message = "¡Importación completada exitosamente!<br>";
             $message .= "Planes importados: " . count($importedPlans) . "<br>";
             $message .= "Servicios en cobertura: {$servicesResult['imported']}<br>";
             $message .= "Servicios omitidos: {$servicesResult['skipped']}";
@@ -974,16 +967,16 @@ class PlanesController extends Controller
                 ]
             ];
 
-            $this->updateProgress($taskId, 100, 'Import completed successfully!', true, $finalResult);
+            $this->updateProgress($taskId, 100, '¡Importación completada exitosamente!', true, $finalResult);
         } catch (\Exception $e) {
-            Yii::error("❌ Import error (Task: $taskId): " . $e->getMessage(), 'import');
+            Yii::error("❌ Error en importación (Tarea: $taskId): " . $e->getMessage(), 'import');
             Yii::error("Stack trace: " . $e->getTraceAsString(), 'import');
             $finalResult = [
                 'success' => false,
-                'message' => 'Import failed: ' . $e->getMessage(),
+                'message' => 'Importación fallida: ' . $e->getMessage(),
                 'detailed_error' => $e->getTraceAsString()
             ];
-            $this->updateProgress($taskId, 100, 'An error occurred during import.', true, $finalResult);
+            $this->updateProgress($taskId, 100, 'Ocurrió un error durante la importación.', true, $finalResult);
         } finally {
             if (file_exists($filePath)) {
                 unlink($filePath);
@@ -991,7 +984,7 @@ class PlanesController extends Controller
 
             $finalCache = Yii::$app->cache->get($taskId);
             if ($finalCache && !$finalCache['finished']) {
-                Yii::info("Force finishing task $taskId in finally block", 'import');
+                Yii::info("Forzando finalización de la tarea $taskId en bloque finally", 'import');
                 $finalCache['finished'] = true;
                 Yii::$app->cache->set($taskId, $finalCache, 3600);
             }
@@ -1009,11 +1002,11 @@ class PlanesController extends Controller
         if ($status === false) {
             return [
                 'progress' => 100,
-                'message' => 'Task not found or expired.',
+                'message' => 'Tarea no encontrada o expirada.',
                 'finished' => true,
                 'result' => [
                     'success' => false,
-                    'message' => 'Task ID not found or expired.'
+                    'message' => 'ID de tarea no encontrado o expirado.'
                 ]
             ];
         }
@@ -1037,7 +1030,7 @@ class PlanesController extends Controller
         ];
         Yii::$app->cache->set($taskId, $data, 3600);
 
-        Yii::info("Progress Update (Task: $taskId): $progress% - $message", 'import');
+        Yii::info("Actualización de progreso (Tarea: $taskId): $progress% - $message", 'import');
     }
 
     /**
@@ -1053,7 +1046,7 @@ class PlanesController extends Controller
         ];
 
         if (count($servicesRows) < 2) {
-            $planServicesResult['warnings'][] = "Services sheet for '$planName' has insufficient data";
+            $planServicesResult['warnings'][] = "La hoja de servicios para '$planName' tiene datos insuficientes";
             return $planServicesResult;
         }
 
@@ -1085,7 +1078,7 @@ class PlanesController extends Controller
             }
 
             if ($j % 3 === 0 || $j === 1 || $j === $totalRows - 1) {
-                $this->updateProgress($taskId, $progress, "Processing services for: $planName", [
+                $this->updateProgress($taskId, $progress, "Procesando servicios para: $planName", [
                     'services_processed' => $currentServiceCount,
                     'current_plan' => $planName,
                     'current_sheet' => $sheetName
@@ -1103,10 +1096,10 @@ class PlanesController extends Controller
             $plazoValue = $this->normalizeNAValue(trim($row[4] ?? ''));
 
             // Log the normalized values for debugging
-            Yii::info("Row $rowNumber - limitValue normalized: '{$limitValue}', plazoValue normalized: '{$plazoValue}'", 'import');
+            Yii::info("Fila $rowNumber - limitValue normalizado: '{$limitValue}', plazoValue normalizado: '{$plazoValue}'", 'import');
 
             if (empty($serviceName)) {
-                Yii::info("Row $rowNumber - SKIPPED: Empty service name", 'import');
+                Yii::info("Fila $rowNumber - OMITIDO: Nombre de servicio vacío", 'import');
                 $planServicesResult['skipped']++;
                 continue;
             }
@@ -1115,18 +1108,18 @@ class PlanesController extends Controller
             $isLimitNA = ($limitValue === 'N/A');
             $isPlazoNA = ($plazoValue === 'N/A');
 
-            Yii::info("Service '{$serviceName}' - Limit is N/A: {$isLimitNA}, Plazo is N/A: {$isPlazoNA}", 'import');
+            Yii::info("Servicio '{$serviceName}' - Límite es N/A: {$isLimitNA}, Plazo es N/A: {$isPlazoNA}", 'import');
 
             // ONLY skip (don't add to plan) if BOTH are N/A
             // This means services with N/A, N/A go to "Servicios Disponibles"
             if ($isLimitNA && $isPlazoNA) {
-                Yii::info("SKIPPING service '{$serviceName}' - both values are N/A (goes to Servicios Disponibles)", 'import');
+                Yii::info("OMITIENDO servicio '{$serviceName}' - ambos valores son N/A (va a Servicios Disponibles)", 'import');
                 $planServicesResult['skipped']++;
                 continue;
             }
 
             // Otherwise, add to plan (Coberturas Incluidas)
-            Yii::info("Adding service '{$serviceName}' to plan - has specific limit/plazo values", 'import');
+            Yii::info("Agregando servicio '{$serviceName}' al plan - tiene valores específicos de límite/plazo", 'import');
 
             try {
                 // ONLY use existing baremo - DO NOT CREATE NEW ONE
@@ -1135,7 +1128,7 @@ class PlanesController extends Controller
 
                 if (!$baremo) {
                     // CRITICAL: Do NOT create new baremo - just skip and warn
-                    $warningMsg = "Service '{$serviceName}' with description '{$description}' not found in Baremo catalog. Please add it to Baremos first, then re-import this plan.";
+                    $warningMsg = "El servicio '{$serviceName}' con descripción '{$description}' no se encuentra en el catálogo de Baremos. Por favor, agréguelo primero a Baremos y luego re-importe este plan.";
                     $planServicesResult['warnings'][] = $warningMsg;
                     $planServicesResult['skipped']++;
                     Yii::warning($warningMsg, 'import');
@@ -1148,14 +1141,14 @@ class PlanesController extends Controller
                 if ($existingItem) {
                     // Update existing instead of creating new
                     $item = $existingItem;
-                    Yii::info("Updating existing coverage for service '{$serviceName}' in plan '{$planName}'", 'import');
+                    Yii::info("Actualizando cobertura existente para el servicio '{$serviceName}' en el plan '{$planName}'", 'import');
                 } else {
                     // Create new service coverage
                     $item = new PlanesItemsCobertura();
                     $item->plan_id = $planId;
                     $item->baremo_id = $baremo->id;
                     $item->nombre_servicio = $baremo->nombre_servicio;
-                    Yii::info("Creating new coverage for service '{$serviceName}' in plan '{$planName}'", 'import');
+                    Yii::info("Creando nueva cobertura para el servicio '{$serviceName}' en el plan '{$planName}'", 'import');
                 }
 
                 // Set the coverage values from Excel
@@ -1170,15 +1163,15 @@ class PlanesController extends Controller
                     if (!$existingItem) {
                         $existingPlanServices[$baremo->id] = $item;
                     }
-                    Yii::info("✅ Successfully added '{$serviceName}' to plan '{$planName}'", 'import');
+                    Yii::info("✅ Servicio '{$serviceName}' agregado exitosamente al plan '{$planName}'", 'import');
                 } else {
                     $errors = implode(', ', $item->getFirstErrors());
-                    $planServicesResult['warnings'][] = "Failed to add '$serviceName' to '$planName': $errors";
+                    $planServicesResult['warnings'][] = "Error al agregar '$serviceName' al plan '$planName': $errors";
                     $planServicesResult['skipped']++;
-                    Yii::error("❌ Failed to add '{$serviceName}' to plan: $errors", 'import');
+                    Yii::error("❌ Error al agregar '{$serviceName}' al plan: $errors", 'import');
                 }
             } catch (\Exception $e) {
-                $errorMsg = "Error processing row $rowNumber for '$serviceName': " . $e->getMessage();
+                $errorMsg = "Error procesando la fila $rowNumber para '$serviceName': " . $e->getMessage();
                 $planServicesResult['warnings'][] = $errorMsg;
                 $planServicesResult['skipped']++;
                 Yii::error("❌ $errorMsg", 'import');
@@ -1190,7 +1183,7 @@ class PlanesController extends Controller
             }
         }
 
-        Yii::info("✅ Completed processing services for plan '$planName': " . json_encode($planServicesResult), 'import');
+        Yii::info("✅ Procesamiento completado para el plan '$planName': " . json_encode($planServicesResult), 'import');
         return $planServicesResult;
     }
 

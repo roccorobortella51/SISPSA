@@ -32,7 +32,7 @@ class ReportesController extends Controller
                         // Todas las acciones del controlador
                         'actions' => ['index', 'get-pagos-detail', 'generate-pdf', 'export-excel', 'comisiones', 'get-comisiones-detail', 'generate-comisiones-pdf-tcpdf', 'generate-comisiones-pdf', 'export-comisiones-excel', 'test-data', 'test-pdf', 'test-payment-clinic', 'cartera-vigente', 'export-cartera-vigente'],
                         // Acceso para 'superadmin' y 'finanzas'
-                        'roles' => ['superadmin', 'FINANZAS', 'COORDINADOR-CLINICA'],
+                        'roles' => ['superadmin', 'FINANZAS', 'COORDINADOR-CLINICA', 'Agente',],
                     ],
                 ],
             ],

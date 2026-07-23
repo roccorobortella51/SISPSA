@@ -2202,7 +2202,26 @@ JS
             </div>
 
             <!-- ===== REMINDER BANNER (inside Información del Pago section) - EYE-CATCHING ===== -->
-            <?php if (isset($selectedContrato) && $selectedContrato && $selectedContrato->fecha_ini): ?>
+            <?php
+            // Only show banner if the FIRST cuota (numero_cuota = 1) is still pending (not paid)
+            $showReminderBanner = false;
+            if (isset($selectedContrato) && $selectedContrato && $selectedContrato->fecha_ini && !empty($cuotas)) {
+                // Find the first cuota (numero_cuota = 1)
+                $firstCuota = null;
+                foreach ($cuotas as $cuota) {
+                    if ($cuota->numero_cuota == 1) {
+                        $firstCuota = $cuota;
+                        break;
+                    }
+                }
+
+                // Check if first cuota exists and is NOT paid
+                if ($firstCuota && $firstCuota->estatus !== 'pagada') {
+                    $showReminderBanner = true;
+                }
+            }
+            ?>
+            <?php if ($showReminderBanner): ?>
                 <div class="reminder-banner">
                     <div class="reminder-icon">
                         <i class="fas fa-exclamation-triangle"></i>

@@ -261,41 +261,48 @@ $exportCsvUrl = Url::to(['/rton-report/export-csv']);
         </div>
     <?php endif; ?>
 
-    <!-- Results Table -->
     <?php if ($dataProvider && $dataProvider->getTotalCount() > 0): ?>
-        <div class="card-filter mt-3">
-            <div class="card-filter-header">
-                <i class="fas fa-list"></i> Resultados por Clínica
-                <span class="float-right">
-                    <span class="badge badge-light"><?= $dataProvider->getTotalCount() ?> clínicas</span>
-                    <div class="btn-group ms-3">
-                        <button type="button" class="btn btn-success btn-sm" id="btn-export-excel">
-                            <i class="fas fa-file-excel"></i> Exportar Excel
-                        </button>
-                        <button type="button" class="btn btn-info btn-sm" id="btn-export-csv">
-                            <i class="fas fa-file-csv"></i> Exportar CSV
-                        </button>
-                    </div>
-                </span>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 px-1 mt-4">
+            <div>
+                <h3 class="text-secondary fw-bold m-0" style="font-size: 1.4rem; color: #201f1e !important;">
+                    <i class="fas fa-list me-2" style="color: #605e5c;"></i> Resultados por Clínica
+                    <span class="badge badge-soft-muted ms-2" style="font-size: 0.85rem; font-weight: 500; background: #f3f2f1; color: #323130; padding: 4px 8px; border-radius: 4px;">
+                        <?= $dataProvider->getTotalCount() ?> clínicas
+                    </span>
+                </h3>
             </div>
+
+            <!-- Clean, brand-colored Fluent-style action buttons -->
+            <div class="btn-toolbar-fluent">
+                <button type="button" class="btn btn-fluent-excel me-2" id="btn-export-excel">
+                    <i class="fas fa-file-excel me-2"></i> Exportar Excel
+                </button>
+                <button type="button" class="btn btn-fluent-csv" id="btn-export-csv">
+                    <i class="fas fa-file-csv me-2"></i> Exportar CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="card-filter">
             <div class="card-filter-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-rton" id="rton-results-table">
+                    <table class="table table-rton mb-0" id="rton-results-table">
                         <thead>
                             <tr>
-                                <th>CÓD. SUCURSAL</th>
-                                <th>CLÍNICA</th>
-                                <th>TOTAL TRANSACCIONES</th>
-                                <th>MONTO TOTAL (Bs.)</th>
-                                <th>MONTO TOTAL (USD)</th>
-                                <th>COBERTURA TOTAL</th>
-                                <th>ACCIONES</th>
+                                <th class="text-center">CÓD. SUCURSAL</th>
+                                <th class="text-left">CLÍNICA</th>
+                                <th class="text-center">TOTAL TRANSACCIONES</th>
+                                <th class="text-right">MONTO TOTAL (Bs.)</th>
+                                <th class="text-right">MONTO TOTAL (USD)</th>
+                                <th class="text-right">COBERTURA TOTAL</th>
+                                <th class="text-center">ACCIONES</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($dataProvider->getModels() as $clinic): ?>
                                 <tr class="clinic-row" data-clinic-id="<?= $clinic['clinica_id'] ?>">
-                                    <td><?= Html::encode($clinic['clinica_codigo'] ?: $clinic['clinica_id']) ?></td>
+                                    <td class="text-center"><?= Html::encode($clinic['clinica_codigo'] ?: $clinic['clinica_id']) ?></td>
                                     <td><strong><?= Html::encode($clinic['clinica_nombre']) ?></strong></td>
                                     <td class="text-center"><?= number_format($clinic['summary']['total_transactions']) ?></td>
                                     <td class="text-right">Bs. <?= number_format($clinic['summary']['total_amount'], 2) ?></td>
@@ -315,8 +322,8 @@ $exportCsvUrl = Url::to(['/rton-report/export-csv']);
                                                     <tr>
                                                         <th>FECHA EMISIÓN</th>
                                                         <th>N° PÓLIZA</th>
-                                                        <th>MONTO (Bs.)</th>
-                                                        <th>MONTO (USD)</th>
+                                                        <th class="text-right">MONTO (Bs.)</th>
+                                                        <th class="text-right">MONTO (USD)</th>
                                                         <th>FORMA PAGO</th>
                                                         <th>CONTRATANTE</th>
                                                         <th>INTERMEDIARIO</th>
@@ -350,29 +357,18 @@ $exportCsvUrl = Url::to(['/rton-report/export-csv']);
                         </tbody>
                     </table>
                 </div>
-                <div class="p-3 bg-light">
-                    <?= LinkPager::widget([
-                        'pagination' => $dataProvider->getPagination(),
-                        'options' => ['class' => 'pagination justify-content-center mb-0'],
-                        'linkOptions' => ['class' => 'page-link'],
-                        'pageCssClass' => 'page-item',
-                    ]) ?>
+                <div class="alert alert-info text-center mt-3">
+                    <i class="fas fa-info-circle"></i> No se encontraron transacciones para los criterios seleccionados.
                 </div>
+            <?php else: ?>
+                <div class="alert alert-secondary text-center mt-3">
+                    <i class="fas fa-search"></i> Seleccione el rango de fechas y presione "Generar Reporte" para generar el reporte.
+                </div>
+            <?php endif; ?>
             </div>
-        </div>
-    <?php elseif (Yii::$app->request->get()): ?>
-        <div class="alert alert-info text-center mt-3">
-            <i class="fas fa-info-circle"></i> No se encontraron transacciones para los criterios seleccionados.
-        </div>
-    <?php else: ?>
-        <div class="alert alert-secondary text-center mt-3">
-            <i class="fas fa-search"></i> Seleccione el rango de fechas y presione "Generar Reporte" para generar el reporte.
-        </div>
-    <?php endif; ?>
-</div>
 
-<?php
-$this->registerCss("
+            <?php
+            $this->registerCss("
     .rton-container { background-color: #f5f5f5; min-height: calc(100vh - 120px); padding: 20px; }
     .card-filter { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
     .card-filter-header { background: #2c3e50; color: white; padding: 12px 20px; font-weight: 600; border-radius: 8px 8px 0 0; }
@@ -382,18 +378,79 @@ $this->registerCss("
     .summary-value { font-size: 28px; font-weight: bold; color: #2c3e50; }
     .summary-label { font-size: 13px; color: #7f8c8d; margin-top: 5px; }
     .summary-icon { font-size: 32px; margin-bottom: 10px; }
+    
     .table-rton { width: 100%; font-size: 13px; }
-    .table-rton thead th { background: #34495e; color: white; font-weight: 600; white-space: nowrap; padding: 10px 12px; border: none; }
+    
+    /* FIXED: Added 'table' wrapper to beat Bootstrap's default specificity and force white text */
+    table.table-rton thead th { 
+        background: #34495e !important; 
+        color: #ffffff !important; 
+        font-weight: 600; 
+        white-space: nowrap; 
+        padding: 10px 12px; 
+        border: none; 
+    }
+    
+    /* FIXED: Forces Bootstrap 4 utility alignment classes to work perfectly on headers */
+    table.table-rton thead th.text-left { text-align: left !important; }
+    table.table-rton thead th.text-center { text-align: center !important; }
+    table.table-rton thead th.text-right { text-align: right !important; }
+    
     .table-rton tbody td { padding: 8px 12px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; }
     .table-rton tbody tr:hover { background-color: #f8f9fa; }
     .badge-conciliado { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
     .badge-por-conciliar { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
     .filter-group { transition: all 0.2s ease; }
     .btn-xl { padding: 1rem 2rem; font-size: 1.5rem; border-radius: 0.5rem; }
+    /* Fluent / Microsoft Style Actions Toolbar */
+    /* Excel Button - Official Microsoft Green Theme */
+    .btn-fluent-excel {
+        background: #e3d7d7;
+        border: 1px solid #107c41;
+        color: #107c41;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 4px;
+        transition: all 0.15s ease-in-out;
+    }
+    .btn-fluent-excel:hover {
+        background-color: #107c41;
+        color: #ffffff;
+        box-shadow: 0 2px 4px rgba(16, 124, 65, 0.2);
+    }
+    .btn-fluent-excel:active {
+        background-color: #0b5930;
+        border-color: #0b5930;
+    }
+
+    /* CSV Button - Fluent Teal/Blue Theme */
+    .btn-fluent-csv {
+        background: #ffffff;
+        border: 1px solid #0078d4;
+        color: #0078d4;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 4px;
+        transition: all 0.15s ease-in-out;
+    }
+    .btn-fluent-csv:hover {
+        background-color: #0078d4;
+        color: #ffffff;
+        box-shadow: 0 2px 4px rgba(0, 120, 212, 0.2);
+    }
+    .btn-fluent-csv:active {
+        background-color: #005a9e;
+        border-color: #005a9e;
+    }
+    
+    /* Removed old headers styling that blocked layouts */
+    .card-filter { border: 1px solid #edebe9; box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; border-radius: 6px; overflow: hidden; }
 ");
 
-// REGISTER JAVASCRIPT - BULLETPROOF VERSION
-$js = <<<JS
+            // REGISTER JAVASCRIPT - BULLETPROOF VERSION
+            $js = <<<JS
     $(document).ready(function() {
         // Date range selector handler
         var dateRangeSelect = $('#date-range-selector');
@@ -511,5 +568,5 @@ $js = <<<JS
     }
 JS;
 
-$this->registerJs($js);
-?>
+            $this->registerJs($js);
+            ?>

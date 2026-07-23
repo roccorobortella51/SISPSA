@@ -196,7 +196,7 @@ $agenteId = $agente->id ?? $model->agente_id ?? null;
 
         <div class="card mb-3 permisos-section">
             <div class="card-header bg-primary text-center">
-                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL AGENTE</h6>
+                <h6 class="mb-0 fw-bold" style="color: white; font-size: 20px;">PERMISOS DEL INTERMEDIARIO</h6>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-center flex-row flex-wrap gap-3 align-items-start" style="overflow-x:auto; padding-bottom:8px;">

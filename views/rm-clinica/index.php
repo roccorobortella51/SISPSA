@@ -57,16 +57,23 @@ $permisosSiniestros = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACI�
                             'class' => 'grid-view-container table-responsive',
                         ],
                         'columns' => [
-                            // ID - Compacto
+                            // Replace the ID column with this:
                             [
-                                'attribute' => 'id',
-                                'label' => 'ID',
-                                'headerOptions' => ['style' => 'color: white!important; width: 60px;'],
+                                'attribute' => 'codigo_clinica',
+                                'label' => 'CÓDIGO',
+                                'headerOptions' => ['style' => 'color: white!important; width: 110px;'],
                                 'contentOptions' => ['class' => 'text-center'],
                                 'filterInputOptions' => [
-                                    'placeholder' => 'Buscar ID',
+                                    'placeholder' => 'Buscar código',
                                     'class' => 'form-control form-control-lg text-center',
                                 ],
+                                'value' => function ($model) {
+                                    return Html::tag('span', Html::encode($model->codigo_clinica), [
+                                        'class' => 'badge',
+                                        'style' => 'background: linear-gradient(135deg, #0078D4 0%, #005a9e 100%); color: white; font-weight: 600; font-size: 0.85rem; padding: 6px 14px; border-radius: 20px; letter-spacing: 0.5px; display: inline-block;'
+                                    ]);
+                                },
+                                'format' => 'raw',
                             ],
                             // Nombre
                             [
@@ -471,5 +478,16 @@ $this->registerCss("
             padding: 4px 8px;
         }
     }
+        /* Style for the código badge */
+        .table .badge-code {
+            background: linear-gradient(135deg, #0078D4 0%, #005a9e 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
 ");
 ?>

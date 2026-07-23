@@ -14,11 +14,11 @@ use app\models\RmClinica; // Importar el modelo de la clínica
 if (!isset($clinica) && !empty($model->clinica_id)) {
     $clinica = RmClinica::findOne((int)$model->clinica_id);
     if (!$clinica) {
-       
+
         $clinica = (object)['id' => (int)$model->clinica_id, 'nombre' => 'Clínica Desconocida'];
     }
 } elseif (!isset($clinica)) {
-    
+
     $clinica = (object)['id' => null, 'nombre' => 'Clínica Desconocida'];
 }
 
@@ -26,7 +26,7 @@ $this->title = 'ACTUALIZAR PLÁN: ' . Html::encode($model->nombre);
 
 $this->params['breadcrumbs'][] = ['label' => 'CLÍNICAS', 'url' => ['/rm-clinica/index']];
 
-if ($clinica->id !== null) { 
+if ($clinica->id !== null) {
     $this->params['breadcrumbs'][] = ['label' => Html::encode($clinica->nombre), 'url' => ['/rm-clinica/view', 'id' => $clinica->id]];
     $this->params['breadcrumbs'][] = ['label' => 'PLANES', 'url' => ['index', 'clinica_id' => $clinica->id]];
 } else {
@@ -36,20 +36,20 @@ $this->params['breadcrumbs'][] = ['label' => Html::encode($model->nombre), 'url'
 $this->params['breadcrumbs'][] = 'Actualizar';
 
 $rol = UserHelper::getMyRol();
-$canManage = ($rol == 'superadmin'); 
+$canManage = ($rol == 'superadmin');
 ?>
 
-<div class="main-container"> 
-    <div class="header-section"> 
+<div class="main-container">
+    <div class="header-section">
         <h1><?= Html::encode($this->title) ?></h1>
-        
-        <div class="header-buttons-group"> 
+
+        <div class="header-buttons-group">
             <?php if ($clinica->id !== null) : ?>
                 <?= Html::a(
-                    '<i class="fas fa-undo mr-2"></i> Volver', 
-                    ['index', 'clinica_id' => $clinica->id], 
+                    '<i class="fas fa-undo mr-2"></i> Volver',
+                    ['index', 'clinica_id' => $clinica->id],
                     [
-                        'class' => 'btn-base btn-gray', 
+                        'class' => 'btn-base btn-gray',
                         'title' => 'Volver a la lista de planes de esta clínica',
                     ]
                 ) ?>
@@ -57,7 +57,7 @@ $canManage = ($rol == 'superadmin');
         </div>
     </div>
 
-    <div class="ms-panel ms-panel-fh border-blue"> 
+    <div class="ms-panel ms-panel-fh border-blue">
         <div class="ms-panel-header">
             <h3 class="section-title">
                 <i class="fas fa-pencil-alt mr-3 text-blue-600"></i> Formulario de Actualización
@@ -67,8 +67,8 @@ $canManage = ($rol == 'superadmin');
             <?= $this->render('_form', [
                 'model' => $model,
                 'itemsModels' => $itemsModels,
-                'clinica' => $clinica 
-            ]) ?>        
+                'clinica' => $clinica
+            ]) ?>
         </div>
     </div>
 </div>

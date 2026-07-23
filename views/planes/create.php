@@ -5,8 +5,11 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\RmClinica $model */
 
+$itemsModels = $itemsModels ?? null;
+$clinica = $clinica ?? null;
+
 $this->title = 'CREAR PLÁN'; // Título principal de la página
-$this->params['breadcrumbs'][] = ['label' => 'PLANES', 'url' => ['index', 'clinica_id' => $clinica->id]];
+$this->params['breadcrumbs'][] = ['label' => 'PLANES', 'url' => $clinica ? ['index', 'clinica_id' => $clinica->id] : ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
@@ -20,7 +23,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 'model' => $model,
                 'itemsModels' => $itemsModels,
                 'clinica' => $clinica
-            ]) ?>        
+            ]) ?>
         </div>
     </div>
 </div>

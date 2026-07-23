@@ -147,7 +147,7 @@ $this->registerCss("
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
     }
     
-    /* Three Cards Row - Microsoft Style */
+    /* Four Cards Row - Microsoft Style */
     .kpi-cards-row {
         display: flex;
         gap: 20px;
@@ -207,9 +207,16 @@ $this->registerCss("
         margin-top: 8px;
     }
     
+    /* Card Color Schemes */
     .kpi-card.primary {
         background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
         color: white;
+    }
+    
+    .kpi-card.primary .kpi-number,
+    .kpi-card.primary .kpi-label,
+    .kpi-card.primary .kpi-card-header h6 {
+        color: #ffffff !important;
     }
     
     .kpi-card.success {
@@ -217,9 +224,128 @@ $this->registerCss("
         color: white;
     }
     
+    .kpi-card.success .kpi-number,
+    .kpi-card.success .kpi-label,
+    .kpi-card.success .kpi-card-header h6 {
+        color: #ffffff !important;
+    }
+    
     .kpi-card.danger {
         background: linear-gradient(135deg, #d13438 0%, #a80000 100%);
         color: white;
+    }
+    
+    .kpi-card.danger .kpi-number,
+    .kpi-card.danger .kpi-label,
+    .kpi-card.danger .kpi-card-header h6 {
+        color: #ffffff !important;
+    }
+    
+    /* ============================================================ */
+    /* CRITICAL CARD - Dark Amber/Orange Theme                      */
+    /* ============================================================ */
+    
+    /* Card background and border */
+    .kpi-card.critical {
+        background: linear-gradient(135deg, #cc7a00 0%, #8a5200 100%) !important;
+        border-color: #a86600 !important;
+        color: #ffffff !important;
+    }
+
+    /* Header - force white text */
+    .kpi-card.critical .kpi-card-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .kpi-card.critical .kpi-card-header h6 {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
+    .kpi-card.critical .kpi-card-header i {
+        color: #ffcc80 !important;
+        opacity: 0.9 !important;
+    }
+
+    /* ============================================================ */
+    /* CRITICAL: kpi-number - structural styles only                */
+    /* Colors are handled by inline styles                          */
+    /* ============================================================ */
+    .kpi-card.critical .kpi-number {
+        font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* ============================================================ */
+    /* CRITICAL: kpi-label - force to amber/white                   */
+    /* ============================================================ */
+    .kpi-card.critical .kpi-label {
+        color: #ffecb3 !important;
+        font-size: 0.7rem !important;
+        opacity: 1 !important;
+        margin-top: 8px !important;
+    }
+
+    .kpi-card.critical .kpi-label i {
+        color: #ffcc80 !important;
+    }
+
+    .kpi-card.critical .kpi-label span {
+        color: #ffe0b2 !important;
+        display: block !important;
+        font-size: 0.65rem !important;
+        margin-top: 2px !important;
+        font-weight: 400 !important;
+    }
+
+    /* Critical badge for tables - Updated to match */
+    .badge-critical {
+        background: linear-gradient(135deg, #cc7a00, #8a5200);
+        color: #ffffff !important;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .badge-critical i {
+        color: #ffcc80 !important;
+    }
+
+    /* Critical status indicator dot with pulse animation - Updated */
+    .critical-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ffcc80;
+        animation: pulse-critical 1.5s ease-in-out infinite;
+        margin-right: 6px;
+        box-shadow: 0 0 8px rgba(255, 204, 128, 0.4);
+    }
+
+    @keyframes pulse-critical {
+        0% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 0 0 8px rgba(255, 204, 128, 0.4);
+        }
+        50% { 
+            opacity: 0.5; 
+            transform: scale(0.7);
+            box-shadow: 0 0 15px rgba(255, 204, 128, 0.2);
+        }
+        100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 0 0 8px rgba(255, 204, 128, 0.4);
+        }
     }
     
     /* Filter Section Styles */
@@ -435,9 +561,18 @@ $this->registerCss("
         color: #ff8c00;
     }
     
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .kpi-cards-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+    
     @media (max-width: 768px) {
         .kpi-cards-row {
-            flex-direction: column;
+            grid-template-columns: 1fr;
             gap: 15px;
         }
         
@@ -870,8 +1005,11 @@ $this->registerJs("
         <?php ActiveForm::end(); ?>
     </div>
 
-    <!-- KPI CARDS - Single Row with 3 cards -->
+    <!-- ============================================================ -->
+    <!-- KPI CARDS - Four Cards Row (Added Critical Delinquency)       -->
+    <!-- ============================================================ -->
     <div class="kpi-cards-row">
+        <!-- Card 1: Total Afiliados -->
         <div class="kpi-card primary">
             <div class="kpi-card-header">
                 <h6><i class="fas fa-users mr-2"></i> <?= $hasClinicAccess ? 'Afiliados en su Clínica' : 'Total Afiliados' ?></h6>
@@ -890,6 +1028,7 @@ $this->registerJs("
             </div>
         </div>
 
+        <!-- Card 2: Contratos Activos -->
         <div class="kpi-card success">
             <div class="kpi-card-header">
                 <h6><i class="fas fa-check-circle mr-2"></i> Contratos Activos</h6>
@@ -903,6 +1042,7 @@ $this->registerJs("
             </div>
         </div>
 
+        <!-- Card 3: Contratos Suspendidos (Existing) -->
         <div class="kpi-card danger">
             <div class="kpi-card-header">
                 <h6><i class="fas fa-pause-circle mr-2"></i> Contratos Suspendidos</h6>
@@ -915,11 +1055,153 @@ $this->registerJs("
                 </div>
             </div>
         </div>
+
+        <!-- ============================================================ -->
+        <!-- NEW CARD 4: Críticos (Más de 3 cuotas vencidas)              -->
+        <!-- UPDATED: Dark Amber/Orange color for better distinction      -->
+        <!-- ============================================================ -->
+        <div class="kpi-card critical" style="background: linear-gradient(135deg, #cc7a00 0%, #8a5200 100%); border-color: #a86600;">
+            <div class="kpi-card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.15);">
+                <h6 style="color: #ffffff; font-weight: 700; margin: 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <i class="fas fa-skull-crossbones mr-2" style="color: #ffcc80;"></i>
+                    <?= $hasClinicAccess ? 'Críticos en su Clínica' : 'Afiliados Críticos' ?>
+                </h6>
+                <i class="fas fa-exclamation-circle" style="color: #ffcc80; font-size: 1.5rem; opacity: 0.9;"></i>
+            </div>
+            <div class="kpi-card-body" style="padding: 0 20px 20px 20px;">
+                <!-- MAIN NUMBER - Inline styles directly on the element -->
+                <div class="kpi-number" style="color: #ffffff; font-size: 2.5rem; font-weight: 700; margin: 0; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                    <?= number_format($totals['critical_delinquency']['count'] ?? 0) ?>
+                    <?php if (($totals['critical_delinquency']['count'] ?? 0) > 0): ?>
+                        <!-- PERCENTAGE TEXT - Inline styles directly on the span -->
+                        <span style="color: #ffffff; font-size: 1rem; font-weight: 500; margin-left: 5px;">
+                            (<?= round(($totals['critical_delinquency']['count'] / max($totals['total_contratos_suspendidos'] ?? 1, 1)) * 100) ?>% de suspendidos)
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <!-- LABEL - Inline styles directly on the element -->
+                <div class="kpi-label" style="color: #ffffff; font-size: 0.7rem; opacity: 1; margin-top: 8px;">
+                    <i class="fas fa-exclamation-triangle mr-1" style="color: #ffffff;"></i>
+                    Con 3+ cuotas vencidas
+                    <?php if (($totals['critical_delinquency']['total_vencidas_cuotas'] ?? 0) > 0): ?>
+                        <span style="color: #ffffff; display: block; font-size: 0.65rem; margin-top: 2px; font-weight: 400;">
+                            Total: <?= number_format($totals['critical_delinquency']['total_vencidas_cuotas'] ?? 0) ?> cuotas vencidas
+                            (prom. <?= $totals['critical_delinquency']['average_vencidas'] ?? 0 ?> c/u)
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- META GOALS CARD - WITH COUNTER -->
-    <!-- ============================================ -->
+    <!-- ============================================================ -->
+    <!-- CRITICAL DELINQUENCY SPOTLIGHT SECTION                        -->
+    <!-- ============================================================ -->
+    <?php if (($totals['critical_delinquency']['count'] ?? 0) > 0): ?>
+        <?php
+        // Get top 5 critical delinquents
+        $topCritical = $searchModel->getTopCriticalDelinquents(5, Yii::$app->request->queryParams);
+        ?>
+        <div class="card mb-4" style="border-left: 4px solid #cc7a00;">
+            <div class="card-header" style="background: linear-gradient(135deg, #cc7a00, #8a5200); color: white;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-skull-crossbones mr-2"></i>
+                        <strong>AFILIADOS CRÍTICOS</strong>
+                        <span class="badge badge-light ml-2">
+                            <?= number_format($totals['critical_delinquency']['count']) ?> afiliados con 3+ cuotas vencidas
+                        </span>
+                    </div>
+                    <small>
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Mayor riesgo de abandono - Prioridad de cobranza
+                    </small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th class="text-center">#</th>
+                                <th>Afiliado</th>
+                                <th>Cédula</th>
+                                <th>Clínica</th>
+                                <th class="text-center">Cuotas Vencidas</th>
+                                <th class="text-right">Total Adeudado</th>
+                                <th class="text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $rank = 1; ?>
+                            <?php foreach ($topCritical as $critical): ?>
+                                <tr class="<?= $rank <= 3 ? 'table-warning' : '' ?>">
+                                    <td class="text-center">
+                                        <?php if ($rank == 1): ?>
+                                            <span class="badge badge-warning" style="font-size: 1.2rem;">🔥</span>
+                                        <?php elseif ($rank == 2): ?>
+                                            <span class="badge badge-warning" style="font-size: 1.2rem;">⚠️</span>
+                                        <?php elseif ($rank == 3): ?>
+                                            <span class="badge badge-warning" style="font-size: 1.2rem;">📌</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-secondary"><?= $rank ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <strong><?= Html::encode($critical['nombre_completo']) ?></strong>
+                                        <?php if ($rank == 1): ?>
+                                            <span class="badge badge-warning ml-1">ALTA PRIORIDAD</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= Html::encode($critical['cedula']) ?></td>
+                                    <td><?= Html::encode($critical['clinica']) ?></td>
+                                    <td class="text-center">
+                                        <span class="badge badge-warning" style="font-size: 1rem;">
+                                            <?= $critical['cuotas_vencidas'] ?>
+                                            <i class="fas fa-times-circle ml-1"></i>
+                                        </span>
+                                    </td>
+                                    <td class="text-right">
+                                        <strong style="color: #cc7a00;">
+                                            $<?= number_format($critical['total_adeudado'], 2) ?>
+                                        </strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge-critical">
+                                            <span class="critical-dot"></span>
+                                            CRÍTICO
+                                        </span>
+                                    </td>
+                                </tr>
+                                <?php $rank++; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Mostrando los <?= count($topCritical) ?> afiliados con mayor número de cuotas vencidas.
+                        <?php if (($totals['critical_delinquency']['count'] ?? 0) > 5): ?>
+                            <span class="badge badge-secondary">
+                                +<?= number_format(($totals['critical_delinquency']['count'] ?? 0) - 5) ?> más
+                            </span>
+                        <?php endif; ?>
+                    </small>
+                    <small class="text-muted">
+                        <i class="fas fa-chart-bar mr-1"></i>
+                        Promedio: <?= $totals['critical_delinquency']['average_vencidas'] ?? 0 ?> cuotas vencidas por afiliado
+                    </small>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- ============================================================ -->
+    <!-- META GOALS CARD - WITH COUNTER                                -->
+    <!-- ============================================================ -->
     <div class="card mb-4">
         <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <i class="fas fa-bullseye mr-2"></i> Cumplimiento de Metas Mensuales por Clínica
@@ -1361,7 +1643,7 @@ $this->registerJs("
         </div>
     </div>
 
-    <!-- Footer Statistics -->
+    <!-- Footer Statistics - Updated with critical delinquency info -->
     <div class="row mt-3">
         <div class="col-12 text-center">
             <small class="text-muted">
@@ -1371,6 +1653,17 @@ $this->registerJs("
                 <?php if ($hasClinicAccess): ?>
                     &nbsp;&nbsp;|&nbsp;&nbsp;
                     <i class="fas fa-lock"></i> Datos limitados a sus clínicas asignadas
+                <?php endif; ?>
+                <?php if (($totals['critical_delinquency']['count'] ?? 0) > 0): ?>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <span style="color: #cc7a00;">
+                        <i class="fas fa-skull-crossbones"></i>
+                        <strong><?= number_format($totals['critical_delinquency']['count']) ?></strong>
+                        afiliados en estado crítico (3+ cuotas vencidas)
+                        <?php if (($totals['critical_delinquency']['total_vencidas_cuotas'] ?? 0) > 0): ?>
+                            - <strong><?= number_format($totals['critical_delinquency']['total_vencidas_cuotas']) ?></strong> cuotas vencidas en total
+                        <?php endif; ?>
+                    </span>
                 <?php endif; ?>
             </small>
         </div>

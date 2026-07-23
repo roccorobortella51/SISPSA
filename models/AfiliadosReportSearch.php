@@ -821,13 +821,21 @@ class AfiliadosReportSearch extends Model
         return array_slice(array_values($nonZeroClinics), 0, $limit);
     }
 
+    // app/models/AfiliadosReportSearch.php
+
     /**
      * Get totals for KPI cards (including meta totals)
+     * MODIFIED: Added 'critical_delinquency' count
      */
     public function getTotals($params = [])
     {
         $summary = $this->getSummaryByClinic($params);
         $metaSummary = $this->getMetaAchievementSummary($params);
+
+        // ============================================================
+        // NEW: Calculate affiliates with 3+ vencidas cuotas
+        // ============================================================
+        $criticalDelinquency = $this->getCriticalDelinquencyCount($params);
 
         return [
             // User counts
@@ -857,6 +865,11 @@ class AfiliadosReportSearch extends Model
 
             'total_clinicas' => count($summary),
 
+            // ============================================================
+            // NEW: Critical Delinquency - Affiliates with 3+ vencidas cuotas
+            // ============================================================
+            'critical_delinquency' => $criticalDelinquency,
+
             // Meta totals
             'meta' => [
                 'clinicas_con_meta' => $metaSummary['clinicas_con_meta'],
@@ -870,5 +883,197 @@ class AfiliadosReportSearch extends Model
                 'detalle_por_clinica' => $metaSummary['detalle_por_clinica'],
             ],
         ];
+    }
+
+    /**
+     * NEW METHOD: Get count of affiliates with 3 or more vencidas cuotas
+     * 
+     * This identifies "critical delinquency" - affiliates who have
+     * accumulated 3+ overdue payments, indicating potential abandonment.
+     * 
+     * @param array $params
+     * @return array
+     */
+    public function getCriticalDelinquencyCount($params = [])
+    {
+        $this->load($params);
+
+        // Get clinic ID filter
+        $filteredClinicaIds = $this->getFilteredClinicaIds();
+
+        // Build the query to find affiliates with 3+ vencidas cuotas
+        $query = (new \yii\db\Query())
+            ->select([
+                'ud.id as user_id',
+                'ud.nombres',
+                'ud.apellidos',
+                'ud.cedula',
+                'COUNT(cu.id) as cuotas_vencidas_count'
+            ])
+            ->from('user_datos ud')
+            ->innerJoin('contratos c', 'c.user_id = ud.id AND c.deleted_at IS NULL')
+            ->innerJoin('cuotas cu', 'cu.contrato_id = c.id')
+            ->where(['ud.role' => 'afiliado'])
+            ->andWhere(['ud.deleted_at' => null])
+            ->andWhere(['c.estatus' => 'Suspendido'])  // Only suspended contracts
+            ->andWhere(['cu.estatus' => 'vencida'])    // Only vencidas cuotas
+            ->groupBy(['ud.id', 'ud.nombres', 'ud.apellidos', 'ud.cedula'])
+            ->having(['>=', 'COUNT(cu.id)', 3]);  // 3 or more vencidas cuotas
+
+        // Apply clinic restrictions
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
+            $query->andWhere(['ud.clinica_id' => $this->_accessibleClinicaIds]);
+        } elseif ($filteredClinicaIds !== null && !empty($filteredClinicaIds)) {
+            $query->andWhere(['ud.clinica_id' => $filteredClinicaIds]);
+        }
+
+        // Apply additional filters from the search
+        if (!empty($this->user_datos_type_id)) {
+            $query->andWhere(['ud.user_datos_type_id' => $this->user_datos_type_id]);
+        }
+
+        if (!empty($this->plan_id)) {
+            $query->andWhere(['ud.plan_id' => $this->plan_id]);
+        }
+
+        if (!empty($this->estatus)) {
+            $query->andWhere(['ud.estatus' => $this->estatus]);
+        }
+
+        if (!empty($this->date_from)) {
+            $query->andWhere(['>=', 'cu.fecha_vencimiento', $this->date_from]);
+        }
+
+        if (!empty($this->date_to)) {
+            $query->andWhere(['<=', 'cu.fecha_vencimiento', $this->date_to]);
+        }
+
+        // Get the results
+        $results = $query->all();
+
+        // Calculate statistics
+        $totalAffiliates = count($results);
+        $totalVencidasCuotas = 0;
+        $maxVencidas = 0;
+
+        foreach ($results as $row) {
+            $totalVencidasCuotas += $row['cuotas_vencidas_count'];
+            if ($row['cuotas_vencidas_count'] > $maxVencidas) {
+                $maxVencidas = $row['cuotas_vencidas_count'];
+            }
+        }
+
+        return [
+            'count' => $totalAffiliates,
+            'total_vencidas_cuotas' => $totalVencidasCuotas,
+            'max_vencidas' => $maxVencidas,
+            'average_vencidas' => $totalAffiliates > 0 ? round($totalVencidasCuotas / $totalAffiliates, 1) : 0,
+            'affiliates' => $results,  // Detailed list for potential drill-down
+        ];
+    }
+
+    /**
+     * Get critical delinquency summary by clinic
+     * NEW: Shows distribution of critical delinquent affiliates per clinic
+     */
+    public function getCriticalDelinquencyByClinic($params = [])
+    {
+        $this->load($params);
+
+        $filteredClinicaIds = $this->getFilteredClinicaIds();
+
+        $query = (new \yii\db\Query())
+            ->select([
+                'c.id as clinica_id',
+                'c.nombre as clinica_nombre',
+                'COUNT(DISTINCT ud.id) as critical_affiliates',
+                'COUNT(cu.id) as total_vencidas_cuotas'
+            ])
+            ->from('rm_clinica c')
+            ->innerJoin('user_datos ud', 'ud.clinica_id = c.id AND ud.role = \'afiliado\' AND ud.deleted_at IS NULL')
+            ->innerJoin('contratos ct', 'ct.user_id = ud.id AND ct.deleted_at IS NULL')
+            ->innerJoin('cuotas cu', 'cu.contrato_id = ct.id')
+            ->where(['ct.estatus' => 'Suspendido'])
+            ->andWhere(['cu.estatus' => 'vencida'])
+            ->groupBy(['c.id', 'c.nombre'])
+            ->having(['>=', 'COUNT(cu.id)', 3])  // Only clinics with affiliates having 3+ vencidas
+            ->orderBy(['critical_affiliates' => SORT_DESC]);
+
+        // Apply clinic restrictions
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
+            $query->andWhere(['c.id' => $this->_accessibleClinicaIds]);
+        } elseif ($filteredClinicaIds !== null && !empty($filteredClinicaIds)) {
+            $query->andWhere(['c.id' => $filteredClinicaIds]);
+        }
+
+        return $query->all();
+    }
+
+    /**
+     * Get top critical delinquent affiliates (for spotlight)
+     */
+    public function getTopCriticalDelinquents($limit = 5, $params = [])
+    {
+        $this->load($params);
+
+        $filteredClinicaIds = $this->getFilteredClinicaIds();
+
+        $query = (new \yii\db\Query())
+            ->select([
+                'ud.id as user_id',
+                'ud.nombres',
+                'ud.apellidos',
+                'ud.cedula',
+                'ud.tipo_cedula',
+                'c.nombre as clinica_nombre',
+                'ct.nrocontrato',
+                'COUNT(cu.id) as cuotas_vencidas_count',
+                'SUM(cu.monto) as total_adeudado'
+            ])
+            ->from('user_datos ud')
+            ->innerJoin('rm_clinica c', 'c.id = ud.clinica_id')
+            ->innerJoin('contratos ct', 'ct.user_id = ud.id AND ct.deleted_at IS NULL')
+            ->innerJoin('cuotas cu', 'cu.contrato_id = ct.id')
+            ->where(['ud.role' => 'afiliado'])
+            ->andWhere(['ud.deleted_at' => null])
+            ->andWhere(['ct.estatus' => 'Suspendido'])
+            ->andWhere(['cu.estatus' => 'vencida'])
+            ->groupBy([
+                'ud.id',
+                'ud.nombres',
+                'ud.apellidos',
+                'ud.cedula',
+                'ud.tipo_cedula',
+                'c.nombre',
+                'ct.nrocontrato'
+            ])
+            ->having(['>=', 'COUNT(cu.id)', 3])
+            ->orderBy(['COUNT(cu.id)' => SORT_DESC, 'SUM(cu.monto)' => SORT_DESC])
+            ->limit($limit);
+
+        // Apply clinic restrictions
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
+            $query->andWhere(['ud.clinica_id' => $this->_accessibleClinicaIds]);
+        } elseif ($filteredClinicaIds !== null && !empty($filteredClinicaIds)) {
+            $query->andWhere(['ud.clinica_id' => $filteredClinicaIds]);
+        }
+
+        $results = $query->all();
+
+        // Format the results
+        $formatted = [];
+        foreach ($results as $row) {
+            $formatted[] = [
+                'id' => $row['user_id'],
+                'nombre_completo' => $row['nombres'] . ' ' . $row['apellidos'],
+                'cedula' => ($row['tipo_cedula'] ?? 'V') . '-' . $row['cedula'],
+                'clinica' => $row['clinica_nombre'],
+                'contrato' => $row['nrocontrato'] ?? 'N/A',
+                'cuotas_vencidas' => (int)$row['cuotas_vencidas_count'],
+                'total_adeudado' => (float)$row['total_adeudado'],
+            ];
+        }
+
+        return $formatted;
     }
 }

@@ -150,7 +150,7 @@ use kartik\select2\Select2;
                         <?php else: ?>
                             <div class="alert alert-warning">
                                 No se encontraron baremos para esta clínica.
-                                <?= Html::a('Agregar baremos', ['/baremo/index', 'clinica_id' => $clinica->id], [
+                                <?= Html::a('Agregar baremos', ['/baremo/index', 'clinica_id' => $model->clinica_id], [
                                     'class' => 'alert-link'
                                 ]) ?>
                             </div>
@@ -162,7 +162,7 @@ use kartik\select2\Select2;
 
         <div class="form-group mt-3">
             <?= Html::submitButton('<i class="fas fa-save"></i> Guardar Plan', ['class' => 'btn btn-success btn-lg']) ?>
-            <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'clinica_id' => $clinica->id], ['class' => 'btn btn-danger btn-lg']) ?>
+            <?= Html::a('<i class="fas fa-times"></i> Cancelar', ['index', 'clinica_id' => $model->clinica_id], ['class' => 'btn btn-danger btn-lg']) ?>
         </div>
 
         <?php ActiveForm::end(); ?>

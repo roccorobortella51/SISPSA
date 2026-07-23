@@ -126,11 +126,11 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                             'attribute' => 'created_at',
                             'hAlign' => 'center',
                             'vAlign' => 'middle',
-                            'label' => 'Fecha Afiliación',
+                            'label' => 'Fecha Alta',
                             'value' => function ($model, $key, $index, $widget) {
-                                return !empty($model->created_at) ? Yii::$app->formatter->asDate($model->created_at, 'd/M/Y HH:mm:ss') : '';
+                                return !empty($model->created_at) ? Yii::$app->formatter->asDate($model->created_at, 'd/M/Y') : '';
                             },
-                            'width' => '12%',
+                            'width' => '10%',
                             'filterType' => \kartik\grid\GridView::FILTER_DATE_RANGE,
                             'format' => 'raw',
                             'filterInputOptions' => ['placeholder' => 'Seleccione un rango de fechas', 'class' => 'form-control'],
@@ -150,6 +150,7 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                         ],
                         [
                             'attribute' => 'user_datos_type_id',
+                            'hAlign' => 'center',
                             'label' => 'Tipo Afiliado',
                             'value' => function ($model) {
                                 return $model->userDatosType ? $model->userDatosType->nombre : null;
@@ -179,7 +180,7 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                                     'id',
                                     'nombre'
                                 ),
-                                'options' => ['placeholder' => 'Filtrar por Clínica'],
+                                'options' => ['placeholder' => 'Filtrar Clínica'],
                                 'pluginOptions' => [
                                     'allowClear' => true
                                 ],
@@ -192,20 +193,64 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                             'label' => 'Corporativo',
                             'value' => function ($model) {
                                 if ($model->user_datos_type_id == 2 && $model->corporativo) {
-                                    return $model->corporativo->nombre;
+                                    $name = Html::encode($model->corporativo->nombre);
+
+                                    // Predefined color palettes
+                                    $colorPalettes = [
+                                        ['#dbeafe', '#93c5fd', '#3b82f6', '#1e40af', '#2563eb'],
+                                        ['#d1fae5', '#6ee7b7', '#10b981', '#065f46', '#059669'],
+                                        ['#ede9fe', '#c4b5fd', '#8b5cf6', '#5b21b6', '#7c3aed'],
+                                        ['#fef3c7', '#fcd34d', '#f59e0b', '#92400e', '#d97706'],
+                                        ['#fce7f3', '#f9a8d4', '#ec4899', '#9d174d', '#db2777'],
+                                        ['#ccfbf1', '#5eead4', '#14b8a6', '#115e59', '#0d9488'],
+                                        ['#fecaca', '#f87171', '#ef4444', '#991b1b', '#dc2626'],
+                                        ['#e0e7ff', '#818cf8', '#4f46e5', '#312e81', '#4338ca'],
+                                        ['#cffafe', '#67e8f9', '#06b6d4', '#164e63', '#0891b2'],
+                                        ['#fce4ec', '#f48fb1', '#e91e63', '#880e4f', '#c2185b'],
+                                        ['#e8f5e9', '#81c784', '#4caf50', '#1b5e20', '#388e3c'],
+                                        ['#fff3e0', '#ffb74d', '#ff9800', '#e65100', '#f57c00'],
+                                        ['#f3e5f5', '#ce93d8', '#9c27b0', '#4a148c', '#7b1fa2'],
+                                        ['#e0f7fa', '#80deea', '#00bcd4', '#006064', '#00838f'],
+                                        ['#fff8e1', '#ffd54f', '#ffc107', '#f57f17', '#f9a825'],
+                                        ['#efebe9', '#a1887f', '#795548', '#3e2723', '#5d4037'],
+                                    ];
+
+                                    $hash = abs(crc32($name));
+                                    $colorIndex = $hash % count($colorPalettes);
+                                    $palette = $colorPalettes[$colorIndex];
+                                    list($bg1, $bg2, $border, $text, $icon) = $palette;
+
+                                    $style = sprintf(
+                                        'background: linear-gradient(135deg, %s 0%%, %s 100%%); border-color: %s; color: %s;',
+                                        $bg1,
+                                        $bg2,
+                                        $border,
+                                        $text
+                                    );
+                                    $iconStyle = sprintf('color: %s;', $icon);
+
+                                    return sprintf(
+                                        '<span class="corporativo-badge" style="%s"><i class="fas fa-building mr-2" style="%s"></i> %s</span>',
+                                        $style,
+                                        $iconStyle,
+                                        $name
+                                    );
                                 }
-                                return null;
+                                return '<span class="no-corporativo-badge"><i class="fas fa-user mr-2"></i> No aplica</span>';
                             },
                             'filter' => \kartik\select2\Select2::widget([
                                 'model' => $searchModel,
                                 'attribute' => 'afiliado_corporativo_id',
                                 'data' => \yii\helpers\ArrayHelper::map(
-                                    \app\models\Corporativo::find()->orderBy('nombre')->all(),
+                                    \app\models\Corporativo::find()
+                                        ->where(['estatus' => 'Activo'])
+                                        ->orderBy('nombre')
+                                        ->all(),
                                     'id',
                                     'nombre'
                                 ),
                                 'options' => [
-                                    'placeholder' => 'Seleccionar corporativo',
+                                    'placeholder' => 'Filtrar corporativo',
                                     'class' => 'form-control'
                                 ],
                                 'pluginOptions' => [
@@ -213,11 +258,13 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                                 ],
                             ]),
                             'contentOptions' => function ($model) {
-                                if ($model->user_datos_type_id == 2) {
-                                    return ['class' => 'corporativo-affiliate'];
+                                if ($model->user_datos_type_id == 2 && $model->corporativo) {
+                                    return ['class' => 'text-center', 'style' => 'vertical-align: middle; padding: 8px 5px;'];
                                 }
-                                return [];
+                                return ['class' => 'text-center', 'style' => 'vertical-align: middle; padding: 8px 5px;'];
                             },
+                            'headerOptions' => ['style' => 'color: white!important; width: 150px; min-width: 150px;'],
+                            'format' => 'raw',
                         ],
                         [
                             'label' => 'Nombre Completo',
@@ -228,40 +275,27 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                             'format' => 'ntext',
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar por nombre',
+                                'placeholder' => 'Buscar nombre',
                                 'class' => 'form-control text-center',
                             ],
                         ],
                         [
-                            'label' => 'Cédula de Identidad',
+                            'label' => 'Cédula Identidad',
                             'attribute' => 'cedula',
                             'value' => function ($model) {
                                 $tipoCedula = $model->tipo_cedula ?? '';
                                 $numeroCedula = $model->cedula ?? '';
-                                $idAfiliado = $model->id ?? '';
-
-                                echo "<script>console.log('ID: $idAfiliado | Tipo: \"$tipoCedula\" | Cédula: $numeroCedula | Consecutivo: " . ($model->consecutivo_menor ?? 'NULL') . "');</script>";
-
                                 $consecutivo = '';
+
                                 if (isset($model->consecutivo_menor) && $model->consecutivo_menor !== null && $model->consecutivo_menor !== '') {
                                     $consecutivo = str_pad((int)$model->consecutivo_menor, 2, '0', STR_PAD_LEFT);
                                 }
 
                                 if ($tipoCedula === 'Menor Sin Cédula') {
                                     if (!empty($consecutivo)) {
-                                        return '
-                                <div class="cedula-grande-container menor-sin-cedula">
-                                    <div class="cedula-grande-text">
-                                    SIN CÉDULA-' . $numeroCedula . '-<span class="consecutivo-grande">' . $consecutivo . '</span>
-                                    </div>
-                                </div>';
+                                        return '<div class="cedula-grande-container menor-sin-cedula"><div class="cedula-grande-text">SIN CÉDULA-' . $numeroCedula . '-<span class="consecutivo-grande">' . $consecutivo . '</span></div></div>';
                                     } else {
-                                        return '
-                                <div class="cedula-grande-container menor-sin-cedula">
-                                    <div class="cedula-grande-text">
-                                    SIN CÉDULA-' . $numeroCedula . '
-                                    </div>
-                                </div>';
+                                        return '<div class="cedula-grande-container menor-sin-cedula"><div class="cedula-grande-text">SIN CÉDULA-' . $numeroCedula . '</div></div>';
                                     }
                                 }
 
@@ -277,51 +311,30 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                                         } catch (\Exception $e) {
                                         }
                                     }
-
-                                    return '
-                                <div class="cedula-grande-container cedula-normal">
-                                    <div class="cedula-grande-text">
-                                        ' . $tipoCedula . '-' . $numeroCedula . '
-                                    </div>
-                                    ' . ($esMenorEdad ? '<div class="edad-etiqueta">MENOR (' . $edad . ' años)</div>' : '') . '
-                                </div>';
+                                    return '<div class="cedula-grande-container cedula-normal"><div class="cedula-grande-text">' . $tipoCedula . '-' . $numeroCedula . '</div>' . ($esMenorEdad ? '<div class="edad-etiqueta">MENOR (' . $edad . ' años)</div>' : '') . '</div>';
                                 }
 
                                 if (!empty($tipoCedula) && empty($numeroCedula) && $tipoCedula !== 'Menor Sin Cédula') {
-                                    return '
-                                <div class="cedula-grande-container cedula-pendiente">
-                                    <div class="cedula-grande-text">
-                                        ' . $tipoCedula . '
-                                    </div>
-                                    <div class="estado-etiqueta">PENDIENTE DE NÚMERO</div>
-                                </div>';
+                                    return '<div class="cedula-grande-container cedula-pendiente"><div class="cedula-grande-text">' . $tipoCedula . '</div><div class="estado-etiqueta">PENDIENTE DE NÚMERO</div></div>';
                                 }
 
-                                return '
-                            <div class="cedula-grande-container sin-cedula">
-                                <div class="cedula-grande-text">
-                                    SIN REGISTRO
-                                </div>
-                            </div>';
+                                return '<div class="cedula-grande-container sin-cedula"><div class="cedula-grande-text">SIN REGISTRO</div></div>';
                             },
                             'format' => 'raw',
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'options' => ['style' => 'width: 280px; min-width: 280px;'],
+                            'options' => ['style' => 'width: 120px; min-width:120px;'],
                             'contentOptions' => function ($model) {
                                 $tipo = $model->tipo_cedula ?? '';
-
                                 if ($tipo === 'Menor Sin Cédula') {
                                     return ['class' => 'text-center bg-menor-sin-cedula'];
                                 }
-
                                 if (!empty($model->cedula)) {
                                     return ['class' => 'text-center bg-cedula-normal'];
                                 }
-
                                 return ['class' => 'text-center'];
                             },
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar por cédula o tipo',
+                                'placeholder' => 'Buscar cédula',
                                 'class' => 'form-control text-center',
                             ],
                         ],
@@ -331,7 +344,7 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                             'label' => 'Correo Electrónico',
                             'format' => 'email',
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'options' => ['style' => 'width: 300px;'],
+                            'options' => ['style' => 'width: 200px;'],
                             'filterInputOptions' => [
                                 'placeholder' => 'Buscar por correo',
                                 'class' => 'form-control text-center',
@@ -339,6 +352,7 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                         ],
                         [
                             'label' => 'Asesor',
+                            'hAlign' => 'center',
                             'format' => 'ntext',
                             'value' => function ($model) {
                                 if ($model->asesor && $model->asesor->userDatos) {
@@ -483,6 +497,7 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                 ]); ?>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -532,20 +547,12 @@ $(document).on('click', '.btn-cerrar-swal', function(e) {
     Swal.close();
 });
 
-// 3. ROBUST TOOLTIP MANAGEMENT SYSTEM (FROM INDEX3.PHP)
+// 3. ROBUST TOOLTIP MANAGEMENT SYSTEM
 $(document).ready(function() {
-    
-    // Function to initialize all tooltips
     function initAllTooltips() {
-        // Dispose all existing tooltips first
         $('[data-toggle="tooltip"]').tooltip('dispose');
-        
-        // Find all elements that need tooltips
-        var tooltipElements = $('[data-toggle="tooltip"]');
-        
-        // Initialize with error handling
         try {
-            tooltipElements.tooltip({
+            $('[data-toggle="tooltip"]').tooltip({
                 trigger: 'hover',
                 delay: { "show": 100, "hide": 100 },
                 container: 'body',
@@ -557,31 +564,23 @@ $(document).ready(function() {
         }
     }
     
-    // Initialize on page load
     initAllTooltips();
-    
-    // Re-initialize on PJAX complete (for GridView pagination/filtering)
     $(document).on('pjax:complete yiiGridViewUpdated', function() {
         setTimeout(initAllTooltips, 100);
     });
     
-    // Add click-to-copy for contract numbers in tooltips
     $(document).on('click', '.contract-tooltip strong', function(e) {
         e.stopPropagation();
-        
         var text = $(this).text();
         if (text.includes('Contrato #') || text.includes('Número:')) {
             var contractNum = text.replace('Contrato #', '').replace('Número: ', '').trim();
-            
             navigator.clipboard.writeText(contractNum).then(function() {
                 var badgeElement = $(e.target).closest('[data-toggle="tooltip"]');
                 var originalText = badgeElement.text();
                 var originalTitle = badgeElement.attr('title');
-                
                 badgeElement.text('✓ Copiado!');
                 badgeElement.attr('title', 'Número de contrato copiado: ' + contractNum);
                 badgeElement.tooltip('update').tooltip('show');
-                
                 setTimeout(function() {
                     badgeElement.text(originalText);
                     badgeElement.attr('title', originalTitle);
@@ -591,7 +590,6 @@ $(document).ready(function() {
         }
     });
     
-    // Highlight important statuses
     function highlightImportantStatuses() {
         $('.badge-danger, .badge-warning, .badge-secondary').each(function() {
             if (!$(this).hasClass('highlighted')) {
@@ -610,7 +608,7 @@ $(document).ready(function() {
     });
 });
 
-// 4. DUAL SCROLLBAR SYSTEM (PRESERVED FROM INDEX.PHP)
+// 4. DUAL SCROLLBAR SYSTEM
 $(document).ready(function() {
     var $gridWrapper = $('#grid-scroll-container');
     var $top = $('.top-native-scrollbar');
@@ -622,7 +620,6 @@ $(document).ready(function() {
         var $candidates = $gridWrapper.find('*').addBack();
         var best = null;
         var bestWidth = 0;
-
         $candidates.each(function() {
             var el = this;
             if (!el || !el.clientWidth) return;
@@ -631,7 +628,6 @@ $(document).ready(function() {
                 bestWidth = el.scrollWidth;
             }
         });
-
         return best ? $(best) : $gridWrapper;
     }
 
@@ -639,7 +635,6 @@ $(document).ready(function() {
         var gridEl = $activeScroller.get(0);
         var topEl = $top.get(0);
         if (!gridEl || !topEl) return;
-
         if (source === 'top') {
             if (syncingFrom === 'grid') return;
             syncingFrom = 'top';
@@ -647,7 +642,6 @@ $(document).ready(function() {
             syncingFrom = null;
             return;
         }
-
         if (source === 'grid') {
             if (syncingFrom === 'top') return;
             syncingFrom = 'grid';
@@ -658,20 +652,16 @@ $(document).ready(function() {
 
     function getMaxScrollWidth() {
         var maxWidth = 0;
-        
         $gridWrapper.find('table').each(function() {
             var width = this.scrollWidth;
             if (width > maxWidth) maxWidth = width;
         });
-        
         if ($gridWrapper[0] && $gridWrapper[0].scrollWidth > maxWidth) {
             maxWidth = $gridWrapper[0].scrollWidth;
         }
-        
         if ($activeScroller[0] && $activeScroller[0].scrollWidth > maxWidth) {
             maxWidth = $activeScroller[0].scrollWidth;
         }
-        
         return maxWidth;
     }
 
@@ -679,22 +669,18 @@ $(document).ready(function() {
         $activeScroller = getActiveGridScroller();
         var gridEl = $activeScroller.get(0);
         if (!gridEl || !$top.length || !$dummy.length) return;
-
         var scrollWidth = getMaxScrollWidth();
         var viewportWidth = gridEl.clientWidth;
         var hasHorizontalScroll = scrollWidth > (viewportWidth + 1);
-
         if (hasHorizontalScroll) {
             $dummy.css('width', (scrollWidth + 20) + 'px');
             $top.show();
-            
             setTimeout(function() {
                 var maxScroll = scrollWidth - $top[0].clientWidth;
                 if ($top[0].scrollLeft > maxScroll) {
                     $top[0].scrollLeft = maxScroll;
                 }
             }, 20);
-            
             syncBars('grid');
         } else {
             $top.hide();
@@ -773,15 +759,6 @@ $this->registerJs($js, View::POS_READY);
         margin: 0 3px;
     }
 
-    .menor-con-cedula .cedula-grande-text {
-        color: #f39c12;
-        background-color: rgba(243, 156, 18, 0.1);
-        border: 2px solid rgba(243, 156, 18, 0.2);
-        border-radius: 6px;
-        padding: 8px 12px;
-        display: inline-block;
-    }
-
     .cedula-normal .cedula-grande-text {
         color: #2c3e50;
         background-color: rgba(52, 152, 219, 0.1);
@@ -825,20 +802,12 @@ $this->registerJs($js, View::POS_READY);
         background-color: rgba(255, 193, 7, 0.08) !important;
     }
 
-    .bg-menor-con-cedula {
-        background-color: rgba(243, 156, 18, 0.05) !important;
-    }
-
     .bg-cedula-normal {
         background-color: rgba(52, 152, 219, 0.03) !important;
     }
 
     tbody tr:hover .bg-menor-sin-cedula {
         background-color: rgba(255, 193, 7, 0.12) !important;
-    }
-
-    tbody tr:hover .bg-menor-con-cedula {
-        background-color: rgba(243, 156, 18, 0.08) !important;
     }
 
     tbody tr:hover .bg-cedula-normal {
@@ -874,7 +843,7 @@ $this->registerJs($js, View::POS_READY);
     }
 
     /* ============================================
-       BADGES DE ESTATUS DE CONTRATO - BASE STYLES
+       CONTRACT STATUS BADGE STYLES
        ============================================ */
     .badge {
         display: inline-block;
@@ -943,35 +912,6 @@ $this->registerJs($js, View::POS_READY);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    @keyframes statusChange {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.05);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .badge.badge-success,
-    .badge.badge-primary {
-        animation: statusChange 0.5s ease-in-out;
-    }
-
-    @media (max-width: 768px) {
-        .badge {
-            font-size: 0.75em;
-            padding: 0.25em 0.5em;
-        }
-    }
-
-    /* ============================================
-       ENHANCED CONTRACT STATUS COLUMN
-       ============================================ */
     .contract-status-cell {
         font-weight: 600;
         text-align: center !important;
@@ -1001,152 +941,84 @@ $this->registerJs($js, View::POS_READY);
     }
 
     /* ============================================
-       STATUS INDICATORS
+       CORPORATIVO BADGE STYLES
        ============================================ */
-    .status-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
+    .corporativo-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.6rem 1.2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border: 2px solid;
+        border-radius: 25px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        letter-spacing: 0.4px;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 40px;
+        background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+        border-color: #3b82f6;
+        color: #1e40af;
     }
 
-    .status-active {
-        background-color: #28a745;
-    }
-
-    .status-inactive {
-        background-color: #dc3545;
-    }
-
-    .status-pending {
-        background-color: #ffc107;
-    }
-
-    .status-indicator-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-        animation: pulse-dot 2s infinite;
-    }
-
-    @keyframes pulse-dot {
-        0% {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        50% {
-            transform: scale(1.2);
-            opacity: 0.8;
-        }
-
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .status-dot-active {
-        background-color: #28a745;
-    }
-
-    .status-dot-inactive {
-        background-color: #dc3545;
-    }
-
-    .status-dot-pending {
-        background-color: #ffc107;
-    }
-
-    .status-dot-warning {
-        background-color: #fd7e14;
-    }
-
-    .status-dot-info {
-        background-color: #17a2b8;
-    }
-
-    /* ============================================
-       ENHANCED TOOLTIP STYLING
-       ============================================ */
-    .contract-tooltip {
-        max-width: 300px;
-        text-align: left;
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    }
-
-    .tooltip {
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        z-index: 9999 !important;
-    }
-
-    .tooltip-inner {
-        max-width: 350px !important;
-        padding: 12px;
-        background-color: #fff;
-        color: #333;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        text-align: left;
-        font-size: 13px;
-        line-height: 1.5;
-    }
-
-    .tooltip.bs-tooltip-top .arrow::before {
-        border-top-color: #ddd;
-    }
-
-    .tooltip.bs-tooltip-bottom .arrow::before {
-        border-bottom-color: #ddd;
-    }
-
-    .tooltip.bs-tooltip-left .arrow::before {
-        border-left-color: #ddd;
-    }
-
-    .tooltip.bs-tooltip-right .arrow::before {
-        border-right-color: #ddd;
-    }
-
-    .badge[data-toggle="tooltip"] {
-        transition: all 0.2s ease;
-        position: relative;
-    }
-
-    .badge[data-toggle="tooltip"]:hover {
+    .corporativo-badge:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        animation: pulse 0.6s ease-in-out;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
-        }
+    .corporativo-badge i {
+        font-size: 1.1rem;
+        margin-right: 10px;
+    }
 
-        50% {
-            transform: scale(1.05);
+    .no-corporativo-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #6c757d;
+        background: #f1f2f6;
+        border: 2px dashed #ced4da;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        letter-spacing: 0.3px;
+        min-height: 40px;
+    }
+
+    .no-corporativo-badge i {
+        font-size: 1rem;
+        margin-right: 10px;
+        color: #adb5bd;
+    }
+
+    .no-corporativo-badge:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+        transform: translateY(-1px);
+    }
+
+    .corporativo-badge {
+        animation: fadeInBadge 0.5s ease-in-out;
+    }
+
+    @keyframes fadeInBadge {
+        0% {
+            opacity: 0;
+            transform: scale(0.9);
         }
 
         100% {
+            opacity: 1;
             transform: scale(1);
         }
     }
 
-    .badge .status-icon {
-        font-size: 0.9em;
-        margin-right: 4px;
-        vertical-align: middle;
-    }
-
     /* ============================================
-       SIMPLE DUAL SCROLLBAR SYSTEM
+       DUAL SCROLLBAR SYSTEM
        ============================================ */
     .table-responsive-scroll {
         overflow-x: auto;
@@ -1173,57 +1045,86 @@ $this->registerJs($js, View::POS_READY);
         height: 1px;
     }
 
-    .top-native-scrollbar::-webkit-scrollbar {
-        height: 12px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 6px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 6px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-
-    .table-responsive-scroll {
-        overflow-x: auto;
-        overflow-y: visible;
-        width: 100%;
-    }
-
+    .top-native-scrollbar::-webkit-scrollbar,
     .table-responsive-scroll::-webkit-scrollbar {
         height: 12px;
     }
 
+    .top-native-scrollbar::-webkit-scrollbar-track,
     .table-responsive-scroll::-webkit-scrollbar-track {
         background: #f1f1f1;
         border-radius: 6px;
     }
 
+    .top-native-scrollbar::-webkit-scrollbar-thumb,
     .table-responsive-scroll::-webkit-scrollbar-thumb {
         background: #888;
         border-radius: 6px;
     }
 
+    .top-native-scrollbar::-webkit-scrollbar-thumb:hover,
     .table-responsive-scroll::-webkit-scrollbar-thumb:hover {
         background: #555;
     }
 
-    /* Ensure contract status column is centered */
+    /* Ensure proper centering */
     .grid-view td:has(.badge) {
         text-align: center !important;
         vertical-align: middle !important;
     }
 
-    /* Badges should be inline-block for proper centering */
     .badge {
         display: inline-block !important;
         text-align: center !important;
+    }
+
+    .grid-view td {
+        vertical-align: middle !important;
+        padding: 8px 6px !important;
+    }
+
+    .grid-view th {
+        vertical-align: middle !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+
+        .corporativo-badge,
+        .no-corporativo-badge {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.9rem;
+            min-height: 34px;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .corporativo-badge i,
+        .no-corporativo-badge i {
+            font-size: 0.9rem;
+            margin-right: 6px;
+        }
+
+        .badge {
+            font-size: 0.75em;
+            padding: 0.25em 0.5em;
+        }
+    }
+
+    @media (max-width: 576px) {
+
+        .corporativo-badge,
+        .no-corporativo-badge {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.7rem;
+            min-height: 30px;
+            border-radius: 20px;
+        }
+
+        .corporativo-badge i,
+        .no-corporativo-badge i {
+            font-size: 0.8rem;
+            margin-right: 4px;
+        }
     }
 </style>

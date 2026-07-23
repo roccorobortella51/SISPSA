@@ -31,15 +31,15 @@ $config = [
         'db' => $db,
         // ADDED MAILER CONFIGURATION
         'mailer' => [
-            'class' => 'yii\swiftmailer\Mailer',
+            'class' => 'yii\symfonymailer\Mailer',
             'useFileTransport' => false,
             'transport' => [
-                'class' => 'Swift_SmtpTransport',
+                'scheme' => 'smtp',
                 'host' => 'smtp.gmail.com',
                 'username' => 'sispsa.notificaciones@gmail.com',
-                'password' => 'wdeqdspikycwtjqf', // REPLACE THIS!
-                'port' => '587',
-                'encryption' => 'tls',
+                'password' => 'wdeqdspikycwtjqf',
+                'port' => 465,
+                'encryption' => 'ssl',
             ],
         ],
     ],

@@ -92,9 +92,6 @@ class UserDatosSearch extends UserDatos
 
         // ============================================================
         // AGENTE FILTERING - For Agente role
-        // Show affiliates that EITHER:
-        // 1. Are assigned to an asesor belonging to this agency, OR
-        // 2. Are directly assigned to this agency (agencia_id)
         // ============================================================
         if ($rol == "Agente") {
             $agenteId = UserHelper::getAgenteId();
@@ -102,14 +99,12 @@ class UserDatosSearch extends UserDatos
             if ($agenteId) {
                 $condition = ['or'];
 
-                // Get all asesores (persons) belonging to this agency
                 $asesorPersonIds = AgenteFuerza::find()
                     ->where(['agente_id' => $agenteId])
                     ->select('idusuario')
                     ->distinct()
                     ->column();
 
-                // Condition 1: Affiliates assigned to asesores of this agency
                 if (!empty($asesorPersonIds)) {
                     $allAgenteFuerzaIds = AgenteFuerza::find()
                         ->where(['idusuario' => $asesorPersonIds])
@@ -121,10 +116,7 @@ class UserDatosSearch extends UserDatos
                     }
                 }
 
-                // Condition 2: Affiliates directly assigned to this agency
                 $condition[] = ['user_datos.agencia_id' => $agenteId];
-
-                // Apply the OR condition
                 $query->andWhere($condition);
             } else {
                 $query->andWhere('1=0');
@@ -150,6 +142,7 @@ class UserDatosSearch extends UserDatos
             'user_datos.agencia_id',
             'user_datos.deleted_at',
             'user_datos.consecutivo_menor',
+            'user_datos.afiliado_corporativo_id',
             'user_datos_type.nombre as userDatosTypeNombre',
             'rm_clinica.nombre as clinicaNombre',
             'ud_asesor.nombres as asesorNombres',
@@ -164,10 +157,14 @@ class UserDatosSearch extends UserDatos
             },
             'clinica'
         ]);
+
+        // ============================================================
+        // FIX: LEFT JOIN CONTRATOS WITHOUT EXCLUDING ANULADO
+        // ============================================================
+        // Join ALL contracts (including annulled) so we can filter by them
+        $query->leftJoin('contratos', 'contratos.user_id = user_datos.id');
+
         $query->leftJoin('corporativos', 'user_datos.afiliado_corporativo_id = corporativos.id');
-        $query->leftJoin('contratos', 'contratos.user_id = user_datos.id AND contratos.estatus != :anulado', [
-            ':anulado' => Contratos::STATUS_ANULADO
-        ]);
 
         $query->groupBy([
             'user_datos.id',
@@ -185,6 +182,7 @@ class UserDatosSearch extends UserDatos
             'user_datos.agencia_id',
             'user_datos.deleted_at',
             'user_datos.consecutivo_menor',
+            'user_datos.afiliado_corporativo_id',
             'user_datos_type.nombre',
             'rm_clinica.nombre',
             'ud_asesor.nombres',
@@ -268,11 +266,26 @@ class UserDatosSearch extends UserDatos
             $query->andFilterWhere(['between', 'user_datos.fechanac', $dates[0] . ' 00:00:00', $dates[1] . ' 23:59:59']);
         }
 
-        // Contract status filter
+        // ============================================================
+        // FIX: CONTRACT STATUS FILTER - Includes "Anulado" support
+        // ============================================================
         if (!empty($this->contrato_estatus)) {
             if ($this->contrato_estatus === 'sin_contrato') {
+                // Show users with NO contracts at all
                 $query->andWhere(['contratos.id' => null]);
+            } elseif ($this->contrato_estatus === 'anulado') {
+                // Show users whose MOST RECENT contract is Anulado
+                // Use a subquery to find the most recent contract status
+                $subQuery = Contratos::find()
+                    ->select('estatus')
+                    ->where('contratos.user_id = user_datos.id')
+                    ->orderBy(['id' => SORT_DESC])
+                    ->limit(1);
+
+                $query->andWhere(['contratos.id' => $subQuery]);
+                $query->andWhere(['contratos.estatus' => Contratos::STATUS_ANULADO]);
             } else {
+                // Show users with contracts in the specified status
                 $query->andFilterWhere(['contratos.estatus' => $this->contrato_estatus]);
             }
         }

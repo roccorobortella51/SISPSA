@@ -2605,26 +2605,29 @@ class UserDatosController extends Controller
 
         // Add report header with statistics (rows 1-3)
         $sheet->setCellValue('A1', 'REPORTE DE AFILIADOS - SISPSA');
-        $sheet->mergeCells('A1:D1');
+        $sheet->mergeCells('A1:G1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         $sheet->setCellValue('A2', 'Generado: ' . date('d/m/Y H:i:s'));
-        $sheet->mergeCells('A2:D2');
+        $sheet->mergeCells('A2:G2');
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         // Add statistics row
         $sheet->setCellValue('A3', 'Total Afiliados: ' . count($affiliates) . ' | Número de Clínicas: ' . $numeroClinicas);
-        $sheet->mergeCells('A3:D3');
+        $sheet->mergeCells('A3:G3');
         $sheet->getStyle('A3')->getFont()->setBold(true);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFE8F4FD');
 
-        // Set headers - WITH NUMBERING COLUMN (start at row 5)
+        // Set headers - Column order: #, Nombre Completo, Cédula, Fecha de Afiliación, Plan, Cuotas Pagadas, Clínica
         $headers = [
             '#',
             'Nombre Completo',
             'Cédula de Identidad',
+            'Fecha de Afiliación',
+            'Plan',
+            'Cuotas Pagadas',
             'Clínica'
         ];
 
@@ -2636,24 +2639,53 @@ class UserDatosController extends Controller
             $column++;
         }
 
-        // Fill data - WITH NUMBERING (start at row 6)
+        // Fill data
         $row = 6;
         $counter = 1;
         foreach ($affiliates as $affiliate) {
-            $sheet->setCellValue('A' . $row, $counter); // Number column
-            $sheet->setCellValue('B' . $row, $affiliate->nombres . ' ' . $affiliate->apellidos);
-            $sheet->setCellValue('C' . $row, $affiliate->tipo_cedula . '-' . $affiliate->cedula);
-            $sheet->setCellValue('D' . $row, $affiliate->clinica ? $affiliate->clinica->nombre : '');
+            // Get the most recent active contract (non-annulled)
+            $contrato = $affiliate->getContratos()
+                ->where(['!=', 'estatus', 'Anulado'])
+                ->orderBy(['fecha_ini' => SORT_DESC])
+                ->one();
+
+            // Check if contract exists and has fecha_ini
+            $fechaAfiliacion = '';
+            if ($contrato && !empty($contrato->fecha_ini)) {
+                $fechaAfiliacion = date('d/m/Y', strtotime($contrato->fecha_ini));
+            } elseif ($contrato && !empty($contrato->created_at)) {
+                $fechaAfiliacion = date('d/m/Y', strtotime($contrato->created_at));
+            } else {
+                $fechaAfiliacion = 'No definida';
+            }
+
+            $planNombre = $affiliate->plan ? $affiliate->plan->nombre : '';
+
+            // Count paid cuotas across ALL contracts (excluding annulled)
+            $totalPaid = \app\models\Cuotas::find()
+                ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
+                ->where(['contratos.user_id' => $affiliate->id])
+                ->andWhere(['!=', 'contratos.estatus', 'Anulado'])
+                ->andWhere(['cuotas.estatus' => 'pagada'])
+                ->count();
+
+            $sheet->setCellValue('A' . $row, $counter); // #
+            $sheet->setCellValue('B' . $row, $affiliate->nombres . ' ' . $affiliate->apellidos); // Nombre Completo
+            $sheet->setCellValue('C' . $row, $affiliate->tipo_cedula . '-' . $affiliate->cedula); // Cédula
+            $sheet->setCellValue('D' . $row, $fechaAfiliacion); // Fecha de Afiliación
+            $sheet->setCellValue('E' . $row, $planNombre); // Plan
+            $sheet->setCellValue('F' . $row, $totalPaid); // Cuotas Pagadas
+            $sheet->setCellValue('G' . $row, $affiliate->clinica ? $affiliate->clinica->nombre : ''); // Clínica
             $row++;
             $counter++;
         }
 
-        // Auto size columns (A through D)
-        foreach (range('A', 'D') as $column) {
+        // Auto size columns (A through G)
+        foreach (range('A', 'G') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        // Add borders to all cells with data (from row 5 to last data row)
+        // Add borders to all cells with data
         $styleArray = [
             'borders' => [
                 'allBorders' => [
@@ -2662,7 +2694,7 @@ class UserDatosController extends Controller
                 ],
             ],
         ];
-        $sheet->getStyle('A5:D' . ($row - 1))->applyFromArray($styleArray);
+        $sheet->getStyle('A5:G' . ($row - 1))->applyFromArray($styleArray);
 
         // Set header style
         $headerStyle = [
@@ -2679,12 +2711,12 @@ class UserDatosController extends Controller
                 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A5:D5')->applyFromArray($headerStyle);
+        $sheet->getStyle('A5:G5')->applyFromArray($headerStyle);
 
         // Set alternate row colors for better readability
         for ($i = 6; $i < $row; $i++) {
             if ($i % 2 == 0) {
-                $sheet->getStyle('A' . $i . ':D' . $i)
+                $sheet->getStyle('A' . $i . ':G' . $i)
                     ->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()
@@ -2692,20 +2724,22 @@ class UserDatosController extends Controller
             }
         }
 
-        // Center align the number column
-        $sheet->getStyle('A6:A' . ($row - 1))
-            ->getAlignment()
-            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        // Center align numeric columns
+        $sheet->getStyle('A6:A' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('C6:C' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D6:D' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('E6:E' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('F6:F' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         // Add summary at the end
         $summaryRow = $row + 1;
         $sheet->setCellValue('A' . $summaryRow, 'RESUMEN:');
-        $sheet->mergeCells('A' . $summaryRow . ':D' . $summaryRow);
+        $sheet->mergeCells('A' . $summaryRow . ':G' . $summaryRow);
         $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
 
         $sheet->setCellValue('A' . ($summaryRow + 1), 'Total de Afiliados: ' . count($affiliates));
         $sheet->setCellValue('B' . ($summaryRow + 1), 'Número de Clínicas: ' . $numeroClinicas);
-        $sheet->mergeCells('B' . ($summaryRow + 1) . ':D' . ($summaryRow + 1));
+        $sheet->mergeCells('B' . ($summaryRow + 1) . ':G' . ($summaryRow + 1));
 
         $sheet->getStyle('A' . $summaryRow . ':A' . ($summaryRow + 1))->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
@@ -2718,7 +2752,7 @@ class UserDatosController extends Controller
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
-        header('Cache-Control: max-age=1'); // For IE9
+        header('Cache-Control: max-age=1');
         header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
         header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         header('Cache-Control: cache, must-revalidate');
@@ -2890,9 +2924,8 @@ class UserDatosController extends Controller
 
         return $pdf->render();
     }
-    /**
-     * Dashboard-style affiliates report with charts and statistics
-     */
+    // In UserDatosController.php - actionReporteAfiliadosDashboard()
+
     public function actionReporteAfiliadosDashboard()
     {
         $searchModel = new AfiliadosReportSearch();
@@ -2903,7 +2936,7 @@ class UserDatosController extends Controller
         $summaryByPlan = $searchModel->getSummaryByPlan($params);
         $timelineData = $searchModel->getTimelineData($params);
         $topClinics = $searchModel->getTopClinics(8, $params);
-        $totals = $searchModel->getTotals($params);
+        $totals = $searchModel->getTotals($params);  // NOW INCLUDES critical_delinquency
 
         // Prepare chart data as JSON for JavaScript
         $chartData = [
@@ -2922,10 +2955,8 @@ class UserDatosController extends Controller
 
         // Get clinics for filter dropdown - but respect user access
         if (UserHelper::hasClinicAccess()) {
-            // Users with clinic access only see their own clinic
             $clinicas = UserHelper::getAccessibleClinicas();
         } else {
-            // Superadmin and admin see all clinics
             $clinicas = RmClinica::find()
                 ->select(['id', 'nombre'])
                 ->where(['IS', 'deleted_at', null])
@@ -2952,7 +2983,7 @@ class UserDatosController extends Controller
             'summaryByPlan' => $summaryByPlan,
             'timelineData' => $timelineData,
             'topClinics' => $topClinics,
-            'totals' => $totals,
+            'totals' => $totals,  // NOW CONTAINS critical_delinquency
             'clinicaList' => $clinicaList,
             'clinicas' => $clinicas,
             'planList' => $planList,

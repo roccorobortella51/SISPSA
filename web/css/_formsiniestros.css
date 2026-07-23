@@ -2030,4 +2030,381 @@
 .services-section-subtitle {
     color: white !important;
 }
+/* ============================================
+   EMERGENCY EXCLUSION BADGE
+   ============================================ */
+.stat-badge.emergency-excluded {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 30px;
+    cursor: default;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.stat-badge.emergency-excluded i {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.stat-badge.emergency-excluded:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* ============================================
+   SERVICES SECTION TITLE ENHANCEMENTS
+   ============================================ */
+.services-section-title small {
+    font-size: 0.7rem;
+    opacity: 0.85;
+    display: block;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.services-section-title small i {
+    color: #ffc107 !important;
+    margin-right: 4px;
+}
+
+/* ============================================
+   EXISTING STAT BADGE STYLES
+   ============================================ */
+.stat-badge {
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.stat-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-badge.disponible {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.restringido {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+    color: #1a1a1a !important;
+}
+
+.stat-badge.agotado {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.historico {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.total {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+    color: white !important;
+}
+
+.stat-badge i {
+    font-size: 0.9rem;
+}
+
+.clickable-badge {
+    cursor: pointer !important;
+}
+
+.clickable-badge:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   INFO BANNER FOR EMERGENCY EXCLUSION
+   ============================================ */
+.emergency-info-banner {
+    background: rgba(255, 193, 7, 0.08);
+    border-left: 4px solid #ffc107;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 8px 0 16px 0;
+}
+
+.emergency-info-banner i {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+.emergency-info-banner strong {
+    color: #856404;
+}
+
+.emergency-info-banner span {
+    color: #856404;
+}
+/* ============================================
+   EMERGENCY EXCLUSION BADGE - WHITE BACKGROUND
+   ============================================ */
+.stat-badge.emergency-excluded-white {
+    background: #ffffff !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 30px;
+    cursor: default;
+    border: 2px solid #dc3545 !important;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.stat-badge.emergency-excluded-white i {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-white:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+    background: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-white span {
+    color: #ffffff !important;
+}
+
+/* ============================================
+   EXISTING STAT BADGE STYLES (keep as is)
+   ============================================ */
+.stat-badge {
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.stat-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-badge.disponible {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.disponible i {
+    color: white !important;
+}
+
+.stat-badge.restringido {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+    color: #1a1a1a !important;
+}
+
+.stat-badge.restringido i {
+    color: #1a1a1a !important;
+}
+
+.stat-badge.agotado {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.agotado i {
+    color: white !important;
+}
+
+.stat-badge.historico {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.historico i {
+    color: white !important;
+}
+
+.stat-badge.total {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.total i {
+    color: white !important;
+}
+
+.stat-badge i {
+    font-size: 0.9rem;
+}
+
+.clickable-badge {
+    cursor: pointer !important;
+}
+
+.clickable-badge:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+/* ============================================
+   EMERGENCY EXCLUSION BADGE - GRAY BACKGROUND WITH WHITE TEXT
+   ============================================ */
+.stat-badge.emergency-excluded-gray {
+    background: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 30px;
+    cursor: default;
+    border: none !important;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.stat-badge.emergency-excluded-gray i {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.stat-badge.emergency-excluded-gray span {
+    color: #ffffff !important;
+}
+
+/* ============================================
+   EXISTING STAT BADGE STYLES (keep as is)
+   ============================================ */
+.stat-badge {
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.stat-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-badge.disponible {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.disponible i {
+    color: white !important;
+}
+
+.stat-badge.restringido {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+    color: #1a1a1a !important;
+}
+
+.stat-badge.restringido i {
+    color: #1a1a1a !important;
+}
+
+.stat-badge.agotado {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.agotado i {
+    color: white !important;
+}
+
+.stat-badge.historico {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.historico i {
+    color: white !important;
+}
+
+.stat-badge.total {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+    color: white !important;
+}
+
+.stat-badge.total i {
+    color: white !important;
+}
+
+.stat-badge i {
+    font-size: 0.9rem;
+}
+
+.clickable-badge {
+    cursor: pointer !important;
+}
+
+.clickable-badge:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+/* ============================================
+   EMERGENCY EXCLUSION BADGE - GRAY BACKGROUND WITH WHITE TEXT
+   ============================================ */
+
+/* ULTRA STRONG SELECTOR - Force white text */
+.badge.stat-badge.emergency-excluded-gray,
+.badge.stat-badge.emergency-excluded-gray span,
+.badge.stat-badge.emergency-excluded-gray i,
+.badge.stat-badge.emergency-excluded-gray .fas,
+.badge.stat-badge.emergency-excluded-gray .fa,
+.badge.stat-badge.emergency-excluded-gray * {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray {
+    background: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 8px 18px !important;
+    border-radius: 30px !important;
+    cursor: default !important;
+    border: none !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stat-badge.emergency-excluded-gray i,
+.stat-badge.emergency-excluded-gray .fas,
+.stat-badge.emergency-excluded-gray .fa {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+.stat-badge.emergency-excluded-gray span {
+    color: #ffffff !important;
+}
 }

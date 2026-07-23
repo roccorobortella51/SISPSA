@@ -123,9 +123,9 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
             ]) ?>
         <?php endif; ?>
 
-        <!-- Panel de Detalle de Pagos - Diseño Ajustado -->
+        <!-- Panel de Detalle de Pagos - Con Columna Intermediario -->
         <div class="col-12">
-            <!-- Encabezado del Panel de Detalle Ajustado -->
+            <!-- Encabezado del Panel de Detalle -->
             <div class="ms-card border-0 shadow-lg mb-3 ms-fade-in" style="background: white;">
                 <div class="ms-card-body p-3">
                     <div class="row align-items-center">
@@ -174,73 +174,89 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                 </div>
             </div>
 
-            <!-- Tabla de Detalle Ajustada -->
+            <!-- Tabla de Detalle - Con Columna Intermediario -->
             <div class="ms-card border-0 shadow-lg p-0 ms-fade-in" style="animation-delay: 0.1s;">
                 <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="ms-table ms-table-striped mb-0" style="min-width: 1300px;">
+                    <table class="ms-table ms-table-striped mb-0" style="min-width: 1600px;">
                         <thead style="position: sticky; top: 0; z-index: 10;">
                             <tr style="background: linear-gradient(135deg, #2c3e50 0%, #4a6491 100%) !important;">
+                                <!-- # -->
                                 <th class="text-center py-3" style="width: 50px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">#</span>
                                     </div>
                                 </th>
+                                <!-- Referencia Bancaria -->
                                 <th class="text-center py-3" style="width: 100px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-receipt me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Referencia Bancaria</span>
                                     </div>
                                 </th>
+                                <!-- Afiliado -->
                                 <th class="py-3 ps-3" style="min-width: 220px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Afiliado</span>
                                     </div>
                                 </th>
+                                <!-- Cédula -->
                                 <th class="text-center py-3" style="width: 120px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-id-card me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Cédula</span>
                                     </div>
                                 </th>
+                                <!-- INTERMEDIARIO - NEW COLUMN -->
+                                <th class="py-3 ps-3" style="min-width: 200px; border-right: 2px solid rgba(255,255,255,0.2);">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-handshake me-2 text-white" style="font-size: 1.3rem;"></i>
+                                        <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Intermediario</span>
+                                    </div>
+                                </th>
+                                <!-- Monto (Bs.) -->
                                 <th class="text-center py-3" style="width: 150px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-money-bill-wave me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Monto (Bs.)</span>
                                     </div>
                                 </th>
-                                <!-- Nueva Columna: Monto en USD -->
+                                <!-- Monto ($) -->
                                 <th class="text-center py-3" style="width: 150px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-dollar-sign me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Monto ($)</span>
                                     </div>
                                 </th>
-                                <!-- Nueva Columna: Tasa de Cambio -->
+                                <!-- Tasa Cambio -->
                                 <th class="text-center py-3" style="width: 140px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-exchange-alt me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Tasa Cambio</span>
                                     </div>
                                 </th>
+                                <!-- Fecha -->
                                 <th class="text-center py-3" style="width: 140px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="far fa-calendar-alt me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Fecha</span>
                                     </div>
                                 </th>
+                                <!-- Método -->
                                 <th class="text-center py-3" style="width: 150px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-credit-card me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Método</span>
                                     </div>
                                 </th>
+                                <!-- Estado -->
                                 <th class="text-center py-3" style="width: 150px; border-right: 2px solid rgba(255,255,255,0.2);">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-chart-line me-2 text-white" style="font-size: 1.3rem;"></i>
                                         <span class="text-white fw-bold" style="font-size: 1.3rem !important;">Estado</span>
                                     </div>
                                 </th>
+                                <!-- Clínica -->
                                 <th class="text-center py-3 pe-3" style="min-width: 200px;">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="fas fa-hospital me-2 text-white" style="font-size: 1.3rem;"></i>
@@ -264,6 +280,8 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                 if ($model->monto_pagado > 0 && $model->monto_usd > 0) {
                                     $tasaCambio = $model->monto_usd / $model->monto_pagado;
                                 }
+                                // Get intermediario name using the helper method
+                                $intermediario = $searchModel->getIntermediarioName($model);
                             ?>
                                 <tr class="ms-slide-in" style="animation-delay: <?= $consecutivo * 0.02 ?>s; border-bottom: 1px solid #f8f9fa;">
                                     <!-- Número Consecutivo -->
@@ -318,6 +336,20 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                         </div>
                                     </td>
 
+                                    <!-- INTERMEDIARIO -->
+                                    <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
+                                        <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                                            <span class="ms-body-lg fw-bold" style="font-size: 1.3rem !important; color: #6f42c1;">
+                                                <?= Html::encode($intermediario) ?>
+                                            </span>
+                                            <?php if ($intermediario !== 'Sin Intermediario' && isset($model->asesor_id) && !empty($model->asesor_id)): ?>
+                                                <small class="ms-body-sm text-muted" style="font-size: 1.1rem !important;">
+                                                    <i class="fas fa-id-badge me-1"></i>ID: <?= Html::encode($model->asesor_id) ?>
+                                                </small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+
                                     <!-- Monto en Bs. -->
                                     <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
                                         <div class="d-flex flex-column align-items-center justify-content-center h-100">
@@ -327,7 +359,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                         </div>
                                     </td>
 
-                                    <!-- Nueva Columna: Monto en USD -->
+                                    <!-- Monto en USD -->
                                     <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
                                         <div class="d-flex flex-column align-items-center justify-content-center h-100">
                                             <span class="display-6 fw-bold text-primary mb-1" style="font-size: 1.4rem !important;">
@@ -336,7 +368,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                         </div>
                                     </td>
 
-                                    <!-- Nueva Columna: Tasa de Cambio -->
+                                    <!-- Tasa de Cambio -->
                                     <td class="text-center py-2" style="border-right: 2px solid #e9ecef;">
                                         <div class="d-flex flex-column align-items-center justify-content-center h-100">
                                             <?php if ($tasaCambio > 0): ?>
@@ -454,11 +486,11 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                             <?php endforeach; ?>
                         </tbody>
 
-                        <!-- Total del Detalle Ajustado -->
+                        <!-- Total del Detalle -->
                         <?php if (!empty($models)): ?>
                             <tfoot style="position: sticky; bottom: 0; z-index: 10;">
                                 <tr style="background: linear-gradient(135deg, #2c3e50 0%, #4a6491 100%);">
-                                    <td colspan="4" class="ps-4 py-3">
+                                    <td colspan="5" class="ps-4 py-3">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-chart-bar me-3" style="font-size: 1.8rem; color: #ffffff;"></i>
                                             <div>
@@ -541,7 +573,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                     </table>
                 </div>
 
-                <!-- Paginación y Controles Ajustados -->
+                <!-- Paginación y Controles -->
                 <div class="ms-card-footer py-3" style="background: #faf9f8;">
                     <div class="row align-items-center">
                         <div class="col-lg-6 mb-3 mb-lg-0">
@@ -591,7 +623,8 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                 </div>
             </div>
         </div>
-        <!-- Tarjetas de Resumen Ajustadas -->
+
+        <!-- Tarjetas de Resumen -->
         <div class="col-12 mb-4">
             <div class="row g-3">
                 <!-- Total Recaudado -->
@@ -713,9 +746,9 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
         </div>
     </div>
 
-    <!-- Estilos Adicionales Ajustados -->
+    <!-- Estilos Adicionales -->
     <style>
-        /* Scrollbar personalizado para la tabla - Ajustado */
+        /* Scrollbar personalizado para la tabla */
         .table-responsive::-webkit-scrollbar {
             width: 10px;
             height: 10px;
@@ -736,7 +769,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
             background: linear-gradient(135deg, #106ebe 0%, #005a9e 100%);
         }
 
-        /* Efecto hover para filas de la tabla - Ajustado */
+        /* Efecto hover para filas de la tabla */
         .ms-table tbody tr {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -747,7 +780,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
             background-color: rgba(0, 120, 212, 0.05) !important;
         }
 
-        /* Ajustes responsivos - Ajustado */
+        /* Ajustes responsivos */
         @media (max-width: 1200px) {
             .table-responsive {
                 max-height: 400px;

@@ -79,6 +79,7 @@ class RmClinica extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
+            'codigo_clinica' => 'CÓDIGO DE CLÍNICA',
             'created_at' => 'Created At',
             'rif' => 'Rif',
             'nombre' => 'NOMBRE',

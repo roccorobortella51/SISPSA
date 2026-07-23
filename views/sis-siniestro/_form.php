@@ -620,6 +620,8 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
             $baremosAgotados = [];
             $baremosDisponiblesInfo = [];
             $selectedBaremos = [];
+            $emergencyExcluded = false; // Track if emergency items were excluded
+            $emergencyCount = 0; // Count how many emergency items were excluded
 
             if ($contrato && $contrato->estatus === 'Activo') {
                 $query = \app\models\PlanesItemsCobertura::find()
@@ -630,6 +632,21 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                     ->andWhere(['baremo.estatus' => 'Activo'])
                     ->andWhere(['planes.id' => $afiliado->plan_id]);
 
+                // ============================================================
+                // 🔥 EXCLUDE EMERGENCY ITEMS FOR CITAS
+                // ============================================================
+                if ($esCitaMode) {
+                    // First, count how many emergency items would be excluded (for display purposes)
+                    $emergencyCountQuery = clone $query;
+                    $emergencyCount = $emergencyCountQuery
+                        ->andWhere(['ILIKE', 'area.nombre', 'EMERGENCIA'])
+                        ->count();
+
+                    // Now exclude Emergency area items from the list for citas
+                    $query->andWhere(['NOT ILIKE', 'area.nombre', 'EMERGENCIA']);
+                    $emergencyExcluded = ($emergencyCount > 0);
+                }
+
                 if ($esCitaMode) {
                     $query->andWhere([
                         'or',
@@ -639,6 +656,7 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                 }
 
                 $planesItemsCobertura = $query->all();
+
 
                 if (isset($model) && $model !== null && !$model->isNewRecord && $model->id) {
                     $baremosDirectos = (new \yii\db\Query())
@@ -864,6 +882,13 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                             <div>
                                 <h3 class="services-section-title" style="margin: 0; line-height: 1.3; font-weight: 600; font-size: 1.3rem; color: white !important;">
                                     Selección de Servicios Médicos
+                                    <?php if ($esCitaMode && $emergencyExcluded): ?>
+                                        <small style="font-size: 0.7rem; opacity: 0.85; display: block; font-weight: 400; color: rgba(255,255,255,0.9) !important;">
+                                            <i class="fas fa-exclamation-circle me-1" style="color: #ffc107;"></i>
+                                            Servicios de EMERGENCIA no disponibles para citas programadas
+                                            <span style="opacity: 0.7;">(<?= $emergencyCount ?> excluido<?= $emergencyCount > 1 ? 's' : '' ?>)</span>
+                                        </small>
+                                    <?php endif; ?>
                                 </h3>
                                 <p class="services-section-subtitle" style="margin: 4px 0 0 0; font-size: 0.9rem; color: rgba(255,255,255,0.85) !important;">
                                     Seleccione los servicios médicos aplicados en esta <?= strtolower($terminoPrincipal) ?>
@@ -871,6 +896,17 @@ foreach ($baremosUtilizados as $siniestroBaremo) {
                             </div>
                         </div>
                         <div class="section-badge-white d-flex flex-wrap gap-2 align-items-center">
+                            <?php if ($esCitaMode && $emergencyExcluded): ?>
+                                <span class="badge badge-pill stat-badge emergency-excluded-gray"
+                                    style="background: #6c757d !important; color: #ffffff !important;"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Los servicios de EMERGENCIA no están disponibles para citas programadas. <?= $emergencyCount ?> servicio(s) excluido(s).">
+                                    <i class="fas fa-ambulance me-3" style="color: #ffffff !important;"></i>
+                                    <span style="color: #ffffff !important;">Emergencia Excluidos (<?= $emergencyCount ?>)</span>
+                                </span>
+                            <?php endif; ?>
+
                             <span class="badge badge-pill stat-badge disponible clickable-badge"
                                 data-toggle="tooltip"
                                 data-placement="top"

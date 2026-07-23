@@ -732,15 +732,52 @@ class SisSiniestroController extends Controller
             ->orderBy('nombre')
             ->all();
 
+        // ============ Obtener datos para gráficos ============
+
+        // 1. Datos de tendencia mensual - Últimos 12 meses
+        $siniestrosPorMes = $this->obtenerSiniestrosPorMes($clinica_id);
+
+        // ============ FIN ============
+
         return $this->render('por-clinica', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'estadisticas' => $estadisticas,
             'clinicas' => $clinicas,
             'clinicaSeleccionada' => $clinica_id,
+            'siniestrosPorMes' => $siniestrosPorMes,
         ]);
     }
 
+    /**
+     * Obtiene estadísticas de siniestros agrupados por mes
+     */
+    private function obtenerSiniestrosPorMes($clinica_id = null)
+    {
+        $query = (new \yii\db\Query())
+            ->select([
+                "TO_CHAR(fecha, 'YYYY-MM') as mes",
+                'COUNT(*) as total'
+            ])
+            ->from('sis_siniestro');
+
+        if ($clinica_id) {
+            $query->andWhere(['idclinica' => $clinica_id]);
+        }
+
+        $resultados = $query
+            ->groupBy('mes')
+            ->orderBy('mes ASC')
+            ->limit(12)
+            ->all();
+
+        $siniestrosPorMes = [];
+        foreach ($resultados as $row) {
+            $siniestrosPorMes[$row['mes']] = (int)$row['total'];
+        }
+
+        return $siniestrosPorMes;
+    }
     /**
      * Obtiene estadísticas de siniestros por clínica
      */

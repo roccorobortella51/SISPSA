@@ -64,6 +64,8 @@ class RmClinicaSearch extends RmClinica
             't.estatus',
             't.created_at',
             't.meta',
+            't.codigo_clinica',  // <<<<--- ADD THIS LINE
+
         ]);
 
         // Pagination setup

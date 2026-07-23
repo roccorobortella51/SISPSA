@@ -113,6 +113,24 @@ class ContractHelper
     }
 
     /**
+     * Get the most recent contract for a user (including annulled ones)
+     * 
+     * @param int $userId
+     * @return Contratos|null
+     */
+    public static function getMostRecentContract($userId)
+    {
+        if (!$userId) {
+            return null;
+        }
+
+        return Contratos::find()
+            ->where(['user_id' => $userId])
+            ->orderBy(['id' => SORT_DESC])
+            ->one();
+    }
+
+    /**
      * Generate detailed tooltip for contracts
      * 
      * @param Contratos $contrato
@@ -182,7 +200,6 @@ class ContractHelper
                 $tooltip .= "<div style='color: #6c757d;'><strong>⏸️ CONTRATO SUSPENDIDO</strong></div>";
                 $tooltip .= "<small>Contrato suspendido por falta de pago o incumplimiento.</small><br>";
 
-                // CHANGED: Show expired cuotas instead of pending ones
                 $expiredCuotas = Cuotas::find()
                     ->where(['contrato_id' => $contrato->id])
                     ->andWhere(['estatus' => Cuotas::ESTADO_VENCIDA])
@@ -310,11 +327,32 @@ class ContractHelper
         // Get pending payment status for this user
         $pendingPaymentStatus = self::getPendingPaymentStatus($user->id);
 
-        // Get the most recent active contract for this affiliate
+        // ============================================================
+        // FIX: Check for annulled contracts FIRST
+        // ============================================================
+
+        // Step 1: Check if there's ANY contract (including annulled)
+        $anyContract = self::getMostRecentContract($user->id);
+
+        // Step 2: If there's a contract and it's annulled, show "Anulado"
+        if ($anyContract && $anyContract->estatus === Contratos::STATUS_ANULADO) {
+            $tooltip = self::generateContractTooltip($anyContract, $pendingPaymentStatus);
+
+            return Html::tag('span', '❌ Anulado', [
+                'class' => 'badge badge-danger',
+                'title' => $tooltip,
+                'data-toggle' => 'tooltip',
+                'data-html' => 'true',
+                'data-placement' => 'top',
+                'style' => 'cursor: help; white-space: nowrap; display: inline-block;'
+            ]);
+        }
+
+        // Step 3: If no annulled contract, try to get active contract
         $contrato = Contratos::getContratoActivo($user->id);
 
         if (!$contrato) {
-            // If no active contract, try to get any valid contract
+            // Try to get any valid contract (not annulled)
             $contratosValidos = Contratos::getContratosValidos($user->id);
             if (!empty($contratosValidos)) {
                 $contrato = $contratosValidos[0]; // Get the most recent one
@@ -356,8 +394,7 @@ class ContractHelper
                 );
             }
 
-            // FIXED: Return just the badge without flex wrapper
-            // Return badge with detailed tooltip
+            // Return just the badge without flex wrapper
             return Html::tag('span', $statusIcon . ' ' . $statusText, [
                 'class' => $statusClass,
                 'title' => $tooltip,
@@ -414,6 +451,13 @@ class ContractHelper
      */
     public static function getContractStatusCellClasses($user)
     {
+        // Check for annulled contract first
+        $anyContract = self::getMostRecentContract($user->id);
+
+        if ($anyContract && $anyContract->estatus === Contratos::STATUS_ANULADO) {
+            return ['class' => 'contract-status-cell anulado text-center'];
+        }
+
         $contrato = Contratos::getContratoActivo($user->id);
         $pendingPaymentStatus = self::getPendingPaymentStatus($user->id);
 

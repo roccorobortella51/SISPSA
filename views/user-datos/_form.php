@@ -148,13 +148,13 @@ $currentRoute = Yii::$app->controller->getRoute();
                             <?= $form->field($model, 'asesor_id')->widget(Select2::classname(), [
                                 'data' => UserHelper::getAgenteFuerzaList(),
                                 'options' => [
-                                    'placeholder' => 'Seleccione el Agente ...',
+                                    'placeholder' => 'Seleccione el Intermediario ...',
                                     'class' => 'form-control form-control-lg',
                                 ],
                                 'pluginOptions' => [
                                     'allowClear' => false,
                                 ],
-                            ])->label('NOMBRE DEL AGENTE (Vendedor)');
+                            ])->label('NOMBRE DEL INTERMEDIARIO (Vendedor)');
                             ?>
                         </div>
 

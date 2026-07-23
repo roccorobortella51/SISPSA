@@ -153,10 +153,64 @@ class PagosController extends Controller
                     $model->tasa = number_format((float)$model->tasa, 2, '.', '');
                 }
 
-                // Handle file upload
-                if ($model->imagen_prueba_file) {
-                    $model->imagen_prueba = $model->upload();
+                // ============================================
+                // FIX: PROPER FILE UPLOAD HANDLING
+                // ============================================
+                $uploadedFile = UploadedFile::getInstance($model, 'imagen_prueba_file');
+
+                if ($uploadedFile && $uploadedFile->size > 0) {
+                    $folder = 'Pago';
+                    $fileName = uniqid('pago_') . '.' . $uploadedFile->extension;
+                    $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
+
+                    if ($uploadedFile->saveAs($tempFilePath)) {
+                        // Upload to Supabase
+                        $publicUrl = UserHelper::uploadFileToSupabaseApi(
+                            $tempFilePath,
+                            $uploadedFile->type,
+                            $fileName,
+                            $folder
+                        );
+
+                        // Clean up temp file
+                        if (file_exists($tempFilePath)) {
+                            unlink($tempFilePath);
+                        }
+
+                        if ($publicUrl) {
+                            // ✅ SET the database field with the URL
+                            $model->imagen_prueba = $publicUrl;
+                            Yii::info("File uploaded successfully: {$publicUrl}", 'pagos');
+                        } else {
+                            Yii::error("Failed to upload file to storage", 'pagos');
+                            Yii::$app->session->setFlash('error', 'Error al subir el comprobante de pago. Por favor, intente nuevamente.');
+                            return $this->render('create', [
+                                'model' => $model,
+                                'cuotas' => $cuotas,
+                                'selectedContrato' => $selectedContrato,
+                            ]);
+                        }
+                    } else {
+                        Yii::error("Failed to save temporary file", 'pagos');
+                        Yii::$app->session->setFlash('error', 'Error al procesar el archivo. Por favor, intente nuevamente.');
+                        return $this->render('create', [
+                            'model' => $model,
+                            'cuotas' => $cuotas,
+                            'selectedContrato' => $selectedContrato,
+                        ]);
+                    }
+                } else {
+                    // If payment method requires an image but none was uploaded
+                    if ($model->metodo_pago !== 'Efectivo - Dólar ($)') {
+                        Yii::$app->session->setFlash('error', 'Debe adjuntar un comprobante de pago para este método de pago.');
+                        return $this->render('create', [
+                            'model' => $model,
+                            'cuotas' => $cuotas,
+                            'selectedContrato' => $selectedContrato,
+                        ]);
+                    }
                 }
+                // ============================================
 
                 if ($model->save()) {
                     // ==== UPDATE INSTALLMENTS ====
@@ -205,219 +259,15 @@ class PagosController extends Controller
                     if ($emailSent && $user) {
                         $successMessage .= ' Se ha enviado un correo electrónico con los recibos a <strong>' . Html::encode($user->email) . '</strong>.';
 
-                        // Add EYE-CATCHING SPAM warning
+                        // Add SPAM warning
                         $spamWarning = '<br><br>
-    <style>
-        @keyframes spamPulse {
-            0%, 100% { box-shadow: 0 4px 20px rgba(245, 124, 0, 0.3); transform: scale(1); }
-            50% { box-shadow: 0 4px 40px rgba(245, 124, 0, 0.5); transform: scale(1.005); }
-        }
-        @keyframes spamShake {
-            0%, 100% { transform: rotate(0deg); }
-            5% { transform: rotate(8deg); }
-            10% { transform: rotate(-8deg); }
-            15% { transform: rotate(5deg); }
-            20% { transform: rotate(-5deg); }
-            25% { transform: rotate(0deg); }
-        }
-        @keyframes spamBounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-        @keyframes spamGlow {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        @keyframes spamPatternMove {
-            0% { transform: translateX(0) translateY(0); }
-            100% { transform: translateX(40px) translateY(40px); }
-        }
-        @keyframes spamLetterPulse {
-            0%, 100% { transform: scale(1) rotate(0deg); }
-            25% { transform: scale(1.1) rotate(-5deg); }
-            50% { transform: scale(1) rotate(0deg); }
-            75% { transform: scale(1.1) rotate(5deg); }
-        }
-        
-        .spam-warning-container {
-            margin: 15px 0 0 0;
-            padding: 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        
-        .spam-warning {
-            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%) !important;
-            border-left: 6px solid #f57c00 !important;
-            border-radius: 12px !important;
-            padding: 20px 28px !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 20px !important;
-            box-shadow: 0 4px 20px rgba(245, 124, 0, 0.25) !important;
-            position: relative !important;
-            overflow: hidden !important;
-            animation: spamPulse 2.5s ease-in-out infinite !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
-        }
-        
-        .spam-warning::before {
-            content: "" !important;
-            position: absolute !important;
-            top: -50% !important;
-            left: -50% !important;
-            width: 200% !important;
-            height: 200% !important;
-            background: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 20px,
-                rgba(245, 124, 0, 0.05) 20px,
-                rgba(245, 124, 0, 0.05) 40px
-            ) !important;
-            animation: spamPatternMove 8s linear infinite !important;
-            pointer-events: none !important;
-        }
-        
-        .spam-warning::after {
-            content: "" !important;
-            position: absolute !important;
-            inset: -2px !important;
-            border-radius: 14px !important;
-            background: linear-gradient(135deg, #f57c00, #ff9800, #f57c00, #e65100) !important;
-            background-size: 300% 300% !important;
-            animation: spamGlow 3s ease-in-out infinite !important;
-            z-index: -1 !important;
-            opacity: 0.3 !important;
-        }
-        
-        .spam-warning .spam-icon {
-            background: linear-gradient(135deg, #f57c00, #e65100) !important;
-            width: 54px !important;
-            height: 54px !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            flex-shrink: 0 !important;
-            box-shadow: 0 4px 16px rgba(245, 124, 0, 0.4) !important;
-            position: relative !important;
-            z-index: 1 !important;
-            animation: spamPulse 1.5s ease-in-out infinite !important;
-        }
-        
-        .spam-warning .spam-icon i {
-            color: white !important;
-            font-size: 26px !important;
-            animation: spamShake 2.5s ease-in-out infinite !important;
-        }
-        
-        .spam-warning .spam-content {
-            flex: 1 !important;
-            position: relative !important;
-            z-index: 1 !important;
-        }
-        
-        .spam-warning .spam-title {
-            font-size: 16px !important;
-            font-weight: 700 !important;
-            color: #e65100 !important;
-            margin-bottom: 4px !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-        }
-        
-        .spam-warning .spam-title i {
-            font-size: 18px !important;
-            animation: spamShake 2s ease-in-out infinite !important;
-        }
-        
-        .spam-warning .spam-text {
-            font-size: 14px !important;
-            font-weight: 500 !important;
-            color: #4a3000 !important;
-            line-height: 1.5 !important;
-        }
-        
-        .spam-warning .spam-text strong {
-            color: #e65100 !important;
-        }
-        
-        spam-warning .spam-highlight {
-            background: #ffc107 !important;
-            color: #000000 !important;
-            padding: 3px 14px !important;
-            border-radius: 6px !important;
-            font-weight: 800 !important;
-            font-size: 14px !important;
-            display: inline-block !important;
-            box-shadow: 0 0 0 2px #ffc107, 0 0 20px rgba(255, 193, 7, 0.3) !important;
-            animation: spamPulse 1.5s ease-in-out infinite !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-}
-        
-        .spam-warning .spam-email-icon {
-            font-size: 36px !important;
-            color: #e65100 !important;
-            flex-shrink: 0 !important;
-            position: relative !important;
-            z-index: 1 !important;
-            animation: spamBounce 2s ease-in-out infinite !important;
-        }
-        
-        .spam-warning .spam-letter-icon {
-            display: inline-block !important;
-            animation: spamLetterPulse 2s ease-in-out infinite !important;
-        }
-        
-        @media (max-width: 768px) {
-            .spam-warning {
-                flex-direction: column !important;
-                text-align: center !important;
-                padding: 20px !important;
-            }
-            .spam-warning .spam-title {
-                justify-content: center !important;
-            }
-            .spam-warning .spam-text {
-                font-size: 13px !important;
-            }
-            .spam-warning .spam-email-icon {
-                font-size: 28px !important;
-            }
-            .spam-warning .spam-icon {
-                width: 46px !important;
-                height: 46px !important;
-            }
-            .spam-warning .spam-icon i {
-                font-size: 22px !important;
-            }
-        }
-    </style>
-    
-    <div class="spam-warning-container">
-        <div class="spam-warning">
-            <div class="spam-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="spam-content">
-                <div class="spam-title">
-                    <i class="fas fa-envelope"></i> 📧 ¡IMPORTANTE!
-                </div>
-                <div class="spam-text">
-                    Informe a la Afiliada o Afiliado que el correo puede haber llegado a la carpeta de <strong class="spam-highlight">SPAM</strong>. 
-                    Por favor, revise su bandeja de correo no deseado y marque el mensaje como 
-                    <strong>"No es spam"</strong> para asegurar la entrega de futuros recibos.
-                </div>
-            </div>
-            <div class="spam-email-icon">
-                <span class="spam-letter-icon">📧</span>
-            </div>
-        </div>
-    </div>';
+                        <div class="alert alert-warning" style="border-left: 6px solid #f57c00; background: #fff8e1;">
+                            <i class="fas fa-exclamation-triangle" style="color: #f57c00;"></i>
+                            <strong>📧 ¡IMPORTANTE!</strong> 
+                            Informe a la Afiliada o Afiliado que el correo puede haber llegado a la carpeta de <strong>SPAM</strong>. 
+                            Por favor, revise su bandeja de correo no deseado y marque el mensaje como 
+                            <strong>"No es spam"</strong> para asegurar la entrega de futuros recibos.
+                        </div>';
 
                         $successMessage .= $spamWarning;
                     } elseif ($user && !$user->email) {
@@ -432,6 +282,7 @@ class PagosController extends Controller
                 }
             } catch (\Exception $e) {
                 $transaction->rollBack();
+                Yii::error("Error creating payment: " . $e->getMessage(), 'pagos');
                 Yii::$app->session->setFlash('error', 'Error al registrar el pago: ' . $e->getMessage());
             }
         }

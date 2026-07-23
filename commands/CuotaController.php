@@ -1640,4 +1640,528 @@ class CuotaController extends Controller
 
         return ExitCode::OK;
     }
+
+    /**
+     * Send reminders for cuotas that are 3 days from expiration
+     * Run daily via cron: 0 8 * * * php /path/to/yii cuota/send-reminders
+     * 
+     * @return int ExitCode
+     */
+    public function actionSendReminders()
+    {
+        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
+        $this->stdout("║        ENVÍO DE RECORDATORIOS DE CUOTAS                  ║\n");
+        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
+
+        $today = new \DateTime();
+        $reminderDate = (clone $today)->modify('+3 days')->format('Y-m-d');
+
+        $this->stdout("📅 Fecha actual: " . $today->format('Y-m-d H:i:s') . "\n");
+        $this->stdout("📅 Recordatorios para cuotas que vencen: {$reminderDate}\n\n");
+
+        // Find cuotas expiring in 3 days that are still pending
+        $cuotas = Cuotas::find()
+            ->alias('c')
+            ->joinWith(['contrato contrato'])
+            ->joinWith(['contrato.user user'])
+            ->where(['c.estatus' => Cuotas::ESTADO_PENDIENTE])
+            ->andWhere(['c.fecha_vencimiento' => $reminderDate])
+            // Prevent sending duplicate reminders
+            ->andWhere([
+                'or',
+                ['c.reminder_sent' => false],
+                ['c.reminder_sent' => null]
+            ])
+            ->andWhere(['not', ['user.email' => null]])
+            ->andWhere(['!=', 'user.email', ''])
+            ->andWhere(['not like', 'contrato.estatus', 'anulado'])
+            ->andWhere(['not like', 'contrato.estatus', 'suspendido'])
+            ->all();
+
+        $this->stdout("📊 Cuotas a recordar: " . count($cuotas) . "\n\n");
+
+        if (empty($cuotas)) {
+            $this->stdout("✅ No hay cuotas que requieran recordatorio.\n");
+            return ExitCode::OK;
+        }
+
+        // Show which users will receive reminders
+        $this->stdout("👥 Afiliados que recibirán recordatorio:\n");
+        foreach ($cuotas as $cuota) {
+            $user = $cuota->contrato->user;
+            $clinicName = $user->clinica ? $user->clinica->nombre : 'Sin clínica';
+            $this->stdout("   - {$user->nombres} {$user->apellidos} ({$user->email}) - {$clinicName} - Cuota #{$cuota->numero_cuota}\n");
+        }
+        $this->stdout("\n");
+
+        $sent = 0;
+        $errors = 0;
+
+        foreach ($cuotas as $cuota) {
+            $this->stdout("Procesando cuota #{$cuota->id}...\n");
+
+            try {
+                $user = $cuota->contrato->user;
+                $contract = $cuota->contrato;
+
+                if (!$user || !$user->email) {
+                    $this->stdout("  ⚠️ Usuario sin email, saltando...\n");
+                    continue;
+                }
+
+                $result = $this->sendCuotaReminderEmail($cuota, $user, $contract);
+
+                if ($result) {
+                    // Mark as sent
+                    $cuota->reminder_sent = true;
+                    $cuota->reminder_sent_at = date('Y-m-d H:i:s');
+                    $cuota->save(false);
+
+                    $sent++;
+                    $this->stdout("  ✅ Recordatorio enviado a: {$user->email}\n");
+                    Yii::info("Cuota reminder sent: cuota_id={$cuota->id}, user_id={$user->id}, email={$user->email}", 'cuota-reminder');
+                } else {
+                    $errors++;
+                    $this->stdout("  ❌ Error al enviar recordatorio\n");
+                }
+            } catch (\Exception $e) {
+                $errors++;
+                $this->stderr("  ❌ Excepción: " . $e->getMessage() . "\n");
+                Yii::error("Error sending cuota reminder: " . $e->getMessage(), 'cuota-reminder');
+            }
+
+            $this->stdout("\n");
+        }
+
+        $this->stdout("📊 RESUMEN:\n");
+        $this->stdout("   - Recordatorios enviados: {$sent}\n");
+        $this->stdout("   - Errores: {$errors}\n");
+        $this->stdout("   - Clínica: Todas las clínicas\n");
+        $this->stdout("✅ Proceso completado.\n");
+
+        return ExitCode::OK;
+    }
+
+    private function sendCuotaReminderEmail($cuota, $user, $contract)
+    {
+        if (!$user || !$user->email) {
+            return false;
+        }
+
+        try {
+            $fullName = trim($user->nombres . ' ' . $user->apellidos);
+            $dueDate = date('d/m/Y', strtotime($cuota->fecha_vencimiento));
+            $amount = number_format($cuota->monto_usd ?: $cuota->monto, 2);
+            $contractNumber = $contract->nrocontrato ?: $contract->id;
+            $installmentNumber = $cuota->numero_cuota;
+
+            $htmlBody = $this->buildReminderEmailHtml($fullName, $dueDate, $amount, $contractNumber, $installmentNumber);
+            $plainTextBody = $this->buildReminderEmailPlainText($fullName, $dueDate, $amount, $contractNumber, $installmentNumber);
+
+            $subject = "🔔 Recordatorio de Pago - Cuota N°{$installmentNumber} - SISPSA";
+
+            $mail = Yii::$app->mailer->compose()
+                ->setFrom([Yii::$app->params['senderEmail'] => 'SISPSA Notificaciones'])
+                ->setTo($user->email)
+                ->setSubject($subject)
+                ->setHtmlBody($htmlBody)
+                ->setTextBody($plainTextBody);
+
+            // 🚫 No logo attachment - clean and simple
+            return $mail->send();
+        } catch (\Exception $e) {
+            Yii::error("Error sending cuota reminder to {$user->email}: " . $e->getMessage(), 'cuota-reminder');
+            return false;
+        }
+    }
+
+    /**
+     * Build HTML email for reminder - Professional Version (No Logo)
+     */
+    private function buildReminderEmailHtml($fullName, $dueDate, $amount, $contractNumber, $installmentNumber)
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recordatorio de Pago - SISPSA</title>
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #f5f7fa; 
+            padding: 30px 0; 
+            line-height: 1.6;
+            color: #2d3748;
+        }
+        
+        /* ===== CONTAINER ===== */
+        .container {
+            max-width: 580px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e8ecf1;
+        }
+        
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a3a6e 0%, #2a5a9e 100%);
+            padding: 32px 30px 28px;
+            text-align: center;
+            border-bottom: 4px solid #fdb813;
+        }
+        .header h1 {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+        .header .subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 14px;
+            margin-top: 6px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        
+        /* ===== CONTENT ===== */
+        .content {
+            padding: 30px 32px 20px;
+        }
+        
+        /* ===== GREETING ===== */
+        .greeting {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a3a6e;
+            margin-bottom: 6px;
+        }
+        .greeting span {
+            color: #2d3748;
+        }
+        
+        /* ===== INTRO TEXT ===== */
+        .intro {
+            color: #4a5568;
+            font-size: 15px;
+            margin: 12px 0 20px;
+        }
+        .intro strong {
+            color: #1a3a6e;
+        }
+        
+        /* ===== ALERT BOX ===== */
+        .alert-box {
+            background: #fff8e7;
+            border-left: 5px solid #fdb813;
+            padding: 14px 20px;
+            border-radius: 6px;
+            margin: 18px 0 20px;
+        }
+        .alert-box .label {
+            font-weight: 600;
+            color: #856404;
+            font-size: 13px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .alert-box .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a3a6e;
+        }
+        
+        /* ===== DETAILS TABLE ===== */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e8ecf1;
+        }
+        .details-table tr {
+            border-bottom: 1px solid #e8ecf1;
+        }
+        .details-table tr:last-child {
+            border-bottom: none;
+        }
+        .details-table td {
+            padding: 12px 16px;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        .details-table .label-cell {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+            width: 40%;
+        }
+        .details-table .value-cell {
+            color: #2d3748;
+            font-weight: 500;
+        }
+        .details-table .amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a3a6e;
+        }
+        .details-table .due-date {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        /* ===== WARNING BOX ===== */
+        .warning-box {
+            background: #fef2f2;
+            border-left: 5px solid #dc3545;
+            padding: 14px 20px;
+            border-radius: 6px;
+            margin: 18px 0 20px;
+        }
+        .warning-box .text {
+            color: #721c24;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .warning-box .detail {
+            color: #5a6268;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        
+        /* ===== PAYMENT METHODS ===== */
+        .payment-methods {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 18px 0 22px;
+            text-align: center;
+        }
+        .payment-methods .title {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .payment-methods .method-tag {
+            display: inline-block;
+            background: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #2d3748;
+            border: 1px solid #e2e8f0;
+            margin: 3px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        
+        /* ===== DIVIDER ===== */
+        .divider {
+            border: none;
+            border-top: 2px dashed #e2e8f0;
+            margin: 22px 0;
+        }
+        
+        /* ===== FOOTER ===== */
+        .footer {
+            background: #f7fafc;
+            padding: 20px 32px 24px;
+            text-align: center;
+            border-top: 1px solid #e8ecf1;
+        }
+        .footer .brand {
+            font-weight: 700;
+            font-size: 14px;
+            color: #1a3a6e;
+        }
+        .footer .contact {
+            color: #718096;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .footer .contact a {
+            color: #1a3a6e;
+            text-decoration: none;
+        }
+        .footer .contact a:hover {
+            text-decoration: underline;
+        }
+        .footer .disclaimer {
+            font-size: 10px;
+            color: #a0aec0;
+            margin-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 480px) {
+            .content { padding: 20px; }
+            .header { padding: 24px 20px; }
+            .header h1 { font-size: 18px; }
+            .details-table td { padding: 10px 12px; font-size: 13px; }
+            .alert-box .value { font-size: 16px; }
+            .details-table .amount { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- ===== HEADER ===== -->
+    <div class="header">
+        <h1>📅 Recordatorio de Pago</h1>
+        <div class="subtitle">Sistema Integral de Salud Programado</div>
+    </div>
+    
+    <!-- ===== CONTENT ===== -->
+    <div class="content">
+        
+        <!-- Greeting -->
+        <p class="greeting">Estimado(a) <span>{$fullName}</span>,</p>
+        
+        <p class="intro">
+            Le recordamos que su <strong>Cuota N°{$installmentNumber}</strong> del contrato 
+            <strong>{$contractNumber}</strong> está próxima a vencer. 
+            Para mantener su cobertura médica activa, le solicitamos realizar el pago a la brevedad.
+        </p>
+        
+        <!-- Alert Box -->
+        <div class="alert-box">
+            <span class="label">⏰ Fecha de Vencimiento</span>
+            <span class="value">{$dueDate}</span>
+        </div>
+        
+        <!-- Details Table -->
+        <table class="details-table">
+            <tr>
+                <td class="label-cell">📄 Contrato</td>
+                <td class="value-cell"><strong>{$contractNumber}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">🔢 Cuota N°</td>
+                <td class="value-cell"><strong>{$installmentNumber}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">💰 Monto a Pagar</td>
+                <td class="value-cell"><span class="amount">$ {$amount} USD</span></td>
+            </tr>
+            <tr>
+                <td class="label-cell">📅 Fecha Límite</td>
+                <td class="value-cell"><span class="due-date">{$dueDate}</span></td>
+            </tr>
+        </table>
+        
+        <!-- Warning Box -->
+        <div class="warning-box">
+            <div class="text">
+                ⚠️ <strong>¡Importante!</strong> Realice su pago antes de la fecha de vencimiento.
+            </div>
+            <div class="detail">
+                El incumplimiento en el pago podría resultar en la <strong>suspensión temporal</strong> de su cobertura médica.
+            </div>
+        </div>
+        
+        <!-- Payment Methods -->
+        <div class="payment-methods">
+            <div class="title">💳 Métodos de Pago Disponibles</div>
+            <div>
+                <span class="method-tag">🏦 Transferencia Bancaria</span>
+                <span class="method-tag">📱 Pago Móvil</span>
+                <span class="method-tag">💵 Zelle</span>
+                <span class="method-tag">💰 Efectivo</span>
+            </div>
+        </div>
+        
+        <hr class="divider">
+        
+        <!-- Additional Info -->
+        <p style="font-size: 13px; color: #718096; text-align: center; margin: 0;">
+            💡 <strong>¿Ya realizó el pago?</strong> Por favor, ignore este mensaje.<br>
+            Para más información, comuníquese con su asesor o nuestra oficina.
+        </p>
+        
+    </div>
+    
+    <!-- ===== FOOTER ===== -->
+    <div class="footer">
+        <div class="brand">SISPSA</div>
+        <div class="brand" style="font-weight: 400; font-size: 12px; color: #4a5568;">
+            Sistema Integral de Salud Programado
+        </div>
+    
+        <div class="disclaimer">
+            Este es un mensaje automático, por favor no responder a este correo.<br>
+            © 2026 SISPSA - Todos los derechos reservados.
+        </div>
+    </div>
+    
+</div>
+
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Build plain text email for reminder - Professional Version (No Logo)
+     */
+    private function buildReminderEmailPlainText($fullName, $dueDate, $amount, $contractNumber, $installmentNumber)
+    {
+        return <<<TEXT
+╔═══════════════════════════════════════════════════════════════╗
+║                    SISPSA - RECORDATORIO DE PAGO              ║
+║              Sistema Integral de Salud Programado             ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Estimado(a) {$fullName},
+
+Le recordamos que su Cuota N°{$installmentNumber} del contrato {$contractNumber} 
+está próxima a vencer.
+
+───────────────────────────────────────────────────────────────────
+  ⏰ FECHA DE VENCIMIENTO: {$dueDate}
+───────────────────────────────────────────────────────────────────
+
+📄 CONTRATO:              {$contractNumber}
+🔢 CUOTA N°:              {$installmentNumber}
+💰 MONTO A PAGAR:         $ {$amount} USD
+📅 FECHA LÍMITE:          {$dueDate}
+
+───────────────────────────────────────────────────────────────────
+
+⚠️ IMPORTANTE:
+Realice su pago antes de la fecha de vencimiento para evitar la 
+suspensión temporal de su cobertura médica.
+
+💳 MÉTODOS DE PAGO DISPONIBLES:
+   • Transferencia Bancaria
+   • Pago Móvil
+   • Zelle
+   • Efectivo
+
+───────────────────────────────────────────────────────────────────
+
+💡 ¿Ya realizó el pago? Por favor, ignore este mensaje.
+
+Para más información, comuníquese con su asesor o nuestra oficina.
+
+───────────────────────────────────────────────────────────────────
+
+SISPSA - Sistema Integral de Salud Programado
+
+Este es un mensaje automático, por favor no responder a este correo.
+© 2026 SISPSA - Todos los derechos reservados.
+TEXT;
+    }
 }
