@@ -1059,42 +1059,10 @@ class SiteController extends Controller
         }
     }
 
-    public function actionMunicipio()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $out = [];
-        if (isset($_POST['depdrop_parents'])) {
-            $parents = $_POST['depdrop_parents'];
-            if ($parents != null) {
-                $est_id = $parents[0];
-                if ($est_id == '') {
-                    return ['output' => '', 'selected' => ''];
-                }
-                $out = RmMunicipio::find()->select(['codigo_muni as id', 'nombre as name'])->where(['estado_codigo' => $est_id])->asArray()->all();
-                return ['output' => $out, 'selected' => ''];
-            }
-        }
-        return ['output' => '', 'selected' => ''];
-    }
-
-    public function actionParroquia()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $out = [];
-        if (isset($_POST['depdrop_parents'])) {
-            $parents = $_POST['depdrop_parents'];
-            if ($parents != null) {
-                $mun_id = $parents[0];
-                if ($mun_id == '') {
-                    return ['output' => '', 'selected' => ''];
-                }
-                $out = RmParroquia::find()->select(['id', 'nombre as name'])->where(['muni_codigo' => $mun_id])->asArray()->all();
-                return ['output' => $out, 'selected' => ''];
-            }
-        }
-        return ['output' => '', 'selected' => ''];
-    }
-
+    /**
+     * Endpoint for ciudades dropdown (DepDrop)
+     * Returns ciudades using codigo_ciudad as the value
+     */
     public function actionCiudad()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -1107,11 +1075,73 @@ class SiteController extends Controller
                 if ($est_id == '') {
                     return ['output' => '', 'selected' => $selected];
                 }
-                $out = RmCiudad::find()->select(['id', 'nombre as name'])->where(['estado_codigo' => $est_id])->asArray()->all();
+                // FIXED: Use 'codigo_ciudad as id' instead of just 'id'
+                $out = RmCiudad::find()
+                    ->select(['codigo_ciudad as id', 'nombre as name'])
+                    ->where(['estado_codigo' => $est_id])
+                    ->orderBy(['nombre' => SORT_ASC])
+                    ->asArray()
+                    ->all();
                 return ['output' => $out, 'selected' => $selected];
             }
         }
         return ['output' => '', 'selected' => $selected];
+    }
+
+    /**
+     * Endpoint for municipios dropdown (DepDrop)
+     * Returns municipios using codigo_muni as the value
+     */
+    public function actionMunicipio()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null) {
+                $est_id = $parents[0];
+                if ($est_id == '') {
+                    return ['output' => '', 'selected' => ''];
+                }
+                // FIXED: Use 'codigo_muni as id' instead of just 'id'
+                $out = RmMunicipio::find()
+                    ->select(['codigo_muni as id', 'nombre as name'])
+                    ->where(['estado_codigo' => $est_id])
+                    ->orderBy(['nombre' => SORT_ASC])
+                    ->asArray()
+                    ->all();
+                return ['output' => $out, 'selected' => ''];
+            }
+        }
+        return ['output' => '', 'selected' => ''];
+    }
+
+    /**
+     * Endpoint for parroquias dropdown (DepDrop)
+     * Returns parroquias using codigo_parro as the value
+     */
+    public function actionParroquia()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $out = [];
+        if (isset($_POST['depdrop_parents'])) {
+            $parents = $_POST['depdrop_parents'];
+            if ($parents != null) {
+                $mun_id = $parents[0];
+                if ($mun_id == '') {
+                    return ['output' => '', 'selected' => ''];
+                }
+                // FIXED: Use 'codigo_parro as id' instead of just 'id'
+                $out = RmParroquia::find()
+                    ->select(['codigo_parro as id', 'nombre as name'])
+                    ->where(['muni_codigo' => $mun_id])
+                    ->orderBy(['nombre' => SORT_ASC])
+                    ->asArray()
+                    ->all();
+                return ['output' => $out, 'selected' => ''];
+            }
+        }
+        return ['output' => '', 'selected' => ''];
     }
 
     public function actionPlanes()

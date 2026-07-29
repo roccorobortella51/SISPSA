@@ -171,7 +171,7 @@ function formatUpdatedAt($value)
             </div>
             <div>
                 <h5><strong>Parroquia:</strong> <?= Html::encode($parroquiaList[$model->parroquia] ?? 'N/A') ?></h5>
-                <h5><strong>Ciudad:</strong> <?= Html::encode($ciudadesList[$model->ciudad] ?? 'N/A') ?></h5>
+                <h5><strong>Ciudad:</strong> <?= Html::encode($ciudadesList[(string)(int)$model->ciudad] ?? 'N/A') ?></h5>
             </div>
         </div>
         <p class="border-top-section"><strong>Dirección:</strong> <?= nl2br(Html::encode($model->direccion)) ?></p>

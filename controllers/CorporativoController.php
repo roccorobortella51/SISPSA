@@ -15,6 +15,7 @@ use app\models\ContratosSearch;
 use app\models\Contratos;
 use app\models\Pagos;
 use app\models\TasaCambio;
+use app\models\RmClinica;
 use app\models\Cuotas;
 use app\components\UserHelper;
 use app\models\MasivoAfiliadosForm;
@@ -650,10 +651,13 @@ class CorporativoController extends Controller
 
                 Yii::$app->session->setFlash($messageType, $messageText);
 
+                // Get the corporativo model for the view
+                $corporativoModel = Corporativo::findOne($corporativoId);
+
                 return $this->render('carga-masiva-resumen', [
                     'model' => $model,
                     'resultados' => $resultados,
-                    'corporativo' => Corporativo::findOne($corporativoId),
+                    'corporativo' => $corporativoModel, // This is now properly defined
                 ]);
             } else {
 
@@ -1302,46 +1306,69 @@ class CorporativoController extends Controller
         // 1. Configurar la respuesta como JSON
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
 
+        // 2. Validar que el ID no esté vacío
+        if (empty($id)) {
+            return ['success' => false, 'error' => 'ID del corporativo no proporcionado', 'data' => []];
+        }
+
         try {
-            // 2. Consulta con Eager Loading (Carga anticipada de relaciones)
-            // Se asume que \app\models\RmClinica tiene la relación 'planes'
-            $clinicas = \app\models\RmClinica::find()
-                // FILTRO: joinWith para asegurar que la clínica está asociada al corporativo ($id)
-                ->joinWith(['corporativoClinicas' => function ($query) use ($id) {
-                    $query->andWhere(['corporativo_id' => $id]);
-                }])
-                // CARGA: with() para cargar los planes asociados a CADA clínica encontrada.
-                ->with('planes')
+            // 3. Verificar que el corporativo existe
+            $corporativo = Corporativo::findOne($id);
+            if (!$corporativo) {
+                return ['success' => false, 'error' => 'El corporativo con ID ' . $id . ' no existe', 'data' => []];
+            }
+
+            // 4. Consulta para obtener las clínicas asociadas al corporativo
+            $clinicas = RmClinica::find()
+                ->innerJoin('corporativo_clinica', 'corporativo_clinica.clinica_id = rm_clinica.id')
+                ->where(['corporativo_clinica.corporativo_id' => $id])
+                ->andWhere(['rm_clinica.estatus' => 'Activo'])
                 ->all();
 
-            // 3. Mapeo a Array para generar la estructura JSON deseada
-            $data = \yii\helpers\ArrayHelper::toArray($clinicas, [
-                'app\models\RmClinica' => [
-                    'id',
-                    'nombre' => 'nombre',
+            if (empty($clinicas)) {
+                return [
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'No se encontraron clínicas activas asociadas a este corporativo.'
+                ];
+            }
 
-                    // Mapeo de la relación anidada 'planes'
-                    'planes' => function ($clinica) {
-                        return \yii\helpers\ArrayHelper::toArray($clinica->planes, [
-                            'app\models\Planes' => [
-                                'id',
-                                'nombre',
-                            ]
-                        ]);
-                    },
-                ]
-            ]);
+            // 5. Construir el array de datos con clínicas y sus planes
+            $data = [];
+            foreach ($clinicas as $clinica) {
+                // Obtener planes asociados a esta clínica
+                $planes = Planes::find()
+                    ->where(['clinica_id' => $clinica->id])
+                    ->andWhere(['estatus' => 'Activo'])
+                    ->orderBy(['nombre' => SORT_ASC])
+                    ->all();
 
-            // Respuesta de éxito con los datos
+                $planesData = [];
+                foreach ($planes as $plan) {
+                    $planesData[] = [
+                        'id' => $plan->id,
+                        'nombre' => $plan->nombre,
+                        'precio' => $plan->precio,
+                    ];
+                }
+
+                $data[] = [
+                    'id' => $clinica->id,
+                    'nombre' => $clinica->nombre,
+                    'direccion' => $clinica->direccion,
+                    'telefono' => $clinica->telefono,
+                    'planes' => $planesData,
+                ];
+            }
+
+            // 6. Respuesta exitosa
             return ['success' => true, 'data' => $data];
         } catch (\Exception $e) {
-            // Manejo de errores detallado
             Yii::error('Error al obtener clínicas con planes: ' . $e->getMessage(), __METHOD__);
             return [
                 'success' => false,
-                'error' => 'Error al obtener clínicas con planes: ' . $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+                'error' => 'Error interno del servidor: ' . $e->getMessage(),
+                'data' => []
             ];
         }
     }

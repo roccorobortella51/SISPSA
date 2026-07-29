@@ -26,7 +26,13 @@ $errorPercentage = $totalProcessed > 0 ? round(($errorCount / $totalProcessed) *
 
 // Ensure corporativo is defined when not passed explicitly
 if (!isset($corporativo)) {
-    $corporativo = isset($model) && isset($model->corporativo) ? $model->corporativo : null;
+    $corporativo = null;
+}
+
+// Safely get corporativo nombre
+$corporativoNombre = 'N/A';
+if ($corporativo !== null && isset($corporativo->nombre)) {
+    $corporativoNombre = $corporativo->nombre;
 }
 
 // Get success details if they exist
@@ -155,7 +161,7 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
                         <table class="table table-borderless">
                             <tr>
                                 <th style="width: 180px;"><i class="fas fa-hospital me-2 text-primary"></i> Corporativo Destino:</th>
-                                <td class="fw-bold"><?= Html::encode($corporativo ? $corporativo->nombre : 'N/A') ?></td>
+                                <td class="fw-bold"><?= Html::encode($corporativoNombre) ?></td>
                             </tr>
                             <tr>
                                 <th><i class="fas fa-calendar-alt me-2 text-primary"></i> Fecha de Inicio:</th>
@@ -300,7 +306,7 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
         <?php endif; ?>
 
         <!-- Detailed Errors Section -->
-        <?php if ($errorCount > 0): ?>
+        <?php if ($errorCount > 0 && isset($resultados['errors']) && is_array($resultados['errors'])): ?>
             <div class="card shadow mb-4">
                 <div class="card-header bg-gradient-danger text-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
@@ -492,7 +498,7 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
                 // Add title
                 html += '<h1>Resumen de Carga Masiva de Afiliados</h1>';
                 html += '<h3>Fecha: <?= date('d/m/Y H:i:s') ?></h3>';
-                html += '<h3>Corporativo: <?= Html::encode($corporativo ? $corporativo->nombre : 'N/A') ?></h3>';
+                html += '<h3>Corporativo: <?= Html::encode($corporativoNombre) ?></h3>';
                 html += '<hr>';
 
                 // Copy the table
@@ -531,11 +537,11 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
             const searchInput = document.createElement('div');
             searchInput.className = 'mb-3';
             searchInput.innerHTML = `
-        <div class="input-group" style="max-width: 300px;">
-            <span class="input-group-text"><i class="fas fa-search"></i></span>
-            <input type="text" id="tableSearch" class="form-control" placeholder="Buscar afiliado...">
-        </div>
-    `;
+                <div class="input-group" style="max-width: 300px;">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" id="tableSearch" class="form-control" placeholder="Buscar afiliado...">
+                </div>
+            `;
             const successCard = document.querySelector('#successTable').closest('.card-body');
             if (successCard && successCard.firstChild) {
                 successCard.insertBefore(searchInput, successCard.firstChild.nextSibling);

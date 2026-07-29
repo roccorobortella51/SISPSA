@@ -78,7 +78,7 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
             <?php if ($permisos) : ?>
                 <?= Html::a(
                     '<i class="fas fa-file-excel mr-2"></i> CARGAR MASIVOS DE AFILIADOS',
-                    ['masivo'],
+                    ['corporativo/index'],
                     ['class' => 'btn-base btn-blue']
                 ) ?>
                 <?= Html::a(
