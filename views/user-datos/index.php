@@ -29,7 +29,7 @@ function getContractStatusClass($status)
 }
 
 /** @var yii\web\View $this */
-/** @var app\models\UserSearch $searchModel */
+/** @var app\models\UserDatosSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 /** @var string|null $clinica_id */
 
@@ -68,10 +68,99 @@ $mostrarFiltroClinica = $isAdmin && !in_array($rol, $rolesSinFiltroClinica);
 // Define roles that can access Atención Médica
 $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR-CLINICA', 'CONTROL DE CITAS', 'GERENTE-CLINICA', 'ADMISIÓN', 'ATENCIÓN'];
 
+// --- GET SUMMARY STATISTICS ---
+$summaryStats = [];
+if (isset($searchModel) && method_exists($searchModel, 'getSummaryStatistics')) {
+    try {
+        $params = Yii::$app->request->queryParams;
+        $summaryStats = $searchModel->getSummaryStatistics($params);
+    } catch (\Exception $e) {
+        Yii::error("Error getting summary statistics: " . $e->getMessage(), 'affiliates-index');
+        $summaryStats = [
+            'total_afiliados' => 0,
+            'total_contratos_activos' => 0,
+            'total_contratos_suspendidos' => 0,
+            'total_contratos_registrados' => 0,
+            'total_contratos_anulados' => 0,
+            'critical_delinquency' => [
+                'count' => 0,
+                'total_vencidas_cuotas' => 0,
+                'average_vencidas' => 0,
+            ],
+        ];
+    }
+}
+
+// --- Get clinic name for display ---
+$displayClinicName = '';
+try {
+    if ($clinica && $clinica->id !== null) {
+        $displayClinicName = Html::encode($clinica->nombre);
+    } else {
+        $clinicName = UserHelper::getMyClinicaName();
+        if (!empty($clinicName)) {
+            $displayClinicName = Html::encode($clinicName);
+        } else {
+            $displayClinicName = 'Todos los afiliados';
+        }
+    }
+} catch (\Exception $e) {
+    Yii::error("Error getting clinic name: " . $e->getMessage(), 'affiliates-index');
+    $displayClinicName = 'Todos los afiliados';
+}
+
+// --- Build filter URLs for each card ---
+// Base URL with current clinic_id if present
+$baseUrl = ['index'];
+if ($clinica && $clinica->id !== null) {
+    $baseUrl['clinica_id'] = $clinica->id;
+}
+
+// Total Afiliados - show all (no filter)
+$urlTotalAfiliados = Url::to(array_merge($baseUrl, []));
+
+// Contratos Activos
+$urlActivos = Url::to(array_merge($baseUrl, [
+    'UserDatosSearch' => ['contrato_estatus' => 'Activo']
+]));
+
+// Contratos Suspendidos
+$urlSuspendidos = Url::to(array_merge($baseUrl, [
+    'UserDatosSearch' => ['contrato_estatus' => 'Suspendido']
+]));
+
+// Contratos Registrados
+$urlRegistrados = Url::to(array_merge($baseUrl, [
+    'UserDatosSearch' => ['contrato_estatus' => 'Registrado']
+]));
+
+// Contratos Anulados
+$urlAnulados = Url::to(array_merge($baseUrl, [
+    'UserDatosSearch' => ['contrato_estatus' => 'Anulado']
+]));
+
+// Afiliados Críticos - Filter by 3+ expired cuotas
+$urlCriticos = Url::to(array_merge($baseUrl, [
+    'UserDatosSearch' => ['critical_filter' => 'true']
+]));
+
+// Get current filter for display
+$currentFilter = Yii::$app->request->get('UserDatosSearch')['contrato_estatus'] ?? null;
+$isCriticalFilter = Yii::$app->request->get('UserDatosSearch')['critical_filter'] ?? null;
+
+// Define available status counts for conditional display
+$hasActivos = ($summaryStats['total_contratos_activos'] ?? 0) > 0;
+$hasSuspendidos = ($summaryStats['total_contratos_suspendidos'] ?? 0) > 0;
+$hasRegistrados = ($summaryStats['total_contratos_registrados'] ?? 0) > 0;
+$hasAnulados = ($summaryStats['total_contratos_anulados'] ?? 0) > 0;
+$hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
+
 ?>
 
-<div class="main-container"> <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
+<div class="main-container">
+    <input type="hidden" id="csrf-token" value="<?= Yii::$app->request->csrfToken; ?>" />
 
+    <!-- HEADER SECTION -->
     <div class="header-section">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="header-buttons-group">
@@ -100,10 +189,182 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- KPI SUMMARY CARDS - Clickable Microsoft Style (Single Row)    -->
+    <!-- ============================================================ -->
+    <div class="kpi-cards-row">
+        <!-- Card 1: Total Afiliados (Always visible) -->
+        <a href="<?= $urlTotalAfiliados ?>" class="kpi-card-link"
+            data-toggle="tooltip"
+            data-placement="top"
+            data-html="true"
+            title="<strong>Total de Afiliados</strong><br>Muestra todos los afiliados registrados en el sistema.<br><small class='text-muted'>Click para ver todos</small>">
+            <div class="kpi-card primary">
+                <div class="kpi-card-header">
+                    <span class="kpi-icon"><i class="fas fa-users"></i></span>
+                    <span class="kpi-title">Total Afiliados</span>
+                    <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                </div>
+                <div class="kpi-card-body">
+                    <span class="kpi-number"><?= number_format($summaryStats['total_afiliados'] ?? 0) ?></span>
+                    <span class="kpi-label">
+                        <i class="fas fa-building mr-1"></i> <?= $displayClinicName ?>
+                    </span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Card 2: Contratos Activos (Conditional) -->
+        <?php if ($hasActivos): ?>
+            <a href="<?= $urlActivos ?>" class="kpi-card-link"
+                data-toggle="tooltip"
+                data-placement="top"
+                data-html="true"
+                title="<strong>Contratos Activos</strong><br>Afiliados con contratos en vigencia.<br><small class='text-muted'>Click para filtrar</small>">
+                <div class="kpi-card success">
+                    <div class="kpi-card-header">
+                        <span class="kpi-icon"><i class="fas fa-check-circle"></i></span>
+                        <span class="kpi-title">Contratos Activos</span>
+                        <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <span class="kpi-number"><?= number_format($summaryStats['total_contratos_activos'] ?? 0) ?></span>
+                        <span class="kpi-label">
+                            <i class="fas fa-calendar-check mr-1"></i> En vigencia
+                        </span>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+
+        <!-- Card 3: Contratos Suspendidos (Conditional) -->
+        <?php if ($hasSuspendidos): ?>
+            <a href="<?= $urlSuspendidos ?>" class="kpi-card-link"
+                data-toggle="tooltip"
+                data-placement="top"
+                data-html="true"
+                title="<strong>Contratos Suspendidos</strong><br>Afiliados con contratos suspendidos por tener al menos una cuota vencida.<br><small class='text-muted'>Click para filtrar</small>">
+                <div class="kpi-card danger">
+                    <div class="kpi-card-header">
+                        <span class="kpi-icon"><i class="fas fa-pause-circle"></i></span>
+                        <span class="kpi-title">Contratos Suspendidos</span>
+                        <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <span class="kpi-number"><?= number_format($summaryStats['total_contratos_suspendidos'] ?? 0) ?></span>
+                        <span class="kpi-label">
+                            <i class="fas fa-clock mr-1"></i> Con cuotas vencidas
+                        </span>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+
+        <!-- Card 4: Contratos Registrados (Conditional) -->
+        <?php if ($hasRegistrados): ?>
+            <a href="<?= $urlRegistrados ?>" class="kpi-card-link"
+                data-toggle="tooltip"
+                data-placement="top"
+                data-html="true"
+                title="<strong>Contratos Registrados</strong><br>Afiliados con contratos registrados pendientes de activación.<br><small class='text-muted'>Click para filtrar</small>">
+                <div class="kpi-card registrado">
+                    <div class="kpi-card-header">
+                        <span class="kpi-icon"><i class="fas fa-clipboard-list"></i></span>
+                        <span class="kpi-title">Contratos Registrados</span>
+                        <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <span class="kpi-number"><?= number_format($summaryStats['total_contratos_registrados'] ?? 0) ?></span>
+                        <span class="kpi-label">
+                            <i class="fas fa-clock mr-1"></i> Pendientes de activación
+                        </span>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+
+        <!-- Card 5: Contratos Anulados (Conditional) -->
+        <?php if ($hasAnulados): ?>
+            <a href="<?= $urlAnulados ?>" class="kpi-card-link"
+                data-toggle="tooltip"
+                data-placement="top"
+                data-html="true"
+                title="<strong>Contratos Anulados</strong><br>Afiliados con contratos cancelados permanentemente.<br><small class='text-muted'>Click para filtrar</small>">
+                <div class="kpi-card anulado">
+                    <div class="kpi-card-header">
+                        <span class="kpi-icon"><i class="fas fa-ban"></i></span>
+                        <span class="kpi-title">Contratos Anulados</span>
+                        <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <span class="kpi-number"><?= number_format($summaryStats['total_contratos_anulados'] ?? 0) ?></span>
+                        <span class="kpi-label">
+                            <i class="fas fa-times-circle mr-1"></i> Cancelados
+                        </span>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+
+        <!-- Card 6: Afiliados Críticos (Conditional) -->
+        <?php if ($hasCriticos): ?>
+            <a href="<?= $urlCriticos ?>" class="kpi-card-link"
+                data-toggle="tooltip"
+                data-placement="top"
+                data-html="true"
+                title="<strong>Afiliados Críticos</strong><br>Afiliados con 3 o más cuotas vencidas. <span class='text-warning'>¡Requieren atención inmediata!</span><br><small class='text-muted'>Click para filtrar</small>">
+                <div class="kpi-card critical">
+                    <div class="kpi-card-header">
+                        <span class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                        <span class="kpi-title">Afiliados Críticos</span>
+                        <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <span class="kpi-number">
+                            <?= number_format($summaryStats['critical_delinquency']['count'] ?? 0) ?>
+                            <?php if (($summaryStats['critical_delinquency']['count'] ?? 0) > 0): ?>
+                                <small class="kpi-percent">
+                                    (<?= round(($summaryStats['critical_delinquency']['count'] / max($summaryStats['total_contratos_suspendidos'] ?? 1, 1)) * 100) ?>%)
+                                </small>
+                            <?php endif; ?>
+                        </span>
+                        <span class="kpi-label">
+                            <i class="fas fa-exclamation-circle mr-1"></i> 3+ cuotas vencidas
+                            <?php if (($summaryStats['critical_delinquency']['total_vencidas_cuotas'] ?? 0) > 0): ?>
+                                <span class="kpi-sub">
+                                    <?= number_format($summaryStats['critical_delinquency']['total_vencidas_cuotas'] ?? 0) ?> cuotas
+                                </span>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- GRID VIEW - Main Affiliates Table                            -->
+    <!-- ============================================================ -->
     <div class="ms-panel ms-panel-fh border-indigo">
         <div class="ms-panel-header">
             <h3 class="section-title">
                 <i class="fas fa-users mr-3 text-indigo-600"></i> Listado de Afiliados
+                <?php
+                // Show active filter indicator
+                if ($isCriticalFilter === 'true'):
+                    echo '<span class="badge badge-critical ml-2">Filtrado: Críticos (3+ cuotas vencidas)</span>';
+                elseif ($currentFilter):
+                    $filterLabels = [
+                        'Activo' => '<span class="badge badge-success ml-2">Filtrado: Activos</span>',
+                        'Suspendido' => '<span class="badge badge-secondary ml-2">Filtrado: Suspendidos</span>',
+                        'Registrado' => '<span class="badge badge-primary ml-2">Filtrado: Registrados</span>',
+                        'Anulado' => '<span class="badge badge-danger ml-2">Filtrado: Anulados</span>',
+                        'Vencido' => '<span class="badge badge-warning ml-2">Filtrado: Vencidos</span>',
+                        'Pendiente' => '<span class="badge badge-info ml-2">Filtrado: Pendientes</span>',
+                    ];
+                    echo $filterLabels[$currentFilter] ?? '';
+                endif;
+                ?>
             </h3>
         </div>
         <div class="ms-panel-body">
@@ -195,7 +456,6 @@ $rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR
                                 if ($model->user_datos_type_id == 2 && $model->corporativo) {
                                     $name = Html::encode($model->corporativo->nombre);
 
-                                    // Predefined color palettes
                                     $colorPalettes = [
                                         ['#dbeafe', '#93c5fd', '#3b82f6', '#1e40af', '#2563eb'],
                                         ['#d1fae5', '#6ee7b7', '#10b981', '#065f46', '#059669'],
@@ -550,8 +810,22 @@ $(document).on('click', '.btn-cerrar-swal', function(e) {
 // 3. ROBUST TOOLTIP MANAGEMENT SYSTEM
 $(document).ready(function() {
     function initAllTooltips() {
+        // Initialize tooltips for KPI cards
+        $('.kpi-card-link').tooltip('dispose');
         $('[data-toggle="tooltip"]').tooltip('dispose');
+        
         try {
+            // Tooltips for KPI cards with custom styling
+            $('.kpi-card-link').tooltip({
+                trigger: 'hover',
+                delay: { "show": 200, "hide": 100 },
+                container: 'body',
+                boundary: 'window',
+                html: true,
+                template: '<div class="tooltip kpi-tooltip" role="tooltip"><div class="arrow"></div><div class="tooltip-inner"></div></div>'
+            });
+            
+            // Tooltips for other elements
             $('[data-toggle="tooltip"]').tooltip({
                 trigger: 'hover',
                 delay: { "show": 100, "hide": 100 },
@@ -564,11 +838,15 @@ $(document).ready(function() {
         }
     }
     
+    // Initial tooltip setup
     initAllTooltips();
+    
+    // Re-initialize after grid updates
     $(document).on('pjax:complete yiiGridViewUpdated', function() {
         setTimeout(initAllTooltips, 100);
     });
     
+    // Contract tooltip click handler
     $(document).on('click', '.contract-tooltip strong', function(e) {
         e.stopPropagation();
         var text = $(this).text();
@@ -713,12 +991,572 @@ $(document).ready(function() {
         }, 150);
     });
 });
+
+// Click tracking for debugging
+$(document).on('click', '.kpi-card-link', function(e) {
+    console.log('KPI Card clicked - URL:', $(this).attr('href'));
+});
 JS;
 
 $this->registerJs($js, View::POS_READY);
 ?>
 
 <style>
+    /* ============================================
+       TOOLTIP CUSTOM STYLES
+       ============================================ */
+    .kpi-tooltip .tooltip-inner {
+        background: #2c3e50;
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.85rem;
+        max-width: 300px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .kpi-tooltip .tooltip-inner strong {
+        color: #ffffff;
+        font-size: 0.95rem;
+    }
+
+    .kpi-tooltip .tooltip-inner .text-muted {
+        color: #aab8c5 !important;
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 4px;
+    }
+
+    .kpi-tooltip .tooltip-inner .text-warning {
+        color: #ffc107 !important;
+        font-weight: 600;
+    }
+
+    .kpi-tooltip .arrow::before {
+        border-top-color: #2c3e50 !important;
+    }
+
+    .kpi-tooltip.bs-tooltip-top .arrow::before {
+        border-top-color: #2c3e50 !important;
+    }
+
+    .kpi-tooltip.bs-tooltip-bottom .arrow::before {
+        border-bottom-color: #2c3e50 !important;
+    }
+
+    .kpi-tooltip.bs-tooltip-left .arrow::before {
+        border-left-color: #2c3e50 !important;
+    }
+
+    .kpi-tooltip.bs-tooltip-right .arrow::before {
+        border-right-color: #2c3e50 !important;
+    }
+
+    /* ============================================
+       KPI CARDS - Clickable Microsoft Style (Single Row)
+       ============================================ */
+    .kpi-cards-row {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 12px;
+        margin-bottom: 24px;
+        overflow-x: auto;
+        padding: 2px 0 8px 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .kpi-cards-row::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .kpi-cards-row::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .kpi-cards-row::-webkit-scrollbar-thumb {
+        background: #c1c7cd;
+        border-radius: 4px;
+    }
+
+    .kpi-cards-row::-webkit-scrollbar-thumb:hover {
+        background: #a0a8b0;
+    }
+
+    .kpi-card-link {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        text-decoration: none !important;
+        display: block;
+        transition: transform 0.2s ease;
+        cursor: pointer;
+    }
+
+    .kpi-card-link:hover {
+        transform: translateY(-3px);
+        text-decoration: none !important;
+    }
+
+    .kpi-card-link:hover .kpi-card {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .kpi-card {
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        transition: all 0.25s ease;
+        border: 1px solid #e8eaed;
+        position: relative;
+        min-height: 90px;
+        height: 100%;
+        width: 100%;
+    }
+
+    .kpi-card:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .kpi-card-header {
+        padding: 10px 14px 4px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        position: relative;
+    }
+
+    .kpi-card-header .kpi-icon {
+        font-size: 1rem;
+        opacity: 0.9;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .kpi-card-header .kpi-title {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        opacity: 0.9;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .kpi-card-header .kpi-arrow {
+        font-size: 0.7rem;
+        opacity: 0.5;
+        transition: all 0.3s ease;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .kpi-card-link:hover .kpi-arrow {
+        opacity: 1;
+        transform: translateX(3px);
+    }
+
+    .kpi-card-body {
+        padding: 6px 14px 12px 14px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kpi-card-body .kpi-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+        letter-spacing: -0.5px;
+        white-space: nowrap;
+    }
+
+    .kpi-card-body .kpi-label {
+        font-size: 0.65rem;
+        opacity: 0.85;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-wrap: wrap;
+        white-space: nowrap;
+    }
+
+    .kpi-card-body .kpi-percent {
+        font-size: 0.85rem;
+        font-weight: 500;
+        opacity: 0.75;
+        margin-left: 2px;
+    }
+
+    .kpi-card-body .kpi-sub {
+        display: block;
+        font-size: 0.6rem;
+        opacity: 0.75;
+        margin-top: 1px;
+        white-space: nowrap;
+    }
+
+    /* ============================================
+       CARD COLOR SCHEMES - MATCHING BADGE COLORS
+       ============================================ */
+
+    /* Total Afiliados - Primary Blue (like badge-primary) */
+    .kpi-card.primary {
+        background: linear-gradient(145deg, #007bff 0%, #0069d9 100%);
+        color: white;
+        border-color: #007bff;
+    }
+
+    .kpi-card.primary .kpi-number,
+    .kpi-card.primary .kpi-label,
+    .kpi-card.primary .kpi-title,
+    .kpi-card.primary .kpi-icon,
+    .kpi-card.primary .kpi-arrow {
+        color: #ffffff !important;
+    }
+
+    /* Registrado - Primary Blue (same as badge-primary) */
+    .kpi-card.registrado {
+        background: linear-gradient(145deg, #007bff 0%, #0069d9 100%);
+        color: white;
+        border-color: #007bff;
+    }
+
+    .kpi-card.registrado .kpi-number,
+    .kpi-card.registrado .kpi-label,
+    .kpi-card.registrado .kpi-title,
+    .kpi-card.registrado .kpi-icon,
+    .kpi-card.registrado .kpi-arrow {
+        color: #ffffff !important;
+    }
+
+    /* Activo - Success Green (same as badge-success) */
+    .kpi-card.success {
+        background: linear-gradient(145deg, #28a745 0%, #218838 100%);
+        color: white;
+        border-color: #28a745;
+    }
+
+    .kpi-card.success .kpi-number,
+    .kpi-card.success .kpi-label,
+    .kpi-card.success .kpi-title,
+    .kpi-card.success .kpi-icon,
+    .kpi-card.success .kpi-arrow {
+        color: #ffffff !important;
+    }
+
+    /* Suspendido - Secondary Gray (same as badge-secondary) */
+    .kpi-card.danger {
+        background: linear-gradient(145deg, #6c757d 0%, #5a6268 100%);
+        color: white;
+        border-color: #6c757d;
+    }
+
+    .kpi-card.danger .kpi-number,
+    .kpi-card.danger .kpi-label,
+    .kpi-card.danger .kpi-title,
+    .kpi-card.danger .kpi-icon,
+    .kpi-card.danger .kpi-arrow {
+        color: #ffffff !important;
+    }
+
+    /* Anulado - Danger Red (same as badge-danger) */
+    .kpi-card.anulado {
+        background: linear-gradient(145deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-color: #dc3545;
+    }
+
+    .kpi-card.anulado .kpi-number,
+    .kpi-card.anulado .kpi-label,
+    .kpi-card.anulado .kpi-title,
+    .kpi-card.anulado .kpi-icon,
+    .kpi-card.anulado .kpi-arrow {
+        color: #ffffff !important;
+    }
+
+    /* Críticos - Warning Orange (same as badge-warning) */
+    .kpi-card.critical {
+        background: linear-gradient(145deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+        border-color: #ffc107;
+    }
+
+    .kpi-card.critical .kpi-number,
+    .kpi-card.critical .kpi-label,
+    .kpi-card.critical .kpi-title,
+    .kpi-card.critical .kpi-icon,
+    .kpi-card.critical .kpi-arrow {
+        color: #212529 !important;
+    }
+
+    .kpi-card.critical .kpi-percent {
+        color: #856404 !important;
+    }
+
+    /* Critical badge for filter indicator */
+    .badge-critical {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        color: #212529 !important;
+        font-weight: 600;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Filter indicator badge in header */
+    .section-title .badge {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.75rem;
+        vertical-align: middle;
+    }
+
+    /* Responsive - Single Row with horizontal scroll on smaller screens */
+    @media (max-width: 1200px) {
+        .kpi-cards-row {
+            gap: 10px;
+        }
+
+        .kpi-card {
+            min-height: 80px;
+        }
+
+        .kpi-card-body .kpi-number {
+            font-size: 1.6rem;
+        }
+
+        .kpi-card-header .kpi-title {
+            font-size: 0.65rem;
+        }
+
+        .kpi-card-header .kpi-icon {
+            font-size: 0.9rem;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .kpi-cards-row {
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            padding-bottom: 8px;
+        }
+
+        .kpi-card-link {
+            flex: 0 0 160px;
+            min-width: 140px;
+        }
+
+        .kpi-card {
+            min-height: 75px;
+        }
+
+        .kpi-card-header {
+            padding: 8px 10px 3px 10px;
+        }
+
+        .kpi-card-header .kpi-title {
+            font-size: 0.6rem;
+        }
+
+        .kpi-card-header .kpi-icon {
+            font-size: 0.85rem;
+        }
+
+        .kpi-card-body {
+            padding: 4px 10px 10px 10px;
+        }
+
+        .kpi-card-body .kpi-number {
+            font-size: 1.4rem;
+        }
+
+        .kpi-card-body .kpi-label {
+            font-size: 0.6rem;
+        }
+
+        .kpi-card-body .kpi-percent {
+            font-size: 0.7rem;
+        }
+
+        .kpi-card-body .kpi-sub {
+            font-size: 0.55rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .kpi-cards-row {
+            gap: 6px;
+        }
+
+        .kpi-card-link {
+            flex: 0 0 130px;
+            min-width: 110px;
+        }
+
+        .kpi-card {
+            min-height: 65px;
+        }
+
+        .kpi-card-header {
+            padding: 6px 8px 2px 8px;
+        }
+
+        .kpi-card-header .kpi-title {
+            font-size: 0.5rem;
+            letter-spacing: 0.2px;
+        }
+
+        .kpi-card-header .kpi-icon {
+            font-size: 0.75rem;
+        }
+
+        .kpi-card-header .kpi-arrow {
+            font-size: 0.6rem;
+        }
+
+        .kpi-card-body {
+            padding: 3px 8px 8px 8px;
+        }
+
+        .kpi-card-body .kpi-number {
+            font-size: 1.2rem;
+        }
+
+        .kpi-card-body .kpi-label {
+            font-size: 0.5rem;
+            white-space: normal;
+        }
+
+        .kpi-card-body .kpi-percent {
+            font-size: 0.65rem;
+        }
+
+        .kpi-card-body .kpi-sub {
+            font-size: 0.5rem;
+            white-space: normal;
+        }
+    }
+
+    /* ============================================
+       CONTRACT STATUS BADGE STYLES - STANDARDIZED
+       ============================================ */
+    .badge {
+        display: inline-block;
+        padding: 0.35em 0.65em;
+        font-size: 0.85em;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.375rem;
+        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        min-width: 80px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid transparent;
+    }
+
+    /* Registrado / Primary */
+    .badge-primary {
+        background: #007bff;
+        color: #fff;
+        border-color: #007bff;
+    }
+
+    /* Activo / Success */
+    .badge-success {
+        background: #28a745;
+        color: #fff;
+        border-color: #28a745;
+    }
+
+    /* Anulado / Danger */
+    .badge-danger {
+        background: #dc3545;
+        color: #fff;
+        border-color: #dc3545;
+    }
+
+    /* Crítico / Warning */
+    .badge-warning {
+        background: #ffc107;
+        color: #212529;
+        border-color: #ffc107;
+    }
+
+    /* Suspendido / Secondary */
+    .badge-secondary {
+        background: #6c757d;
+        color: #fff;
+        border-color: #6c757d;
+    }
+
+    /* Pendiente / Info */
+    .badge-info {
+        background: #17a2b8;
+        color: #fff;
+        border-color: #17a2b8;
+    }
+
+    .badge-light {
+        color: #212529;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .badge:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .contract-status-cell {
+        font-weight: 600;
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    .contract-status-cell.activo {
+        background-color: rgba(40, 167, 69, 0.05) !important;
+    }
+
+    .contract-status-cell.vencido,
+    .contract-status-cell.suspendido,
+    .contract-status-cell.anulado {
+        background-color: rgba(220, 53, 69, 0.05) !important;
+    }
+
+    .contract-status-cell.registrado {
+        background-color: rgba(0, 123, 255, 0.05) !important;
+    }
+
+    .contract-status-cell.pendiente {
+        background-color: rgba(23, 162, 184, 0.05) !important;
+    }
+
+    tbody tr:hover .contract-status-cell.activo {
+        background-color: rgba(40, 167, 69, 0.1) !important;
+    }
+
     /* ============================================
        CÉDULA DE IDENTIDAD STYLES
        ============================================ */
@@ -840,104 +1678,6 @@ $this->registerJs($js, View::POS_READY);
             background-color: transparent !important;
             border: 1px solid #ccc !important;
         }
-    }
-
-    /* ============================================
-       CONTRACT STATUS BADGE STYLES
-       ============================================ */
-    .badge {
-        display: inline-block;
-        padding: 0.35em 0.65em;
-        font-size: 0.85em;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: 0.375rem;
-        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-        min-width: 80px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border: 1px solid transparent;
-    }
-
-    .badge-primary {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        color: #fff;
-        border-color: #0062cc;
-    }
-
-    .badge-success {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: #fff;
-        border-color: #1e7e34;
-    }
-
-    .badge-danger {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        color: #fff;
-        border-color: #bd2130;
-    }
-
-    .badge-warning {
-        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-        color: #212529;
-        border-color: #d39e00;
-    }
-
-    .badge-info {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        color: #fff;
-        border-color: #117a8b;
-    }
-
-    .badge-secondary {
-        background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
-        color: #fff;
-        border-color: #4e555b;
-    }
-
-    .badge-light {
-        color: #212529;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-    }
-
-    .badge:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .contract-status-cell {
-        font-weight: 600;
-        text-align: center !important;
-        vertical-align: middle !important;
-    }
-
-    .contract-status-cell.activo {
-        background-color: rgba(40, 167, 69, 0.05) !important;
-    }
-
-    .contract-status-cell.vencido,
-    .contract-status-cell.suspendido,
-    .contract-status-cell.anulado {
-        background-color: rgba(220, 53, 69, 0.05) !important;
-    }
-
-    .contract-status-cell.registrado {
-        background-color: rgba(0, 123, 255, 0.05) !important;
-    }
-
-    .contract-status-cell.pendiente {
-        background-color: rgba(23, 162, 184, 0.05) !important;
-    }
-
-    tbody tr:hover .contract-status-cell.activo {
-        background-color: rgba(40, 167, 69, 0.1) !important;
     }
 
     /* ============================================

@@ -19,6 +19,7 @@ class UserDatosSearch extends UserDatos
     public $clinica_nombre;
     public $consecutivo_menor;
     public $contrato_estatus;
+    public $critical_filter; // Added for critical affiliates filter
 
     /**
      * {@inheritdoc}
@@ -27,7 +28,7 @@ class UserDatosSearch extends UserDatos
     {
         return [
             [['id', 'clinica_id', 'plan_id', 'contrato_id', 'asesor_id', 'cedula', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id', 'consecutivo_menor', 'agencia_id'], 'integer'],
-            [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'clinica_nombre', 'contrato_estatus'], 'safe'],
+            [['created_at', 'user_id', 'nombres', 'fechanac', 'sexo', 'selfie', 'telefono', 'estado', 'role', 'estatus', 'imagen_identificacion', 'qr', 'video', 'ciudad', 'municipio', 'parroquia', 'direccion', 'codigoValidacion', 'apellidos', 'email', 'deleted_at', 'updated_at', 'ver_cedula', 'ver_foto', 'session_id', 'tipo_cedula', 'tipo_sangre', 'estatus_solvente', 'clinica_nombre', 'contrato_estatus', 'critical_filter'], 'safe'],
             [['paso'], 'number'],
         ];
     }
@@ -39,6 +40,7 @@ class UserDatosSearch extends UserDatos
     {
         $labels = parent::attributeLabels();
         $labels['contrato_estatus'] = 'Estatus Contrato';
+        $labels['critical_filter'] = 'Filtro Crítico';
         return $labels;
     }
 
@@ -267,7 +269,7 @@ class UserDatosSearch extends UserDatos
         }
 
         // ============================================================
-        // FIX: CONTRACT STATUS FILTER - Includes "Anulado" support
+        // CONTRACT STATUS FILTER - Includes "Anulado" support
         // ============================================================
         if (!empty($this->contrato_estatus)) {
             if ($this->contrato_estatus === 'sin_contrato') {
@@ -287,6 +289,29 @@ class UserDatosSearch extends UserDatos
             } else {
                 // Show users with contracts in the specified status
                 $query->andFilterWhere(['contratos.estatus' => $this->contrato_estatus]);
+            }
+        }
+
+        // ============================================================
+        // CRITICAL FILTER - Show only users with 3+ expired cuotas
+        // ============================================================
+        if ($this->critical_filter === 'true') {
+            // Subquery to find users with 3+ expired cuotas
+            $subQuery = Cuotas::find()
+                ->select('contratos.user_id')
+                ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
+                ->where(['cuotas.estatus' => 'vencida'])
+                ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
+                ->groupBy('contratos.user_id')
+                ->having(['>=', 'COUNT(cuotas.id)', 3]);
+
+            $criticalUserIds = $subQuery->column();
+
+            if (!empty($criticalUserIds)) {
+                $query->andWhere(['user_datos.id' => $criticalUserIds]);
+            } else {
+                // No critical users found, return empty result
+                $query->andWhere('1=0');
             }
         }
 
@@ -320,5 +345,254 @@ class UserDatosSearch extends UserDatos
             ->andWhere(['is', 'user_datos.deleted_at', null]);
 
         return $dataProvider;
+    }
+
+    /**
+     * Get summary statistics for affiliates
+     * 
+     * @param array $params Search parameters
+     * @return array Summary data with totals and critical delinquents
+     */
+    public function getSummaryStatistics($params = [])
+    {
+        // Apply the same filtering as the main search
+        $query = UserDatos::find();
+        $this->applyFilters($query, $params);
+
+        // Only include affiliates (not other roles)
+        $query->andWhere(['user_datos.role' => 'afiliado']);
+        $query->andWhere(['is', 'user_datos.deleted_at', null]);
+
+        // Get total affiliates count
+        $totalAfiliados = $query->count();
+
+        // Get active contracts count (users with active contracts)
+        $activeContractsQuery = clone $query;
+        $activeContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_ACTIVO])
+            ->distinct('user_datos.id');
+        $totalActivos = $activeContractsQuery->count();
+
+        // Get suspended contracts count (users with suspended contracts)
+        $suspendedContractsQuery = clone $query;
+        $suspendedContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
+            ->distinct('user_datos.id');
+        $totalSuspendidos = $suspendedContractsQuery->count();
+
+        // ============================================================
+        // ADDED: Get registrados contracts count
+        // ============================================================
+        $registradosContractsQuery = clone $query;
+        $registradosContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_REGISTRADO])
+            ->distinct('user_datos.id');
+        $totalRegistrados = $registradosContractsQuery->count();
+
+        // ============================================================
+        // ADDED: Get anulados contracts count
+        // ============================================================
+        $anuladosContractsQuery = clone $query;
+        $anuladosContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_ANULADO])
+            ->distinct('user_datos.id');
+        $totalAnulados = $anuladosContractsQuery->count();
+
+        // Get critical delinquents (users with 3+ overdue payments)
+        $criticalQuery = clone $query;
+        $criticalQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->innerJoin('cuotas', 'cuotas.contrato_id = contratos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
+            ->andWhere(['cuotas.estatus' => 'vencida'])
+            ->groupBy('user_datos.id')
+            ->having(['>=', 'COUNT(cuotas.id)', 3])
+            ->distinct('user_datos.id');
+
+        $criticalCount = $criticalQuery->count();
+
+        // Get total overdue cuotas for critical users
+        $criticalCuotasQuery = clone $query;
+        $criticalCuotasQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->innerJoin('cuotas', 'cuotas.contrato_id = contratos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
+            ->andWhere(['cuotas.estatus' => 'vencida'])
+            ->groupBy('user_datos.id')
+            ->having(['>=', 'COUNT(cuotas.id)', 3]);
+
+        $criticalUsers = $criticalCuotasQuery->select('user_datos.id')->column();
+        $totalOverdueCuotas = 0;
+        $averageOverdue = 0;
+
+        if (!empty($criticalUsers)) {
+            $overdueQuery = Cuotas::find()
+                ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
+                ->where(['contratos.user_id' => $criticalUsers])
+                ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
+                ->andWhere(['cuotas.estatus' => 'vencida']);
+
+            $totalOverdueCuotas = $overdueQuery->count();
+            $averageOverdue = $criticalCount > 0 ? round($totalOverdueCuotas / $criticalCount, 1) : 0;
+        }
+
+        return [
+            'total_afiliados' => $totalAfiliados,
+            'total_contratos_activos' => $totalActivos,
+            'total_contratos_suspendidos' => $totalSuspendidos,
+            'total_contratos_registrados' => $totalRegistrados,
+            'total_contratos_anulados' => $totalAnulados,
+            'critical_delinquency' => [
+                'count' => $criticalCount,
+                'total_vencidas_cuotas' => $totalOverdueCuotas,
+                'average_vencidas' => $averageOverdue,
+            ],
+        ];
+    }
+
+    /**
+     * Get top critical delinquents (users with 3+ overdue payments)
+     * 
+     * @param int $limit Maximum number of results
+     * @param array $params Search parameters
+     * @return array List of critical delinquents with details
+     */
+    public function getTopCriticalDelinquents($limit = 5, $params = [])
+    {
+        $query = UserDatos::find();
+        $this->applyFilters($query, $params);
+
+        // Only include affiliates
+        $query->andWhere(['user_datos.role' => 'afiliado']);
+        $query->andWhere(['is', 'user_datos.deleted_at', null]);
+
+        // Join with contracts and cuotas
+        $query->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+            ->innerJoin('cuotas', 'cuotas.contrato_id = contratos.id')
+            ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
+            ->andWhere(['cuotas.estatus' => 'vencida'])
+            ->groupBy([
+                'user_datos.id',
+                'user_datos.nombres',
+                'user_datos.apellidos',
+                'user_datos.tipo_cedula',
+                'user_datos.cedula',
+                'rm_clinica.nombre',
+            ])
+            ->having(['>=', 'COUNT(cuotas.id)', 3])
+            ->orderBy(['COUNT(cuotas.id)' => SORT_DESC])
+            ->limit($limit);
+
+        // Add joins for clinic name
+        $query->leftJoin('rm_clinica', 'rm_clinica.id = user_datos.clinica_id');
+
+        // Select the needed fields
+        $query->select([
+            'user_datos.id',
+            'user_datos.nombres',
+            'user_datos.apellidos',
+            'user_datos.tipo_cedula',
+            'user_datos.cedula',
+            'rm_clinica.nombre as clinica_nombre',
+            'COUNT(cuotas.id) as cuotas_vencidas',
+            'SUM(cuotas.monto_usd) as total_adeudado'
+        ]);
+
+        $results = $query->asArray()->all();
+
+        // Format the results
+        $formatted = [];
+        foreach ($results as $row) {
+            $formatted[] = [
+                'id' => $row['id'],
+                'nombre_completo' => $row['nombres'] . ' ' . $row['apellidos'],
+                'cedula' => ($row['tipo_cedula'] ? $row['tipo_cedula'] . '-' : '') . $row['cedula'],
+                'clinica' => $row['clinica_nombre'] ?? 'No asignada',
+                'cuotas_vencidas' => (int)$row['cuotas_vencidas'],
+                'total_adeudado' => (float)$row['total_adeudado'],
+            ];
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Apply filters to query (extracted for reuse)
+     * 
+     * @param \yii\db\ActiveQuery $query The query to apply filters to
+     * @param array $params Search parameters
+     */
+    private function applyFilters(&$query, $params = [])
+    {
+        $rol = UserHelper::getMyRol();
+
+        // Clinic access filtering
+        if (UserHelper::hasClinicAccess()) {
+            $clinicId = UserHelper::getMyClinicaId();
+            if ($clinicId) {
+                $query->andFilterWhere(['user_datos.clinica_id' => $clinicId]);
+            }
+        }
+
+        // Asesor filtering
+        if ($rol == "Asesor") {
+            $asesorId = UserHelper::getAgenteFuerzaId();
+            if ($asesorId) {
+                $query->andWhere(['user_datos.asesor_id' => $asesorId]);
+            } else {
+                $userDatos = UserDatos::findOne(['user_login_id' => Yii::$app->user->id]);
+                if ($userDatos) {
+                    $query->andWhere(['user_datos.asesor_id' => $userDatos->id]);
+                } else {
+                    $query->andWhere('1=0');
+                }
+            }
+        }
+
+        // Agente filtering
+        if ($rol == "Agente") {
+            $agenteId = UserHelper::getAgenteId();
+            if ($agenteId) {
+                $condition = ['or'];
+                $asesorPersonIds = AgenteFuerza::find()
+                    ->where(['agente_id' => $agenteId])
+                    ->select('idusuario')
+                    ->distinct()
+                    ->column();
+
+                if (!empty($asesorPersonIds)) {
+                    $allAgenteFuerzaIds = AgenteFuerza::find()
+                        ->where(['idusuario' => $asesorPersonIds])
+                        ->select('id')
+                        ->column();
+                    if (!empty($allAgenteFuerzaIds)) {
+                        $condition[] = ['user_datos.asesor_id' => $allAgenteFuerzaIds];
+                    }
+                }
+                $condition[] = ['user_datos.agencia_id' => $agenteId];
+                $query->andWhere($condition);
+            } else {
+                $query->andWhere('1=0');
+            }
+        }
+
+        // Apply any additional filters from params
+        if (!empty($params['UserDatosSearch'])) {
+            $searchParams = $params['UserDatosSearch'];
+
+            if (!empty($searchParams['clinica_id'])) {
+                $query->andFilterWhere(['user_datos.clinica_id' => $searchParams['clinica_id']]);
+            }
+            if (!empty($searchParams['user_datos_type_id'])) {
+                $query->andFilterWhere(['user_datos.user_datos_type_id' => $searchParams['user_datos_type_id']]);
+            }
+            if (!empty($searchParams['estatus_solvente'])) {
+                $query->andFilterWhere(['user_datos.estatus_solvente' => $searchParams['estatus_solvente']]);
+            }
+            if (!empty($searchParams['contrato_estatus'])) {
+                // This will be handled by the main search logic
+            }
+            if (!empty($searchParams['critical_filter'])) {
+                // This will be handled by the main search logic
+            }
+        }
     }
 }

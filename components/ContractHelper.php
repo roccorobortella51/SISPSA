@@ -29,7 +29,7 @@ class ContractHelper
             'anulado' => 'badge badge-danger',
             'vencido' => 'badge badge-warning',
             'pendiente' => 'badge badge-info',
-            'suspendido' => 'badge badge-secondary',
+            'suspendido' => 'badge badge-suspendido',  // Custom class to match card color
             'sin_contrato' => 'badge badge-light',
         ];
 
