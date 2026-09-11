@@ -45,7 +45,7 @@ if (!empty($clinica_id_param)) {
 }
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA");
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "COORDINADOR-CLINICA" || $rol == "OPERACIONES-BOSQUE");
 
 // --- BREADCRUMBS CONDICIONALES ---
 if ($permisos == true) {
@@ -62,11 +62,11 @@ if ($clinica && $clinica->id !== null) {
 
 // Define admin roles for clinic search filter
 $isAdmin = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
-$rolesSinFiltroClinica = ['GERENTE-CLINICA', 'Administrador-clinica', 'CONTROL DE CITAS', 'ADMISIÓN', 'ATENCIÓN', 'COORDINADOR-CLINICA'];
+$rolesSinFiltroClinica = ['GERENTE-CLINICA', 'Administrador-clinica', 'CONTROL DE CITAS', 'ADMISIÓN', 'ATENCIÓN', 'COORDINADOR-CLINICA', 'OPERACIONES-BOSQUE'];
 $mostrarFiltroClinica = $isAdmin && !in_array($rol, $rolesSinFiltroClinica);
 
 // Define roles that can access Atención Médica
-$rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR-CLINICA', 'CONTROL DE CITAS', 'GERENTE-CLINICA', 'ADMISIÓN', 'ATENCIÓN'];
+$rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR-CLINICA', 'CONTROL DE CITAS', 'GERENTE-CLINICA', 'ADMISIÓN', 'ATENCIÓN', 'OPERACIONES-BOSQUE'];
 
 // --- GET SUMMARY STATISTICS ---
 $summaryStats = [];
@@ -540,7 +540,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                             ],
                         ],
                         [
-                            'label' => 'Cédula Identidad',
+                            'label' => 'Cédula / Pasaporte',
                             'attribute' => 'cedula',
                             'value' => function ($model) {
                                 $tipoCedula = $model->tipo_cedula ?? '';
@@ -551,6 +551,19 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                     $consecutivo = str_pad((int)$model->consecutivo_menor, 2, '0', STR_PAD_LEFT);
                                 }
 
+                                // ============================================
+                                // HANDLE PASSPORT (P) - NEW
+                                // ============================================
+                                if ($tipoCedula === 'P') {
+                                    return '<div class="cedula-grande-container cedula-passport">
+                    <div class="cedula-grande-text">
+                        <i class="fas fa-passport" style="font-size: 1.1rem; margin-right: 8px; color: #0078d4;"></i>
+                        PASAPORTE: ' . $tipoCedula . '-' . $numeroCedula . '
+                    </div>
+                   
+                </div>';
+                                }
+
                                 if ($tipoCedula === 'Menor Sin Cédula') {
                                     if (!empty($consecutivo)) {
                                         return '<div class="cedula-grande-container menor-sin-cedula"><div class="cedula-grande-text">SIN CÉDULA-' . $numeroCedula . '-<span class="consecutivo-grande">' . $consecutivo . '</span></div></div>';
@@ -559,7 +572,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                     }
                                 }
 
-                                if (!empty($numeroCedula) && !empty($tipoCedula) && $tipoCedula !== 'Menor Sin Cédula') {
+                                if (!empty($numeroCedula) && !empty($tipoCedula) && $tipoCedula !== 'Menor Sin Cédula' && $tipoCedula !== 'P') {
                                     $esMenorEdad = false;
                                     $edad = null;
                                     if (!empty($model->fechanac)) {
@@ -574,7 +587,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                     return '<div class="cedula-grande-container cedula-normal"><div class="cedula-grande-text">' . $tipoCedula . '-' . $numeroCedula . '</div>' . ($esMenorEdad ? '<div class="edad-etiqueta">MENOR (' . $edad . ' años)</div>' : '') . '</div>';
                                 }
 
-                                if (!empty($tipoCedula) && empty($numeroCedula) && $tipoCedula !== 'Menor Sin Cédula') {
+                                if (!empty($tipoCedula) && empty($numeroCedula) && $tipoCedula !== 'Menor Sin Cédula' && $tipoCedula !== 'P') {
                                     return '<div class="cedula-grande-container cedula-pendiente"><div class="cedula-grande-text">' . $tipoCedula . '</div><div class="estado-etiqueta">PENDIENTE DE NÚMERO</div></div>';
                                 }
 
@@ -582,11 +595,14 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                             },
                             'format' => 'raw',
                             'headerOptions' => ['style' => 'color: white!important;'],
-                            'options' => ['style' => 'width: 120px; min-width:120px;'],
+                            'options' => ['style' => 'width: 140px; min-width:140px;'],
                             'contentOptions' => function ($model) {
                                 $tipo = $model->tipo_cedula ?? '';
                                 if ($tipo === 'Menor Sin Cédula') {
                                     return ['class' => 'text-center bg-menor-sin-cedula'];
+                                }
+                                if ($tipo === 'P') {
+                                    return ['class' => 'text-center bg-passport'];
                                 }
                                 if (!empty($model->cedula)) {
                                     return ['class' => 'text-center bg-cedula-normal'];
@@ -594,7 +610,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                 return ['class' => 'text-center'];
                             },
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar cédula',
+                                'placeholder' => 'Buscar cédula/pasaporte',
                                 'class' => 'form-control text-center',
                             ],
                         ],
@@ -700,22 +716,30 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                     }
                                 },
                                 'atencion' => function ($url, $model, $key) use ($rolesAtencionMedica, $clinica, $rol) {
+                                    // Only show if user has role with medical access AND has a clinic assigned
                                     if (in_array($rol, $rolesAtencionMedica) && $model->clinica_id) {
-                                        $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
-                                        $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
+                                        // NEW: Check if user has an ACTIVE contract
+                                        $hasActiveContract = \app\models\Contratos::find()
+                                            ->where(['user_id' => $model->id, 'estatus' => 'Activo'])
+                                            ->exists();
 
-                                        return Html::a(
-                                            '<i class="fas fa-heartbeat" style="color: red;"></i>',
-                                            '#',
-                                            [
-                                                'title' => 'Gestionar Atención',
-                                                'class' => 'btn-action view atencion-btn',
-                                                'data' => [
-                                                    'url-siniestro' => $urlSiniestro,
-                                                    'url-cita' => $urlCita,
-                                                ],
-                                            ]
-                                        );
+                                        if ($hasActiveContract) {
+                                            $urlSiniestro = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'siniestro', 'clinica_id' => $clinica ? $clinica->id : null]);
+                                            $urlCita = Url::to(['/sis-siniestro/index', 'user_id' => $model->id, 'modo' => 'cita', 'clinica_id' => $clinica ? $clinica->id : null]);
+
+                                            return Html::a(
+                                                '<i class="fas fa-heartbeat" style="color: red;"></i>',
+                                                '#',
+                                                [
+                                                    'title' => 'Gestionar Atención',
+                                                    'class' => 'btn-action view atencion-btn',
+                                                    'data' => [
+                                                        'url-siniestro' => $urlSiniestro,
+                                                        'url-cita' => $urlCita,
+                                                    ],
+                                                ]
+                                            );
+                                        }
                                     }
                                     return "";
                                 },
@@ -1866,5 +1890,44 @@ $this->registerJs($js, View::POS_READY);
             font-size: 0.8rem;
             margin-right: 4px;
         }
+    }
+
+    /* ============================================
+   PASSPORT (P) CÉDULA STYLES
+   ============================================ */
+    .cedula-grande-container.cedula-passport .cedula-grande-text {
+        font-size: 1.2rem !important;
+        font-weight: 700;
+        color: #005a9e;
+        background: linear-gradient(135deg, rgba(0, 120, 212, 0.08) 0%, rgba(0, 120, 212, 0.02) 100%);
+        border: 2px solid rgba(0, 120, 212, 0.25);
+        border-radius: 8px;
+        padding: 10px 18px;
+        display: inline-block;
+        box-shadow: 0 2px 8px rgba(0, 120, 212, 0.08);
+    }
+
+    .cedula-grande-container.cedula-passport .cedula-grande-text i {
+        color: #0078d4;
+    }
+
+    .bg-passport {
+        background-color: rgba(0, 120, 212, 0.04) !important;
+    }
+
+    tbody tr:hover .bg-passport {
+        background-color: rgba(0, 120, 212, 0.08) !important;
+    }
+
+    /* Passport badge in filter */
+    .filter-container .passport-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        background: rgba(0, 120, 212, 0.1);
+        border: 1px solid rgba(0, 120, 212, 0.2);
+        border-radius: 12px;
+        font-size: 0.7rem;
+        color: #005a9e;
+        font-weight: 600;
     }
 </style>

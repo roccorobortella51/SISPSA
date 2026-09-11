@@ -6,6 +6,7 @@ use Yii;
 use yii\base\Model;
 use yii\data\ArrayDataProvider;
 use yii\db\Query;
+use app\components\UserHelper;
 
 /**
  * SisSiniestroReporteSearch represents the model for generating clinic attention reports
@@ -16,7 +17,8 @@ class SisSiniestroReporteSearch extends Model
     public $date_from;
     public $date_to;
     public $clinicas = [];
-    public $status; // For possible future expansion
+    public $status;
+    public $type; // NEW: 'all', 'citas', 'siniestros'
 
     /**
      * {@inheritdoc}
@@ -26,7 +28,7 @@ class SisSiniestroReporteSearch extends Model
         return [
             [['range'], 'string'],
             [['date_from', 'date_to'], 'safe'],
-            [['clinicas', 'status'], 'safe'],
+            [['clinicas', 'status', 'type'], 'safe'],
         ];
     }
 
@@ -41,9 +43,9 @@ class SisSiniestroReporteSearch extends Model
             'date_to' => 'Fecha Final',
             'clinicas' => 'Clínicas',
             'status' => 'Estado',
+            'type' => 'Tipo de Atención',
         ];
     }
-
 
     /**
      * Get date range based on selected range
@@ -99,14 +101,37 @@ class SisSiniestroReporteSearch extends Model
     }
 
     /**
-     * Generate clinic attention report
+     * Get the type filter condition for SQL
+     * @return array|null
+     */
+    private function getTypeCondition()
+    {
+        if (empty($this->type) || $this->type === 'all') {
+            return null; // No filter - show all
+        }
+
+        if ($this->type === 'citas') {
+            return ['s.es_cita' => 1];
+        }
+
+        if ($this->type === 'siniestros') {
+            return ['s.es_cita' => 0];
+        }
+
+        return null;
+    }
+
+    /**
+     * Generate clinic attention report with role-based filtering
      */
     public function generateReport()
     {
         $dateRange = $this->getDateRange();
 
-        // Debug: Log the date range being used
         Yii::info("Generating report with date range: {$dateRange['from']} to {$dateRange['to']}", __METHOD__);
+        Yii::info("Clinic filter: " . json_encode($this->clinicas), __METHOD__);
+        Yii::info("Type filter: " . ($this->type ?? 'all'), __METHOD__);
+        Yii::info("Has clinic access: " . (UserHelper::hasClinicAccess() ? 'Yes' : 'No'), __METHOD__);
 
         $query = (new Query())
             ->select([
@@ -114,25 +139,54 @@ class SisSiniestroReporteSearch extends Model
                 'c.nombre as clinic_name',
                 'c.estatus as clinic_status',
                 'COUNT(s.id) as total_attentions',
-                // PostgreSQL-compatible using explicit boolean to integer casting
                 'SUM(CASE WHEN s.atendido::integer = 1 THEN 1 ELSE 0 END) as attended_count',
                 'SUM(CASE WHEN s.atendido::integer = 0 OR s.atendido IS NULL THEN 1 ELSE 0 END) as pending_count',
                 'COUNT(DISTINCT s.iduser) as unique_patients',
                 'AVG(s.costo_total) as avg_cost',
                 'SUM(s.costo_total) as total_cost',
-                // PostgreSQL-compatible using explicit boolean to integer casting
                 'COUNT(CASE WHEN s.es_cita::integer = 1 THEN 1 END) as appointments_count',
                 'COUNT(CASE WHEN s.es_cita::integer = 0 THEN 1 END) as emergencies_count',
             ])
             ->from(['c' => RmClinica::tableName()])
             ->leftJoin(['s' => SisSiniestro::tableName()], 'c.id = s.idclinica')
             ->where(['c.estatus' => 'Activo'])
+            ->andWhere(['IS', 'c.deleted_at', null])
             ->andWhere(['>=', 's.fecha', $dateRange['from']])
             ->andWhere(['<=', 's.fecha', $dateRange['to']]);
 
-        // Filter by selected clinics
-        if (!empty($this->clinicas) && !in_array('todas', $this->clinicas)) {
-            $query->andWhere(['c.id' => $this->clinicas]);
+        // ============================================================
+        // TYPE FILTER - NEW
+        // ============================================================
+        $typeCondition = $this->getTypeCondition();
+        if ($typeCondition !== null) {
+            $query->andWhere($typeCondition);
+            Yii::info("Applied type filter: " . json_encode($typeCondition), __METHOD__);
+        }
+
+        // ============================================================
+        // CLINIC ACCESS FILTER - CRITICAL LOGIC
+        // ============================================================
+        if (UserHelper::hasClinicAccess()) {
+            // Users with clinic roles: ONLY their assigned clinics
+            $accessibleClinicaIds = UserHelper::getAccessibleClinicaIds();
+            if ($accessibleClinicaIds !== null && !empty($accessibleClinicaIds)) {
+                $query->andWhere(['c.id' => $accessibleClinicaIds]);
+                Yii::info("Applied clinic access restriction (hasClinicAccess): " . json_encode($accessibleClinicaIds), __METHOD__);
+            } else {
+                // Should not happen for clinic roles, but if it does, return empty
+                Yii::warning("User has clinic access but no clinics assigned", __METHOD__);
+                $query->andWhere(['1' => '0']); // Return no results
+            }
+        } elseif (!empty($this->clinicas)) {
+            // Admin users: filter by selected clinics
+            if (is_array($this->clinicas) && !in_array('todas', $this->clinicas)) {
+                $query->andWhere(['c.id' => $this->clinicas]);
+                Yii::info("Applied clinic filter (admin selected): " . json_encode($this->clinicas), __METHOD__);
+            } else {
+                Yii::info("Admin user - showing all clinics (no filter)", __METHOD__);
+            }
+        } else {
+            Yii::info("Admin user - showing all clinics (empty filter)", __METHOD__);
         }
 
         $query->groupBy(['c.id', 'c.nombre', 'c.estatus'])
@@ -186,39 +240,63 @@ class SisSiniestroReporteSearch extends Model
                 'total_cost' => $totalCost,
                 'avg_cost_per_attention' => $totalAttentions > 0 ? round($totalCost / $totalAttentions, 2) : 0,
                 'date_range' => $dateRange,
+            ],
+            'filters' => [
+                'type' => $this->type ?? 'all',
+                'range' => $this->range,
+                'clinicas' => $this->clinicas,
             ]
         ];
     }
 
     /**
-     * Generate detailed report for a specific clinic
+     * Generate detailed report for a specific clinic with role-based access
      */
     public function generateClinicDetailReport($clinicId)
     {
         $dateRange = $this->getDateRange();
 
-        // Get clinic info
-        $clinic = RmClinica::findOne($clinicId);
+        // Verify user has access to this clinic
+        if (UserHelper::hasClinicAccess()) {
+            $accessibleClinicaIds = UserHelper::getAccessibleClinicaIds();
+            if ($accessibleClinicaIds !== null && !in_array($clinicId, $accessibleClinicaIds)) {
+                Yii::warning("User attempted to access unauthorized clinic: $clinicId", __METHOD__);
+                return null;
+            }
+        }
+
+        // Get clinic info - FIX: Use findOne without eager loading to avoid missing table error
+        $clinic = RmClinica::find()
+            ->where(['id' => $clinicId])
+            ->one();
+
         if (!$clinic) {
             return null;
         }
 
-        // Get attentions for this clinic
-        $attentions = SisSiniestro::find()
+        // Build attention query with type filter
+        $attentionQuery = SisSiniestro::find()
             ->alias('s')
             ->joinWith(['afiliado a', 'baremos b'])
             ->where(['s.idclinica' => $clinicId])
             ->andWhere(['>=', 's.fecha', $dateRange['from']])
-            ->andWhere(['<=', 's.fecha', $dateRange['to']])
+            ->andWhere(['<=', 's.fecha', $dateRange['to']]);
+
+        // Apply type filter
+        $typeCondition = $this->getTypeCondition();
+        if ($typeCondition !== null) {
+            $attentionQuery->andWhere($typeCondition);
+        }
+
+        $attentions = $attentionQuery
             ->orderBy(['s.fecha' => SORT_DESC, 's.hora' => SORT_DESC])
             ->all();
 
-        // Get daily statistics
-        $dailyStats = (new Query())
+        // Get daily statistics with type filter
+        $dailyStatsQuery = (new Query())
             ->select([
                 's.fecha as date',
                 'COUNT(s.id) as attentions_count',
-                // PostgreSQL-compatible using explicit boolean to integer casting
                 'SUM(CASE WHEN s.atendido::integer = 1 THEN 1 ELSE 0 END) as attended_count',
                 'SUM(s.costo_total) as daily_cost',
                 'COUNT(DISTINCT s.iduser) as daily_patients',
@@ -226,16 +304,26 @@ class SisSiniestroReporteSearch extends Model
             ->from(['s' => SisSiniestro::tableName()])
             ->where(['s.idclinica' => $clinicId])
             ->andWhere(['>=', 's.fecha', $dateRange['from']])
-            ->andWhere(['<=', 's.fecha', $dateRange['to']])
+            ->andWhere(['<=', 's.fecha', $dateRange['to']]);
+
+        if ($typeCondition !== null) {
+            $dailyStatsQuery->andWhere($typeCondition);
+        }
+
+        $dailyStats = $dailyStatsQuery
             ->groupBy('s.fecha')
             ->orderBy('s.fecha')
             ->all();
 
-        // Get most common baremos - FIXED for composite primary key
-        $commonBaremos = (new Query())
+        // Get most common baremos with type filter
+        // ============================================================
+        // FIX: Added b.id as baremo_id to SELECT clause
+        // ============================================================
+        $commonBaremosQuery = (new Query())
             ->select([
+                'b.id as baremo_id',  // ← ADDED THIS LINE
                 'b.nombre_servicio as service_name',
-                'COUNT(*) as usage_count',  // Use COUNT(*) since primary key is composite
+                'COUNT(*) as usage_count',
                 'AVG(b.precio) as avg_price',
                 'SUM(b.precio) as total_cost',
             ])
@@ -244,7 +332,13 @@ class SisSiniestroReporteSearch extends Model
             ->leftJoin(['b' => 'baremo'], 'sb.baremo_id = b.id')
             ->where(['s.idclinica' => $clinicId])
             ->andWhere(['>=', 's.fecha', $dateRange['from']])
-            ->andWhere(['<=', 's.fecha', $dateRange['to']])
+            ->andWhere(['<=', 's.fecha', $dateRange['to']]);
+
+        if ($typeCondition !== null) {
+            $commonBaremosQuery->andWhere($typeCondition);
+        }
+
+        $commonBaremos = $commonBaremosQuery
             ->groupBy('b.id', 'b.nombre_servicio')
             ->orderBy(['usage_count' => SORT_DESC])
             ->limit(10)
@@ -256,6 +350,9 @@ class SisSiniestroReporteSearch extends Model
             'daily_stats' => $dailyStats,
             'common_baremos' => $commonBaremos,
             'date_range' => $dateRange,
+            'filters' => [
+                'type' => $this->type ?? 'all',
+            ]
         ];
     }
 

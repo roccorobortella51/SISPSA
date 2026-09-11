@@ -189,7 +189,7 @@ $('#pago-form').on('submit', function(e) {
 });
 
         // ============================================================
-        // Function to update Bs amount
+        // Function to update Bs amount with 4 decimals
         // ============================================================
         function updateMontoBs() {
             var montoUsd = parseFloat($('#pagos-monto_pagado').val()) || 0;
@@ -264,7 +264,7 @@ $('#pago-form').on('submit', function(e) {
         });
 
         // ============================================================
-        // Event handlers
+        // Event handlers with 4 decimal support
         // ============================================================
         $('#fecha-pago').on('change', function() {
             var fecha = $(this).val();
@@ -275,15 +275,31 @@ $('#pago-form').on('submit', function(e) {
                     data: { fecha: fecha },
                     success: function(response) {
                         if (response) {
-                            $('#pagos-tasa').val(parseFloat(response).toFixed(2));
-                            updateMontoBs();
+                            var tasaValue = parseFloat(response);
+                            if (!isNaN(tasaValue) && tasaValue > 0) {
+                                $('#pagos-tasa').val(tasaValue.toFixed(4));
+                                updateMontoBs();
+                            } else {
+                                $('#pagos-tasa').val('');
+                            }
                         }
                     }
                 });
             }
         });
 
-        $('#pagos-monto_pagado, #pagos-tasa').on('change keyup', updateMontoBs);
+        // ============================================================
+        // Update on manual change with 4 decimal support
+        // ============================================================
+        $('#pagos-tasa').on('change keyup', function() {
+            var val = parseFloat($(this).val());
+            if (!isNaN(val) && val > 0) {
+                $(this).val(val.toFixed(4));
+            }
+            updateMontoBs();
+        });
+
+        $('#pagos-monto_pagado').on('change keyup', updateMontoBs);
         $('#pagos-metodo_pago').on('change', updateFieldsVisibility);
 
         // Initialize any pre-checked checkboxes (for edit mode)
@@ -2355,11 +2371,11 @@ JS
                         <?= $form->field($model, 'tasa')->textInput([
                             'class' => 'form-control',
                             'type' => 'number',
-                            'step' => '0.01',
-                            'min' => '0.01',
+                            'step' => '0.0001',  // 4 decimal places
+                            'min' => '0.0001',
                             'placeholder' => 'Ingrese la tasa de cambio',
                             'id' => 'pagos-tasa',
-                            'value' => $model->tasa ? number_format($model->tasa, 2, '.', '') : '',
+                            'value' => $model->tasa ? number_format($model->tasa, 4, '.', '') : '',
                         ])->label('Tasa de Cambio USD a Bs (BCV)' . '<span class="required-field" style="color:#d13438;"></span>') ?>
                     </div>
                 </div>

@@ -4,7 +4,6 @@
 /* @var $content string */
 
 use app\assets\AppAsset;
-use yii\helpers\Html;
 
 // Registramos nuestro AppAsset, que ahora contendrá los estilos personalizados.
 AppAsset::register($this);
@@ -14,12 +13,13 @@ $this->registerCssFile('https://fonts.googleapis.com/css?family=Source+Sans+Pro:
 $this->registerCssFile('https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css');
 \hail812\adminlte3\assets\PluginAsset::register($this)->add(['fontawesome', 'icheck-bootstrap']);
 
-    $logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
+$logo_pestana = "https://sispsa.app/v2/web/img/sispsa.svg";
 
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="<?= Yii::$app->charset ?>">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -27,37 +27,39 @@ $this->registerCssFile('https://code.ionicframework.com/ionicons/2.0.1/css/ionic
     <!-- Tell the browser to be responsive to screen width -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="icon" href=<?= $logo_pestana?> sizes="32x32" />
-    <link rel="icon" href=<?= $logo_pestana?> sizes="192x192" />
-    <link rel="apple-touch-icon" href=<?= $logo_pestana?> />
-    <meta name="msapplication-TileImage" content=<?= $logo_pestana?> />
+    <link rel="icon" href=<?= $logo_pestana ?> sizes="32x32" />
+    <link rel="icon" href=<?= $logo_pestana ?> sizes="192x192" />
+    <link rel="apple-touch-icon" href=<?= $logo_pestana ?> />
+    <meta name="msapplication-TileImage" content=<?= $logo_pestana ?> />
     <?php $this->registerCsrfMetaTags() ?>
     <?php $this->head() ?>
 </head>
-<body >
-<?php  $this->beginBody() ?>
-    <main>
-    <nav class="navbar ms-navbar" style="background-color: #009efb;">
-        <div class="ms-aside-toggler ms-toggler pl-0">
-        </div>
-        <div class="logo-sn logo-sm">
-            <a class="pl-0 ml-0 text-center navbar-brand mr-0" href="<?= Yii::$app->homeUrl ?>"><img src="<?= Yii::getAlias('@web/img/sispsa-12-62.png') ?>" alt="logo"> </a>
-        </div>
-        <div class="ms-aside-toggler ms-toggler pl-0">
-        </div>
-    </nav>
-    <div class ="ms-auth-container">
-        <div class="ms-auth-col">
-            <div class="ms-auth-bg" bis_skin_checked="1"></div>
-        </div>
-        <div class="ms-auth-col">
-            <?= $content ?>
-        </div>
-    </div>
-<!-- /.login-box -->
 
-<?php $this->endBody() ?>
+<body>
+    <?php $this->beginBody() ?>
+    <main>
+        <nav class="navbar ms-navbar" style="background-color: #009efb;">
+            <div class="ms-aside-toggler ms-toggler pl-0">
+            </div>
+            <div class="logo-sn logo-sm">
+                <a class="pl-0 ml-0 text-center navbar-brand mr-0" href="<?= Yii::$app->homeUrl ?>"><img src="<?= Yii::getAlias('@web/img/sispsa-12-62.png') ?>" alt="logo"> </a>
+            </div>
+            <div class="ms-aside-toggler ms-toggler pl-0">
+            </div>
+        </nav>
+        <div class="ms-auth-container">
+            <div class="ms-auth-col">
+                <div class="ms-auth-bg" bis_skin_checked="1"></div>
+            </div>
+            <div class="ms-auth-col">
+                <?= $content ?? '' ?>
+            </div>
+        </div>
+        <!-- /.login-box -->
+
+        <?php $this->endBody() ?>
     </main>
 </body>
+
 </html>
 <?php $this->endPage() ?>

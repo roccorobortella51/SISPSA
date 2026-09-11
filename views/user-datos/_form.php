@@ -432,7 +432,16 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <div class="row">
                         <div class="col-md-1">
                             <?= $form->field($model, 'tipo_cedula')->widget(Select2::class, [
-                                'data' => ['V' => 'V', 'E' => 'E', 'J' => 'J', 'P' => 'P', 'N' => 'N', 'M' => 'M', 'Menor Sin Cédula' => 'Menor Sin Cédula'],
+                                'data' => [
+                                    'V' => 'V',
+                                    'E' => 'E',
+                                    'J' => 'J',
+                                    'P' => 'P',
+                                    'N' => 'N',
+                                    'M' => 'M',
+                                    'Menor Sin Cédula' => 'Menor Sin Cédula',
+                                    'Afiliado Otras Clínicas' => 'Afiliado Otras Clínicas'
+                                ],
                                 'options' => [
                                     'placeholder' => 'Tipo',
                                     'class' => 'form-control form-control-lg',
@@ -1536,98 +1545,271 @@ $(document).ready(function() {
         }
     }
 
-    // Function to toggle cédula/consecutivo fields
-    function toggleCedulaFields() {
-        var tipoCedula = $('#userdatos-tipo_cedula').val();
-        var consecutivoContainer = $('#consecutivo-container');
-        var cedulaField = $('#userdatos-cedula');
-        var cedulaLabel = $('label[for="userdatos-cedula"]');
-        var consecutivoField = $('#userdatos-consecutivo_menor');
+    // Function to toggle cédula/consecutivo fields - UPDATED for Afiliado Otras Clínicas and Passport
+// Function to toggle cédula/consecutivo fields - UPDATED for Afiliado Otras Clínicas and Passport
+function toggleCedulaFields() {
+    var tipoCedula = $('#userdatos-tipo_cedula').val();
+    var consecutivoContainer = $('#consecutivo-container');
+    var cedulaField = $('#userdatos-cedula');
+    var cedulaLabel = $('label[for="userdatos-cedula"]');
+    var consecutivoField = $('#userdatos-consecutivo_menor');
+    var fieldContainer = $('.field-userdatos-cedula');
+    
+    // Check if the new tipo is selected
+    if (tipoCedula === 'Afiliado Otras Clínicas') {
+        // For "Afiliado Otras Clínicas", treat similarly to a regular affiliate
+        consecutivoContainer.hide();
+        cedulaField.attr('placeholder', 'Ejemplo: 12345678');
+        cedulaLabel.html('Cédula de Identidad (Otra Clínica) <span class="text-danger conditional-asterisk"></span>');
+        cedulaField.attr('required', true);
+        consecutivoField.removeAttr('required');
+        $('.field-userdatos-consecutivo_menor').removeClass('required');
         
-        if (tipoCedula === 'Menor Sin Cédula') {
-            // Show consecutivo field
-            consecutivoContainer.show();
-            
-            // Update cedula field placeholder and label
-            cedulaField.attr('placeholder', 'Cédula del padre/madre/tutor');
-            cedulaLabel.html('Cédula del Tutor <span class="text-danger"></span>');
-            
-            // Make consecutivo required
-            consecutivoField.attr('required', true);
-            
-            // Update form validation attributes
-            $('.field-userdatos-consecutivo_menor').addClass('required');
-            
-            // Update validation messages dynamically
-            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
-                required: true
-            });
-        } else {
-            // Hide consecutivo field
-            consecutivoContainer.hide();
-            
-            // Restore original cedula field placeholder and label
-            cedulaField.attr('placeholder', 'Ejemplo: 12345678');
-            cedulaLabel.html('Cédula de Identidad <span class="text-danger conditional-asterisk"></span>');
-            
-            // Clear and disable consecutivo field validation
-            consecutivoField.val('').removeAttr('required');
-            $('.field-userdatos-consecutivo_menor').removeClass('required');
-            
-            // Update validation
-            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
-                required: false
+        // Update validation messages
+        updateCedulaValidationMessages('Cédula', 'numerico');
+        
+        // Update validation
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+            required: true,
+            messages: {
+                required: 'Cédula no puede estar vacío.'
+            }
+        });
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    } else if (tipoCedula === 'Menor Sin Cédula') {
+        // Show consecutivo field
+        consecutivoContainer.show();
+        cedulaField.attr('placeholder', 'Cédula del padre/madre/tutor');
+        cedulaLabel.html('Cédula del Tutor <span class="text-danger"></span>');
+        consecutivoField.attr('required', true);
+        $('.field-userdatos-consecutivo_menor').addClass('required');
+        
+        // Update validation messages for tutor cedula
+        updateCedulaValidationMessages('Cédula del Tutor', 'numerico');
+        
+        // Update form validation
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: true
+        });
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+            required: false
+        });
+    } else if (tipoCedula === 'P') {
+        // ============================================
+        // PASSPORT handling
+        // ============================================
+        consecutivoContainer.hide();
+        cedulaField.attr('placeholder', 'Ingrese solo números 123456');
+        cedulaLabel.html('Número de Pasaporte <span class="text-danger conditional-asterisk"></span>');
+        cedulaField.attr('required', true);
+        consecutivoField.removeAttr('required');
+        $('.field-userdatos-consecutivo_menor').removeClass('required');
+        
+        // Update validation messages for Passport
+        updateCedulaValidationMessages('Pasaporte', 'alfanumerico');
+        
+        // Update validation
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+            required: true,
+            messages: {
+                required: 'Pasaporte no puede estar vacío.'
+            }
+        });
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    } else {
+        // Regular behavior for V, E, J, N, M
+        consecutivoContainer.hide();
+        cedulaField.attr('placeholder', 'Ejemplo: 12345678');
+        cedulaLabel.html('Cédula de Identidad <span class="text-danger conditional-asterisk"></span>');
+        cedulaField.attr('required', true);
+        consecutivoField.removeAttr('required');
+        $('.field-userdatos-consecutivo_menor').removeClass('required');
+        
+        // Update validation messages for regular cedula
+        updateCedulaValidationMessages('Cédula', 'numerico');
+        
+        // Update validation
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+            required: true,
+            messages: {
+                required: 'Cédula no puede estar vacío.'
+            }
+        });
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    }
+}
+
+// Helper function to update validation messages
+function updateCedulaValidationMessages(label, type) {
+    var cedulaField = $('#userdatos-cedula');
+    var fieldContainer = $('.field-userdatos-cedula');
+    var helpBlock = fieldContainer.find('.help-block');
+    
+    // Update the help block messages if they exist
+    if (helpBlock.length > 0) {
+        // Check if we need to update the error messages
+        var errors = helpBlock.find('.help-block-error');
+        if (errors.length > 0) {
+            errors.each(function() {
+                var currentText = $(this).text();
+                if (currentText.includes('Cédula')) {
+                    $(this).text(currentText.replace('Cédula', label));
+                }
             });
         }
     }
+}
 
+// ============================================
+// ADD THIS FUNCTION HERE - RIGHT AFTER THE ABOVE FUNCTIONS
+// ============================================
+function updateErrorMessageOnChange() {
+    var tipoCedula = $('#userdatos-tipo_cedula').val();
+    var errorElement = $('.field-userdatos-cedula .help-block-error');
+    
+    if (errorElement.length > 0) {
+        var currentText = errorElement.text();
+        if (tipoCedula === 'P' && currentText.includes('Cédula')) {
+            errorElement.text('Pasaporte no puede estar vacío. Ingrese solo el número');
+        } else if (tipoCedula === 'Menor Sin Cédula' && currentText.includes('Cédula')) {
+            errorElement.text('Cédula del Tutor no puede estar vacía');
+        } else if (tipoCedula === 'Afiliado Otras Clínicas' && currentText.includes('Cédula')) {
+            errorElement.text('Cédula de Identidad (Otra Clínica) no puede estar vacía');
+        }
+    }
+}
     // Initial call on page load
     toggleCedulaFields();
 
     // Listen for changes on tipo_cedula dropdown
     $('#userdatos-tipo_cedula').on('change', toggleCedulaFields);
 
-    // Handle form validation dynamically
-    $('#user-datos-form').on('beforeValidate', function() {
-        toggleCedulaFields();
-        return true;
-    });
-
-    // Handle form validation dynamically
-    $('#user-datos-form').on('beforeValidate', function() {
-        var tipoCedula = $('#userdatos-tipo_cedula').val();
-        var cedulaField = $('#userdatos-cedula');
-        var consecutivoField = $('#userdatos-consecutivo_menor');
-        
-        if (tipoCedula === 'Menor Sin Cédula') {
-            // For "Menor Sin Cédula", cedula is not required
+// Handle form validation dynamically - UPDATED for Afiliado Otras Clínicas and Passport
+// Handle form validation dynamically - UPDATED for Afiliado Otras Clínicas and Passport
+$('#user-datos-form').on('beforeValidate', function() {
+    var tipoCedula = $('#userdatos-tipo_cedula').val();
+    var cedulaField = $('#userdatos-cedula');
+    var consecutivoField = $('#userdatos-consecutivo_menor');
+    
+    // Clear any existing errors for cedula
+    $('.field-userdatos-cedula .help-block-error').remove();
+    
+    // Check if the new tipo is selected
+    if (tipoCedula === 'Afiliado Otras Clínicas') {
+        var tieneContratante = $('#userdatos-tiene_contratante_diferente').is(':checked');
+        if (!tieneContratante) {
+            cedulaField.attr('required', true);
+            // Remove integer validation for this type
+            cedulaField.removeAttr('pattern');
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+                required: true,
+                validate: function(value, messages) {
+                    // Custom validation for Afiliado Otras Clínicas
+                    if (!value || value.trim() === '') {
+                        messages.push('Cédula de Identidad (Otra Clínica) no puede estar vacía.');
+                        return;
+                    }
+                    // Check if numeric
+                    if (!/^\d+$/.test(value)) {
+                        messages.push('Cédula de Identidad (Otra Clínica) debe ser un número entero.');
+                    }
+                }
+            });
+        } else {
             cedulaField.removeAttr('required');
-            consecutivoField.attr('required', true);
-            
-            // Also update the Yii2 validation dynamically
             $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
                 required: false
             });
-            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
-                required: true
+        }
+        consecutivoField.removeAttr('required');
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    } else if (tipoCedula === 'Menor Sin Cédula') {
+        cedulaField.removeAttr('required');
+        cedulaField.removeAttr('pattern');
+        consecutivoField.attr('required', true);
+        
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+            required: false
+        });
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: true,
+            messages: {
+                required: 'Consecutivo del menor no puede estar vacío.'
+            }
+        });
+    } else if (tipoCedula === 'P') {
+        // ============================================
+        // PASSPORT validation - numbers only
+        // ============================================
+        var tieneContratante = $('#userdatos-tiene_contratante_diferente').is(':checked');
+        if (!tieneContratante) {
+            cedulaField.attr('required', true);
+            // Remove pattern for numeric only (we'll use custom validation)
+            cedulaField.removeAttr('pattern');
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+                required: true,
+                validate: function(value, messages) {
+                    // Custom validation for Passport
+                    if (!value || value.trim() === '') {
+                        messages.push('Pasaporte no puede estar vacío. Ingrese solo el número');
+                        return;
+                    }
+                    // Check if numeric (only numbers)
+                    if (!/^\d+$/.test(value)) {
+                        messages.push('Pasaporte debe ser un número entero. Ingrese solo el número');
+                    }
+                }
             });
         } else {
-            // For regular ID types, restore normal validation
-            var tieneContratante = $('#userdatos-tiene_contratante_diferente').is(':checked');
-            if (!tieneContratante) {
-                cedulaField.attr('required', true);
-                $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
-                    required: true
-                });
-            }
-            consecutivoField.removeAttr('required');
-            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            cedulaField.removeAttr('required');
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
                 required: false
             });
         }
-        
-        return true;
-    });
+        consecutivoField.removeAttr('required');
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    } else {
+        // Regular validation for V, E, J, N, M
+        var tieneContratante = $('#userdatos-tiene_contratante_diferente').is(':checked');
+        if (!tieneContratante) {
+            cedulaField.attr('required', true);
+            cedulaField.removeAttr('pattern');
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+                required: true,
+                validate: function(value, messages) {
+                    if (!value || value.trim() === '') {
+                        messages.push('Cédula no puede estar vacío.');
+                        return;
+                    }
+                    if (!/^\d+$/.test(value)) {
+                        messages.push('Cédula debe ser un número entero.');
+                    }
+                }
+            });
+        } else {
+            cedulaField.removeAttr('required');
+            $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-cedula', {
+                required: false
+            });
+        }
+        consecutivoField.removeAttr('required');
+        $('#user-datos-form').yiiActiveForm('updateAttribute', 'userdatos-consecutivo_menor', {
+            required: false
+        });
+    }
+    
+    return true;
+});
 
     function calcularFechaVencimiento(fechaIni) {
     if (fechaIni) {
@@ -2110,11 +2292,113 @@ $(document).ready(function() {
         return true;
     });
 });
+
+// ============================================
+// FIXED: Dynamic error message updater for afterValidate
+// ============================================
+$(document).on('afterValidate', '#user-datos-form', function(event, messages, errorAttributes) {
+    var tipoCedula = $('#userdatos-tipo_cedula').val();
+    
+    // Check if there are errors for the cedula field
+    if (errorAttributes && errorAttributes['userdatos-cedula']) {
+        var helpBlock = $('.field-userdatos-cedula .help-block');
+        
+        if (helpBlock.length > 0) {
+            var errorElement = helpBlock.find('.help-block-error');
+            
+            if (errorElement.length === 0) {
+                var errorText = helpBlock.text();
+                if (errorText && errorText.length > 0) {
+                    var newMessage = errorText;
+                    if (tipoCedula === 'P') {
+                        if (errorText.includes('vacío') || errorText.includes('obligatorio')) {
+                            newMessage = 'Pasaporte no puede estar vacío. Ingrese solo el número';
+                        } else if (errorText.includes('entero')) {
+                            newMessage = 'Pasaporte debe ser un número entero. Ingrese solo el número';
+                        }
+                    } else if (tipoCedula === 'Menor Sin Cédula') {
+                        newMessage = 'Cédula del Tutor no puede estar vacía';
+                    } else if (tipoCedula === 'Afiliado Otras Clínicas') {
+                        newMessage = 'Cédula de Identidad (Otra Clínica) no puede estar vacía';
+                    }
+                    helpBlock.html('<p class="help-block-error">' + newMessage + '</p>');
+                }
+            } else {
+                errorElement.each(function() {
+                    var currentText = $(this).text();
+                    if (tipoCedula === 'P') {
+                        if (currentText.includes('vacío') || currentText.includes('obligatorio') || currentText.includes('entero')) {
+                            $(this).text('Pasaporte debe ser un número entero. Ingrese solo el número');
+                        }
+                    } else if (tipoCedula === 'Menor Sin Cédula' && currentText.includes('Cédula')) {
+                        $(this).text('Cédula del Tutor no puede estar vacía');
+                    } else if (tipoCedula === 'Afiliado Otras Clínicas' && currentText.includes('Cédula')) {
+                        $(this).text('Cédula de Identidad (Otra Clínica) no puede estar vacía');
+                    }
+                });
+            }
+        }
+    }
+});
+
+// ============================================
+        // PREVENT DOUBLE FORM SUBMISSION
+        // ============================================
+        var formSubmitted = false;
+        
+        $('#user-datos-form').on('beforeSubmit', function(e) {
+            if (formSubmitted) {
+                e.preventDefault();
+                return false;
+            }
+            formSubmitted = true;
+            
+            var submitBtn = $(this).find('button[type="submit"]');
+            if (submitBtn.length) {
+                submitBtn.prop('disabled', true);
+                submitBtn.html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+            }
+            
+            return true;
+        });
+        
+        $(document).on('yiiActiveFormError', function() {
+            formSubmitted = false;
+            var submitBtn = $('#user-datos-form').find('button[type="submit"]');
+            if (submitBtn.length) {
+                submitBtn.prop('disabled', false);
+                submitBtn.html('<i class="fas fa-save mr-2"></i> Guardar');
+            }
+        });
+        
+        $(document).on('yiiActiveFormInvalid', function() {
+            formSubmitted = false;
+            var submitBtn = $('#user-datos-form').find('button[type="submit"]');
+            if (submitBtn.length) {
+                submitBtn.prop('disabled', false);
+                submitBtn.html('<i class="fas fa-save mr-2"></i> Guardar');
+            }
+        });
+        
+        $('#user-datos-form').on('reset', function() {
+            formSubmitted = false;
+            var submitBtn = $(this).find('button[type="submit"]');
+            if (submitBtn.length) {
+                submitBtn.prop('disabled', false);
+                submitBtn.html('<i class="fas fa-save mr-2"></i> Guardar');
+            }
+        });                                        
 JS
 );
 ?>
 
 <style>
+    /* Passport field specific styling */
+    #userdatos-cedula[placeholder*="Solo Números"] {
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
     #consecutivo-container .input-group-prepend .input-group-text {
         background-color: #f8f9fa;
         border-right: 0;
@@ -2553,5 +2837,188 @@ JS
     .hover-lift:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ============================================
+   ENHANCED TIPO AND CEDULA FIELD STYLING
+   ============================================ */
+
+    /* Make the Tipo field larger */
+    .field-userdatos-tipo_cedula {
+        min-width: 120px;
+    }
+
+    .field-userdatos-tipo_cedula .select2-container {
+        min-width: 120px;
+    }
+
+    .field-userdatos-tipo_cedula .select2-container .select2-selection--single {
+        height: 48px !important;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .field-userdatos-tipo_cedula .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 34px;
+        font-size: 16px;
+        padding-left: 4px;
+    }
+
+    .field-userdatos-tipo_cedula .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 46px;
+    }
+
+    /* Make the Cedula/Passport field larger */
+    .field-userdatos-cedula {
+        min-width: 200px;
+    }
+
+    #userdatos-cedula {
+        height: 48px !important;
+        font-size: 16px !important;
+        padding: 8px 14px !important;
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    /* Ensure placeholder text is fully visible with proper styling */
+    #userdatos-cedula::placeholder {
+        color: #6c757d;
+        font-size: 14px;
+        opacity: 0.85;
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    /* Style for when cedula field has focus */
+    #userdatos-cedula:focus {
+        border-color: #0078d4;
+        box-shadow: 0 0 0 0.2rem rgba(0, 120, 212, 0.25);
+    }
+
+    /* Style for Select2 when focused */
+    .field-userdatos-tipo_cedula .select2-container--focus .select2-selection--single {
+        border-color: #0078d4;
+        box-shadow: 0 0 0 0.2rem rgba(0, 120, 212, 0.25);
+    }
+
+    /* Container for the Tipo and Cedula row to ensure proper spacing */
+    .user-datos-form .row .col-md-1 {
+        flex: 0 0 12%;
+        max-width: 12%;
+        padding-right: 5px;
+    }
+
+    .user-datos-form .row .col-md-2 {
+        flex: 0 0 20%;
+        max-width: 20%;
+        padding-right: 15px;
+    }
+
+    .user-datos-form .row .col-md-3 {
+        flex: 0 0 28%;
+        max-width: 28%;
+    }
+
+    /* Add a subtle animation when switching between document types */
+    #userdatos-cedula {
+        transition: all 0.3s ease;
+    }
+
+    /* Professional label styling */
+    label[for="userdatos-cedula"] {
+        font-weight: 500;
+        color: #323130;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    label[for="userdatos-tipo_cedula"] {
+        font-weight: 500;
+        color: #323130;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    /* Responsive adjustments for smaller screens */
+    @media (max-width: 768px) {
+        .user-datos-form .row .col-md-1 {
+            flex: 0 0 30%;
+            max-width: 30%;
+        }
+
+        .user-datos-form .row .col-md-2 {
+            flex: 0 0 70%;
+            max-width: 70%;
+        }
+
+        .user-datos-form .row .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+
+    /* Additional styling for the help text/validation messages */
+    .field-userdatos-cedula .help-block {
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+
+    .field-userdatos-cedula .help-block-error {
+        color: #d13438;
+        background-color: #fef6f6;
+        padding: 4px 10px;
+        border-radius: 4px;
+        border-left: 3px solid #d13438;
+        font-size: 0.85rem;
+    }
+
+    /* Input group styling if you want to add icons */
+    .input-group-icon {
+        position: relative;
+    }
+
+    .input-group-icon .form-control {
+        padding-left: 40px;
+    }
+
+    .input-group-icon .input-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 10;
+    }
+
+    /* Custom select2 dropdown styling to match */
+    .select2-container--default .select2-selection--single {
+        height: 48px !important;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 34px !important;
+        font-size: 16px;
+        color: #323130;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    /* Increase dropdown font size */
+    .select2-container--default .select2-results__option {
+        font-size: 14px;
+        padding: 8px 12px;
     }
 </style>

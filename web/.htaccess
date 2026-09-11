@@ -1,4 +1,14 @@
 RewriteEngine on
-RewriteCond %{REQUEST_FILENAME} !-d
+
+# If a directory or a file exists, use it directly
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule . index.php [L]
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Otherwise forward it to index.php
+RewriteRule . index.php
+
+# Prevent access to .map files and return 404
+RewriteRule \.map$ - [R=404,L]
+
+# Prevent access to .map files in jsMedboard
+RewriteRule jsMedboard/.*\.map$ - [R=404,L]

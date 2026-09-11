@@ -401,38 +401,118 @@ function formatMoney($amount)
                     </div>
                 </div>
 
-                <!-- Revenue by Plan Chart -->
+                <!-- Contracts by Plan Chart -->
                 <div class="col-xl-5 col-lg-5 mb-4">
-                    <div class="card shadow h-100">
-                        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.35rem 0.35rem 0 0;">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-chart-pie mr-2 text-white fa-lg"></i>
-                                <div>
-                                    <h6 class="m-0 font-weight-bold text-white">Distribución de Ingresos por Plan</h6>
-                                    <small class="text-white-50">Distribución por categoría de plan</small>
+                    <div class="card shadow h-100 border-0">
+                        <!-- Header with cleaner gradient and icon -->
+                        <div class="card-header py-3" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); border-radius: 0.35rem 0.35rem 0 0;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-white rounded-circle p-2 mr-3 shadow-sm" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-chart-pie" style="color: #4e73df; font-size: 16px;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="m-0 font-weight-bold text-white">Contratos por Plan</h6>
+                                        <small class="text-white-50">Cantidad de contratos por categoría</small>
+                                    </div>
                                 </div>
-                                <i class="fas fa-info-circle text-white-50 ml-2" data-toggle="tooltip" data-placement="right" title="Participación porcentual de cada plan en el ingreso total"></i>
+                                <i class="fas fa-info-circle text-white-50 cursor-pointer" data-toggle="tooltip" data-placement="left" title="Cantidad de contratos por plan"></i>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div class="chart-pie" style="position: relative; height: 250px;">
-                                <canvas id="revenueByPlanChart"></canvas>
-                            </div>
-                            <div class="mt-4 text-center">
-                                <?php if (!empty($revenueByPlan)): ?>
-                                    <div class="d-flex flex-wrap justify-content-center">
-                                        <?php foreach ($revenueByPlan as $index => $plan): ?>
-                                            <span class="mr-3 mb-2" data-toggle="tooltip" data-placement="top" title="<?= Html::encode($plan['plan_name']) ?>: <?= formatMoney($plan['total_revenue']) ?> (<?= number_format($plan['contract_count'] ?? 0) ?> contratos)">
-                                                <i class="fas fa-circle" style="color: <?= $plan['color'] ?>"></i>
-                                                <span class="text-dark font-weight-medium"><?= Html::encode($plan['plan_name']) ?></span>
-                                                <small class="text-secondary ml-1">(<?= formatMoney($plan['total_revenue']) ?>)</small>
-                                            </span>
-                                        <?php endforeach; ?>
+
+                        <div class="card-body d-flex flex-column">
+                            <?php if (!empty($revenueByPlan)): ?>
+                                <!-- Row to hold Chart and Legend Side-by-Side -->
+                                <div class="row align-items-center flex-grow-1">
+                                    <!-- Chart Column -->
+                                    <div class="col-md-6 col-12 mb-3 mb-md-0">
+                                        <div class="chart-pie" style="position: relative; height: 180px;">
+                                            <canvas id="revenueByPlanChart"></canvas>
+                                        </div>
                                     </div>
-                                <?php else: ?>
-                                    <span class="text-secondary">No hay datos de ingresos por plan</span>
-                                <?php endif; ?>
-                            </div>
+
+                                    <!-- Legend Column (Cleaner than chart.js default) -->
+                                    <div class="col-md-6 col-12">
+                                        <div class="plan-legend pl-md-3">
+                                            <?php
+                                            // DEFINE PLAN COLORS
+                                            $colorMap = [
+                                                'Bronce' => '#cd7f32',
+                                                'Plata'  => '#c0c0c0',
+                                                'Oro'    => '#ffd700',
+                                                'Esmeralda' => '#50c878',
+                                                'Otros'  => '#6c757d',
+                                            ];
+
+                                            // Calculate total contracts from the array
+                                            $totalContractsByPlan = array_sum(array_column($revenueByPlan, 'contract_count'));
+
+                                            foreach ($revenueByPlan as $plan):
+                                                $planName = $plan['plan_name'] ?? 'Desconocido';
+                                                $planColor = $colorMap[$planName] ?? '#4e73df';
+                                                $planContractCount = $plan['contract_count'] ?? 0;
+                                                $percent = ($totalContractsByPlan > 0) ? ($planContractCount / $totalContractsByPlan * 100) : 0;
+                                            ?>
+                                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="mr-2 rounded-circle" style="display: inline-block; width: 14px; height: 14px; background-color: <?= $planColor ?>; border: 1px solid rgba(0,0,0,0.1);"></span>
+                                                        <span class="text-secondary font-weight-medium" style="font-size: 0.85rem;"><?= htmlspecialchars($planName) ?></span>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <span class="font-weight-bold text-dark" style="font-size: 0.9rem;"><?= number_format($percent, 1) ?>%</span>
+                                                        <small class="text-muted ml-1">(<?= number_format($planContractCount) ?>)</small>
+                                                    </div>
+                                                </div>
+                                            <?php
+                                            endforeach;
+
+                                            // --- ADD MISSING CONTRACTS HERE ---
+                                            // Calculate the difference between the two totals
+                                            $contractStatusTotal = array_sum($contractStatus); // This gives you 196
+                                            $difference = $contractStatusTotal - $totalContractsByPlan; // This equals 2
+
+                                            // If there are missing contracts, add a 'Sin Plan' row
+                                            if ($difference > 0):
+                                                $missingPercent = ($contractStatusTotal > 0) ? ($difference / $contractStatusTotal * 100) : 0;
+                                            ?>
+                                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="mr-2 rounded-circle" style="display: inline-block; width: 14px; height: 14px; background-color: #dc3545; border: 1px solid rgba(0,0,0,0.1);"></span>
+                                                        <span class="text-secondary font-weight-medium" style="font-size: 0.85rem;">Sin Plan Asignado</span>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <span class="font-weight-bold text-dark" style="font-size: 0.9rem;"><?= number_format($missingPercent, 1) ?>%</span>
+                                                        <small class="text-muted ml-1">(<?= number_format($difference) ?>)</small>
+                                                    </div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Summary Footer -->
+                                <div class="mt-3 pt-3 border-top bg-light rounded p-2">
+                                    <div class="row no-gutters text-center">
+                                        <div class="col-6 border-right">
+                                            <div class="px-2">
+                                                <span class="d-block text-xs text-uppercase text-secondary font-weight-bold mb-1">Total Contratos</span>
+                                                <span class="h5 mb-0 text-dark font-weight-bold"><?= number_format(($totalPlanContracts ?? 0) + ($difference ?? 0)) ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="px-2">
+                                                <span class="d-block text-xs text-uppercase text-secondary font-weight-bold mb-1">Ingreso Total</span>
+                                                <span class="h5 mb-0 text-success font-weight-bold">$ <?= number_format($totalPlanRevenue ?? 0, 2, ',', '.') ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-chart-pie fa-3x mb-3 opacity-25"></i>
+                                    <p>No hay datos de contratos disponibles.</p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -594,9 +674,6 @@ function formatMoney($amount)
 <?php
 $monthlyData = json_encode(array_column($monthlyRevenue, 'revenue'));
 $monthlyLabels = json_encode(array_column($monthlyRevenue, 'month'));
-$planData = json_encode(array_column($revenueByPlan, 'total_revenue'));
-$planLabels = json_encode(array_column($revenueByPlan, 'plan_name'));
-$planColors = json_encode(array_column($revenueByPlan, 'color'));
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -708,11 +785,40 @@ $planColors = json_encode(array_column($revenueByPlan, 'color'));
             }
         });
 
-        // Revenue by Plan Pie Chart with specific colors
+        // Revenue by Plan Pie Chart
         const planCtx = document.getElementById('revenueByPlanChart').getContext('2d');
+
+        // Extract data safely - Now using 'contract_count' instead of revenue
         const planLabels = <?= json_encode(array_column($revenueByPlan, 'plan_name')) ?>;
-        const planData = <?= json_encode(array_column($revenueByPlan, 'total_revenue')) ?>;
-        const planColors = <?= json_encode(array_column($revenueByPlan, 'color')) ?>;
+        const planDataRaw = <?= json_encode(array_column($revenueByPlan, 'contract_count')) ?>;
+
+        // Fallback: If contract_count isn't the key, try 0
+        const planData = planDataRaw.some(v => v > 0) ? planDataRaw : [];
+
+        // Hard-code the Real Colors based on the Plan Names inside JS
+        const planColorsMap = {
+            'Bronce': '#cd7f32',
+            'Plata': '#c0c0c0',
+            'Oro': '#ffd700',
+            'Esmeralda': '#50c878',
+            'Otros': '#6c757d',
+            'Sin Plan': '#dc3545'
+        };
+
+        // Map the planLabels to their specific colors
+        const backgroundColors = planLabels.map(label => planColorsMap[label] || '#4e73df');
+
+        // Add the "Sin Plan" slice to the chart if it exists in the legend
+        const statusTotal = <?= array_sum($contractStatus) ?>;
+        const totalFromPlans = planData.reduce((a, b) => a + b, 0);
+        const missingCount = statusTotal - totalFromPlans;
+
+        // If there are missing contracts, push them into the chart data
+        if (missingCount > 0) {
+            planLabels.push('Sin Plan');
+            planData.push(missingCount);
+            backgroundColors.push('#dc3545');
+        }
 
         if (planLabels.length > 0 && planData.length > 0 && planData.some(v => v > 0)) {
             new Chart(planCtx, {
@@ -721,55 +827,48 @@ $planColors = json_encode(array_column($revenueByPlan, 'color'));
                     labels: planLabels,
                     datasets: [{
                         data: planData,
-                        backgroundColor: planColors,
-                        hoverBackgroundColor: planColors.map(color => color + 'cc'),
-                        borderWidth: 0,
+                        backgroundColor: backgroundColors,
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverBackgroundColor: backgroundColors.map(color => color + '99'),
                         hoverOffset: 10
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: {
-                                font: {
-                                    size: 11,
-                                    weight: '500'
-                                },
-                                color: '#333',
-                                boxWidth: 12,
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }
+                            display: false
                         },
                         tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((context.raw / total) * 100).toFixed(1);
-                                    return context.label + ': $ ' + context.raw.toLocaleString('es-VE') + ' (' + percentage + '%)';
-                                }
-                            },
-                            backgroundColor: '#2c3e50',
+                            backgroundColor: 'rgba(0,0,0,0.8)',
                             titleColor: '#fff',
-                            bodyColor: '#fff',
                             titleFont: {
                                 weight: 'bold'
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.parsed || 0;
+                                    let total = statusTotal; // Use the actual total from PHP
+                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    return label + ': ' + value.toLocaleString('es-VE') + ' contratos (' + percentage + ')';
+                                }
                             }
                         }
-                    },
-                    cutout: '60%'
+                    }
                 }
             });
         } else {
+            // Fallback if no data exists
             planCtx.canvas.width = planCtx.canvas.width || 300;
             planCtx.canvas.height = planCtx.canvas.height || 300;
             planCtx.font = 'bold 14px Arial';
             planCtx.fillStyle = '#666';
             planCtx.textAlign = 'center';
-            planCtx.fillText('No hay datos de ingresos por plan disponibles', planCtx.canvas.width / 2, planCtx.canvas.height / 2);
+            planCtx.fillText('No hay datos de contratos disponibles', planCtx.canvas.width / 2, planCtx.canvas.height / 2);
         }
     });
 </script>

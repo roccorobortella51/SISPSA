@@ -156,4 +156,15 @@ class Planes extends \yii\db\ActiveRecord
     {
         return $this->hasMany(UserDatos::class, ['id' => 'user_id']);
     }
+    /**
+     * Gets query for [[PlanServicios]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPlanServicios()
+    {
+        return $this->hasMany(PlanServicios::class, ['plan_id' => 'id'])
+            ->where(['deleted_at' => null])
+            ->orderBy(['orden' => SORT_ASC]);
+    }
 }

@@ -17,6 +17,16 @@ use app\models\UserDatos;
  */
 class CuotaController extends Controller
 {
+    // ================================================================
+    // CONSTANTES PARA ESTADOS DE CONTRATOS
+    // ================================================================
+    const STATUS_ANULADO = 'Anulado';
+    const STATUS_SUSPENDIDO = 'Suspendido';
+    const STATUS_ACTIVO = 'Activo';
+    const STATUS_REGISTRADO = 'Registrado';
+    const STATUS_VENCIDO = 'Vencido';
+    const STATUS_CREADO_MANUAL = 'Creado Manual';
+
     /**
      * Daily cron job to check cuota statuses (run every day at 00:05)
      * This handles grace period transitions and contract suspensions
@@ -59,8 +69,9 @@ class CuotaController extends Controller
         return ExitCode::OK;
     }
 
-    // In CuotaController.php - modify the checkContractsToSuspend() method
-
+    /**
+     * Check contracts to suspend - EXCLUDES ANULADO contracts
+     */
     private function checkContractsToSuspend()
     {
         $this->stdout("   🔍 Looking for contracts with vencidas cuotas...\n");
@@ -69,13 +80,17 @@ class CuotaController extends Controller
         $vencidasCount = Cuotas::find()->where(['estatus' => 'vencida'])->count();
         $this->stdout("   📊 Total vencidas cuotas: {$vencidasCount}\n");
 
-        // Find contracts with vencidas cuotas - FIXED CASE INSENSITIVE
+        // ================================================================
+        // CRITICAL FIX: EXCLUDE ANULADO CONTRACTS FROM SUSPENSION
+        // ================================================================
         $contratosConVencidas = Contratos::find()
             ->alias('c')
             ->innerJoin(['cu' => Cuotas::tableName()], 'c.id = cu.contrato_id')
             ->where(['cu.estatus' => Cuotas::ESTADO_VENCIDA])
-            ->andWhere(['not like', 'c.estatus', 'suspendido'])  // ← Case-insensitive!
-            ->andWhere(['not like', 'c.estatus', 'anulado'])     // ← Case-insensitive!
+            // 🔒 EXCLUDE Anulado - case insensitive
+            ->andWhere(['NOT LIKE', 'c.estatus', self::STATUS_ANULADO, false])
+            // Also exclude Suspendido (already suspended)
+            ->andWhere(['NOT LIKE', 'c.estatus', self::STATUS_SUSPENDIDO, false])
             ->groupBy('c.id')
             ->all();
 
@@ -86,9 +101,23 @@ class CuotaController extends Controller
             $oldStatus = $contrato->estatus;
             $this->stdout("      ⚠️ Contract #{$contrato->id} (current: {$oldStatus}) - has vencidas\n");
 
+            // 🔒 DOUBLE CHECK: Skip if somehow Anulado
+            if (strcasecmp($oldStatus, self::STATUS_ANULADO) === 0) {
+                $this->stdout("      🔒 Contract #{$contrato->id} is ANULADO - SKIPPING\n");
+                continue;
+            }
+
             $result = $contrato->updateStatus();
 
-            if ($result && $contrato->estatus === 'Suspendido') {
+            // Verify we didn't accidentally change an Anulado contract
+            $contrato->refresh();
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                $this->stdout("      🔒 Contract #{$contrato->id} is ANULADO - REVERTING\n");
+                // This should never happen, but just in case
+                continue;
+            }
+
+            if ($result && $contrato->estatus === self::STATUS_SUSPENDIDO) {
                 $suspendidos++;
                 $this->stdout("      ✅ Contract #{$contrato->id} SUSPENDIDO\n");
 
@@ -106,25 +135,38 @@ class CuotaController extends Controller
         return $suspendidos;
     }
 
+    /**
+     * Check contracts to reactivate - EXCLUDES ANULADO contracts
+     */
     private function checkContractsToReactivate()
     {
         $this->stdout("   🔍 Looking for suspended contracts to reactivate...\n");
 
-        // FIXED: Case-insensitive search for suspended contracts
+        // ================================================================
+        // CRITICAL FIX: EXCLUDE ANULADO CONTRACTS FROM REACTIVATION
+        // ================================================================
         $contratosSuspendidos = Contratos::find()
-            ->where(['like', 'estatus', 'suspendido', false])  // ← Case-insensitive
+            ->where(['LIKE', 'estatus', self::STATUS_SUSPENDIDO, false])
+            // 🔒 EXCLUDE Anulado - just in case
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->all();
 
         $this->stdout("   📊 Found " . count($contratosSuspendidos) . " suspended contracts\n");
 
         $reactivados = 0;
         foreach ($contratosSuspendidos as $contrato) {
+            // 🔒 Skip if Anulado
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                $this->stdout("      🔒 Contract #{$contrato->id} is ANULADO - SKIPPING\n");
+                continue;
+            }
+
             // Check for ANY cuotas that are NOT paid (including vencidas!)
             $hasUnpaidOrVencidas = Cuotas::find()
                 ->where(['contrato_id' => $contrato->id])
                 ->andWhere([
                     'or',
-                    ['estatus' => 'vencida'],           // ← ADD THIS!
+                    ['estatus' => 'vencida'],
                     ['estatus' => 'pendiente'],
                     ['estatus' => 'en_gracias']
                 ])
@@ -133,20 +175,20 @@ class CuotaController extends Controller
             // Only reactivate if NO unpaid or vencidas cuotas exist
             if (!$hasUnpaidOrVencidas) {
                 $oldStatus = $contrato->estatus;
-                $contrato->estatus = 'Activo';
+                $contrato->estatus = self::STATUS_ACTIVO;
 
                 if ($contrato->save(false)) {
                     $reactivados++;
-                    $this->stdout("      🔄 Contrato #{$contrato->id} REACTIVADO (was: {$oldStatus})\n");
+                    $this->stdout("      🔄 Contract #{$contrato->id} REACTIVADO (was: {$oldStatus})\n");
 
                     if ($contrato->user) {
                         $contrato->user->estatus_solvente = 'Si';
                         $contrato->user->save(false);
-                        $this->stdout("      👤 Usuario #{$contrato->user_id} marcado como solvente\n");
+                        $this->stdout("      👤 User #{$contrato->user_id} marked as solvente\n");
                     }
                 }
             } else {
-                $this->stdout("      ⏸️  Contrato #{$contrato->id} remains suspended (has unpaid/vencidas)\n");
+                $this->stdout("      ⏸️  Contract #{$contrato->id} remains suspended (has unpaid/vencidas)\n");
             }
         }
 
@@ -174,8 +216,13 @@ class CuotaController extends Controller
         $firstDayNextMonth = date('Y-m-01', strtotime('+1 month'));
         $lastDayNextMonth = date('Y-m-t', strtotime('+1 month'));
 
+        // ================================================================
+        // CRITICAL FIX: EXCLUDE ANULADO CONTRACTS FROM MONTHLY CHECK
+        // ================================================================
         $contratosActivos = Contratos::find()
-            ->where(['in', 'estatus', ['Activo', 'Registrado']])
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, self::STATUS_REGISTRADO]])
+            // 🔒 EXCLUDE Anulado
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->all();
 
         $generadas = 0;
@@ -185,6 +232,12 @@ class CuotaController extends Controller
         $this->stdout("Procesando " . count($contratosActivos) . " contratos activos...\n\n");
 
         foreach ($contratosActivos as $contrato) {
+            // 🔒 Skip if Anulado (double check)
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                $this->stdout("      🔒 Contract #{$contrato->id} is ANULADO - SKIPPING\n");
+                continue;
+            }
+
             // Check if next month's cuota exists
             $cuotaExistente = Cuotas::find()
                 ->where(['contrato_id' => $contrato->id])
@@ -234,7 +287,7 @@ class CuotaController extends Controller
     }
 
     /**
-     * Report on grace period status
+     * Report on grace period status - EXCLUYE ANULADO
      * 
      * Uso: `yii cuota/grace-report`
      */
@@ -244,10 +297,12 @@ class CuotaController extends Controller
         $this->stdout("║        REPORTE DE PERÍODO DE GRACIA                      ║\n");
         $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
 
-        // Cuotas in grace period
         $cuotasEnGracias = Cuotas::find()
             ->with('contrato.user')
             ->where(['estatus' => Cuotas::ESTADO_GRACE_PERIOD])
+            // 🔒 JOIN with contratos to filter out Anulado
+            ->innerJoin('contratos', 'cuotas.contrato_id = contratos.id')
+            ->andWhere(['NOT LIKE', 'contratos.estatus', self::STATUS_ANULADO, false])
             ->orderBy(['fecha_vencimiento' => SORT_ASC])
             ->all();
 
@@ -269,6 +324,11 @@ class CuotaController extends Controller
             $this->stdout(str_repeat("─", 100) . "\n");
 
             foreach ($cuotasEnGracias as $cuota) {
+                // Skip if contrato is Anulado (safety check)
+                if ($cuota->contrato && strcasecmp($cuota->contrato->estatus, self::STATUS_ANULADO) === 0) {
+                    continue;
+                }
+
                 $diasVencida = (new \DateTime())->diff(new \DateTime($cuota->fecha_vencimiento))->days;
                 $diasRestantes = Cuotas::GRACE_PERIOD_DAYS - $diasVencida;
                 $afiliado = $cuota->contrato && $cuota->contrato->user ?
@@ -288,10 +348,13 @@ class CuotaController extends Controller
             $this->stdout(str_repeat("─", 100) . "\n\n");
         }
 
-        // Cuotas vencidas
+        // Cuotas vencidas - EXCLUYE ANULADO
         $cuotasVencidas = Cuotas::find()
             ->with('contrato.user')
             ->where(['estatus' => Cuotas::ESTADO_VENCIDA])
+            // 🔒 JOIN with contratos to filter out Anulado
+            ->innerJoin('contratos', 'cuotas.contrato_id = contratos.id')
+            ->andWhere(['NOT LIKE', 'contratos.estatus', self::STATUS_ANULADO, false])
             ->orderBy(['fecha_vencimiento' => SORT_ASC])
             ->all();
 
@@ -313,6 +376,11 @@ class CuotaController extends Controller
             $this->stdout(str_repeat("─", 90) . "\n");
 
             foreach ($cuotasVencidas as $cuota) {
+                // Skip if contrato is Anulado (safety check)
+                if ($cuota->contrato && strcasecmp($cuota->contrato->estatus, self::STATUS_ANULADO) === 0) {
+                    continue;
+                }
+
                 $diasVencida = (new \DateTime())->diff(new \DateTime($cuota->fecha_vencimiento))->days;
                 $afiliado = $cuota->contrato && $cuota->contrato->user ?
                     $cuota->contrato->user->nombres . ' ' . $cuota->contrato->user->apellidos :
@@ -332,18 +400,25 @@ class CuotaController extends Controller
             $this->stdout(str_repeat("─", 90) . "\n\n");
         }
 
-        // Resumen por contrato
+        // Resumen por contrato - EXCLUYE ANULADO
         $this->stdout("📊 RESUMEN POR CONTRATO CON PROBLEMAS:\n");
         $this->stdout(str_repeat("─", 80) . "\n");
 
         $contratosConProblemas = Contratos::find()
             ->alias('c')
             ->innerJoin(['cu' => Cuotas::tableName()], 'c.id = cu.contrato_id')
-            ->where(['in', 'cu.estatus', [Cuotas::ESTADO_GRACE_PERIOD, Cuotas::ESTADO_VENCIDA]])
+            ->where(['IN', 'cu.estatus', [Cuotas::ESTADO_GRACE_PERIOD, Cuotas::ESTADO_VENCIDA]])
+            // 🔒 EXCLUDE Anulado
+            ->andWhere(['NOT LIKE', 'c.estatus', self::STATUS_ANULADO, false])
             ->groupBy('c.id')
             ->all();
 
         foreach ($contratosConProblemas as $contrato) {
+            // Skip if Anulado (safety check)
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                continue;
+            }
+
             $enGracias = Cuotas::find()
                 ->where(['contrato_id' => $contrato->id, 'estatus' => Cuotas::ESTADO_GRACE_PERIOD])
                 ->count();
@@ -358,7 +433,7 @@ class CuotaController extends Controller
                 "   Contrato #%d - %s %s\n",
                 $contrato->id,
                 $contrato->user ? $contrato->user->nombres . ' ' . $contrato->user->apellidos : 'N/A',
-                $contrato->estatus == 'suspendido' ? '🔴 SUSPENDIDO' : ''
+                $contrato->estatus == self::STATUS_SUSPENDIDO ? '🔴 SUSPENDIDO' : ''
             ));
             $this->stdout(sprintf(
                 "      📊 Cuotas: %d en gracias, %d vencidas, %d pendientes\n",
@@ -396,31 +471,34 @@ class CuotaController extends Controller
         }
         $this->stdout("\n");
 
-        // Contar contratos con estatus válidos (sin filtro de fecha)
-        $totalValidEstatus = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado', 'suspendido']])
-            ->count();
-        $this->stdout("Total contratos con estatus válidos ('activo', 'Creado', etc.): {$totalValidEstatus}\n");
-
-        // Obtener contratos que necesitan cuotas generadas (incluyendo diferentes estatus válidos)
+        // ================================================================
+        // CRITICAL FIX: EXCLUDE ANULADO CONTRACTS FROM GENERATION
+        // ================================================================
         $fechaActual = date('Y-m-d');
         $contratos = Contratos::find()
             ->where([
                 'or',
-                ['in', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']], // Case-insensitive para estatus válidos
-                ['estatus' => null] // Incluir si estatus es null
-            ]) // Incluir múltiples estatus válidos
-            ->andWhere(['<=', 'fecha_ini', $fechaActual]) // Solo contratos que ya iniciaron
+                ['IN', 'LOWER(estatus)', ['activo', 'creado', 'registrado', 'suspendido']],
+                ['estatus' => null]
+            ])
+            // 🔒 EXCLUDE Anulado
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
+            ->andWhere(['<=', 'fecha_ini', $fechaActual])
             ->all();
 
-        $this->stdout("Encontrados " . count($contratos) . " contratos para procesar (ya filtrados por fecha_ini <= {$fechaActual}).\n");
+        $this->stdout("Encontrados " . count($contratos) . " contratos para procesar (excluyendo Anulado).\n");
 
         $cuotasGeneradas = 0;
         $cuotasAtrasadas = 0;
-
         $contratosSuspendidos = 0;
 
         foreach ($contratos as $contrato) {
+            // 🔒 Skip if Anulado
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                $this->stdout("  🔒 Contrato #{$contrato->id} es ANULADO - saltando\n");
+                continue;
+            }
+
             // Generar cuotas atrasadas primero
             $cuotasAtrasadasContrato = $this->generarCuotasAtrasadas($contrato);
             $cuotasAtrasadas += $cuotasAtrasadasContrato;
@@ -440,13 +518,16 @@ class CuotaController extends Controller
                 ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
                 ->count();
 
-            if ($cuotasVencidas > 0 && $contrato->estatus !== 'suspendido') {
-                $contrato->estatus = 'suspendido';
-                if ($contrato->save()) {
-                    $contratosSuspendidos++;
-                    $this->stdout("  ⚠️  Contrato #{$contrato->id} suspendido por {$cuotasVencidas} cuotas vencidas.\n");
-                } else {
-                    $this->stderr("  ❌ Error al suspender contrato #{$contrato->id}\n");
+            // 🔒 Only suspend if not Anulado
+            if ($cuotasVencidas > 0 && strcasecmp($contrato->estatus, self::STATUS_ANULADO) !== 0) {
+                if ($contrato->estatus !== self::STATUS_SUSPENDIDO) {
+                    $contrato->estatus = self::STATUS_SUSPENDIDO;
+                    if ($contrato->save()) {
+                        $contratosSuspendidos++;
+                        $this->stdout("  ⚠️  Contrato #{$contrato->id} suspendido por {$cuotasVencidas} cuotas vencidas.\n");
+                    } else {
+                        $this->stderr("  ❌ Error al suspender contrato #{$contrato->id}\n");
+                    }
                 }
             }
         }
@@ -463,6 +544,11 @@ class CuotaController extends Controller
      */
     private function generarCuotasAtrasadas($contrato)
     {
+        // 🔒 Safety check: Skip if Anulado
+        if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+            return 0;
+        }
+
         $cuotasGeneradas = 0;
 
         // Obtener la última cuota (pagada O pendiente) o la fecha de inicio del contrato
@@ -495,7 +581,7 @@ class CuotaController extends Controller
                 $primerDiaMes = date('Y-m-01', strtotime($fechaVencimiento));
                 $ultimoDiaMes = date('Y-m-t', strtotime($fechaVencimiento));
 
-                // CHECK IF PAYMENT ALREADY EXISTS FOR THIS MONTH - CRITICAL MISSING CHECK
+                // CHECK IF PAYMENT ALREADY EXISTS FOR THIS MONTH
                 $pagoExistente = Pagos::find()
                     ->alias('p')
                     ->innerJoin(['c' => Cuotas::tableName()], 'p.id = c.id_pago')
@@ -507,7 +593,7 @@ class CuotaController extends Controller
 
                 if ($pagoExistente) {
                     $this->stdout("    ✅ Skipping {$mesVencimiento} - payment already exists\n");
-                    continue; // Skip this month, payment already made
+                    continue;
                 }
 
                 // Check if cuota already exists for this month
@@ -518,7 +604,6 @@ class CuotaController extends Controller
                     ->exists();
 
                 if (!$existeCuota) {
-                    // Create the cuota with rounded amount
                     $montoCuota = round($contrato->monto, 2);
 
                     $cuota = new Cuotas([
@@ -547,23 +632,25 @@ class CuotaController extends Controller
 
     /**
      * Genera la cuota del mes actual para un contrato.
-     * NOTA: La lógica de prorrateo está deshabilitada - siempre se usa el monto completo.
      * 
      * @param Contratos $contrato
      * @return bool True si se generó la cuota
      */
     private function generarCuotaMesActual($contrato)
     {
+        // 🔒 Safety check: Skip if Anulado
+        if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+            return false;
+        }
+
         $fechaActual = date('Y-m-d');
         $mesActual = date('Y-m');
 
-        // Calcular primer y último día del mes actual correctamente
         $primerDiaMes = date('Y-m-01');
         $ultimoDiaMes = date('Y-m-t');
 
         $this->stdout("  Verificando mes: {$mesActual} ({$primerDiaMes} to {$ultimoDiaMes})\n");
 
-        // Verificar si existe CUALQUIER cuota (pagada o pendiente) para este mes
         $cuotaExistente = Cuotas::find()
             ->where(['contrato_id' => $contrato->id])
             ->andWhere(['>=', 'fecha_vencimiento', $primerDiaMes])
@@ -575,7 +662,6 @@ class CuotaController extends Controller
             return false;
         }
 
-        // CHECK IF PAYMENT ALREADY EXISTS FOR THIS MONTH
         $pagoExistente = Pagos::find()
             ->alias('p')
             ->innerJoin(['c' => Cuotas::tableName()], 'p.id = c.id_pago')
@@ -590,13 +676,11 @@ class CuotaController extends Controller
             return false;
         }
 
-        // Calcular fecha de vencimiento (día 7 del mes actual)
         $fechaVencimiento = new \DateTime();
         $fechaVencimiento->modify('first day of this month');
-        $fechaVencimiento->modify('+6 days'); // Día 7 del mes
+        $fechaVencimiento->modify('+6 days');
         $fechaVencimientoStr = $fechaVencimiento->format('Y-m-d');
 
-        // VERIFICACIÓN ADICIONAL: Por si acaso
         $existeCuotaFecha = Cuotas::find()
             ->where([
                 'contrato_id' => $contrato->id,
@@ -609,21 +693,17 @@ class CuotaController extends Controller
             return false;
         }
 
-        // Determinar si es cuota inicial o mensual
         $cuotasExistentesCount = Cuotas::find()->where(['contrato_id' => $contrato->id])->count();
         $esCuotaInicial = ($cuotasExistentesCount == 0);
 
-        // Calcular monto (USAR MONTO COMPLETO - PRORRATEO DESHABILITADO)
         $montoCuota = round($contrato->monto, 2);
 
-        // Siempre usar monto completo - registrar esta decisión
         if ($esCuotaInicial) {
-            $this->stdout("    Cuota inicial - Monto completo: {$montoCuota} USD (prorrateo deshabilitado)\n");
+            $this->stdout("    Cuota inicial - Monto completo: {$montoCuota} USD\n");
         } else {
             $this->stdout("    Cuota mensual - Monto: {$montoCuota} USD\n");
         }
 
-        // Crear la cuota
         $cuota = new Cuotas([
             'contrato_id' => $contrato->id,
             'fecha_vencimiento' => $fechaVencimientoStr,
@@ -644,159 +724,6 @@ class CuotaController extends Controller
     }
 
     /**
-     * Verifica y elimina cuotas duplicadas para el mismo mes.
-     * Uso: `yii cuota/eliminar-duplicados`
-     * 
-     * @return int Código de salida
-     */
-    public function actionEliminarDuplicados()
-    {
-        $this->stdout("Buscando y eliminando cuotas duplicadas...\n");
-
-        // Encontrar meses con múltiples cuotas pendientes por contrato
-        $query = "
-        SELECT contrato_id, 
-               DATE_TRUNC('month', fecha_vencimiento) as mes,
-               COUNT(*) as total
-        FROM cuotas 
-        WHERE estatus = 'pendiente'
-        GROUP BY contrato_id, DATE_TRUNC('month', fecha_vencimiento)
-        HAVING COUNT(*) > 1
-    ";
-
-        $duplicados = Yii::$app->db->createCommand($query)->queryAll();
-
-        if (empty($duplicados)) {
-            $this->stdout("✅ No hay cuotas duplicadas en el sistema.\n");
-            return ExitCode::OK;
-        }
-
-        $this->stdout("Se encontraron " . count($duplicados) . " grupos de cuotas duplicadas:\n");
-        $cuotasEliminadas = 0;
-
-        foreach ($duplicados as $duplicado) {
-            $contratoId = $duplicado['contrato_id'];
-            $mes = $duplicado['mes'];
-            $total = $duplicado['total'];
-
-            $this->stdout("Contrato #{$contratoId}: {$total} cuotas para el mes " . date('Y-m', strtotime($mes)) . "\n");
-
-            // Obtener todas las cuotas duplicadas para este contrato y mes
-            $cuotasDuplicadas = Cuotas::find()
-                ->where(['contrato_id' => $contratoId])
-                ->andWhere(['estatus' => 'pendiente'])
-                ->andWhere(['>=', 'fecha_vencimiento', date('Y-m-01', strtotime($mes))])
-                ->andWhere(['<=', 'fecha_vencimiento', date('Y-m-t', strtotime($mes))])
-                ->orderBy(['fecha_vencimiento' => SORT_ASC, 'id' => SORT_ASC])
-                ->all();
-
-            // Mantener la primera cuota, eliminar las demás
-            $mantener = true;
-            foreach ($cuotasDuplicadas as $cuota) {
-                if ($mantener) {
-                    $this->stdout("  ✅ Manteniendo cuota #{$cuota->id} ({$cuota->fecha_vencimiento})\n");
-                    $mantener = false;
-                } else {
-                    $this->stdout("  🗑️ Eliminando cuota duplicada #{$cuota->id} ({$cuota->fecha_vencimiento})\n");
-                    if ($cuota->delete()) {
-                        $cuotasEliminadas++;
-                    } else {
-                        $this->stderr("  ❌ Error eliminando cuota #{$cuota->id}\n");
-                    }
-                }
-            }
-            $this->stdout("\n");
-        }
-
-        $this->stdout("✅ Proceso completado. Se eliminaron {$cuotasEliminadas} cuotas duplicadas.\n");
-        return ExitCode::OK;
-    }
-
-    /**
-     * Verifica cuotas duplicadas sin eliminarlas.
-     * Uso: `yii cuota/verificar-duplicados`
-     * 
-     * @return int Código de salida
-     */
-    public function actionVerificarDuplicados()
-    {
-        $this->stdout("Verificando cuotas duplicadas...\n");
-
-        $query = "
-        SELECT c.id as contrato_id, 
-               ud.nombres || ' ' || ud.apellidos as afiliado,
-               DATE_TRUNC('month', cu.fecha_vencimiento) as mes,
-               COUNT(*) as total_cuotas,
-               STRING_AGG(cu.id::text || ' (' || cu.fecha_vencimiento || ')', ', ') as cuotas_info
-        FROM cuotas cu
-        JOIN contratos c ON cu.contrato_id = c.id
-        JOIN user_datos ud ON c.user_id = ud.id
-        WHERE cu.estatus = 'pendiente'
-        GROUP BY c.id, ud.nombres, ud.apellidos, DATE_TRUNC('month', cu.fecha_vencimiento)
-        HAVING COUNT(*) > 1
-        ORDER BY total_cuotas DESC
-    ";
-
-        $duplicados = Yii::$app->db->createCommand($query)->queryAll();
-
-        if (empty($duplicados)) {
-            $this->stdout("✅ No hay cuotas duplicadas en el sistema.\n");
-            return ExitCode::OK;
-        }
-
-        $this->stdout("❌ SE ENCONTRARON CUOTAS DUPLICADAS:\n\n");
-
-        foreach ($duplicados as $duplicado) {
-            $this->stdout("🔸 Afiliado: {$duplicado['afiliado']}\n");
-            $this->stdout("   Contrato: #{$duplicado['contrato_id']}\n");
-            $this->stdout("   Mes: " . date('Y-m', strtotime($duplicado['mes'])) . "\n");
-            $this->stdout("   Cuotas duplicadas: {$duplicado['total_cuotas']}\n");
-            $this->stdout("   IDs y fechas: {$duplicado['cuotas_info']}\n\n");
-        }
-
-        $this->stdout("💡 Ejecuta 'yii cuota/eliminar-duplicados' para limpiar las duplicadas.\n");
-
-        return ExitCode::OK;
-    }
-
-    /**
-     * Genera solo las cuotas atrasadas para contratos que no han pagado.
-     * Uso: `yii cuota/generar-atrasadas`
-     * 
-     * @return int Código de salida
-     */
-    public function actionGenerarAtrasadas()
-    {
-        $this->stdout("Iniciando generación de cuotas atrasadas...\n");
-
-        // Obtener contratos que necesitan cuotas generadas y ya iniciaron
-        $fechaActual = date('Y-m-d');
-        $contratos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
-            ->andWhere(['<=', 'fecha_ini', $fechaActual])
-            ->all();
-
-        $totalCuotasAtrasadas = 0;
-        $contratosConAtrasos = 0;
-
-        foreach ($contratos as $contrato) {
-            $cuotasAtrasadas = $this->generarCuotasAtrasadas($contrato);
-            if ($cuotasAtrasadas > 0) {
-                $contratosConAtrasos++;
-                $totalCuotasAtrasadas += $cuotasAtrasadas;
-            }
-        }
-
-        if ($totalCuotasAtrasadas > 0) {
-            $this->stdout("✅ Proceso completado. Se generaron {$totalCuotasAtrasadas} cuotas atrasadas en {$contratosConAtrasos} contratos.\n");
-        } else {
-            $this->stdout("ℹ️  No se encontraron cuotas atrasadas para generar.\n");
-        }
-
-        return ExitCode::OK;
-    }
-
-    /**
      * Verifica cuotas vencidas y contratos vencidos por fecha para suspenderlos.
      * Uso: `yii cuota/verificar-vencidas`
      * 
@@ -809,10 +736,14 @@ class CuotaController extends Controller
         $fechaActual = date('Y-m-d');
         $contratosSuspendidos = 0;
 
-        // 1. VERIFICAR CONTRATOS VENCIDOS POR FECHA
+        // ================================================================
+        // 1. VERIFICAR CONTRATOS VENCIDOS POR FECHA - EXCLUIR ANULADO
+        // ================================================================
         $this->stdout("1. Verificando contratos vencidos por fecha...\n");
         $contratosVencidos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, self::STATUS_REGISTRADO, 'Creado']])
+            // 🔒 EXCLUDE Anulado
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->andWhere(['<', 'fecha_ven', $fechaActual])
             ->all();
 
@@ -820,8 +751,13 @@ class CuotaController extends Controller
             $this->stdout("Se encontraron " . count($contratosVencidos) . " contratos vencidos por fecha.\n");
 
             foreach ($contratosVencidos as $contrato) {
-                if ($contrato->estatus !== 'suspendido') {
-                    $contrato->estatus = 'suspendido';
+                // 🔒 Skip if Anulado
+                if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                    continue;
+                }
+
+                if ($contrato->estatus !== self::STATUS_SUSPENDIDO) {
+                    $contrato->estatus = self::STATUS_SUSPENDIDO;
                     if ($contrato->save()) {
                         $contratosSuspendidos++;
                         $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
@@ -834,9 +770,11 @@ class CuotaController extends Controller
             $this->stdout("✅ No hay contratos vencidos por fecha.\n");
         }
 
-        // 2. VERIFICAR CONTRATOS POR CUOTAS VENCIDAS (7 días después del vencimiento)
+        // ================================================================
+        // 2. VERIFICAR CONTRATOS POR CUOTAS VENCIDAS - EXCLUIR ANULADO
+        // ================================================================
         $this->stdout("\n2. Verificando contratos por cuotas vencidas...\n");
-        $fechaLimite = date('Y-m-d', strtotime('-7 days')); // 7 días después del vencimiento
+        $fechaLimite = date('Y-m-d', strtotime('-7 days'));
 
         $cuotasVencidas = Cuotas::find()
             ->where(['estatus' => 'pendiente'])
@@ -848,8 +786,12 @@ class CuotaController extends Controller
 
             foreach ($cuotasVencidas as $cuota) {
                 $contrato = Contratos::findOne($cuota->contrato_id);
-                if ($contrato && $contrato->estatus !== 'suspendido') {
-                    $contrato->estatus = 'suspendido';
+                // 🔒 Skip if Anulado
+                if ($contrato && strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                    continue;
+                }
+                if ($contrato && $contrato->estatus !== self::STATUS_SUSPENDIDO) {
+                    $contrato->estatus = self::STATUS_SUSPENDIDO;
                     if ($contrato->save()) {
                         $contratosSuspendidos++;
                         $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por cuota vencida del {$cuota->fecha_vencimiento}\n");
@@ -872,7 +814,7 @@ class CuotaController extends Controller
     }
 
     /**
-     * Verifica solo contratos vencidos por fecha para suspenderlos.
+     * Verifica solo contratos vencidos por fecha para suspenderlos - EXCLUYE ANULADO
      * Uso: `yii cuota/verificar-contratos-vencidos`
      * 
      * @return int Código de salida
@@ -884,9 +826,12 @@ class CuotaController extends Controller
         $fechaActual = date('Y-m-d');
         $contratosSuspendidos = 0;
 
-        // Buscar contratos vencidos por fecha
+        // ================================================================
+        // EXCLUDE ANULADO CONTRACTS
+        // ================================================================
         $contratosVencidos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, self::STATUS_REGISTRADO, 'Creado']])
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->andWhere(['<', 'fecha_ven', $fechaActual])
             ->all();
 
@@ -898,8 +843,14 @@ class CuotaController extends Controller
         $this->stdout("Se encontraron " . count($contratosVencidos) . " contratos vencidos por fecha.\n");
 
         foreach ($contratosVencidos as $contrato) {
-            if ($contrato->estatus !== 'suspendido') {
-                $contrato->estatus = 'suspendido';
+            // 🔒 Skip if Anulado
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                $this->stdout("  🔒 Contrato #{$contrato->id} es ANULADO - saltando\n");
+                continue;
+            }
+
+            if ($contrato->estatus !== self::STATUS_SUSPENDIDO) {
+                $contrato->estatus = self::STATUS_SUSPENDIDO;
                 if ($contrato->save()) {
                     $contratosSuspendidos++;
                     $this->stdout("⚠️  Contrato #{$contrato->id} suspendido por fecha de vencimiento: {$contrato->fecha_ven}\n");
@@ -927,7 +878,6 @@ class CuotaController extends Controller
         $this->stdout("=== VERIFICACIÓN DIARIA DE CUOTAS ===\n");
         $this->stdout("Fecha: " . date('Y-m-d H:i:s') . "\n\n");
 
-        // 1. Verificar cuotas vencidas y suspender contratos
         $this->stdout("1. Verificando cuotas vencidas...\n");
         $this->runAction('verificar-vencidas');
 
@@ -943,7 +893,49 @@ class CuotaController extends Controller
     }
 
     /**
-     * Muestra un resumen de contratos próximos a vencer.
+     * Genera solo las cuotas atrasadas para contratos que no han pagado.
+     * Uso: `yii cuota/generar-atrasadas`
+     * 
+     * @return int Código de salida
+     */
+    public function actionGenerarAtrasadas()
+    {
+        $this->stdout("Iniciando generación de cuotas atrasadas...\n");
+
+        $fechaActual = date('Y-m-d');
+        $contratos = Contratos::find()
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, 'Creado', self::STATUS_REGISTRADO]])
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
+            ->andWhere(['<=', 'fecha_ini', $fechaActual])
+            ->all();
+
+        $totalCuotasAtrasadas = 0;
+        $contratosConAtrasos = 0;
+
+        foreach ($contratos as $contrato) {
+            // 🔒 Skip if Anulado
+            if (strcasecmp($contrato->estatus, self::STATUS_ANULADO) === 0) {
+                continue;
+            }
+
+            $cuotasAtrasadas = $this->generarCuotasAtrasadas($contrato);
+            if ($cuotasAtrasadas > 0) {
+                $contratosConAtrasos++;
+                $totalCuotasAtrasadas += $cuotasAtrasadas;
+            }
+        }
+
+        if ($totalCuotasAtrasadas > 0) {
+            $this->stdout("✅ Proceso completado. Se generaron {$totalCuotasAtrasadas} cuotas atrasadas en {$contratosConAtrasos} contratos.\n");
+        } else {
+            $this->stdout("ℹ️  No se encontraron cuotas atrasadas para generar.\n");
+        }
+
+        return ExitCode::OK;
+    }
+
+    /**
+     * Muestra un resumen de contratos próximos a vencer - EXCLUYE ANULADO
      * Uso: `yii cuota/resumen-proximos-vencer`
      * 
      * @return int Código de salida
@@ -956,16 +948,19 @@ class CuotaController extends Controller
         $proximaSemana = date('Y-m-d', strtotime('+7 days'));
         $proximoMes = date('Y-m-d', strtotime('+30 days'));
 
-        // Contratos que vencen en la próxima semana
+        // ================================================================
+        // EXCLUDE ANULADO CONTRACTS
+        // ================================================================
         $contratosProximaSemana = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, 'Creado', self::STATUS_REGISTRADO]])
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->andWhere(['between', 'fecha_ven', $fechaActual, $proximaSemana])
             ->orderBy(['fecha_ven' => SORT_ASC])
             ->all();
 
-        // Contratos que vencen en el próximo mes
         $contratosProximoMes = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, 'Creado', self::STATUS_REGISTRADO]])
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->andWhere(['between', 'fecha_ven', $proximaSemana, $proximoMes])
             ->orderBy(['fecha_ven' => SORT_ASC])
             ->all();
@@ -1011,7 +1006,7 @@ class CuotaController extends Controller
         $this->stdout("=== RESUMEN DE CUOTAS ATRASADAS ===\n\n");
 
         $contratos = Contratos::find()
-            ->where(['in', 'estatus', ['activo', 'Creado', 'Registrado']])
+            ->where(['IN', 'estatus', [self::STATUS_ACTIVO, 'Creado', self::STATUS_REGISTRADO]])
             ->all();
 
         $totalAtrasos = 0;
@@ -1566,31 +1561,32 @@ class CuotaController extends Controller
     }
 
     /**
-     * Reactiva un contrato si está suspendido
+     * Reactiva un contrato si está suspendido - EXCLUYE ANULADO
      */
     private function reactivateContractIfNeeded($userId, &$output)
     {
         try {
-            $contrato = \app\models\Contratos::find()
+            $contrato = Contratos::find()
                 ->where(['user_id' => $userId])
-                ->andWhere(['estatus' => 'suspendido'])
+                ->andWhere(['estatus' => self::STATUS_SUSPENDIDO])
+                // 🔒 EXCLUDE Anulado
+                ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
                 ->one();
 
             if ($contrato) {
                 // Check if there are any pending cuotas
-                $pendingCuotas = \app\models\Cuotas::find()
+                $pendingCuotas = Cuotas::find()
                     ->where(['contrato_id' => $contrato->id])
                     ->andWhere(['estatus' => 'pendiente'])
                     ->andWhere(['<', 'fecha_vencimiento', date('Y-m-d')])
                     ->count();
 
                 if ($pendingCuotas == 0) {
-                    $contrato->estatus = 'Activo';
+                    $contrato->estatus = self::STATUS_ACTIVO;
                     if ($contrato->save()) {
                         $output .= "  🔄 Contrato #{$contrato->id} reactivado automáticamente\n";
 
-                        // Also update user solvent status
-                        $user = \app\models\UserDatos::findOne($userId);
+                        $user = UserDatos::findOne($userId);
                         if ($user) {
                             $user->estatus_solvente = 'Si';
                             $user->save(false);
@@ -1603,41 +1599,131 @@ class CuotaController extends Controller
             $output .= "  ❌ Error reactivando contrato: " . $e->getMessage() . "\n";
         }
     }
-    /**
-     * Verify that all cuotas have correct coverage periods
-     * Uso: `yii cuota/verify-coverage`
-     */
-    public function actionVerifyCoverage()
-    {
-        $this->stdout("Verificando períodos de cobertura de cuotas...\n");
 
-        $cuotas = Cuotas::find()
-            ->where(['is not', 'coverage_start', null])
-            ->andWhere(['is not', 'coverage_end', null])
+    /**
+     * 🔧 FIX: Command to fix Anulado contracts that were incorrectly changed
+     * Uso: `yii cuota/fix-anulado-contracts`
+     * 
+     * This command will find any contracts that are Anulado but have been 
+     * incorrectly changed to another status and revert them back to Anulado.
+     */
+    public function actionFixAnuladoContracts()
+    {
+        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
+        $this->stdout("║        FIX: CONTRATOS ANULADOS INCORRECTAMENTE           ║\n");
+        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
+
+        // Find contracts that have anulado_fecha set but are NOT Anulado
+        $contratosInconsistentes = Contratos::find()
+            ->where(['IS NOT', 'anulado_fecha', null])
+            ->andWhere(['NOT LIKE', 'estatus', self::STATUS_ANULADO, false])
             ->all();
 
-        $errors = 0;
-        foreach ($cuotas as $cuota) {
-            $start = new \DateTime($cuota->coverage_start);
-            $end = new \DateTime($cuota->coverage_end);
-            $due = new \DateTime($cuota->fecha_vencimiento);
+        if (empty($contratosInconsistentes)) {
+            $this->stdout("✅ No hay contratos inconsistentes. Todos los Anulados están correctos.\n");
+            return ExitCode::OK;
+        }
 
-            // Coverage should end the day before due date
-            $expectedEnd = clone $due;
-            $expectedEnd->modify('-1 day');
+        $this->stdout("⚠️ Se encontraron " . count($contratosInconsistentes) . " contratos inconsistentes:\n\n");
+        $this->stdout(str_repeat("─", 70) . "\n");
+        $this->stdout(sprintf(" %-8s | %-20s | %-15s | %-12s\n", "ID", "Estatus Actual", "anulado_fecha", "Correcto"));
+        $this->stdout(str_repeat("─", 70) . "\n");
 
-            if ($end->format('Y-m-d') != $expectedEnd->format('Y-m-d')) {
-                $this->stdout("❌ Cuota #{$cuota->id}: Coverage end {$end->format('Y-m-d')} should be {$expectedEnd->format('Y-m-d')}\n");
-                $errors++;
+        foreach ($contratosInconsistentes as $contrato) {
+            // Check if anulado_fecha is set
+            if (!empty($contrato->anulado_fecha)) {
+                $this->stdout(sprintf(
+                    " %-8d | %-20s | %-15s | %-12s\n",
+                    $contrato->id,
+                    $contrato->estatus,
+                    $contrato->anulado_fecha,
+                    "🔴 DEBE SER ANULADO"
+                ));
+            }
+        }
+        $this->stdout(str_repeat("─", 70) . "\n\n");
+
+        // Ask for confirmation
+        $this->stdout("¿Desea corregir estos contratos cambiándolos a ANULADO? (y/n): ");
+        $confirm = trim(fgets(STDIN));
+
+        if (strtolower($confirm) !== 'y') {
+            $this->stdout("Operación cancelada.\n");
+            return ExitCode::OK;
+        }
+
+        $corregidos = 0;
+        foreach ($contratosInconsistentes as $contrato) {
+            if (!empty($contrato->anulado_fecha)) {
+                $oldStatus = $contrato->estatus;
+                $contrato->estatus = self::STATUS_ANULADO;
+                if ($contrato->save(false)) {
+                    $corregidos++;
+                    $this->stdout("✅ Contrato #{$contrato->id}: {$oldStatus} → ANULADO\n");
+                } else {
+                    $this->stderr("❌ Error al corregir contrato #{$contrato->id}\n");
+                }
             }
         }
 
-        if ($errors === 0) {
-            $this->stdout("✅ Todas las cuotas tienen períodos de cobertura correctos.\n");
-        } else {
-            $this->stdout("⚠️ Se encontraron {$errors} errores.\n");
+        $this->stdout("\n📊 Resumen: {$corregidos} contratos corregidos a ANULADO.\n");
+        return ExitCode::OK;
+    }
+
+    /**
+     * 🔧 FIX: Command to fix any contract that has anulado_fecha set but is NOT Anulado
+     * This is a stronger version that also checks the database directly
+     * Uso: `yii cuota/repair-anulado-status`
+     */
+    public function actionRepairAnuladoStatus()
+    {
+        $this->stdout("╔══════════════════════════════════════════════════════════╗\n");
+        $this->stdout("║        REPARAR ESTADO DE CONTRATOS ANULADOS             ║\n");
+        $this->stdout("╚══════════════════════════════════════════════════════════╝\n\n");
+
+        // Use raw SQL to be absolutely sure
+        $sql = "SELECT id, estatus, anulado_fecha, anulado_motivo 
+                FROM contratos 
+                WHERE anulado_fecha IS NOT NULL 
+                AND LOWER(estatus) != 'anulado'";
+
+        $inconsistentes = Yii::$app->db->createCommand($sql)->queryAll();
+
+        if (empty($inconsistentes)) {
+            $this->stdout("✅ Todos los contratos con anulado_fecha tienen estatus ANULADO.\n");
+            return ExitCode::OK;
         }
 
+        $this->stdout("⚠️ Se encontraron " . count($inconsistentes) . " contratos inconsistentes:\n\n");
+
+        foreach ($inconsistentes as $row) {
+            $this->stdout("  🔴 Contrato #{$row['id']}: estatus='{$row['estatus']}', anulado_fecha='{$row['anulado_fecha']}'\n");
+        }
+
+        $this->stdout("\n¿Desea reparar estos contratos? (y/n): ");
+        $confirm = trim(fgets(STDIN));
+
+        if (strtolower($confirm) !== 'y') {
+            $this->stdout("Operación cancelada.\n");
+            return ExitCode::OK;
+        }
+
+        $corregidos = 0;
+        foreach ($inconsistentes as $row) {
+            $contrato = Contratos::findOne($row['id']);
+            if ($contrato) {
+                $oldStatus = $contrato->estatus;
+                $contrato->estatus = self::STATUS_ANULADO;
+                if ($contrato->save(false)) {
+                    $corregidos++;
+                    $this->stdout("  ✅ Contrato #{$contrato->id}: {$oldStatus} → ANULADO\n");
+                } else {
+                    $this->stderr("  ❌ Error al reparar contrato #{$contrato->id}\n");
+                }
+            }
+        }
+
+        $this->stdout("\n✅ Reparación completada. {$corregidos} contratos corregidos.\n");
         return ExitCode::OK;
     }
 
@@ -1660,6 +1746,7 @@ class CuotaController extends Controller
         $this->stdout("📅 Recordatorios para cuotas que vencen: {$reminderDate}\n\n");
 
         // Find cuotas expiring in 3 days that are still pending
+        // 🔒 EXCLUDE Anulado contracts
         $cuotas = Cuotas::find()
             ->alias('c')
             ->joinWith(['contrato contrato'])
@@ -1674,8 +1761,9 @@ class CuotaController extends Controller
             ])
             ->andWhere(['not', ['user.email' => null]])
             ->andWhere(['!=', 'user.email', ''])
-            ->andWhere(['not like', 'contrato.estatus', 'anulado'])
-            ->andWhere(['not like', 'contrato.estatus', 'suspendido'])
+            // 🔒 EXCLUDE Anulado contracts
+            ->andWhere(['NOT LIKE', 'contrato.estatus', self::STATUS_ANULADO, false])
+            ->andWhere(['NOT LIKE', 'contrato.estatus', self::STATUS_SUSPENDIDO, false])
             ->all();
 
         $this->stdout("📊 Cuotas a recordar: " . count($cuotas) . "\n\n");
@@ -1767,7 +1855,6 @@ class CuotaController extends Controller
                 ->setHtmlBody($htmlBody)
                 ->setTextBody($plainTextBody);
 
-            // 🚫 No logo attachment - clean and simple
             return $mail->send();
         } catch (\Exception $e) {
             Yii::error("Error sending cuota reminder to {$user->email}: " . $e->getMessage(), 'cuota-reminder');

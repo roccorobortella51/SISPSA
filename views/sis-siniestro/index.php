@@ -20,7 +20,7 @@ use yii\web\View;
 // 1. LÓGICA DE MODO Y BOTONES
 // ----------------------------------------------------------------------
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "Administrador-clinica" || $rol == "COORDINADOR-CLINICA");
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACION' || $rol == 'Asesor' || $rol == 'Agente' || $rol == "ADMISIÓN" || $rol == "CONTROL DE CITAS" || $rol == "Administrador-clinica" || $rol == "COORDINADOR-CLINICA" || $rol == "OPERACIONES-BOSQUE");
 
 // Define si puede actualizar
 $canUpdate = $permisos;
@@ -779,10 +779,10 @@ $this->registerCss("
                     ?>
                     <?= Html::a(
                         '<i class="' . $volverBtnIcon . ' me-2"></i> Volver',
-                        ['/user-datos/index-clinicas', 'clinica_id' => $afiliado->clinica_id],
+                        ['/user-datos/view', 'id' => $afiliado->id],
                         [
                             'class' => 'btn btn-lg ' . ($contratoSuspendido ? 'btn-back-warning' : 'btn-back'),
-                            'title' => $volverBtnTitle,
+                            'title' => 'Volver a los detalles del afiliado',
                             'data' => ['pjax' => 0],
                             'style' => 'font-size: 1.2rem; padding: 14px 28px; border-radius: 12px;'
                         ]

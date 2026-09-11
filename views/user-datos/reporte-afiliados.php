@@ -226,7 +226,7 @@ if (!isset($tipoAfiliadoList) || !is_array($tipoAfiliadoList)) {
                         'value' => function ($model) {
                             return $model->nombres . ' ' . $model->apellidos;
                         },
-                        'headerOptions' => ['style' => 'width: 18%'],
+                        'headerOptions' => ['style' => 'width: 16%'],
                         'enableSorting' => false,
                     ],
                     [
@@ -238,20 +238,32 @@ if (!isset($tipoAfiliadoList) || !is_array($tipoAfiliadoList)) {
                         'contentOptions' => ['style' => 'text-align: center;'],
                         'enableSorting' => false,
                     ],
+                    // ============================================
+                    // NEW COLUMN: Fecha de Nacimiento
+                    // ============================================
+                    [
+                        'label' => 'Fecha de Nacimiento',
+                        'value' => function ($model) {
+                            if (!empty($model->fechanac)) {
+                                return Yii::$app->formatter->asDate($model->fechanac, 'dd/MM/yyyy');
+                            }
+                            return 'No definida';
+                        },
+                        'headerOptions' => ['style' => 'width: 10%'],
+                        'contentOptions' => ['style' => 'text-align: center;'],
+                        'enableSorting' => false,
+                    ],
                     [
                         'label' => 'Fecha de Afiliación',
                         'value' => function ($model) {
-                            // Get the most recent active contract (non-annulled)
                             $contrato = $model->getContratos()
                                 ->where(['!=', 'estatus', 'Anulado'])
                                 ->orderBy(['fecha_ini' => SORT_DESC])
                                 ->one();
 
-                            // Check if contract exists and has fecha_ini
                             if ($contrato && !empty($contrato->fecha_ini)) {
                                 return Yii::$app->formatter->asDate($contrato->fecha_ini, 'dd/MM/yyyy');
                             } elseif ($contrato && !empty($contrato->created_at)) {
-                                // Fallback to created_at if fecha_ini is not set
                                 return Yii::$app->formatter->asDate($contrato->created_at, 'dd/MM/yyyy');
                             }
                             return 'No definida';
@@ -265,14 +277,13 @@ if (!isset($tipoAfiliadoList) || !is_array($tipoAfiliadoList)) {
                         'value' => function ($model) {
                             return $model->plan ? $model->plan->nombre : '';
                         },
-                        'headerOptions' => ['style' => 'width: 12%'],
+                        'headerOptions' => ['style' => 'width: 10%'],
                         'contentOptions' => ['style' => 'text-align: center;'],
                         'enableSorting' => false,
                     ],
                     [
                         'label' => 'Cuotas Pagadas',
                         'value' => function ($model) {
-                            // Count paid cuotas across ALL contracts (excluding annulled)
                             $totalPaid = \app\models\Cuotas::find()
                                 ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
                                 ->where(['contratos.user_id' => $model->id])
@@ -290,7 +301,7 @@ if (!isset($tipoAfiliadoList) || !is_array($tipoAfiliadoList)) {
                         'value' => function ($model) {
                             return $model->clinica ? $model->clinica->nombre : '';
                         },
-                        'headerOptions' => ['style' => 'width: 38%'],
+                        'headerOptions' => ['style' => 'width: 32%'],
                         'contentOptions' => ['style' => 'text-align: center;'],
                         'enableSorting' => false,
                     ],

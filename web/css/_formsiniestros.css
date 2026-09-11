@@ -527,6 +527,11 @@
         margin-bottom: 8px;
         font-size: 14px;
     }
+
+    /* Allow actions row to wrap gracefully on extra narrow screens if needed */
+    .form-actions-container {
+        flex-wrap: wrap !important;
+    }
     
     .plan-info-item {
         flex-direction: column;
@@ -2259,117 +2264,10 @@
     transform: translateY(-3px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
+
 /* ============================================
    EMERGENCY EXCLUSION BADGE - GRAY BACKGROUND WITH WHITE TEXT
    ============================================ */
-.stat-badge.emergency-excluded-gray {
-    background: #6c757d !important;
-    color: #ffffff !important;
-    font-weight: 600;
-    padding: 8px 18px;
-    border-radius: 30px;
-    cursor: default;
-    border: none !important;
-    font-size: 0.8rem;
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-}
-
-.stat-badge.emergency-excluded-gray i {
-    color: #ffffff !important;
-}
-
-.stat-badge.emergency-excluded-gray:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-}
-
-.stat-badge.emergency-excluded-gray span {
-    color: #ffffff !important;
-}
-
-/* ============================================
-   EXISTING STAT BADGE STYLES (keep as is)
-   ============================================ */
-.stat-badge {
-    font-size: 0.8rem;
-    padding: 8px 14px;
-    border-radius: 30px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-    cursor: default;
-}
-
-.stat-badge:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.stat-badge.disponible {
-    background: linear-gradient(135deg, #28a745 0%, #218838 100%) !important;
-    color: white !important;
-}
-
-.stat-badge.disponible i {
-    color: white !important;
-}
-
-.stat-badge.restringido {
-    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
-    color: #1a1a1a !important;
-}
-
-.stat-badge.restringido i {
-    color: #1a1a1a !important;
-}
-
-.stat-badge.agotado {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-    color: white !important;
-}
-
-.stat-badge.agotado i {
-    color: white !important;
-}
-
-.stat-badge.historico {
-    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
-    color: white !important;
-}
-
-.stat-badge.historico i {
-    color: white !important;
-}
-
-.stat-badge.total {
-    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
-    color: white !important;
-}
-
-.stat-badge.total i {
-    color: white !important;
-}
-
-.stat-badge i {
-    font-size: 0.9rem;
-}
-
-.clickable-badge {
-    cursor: pointer !important;
-}
-
-.clickable-badge:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-/* ============================================
-   EMERGENCY EXCLUSION BADGE - GRAY BACKGROUND WITH WHITE TEXT
-   ============================================ */
-
-/* ULTRA STRONG SELECTOR - Force white text */
 .badge.stat-badge.emergency-excluded-gray,
 .badge.stat-badge.emergency-excluded-gray span,
 .badge.stat-badge.emergency-excluded-gray i,
@@ -2406,5 +2304,490 @@
 
 .stat-badge.emergency-excluded-gray span {
     color: #ffffff !important;
+}
+
+/* ============================================
+   BOTTOM ACTIONS BAR - CENTERED HORIZONTAL ROW
+   ============================================ */   
+.badge.stat-badge.emergency-excluded-gray,
+.badge.stat-badge.emergency-excluded-gray span,
+.badge.stat-badge.emergency-excluded-gray i,
+.badge.stat-badge.emergency-excluded-gray .fas,
+.badge.stat-badge.emergency-excluded-gray .fa,
+.badge.stat-badge.emergency-excluded-gray * {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray {
+    background: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 8px 18px !important;
+    border-radius: 30px !important;
+    cursor: default !important;
+    border: none !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stat-badge.emergency-excluded-gray i,
+.stat-badge.emergency-excluded-gray .fas,
+.stat-badge.emergency-excluded-gray .fa {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+.stat-badge.emergency-excluded-gray span {
+    color: #ffffff !important;
+}
+
+/* ============================================
+   BOTTOM ACTIONS BAR - CENTERED HORIZONTAL ROW
+   ============================================ */  
+.badge.stat-badge.emergency-excluded-gray,
+.badge.stat-badge.emergency-excluded-gray span,
+.badge.stat-badge.emergency-excluded-gray i,
+.badge.stat-badge.emergency-excluded-gray .fas,
+.badge.stat-badge.emergency-excluded-gray .fa,
+.badge.stat-badge.emergency-excluded-gray * {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray {
+    background: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 8px 18px !important;
+    border-radius: 30px !important;
+    cursor: default !important;
+    border: none !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stat-badge.emergency-excluded-gray i,
+.stat-badge.emergency-excluded-gray .fas,
+.stat-badge.emergency-excluded-gray .fa {
+    color: #ffffff !important;
+}
+
+.stat-badge.emergency-excluded-gray:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+}
+
+.stat-badge.emergency-excluded-gray span {
+    color: #ffffff !important;
+}
+
+/* ============================================
+   BOTTOM ACTIONS BAR - CENTERED HORIZONTAL ROW
+   ============================================ */
+.bottom-actions-bar {
+    background: #ffffff;
+    border: 1px solid #edebe9;
+    border-radius: 2px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.bottom-actions-bar .action-buttons-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.bottom-actions-bar .action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    text-align: center;
+}
+
+.bottom-actions-bar .action-buttons .btn-bottom-action,
+.btn-bottom-action {
+    display: inline-flex !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-width: 140px !important;
+    margin: 0 !important;
+    padding: 10px 24px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    float: none !important;
+    clear: none !important;
+}
+
+.btn-bottom-action i {
+    margin-right: 6px !important;
+}
+
+.bottom-actions-bar .action-hint {
+    text-align: center;
+    margin-top: 12px;
+    color: #6c757d;
+    font-size: 13px;
+    clear: both;
+}
+
+.bottom-actions-bar .action-hint i {
+    margin-right: 6px;
+}
+
+@media (max-width: 768px) {
+    .bottom-actions-bar .action-buttons {
+        gap: 8px;
+    }
+
+    .bottom-actions-bar .action-buttons .btn-bottom-action,
+    .btn-bottom-action {
+        width: auto !important;
+        display: inline-flex !important;
+        min-width: 120px !important;
+        padding: 8px 16px !important;
+        font-size: 13px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .bottom-actions-bar .action-buttons-wrapper {
+        display: block;
+    }
+
+    .bottom-actions-bar .action-buttons {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .bottom-actions-bar .action-buttons .btn-bottom-action,
+    .btn-bottom-action {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+}
+/* ===== BOTTOM ACTIONS BAR - FULLY CENTERED ===== */
+.form-actions-container {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 12px !important;
+    
+    /* Ensure the container spans the entire available parent width */
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important; /* Centering fallback */
+    text-align: center !important;
+    
+    padding: 20px 0 !important;
+    clear: both !important; /* Prevents floating elements from pushing it off-center */
+}
+
+/* Ensure child buttons remain inline without stretching */
+.form-actions-container .btn {
+    width: auto !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+}
+/* ============================================================ */
+/* TABBED LAYOUT STYLES - COMPLETE OVERRIDE */
+/* ============================================================ */
+
+.tab-content-wrapper {
+    background: #ffffff;
+    border: 1px solid #edebe9;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.tab-content-wrapper .nav-tabs {
+    background: #faf9f8;
+    border-bottom: 1px solid #edebe9;
+    padding: 0 16px;
+    display: flex;
+    flex-wrap: wrap;
+    overflow: visible;
+    margin-bottom: 0;
+}
+
+.tab-content-wrapper .nav-tabs .nav-item {
+    margin-bottom: -1px;
+    flex-shrink: 0;
+}
+
+.tab-content-wrapper .nav-tabs .nav-link {
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    color: #605e5c !important;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 14px 20px !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.tab-content-wrapper .nav-tabs .nav-link:hover {
+    color: #323130 !important;
+    background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.tab-content-wrapper .nav-tabs .nav-link:focus {
+    outline: none;
+}
+
+/* ACTIVE TAB */
+.tab-content-wrapper .nav-tabs .nav-link.active {
+    color: #0078d4 !important;
+    background: #e8f0fe !important;
+    border-bottom: 3px solid #0078d4 !important;
+    font-weight: 600 !important;
+}
+
+.tab-content-wrapper .nav-tabs .nav-link i {
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.tab-content-wrapper .nav-tabs .nav-link .badge {
+    margin-left: 6px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #e8ecf1;
+    color: #605e5c;
+}
+
+.tab-content-wrapper .nav-tabs .nav-link.active .badge {
+    background: #deecf9;
+    color: #0078d4;
+}
+
+/* Make sure tabs don't overflow */
+.tab-content-wrapper .nav-tabs .nav-item:last-child {
+    margin-right: 0;
+}
+
+/* ============================================================ */
+/* FORCE ACTIVE TAB STYLES - ULTIMATE OVERRIDE */
+/* ============================================================ */
+
+/* Force active tab pane styles using !important */
+.tab-content-wrapper .tab-pane.active {
+    display: block !important;
+    background: #f8faff !important;
+    border-left: 4px solid #0078d4 !important;
+    padding: 24px 24px 24px 28px !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 120, 212, 0.08) !important;
+}
+
+/* Style the card headers inside active tab */
+.tab-content-wrapper .tab-pane.active .card-header {
+    background: #f0f6fe !important;
+    border-bottom-color: #d6e4f5 !important;
+}
+
+/* Style the cards inside active tab */
+.tab-content-wrapper .tab-pane.active .card {
+    border-color: #d6e4f5 !important;
+}
+
+/* Inactive tabs - hidden */
+.tab-content-wrapper .tab-pane:not(.active) {
+    display: none !important;
+}
+
+/* Force the active tab button */
+.tab-content-wrapper .nav-tabs .nav-link.active {
+    background: #e8f0fe !important;
+    color: #0078d4 !important;
+    border-bottom: 3px solid #0078d4 !important;
+    font-weight: 600 !important;
+}
+
+/* Animation for tab switching */
+.tab-content-wrapper .tab-pane.active {
+    animation: tabFadeIn 0.25s ease;
+}
+
+@keyframes tabFadeIn {
+    from {
+        opacity: 0.5;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* ============================================
+   PRE-EXISTENCIAS - ULTRA COMPACT ACTION BUTTONS
+   ============================================ */
+
+/* Action buttons container */
+.action-buttons {
+    display: flex !important;
+    gap: 2px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+}
+
+/* Base action button - ultra compact */
+.btn-action {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 4px !important;
+    border: 1px solid transparent !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+}
+
+.btn-action i {
+    font-size: 11px !important;
+    margin: 0 !important;
+}
+
+.btn-action:hover {
+    transform: scale(1.1) !important;
+    text-decoration: none !important;
+}
+
+/* View button */
+.btn-action-view {
+    background: transparent !important;
+    color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+}
+
+.btn-action-view:hover {
+    background: #17a2b8 !important;
+    color: #ffffff !important;
+}
+
+/* Edit button */
+.btn-action-edit {
+    background: transparent !important;
+    color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.btn-action-edit:hover {
+    background: #007bff !important;
+    color: #ffffff !important;
+}
+
+/* Delete button */
+.btn-action-delete {
+    background: transparent !important;
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.btn-action-delete:hover {
+    background: #dc3545 !important;
+    color: #ffffff !important;
+}
+
+/* Toggle status button */
+.btn-action-toggle {
+    background: transparent !important;
+    color: #ffc107 !important;
+    border-color: #ffc107 !important;
+}
+
+.btn-action-toggle:hover {
+    background: #ffc107 !important;
+    color: #ffffff !important;
+}
+
+/* Table cell with action buttons */
+.preexistencias-table td.text-center {
+    vertical-align: middle !important;
+}
+
+.preexistencias-table .action-buttons {
+    gap: 3px !important;
+}
+
+/* Make the action column narrower */
+.preexistencias-table td:last-child {
+    width: 1% !important;
+    white-space: nowrap !important;
+    padding: 4px 4px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-action {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        font-size: 10px !important;
+    }
+    
+    .btn-action i {
+        font-size: 10px !important;
+    }
+    
+    .action-buttons {
+        gap: 2px !important;
+    }
+}
+
+/* Ensure the status badges are properly styled */
+.badge-status-activo {
+    background: #28a745;
+    color: white;
+}
+
+.badge-status-inactivo {
+    background: #6c757d;
+    color: white;
+}
+
+.badge-status-tratamiento {
+    background: #17a2b8;
+    color: white;
+}
+
+.badge-status-remision {
+    background: #ffc107;
+    color: #212529;
 }
 }

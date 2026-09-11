@@ -27,8 +27,6 @@ use app\models\Agente;
 use app\models\Cuotas;
 use yii\db\Expression;
 
-
-
 class SiteController extends Controller
 {
     /**
@@ -129,41 +127,62 @@ class SiteController extends Controller
             return $this->goHome();
         }
 
+        // Clear any flash messages before showing login page
+        Yii::$app->session->removeFlash('success');
+        Yii::$app->session->removeFlash('error');
+
         // Cambiamos el layout para que la página de login no muestre el menú lateral ni la barra superior.
         $this->layout = 'main-login';
 
         $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
 
-            // After successful login, check role and redirect accordingly
-            $user = Yii::$app->user->identity;
-            $authManager = Yii::$app->authManager;
-            $roles = $authManager->getRolesByUser($user->id);
-
-            if (isset($roles['GERENTE-CLINICA'])) {
-                return $this->redirect(['site/dashboard']);
+        if ($model->load(Yii::$app->request->post())) {
+            // ============================================ 
+            // FIX: Manually set rememberMe from POST data
+            // ============================================ 
+            $post = Yii::$app->request->post();
+            if (isset($post['rememberMe']) && $post['rememberMe'] == '1') {
+                $model->rememberMe = true;
+            } else {
+                $model->rememberMe = false;
             }
 
-            if (isset($roles['COORDINADOR-CLINICA'])) {
-                return $this->redirect(['site/dashboard-coordinador']);
-            }
+            if ($model->login()) {
+                $tasa_bcv = $this->actionTasacambio(date('Y-m-d'));
 
-            if (isset($roles['Asesor'])) {
-                return $this->redirect(['site/dashboard-asesor']);
-            }
+                // After successful login, check role and redirect accordingly
+                $user = Yii::$app->user->identity;
+                $authManager = Yii::$app->authManager;
+                $roles = $authManager->getRolesByUser($user->id);
 
-            // Redirect to agencia dashboard for Agente role - NEW
-            if (isset($roles['Agente'])) {
-                return $this->redirect(['site/dashboard-agencia']);
-            }
+                // Clear any flash messages after successful login
+                Yii::$app->session->removeFlash('success');
+                Yii::$app->session->removeFlash('error');
 
-            // ADD THIS: Redirect FINANZAS role to finanzas dashboard
-            if (isset($roles['FINANZAS'])) {
-                return $this->redirect(['site/dashboard-finanzas']);
-            }
+                if (isset($roles['GERENTE-CLINICA'])) {
+                    return $this->redirect(['site/dashboard']);
+                }
 
-            return $this->goBack();
+                if (isset($roles['COORDINADOR-CLINICA'])) {
+                    return $this->redirect(['site/dashboard-coordinador']);
+                }
+
+                if (isset($roles['Asesor'])) {
+                    return $this->redirect(['site/dashboard-asesor']);
+                }
+
+                // Redirect to agencia dashboard for Agente role - NEW
+                if (isset($roles['Agente'])) {
+                    return $this->redirect(['site/dashboard-agencia']);
+                }
+
+                // ADD THIS: Redirect FINANZAS role to finanzas dashboard
+                if (isset($roles['FINANZAS'])) {
+                    return $this->redirect(['site/dashboard-finanzas']);
+                }
+
+                return $this->goBack();
+            }
         }
 
         $model->password = '';
@@ -1185,82 +1204,203 @@ class SiteController extends Controller
         }
     }
 
+    /**
+     * Get exchange rate with auto-population and fallback
+     * 
+     * @param string|null $fecha Date in YYYY-MM-DD format
+     * @return float|string
+     */
     public function actionTasacambio($fecha = null)
     {
-        $fecha = Yii::$app->request->post('fecha');
+        // Allow POST and GET
+        if (Yii::$app->request->isPost) {
+            $fecha = Yii::$app->request->post('fecha');
+        } elseif (Yii::$app->request->isGet) {
+            $fecha = Yii::$app->request->get('fecha', $fecha);
+        }
 
-        if ($fecha == null) {
+        if ($fecha === null) {
             $fecha = date('Y-m-d');
         }
 
-        $tasacambio = Tasacambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
-
-        if ($tasacambio == null) {
-            $tasacambio = new Tasacambio();
-            $tasacambio->fecha = $fecha;
-            $tasacambio->tasa_cambio = $this->explorartasabcv();
-            $tasacambio->save();
+        // Validate date format
+        if (!strtotime($fecha)) {
+            Yii::warning("Invalid date format: {$fecha}", 'tasa_cambio');
+            return $this->getDefaultExchangeRate();
         }
-        $tasacambio = TasaCambio::find()->select(['tasa_cambio'])->where(['fecha' => $fecha])->one();
-        return $tasacambio->tasa_cambio;
+
+        // Try to get from cache first (5 minute cache)
+        $cacheKey = 'tasa_cambio_' . $fecha;
+        $cachedRate = Yii::$app->cache->get($cacheKey);
+
+        if ($cachedRate !== false) {
+            return (float)$cachedRate;
+        }
+
+        // Get from database
+        $tasa = TasaCambio::find()
+            ->where(['fecha' => $fecha])
+            ->orderBy(['hora' => SORT_DESC, 'id' => SORT_DESC])
+            ->one();
+
+        $rateValue = null;
+
+        if ($tasa === null) {
+            // Try to get the rate with fallback
+            $rate = $this->getExchangeRateWithFallback($fecha);
+
+            if ($rate !== null && $rate > 0) {
+                $model = new TasaCambio();
+                $model->fecha = $fecha;
+                $model->tasa_cambio = $rate;
+                $model->hora = date('H:i:s');
+
+                if ($model->save()) {
+                    Yii::info("Created exchange rate for {$fecha}: {$rate}", 'tasa_cambio');
+                    $rateValue = $rate;
+                } else {
+                    Yii::error("Failed to save exchange rate: " . print_r($model->errors, true), 'tasa_cambio');
+                    $rateValue = $rate;
+                }
+            } else {
+                // Use default rate
+                $rateValue = $this->getDefaultExchangeRate();
+
+                // Try to save default rate
+                $model = new TasaCambio();
+                $model->fecha = $fecha;
+                $model->tasa_cambio = $rateValue;
+                $model->hora = date('H:i:s');
+                $model->save();
+            }
+        } else {
+            $rateValue = (float)$tasa->tasa_cambio;
+        }
+
+        // Cache for 5 minutes
+        Yii::$app->cache->set($cacheKey, $rateValue, 300);
+
+        return $rateValue;
     }
 
+    /**
+     * Get exchange rate with multiple fallback methods
+     * 
+     * @param string $fecha Date in YYYY-MM-DD format
+     * @return float|null
+     */
+    private function getExchangeRateWithFallback($fecha)
+    {
+        // Method 1: Try to get from BCV (only for today)
+        if ($fecha === date('Y-m-d')) {
+            $rate = $this->explorartasabcv();
+            if ($rate !== null && $rate > 0) {
+                return $rate;
+            }
+        }
+
+        // Method 2: Use nearest available rate from database
+        $nearestRate = TasaCambio::find()
+            ->select(['tasa_cambio'])
+            ->where(['<=', 'fecha', $fecha])
+            ->orderBy(['fecha' => SORT_DESC, 'hora' => SORT_DESC])
+            ->limit(1)
+            ->scalar();
+
+        if ($nearestRate !== null) {
+            return (float)$nearestRate;
+        }
+
+        // Method 3: Use any available rate
+        $anyRate = TasaCambio::find()
+            ->select(['tasa_cambio'])
+            ->orderBy(['fecha' => SORT_DESC, 'hora' => SORT_DESC])
+            ->limit(1)
+            ->scalar();
+
+        if ($anyRate !== null) {
+            return (float)$anyRate;
+        }
+
+        return null;
+    }
+
+    /**
+     * Scrape BCV website for current exchange rate with multiple selectors
+     * 
+     * @return float|null
+     */
     private function explorartasabcv()
     {
         $url = "https://www.bcv.org.ve/";
 
-        // Add timeout context
         $context = stream_context_create([
             'ssl' => [
                 'verify_peer' => false,
                 'verify_peer_name' => false,
             ],
             'http' => [
-                'timeout' => 30, // Increase timeout to 30 seconds
+                'timeout' => 30,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             ]
         ]);
 
-        // Use @ to suppress warnings and add error handling
         $html = @file_get_contents($url, false, $context);
 
-        // Check if fetch failed
         if ($html === false) {
-            // Log the error for debugging
             Yii::warning("Failed to fetch BCV data. Error: " .
-                (error_get_last()['message'] ?? 'Unknown error'));
-
-            // Return a default value instead of breaking the page
-            return $this->getDefaultExchangeRate();
+                (error_get_last()['message'] ?? 'Unknown error'), 'tasa_cambio');
+            return null;
         }
 
         $dom = new \DOMDocument();
         libxml_use_internal_errors(true);
         $dom->loadHTML($html);
         $xpath = new \DOMXPath($dom);
-        $tasa_bcv = $xpath->query("//*[@id='dolar']/div/div/div/strong");
 
-        // Check if element was found
-        if ($tasa_bcv->length > 0) {
-            $valor = str_replace(',', '.', trim($tasa_bcv->item(0)->textContent));
-            return (float) $valor;
-        } else {
-            Yii::warning("Could not find exchange rate element on BCV page");
-            return $this->getDefaultExchangeRate();
+        // Try multiple selectors as BCV may change their structure
+        $selectors = [
+            "//*[@id='dolar']/div/div/div/strong",
+            "//*[contains(@class, 'dolar')]//strong",
+            "//*[contains(text(), 'Dólar')]/following::strong[1]",
+        ];
+
+        foreach ($selectors as $selector) {
+            $tasa_bcv = $xpath->query($selector);
+            if ($tasa_bcv->length > 0) {
+                $valor = str_replace(',', '.', trim($tasa_bcv->item(0)->textContent));
+                $rate = (float) $valor;
+                if ($rate > 0) {
+                    Yii::info("BCV rate fetched: {$rate}", 'tasa_cambio');
+                    return $rate;
+                }
+            }
         }
+
+        Yii::warning("Could not find exchange rate element on BCV page", 'tasa_cambio');
+        return null;
     }
 
-    // Add this helper function to provide a default value
+    /**
+     * Get default exchange rate with multiple fallbacks
+     * 
+     * @return float
+     */
     private function getDefaultExchangeRate()
     {
-        // Try to get the latest rate from your database
+        // Try to get the latest rate from database
         $latestRate = TasaCambio::find()
             ->select(['tasa_cambio'])
-            ->orderBy(['fecha' => SORT_DESC])
+            ->orderBy(['fecha' => SORT_DESC, 'hora' => SORT_DESC])
             ->limit(1)
             ->scalar();
 
+        if ($latestRate !== null) {
+            return (float)$latestRate;
+        }
+
         // If no rate in database, use a reasonable default
-        return $latestRate ?: 36.00;
+        return 36.00;
     }
 
     public function actionCuotaGenerar()
@@ -2023,6 +2163,7 @@ class SiteController extends Controller
         }
         return ['output' => $out, 'selected' => ''];
     }
+
     /**
      * Test email configuration
      * Access: https://sispsatest.com/index.php?r=site/test-email
@@ -2164,5 +2305,383 @@ class SiteController extends Controller
         }
 
         echo "<p><a href='" . Yii::$app->request->referrer . "'>Go Back</a></p>";
+    }
+    /**
+     * Dashboard for FINANZAS role
+     * Shows financial metrics, revenue, contracts, and KPIs
+     * 
+     * @return string
+     */
+    public function actionDashboardFinanzas()
+    {
+        // Check if user has FINANZAS role
+        $user = Yii::$app->user->identity;
+
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['site/login']);
+        }
+
+        $authManager = Yii::$app->authManager;
+        $roles = $authManager->getRolesByUser($user->id);
+
+        if (!isset($roles['FINANZAS'])) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a este dashboard.');
+            return $this->goHome();
+        }
+
+        // Get clinic access if applicable
+        $clinicaId = UserHelper::getMyClinicaId();
+        $clinica = null;
+        if ($clinicaId) {
+            $clinica = RmClinica::findOne($clinicaId);
+        }
+
+        // ============================================
+        // KPI CALCULATIONS
+        // ============================================
+
+        // Base query for contracts (with clinic filter if applicable)
+        $contractQuery = Contratos::find()
+            ->alias('c')
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id');
+
+        if ($clinicaId && UserHelper::hasClinicAccess()) {
+            $contractQuery->andWhere(['ud.clinica_id' => $clinicaId]);
+        }
+
+        // Total Revenue (all active contracts)
+        $totalRevenue = (clone $contractQuery)
+            ->andWhere(['c.estatus' => 'Activo'])
+            ->sum('c.monto') ?: 0;
+
+        // Monthly Recurring Revenue (MRR) - sum of all active contracts
+        $mrr = (clone $contractQuery)
+            ->andWhere(['c.estatus' => 'Activo'])
+            ->sum('c.monto') ?: 0;
+
+        // Total active affiliates (with active contracts)
+        $totalActiveAffiliates = (clone $contractQuery)
+            ->andWhere(['c.estatus' => 'Activo'])
+            ->select('c.user_id')
+            ->distinct()
+            ->count();
+
+        // Total contracts count (ALL contracts, not just active)
+        $totalContracts = (clone $contractQuery)->count();
+
+        // Average contract value
+        $avgContractValue = $totalContracts > 0 ? $totalRevenue / $totalContracts : 0;
+
+        // Expiring contracts (next 30 days)
+        $expiringContracts = (clone $contractQuery)
+            ->andWhere(['c.estatus' => 'Activo'])
+            ->andWhere(['>=', 'c.fecha_ven', date('Y-m-d')])
+            ->andWhere(['<=', 'c.fecha_ven', date('Y-m-d', strtotime('+30 days'))])
+            ->count();
+
+        // Expired contracts
+        $expiredContracts = (clone $contractQuery)
+            ->andWhere(['<', 'c.fecha_ven', date('Y-m-d')])
+            ->andWhere(['not', ['c.estatus' => 'Anulado']])
+            ->count();
+
+        // Attention needed (expired + expiring soon)
+        $attentionNeeded = $expiredContracts + $expiringContracts;
+
+        // ============================================
+        // CONTRACT STATUS DISTRIBUTION
+        // ============================================
+        $contractStatus = [
+            'activos' => (clone $contractQuery)->andWhere(['c.estatus' => 'Activo'])->count(),
+            'registrados' => (clone $contractQuery)->andWhere(['c.estatus' => 'Registrado'])->count(),
+            'suspendidos' => (clone $contractQuery)->andWhere(['c.estatus' => 'Suspendido'])->count(),
+            'creados' => (clone $contractQuery)->andWhere(['c.estatus' => 'Creado'])->count(),
+            'vencidos' => (clone $contractQuery)->andWhere(['c.estatus' => 'Vencido'])->count(),
+            'anulados' => (clone $contractQuery)->andWhere(['c.estatus' => 'Anulado'])->count(),
+        ];
+
+        // ============================================
+        // CONTRACTS BY PLAN - FIXED TO COUNT ALL STATUSES
+        // ============================================
+
+        // Define the standard plan categories
+        $planCategories = [
+            'Bronce' => ['color' => '#cd7f32', 'icon' => 'fa-medal', 'description' => 'Plan Básico'],
+            'Plata' => ['color' => '#c0c0c0', 'icon' => 'fa-medal', 'description' => 'Plan Intermedio'],
+            'Oro' => ['color' => '#ffd700', 'icon' => 'fa-crown', 'description' => 'Plan Premium'],
+            'Esmeralda' => ['color' => '#50c878', 'icon' => 'fa-gem', 'description' => 'Plan Senior'],
+        ];
+
+        // Get ALL plans from the database
+        $allPlans = Planes::find()->all();
+
+        $planData = [];
+        $totalPlanRevenue = 0;
+        $totalPlanContracts = 0;
+
+        // Process each plan category
+        foreach ($planCategories as $category => $info) {
+            $categoryRevenue = 0;
+            $categoryContracts = 0;
+            $planDetails = [];
+
+            // Find plans that match this category
+            foreach ($allPlans as $plan) {
+                if (stripos($plan->nombre, $category) !== false) {
+                    // FIX: COUNT ALL contracts, not just 'Activo'
+                    $planContractCount = (clone $contractQuery)
+                        ->andWhere(['c.plan_id' => $plan->id])
+                        ->count();
+
+                    $planRevenue = (clone $contractQuery)
+                        ->andWhere(['c.estatus' => 'Activo'])
+                        ->andWhere(['c.plan_id' => $plan->id])
+                        ->sum('c.monto') ?: 0;
+
+                    $planDetails[] = [
+                        'plan_id' => $plan->id,
+                        'plan_name' => $plan->nombre,
+                        'contract_count' => $planContractCount,
+                        'revenue' => $planRevenue,
+                        'price' => $plan->precio,
+                    ];
+                    $categoryRevenue += $planRevenue;
+                    $categoryContracts += $planContractCount;
+                }
+            }
+
+            if (!empty($planDetails)) {
+                $planData[$category] = [
+                    'category' => $category,
+                    'color' => $info['color'],
+                    'icon' => $info['icon'],
+                    'description' => $info['description'],
+                    'total_revenue' => $categoryRevenue,
+                    'total_contracts' => $categoryContracts,
+                    'plans' => $planDetails,
+                ];
+                $totalPlanRevenue += $categoryRevenue;
+                $totalPlanContracts += $categoryContracts;
+            }
+        }
+
+        // Get any remaining plans (Otros)
+        $otherPlanDetails = [];
+        $otherRevenue = 0;
+        $otherContracts = 0;
+
+        foreach ($allPlans as $plan) {
+            $isInCategory = false;
+            foreach ($planCategories as $category => $info) {
+                if (stripos($plan->nombre, $category) !== false) {
+                    $isInCategory = true;
+                    break;
+                }
+            }
+
+            if (!$isInCategory) {
+                // FIX: COUNT ALL contracts, not just 'Activo'
+                $planContractCount = (clone $contractQuery)
+                    ->andWhere(['c.plan_id' => $plan->id])
+                    ->count();
+
+                $planRevenue = (clone $contractQuery)
+                    ->andWhere(['c.estatus' => 'Activo'])
+                    ->andWhere(['c.plan_id' => $plan->id])
+                    ->sum('c.monto') ?: 0;
+
+                $otherPlanDetails[] = [
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->nombre,
+                    'contract_count' => $planContractCount,
+                    'revenue' => $planRevenue,
+                    'price' => $plan->precio,
+                ];
+                $otherRevenue += $planRevenue;
+                $otherContracts += $planContractCount;
+            }
+        }
+
+        if (!empty($otherPlanDetails)) {
+            $planData['Otros'] = [
+                'category' => 'Otros',
+                'color' => '#6c757d',
+                'icon' => 'fa-ellipsis-h',
+                'description' => 'Otros Planes',
+                'total_revenue' => $otherRevenue,
+                'total_contracts' => $otherContracts,
+                'plans' => $otherPlanDetails,
+            ];
+            $totalPlanRevenue += $otherRevenue;
+            $totalPlanContracts += $otherContracts;
+        }
+
+        // Prepare revenue by plan for the chart
+        $revenueByPlan = [];
+        foreach ($planData as $category => $data) {
+            $revenueByPlan[] = [
+                'plan_name' => $category,
+                'total_revenue' => $data['total_revenue'],
+                'contract_count' => $data['total_contracts'],
+                'color' => $data['color'],
+                'icon' => $data['icon'],
+                'description' => $data['description'],
+                'plans' => $data['plans'],
+            ];
+        }
+
+        // ============================================
+        // MONTHLY REVENUE (last 12 months)
+        // ============================================
+        $monthlyRevenue = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $startDate = date('Y-m-01', strtotime("-$i months"));
+            $endDate = date('Y-m-t', strtotime("-$i months"));
+            $monthName = date('M Y', strtotime($startDate));
+
+            $revenue = (clone $contractQuery)
+                ->andWhere(['c.estatus' => 'Activo'])
+                ->andWhere(['<=', 'c.fecha_ini', $endDate])
+                ->andWhere([
+                    'or',
+                    ['>=', 'c.fecha_ven', $startDate],
+                    ['c.fecha_ven' => null]
+                ])
+                ->sum('c.monto') ?: 0;
+
+            $monthlyRevenue[] = [
+                'month' => $monthName,
+                'revenue' => (float)$revenue
+            ];
+        }
+
+        // ============================================
+        // RECENT CONTRACTS (last 10)
+        // ============================================
+        $recentContracts = (clone $contractQuery)
+            ->orderBy(['c.created_at' => SORT_DESC])
+            ->limit(10)
+            ->all();
+
+        // ============================================
+        // KPIS ARRAY
+        // ============================================
+        $kpis = [
+            'total_revenue' => $totalRevenue,
+            'mrr' => $mrr,
+            'total_active_affiliates' => $totalActiveAffiliates,
+            'avg_contract_value' => $avgContractValue,
+            'expiring_contracts' => $expiringContracts,
+            'expired_contracts' => $expiredContracts,
+            'attention_needed' => $attentionNeeded,
+            'total_contracts' => $totalContracts,
+        ];
+
+        // ============================================
+        // RENDER VIEW
+        // ============================================
+        return $this->render('dashboard-finanzas', [
+            'clinica' => $clinica,
+            'kpis' => $kpis,
+            'contractStatus' => $contractStatus,
+            'revenueByPlan' => $revenueByPlan,
+            'planData' => $planData,
+            'monthlyRevenue' => $monthlyRevenue,
+            'recentContracts' => $recentContracts,
+            'totalPlanRevenue' => $totalPlanRevenue,
+            'totalPlanContracts' => $totalPlanContracts,
+        ]);
+    }
+    /**
+     * Requests password reset.
+     *
+     * @return string|\yii\web\Response
+     */
+    public function actionRequestPasswordReset()
+    {
+        // Use main-login layout for consistent login page style
+        $this->layout = 'main-login';
+
+        $model = new \app\models\PasswordResetRequestForm();
+        $emailSent = false;
+        $errorMessage = '';
+
+        if ($model->load(Yii::$app->request->post())) {
+            Yii::info('Password reset form submitted with email: ' . $model->email, 'password-reset');
+
+            if ($model->validate()) {
+                Yii::info('Form validation passed', 'password-reset');
+
+                if ($model->sendEmail()) {
+                    Yii::info('Email sent successfully', 'password-reset');
+                    $emailSent = true;
+                    // Don't redirect - stay on the page and show success
+                } else {
+                    Yii::error('Failed to send email for: ' . $model->email, 'password-reset');
+                    $errorMessage = 'Lo sentimos, no pudimos enviar el correo de recuperación. Por favor intente de nuevo más tarde.';
+                }
+            } else {
+                Yii::error('Form validation failed: ' . json_encode($model->errors), 'password-reset');
+            }
+        }
+
+        return $this->render('requestPasswordResetToken', [
+            'model' => $model,
+            'emailSent' => $emailSent,
+            'errorMessage' => $errorMessage,
+        ]);
+    }
+
+    /**
+     * Resets password.
+     *
+     * @param string $token
+     * @return string|\yii\web\Response
+     */
+    public function actionResetPassword($token)
+    {
+        try {
+            $model = new \app\models\ResetPasswordForm($token);
+        } catch (\yii\base\InvalidParamException $e) {
+            Yii::$app->session->setFlash('error', 'El enlace de recuperación no es válido o ha expirado. Por favor solicite uno nuevo.');
+            return $this->redirect(['site/request-password-reset']);
+        }
+
+        $this->layout = 'main-login';
+
+        // Clear any flash messages from previous requests
+        Yii::$app->session->removeFlash('success');
+        Yii::$app->session->removeFlash('error');
+
+        // Initialize variables with default values
+        $success = false;
+        $message = '';
+
+        if ($model->load(Yii::$app->request->post())) {
+            Yii::info('Reset password form submitted', 'password-reset');
+            Yii::info('POST data: ' . json_encode(Yii::$app->request->post()), 'password-reset');
+
+            if ($model->validate()) {
+                Yii::info('Reset password validation passed', 'password-reset');
+
+                if ($model->resetPassword()) {
+                    Yii::info('Password reset successful for user', 'password-reset');
+                    $success = true;
+                    $message = 'Su contraseña ha sido restablecida exitosamente. Ahora puede iniciar sesión con su nueva contraseña.';
+                } else {
+                    Yii::error('Reset password failed', 'password-reset');
+                    Yii::$app->session->setFlash('error', 'No se pudo restablecer la contraseña. Por favor intente de nuevo.');
+                }
+            } else {
+                Yii::error('Reset password validation failed: ' . json_encode($model->errors), 'password-reset');
+                Yii::$app->session->setFlash('error', 'Por favor corrija los errores en el formulario.');
+            }
+        }
+
+        return $this->render('resetPassword', [
+            'model' => $model,
+            'success' => $success,
+            'message' => $message,
+        ]);
     }
 }

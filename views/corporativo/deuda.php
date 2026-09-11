@@ -22,12 +22,23 @@ $totalPaid = $totalPaid ?? 0;
 $totalPayments = $totalPayments ?? 0;
 $lastPaymentDate = $lastPaymentDate ?? null;
 
-// Group cuotas by month (based on fecha_vencimiento)
+// ============================================================
+// CHANGED: Group cuotas by coverage_start instead of fecha_vencimiento
+// ============================================================
 $monthGroups = [];
 
 foreach ($allCuotas as $cuota) {
-    $fechaVencimiento = new \DateTime($cuota->fecha_vencimiento);
-    $monthKey = $fechaVencimiento->format('Y-m');
+    // Use coverage_start for grouping
+    $coverageStart = $cuota->coverage_start;
+
+    // Fallback to fecha_vencimiento if coverage_start is null
+    if (empty($coverageStart)) {
+        $coverageStart = $cuota->fecha_vencimiento;
+        \Yii::warning("Cuota #{$cuota->id} has no coverage_start, using fecha_vencimiento: {$coverageStart}", 'deuda');
+    }
+
+    $coverageDate = new \DateTime($coverageStart);
+    $monthKey = $coverageDate->format('Y-m');
 
     // Manual Spanish month mapping (works without intl extension)
     $months = [
@@ -45,10 +56,10 @@ foreach ($allCuotas as $cuota) {
         'December' => 'Diciembre',
     ];
 
-    $englishMonth = $fechaVencimiento->format('F');
-    $monthName = $months[$englishMonth] . ' ' . $fechaVencimiento->format('Y');
-    $monthNumber = $fechaVencimiento->format('m');
-    $year = $fechaVencimiento->format('Y');
+    $englishMonth = $coverageDate->format('F');
+    $monthName = $months[$englishMonth] . ' ' . $coverageDate->format('Y');
+    $monthNumber = $coverageDate->format('m');
+    $year = $coverageDate->format('Y');
 
     $contrato = $cuota->contrato ?? null;
     $userDatos = $contrato->user ?? null;
@@ -63,6 +74,7 @@ foreach ($allCuotas as $cuota) {
             'total' => 0,
             'cuota_count' => 0,
             'affiliates' => [],
+            'coverage_start' => $coverageStart, // Added for reference
         ];
     }
 
@@ -73,6 +85,8 @@ foreach ($allCuotas as $cuota) {
         'affiliate_name' => $userDatos ? $userDatos->nombres . ' ' . $userDatos->apellidos : 'N/A',
         'affiliate_cedula' => $userDatos ? $userDatos->tipo_cedula . '-' . $userDatos->cedula : 'N/A',
         'contrato_nro' => $contrato ? $contrato->nrocontrato : 'N/A',
+        'coverage_start' => $coverageStart,
+        'coverage_end' => $cuota->coverage_end,
     ];
 
     $monthGroups[$monthKey]['cuotas'][] = $cuotaData;
@@ -124,6 +138,9 @@ foreach ($paymentHistory as $payment) {
         ->count();
 }
 
+// ============================================================
+// ENHANCED: Add coverage period badge to month header
+// ============================================================
 // Register CSS
 $this->registerCss(
     <<<CSS
@@ -260,6 +277,15 @@ h5 { font-size: 16px !important; font-weight: 600 !important; }
     font-weight: 500;
 }
 
+.month-badge-coverage {
+    background-color: #e8f4fd;
+    color: #107c10;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
 .month-header-right {
     display: flex;
     align-items: center;
@@ -378,6 +404,16 @@ h5 { font-size: 16px !important; font-weight: 600 !important; }
 
 .affiliate-cuotas-table .text-muted {
     color: #605e5c !important;
+}
+
+/* ===== COVERAGE PERIOD DISPLAY ===== */
+.coverage-period {
+    font-size: 12px;
+    color: #605e5c;
+    background-color: #f3f2f1;
+    padding: 2px 10px;
+    border-radius: 12px;
+    display: inline-block;
 }
 
 /* ===== STATUS STYLES ===== */
@@ -796,7 +832,6 @@ JS
                     <h1 style="font-size: 24px !important; font-weight: 700 !important; margin-bottom: 0 !important;">
                         <i class="fas fa-building me-2"></i>Gestión de Pagos - <?= Html::encode($corporativo->nombre) ?>
                     </h1>
-
                 </div>
 
                 <div class="ms-panel-body">
@@ -979,7 +1014,7 @@ JS
                             <div class="ms-panel border-warning mb-4">
                                 <div class="ms-panel-header bg-gradient-blue-3">
                                     <h3 class="mb-0">
-                                        <i class="fas fa-calendar-alt me-2"></i>Cuotas Pendientes por Mes
+                                        <i class="fas fa-calendar-alt me-2"></i>Cuotas Pendientes por Mes de Cobertura
                                         <span class="badge badge-light ms-2"><?= $totalMonths ?> meses</span>
                                     </h3>
                                 </div>
@@ -1001,6 +1036,12 @@ JS
                                                         <span class="month-badge">
                                                             <i class="fas fa-file-invoice me-1"></i> <?= $month['cuota_count'] ?> cuota(s)
                                                         </span>
+                                                        <?php if (isset($month['coverage_start'])): ?>
+                                                            <span class="coverage-period">
+                                                                <i class="fas fa-calendar-check me-1"></i>
+                                                                Inicio cobertura: <?= Yii::$app->formatter->asDate($month['coverage_start'], 'php:d/m/Y') ?>
+                                                            </span>
+                                                        <?php endif; ?>
                                                     </div>
                                                     <div class="month-header-right">
                                                         <div class="month-stats">
@@ -1073,12 +1114,22 @@ JS
                                                                                             </td>
                                                                                             <td colspan="2">
                                                                                                 <small class="text-muted">Cuota #<?= $cuota->numero_cuota ?></small>
-                                                                                                穷
+                                                                                                <?php if (!empty($cuota->coverage_start) && !empty($cuota->coverage_end)): ?>
+                                                                                                    <br>
+                                                                                                    <span class="coverage-period" style="font-size: 11px;">
+                                                                                                        <i class="fas fa-calendar-alt me-1"></i>
+                                                                                                        Cobertura: <?= Yii::$app->formatter->asDate($cuota->coverage_start, 'php:d/m/Y') ?> -
+                                                                                                        <?= Yii::$app->formatter->asDate($cuota->coverage_end, 'php:d/m/Y') ?>
+                                                                                                    </span>
+                                                                                                <?php endif; ?>
+                                                                                            </td>
                                                                                             <td class="text-end cuota-amount" data-amount="<?= $cuota->monto ?>">
                                                                                                 <strong>$<?= number_format($cuota->monto, 2, '.', ',') ?> USD</strong>
                                                                                             </td>
                                                                                             <td>
-                                                                                                <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?>
+                                                                                                <span class="coverage-period">
+                                                                                                    Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?>
+                                                                                                </span>
                                                                                             </td>
                                                                                             <td>
                                                                                                 <span class="<?= $statusClass ?>"><?= $statusText ?></span>

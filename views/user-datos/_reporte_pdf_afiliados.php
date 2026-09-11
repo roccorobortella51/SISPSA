@@ -57,16 +57,20 @@ $logo = isset($logo) ? $logo : '';
     <?php endif; ?>
 
     <!-- Table -->
-    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9pt;">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 8pt;">
         <thead>
             <tr>
-                <th style="width: 4%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">#</th>
-                <th style="width: 18%; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">Nombre Completo</th>
-                <th style="width: 10%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">Cédula de Identidad</th>
-                <th style="width: 10%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">Fecha de Afiliación</th>
-                <th style="width: 12%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">Plan</th>
-                <th style="width: 8%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">Cuotas Pagadas</th>
-                <th style="width: 38%; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 8px; font-weight: bold;">Clínica</th>
+                <th style="width: 3%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">#</th>
+                <th style="width: 16%; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">Nombre Completo</th>
+                <th style="width: 10%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">Cédula</th>
+                <!-- ============================================ -->
+                <!-- NEW COLUMN: Fecha de Nacimiento              -->
+                <!-- ============================================ -->
+                <th style="width: 10%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">F. Nacimiento</th>
+                <th style="width: 10%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">F. Afiliación</th>
+                <th style="width: 11%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">Plan</th>
+                <th style="width: 7%; text-align: center; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">Cuotas</th>
+                <th style="width: 33%; background-color: #2c3e50; color: white; border: 1px solid #ddd; padding: 6px; font-weight: bold;">Clínica</th>
             </tr>
         </thead>
         <tbody>
@@ -85,9 +89,16 @@ $logo = isset($logo) ? $logo : '';
                     $fechaAfiliacion = date('d/m/Y', strtotime($contrato->created_at));
                 }
 
+                // ============================================
+                // NEW: Format birth date for PDF
+                // ============================================
+                $fechaNacimiento = '';
+                if (!empty($affiliate->fechanac)) {
+                    $fechaNacimiento = date('d/m/Y', strtotime($affiliate->fechanac));
+                }
+
                 $planNombre = $affiliate->plan ? $affiliate->plan->nombre : '';
 
-                // Count paid cuotas across ALL contracts (excluding annulled)
                 $totalPaid = \app\models\Cuotas::find()
                     ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
                     ->where(['contratos.user_id' => $affiliate->id])
@@ -98,19 +109,29 @@ $logo = isset($logo) ? $logo : '';
                 $rowColor = ($counter % 2 == 0) ? '#f9f9f9' : '#ffffff';
                 ?>
                 <tr style="background-color: <?= $rowColor ?>;">
-                    <td style="text-align: center; border: 1px solid #ddd; padding: 6px;"><?= $counter++ ?></td>
-                    <td style="border: 1px solid #ddd; padding: 6px;"><?= Html::encode($affiliate->nombres . ' ' . $affiliate->apellidos) ?></td>
-                    <td style="text-align: center; border: 1px solid #ddd; padding: 6px;"><?= Html::encode($affiliate->tipo_cedula . '-' . $affiliate->cedula) ?></td>
-                    <td style="text-align: center; border: 1px solid #ddd; padding: 6px;">
+                    <td style="text-align: center; border: 1px solid #ddd; padding: 5px;"><?= $counter++ ?></td>
+                    <td style="border: 1px solid #ddd; padding: 5px;"><?= Html::encode($affiliate->nombres . ' ' . $affiliate->apellidos) ?></td>
+                    <td style="text-align: center; border: 1px solid #ddd; padding: 5px;"><?= Html::encode($affiliate->tipo_cedula . '-' . $affiliate->cedula) ?></td>
+                    <!-- ============================================ -->
+                    <!-- NEW: Birth date cell                          -->
+                    <!-- ============================================ -->
+                    <td style="text-align: center; border: 1px solid #ddd; padding: 5px;">
+                        <?php if (!empty($fechaNacimiento)): ?>
+                            <?= Html::encode($fechaNacimiento) ?>
+                        <?php else: ?>
+                            <span style="color: #6c757d; font-style: italic;">N/D</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align: center; border: 1px solid #ddd; padding: 5px;">
                         <?php if (!empty($fechaAfiliacion)): ?>
                             <?= Html::encode($fechaAfiliacion) ?>
                         <?php else: ?>
-                            <span style="color: #6c757d; font-style: italic;">No definida</span>
+                            <span style="color: #6c757d; font-style: italic;">N/D</span>
                         <?php endif; ?>
                     </td>
-                    <td style="text-align: center; border: 1px solid #ddd; padding: 6px;"><?= Html::encode($planNombre) ?></td>
-                    <td style="text-align: center; border: 1px solid #ddd; padding: 6px; font-weight: bold;"><?= number_format($totalPaid) ?></td>
-                    <td style="border: 1px solid #ddd; padding: 6px;"><?= Html::encode($affiliate->clinica ? $affiliate->clinica->nombre : '') ?></td>
+                    <td style="text-align: center; border: 1px solid #ddd; padding: 5px;"><?= Html::encode($planNombre) ?></td>
+                    <td style="text-align: center; border: 1px solid #ddd; padding: 5px; font-weight: bold;"><?= number_format($totalPaid) ?></td>
+                    <td style="border: 1px solid #ddd; padding: 5px;"><?= Html::encode($affiliate->clinica ? $affiliate->clinica->nombre : '') ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>

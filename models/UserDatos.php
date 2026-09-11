@@ -40,7 +40,7 @@ use yii\db\ActiveRecord;
  * @property string|null $ver_cedula
  * @property string|null $ver_foto
  * @property string|null $session_id
- * @property int|null $cedula // ¡Sigue siendo INTEGER en DB, solo números!
+ * @property int|null $cedula
  * @property string|null $tipo_cedula
  * @property string|null $tipo_sangre
  * @property string|null $estatus_solvente
@@ -138,8 +138,8 @@ use yii\db\ActiveRecord;
  * @property string|null $direccion_cobro
  * @property int|null $afiliado_corporativo_id
  * @property int|null $consecutivo_menor
+ * @property int|null $agencia_id
 
- * // ... (Tus @property para las relaciones get...())
  * @property UploadedFile $selfieFile
  * @property UploadedFile $imagenIdentificacionFile
  * @property UploadedFile $videoFile
@@ -149,8 +149,6 @@ use yii\db\ActiveRecord;
  * @property Agente $asesor
  * @property Contratos $contratos
  * @property User $userLogin
- * @property int|null $agencia_id
-
  */
 class UserDatos extends ActiveRecord
 {
@@ -159,11 +157,7 @@ class UserDatos extends ActiveRecord
     public $videoFile;
     public $codigoAsesor;
     public $masivoFile;
-    //public $tiene_contratante_diferente;
     public $cobertura_maternidad;
-    
-    // NOTA: Solo propiedades públicas para campos que NO están en la base de datos
-    // Todos los campos de la tabla están documentados en @property arriba
 
     /**
      * @var string Propiedad temporal para manejar la cédula con el formato completo (ej. V-12345678)
@@ -224,7 +218,7 @@ class UserDatos extends ActiveRecord
                 'message' => 'El afiliado corporativo es obligatorio cuando el tipo es corporativo.'
             ],
 
-            // 4. Valores por defecto (se mantienen igual)
+            // 4. Valores por defecto
             [['paso'], 'default', 'value' => 0.0],
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
@@ -233,7 +227,7 @@ class UserDatos extends ActiveRecord
             [['user_id', 'session_id', 'estatus_solvente'], 'string'],
 
             // 5. Validación de tipos de datos y longitud
-            [['telefono'], 'string', 'max' => 15], // La longitud máxima de (9999) 999-9999 es 14, pero 15 por si acaso
+            [['telefono'], 'string', 'max' => 15],
             [
                 ['telefono'],
                 'match',
@@ -245,20 +239,18 @@ class UserDatos extends ActiveRecord
             [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'tipo_sangre'], 'string', 'max' => 255],
             [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
 
-
             [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
 
-            // 6. Validaciones específicas de contenido (se mantienen igual)
+            // 6. Validaciones específicas de contenido
             [['email'], 'email'],
             [['email'], 'unique', 'targetClass' => UserDatos::class, 'message' => 'Este correo electrónico ya está registrado.'],
 
             [['paso'], 'number'],
             [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
 
-            // 7. Validaciones para campos de selección (TEXT en DB) (se mantienen igual, pero la de tipo_cedula es redundante si se deriva)
+            // 7. Validaciones para campos de selección
             [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
 
-            //validaciones para roles 
             [
                 ['role'],
                 'in',
@@ -270,25 +262,87 @@ class UserDatos extends ActiveRecord
             ],
 
             [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
-            [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G', 'Menor Sin Cédula'], 'message' => 'Tipo de cédula no válido.'],
+            [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G', 'P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'], 'message' => 'Tipo de cédula no válido.'],
 
-            // 8. Validaciones para carga de archivos (se mantienen igual)
+            // 8. Validaciones para carga de archivos
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
             [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
             [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
 
-            // 9. Campos que almacenan la ruta de los archivos (TEXT en DB) (se mantienen igual)
+            // 9. Campos que almacenan la ruta de los archivos
             [['selfie', 'imagen_identificacion', 'video', 'qr'], 'string', 'max' => 255],
 
             // 10. Campos seguros (timestamps)
             [['created_at', 'updated_at', 'deleted_at', 'fechanac', 'clinica_id'], 'safe'],
 
-            // 11. Validación específica para cédula - debe ser numérica y ahora es obligatoria
+            // 11. Validación específica para cédula
             [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
             [['cedula'], 'integer', 'max' => 9999999999, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
             [['codigoAsesor'], 'safe'],
+            // ============================================
+            // CEDULA VALIDATION - COMPLETE SECTION
+            // ============================================
 
-            // 12. Validaciones de Existencia (Claves Foráneas) (se mantienen igual)
+            // 1. Required validation
+            [
+                'cedula',
+                'required',
+                'when' => function ($model) {
+                    return $model->tipo_cedula !== 'Menor Sin Cédula' && !$model->tiene_contratante_diferente;
+                },
+                'whenClient' => "function (attribute, value) {
+        var tipoCedula = $('#userdatos-tipo_cedula').val();
+        return tipoCedula !== 'Menor Sin Cédula' && !$('#userdatos-tiene_contratante_diferente').is(':checked');
+    }",
+                'message' => 'Este campo es obligatorio.'
+            ],
+            // 2. Integer validation - SKIP for Passport, Menor Sin Cédula, Afiliado Otras Clínicas
+            [
+                'cedula',
+                'integer',
+                'when' => function ($model) {
+                    $skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
+                    return !in_array($model->tipo_cedula, $skipTypes);
+                },
+                'whenClient' => "function (attribute, value) {
+        var tipoCedula = $('#userdatos-tipo_cedula').val();
+        var skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
+        return skipTypes.indexOf(tipoCedula) === -1;
+    }",
+                'message' => 'Cédula debe ser un número entero.'
+            ],
+            // 3. Max length validation - SKIP for Passport, Menor Sin Cédula, Afiliado Otras Clínicas
+            [
+                'cedula',
+                'integer',
+                'max' => 9999999999,
+                'when' => function ($model) {
+                    $skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
+                    return !in_array($model->tipo_cedula, $skipTypes);
+                },
+                'whenClient' => "function (attribute, value) {
+        var tipoCedula = $('#userdatos-tipo_cedula').val();
+        var skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
+        return skipTypes.indexOf(tipoCedula) === -1;
+    }",
+                'message' => 'La cédula no puede tener más de 10 dígitos.'
+            ],
+            // 4. Passport validation - numbers only
+            [
+                'cedula',
+                'match',
+                'pattern' => '/^[0-9]+$/',
+                'when' => function ($model) {
+                    return $model->tipo_cedula === 'P' && !$model->tiene_contratante_diferente;
+                },
+                'whenClient' => "function (attribute, value) {
+        var tipoCedula = $('#userdatos-tipo_cedula').val();
+        return tipoCedula === 'P' && !$('#userdatos-tiene_contratante_diferente').is(':checked');
+    }",
+                'message' => 'Pasaporte debe ser un número entero. Ingrese solo el número.'
+            ],
+
+            // 12. Validaciones de Existencia (Claves Foráneas)
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
             [['contrato_id'], 'validateContratoId', 'skipOnEmpty' => true, 'skipOnError' => true],
@@ -298,7 +352,7 @@ class UserDatos extends ActiveRecord
             [['banco_id'], 'exist', 'skipOnError' => true, 'targetClass' => Banco::class, 'targetAttribute' => ['banco_id' => 'id'], 'message' => 'El banco seleccionado no existe.'],
 
             // 13. Validaciones de fecha
-            [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'], // Valida el formato de fecha
+            [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'],
             [
                 ['fechanac'],
                 'compare',
@@ -308,7 +362,7 @@ class UserDatos extends ActiveRecord
                 'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'
             ],
 
-            // 14. Validaciones para campos de texto (VARCHAR/TEXT)
+            // 14. Validaciones para campos de texto
             [[
                 'nacionalidad',
                 'estado_civil',
@@ -401,7 +455,6 @@ class UserDatos extends ActiveRecord
             [['grupo_familiar'], 'safe'],
 
             [['tipo_cedula', 'cedula'], 'required', 'when' => function ($model) {
-                // Solo es requerido si 'tiene_contratante_diferente' es falso/no está marcado.
                 return !$model->tiene_contratante_diferente;
             }, 'whenClient' => "function (attribute, value) {
                 return !$('#userdatos-tiene_contratante_diferente').is(':checked');
@@ -433,6 +486,9 @@ class UserDatos extends ActiveRecord
             ],
             [['agencia_id'], 'integer'],
             [['agencia_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['agencia_id' => 'id']],
+
+            // 19. DUPLICATE VALIDATION - Check if affiliate already exists
+            ['cedula', 'validateNoDuplicate'],
         ];
     }
 
@@ -552,7 +608,7 @@ class UserDatos extends ActiveRecord
     public function attributeLabels()
     {
         return array_merge(parent::attributeLabels(), [
-            'cedulaFormatted' => 'Cédula de Identidad',
+            'cedulaFormatted' => 'Cédula de Identidad / Pasaporte',
             'direccion_cobro' => 'Dirección de Cobro',
             'user_datos_type_id' => 'Tipo de Afiliado',
             'clinica_id' => 'Clínica',
@@ -560,29 +616,27 @@ class UserDatos extends ActiveRecord
             'consecutivo_menor' => 'Número Consecutivo',
             'afiliado_corporativo_id' => 'Afiliado Corporativo',
             'agencia_id' => 'Agencia Asociada',
-
         ]);
     }
 
-    // --- INICIO: Validador personalizado para el campo 'telefono' ---
+    // ============================================
+    // VALIDACIÓN PERSONALIZADA PARA TELÉFONO
+    // ============================================
+
     /**
      * Valida que el número de teléfono sea venezolano y tenga un prefijo válido.
-     * Este método es llamado por la regla de validación definida en `rules()`.
      *
      * @param string $attribute El nombre del atributo que se está validando (ej. 'telefono').
      * @param array $params Parámetros adicionales para la validación.
      */
     public function validateVenezuelanPhoneNumber($attribute, $params)
     {
-        // Si ya hay errores en el atributo (ej. 'required'), no seguimos validando.
         if ($this->hasErrors($attribute)) {
             return;
         }
 
-        // Limpiamos el formato del número de teléfono (quita paréntesis, espacios, guiones).
         $cleanedPhone = str_replace(['(', ')', ' ', '-'], '', $this->$attribute);
 
-        // Define los prefijos venezolanos válidos.
         $validPrefixes = [
             '0416',
             '0426',
@@ -601,101 +655,334 @@ class UserDatos extends ActiveRecord
             '0293'
         ];
 
-        // 1. Valida la longitud total del número limpio.
         if (strlen($cleanedPhone) !== 11) {
             $this->addError($attribute, 'El número de teléfono debe tener 11 dígitos.');
-            return; // Si la longitud es incorrecta, no continuamos con la validación de prefijo.
+            return;
         }
 
-        // 2. Extrae el prefijo (los primeros 4 dígitos).
         $prefix = substr($cleanedPhone, 0, 4);
 
-        // 3. Valida si el prefijo está en la lista de prefijos válidos.
         if (!in_array($prefix, $validPrefixes)) {
             $this->addError($attribute, 'El prefijo del número de teléfono no es válido en Venezuela.');
         }
 
-        // 4. (Opcional pero recomendado) Valida que el resto del número sean solo dígitos.
         if (!preg_match('/^\d{11}$/', $cleanedPhone)) {
             $this->addError($attribute, 'El número de teléfono debe contener solo dígitos.');
         }
     }
-    // --- FIN: Validador personalizado para el campo 'telefono' ---
+
+    // ============================================
+    // VALIDACIÓN PERSONALIZADA PARA EDAD
+    // ============================================
 
     /**
      * Valida que la fecha de nacimiento no corresponda a una persona menor de 18 años.
-     * Este es un método de validación personalizado.
      *
      * @param string $attribute el nombre del atributo a validar (ej. 'fechanac')
      * @param array $params parámetros adicionales (no usados aquí)
      */
     public function validateAge($attribute, $params)
     {
-        // Solo valida si el campo tiene un valor. Las reglas 'required' y 'date'
-        // ya deberían asegurar que el valor no esté vacío y tenga un formato de fecha.
         if (!empty($this->$attribute)) {
             try {
-                // Crea objetos DateTime para la fecha de nacimiento y la fecha actual
                 $birthDate = new \DateTime($this->$attribute);
-                $today = new \DateTime(); // La fecha y hora actual (ej. 2025-07-12)
-
-                // Calcula la diferencia en años
+                $today = new \DateTime();
                 $age = $birthDate->diff($today)->y;
 
-                // Si la edad calculada es menor de 18, añade un error
                 if ($age < 18) {
                     $this->addError($attribute, 'Debe tener al menos 18 años para registrarse.');
                 }
             } catch (\Exception $e) {
-                // Captura cualquier error si el valor de la fecha es inesperadamente inválido
                 $this->addError($attribute, 'Formato de fecha de nacimiento inválido.');
             }
         }
     }
 
-    // --- RELACIONES (MÉTODOS GET) ---
-    public function getClinica()
+    // ============================================
+    // VALIDACIÓN PERSONALIZADA PARA DUPLICADOS
+    // ============================================
+
+    /**
+     * Comprehensive duplicate validation for affiliates
+     * 
+     * @param bool $excludeCurrent If true, exclude current record when checking duplicates
+     * @return bool Returns true if duplicate found, false otherwise
+     */
+    public function checkAffiliateDuplicate($excludeCurrent = false)
     {
-        return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']);
-    }
-    public function getPlan()
-    {
-        return $this->hasOne(Planes::class, ['id' => 'plan_id']);
-    }
-    public function getAsesor()
-    {
-        return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']);
-    }
-    public function getContrato()
-    {
-        return $this->hasOne(Contratos::class, ['id' => 'contrato_id']);
-    }
-    public function getContratos()
-    {
-        return $this->hasMany(Contratos::class, ['user_id' => 'id']);
-    }
-    public function getUserLogin()
-    {
-        return $this->hasOne(User::class, ['id' => 'user_login_id']);
-    }
-    public function getUserDatosType()
-    {
-        return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);
-    }
-    public function getUser()
-    {
-        return $this->hasOne(User::class, ['id' => 'user_login_id']);
-    }
-    public function getBanco()
-    {
-        return $this->hasOne(Banco::class, ['id' => 'banco_id']);
+        // Only check for 'afiliado' role
+        if ($this->role !== 'afiliado') {
+            return false;
+        }
+
+        // For underage (Menor Sin Cédula), we use a different duplicate logic
+        if ($this->tipo_cedula === 'Menor Sin Cédula') {
+            return $this->checkUnderageDuplicate($excludeCurrent);
+        }
+
+        // Regular duplicate check for normal affiliates
+        return $this->checkRegularDuplicate($excludeCurrent);
     }
 
-
-    public function getCorporativo()
+    /**
+     * Check duplicates for regular affiliates (non-underage)
+     * 
+     * @param bool $excludeCurrent
+     * @return bool
+     */
+    private function checkRegularDuplicate($excludeCurrent = false)
     {
-        return $this->hasOne(Corporativo::class, ['id' => 'afiliado_corporativo_id']);
+        // Normalize names for comparison (trim, remove multiple spaces)
+        $nombres = preg_replace('/\s+/', ' ', trim($this->nombres));
+        $apellidos = preg_replace('/\s+/', ' ', trim($this->apellidos));
+
+        $query = self::find()
+            ->where(['role' => 'afiliado'])
+            ->andWhere(['tipo_cedula' => $this->tipo_cedula])
+            ->andWhere(['cedula' => $this->cedula])
+            ->andWhere(['IS', 'deleted_at', null]);
+
+        // ============================================
+        // MODIFIED: Only check cross-type for non-"Afiliado Otras Clínicas"
+        // "Afiliado Otras Clínicas" is treated as a separate valid type
+        // ============================================
+        if ($this->tipo_cedula !== 'Afiliado Otras Clínicas') {
+            // For regular types (V, E, J, etc.), check if this cedula exists 
+            // with "Afiliado Otras Clínicas" type
+            $crossQuery = self::find()
+                ->where(['role' => 'afiliado'])
+                ->andWhere(['cedula' => $this->cedula])
+                ->andWhere(['IS', 'deleted_at', null])
+                ->andWhere(['tipo_cedula' => 'Afiliado Otras Clínicas']);
+
+            if ($excludeCurrent && !$this->isNewRecord) {
+                $crossQuery->andWhere(['!=', 'id', $this->id]);
+            }
+
+            if ($crossQuery->count() > 0) {
+                return true;
+            }
+        }
+
+        // Also check: If current is "Afiliado Otras Clínicas", check if it exists
+        // with the SAME tipo (should be the only one)
+        if ($this->tipo_cedula === 'Afiliado Otras Clínicas') {
+            // Only check for exact match on tipo_cedula for this type
+            // No cross-type checking for "Afiliado Otras Clínicas"
+            // This allows "Afiliado Otras Clínicas" to coexist with V, E, J, etc.
+            // with the same cedula number
+            if ($excludeCurrent && !$this->isNewRecord) {
+                $query->andWhere(['!=', 'id', $this->id]);
+            }
+        } else {
+            if ($excludeCurrent && !$this->isNewRecord) {
+                $query->andWhere(['!=', 'id', $this->id]);
+            }
+        }
+
+        $count = $query->count();
+
+        if ($count > 0) {
+            if ($count == 1) {
+                $existing = $query->one();
+                if ($existing) {
+                    if (
+                        strcasecmp($existing->nombres, $nombres) === 0 &&
+                        strcasecmp($existing->apellidos, $apellidos) === 0
+                    ) {
+                        return true;
+                    }
+                    return true;
+                }
+            }
+            return true;
+        }
+
+        return false;
     }
+
+    /**
+     * Check duplicates for underage affiliates (Menor Sin Cédula)
+     * These can share the same parent/tutor cedula
+     * 
+     * @param bool $excludeCurrent
+     * @return bool
+     */
+    private function checkUnderageDuplicate($excludeCurrent = false)
+    {
+        $nombres = preg_replace('/\s+/', ' ', trim($this->nombres));
+        $apellidos = preg_replace('/\s+/', ' ', trim($this->apellidos));
+
+        $query = self::find()
+            ->where(['role' => 'afiliado'])
+            ->andWhere(['tipo_cedula' => 'Menor Sin Cédula'])
+            ->andWhere(['cedula' => $this->cedula])
+            ->andWhere(['IS', 'deleted_at', null]);
+
+        if ($excludeCurrent && !$this->isNewRecord) {
+            $query->andWhere(['!=', 'id', $this->id]);
+        }
+
+        $existing = $query->all();
+
+        if (empty($existing)) {
+            return false;
+        }
+
+        $nombresLower = strtolower($nombres);
+        $apellidosLower = strtolower($apellidos);
+
+        foreach ($existing as $record) {
+            $recordNombres = strtolower(preg_replace('/\s+/', ' ', trim($record->nombres)));
+            $recordApellidos = strtolower(preg_replace('/\s+/', ' ', trim($record->apellidos)));
+
+            if ($recordNombres === $nombresLower && $recordApellidos === $apellidosLower) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get duplicate details for error reporting
+     * 
+     * @param bool $excludeCurrent
+     * @return array|null Returns array with duplicate record details or null if none
+     */
+    public function getDuplicateDetails($excludeCurrent = false)
+    {
+        if ($this->tipo_cedula === 'Menor Sin Cédula') {
+            return $this->getUnderageDuplicateDetails($excludeCurrent);
+        }
+
+        return $this->getRegularDuplicateDetails($excludeCurrent);
+    }
+
+    /**
+     * Get regular affiliate duplicate details
+     * 
+     * @param bool $excludeCurrent
+     * @return array|null Returns array with 'record' and 'type' keys, or null
+     */
+    private function getRegularDuplicateDetails($excludeCurrent = false)
+    {
+        $query = self::find()
+            ->where(['role' => 'afiliado'])
+            ->andWhere(['tipo_cedula' => $this->tipo_cedula])
+            ->andWhere(['cedula' => $this->cedula])
+            ->andWhere(['IS', 'deleted_at', null]);
+
+        if ($excludeCurrent && !$this->isNewRecord) {
+            $query->andWhere(['!=', 'id', $this->id]);
+        }
+
+        $record = $query->one();
+
+        if ($record) {
+            return [
+                'record' => $record,
+                'type' => 'regular'
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Get underage affiliate duplicate details
+     * 
+     * @param bool $excludeCurrent
+     * @return array|null Returns array with 'record' and 'type' keys, or null
+     */
+    private function getUnderageDuplicateDetails($excludeCurrent = false)
+    {
+        $nombres = preg_replace('/\s+/', ' ', trim($this->nombres));
+        $apellidos = preg_replace('/\s+/', ' ', trim($this->apellidos));
+
+        $query = self::find()
+            ->where(['role' => 'afiliado'])
+            ->andWhere(['tipo_cedula' => 'Menor Sin Cédula'])
+            ->andWhere(['cedula' => $this->cedula])
+            ->andWhere(['IS', 'deleted_at', null]);
+
+        if ($excludeCurrent && !$this->isNewRecord) {
+            $query->andWhere(['!=', 'id', $this->id]);
+        }
+
+        $nombresLower = strtolower($nombres);
+        $apellidosLower = strtolower($apellidos);
+
+        foreach ($query->all() as $record) {
+            $recordNombres = strtolower(preg_replace('/\s+/', ' ', trim($record->nombres)));
+            $recordApellidos = strtolower(preg_replace('/\s+/', ' ', trim($record->apellidos)));
+
+            if ($recordNombres === $nombresLower && $recordApellidos === $apellidosLower) {
+                return [
+                    'record' => $record,
+                    'type' => 'underage'
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Validate that there is no duplicate affiliate
+     */
+    public function validateNoDuplicate($attribute, $params)
+    {
+        if ($this->role !== 'afiliado') {
+            return;
+        }
+
+        $excludeCurrent = !$this->isNewRecord;
+
+        if ($this->checkAffiliateDuplicate($excludeCurrent)) {
+            $duplicateInfo = $this->getDuplicateDetails($excludeCurrent);
+
+            $message = 'Este afiliado ya se encuentra registrado en el sistema.';
+
+            if ($duplicateInfo && isset($duplicateInfo['record'])) {
+                $record = $duplicateInfo['record'];
+                $message .= ' Registro existente: ' . $record->nombres . ' ' . $record->apellidos;
+                $message .= ' (Cédula: ' . $record->tipo_cedula . '-' . $record->cedula . ')';
+
+                if ($this->tipo_cedula === 'Menor Sin Cédula') {
+                    $message .= ' | Consecutivo: ' . ($record->consecutivo_menor ?? 'N/A');
+                }
+            }
+
+            $this->addError($attribute, $message);
+        }
+    }
+
+    // ============================================
+    // VALIDACIÓN PERSONALIZADA PARA CONTRATO ID
+    // ============================================
+
+    /**
+     * Custom validator for contrato_id
+     * Only validates if the contrato_id is not empty AND we're not in update mode
+     */
+    public function validateContratoId($attribute, $params)
+    {
+        if (!empty($this->$attribute)) {
+            $contrato = Contratos::findOne($this->$attribute);
+            if ($contrato === null) {
+                if ($this->isNewRecord) {
+                    $this->addError($attribute, 'El contrato seleccionado no existe.');
+                } else {
+                    $this->$attribute = null;
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // BEFORE VALIDATE
+    // ============================================
 
     public function beforeValidate()
     {
@@ -703,44 +990,154 @@ class UserDatos extends ActiveRecord
             return false;
         }
 
-        // Solución de emergencia: Convertir el valor a booleano estricto.
-        // Esto es necesario para PostgreSQL cuando el campo es 'boolean'.
         if ($this->hasAttribute('tiene_contratante_diferente')) {
-            // Si el valor es el entero 1 o 0 (que es lo que envían el controlador/form), 
-            // lo convertimos a TRUE o FALSE antes de la validación final.
             $this->tiene_contratante_diferente = (bool)$this->tiene_contratante_diferente;
         }
 
         return true;
     }
-    /**
-     * Custom validator for contrato_id
-     * Only validates if the contrato_id is not empty AND we're not in update mode
-     */
-    public function validateContratoId($attribute, $params)
-    {
-        // Only validate if contrato_id is not empty/null
-        if (!empty($this->$attribute)) {
-            // Check if the contract exists
-            $contrato = Contratos::findOne($this->$attribute);
-            if ($contrato === null) {
-                // Contract doesn't exist
-                // BUT: If we're updating and the contract was deleted, we should allow it
-                // The controller will handle creating a new contract
 
-                // Only add error if this is a new record
-                if ($this->isNewRecord) {
-                    $this->addError($attribute, 'El contrato seleccionado no existe.');
-                } else {
-                    // For existing records, we'll allow this and let the controller handle it
-                    // Clear the invalid contrato_id so it can be set to a new one
-                    $this->$attribute = null;
-                }
-            }
-        }
+    // ============================================
+    // RELACIONES (MÉTODOS GET)
+    // ============================================
+
+    public function getClinica()
+    {
+        return $this->hasOne(RmClinica::class, ['id' => 'clinica_id']);
     }
+
+    public function getPlan()
+    {
+        return $this->hasOne(Planes::class, ['id' => 'plan_id']);
+    }
+
+    public function getAsesor()
+    {
+        return $this->hasOne(AgenteFuerza::class, ['id' => 'asesor_id']);
+    }
+
+    public function getContrato()
+    {
+        return $this->hasOne(Contratos::class, ['id' => 'contrato_id']);
+    }
+
+    public function getContratos()
+    {
+        return $this->hasMany(Contratos::class, ['user_id' => 'id']);
+    }
+
+    public function getUserLogin()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_login_id']);
+    }
+
+    public function getUserDatosType()
+    {
+        return $this->hasOne(UserDatosType::class, ['id' => 'user_datos_type_id']);
+    }
+
+    public function getUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_login_id']);
+    }
+
+    public function getBanco()
+    {
+        return $this->hasOne(Banco::class, ['id' => 'banco_id']);
+    }
+
+    public function getCorporativo()
+    {
+        return $this->hasOne(Corporativo::class, ['id' => 'afiliado_corporativo_id']);
+    }
+
     public function getAgencia()
     {
         return $this->hasOne(Agente::class, ['id' => 'agencia_id']);
+    }
+
+    // ============================================
+    // MÉTODOS UTILITARIOS
+    // ============================================
+
+    /**
+     * Get the full location as a formatted string
+     * 
+     * @return string Location in format "Estado, Municipio, Ciudad"
+     */
+    public function getFullLocation()
+    {
+        $parts = [];
+        if (!empty($this->estado)) $parts[] = $this->estado;
+        if (!empty($this->municipio)) $parts[] = $this->municipio;
+        if (!empty($this->ciudad)) $parts[] = $this->ciudad;
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Get the SUDEASEG location code for this user
+     * 
+     * @return string Location code in format "XX-YY"
+     */
+    public function getSudeasegLocationCode()
+    {
+        if (empty($this->estado)) {
+            return '';
+        }
+
+        if (!empty($this->municipio)) {
+            $code = EventoReportSearch::getLocationCode($this->estado, $this->municipio);
+            if (!empty($code)) return $code;
+        }
+
+        if (!empty($this->ciudad)) {
+            $code = EventoReportSearch::getLocationCode($this->estado, $this->ciudad);
+            if (!empty($code)) return $code;
+        }
+
+        if (!empty($this->parroquia)) {
+            $code = EventoReportSearch::getLocationCode($this->estado, $this->parroquia);
+            if (!empty($code)) return $code;
+        }
+
+        $stateCode = EventoReportSearch::getStateCode($this->estado);
+        if ($stateCode) {
+            return $stateCode . '-00';
+        }
+
+        return '';
+    }
+    /**
+     * Gets query for [[Preexistencias]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPreexistencias()
+    {
+        return $this->hasMany(Preexistencias::class, ['user_id' => 'id'])
+            ->where(['IS', 'deleted_at', null])
+            ->orderBy(['created_at' => SORT_DESC]);
+    }
+
+    /**
+     * Gets query for [[DeclaracionDeSalud]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getDeclaracionDeSalud()
+    {
+        return $this->hasOne(DeclaracionDeSalud::class, ['user_id' => 'id'])
+            ->where(['IS', 'deleted_at', null])
+            ->orderBy(['created_at' => SORT_DESC]);
+    }
+
+    /**
+     * Check if the affiliate has a health declaration
+     *
+     * @return bool
+     */
+    public function hasHealthDeclaration()
+    {
+        return $this->getDeclaracionDeSalud()->exists();
     }
 }

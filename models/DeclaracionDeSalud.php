@@ -1,4 +1,5 @@
 <?php
+// app/models/DeclaracionDeSalud.php
 
 namespace app\models;
 
@@ -57,7 +58,25 @@ use Yii;
  */
 class DeclaracionDeSalud extends \yii\db\ActiveRecord
 {
-
+    // Question labels for mapping
+    const QUESTIONS = [
+        'p1' => 'Enfermedades Cardiovasculares',
+        'p2' => 'Enfermedades Vasculares',
+        'p3' => 'Enfermedades de la Sangre',
+        'p4' => 'Enfermedades de las Vías Respiratorias',
+        'p5' => 'Enfermedades de las Vías Digestivas',
+        'p6' => 'Enfermedades del Sistema Endocrino',
+        'p7' => 'Enfermedades Osteomusculares',
+        'p8' => 'Enfermedades Genito-Urinarias',
+        'p9' => 'Enfermedades de Piel, Ojos, Oídos, Nariz, Garganta',
+        'p10' => 'Enfermedades o Desorden Mental',
+        'p11' => 'Enfermedades Transitorias Crónicas',
+        'p12' => 'Cáncer, Tumores, Quistes',
+        'p13' => 'Enfermedades Propias de la Mujer',
+        'p14' => 'Transfusiones, Quimioterapia, Radioterapia',
+        'p15' => 'Intervenciones Quirúrgicas',
+        'p16' => 'Otras Enfermedades o Patologías',
+    ];
 
     /**
      * {@inheritdoc}
@@ -90,48 +109,48 @@ class DeclaracionDeSalud extends \yii\db\ActiveRecord
     {
         return [
             'id' => 'ID',
-            'created_at' => 'Created At',
-            'p1_sino' => 'P1 Sino',
-            'p1_especifica' => 'P1 Especifica',
-            'p2_sino' => 'P2 Sino',
-            'p2_especifica' => 'P2 Especifica',
-            'p3_sino' => 'P3 Sino',
-            'p3_especifica' => 'P3 Especifica',
-            'p4_sino' => 'P4 Sino',
-            'p4_especifica' => 'P4 Especifica',
-            'p5_sino' => 'P5 Sino',
-            'p5_especifica' => 'P5 Especifica',
-            'p6_sino' => 'P6 Sino',
-            'p6_especifica' => 'P6 Especifica',
-            'p7_sino' => 'P7 Sino',
-            'p7_especifica' => 'P7 Especifica',
-            'p8_sino' => 'P8 Sino',
-            'p8_especifica' => 'P8 Especifica',
-            'p9_sino' => 'P9 Sino',
-            'p9_especifica' => 'P9 Especifica',
-            'p10_sino' => 'P10 Sino',
-            'p10_especifica' => 'P10 Especifica',
-            'p11_sino' => 'P11 Sino',
-            'p11_especifica' => 'P11 Especifica',
-            'p12_sino' => 'P12 Sino',
-            'p12_especifica' => 'P12 Especifica',
-            'p13_sino' => 'P13 Sino',
-            'p13_especifica' => 'P13 Especifica',
-            'p14_sino' => 'P14 Sino',
-            'p14_especifica' => 'P14 Especifica',
-            'p15_sino' => 'P15 Sino',
-            'p15_especifica' => 'P15 Especifica',
-            'p16_sino' => 'P16 Sino',
-            'p16_especifica' => 'P16 Especifica',
-            'deleted_at' => 'Deleted At',
-            'updated_at' => 'Updated At',
+            'created_at' => 'Fecha de Creación',
+            'p1_sino' => 'Enfermedades Cardiovasculares',
+            'p1_especifica' => 'Especificación',
+            'p2_sino' => 'Enfermedades Vasculares',
+            'p2_especifica' => 'Especificación',
+            'p3_sino' => 'Enfermedades de la Sangre',
+            'p3_especifica' => 'Especificación',
+            'p4_sino' => 'Enfermedades de las Vías Respiratorias',
+            'p4_especifica' => 'Especificación',
+            'p5_sino' => 'Enfermedades de las Vías Digestivas',
+            'p5_especifica' => 'Especificación',
+            'p6_sino' => 'Enfermedades del Sistema Endocrino',
+            'p6_especifica' => 'Especificación',
+            'p7_sino' => 'Enfermedades Osteomusculares',
+            'p7_especifica' => 'Especificación',
+            'p8_sino' => 'Enfermedades Genito-Urinarias',
+            'p8_especifica' => 'Especificación',
+            'p9_sino' => 'Enfermedades de Piel, Ojos, Oídos, Nariz, Garganta',
+            'p9_especifica' => 'Especificación',
+            'p10_sino' => 'Enfermedades o Desorden Mental',
+            'p10_especifica' => 'Especificación',
+            'p11_sino' => 'Enfermedades Transitorias Crónicas',
+            'p11_especifica' => 'Especificación',
+            'p12_sino' => 'Cáncer, Tumores, Quistes',
+            'p12_especifica' => 'Especificación',
+            'p13_sino' => 'Enfermedades Propias de la Mujer',
+            'p13_especifica' => 'Especificación',
+            'p14_sino' => 'Transfusiones, Quimioterapia, Radioterapia',
+            'p14_especifica' => 'Especificación',
+            'p15_sino' => 'Intervenciones Quirúrgicas',
+            'p15_especifica' => 'Especificación',
+            'p16_sino' => 'Otras Enfermedades o Patologías',
+            'p16_especifica' => 'Especificación',
+            'deleted_at' => 'Eliminado El',
+            'updated_at' => 'Actualizado El',
             'ver_usuario_id' => 'Ver Usuario ID',
             'ver_observacion' => 'Ver Observacion',
             'ver_si_no' => 'Ver Si No',
             'ver_fecha' => 'Ver Fecha',
             'url_video_declaracion' => 'Url Video Declaracion',
             'estatus' => 'Estatus',
-            'user_id' => 'User ID',
+            'user_id' => 'Afiliado',
             'estatura' => 'Estatura',
             'peso' => 'Peso',
         ];
@@ -147,4 +166,315 @@ class DeclaracionDeSalud extends \yii\db\ActiveRecord
         return $this->hasOne(UserDatos::class, ['id' => 'user_id']);
     }
 
+    /**
+     * Gets query for [[Preexistencias]] related to this declaration.
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPreexistencias()
+    {
+        return $this->hasMany(Preexistencias::class, ['user_id' => 'user_id'])
+            ->where(['IS', 'preexistencias.deleted_at', null])
+            ->orderBy(['preexistencias.created_at' => SORT_DESC]);
+    }
+
+    /**
+     * Get all questions with their answers
+     *
+     * @return array
+     */
+    public function getQuestionsWithAnswers()
+    {
+        $questions = [];
+        foreach (self::QUESTIONS as $key => $label) {
+            $sinoField = $key . '_sino';
+            $especificaField = $key . '_especifica';
+            $questions[$key] = [
+                'label' => $label,
+                'sino' => $this->$sinoField,
+                'especifica' => $this->$especificaField,
+            ];
+        }
+        return $questions;
+    }
+
+    /**
+     * Get only the questions answered with "Yes"
+     *
+     * @return array
+     */
+    public function getYesAnswers()
+    {
+        $yesAnswers = [];
+        foreach (self::QUESTIONS as $key => $label) {
+            $sinoField = $key . '_sino';
+            $especificaField = $key . '_especifica';
+            // Check for 'Si' or 'Yes' case-insensitively
+            $value = strtolower(trim($this->$sinoField));
+            if ($value === 'si' || $value === 'yes' || $value === 'sí') {
+                $yesAnswers[$key] = [
+                    'label' => $label,
+                    'especifica' => $this->$especificaField,
+                ];
+            }
+        }
+        return $yesAnswers;
+    }
+
+    /**
+     * Check if any question has a "Yes" answer
+     *
+     * @return bool
+     */
+    public function hasYesAnswers()
+    {
+        return !empty($this->getYesAnswers());
+    }
+
+    /**
+     * Synchronize pre-existences based on health declaration answers.
+     * 
+     * IMPORTANT MAPPING:
+     * - Preexistencias.nombre = The user's specific description (p1_especifica, etc.)
+     * - Preexistencias.descripcion = The condition label + the user's specific description (concatenated)
+     * - Preexistencias.fecha_diagnostico = The created_at date from the health declaration
+     *
+     * Example:
+     * - Health Declaration: p1_sino = "Si", p1_especifica = "Hipertensión arterial en tratamiento", created_at = "2024-01-15 10:30:00"
+     * - Result: 
+     *   - Preexistencias.nombre = "Hipertensión arterial en tratamiento"
+     *   - Preexistencias.descripcion = "Enfermedades Cardiovasculares: Hipertensión arterial en tratamiento"
+     *   - Preexistencias.fecha_diagnostico = "2024-01-15"
+     *
+     * @return array Result with 'created', 'deleted', 'errors'
+     */
+    public function syncPreexistencias()
+    {
+        $result = [
+            'created' => [],
+            'deleted' => [],
+            'errors' => [],
+        ];
+
+        if (!$this->user_id) {
+            $result['errors'][] = 'No user_id associated with this health declaration.';
+            return $result;
+        }
+
+        // Get current "Yes" answers
+        $yesAnswers = $this->getYesAnswers();
+
+        // Get existing pre-existencias for this user
+        $existingPreexistencias = Preexistencias::find()
+            ->where(['user_id' => $this->user_id])
+            ->andWhere(['IS', 'preexistencias.deleted_at', null])
+            ->all();
+
+        // Map existing pre-existencias by their source question
+        $existingMap = [];
+        foreach ($existingPreexistencias as $pre) {
+            $sourceKey = null;
+            foreach (self::QUESTIONS as $key => $label) {
+                // Check if the description starts with the label
+                if (strpos($pre->descripcion, $label . ':') === 0) {
+                    $sourceKey = $key;
+                    break;
+                }
+                // Also check if the nombre matches the label (for backward compatibility)
+                if ($pre->nombre === $label) {
+                    $sourceKey = $key;
+                    break;
+                }
+            }
+            if ($sourceKey) {
+                $existingMap[$sourceKey] = $pre;
+            }
+        }
+
+        // Track which keys we've processed
+        $processedKeys = [];
+
+        // Create or update pre-existencias for "Yes" answers
+        foreach ($yesAnswers as $key => $answer) {
+            $processedKeys[] = $key;
+            $label = $answer['label'];
+            $especifica = trim($answer['especifica']);
+
+            // Build the values
+            if (!empty($especifica)) {
+                $nombre = $especifica;
+                $descripcion = $label . ': ' . $especifica;
+            } else {
+                $nombre = 'Diagnosticado con ' . $label;
+                $descripcion = $label . ': ' . 'Diagnosticado con ' . $label;
+            }
+
+            // Use the created_at date as fecha_diagnostico
+            $fechaDiagnostico = $this->created_at ? date('Y-m-d', strtotime($this->created_at)) : null;
+
+            if (isset($existingMap[$key])) {
+                // Update existing pre-existence
+                $pre = $existingMap[$key];
+                $pre->nombre = $nombre;
+                $pre->descripcion = $descripcion;
+                $pre->fecha_diagnostico = $fechaDiagnostico;
+                $pre->estatus = Preexistencias::ESTATUS_ACTIVO;
+                $pre->updated_at = date('Y-m-d H:i:s');
+                if ($pre->save()) {
+                    $result['created'][] = "Actualizado: {$pre->nombre} → {$pre->descripcion} (Fecha: {$fechaDiagnostico})";
+                } else {
+                    $result['errors'][] = "Error updating pre-existence for {$key}: " . implode(', ', $pre->getErrorSummary(true));
+                }
+            } else {
+                // Create new pre-existence
+                $pre = new Preexistencias();
+                $pre->user_id = $this->user_id;
+                $pre->nombre = $nombre;
+                $pre->descripcion = $descripcion;
+                $pre->fecha_diagnostico = $fechaDiagnostico;
+                $pre->estatus = Preexistencias::ESTATUS_ACTIVO;
+                $pre->created_at = date('Y-m-d H:i:s');
+                if ($pre->save()) {
+                    $result['created'][] = "Creado: {$pre->nombre} → {$pre->descripcion} (Fecha: {$fechaDiagnostico})";
+                } else {
+                    $result['errors'][] = "Error creating pre-existence for {$key}: " . implode(', ', $pre->getErrorSummary(true));
+                }
+            }
+        }
+
+        // Soft delete pre-existencias that are no longer "Yes"
+        foreach ($existingMap as $key => $pre) {
+            if (!in_array($key, $processedKeys)) {
+                $pre->deleted_at = date('Y-m-d H:i:s');
+                if ($pre->save()) {
+                    $result['deleted'][] = "Eliminado: {$pre->nombre}";
+                } else {
+                    $result['errors'][] = "Error deleting pre-existence for {$key}: " . implode(', ', $pre->getErrorSummary(true));
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * After save, synchronize pre-existences
+     *
+     * @param bool $insert
+     * @param array $changedAttributes
+     */
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        // Synchronize pre-existences
+        $result = $this->syncPreexistencias();
+
+        // Log the synchronization results
+        if (!empty($result['created']) || !empty($result['deleted']) || !empty($result['errors'])) {
+            $logMessage = "Health Declaration #{$this->id} sync results:\n";
+            $logMessage .= "Created: " . implode(', ', $result['created']) . "\n";
+            $logMessage .= "Deleted: " . implode(', ', $result['deleted']) . "\n";
+            if (!empty($result['errors'])) {
+                $logMessage .= "Errors: " . implode(', ', $result['errors']);
+            }
+            Yii::info($logMessage, 'health-declaration-sync');
+        }
+
+        // Store sync result in session for user feedback
+        if (!empty($result['created']) || !empty($result['deleted']) || !empty($result['errors'])) {
+            $flashMessages = [];
+            if (!empty($result['created'])) {
+                $flashMessages[] = "✅ Pre-existencias creadas/actualizadas:\n" . implode("\n", $result['created']);
+            }
+            if (!empty($result['deleted'])) {
+                $flashMessages[] = "❌ Pre-existencias eliminadas:\n" . implode("\n", $result['deleted']);
+            }
+            if (!empty($result['errors'])) {
+                $flashMessages[] = "⚠️ Errores:\n" . implode("\n", $result['errors']);
+            }
+
+            $flashType = empty($result['errors']) ? 'success' : 'warning';
+            Yii::$app->session->setFlash($flashType, nl2br(implode("\n\n", $flashMessages)));
+        }
+    }
+
+    /**
+     * Get the pre-existences created from this health declaration
+     *
+     * @return array
+     */
+    public function getGeneratedPreexistencias()
+    {
+        $yesAnswers = $this->getYesAnswers();
+        $preexistencias = [];
+
+        foreach ($yesAnswers as $key => $answer) {
+            $especifica = trim($answer['especifica']);
+            $label = $answer['label'];
+            $fechaDiagnostico = $this->created_at ? date('Y-m-d', strtotime($this->created_at)) : null;
+
+            $nombre = !empty($especifica) ? $especifica : 'Diagnosticado con ' . $label;
+            $descripcion = $label . ': ' . $nombre;
+
+            // Check if it exists using direct query to avoid ambiguity
+            $exists = (bool) Yii::$app->db->createCommand(
+                'SELECT EXISTS(
+                    SELECT 1 FROM "preexistencias" 
+                    WHERE user_id = :user_id 
+                    AND nombre = :nombre 
+                    AND deleted_at IS NULL
+                )',
+                [
+                    ':user_id' => $this->user_id,
+                    ':nombre' => $nombre
+                ]
+            )->queryScalar();
+
+            $preexistencias[$key] = [
+                'label' => $label,
+                'nombre' => $nombre,
+                'descripcion' => $descripcion,
+                'fecha_diagnostico' => $fechaDiagnostico,
+                'exists' => $exists,
+            ];
+        }
+
+        return $preexistencias;
+    }
+
+    /**
+     * Get the status of pre-existence sync
+     *
+     * @return array
+     */
+    public function getSyncStatus()
+    {
+        $yesAnswers = $this->getYesAnswers();
+
+        // Use direct query to avoid column ambiguity
+        $existingCount = (int) Yii::$app->db->createCommand(
+            'SELECT COUNT(*) FROM "preexistencias" 
+             WHERE user_id = :user_id 
+             AND deleted_at IS NULL',
+            [':user_id' => $this->user_id]
+        )->queryScalar();
+
+        return [
+            'yes_answers' => count($yesAnswers),
+            'existing_pre_existencias' => $existingCount,
+            'is_synced' => count($yesAnswers) == $existingCount,
+        ];
+    }
+
+    /**
+     * Override delete to handle cascading soft delete
+     *
+     * @return bool
+     */
+    public function delete()
+    {
+        $this->deleted_at = date('Y-m-d H:i:s');
+        return $this->save(false);
+    }
 }

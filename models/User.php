@@ -36,7 +36,7 @@ class User extends ActiveRecord implements IdentityInterface
 
     const STATUS_DELETED = 0;
     const STATUS_INACTIVE = 9;
-    const STATUS_ACTIVE = 10; 
+    const STATUS_ACTIVE = 10;
 
 
     /**
@@ -51,23 +51,27 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return [
             // 'username' y 'email' son siempre obligatorios
-            [['username', 'email'], 'required'], 
-            
+            [['username', 'email'], 'required'],
+
             // 'password' solo es obligatorio al crear un nuevo usuario
             ['password', 'required', 'on' => 'create'],
 
             // El resto de tus reglas...
             ['username', 'string', 'max' => 255],
             ['email', 'string', 'max' => 255],
-            [['username', 'email'], 'email'], 
+            [['username', 'email'], 'email'],
             ['password', 'string', 'min' => 5], // Longitud mínima para la contraseña
-            
+
             // Reglas para roles y status
             ['roles', 'safe'], // 'safe' para que se pueda cargar desde el formulario
-         
 
-            ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED, 0, 1],
-            'message' => 'El estatus "{value}" no es válido. Los valores permitidos son: Activo (10), Inactivo (9), Eliminado (0).'],
+
+            [
+                'status',
+                'in',
+                'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED, 0, 1],
+                'message' => 'El estatus "{value}" no es válido. Los valores permitidos son: Activo (10), Inactivo (9), Eliminado (0).'
+            ],
             // Si quieres que el mensaje sea más claro sobre lo que se espera *internamente*
 
             ['status', 'default', 'value' => self::STATUS_ACTIVE, 'on' => 'create'],
@@ -76,32 +80,31 @@ class User extends ActiveRecord implements IdentityInterface
 
 
     public function afterFind()
-{
-    parent::afterFind();
-    // Convertimos el valor de la DB (10 o 9) a 1 o 0 para el SwitchInput
-    if ($this->status === self::STATUS_ACTIVE) { // Si el status de DB es 10
-        $this->status = 1; // Lo mostramos como 1 en el formulario
-    } elseif ($this->status === self::STATUS_INACTIVE || $this->status === self::STATUS_DELETED) { // Si el status de DB es 9 o 0
-        $this->status = 0; // Lo mostramos como 0 en el formulario
+    {
+        parent::afterFind();
+        // Convertimos el valor de la DB (10 o 9) a 1 o 0 para el SwitchInput
+        if ($this->status === self::STATUS_ACTIVE) { // Si el status de DB es 10
+            $this->status = 1; // Lo mostramos como 1 en el formulario
+        } elseif ($this->status === self::STATUS_INACTIVE || $this->status === self::STATUS_DELETED) { // Si el status de DB es 9 o 0
+            $this->status = 0; // Lo mostramos como 0 en el formulario
+        }
+        // IMPORTANTE: Esta conversión solo afecta la presentación en el formulario.
+        // beforeSave() se encarga de convertirlo de vuelta para guardar en la DB.
     }
-    // IMPORTANTE: Esta conversión solo afecta la presentación en el formulario.
-    // beforeSave() se encarga de convertirlo de vuelta para guardar en la DB.
-}
 
-    
+
     public function beforeSave($insert)
     {
         if (parent::beforeSave($insert)) {
 
-           
+
             if ($this->isNewRecord || !empty($this->password)) {
-                if (!empty($this->password)) { 
+                if (!empty($this->password)) {
                     $this->password_hash = Yii::$app->security->generatePasswordHash($this->password);
                 } else {
-            
                 }
             }
-          
+
 
             // Generar auth_key siempre que sea un nuevo registro.
             if ($this->isNewRecord) {
@@ -124,7 +127,7 @@ class User extends ActiveRecord implements IdentityInterface
      *
      * @return \yii\db\ActiveQuery
      */
-    
+
     public function getUserDatos()
     {
         return $this->hasOne(UserDatos::class, ['user_login_id' => 'id']);
@@ -180,8 +183,8 @@ class User extends ActiveRecord implements IdentityInterface
         }
 
         return static::findOne([
-                'password_reset_token' => $token,
-                'status' => self::STATUS_ACTIVE,
+            'password_reset_token' => $token,
+            'status' => self::STATUS_ACTIVE,
         ]);
     }
 
@@ -288,7 +291,7 @@ class User extends ActiveRecord implements IdentityInterface
         return $this->hasOne(AgenteFuerza::class, ['idusuario' => 'id']);
     }
 
-     public function getAgente()
+    public function getAgente()
     {
         return $this->hasOne(Agente::class, ['idusuariopropietario' => 'id']);
     }
@@ -301,7 +304,4 @@ class User extends ActiveRecord implements IdentityInterface
             self::STATUS_DELETED => 'Eliminado',
         ];
     }
-
-    
-
 }

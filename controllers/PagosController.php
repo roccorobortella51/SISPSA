@@ -45,24 +45,40 @@ class PagosController extends Controller
     }
 
     /**
-     * Obtiene la tasa de cambio actual
+     * Obtiene la tasa de cambio actual para el formulario de pagos.
+     * Primero intenta usar la tasa registrada para hoy en tasa_cambio.
+     * Si no existe, consulta el flujo de fallback del SiteController
+     * (que intenta obtenerla desde BCV y la guarda en la tabla).
      */
     private function getTasaCambio()
     {
+        $fechaHoy = date('Y-m-d');
+
         $tasa = TasaCambio::find()
-            ->where(['fecha' => date('Y-m-d')])
+            ->where(['fecha' => $fechaHoy])
+            ->orderBy(['hora' => SORT_DESC, 'id' => SORT_DESC])
             ->one();
 
         if ($tasa) {
-            return $tasa->tasa_cambio;
+            return (float)$tasa->tasa_cambio;
         }
 
-        // Si no hay tasa para hoy, buscar la más reciente
+        try {
+            $tasaDesdeSite = Yii::$app->runAction('site/tasacambio', ['fecha' => $fechaHoy]);
+
+            if ($tasaDesdeSite !== null && $tasaDesdeSite !== false && $tasaDesdeSite > 0) {
+                return (float)$tasaDesdeSite;
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('No se pudo obtener la tasa de cambio desde site/tasacambio: ' . $e->getMessage(), 'pagos');
+        }
+
+        // Si no se pudo obtener una tasa válida, usar la más reciente disponible
         $ultimaTasa = TasaCambio::find()
-            ->orderBy(['fecha' => SORT_DESC])
+            ->orderBy(['fecha' => SORT_DESC, 'hora' => SORT_DESC, 'id' => SORT_DESC])
             ->one();
 
-        return $ultimaTasa ? $ultimaTasa->tasa_cambio : 1.0;
+        return $ultimaTasa ? (float)$ultimaTasa->tasa_cambio : 1.0;
     }
 
     public function actionClinica($id)
@@ -122,7 +138,7 @@ class PagosController extends Controller
 
         // ===== SET DEFAULT TASA WITH 2 DECIMALS =====
         $tasaCambio = $this->getTasaCambio();
-        $model->tasa = number_format($tasaCambio, 2, '.', '');
+        $model->tasa = number_format($tasaCambio, 4, '.', '');
 
         // Get contract info
         $selectedContrato = null;

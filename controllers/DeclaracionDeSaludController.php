@@ -1,14 +1,16 @@
 <?php
+// app/controllers/DeclaracionDeSaludController.php
 
 namespace app\controllers;
 
 use app\models\DeclaracionDeSalud;
 use app\models\DeclaracionDeSaludSearch;
 use app\models\UserDatos;
+use app\models\Preexistencias;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use kartik\mpdf\Pdf; // Asegúrate de que el namespace sea correcto
+use kartik\mpdf\Pdf;
 use Yii;
 
 /**
@@ -39,7 +41,7 @@ class DeclaracionDeSaludController extends Controller
      *
      * @return string
      */
-   public function actionIndex($user_id = "")
+    public function actionIndex($user_id = "")
     {
         $afiliado = UserDatos::find()->where(['id' => $user_id])->one();
 
@@ -49,15 +51,19 @@ class DeclaracionDeSaludController extends Controller
         $dataProvider = $searchModel->search($this->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'user_id', $user_id]);
 
-            if ($model->load($this->request->post())) {
+        if ($model->load($this->request->post())) {
+            $model->user_id = $user_id;
 
-                $model->user_id = $user_id;
-                if($model->save()){
-                }else{
-                     var_dump($model->errors); die();
-                };
-                return $this->redirect(['index', 'user_id' => $afiliado->id]);
+            if ($model->save()) {
+                // Show sync results in flash message (already handled in afterSave)
+                Yii::$app->session->setFlash('info', 'La declaración de salud se ha guardado correctamente. Las pre-existencias han sido sincronizadas automáticamente.');
+                return $this->redirect(['view', 'id' => $model->id]);
+            } else {
+                // Log errors for debugging
+                Yii::error('Error saving health declaration: ' . print_r($model->getErrors(), true));
+                Yii::$app->session->setFlash('error', 'Error al guardar la declaración de salud. Por favor, verifique los datos.');
             }
+        }
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -75,12 +81,23 @@ class DeclaracionDeSaludController extends Controller
      */
     public function actionView($id)
     {
-         $model = $this->findModel($id);
-         $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
+        $model = $this->findModel($id);
+        $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
+
+        // Get sync status
+        $syncStatus = $model->getSyncStatus();
+
+        // Get associated pre-existences
+        $preexistencias = Preexistencias::find()
+            ->where(['user_id' => $model->user_id])
+            ->andWhere(['IS', 'deleted_at', null])
+            ->all();
 
         return $this->render('view', [
             'model' => $model,
-            'afiliado' => $afiliado
+            'afiliado' => $afiliado,
+            'syncStatus' => $syncStatus,
+            'preexistencias' => $preexistencias,
         ]);
     }
 
@@ -118,7 +135,7 @@ class DeclaracionDeSaludController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
-         $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
+        $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
@@ -139,9 +156,44 @@ class DeclaracionDeSaludController extends Controller
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($id);
+        $user_id = $model->user_id;
 
-        return $this->redirect(['index']);
+        // Soft delete the health declaration
+        $model->delete();
+
+        // Also soft delete associated pre-existences
+        Preexistencias::updateAll(
+            ['deleted_at' => date('Y-m-d H:i:s')],
+            ['user_id' => $user_id]
+        );
+
+        return $this->redirect(['index', 'user_id' => $user_id]);
+    }
+
+    /**
+     * Synchronize pre-existences for a health declaration
+     * @param int $id
+     * @return \yii\web\Response
+     */
+    public function actionSync($id)
+    {
+        $model = $this->findModel($id);
+        $result = $model->syncPreexistencias();
+
+        $message = "Sincronización completada.\n";
+        if (!empty($result['created'])) {
+            $message .= "✅ Creadas: " . implode(', ', $result['created']) . "\n";
+        }
+        if (!empty($result['deleted'])) {
+            $message .= "❌ Eliminadas: " . implode(', ', $result['deleted']) . "\n";
+        }
+        if (!empty($result['errors'])) {
+            $message .= "⚠️ Errores: " . implode(', ', $result['errors']);
+        }
+
+        Yii::$app->session->setFlash(empty($result['errors']) ? 'success' : 'warning', nl2br($message));
+        return $this->redirect(['view', 'id' => $model->id]);
     }
 
     /**
@@ -164,8 +216,8 @@ class DeclaracionDeSaludController extends Controller
     {
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->user_id])->one();
-        
-        // Obtener las preguntas (puedes copiar el mismo array de tu vista)
+
+        // Obtener las preguntas
         $preguntas = [
             1 => 'Has sido diagnosticado con alguna de las siguientes ENFERMEDADES CARDIOVASCULARES: Hipertensión Arterial, infarto al Miocardio, Arritmia Cardíaca, Aneurisma, Palpitaciones, Angina de Pecho, Fiebre Reumática, Arteriesclerosis, Trastornos Valvulares, Tromboflebitis, Várices.',
             2 => 'Has sido diagnosticado con alguna de las siguientes ENFERMEDADES VASCULARES: Accidentes Vasculares, Hemiplejia, Parálisis, Hemorragias Cerebrales, Epilepsia o similares.',
@@ -184,15 +236,15 @@ class DeclaracionDeSaludController extends Controller
             15 => 'Le ha sido indicada o practicada alguna INTERVENCIÓN QUIRÚRGICA O SE HA SOMETIDO A TRATAMIENTO MÉDICO POR ALGUNA ENFERMEDAD O LESIÓN ADICIONAL A LAS ANTERIORES.',
             16 => 'Le ha sido diagnosticada alguna otra enfermedad o patología no mencionada anteriormente.',
         ];
-        // Datos para el QR
+
         $qrData = "Declaración de Salud\n";
         $qrData .= "Fecha: " . date('d/m/Y') . "\n";
         $qrData .= "Afiliado: " . $afiliado->nombres . ' ' . $afiliado->apellidos . "\n";
         $qrData .= "Cédula: " . $afiliado->cedula . "\n";
         $qrData .= "ID Declaración: " . $model->id;
 
-        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg'); 
-        
+        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+
         $content = $this->renderPartial('_pdf', [
             'model' => $model,
             'afiliado' => $afiliado,
@@ -200,7 +252,7 @@ class DeclaracionDeSaludController extends Controller
             'preguntas' => $preguntas,
             'logo' => $logo
         ]);
-        
+
         $pdf = new Pdf([
             'mode' => Pdf::MODE_UTF8,
             'format' => 'A4',
@@ -223,17 +275,14 @@ class DeclaracionDeSaludController extends Controller
                 .borde-inferior { border-bottom: 1px solid #000; }
                 .numero-enfermedad { font-weight: bold; }
                 .qr-container { position: absolute; right: 20px; top: 20px; border: 1px solid #ddd; padding: 5px; }
-                
-                /* --- NUEVO ESTILO PARA EL LOGO --- */
                 .logo-superior-izquierda {
-                    position: absolute; /* Permite posicionar la imagen con respecto al documento */
-                    top: 15px; /* Ajusta la distancia desde la parte superior */
-                    left: 15px; /* Ajusta la distancia desde la parte izquierda */
-                    max-width: 150px; /* Tamaño máximo para el logo */
-                    height: auto; /* Mantiene la proporción */
-                    z-index: 1000; /* Asegura que el logo esté por encima de otros elementos */
+                    position: absolute;
+                    top: 15px;
+                    left: 15px;
+                    max-width: 150px;
+                    height: auto;
+                    z-index: 1000;
                 }
-                /* --- FIN NUEVO ESTILO --- */
             ',
             'options' => ['title' => 'Declaración de Salud'],
             'methods' => [
@@ -241,9 +290,25 @@ class DeclaracionDeSaludController extends Controller
                 'SetFooter' => ['{PAGENO}'],
             ]
         ]);
-        
+
         return $pdf->render();
     }
 
+    /**
+     * Get pre-existences for an affiliate
+     * @param int $user_id
+     * @return \yii\web\Response
+     */
+    public function actionGetPreexistencias($user_id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
 
+        $preexistencias = Preexistencias::find()
+            ->where(['user_id' => $user_id])
+            ->andWhere(['IS', 'deleted_at', null])
+            ->select(['id', 'nombre', 'descripcion', 'estatus', 'fecha_diagnostico'])
+            ->all();
+
+        return $this->asJson($preexistencias);
+    }
 }

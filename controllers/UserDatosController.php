@@ -26,9 +26,9 @@ use yii\base\Security;
 use kartik\mpdf\Pdf;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
-use yii\web\UploadedFile; // Necesario para manejar la subida de archivos
+use yii\web\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\Exception; // Para manejar excepciones del lector
+use PhpOffice\PhpSpreadsheet\Reader\Exception;
 use DateTime;
 use app\models\Cuotas;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -68,6 +68,558 @@ class UserDatosController extends Controller
         );
     }
 
+    // ============================================
+    // PROFESSIONAL FLASH MESSAGE HELPERS
+    // ============================================
+
+    /**
+     * Generate a professional Microsoft Fluent Design styled error message for duplicates
+     * 
+     * @param UserDatos $existing The existing duplicate record
+     * @param UserDatos $new The new record being created
+     * @param string $type 'regular' or 'underage'
+     * @return string HTML formatted error message
+     */
+    private function generateDuplicateErrorMessage($existing, $new, $type = 'regular')
+    {
+        $isUnderage = ($type === 'underage');
+        $title = $isUnderage ? 'Menor Duplicado Detectado' : 'Duplicado de Afiliado Detectado';
+        $icon = $isUnderage ? 'fa-child' : 'fa-exclamation-triangle';
+        $color = $isUnderage ? '#e97c00' : '#d13438';
+        $colorLight = $isUnderage ? '#fef6e8' : '#fef6f6';
+        $colorBg = $isUnderage ? '#fde8d0' : '#fde8e8';
+
+        $viewUrl = Yii::$app->urlManager->createUrl(['user-datos/view', 'id' => $existing->id]);
+        $createUrl = Yii::$app->urlManager->createUrl(['user-datos/create']);
+
+        $additionalInfo = '';
+        if ($isUnderage && !empty($existing->consecutivo_menor)) {
+            $additionalInfo = '
+            <span style="font-weight: 500; color: #605e5c;">Consecutivo:</span>
+            <span style="color: #1a1a1a; font-weight: 500;">' . $existing->consecutivo_menor . '</span>
+        ';
+        }
+
+        return '
+    <div style="
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 16px 0;
+    ">
+        <div class="duplicate-error-container" style="
+            background: linear-gradient(135deg, ' . $colorLight . ' 0%, ' . $colorBg . ' 100%);
+            border-left: 6px solid ' . $color . ';
+            border-radius: 8px;
+            padding: 24px 28px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+            font-family: \'Segoe UI\', \'Microsoft Sans Serif\', -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 820px;
+            width: 100%;
+            position: relative;
+            transition: all 0.3s ease;
+        ">
+            <div style="display: flex; align-items: flex-start; gap: 18px;">
+                <!-- Icon Container -->
+                <div style="
+                    background: ' . $color . ';
+                    border-radius: 50%;
+                    width: 52px;
+                    height: 52px;
+                    min-width: 52px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+                ">
+                    <i class="fas ' . $icon . '" style="color: white; font-size: 24px;"></i>
+                </div>
+                
+                <!-- Content Container -->
+                <div style="flex: 1; min-width: 0;">
+                    <!-- Header -->
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 12px;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    ">
+                        <div style="
+                            font-size: 17px;
+                            font-weight: 600;
+                            color: #1a1a1a;
+                            letter-spacing: 0.2px;
+                        ">
+                            <span style="color: ' . $color . '; margin-right: 6px;">●</span>
+                            ' . $title . '
+                        </div>
+                        <span style="
+                            font-size: 12px;
+                            color: #605e5c;
+                            background: rgba(0, 0, 0, 0.05);
+                            padding: 2px 12px;
+                            border-radius: 12px;
+                            font-weight: 500;
+                        ">
+                            <i class="far fa-clock" style="margin-right: 4px;"></i>
+                            ' . date('H:i') . '
+                        </span>
+                    </div>
+                    
+                    <!-- Message Body -->
+                    <div style="
+                        font-size: 14px;
+                        color: #323130;
+                        line-height: 1.6;
+                        margin-bottom: 16px;
+                        padding: 14px 18px;
+                        background: rgba(255, 255, 255, 0.85);
+                        border-radius: 6px;
+                        border: 1px solid rgba(0, 0, 0, 0.06);
+                        backdrop-filter: blur(4px);
+                    ">
+                        <div style="margin-bottom: 10px; font-weight: 500; color: #1a1a1a;">
+                            <i class="fas fa-info-circle" style="color: ' . $color . '; margin-right: 8px;"></i>
+                            Ya existe un afiliado registrado con los siguientes datos:
+                        </div>
+                        <div style="
+                            display: grid;
+                            grid-template-columns: auto 1fr;
+                            gap: 6px 20px;
+                            font-size: 14px;
+                            padding-left: 4px;
+                        ">
+                            <span style="font-weight: 500; color: #605e5c;">Nombre completo:</span>
+                            <span style="color: #1a1a1a; font-weight: 500;">' . htmlspecialchars($existing->nombres . ' ' . $existing->apellidos) . '</span>
+                            
+                            <span style="font-weight: 500; color: #605e5c;">Cédula de Identidad:</span>
+                            <span style="color: #1a1a1a; font-weight: 500;">' . htmlspecialchars($existing->tipo_cedula . '-' . $existing->cedula) . '</span>
+                            
+                            ' . $additionalInfo . '
+                            
+                            <span style="font-weight: 500; color: #605e5c;">ID de Registro:</span>
+                            <span style="color: #0078d4; font-weight: 600; font-family: \'Segoe UI Mono\', monospace;">' . $existing->id . '</span>
+                            
+                            <span style="font-weight: 500; color: #605e5c;">Fecha de Registro:</span>
+                            <span style="color: #1a1a1a;">' . Yii::$app->formatter->asDatetime($existing->created_at, 'dd/MM/yyyy HH:mm') . '</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="
+                        display: flex;
+                        gap: 12px;
+                        margin-top: 4px;
+                        flex-wrap: wrap;
+                    ">
+                        <a href="' . $viewUrl . '" 
+                           style="
+                               display: inline-flex;
+                               align-items: center;
+                               gap: 8px;
+                               padding: 9px 24px;
+                               background: #0078d4;
+                               color: white;
+                               text-decoration: none;
+                               border-radius: 4px;
+                               font-size: 14px;
+                               font-weight: 500;
+                               transition: all 0.15s ease;
+                               border: none;
+                               cursor: pointer;
+                               box-shadow: 0 2px 4px rgba(0, 120, 212, 0.2);
+                           "
+                           onmouseover="this.style.backgroundColor=\'#106ebe\'; this.style.boxShadow=\'0 4px 8px rgba(0, 120, 212, 0.3)\'"
+                           onmouseout="this.style.backgroundColor=\'#0078d4\'; this.style.boxShadow=\'0 2px 4px rgba(0, 120, 212, 0.2)\'">
+                            <i class="fas fa-eye" style="font-size: 14px;"></i>
+                            Ver Registro Existente
+                        </a>
+                        <a href="' . $createUrl . '" 
+                           style="
+                               display: inline-flex;
+                               align-items: center;
+                               gap: 8px;
+                               padding: 9px 24px;
+                               background: #f3f2f1;
+                               color: #323130;
+                               text-decoration: none;
+                               border-radius: 4px;
+                               font-size: 14px;
+                               font-weight: 500;
+                               transition: all 0.15s ease;
+                               border: 1px solid #d2d0ce;
+                               cursor: pointer;
+                           "
+                           onmouseover="this.style.backgroundColor=\'#e1dfdd\'"
+                           onmouseout="this.style.backgroundColor=\'#f3f2f1\'">
+                            <i class="fas fa-arrow-left" style="font-size: 14px;"></i>
+                            Volver al Formulario
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Close Button -->
+                <button type="button" 
+                        onclick="this.closest(\'.duplicate-error-container\').style.display=\'none\'"
+                        style="
+                            background: none;
+                            border: none;
+                            color: #605e5c;
+                            font-size: 18px;
+                            cursor: pointer;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            transition: all 0.15s ease;
+                            flex-shrink: 0;
+                            line-height: 1;
+                        "
+                        onmouseover="this.style.backgroundColor=\'rgba(0,0,0,0.06)\'"
+                        onmouseout="this.style.backgroundColor=\'transparent\'"
+                        aria-label="Cerrar mensaje">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    ';
+    }
+
+    /**
+     * Generate a professional success message
+     * 
+     * @param string $title The title of the success message
+     * @param string $message The main message content
+     * @param string $icon Optional icon class
+     * @return string HTML formatted success message
+     */
+    private function generateSuccessMessage($title, $message, $icon = 'fa-check-circle')
+    {
+        return '
+    <div style="
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 16px 0;
+    ">
+        <div style="
+            background: linear-gradient(135deg, #f0faf0 0%, #e0f0e0 100%);
+            border-left: 6px solid #107c10;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(16, 124, 16, 0.10);
+            font-family: \'Segoe UI\', \'Microsoft Sans Serif\', sans-serif;
+            max-width: 820px;
+            width: 100%;
+            position: relative;
+        ">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="
+                    background: #107c10;
+                    border-radius: 50%;
+                    width: 44px;
+                    height: 44px;
+                    min-width: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <i class="fas ' . $icon . '" style="color: white; font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #1a1a1a;
+                        margin-bottom: 6px;
+                    ">
+                        ' . $title . '
+                    </div>
+                    <div style="
+                        font-size: 14px;
+                        color: #333333;
+                        line-height: 1.5;
+                    ">
+                        ' . $message . '
+                    </div>
+                </div>
+                <button type="button" 
+                        onclick="this.parentElement.parentElement.style.display=\'none\'"
+                        style="
+                            background: none;
+                            border: none;
+                            color: #605e5c;
+                            font-size: 18px;
+                            cursor: pointer;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            transition: all 0.15s ease;
+                            flex-shrink: 0;
+                        "
+                        onmouseover="this.style.backgroundColor=\'rgba(0,0,0,0.06)\'"
+                        onmouseout="this.style.backgroundColor=\'transparent\'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    ';
+    }
+
+    /**
+     * Generate a professional warning message
+     * 
+     * @param string $title The title of the warning message
+     * @param string $message The main message content
+     * @param string $icon Optional icon class
+     * @return string HTML formatted warning message
+     */
+    private function generateWarningMessage($title, $message, $icon = 'fa-exclamation-circle')
+    {
+        return '
+    <div style="
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 16px 0;
+    ">
+        <div style="
+            background: linear-gradient(135deg, #fffbeb 0%, #fff5cc 100%);
+            border-left: 6px solid #e97c00;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(233, 124, 0, 0.10);
+            font-family: \'Segoe UI\', \'Microsoft Sans Serif\', sans-serif;
+            max-width: 820px;
+            width: 100%;
+            position: relative;
+        ">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="
+                    background: #e97c00;
+                    border-radius: 50%;
+                    width: 44px;
+                    height: 44px;
+                    min-width: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <i class="fas ' . $icon . '" style="color: white; font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #1a1a1a;
+                        margin-bottom: 6px;
+                    ">
+                        ' . $title . '
+                    </div>
+                    <div style="
+                        font-size: 14px;
+                        color: #333333;
+                        line-height: 1.5;
+                    ">
+                        ' . $message . '
+                    </div>
+                </div>
+                <button type="button" 
+                        onclick="this.parentElement.parentElement.style.display=\'none\'"
+                        style="
+                            background: none;
+                            border: none;
+                            color: #605e5c;
+                            font-size: 18px;
+                            cursor: pointer;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            transition: all 0.15s ease;
+                            flex-shrink: 0;
+                        "
+                        onmouseover="this.style.backgroundColor=\'rgba(0,0,0,0.06)\'"
+                        onmouseout="this.style.backgroundColor=\'transparent\'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    ';
+    }
+
+    /**
+     * Generate a professional error message
+     * 
+     * @param string $title The title of the error message
+     * @param string $message The main message content
+     * @param string $icon Optional icon class
+     * @return string HTML formatted error message
+     */
+    private function generateErrorMessage($title, $message, $icon = 'fa-exclamation-triangle')
+    {
+        return '
+    <div style="
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 16px 0;
+    ">
+        <div style="
+            background: linear-gradient(135deg, #fef6f6 0%, #fde8e8 100%);
+            border-left: 6px solid #d13438;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(209, 52, 56, 0.12);
+            font-family: \'Segoe UI\', \'Microsoft Sans Serif\', sans-serif;
+            max-width: 820px;
+            width: 100%;
+            position: relative;
+        ">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="
+                    background: #d13438;
+                    border-radius: 50%;
+                    width: 44px;
+                    height: 44px;
+                    min-width: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <i class="fas ' . $icon . '" style="color: white; font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #1a1a1a;
+                        margin-bottom: 6px;
+                    ">
+                        ' . $title . '
+                    </div>
+                    <div style="
+                        font-size: 14px;
+                        color: #333333;
+                        line-height: 1.5;
+                    ">
+                        ' . $message . '
+                    </div>
+                </div>
+                <button type="button" 
+                        onclick="this.parentElement.parentElement.style.display=\'none\'"
+                        style="
+                            background: none;
+                            border: none;
+                            color: #605e5c;
+                            font-size: 18px;
+                            cursor: pointer;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            transition: all 0.15s ease;
+                            flex-shrink: 0;
+                        "
+                        onmouseover="this.style.backgroundColor=\'rgba(0,0,0,0.06)\'"
+                        onmouseout="this.style.backgroundColor=\'transparent\'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    ';
+    }
+
+    /**
+     * Generate a professional info message
+     * 
+     * @param string $title The title of the info message
+     * @param string $message The main message content
+     * @param string $icon Optional icon class
+     * @return string HTML formatted info message
+     */
+    private function generateInfoMessage($title, $message, $icon = 'fa-info-circle')
+    {
+        return '
+    <div style="
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 16px 0;
+    ">
+        <div style="
+            background: linear-gradient(135deg, #f0f6fd 0%, #e5f0fa 100%);
+            border-left: 6px solid #0078d4;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0, 120, 212, 0.10);
+            font-family: \'Segoe UI\', \'Microsoft Sans Serif\', sans-serif;
+            max-width: 820px;
+            width: 100%;
+            position: relative;
+        ">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="
+                    background: #0078d4;
+                    border-radius: 50%;
+                    width: 44px;
+                    height: 44px;
+                    min-width: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <i class="fas ' . $icon . '" style="color: white; font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #1a1a1a;
+                        margin-bottom: 6px;
+                    ">
+                        ' . $title . '
+                    </div>
+                    <div style="
+                        font-size: 14px;
+                        color: #333333;
+                        line-height: 1.5;
+                    ">
+                        ' . $message . '
+                    </div>
+                </div>
+                <button type="button" 
+                        onclick="this.parentElement.parentElement.style.display=\'none\'"
+                        style="
+                            background: none;
+                            border: none;
+                            color: #605e5c;
+                            font-size: 18px;
+                            cursor: pointer;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            transition: all 0.15s ease;
+                            flex-shrink: 0;
+                        "
+                        onmouseover="this.style.backgroundColor=\'rgba(0,0,0,0.06)\'"
+                        onmouseout="this.style.backgroundColor=\'transparent\'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    ';
+    }
+
     /**
      * Valida los campos del archivo Excel antes de procesarlo
      * @param array $data Los datos del archivo Excel
@@ -76,13 +628,12 @@ class UserDatosController extends Controller
     private function validateExcelData($data)
     {
         $errors = [];
-        $rowNumber = 1; // Comenzamos en 1 para incluir el encabezado
+        $rowNumber = 1;
 
         foreach ($data as $row) {
             $rowNumber++;
             $rowErrors = [];
 
-            // Validar que la fila no esté completamente vacía
             $isEmptyRow = true;
             foreach ($row as $cellValue) {
                 if ($cellValue !== null && $cellValue !== '') {
@@ -91,52 +642,45 @@ class UserDatosController extends Controller
                 }
             }
             if ($isEmptyRow) {
-                continue; // Saltar filas completamente vacías
+                continue;
             }
 
-            // Validar email (columna A)
             if (empty($row['A'])) {
                 $rowErrors[] = 'Email es obligatorio';
             } elseif (!filter_var($row['A'], FILTER_VALIDATE_EMAIL)) {
                 $rowErrors[] = 'Email no tiene formato válido';
             }
 
-            // Validar teléfono (columna B)
             if (empty($row['B'])) {
                 $rowErrors[] = 'Teléfono es obligatorio';
             } elseif (!preg_match('/^[0-9+\-\s\(\)]{7,15}$/', $row['B'])) {
                 $rowErrors[] = 'Teléfono no tiene formato válido';
             }
 
-            // Validar nombres (columna C)
             if (empty($row['C'])) {
                 $rowErrors[] = 'Nombres es obligatorio';
             } elseif (strlen($row['C']) < 2) {
                 $rowErrors[] = 'Nombres debe tener al menos 2 caracteres';
             }
 
-            // Validar apellidos (columna D)
             if (empty($row['D'])) {
                 $rowErrors[] = 'Apellidos es obligatorio';
             } elseif (strlen($row['D']) < 2) {
                 $rowErrors[] = 'Apellidos debe tener al menos 2 caracteres';
             }
 
-            // Validar tipo de cédula (columna E)
             if (empty($row['E'])) {
                 $rowErrors[] = 'Tipo de cédula es obligatorio';
             } elseif (!in_array(strtoupper($row['E']), ['V', 'E', 'P', 'J'])) {
                 $rowErrors[] = 'Tipo de cédula debe ser V, E, P o J';
             }
 
-            // Validar cédula (columna F)
             if (empty($row['F']) && !is_numeric($row['F'])) {
                 $rowErrors[] = 'Cédula es obligatoria';
             } elseif (!is_numeric($row['F']) || strlen($row['F']) < 6 || strlen($row['F']) > 10) {
                 $rowErrors[] = 'Cédula debe ser numérica y tener entre 6 y 10 dígitos';
             }
 
-            // Validar fecha de nacimiento (columna G)
             if (empty($row['G'])) {
                 $rowErrors[] = 'Fecha de nacimiento es obligatoria';
             } else {
@@ -152,14 +696,12 @@ class UserDatosController extends Controller
                 }
             }
 
-            // Validar sexo (columna H)
             if (empty($row['H'])) {
                 $rowErrors[] = 'Sexo es obligatorio';
             } elseif (!in_array(strtoupper($row['H']), ['M', 'F', 'MASCULINO', 'FEMENINO'])) {
                 $rowErrors[] = 'Sexo debe ser M, F, Masculino o Femenino';
             }
 
-            // Validar tipo de sangre (columna I) - opcional pero si se proporciona debe ser válido
             if (!empty($row['I'])) {
                 $tiposSangre = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
                 if (!in_array(strtoupper($row['I']), $tiposSangre)) {
@@ -167,28 +709,24 @@ class UserDatosController extends Controller
                 }
             }
 
-            // Validar estado - municipio - parroquia (columna J) 
             if (empty($row['J'])) {
                 $rowErrors[] = 'Estado - municipio - parroquia es obligatorio';
             } elseif (strlen($row['J']) < 2) {
                 $rowErrors[] = 'Estado - municipio - parroquia debe tener al menos 2 caracteres';
             }
 
-            // Validar municipio (columna K) - opcional pero si se proporciona debe ser numérico
             if (empty($row['K'])) {
                 $rowErrors[] = 'Ciudad es obligatorio';
             } elseif (strlen($row['K']) < 2) {
                 $rowErrors[] = 'Ciudad debe tener al menos 2 caracteres';
             }
 
-            // Validar dirección (columna N)
             if (empty($row['L'])) {
                 $rowErrors[] = 'Dirección es obligatoria';
             } elseif (strlen($row['L']) < 1) {
                 $rowErrors[] = 'Dirección debe tener al menos 10 caracteres';
             }
 
-            // Si hay errores en esta fila, agregarlos al array de errores
             if (!empty($rowErrors)) {
                 $errors[] = [
                     'row' => $rowNumber,
@@ -211,12 +749,11 @@ class UserDatosController extends Controller
         $errors = [];
         $emails = [];
         $cedulas = [];
-        $rowNumber = 1; // Comenzamos en 1 para incluir el encabezado
+        $rowNumber = 1;
 
         foreach ($data as $row) {
             $rowNumber++;
 
-            // Validar que la fila no esté completamente vacía
             $isEmptyRow = true;
             foreach ($row as $cellValue) {
                 if ($cellValue !== null && $cellValue !== '') {
@@ -225,13 +762,13 @@ class UserDatosController extends Controller
                 }
             }
             if ($isEmptyRow) {
-                continue; // Saltar filas completamente vacías
+                continue;
             }
 
             $email = trim($row['A']);
             $cedula = trim($row['F']);
             $tipoCedula = trim($row['E']);
-            // Verificar duplicados en el archivo
+
             if (!empty($email)) {
                 if (in_array($email, $emails)) {
                     $errors[] = [
@@ -258,7 +795,6 @@ class UserDatosController extends Controller
             }
         }
 
-        // Verificar duplicados en la base de datos
         if (!empty($emails)) {
             $existingEmails = UserDatos::find()
                 ->where(['email' => $emails])
@@ -266,7 +802,7 @@ class UserDatosController extends Controller
                 ->column();
 
             foreach ($data as $index => $row) {
-                $rowNumber = $index + 2; // +2 porque comenzamos en 1 y tenemos encabezado
+                $rowNumber = $index + 2;
 
                 $email = trim($row['A']);
                 if (!empty($email) && in_array($email, $existingEmails)) {
@@ -288,7 +824,7 @@ class UserDatosController extends Controller
                 ->column();
 
             foreach ($data as $index => $row) {
-                $rowNumber = $index + 2; // +2 porque comenzamos en 1 y tenemos encabezado
+                $rowNumber = $index + 2;
 
                 $cedula = trim($row['F']);
                 if (!empty($cedula) && in_array($cedula, $existingCedulas)) {
@@ -312,7 +848,6 @@ class UserDatosController extends Controller
      */
     private function generateValidationReport($errors, $totalRows)
     {
-        // Agrupar errores por fila
         $groupedErrors = [];
         foreach ($errors as $error) {
             $row = $error['row'];
@@ -323,11 +858,9 @@ class UserDatosController extends Controller
                     'data' => $error['data']
                 ];
             }
-            // Agregar todos los errores de esta fila
             $groupedErrors[$row]['errors'] = array_merge($groupedErrors[$row]['errors'], $error['errors']);
         }
 
-        // Ordenar por número de fila
         ksort($groupedErrors);
 
         $validRows = $totalRows - count($groupedErrors);
@@ -392,11 +925,9 @@ class UserDatosController extends Controller
      */
     public function actionDownloadTemplate()
     {
-        // Crear un nuevo objeto Spreadsheet
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Definir los encabezados
         $headers = [
             'A1' => 'Email',
             'B1' => 'Teléfono',
@@ -414,12 +945,10 @@ class UserDatosController extends Controller
             'N1' => 'Dirección'
         ];
 
-        // Aplicar encabezados
         foreach ($headers as $cell => $value) {
             $sheet->setCellValue($cell, $value);
         }
 
-        // Agregar datos de ejemplo
         $exampleData = [
             'A2' => 'ejemplo@email.com',
             'B2' => '0412-1234567',
@@ -441,7 +970,6 @@ class UserDatosController extends Controller
             $sheet->setCellValue($cell, $value);
         }
 
-        // Aplicar formato a los encabezados
         $headerStyle = [
             'font' => [
                 'bold' => true,
@@ -455,22 +983,18 @@ class UserDatosController extends Controller
 
         $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
 
-        // Autoajustar columnas
         foreach (range('A', 'N') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        // Crear el archivo temporal
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $tempFile = Yii::getAlias('@runtime/template_afiliados.xlsx');
         $writer->save($tempFile);
 
-        // Enviar el archivo al navegador
         return Yii::$app->response->sendFile($tempFile, 'plantilla_afiliados.xlsx', [
             'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'inline' => false
         ])->on(\yii\web\Response::EVENT_AFTER_SEND, function ($event) use ($tempFile) {
-            // Eliminar el archivo temporal después de enviarlo
             if (file_exists($tempFile)) {
                 unlink($tempFile);
             }
@@ -483,12 +1007,13 @@ class UserDatosController extends Controller
         $model = new UserDatos();
 
         if ($this->request->isPost && $model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
-            // Obtener el archivo subido
             $masivoFiles = UploadedFile::getInstancesByName('UserDatos[masivoFile]');
 
             if (empty($masivoFiles) || !$masivoFiles[0]->tempName) {
-                // Si no se subió ningún archivo o el archivo está vacío
-                Yii::$app->session->setFlash('error', 'No se ha subido ningún archivo o el archivo está corrupto.');
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error al Subir el Archivo',
+                    'No se ha subido ningún archivo o el archivo está corrupto. Por favor, verifique el archivo e intente nuevamente.'
+                ));
                 return $this->render('masivo', [
                     'model' => $model,
                     'modelContrato' => $modelContrato,
@@ -499,7 +1024,10 @@ class UserDatosController extends Controller
             $filePath = Yii::getAlias('@app/web/uploads/masivoFiles/' . $uploadedFile->baseName . '.' . $uploadedFile->extension);
 
             if (!$uploadedFile->saveAs($filePath)) {
-                Yii::$app->session->setFlash('error', 'Error al guardar el archivo subido.');
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error al Guardar el Archivo',
+                    'Ocurrió un error al guardar el archivo subido en el servidor. Por favor, intente nuevamente.'
+                ));
                 return $this->render('masivo', [
                     'model' => $model,
                     'modelContrato' => $modelContrato,
@@ -509,15 +1037,13 @@ class UserDatosController extends Controller
             $clinica_id = $model->clinica_id;
             $plan_id = $modelContrato->plan_id;
 
-            // ******* CORRECCIÓN CLAVE DE RELACIÓN *******
-            // Asignar el plan_id al modelo UserDatos *antes* de intentar usar la relación.
             $model->plan_id = $plan_id;
 
-            // --- Validar la relación 'plan' antes de acceder a la propiedad 'precio' ---
             if ($model->plan === null) {
-                // Mensaje de error mejorado para mostrar el ID que falló
-                Yii::$app->session->setFlash('error', 'Error de datos: No se pudo cargar el precio porque el Plan ID (' . $plan_id . ') asociado al modelo principal no existe. Verifique que el ID del Plan seleccionado sea válido en la tabla "planes".');
-                // Eliminar el archivo subido
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error de Datos',
+                    'No se pudo cargar el precio porque el Plan ID (' . $plan_id . ') asociado al modelo principal no existe. Verifique que el ID del Plan seleccionado sea válido en la tabla "planes".'
+                ));
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
@@ -527,39 +1053,30 @@ class UserDatosController extends Controller
                 ]);
             }
 
-            $monto = $model->plan->precio; // Ahora es seguro acceder a 'precio'
-            // --- FIN DE LA CORRECCIÓN DE RELACIÓN ---
-
+            $monto = $model->plan->precio;
             $fecha_ini = $modelContrato->fecha_ini;
             $fecha_ven = $modelContrato->fecha_ven;
             $fechaCreacion = date('Y-m-d H:i:s');
+
             try {
-                // Leer archivo .xlsx
-                // *** ESTA LÍNEA NECESITA EL 'use PhpOffice\PhpSpreadsheet\IOFactory;' ***
                 $spreadsheet = IOFactory::load($filePath);
                 $sheet = $spreadsheet->getActiveSheet();
 
-                // Establecer el rango de columnas a leer (de A a L)
-                // Usamos getHighestRow() para encontrar la última fila con datos
-                $highestRow = $sheet->getHighestDataRow(); // Obtiene la última fila con cualquier dato
-                $range = 'A1:L' . $highestRow; // Rango de A1 hasta la columna L de la última fila con datos
+                $highestRow = $sheet->getHighestDataRow();
+                $range = 'A1:L' . $highestRow;
 
-                // Obtener los datos del rango especificado
                 $sheetData = $sheet->rangeToArray(
-                    $range,     // El rango de celdas a leer
-                    null,       // No aplicar pre-casteo de valores
-                    true,       // Formatear celdas (por ejemplo, fechas)
-                    true,       // Incluir celdas nulas (vacías en el rango)
-                    true        // Incluir las columnas como claves si TRUE (A, B, C...)
+                    $range,
+                    null,
+                    true,
+                    true,
+                    true
                 );
 
-                // Filtrar filas vacías (todas las columnas de A a N están vacías)
                 $filteredData = [];
                 foreach ($sheetData as $row) {
-                    // Revisa si TODAS las celdas en el rango A-N de la fila están vacías
                     $isEmptyRow = true;
                     foreach ($row as $cellValue) {
-                        // Si encuentra cualquier valor no nulo o no una cadena vacía, la fila no está vacía
                         if ($cellValue !== null && $cellValue !== '') {
                             $isEmptyRow = false;
                             break;
@@ -570,25 +1087,23 @@ class UserDatosController extends Controller
                     }
                 }
 
-                // Si la primera fila es un encabezado, la dejamos fuera del array principal de datos
                 if (!empty($filteredData)) {
-                    $headers = array_shift($filteredData); // Si la primera fila es el encabezado
+                    $headers = array_shift($filteredData);
                 }
 
-                // Validar los datos antes de procesarlos
                 $validationErrors = $this->validateExcelData($filteredData);
                 $duplicateErrors = $this->validateDuplicates($filteredData);
 
                 $allErrors = array_merge($validationErrors, $duplicateErrors);
 
                 if (!empty($allErrors)) {
-                    // Si hay errores de validación, mostrar el reporte HTML y no procesar
                     $validationReport = $this->generateValidationReport($allErrors, count($filteredData));
 
-                    // Guardar el reporte en la sesión para mostrarlo en la vista
-                    Yii::$app->session->setFlash('error', $validationReport);
+                    Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                        'Errores de Validación en el Archivo',
+                        'El archivo contiene errores que deben ser corregidos antes de continuar. Por favor, revise el reporte detallado a continuación.'
+                    ) . $validationReport);
 
-                    // Eliminar el archivo subido
                     if (file_exists($filePath)) {
                         unlink($filePath);
                     }
@@ -599,7 +1114,10 @@ class UserDatosController extends Controller
                     ]);
                 }
 
-                // Si no hay errores de validación, proceder con el procesamiento
+                $successCount = 0;
+                $errorCount = 0;
+                $errorMessages = [];
+
                 foreach ($filteredData as $row) {
                     $contrato = new Contratos();
                     $contrato->clinica_id = $clinica_id;
@@ -609,16 +1127,13 @@ class UserDatosController extends Controller
                     $contrato->fecha_ven = $fecha_ven;
                     $contrato->created_at = $fechaCreacion;
                     $contrato->estatus = 'Creado';
-                    $guardadoContrato = $contrato->save();
-                    if ($guardadoContrato) {
-                        Yii::$app->session->setFlash('success', 'Contrato guardado correctamente.');
-                    } else {
-                        Yii::$app->session->setFlash('error', 'Error al guardar el contrato.');
-                        print_r($contrato->getErrors());
-                        exit;
+
+                    if (!$contrato->save()) {
+                        $errorCount++;
+                        $errorMessages[] = 'Error al guardar el contrato para la fila ' . ($successCount + $errorCount + 1) . ': ' . implode(', ', $contrato->getErrorSummary(true));
+                        continue;
                     }
 
-                    // IMPORTANTE: Reiniciar el modelo de afiliado para cada fila
                     $model = new UserDatos();
 
                     $model->role = 'afiliado';
@@ -643,14 +1158,21 @@ class UserDatosController extends Controller
                     $model->direccion = $row['L'];
                     $model->contrato_id = $contrato->id;
                     $model->clinica_id = $clinica_id;
-                    $model->plan_id = $plan_id; // Se asigna el plan_id global a cada nuevo UserDatos
+                    $model->plan_id = $plan_id;
                     $model->created_at = $fechaCreacion;
                     $model->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
-                    $guardo = $model->save();
-                    if ($guardo) {
+
+                    // Check for duplicates before saving
+                    if ($model->checkAffiliateDuplicate()) {
+                        $errorCount++;
+                        $errorMessages[] = 'El afiliado con cédula ' . $model->tipo_cedula . '-' . $model->cedula . ' ya existe en el sistema. Fila: ' . ($successCount + $errorCount + 1);
+                        continue;
+                    }
+
+                    if ($model->save()) {
                         $contrato->user_id = $model->id;
                         $contrato->save(false);
-                        Yii::$app->session->setFlash('success', 'Afiliado guardado correctamente.');
+
                         $pass = 'sispsa' . $model->cedula;
                         $modelUser = new User();
                         $modelUser->username = $model->email;
@@ -658,9 +1180,8 @@ class UserDatosController extends Controller
                         $modelUser->auth_key = User::generateAuthKey();
                         $modelUser->email = $model->email;
                         $modelUser->status = 1;
-                        $guardadoUser = $modelUser->save();
-                        if ($guardadoUser) {
-                            Yii::$app->session->setFlash('success', 'Usuario guardado correctamente.');
+
+                        if ($modelUser->save()) {
                             $auth = Yii::$app->authManager;
                             $roleName = 'afiliado';
                             $role = $auth->getRole($roleName);
@@ -674,34 +1195,54 @@ class UserDatosController extends Controller
                                 } catch (\Exception $e) {
                                     Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
                                 }
-                            } else {
-                                Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
-                                print_r($modelUser->getErrors());
-                                exit;
                             }
-                        } else {
-                            Yii::$app->session->setFlash('error', 'Error al guardar el usuario.');
-                            print_r($modelUser->getErrors());
-                            exit;
                         }
+                        $successCount++;
                     } else {
-                        Yii::$app->session->setFlash('error', 'Error al guardar el afiliado.');
-                        print_r($model->getErrors());
-                        exit;
+                        $errorCount++;
+                        $errorMessages[] = 'Error al guardar el afiliado: ' . implode(', ', $model->getErrorSummary(true));
                     }
                 }
-                Yii::$app->session->setFlash('success', 'Afiliados guardados correctamente.');
-                return $this->redirect(['index']);
-            } catch (Exception $e) {
-                Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
-                Yii::$app->session->setFlash('error', 'Error al leer el archivo Excel: ' . $e->getMessage());
-                // Asegúrate de eliminar el archivo subido si hubo un error al leerlo
+
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
-            } catch (\Exception $e) { // Captura otras excepciones generales
+
+                if ($successCount > 0 && $errorCount == 0) {
+                    Yii::$app->session->setFlash('success', $this->generateSuccessMessage(
+                        'Importación Exitosa',
+                        'Se han importado <strong>' . $successCount . '</strong> afiliados correctamente.'
+                    ));
+                } elseif ($successCount > 0 && $errorCount > 0) {
+                    Yii::$app->session->setFlash('warning', $this->generateWarningMessage(
+                        'Importación Parcial',
+                        'Se importaron <strong>' . $successCount . '</strong> afiliados correctamente, pero <strong>' . $errorCount . '</strong> registros presentaron errores.<br><br>' .
+                            '<strong>Detalles de los errores:</strong><br>' . implode('<br>', $errorMessages)
+                    ));
+                } else {
+                    Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                        'Error en la Importación',
+                        'No se pudo importar ningún afiliado. Se encontraron <strong>' . $errorCount . '</strong> errores.<br><br>' .
+                            '<strong>Detalles de los errores:</strong><br>' . implode('<br>', $errorMessages)
+                    ));
+                }
+
+                return $this->redirect(['index']);
+            } catch (Exception $e) {
+                Yii::error('Error al procesar el archivo Excel: ' . $e->getMessage());
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error al Leer el Archivo Excel',
+                    'Ocurrió un error al procesar el archivo: ' . $e->getMessage()
+                ));
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            } catch (\Exception $e) {
                 Yii::error('Un error inesperado ocurrió: ' . $e->getMessage());
-                Yii::$app->session->setFlash('error', 'Un error inesperado ocurrió al procesar el archivo: ' . $e->getMessage());
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error Inesperado',
+                    'Ocurrió un error inesperado al procesar el archivo: ' . $e->getMessage()
+                ));
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
@@ -719,7 +1260,6 @@ class UserDatosController extends Controller
         ]);
     }
 
-
     /**
      * Lists all UserDatos models.
      *
@@ -729,9 +1269,7 @@ class UserDatosController extends Controller
     {
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        // Calificar con el nombre de la tabla para evitar ambigüedad (existe join a user_datos como ud_asesor)
         $dataProvider->query->andFilterWhere(['ilike', 'user_datos.role', 'Afiliado']);
-
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -783,7 +1321,6 @@ class UserDatosController extends Controller
             $ciudad = $ciudadModel ? $ciudadModel->nombre : null;
         }
 
-
         return $this->render('view', [
             'model' => $model,
             'estado' => $estado,
@@ -809,9 +1346,6 @@ class UserDatosController extends Controller
         $model->role = 'afiliado';
         $model->estatus = 'Creado';
 
-        // ============================================
-        // AGENCIA_ID: Set automatically for Agente users
-        // ============================================
         $rol = UserHelper::getMyRol();
         if ($rol == "Agente") {
             $agenteId = UserHelper::getAgenteId();
@@ -820,7 +1354,6 @@ class UserDatosController extends Controller
                 Yii::info("Automatically set agencia_id = {$agenteId} for Agente user creating affiliate", __METHOD__);
             }
         }
-        // ============================================
 
         if ($model->estatus_solvente == "" || $model->estatus_solvente == null) {
             $model->estatus_solvente = "No";
@@ -828,40 +1361,30 @@ class UserDatosController extends Controller
 
         if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-            // ============================================
-            // Calculate fecha_ven from fecha_ini BEFORE validation
-            // ============================================
             if (!empty($modelContrato->fecha_ini)) {
                 $fechaIni = new \DateTime($modelContrato->fecha_ini);
                 $fechaIni->modify('+1 year');
                 $fechaIni->modify('-1 day');
                 $modelContrato->fecha_ven = $fechaIni->format('Y-m-d');
-
-                // Log for debugging
                 Yii::info("Setting fecha_ven: {$modelContrato->fecha_ven} based on fecha_ini: {$modelContrato->fecha_ini}", 'user-datos');
             }
-            // ============================================
 
             $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
 
-            // Normalize estatus_solvente to consistent format
             if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
                 $model->estatus_solvente = "Si";
             } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
                 $model->estatus_solvente = "No";
             }
 
-            // Procesar grupo familiar
             $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
             if (!empty($grupoFamiliar)) {
                 $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
             }
 
-            // Procesar datos del contratante si es diferente
             if ($model->tiene_contratante_diferente) {
-                // Los datos del contratante ya se cargan automáticamente con load()
+                // Datos del contratante ya cargados
             } else {
-                // Si no hay contratante diferente, limpiar los campos del contratante
                 $model->nombre_contratante = null;
                 $model->apellido_contratante = null;
                 $model->tipo_cedula_contratante = null;
@@ -889,6 +1412,34 @@ class UserDatosController extends Controller
 
             if ($model->user_datos_type_id == 1) {
                 $model->afiliado_corporativo_id = null;
+            }
+
+            // ============================================
+            // DUPLICATE CHECK - Validate before saving
+            // ============================================
+            if ($model->role === 'afiliado') {
+                // Check for duplicates using the model's built-in validation
+                $duplicateInfo = $model->getDuplicateDetails();
+
+                if ($duplicateInfo && isset($duplicateInfo['record'])) {
+                    $existing = $duplicateInfo['record'];
+
+                    // For underage affiliates, check if it's the same child
+                    if ($model->tipo_cedula === 'Menor Sin Cédula') {
+                        Yii::$app->session->setFlash('error', $this->generateDuplicateErrorMessage($existing, $model, 'underage'));
+                        return $this->render('create', [
+                            'model' => $model,
+                            'modelContrato' => $modelContrato,
+                        ]);
+                    }
+
+                    // Regular affiliate duplicate
+                    Yii::$app->session->setFlash('error', $this->generateDuplicateErrorMessage($existing, $model, 'regular'));
+                    return $this->render('create', [
+                        'model' => $model,
+                        'modelContrato' => $modelContrato,
+                    ]);
+                }
             }
 
             if ($model->save()) {
@@ -923,16 +1474,28 @@ class UserDatosController extends Controller
                         if ($publicUrl) {
                             $model->imagen_identificacion = $publicUrl;
                             if ($model->save(false)) {
-                                Yii::$app->session->setFlash('success', 'Identificacion subido con éxito.');
+                                Yii::$app->session->setFlash('success', $this->generateSuccessMessage(
+                                    'Imagen de Identificación Subida',
+                                    'La imagen de identificación se ha subido correctamente.'
+                                ));
                             } else {
-                                Yii::$app->session->setFlash('error', 'Error al guardar identificacion en la base de datos.');
+                                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                                    'Error al Guardar la Imagen',
+                                    'La imagen se subió pero no se pudo guardar en la base de datos.'
+                                ));
                             }
                         } else {
-                            Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                                'Error al Subir la Imagen',
+                                'Ocurrió un error al subir la imagen a Supabase Storage.'
+                            ));
                         }
                     } else {
                         Yii::error("Error al guardar el archivo temporal: " . $model->imagenIdentificacionFile->error, __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                            'Error al Guardar el Archivo',
+                            'No se pudo guardar el archivo temporal en el servidor.'
+                        ));
                     }
                 }
 
@@ -960,16 +1523,28 @@ class UserDatosController extends Controller
                         if ($publicUrl) {
                             $model->selfie = $publicUrl;
                             if ($model->save(false)) {
-                                Yii::$app->session->setFlash('success', 'Selfie subido con éxito.');
+                                Yii::$app->session->setFlash('success', $this->generateSuccessMessage(
+                                    'Selfie Subido',
+                                    'La foto de perfil se ha subido correctamente.'
+                                ));
                             } else {
-                                Yii::$app->session->setFlash('error', 'Error al guardar selfie en la base de datos.');
+                                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                                    'Error al Guardar el Selfie',
+                                    'El selfie se subió pero no se pudo guardar en la base de datos.'
+                                ));
                             }
                         } else {
-                            Yii::$app->session->setFlash('error', 'Fallo la subida a Supabase Storage.');
+                            Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                                'Error al Subir el Selfie',
+                                'Ocurrió un error al subir el selfie a Supabase Storage.'
+                            ));
                         }
                     } else {
                         Yii::error("Error al guardar el archivo temporal: " . $model->selfieFile->error, __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al guardar el archivo temporal en el servidor.');
+                        Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                            'Error al Guardar el Archivo',
+                            'No se pudo guardar el archivo temporal en el servidor.'
+                        ));
                     }
                 }
 
@@ -987,42 +1562,41 @@ class UserDatosController extends Controller
                     $plan = Planes::find()->where(['id' => $modelContrato->plan_id])->one();
                     $modelContrato->monto = $plan ? $plan->precio : 0;
 
-                    // Generate anniversary-based cuotas
                     if ($modelContrato->save()) {
 
-                        // ADD THIS DEBUG CODE
                         Yii::info("=== START CUOTA GENERATION DEBUG ===", 'debug');
                         Yii::info("Contract ID: " . $modelContrato->id, 'debug');
                         Yii::info("Start Date: " . $modelContrato->fecha_ini, 'debug');
                         Yii::info("Monto: " . $modelContrato->monto, 'debug');
 
-                        // Check if method exists
                         if (!method_exists('app\models\Cuotas', 'generateCuotasSimple')) {
                             Yii::error("CRITICAL: generateCuotasSimple method not found!", 'debug');
                         } else {
                             Yii::info("Method exists, calling it now...", 'debug');
                         }
 
-                        // Generate 12 cuotas using the new anniversary-based method
                         $cuotaGeneration = Cuotas::generateCuotasSimple(
                             $modelContrato->id,
                             $modelContrato->fecha_ini,
                             $modelContrato->monto
                         );
-                        // Log the result
                         Yii::info("Generation result: " . print_r($cuotaGeneration, true), 'debug');
 
                         if (!$cuotaGeneration['success']) {
                             Yii::error("Failed to generate cuotas: " . $cuotaGeneration['error'], 'user-datos');
-                            Yii::$app->session->setFlash('warning', 'Contrato creado pero hubo un problema generando las cuotas. Por favor, ejecute el comando de generación manualmente.');
+                            Yii::$app->session->setFlash('warning', $this->generateWarningMessage(
+                                'Contrato Creado con Advertencia',
+                                'El contrato se creó correctamente, pero hubo un problema al generar las cuotas. Por favor, ejecute el comando de generación manualmente.<br><br>' .
+                                    '<strong>Error:</strong> ' . ($cuotaGeneration['error'] ?? 'Error desconocido')
+                            ));
                         } else {
                             Yii::info("Successfully generated anniversary-based cuotas for contract #{$modelContrato->id}", 'user-datos');
-                            Yii::$app->session->setFlash('success', 'Afiliado creado exitosamente con 12 cuotas mensuales. La primera cuota vence hoy, las siguientes el mismo día de cada mes.');
+                            Yii::$app->session->setFlash('success', $this->generateSuccessMessage(
+                                'Afiliado Creado Exitosamente',
+                                'El afiliado se ha registrado correctamente con <strong>12 cuotas mensuales</strong>.<br><br>' .
+                                    'La primera cuota vence hoy, las siguientes el mismo día de cada mes.'
+                            ));
                         }
-
-                        // ============================================
-                        // END OF CUOTA GENERATION
-                        // ============================================
 
                         $anio_actual = date('Y');
                         $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
@@ -1040,9 +1614,7 @@ class UserDatosController extends Controller
                                 $model->user_login_id = $modelUser->id;
                                 $model->save();
 
-                                // Crear relación con corporativo si es tipo 2 y hay ID de corporativo
                                 if ($model->user_datos_type_id == 2 && !empty($model->afiliado_corporativo_id)) {
-                                    // Eliminar relación previa si existe para evitar duplicados
                                     CorporativoUser::deleteAll(['user_id' => $model->id]);
 
                                     $corporativoUser = new CorporativoUser();
@@ -1053,27 +1625,38 @@ class UserDatosController extends Controller
                                         Yii::error('No se pudo guardar la relación en corporativo_user: ' . json_encode($corporativoUser->getErrors()));
                                     }
                                 } elseif (empty($model->afiliado_corporativo_id)) {
-                                    // Si no hay corporativo, eliminar relación existente
                                     CorporativoUser::deleteAll(['user_id' => $model->id]);
                                 }
                             } catch (\Exception $e) {
                                 Yii::error("Error al asignar el rol: " . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
                             }
                         } else {
-                            Yii::$app->session->setFlash('warning', "El rol '$roleName' no existe. Usuario creado, pero el rol no pudo ser asignado.");
+                            Yii::$app->session->setFlash('warning', $this->generateWarningMessage(
+                                'Rol No Asignado',
+                                'El usuario se creó correctamente, pero el rol "' . $roleName . '" no existe. Por favor, contacte al administrador del sistema.'
+                            ));
                         }
                         return $this->redirect(['view', 'id' => $model->id]);
                     } else {
                         Yii::error("Error saving contract: " . json_encode($modelContrato->errors), __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al guardar el contrato: ' . implode(', ', $modelContrato->getErrorSummary(true)));
+                        Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                            'Error al Guardar el Contrato',
+                            'No se pudo guardar el contrato: ' . implode(', ', $modelContrato->getErrorSummary(true))
+                        ));
                     }
                 } else {
                     Yii::error("Error saving user: " . json_encode($modelUser->errors), __METHOD__);
-                    Yii::$app->session->setFlash('error', 'Error al guardar el usuario: ' . implode(', ', $modelUser->getErrorSummary(true)));
+                    Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                        'Error al Guardar el Usuario',
+                        'No se pudo guardar el usuario: ' . implode(', ', $modelUser->getErrorSummary(true))
+                    ));
                 }
             } else {
                 Yii::error("Error saving UserDatos: " . json_encode($model->errors), __METHOD__);
-                Yii::$app->session->setFlash('error', 'Error al guardar los datos del afiliado: ' . implode(', ', $model->getErrorSummary(true)));
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error al Guardar los Datos del Afiliado',
+                    'No se pudieron guardar los datos del afiliado: ' . implode(', ', $model->getErrorSummary(true))
+                ));
             }
         }
 
@@ -1094,36 +1677,25 @@ class UserDatosController extends Controller
     {
         $model = $this->findModel($id);
 
-        // ============================================
-        // AGENCIA_ID: Store original value to preserve it
-        // ============================================
         $originalAgenciaId = $model->agencia_id;
-        // ============================================
 
-        // CRITICAL: Clear invalid contrato_id BEFORE loading form data
         if ($model->contrato_id) {
             $existingContract = Contratos::findOne($model->contrato_id);
             if (!$existingContract) {
                 Yii::info("Contrato ID {$model->contrato_id} no existe, limpiando referencia para usuario {$id}", __METHOD__);
-                $model->contrato_id = null; // Clear invalid reference immediately
+                $model->contrato_id = null;
             }
         }
 
-        // ============================================
-        // FIX: Get ONLY non-annulled contracts
-        // ============================================
-        // Try to find existing NON-ANULLED contract by user_id
         $modelContrato = Contratos::find()
             ->where(['user_id' => $id])
-            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO]) // Exclude annulled contracts
-            ->orderBy(['fecha_ini' => SORT_DESC]) // Get the most recent first
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+            ->orderBy(['fecha_ini' => SORT_DESC])
             ->one();
 
         $isNewContract = false;
 
         if ($modelContrato === null) {
-            // No active contract exists for this user
-            // Check if there ARE contracts but all are annulled
             $hasAnnulledContracts = Contratos::find()
                 ->where(['user_id' => $id])
                 ->andWhere(['estatus' => Contratos::STATUS_ANULADO])
@@ -1131,56 +1703,46 @@ class UserDatosController extends Controller
 
             if ($hasAnnulledContracts) {
                 Yii::info("Usuario {$id} tiene contratos pero todos están anulados", __METHOD__);
-                // Optionally add a flash message to inform the user
-                Yii::$app->session->addFlash('info', 'Este afiliado tiene contratos, pero todos están anulados. Se creará un nuevo contrato.');
+                Yii::$app->session->setFlash('info', $this->generateInfoMessage(
+                    'Contratos Anulados',
+                    'Este afiliado tiene contratos, pero todos están anulados. Se creará un nuevo contrato.'
+                ));
             }
 
-            // No active contract exists, create a new one
             $modelContrato = new Contratos();
             $isNewContract = true;
 
-            // Set default dates
             $modelContrato->fecha_ini = date('Y-m-d');
             $modelContrato->fecha_ven = date('Y-m-d', strtotime('+1 year'));
             $modelContrato->estatus = 'Creado';
         } else {
-            // We found an active contract by user_id, update the model's contrato_id
             $model->contrato_id = $modelContrato->id;
             Yii::info("Contrato activo encontrado para usuario {$id}: ID {$modelContrato->id} con estatus '{$modelContrato->estatus}'", __METHOD__);
         }
 
-        // Almacenamos el estado anterior
         $tipoUsuarioAnterior = $model->user_datos_type_id;
         $corporativoIdAnterior = $model->afiliado_corporativo_id;
 
         if ($this->request->isPost) {
-            // Load model data
             if ($model->load($this->request->post()) && $modelContrato->load($this->request->post())) {
 
-                // ============================================
-                // AGENCIA_ID: Restore the original value if it was cleared
-                // ============================================
                 if ($originalAgenciaId && empty($model->agencia_id)) {
                     $model->agencia_id = $originalAgenciaId;
                     Yii::info("Restored agencia_id = {$originalAgenciaId} for user {$id} during update", __METHOD__);
                 }
-                // ============================================
 
-                // CRITICAL: Clear any validation errors for contrato_id
                 $model->clearErrors('contrato_id');
 
                 Yii::info("Iniciando proceso de actualización para UserDatos ID: " . $id, __METHOD__);
 
                 $model->tiene_contratante_diferente = (int)($this->request->post('UserDatos')['tiene_contratante_diferente'] ?? 0);
 
-                // Normalize estatus_solvente
                 if ($model->estatus_solvente === "SI" || $model->estatus_solvente === "Sí" || $model->estatus_solvente === 1) {
                     $model->estatus_solvente = "Si";
                 } elseif ($model->estatus_solvente === "NO" || $model->estatus_solvente === 0) {
                     $model->estatus_solvente = "No";
                 }
 
-                // Procesar grupo familiar
                 $grupoFamiliar = $this->request->post('UserDatos')['grupo_familiar'] ?? [];
                 if (!empty($grupoFamiliar)) {
                     $model->grupo_familiar = json_encode(array_values($grupoFamiliar));
@@ -1188,15 +1750,12 @@ class UserDatosController extends Controller
                     $model->grupo_familiar = null;
                 }
 
-                // Clear contratante fields if not needed
                 if (!$model->tiene_contratante_diferente) {
                     $this->clearContratanteFields($model);
                 }
 
-                // Set plan_id from contract to user_datos
                 $model->plan_id = $modelContrato->plan_id;
 
-                // Set default values
                 if (empty($model->estatus_solvente)) {
                     $model->estatus_solvente = "No";
                 }
@@ -1205,7 +1764,6 @@ class UserDatosController extends Controller
                 $model->estatus = 'Registrado';
                 $model->updated_at = date('Y-m-d H:i:s');
 
-                // Handle corporativo relations
                 $tipoUsuarioActual = (int)($this->request->post('UserDatos')['user_datos_type_id'] ?? 0);
                 $corporativoIdSeleccionado = (int)($this->request->post('UserDatos')['afiliado_corporativo_id'] ?? null);
 
@@ -1240,12 +1798,46 @@ class UserDatosController extends Controller
                 }
 
                 // ============================================
-                // SAVE USERDATOS (should pass validation now)
+                // DUPLICATE CHECK FOR UPDATE
                 // ============================================
+                // Only check if we're changing the cedula or names
+                $originalModel = UserDatos::findOne($id);
+                $isChangingIdentity = false;
+
+                if ($originalModel) {
+                    $isChangingIdentity = (
+                        $model->tipo_cedula !== $originalModel->tipo_cedula ||
+                        $model->cedula !== $originalModel->cedula ||
+                        trim($model->nombres) !== trim($originalModel->nombres) ||
+                        trim($model->apellidos) !== trim($originalModel->apellidos)
+                    );
+                }
+
+                if ($isChangingIdentity && $model->role === 'afiliado') {
+                    // Check for duplicates excluding the current record
+                    $excludeCurrent = true;
+                    if ($model->checkAffiliateDuplicate($excludeCurrent)) {
+                        $duplicateInfo = $model->getDuplicateDetails($excludeCurrent);
+
+                        if ($duplicateInfo && isset($duplicateInfo['record'])) {
+                            $existing = $duplicateInfo['record'];
+
+                            if ($model->tipo_cedula === 'Menor Sin Cédula') {
+                                Yii::$app->session->setFlash('error', $this->generateDuplicateErrorMessage($existing, $model, 'underage'));
+                            } else {
+                                Yii::$app->session->setFlash('error', $this->generateDuplicateErrorMessage($existing, $model, 'regular'));
+                            }
+                            return $this->render('update', [
+                                'model' => $model,
+                                'modelContrato' => $modelContrato,
+                            ]);
+                        }
+                    }
+                }
+
                 if ($model->save()) {
                     Yii::info("UserDatos guardado exitosamente", __METHOD__);
 
-                    // Handle file uploads
                     $imagenIdentificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
                     $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
 
@@ -1259,18 +1851,13 @@ class UserDatosController extends Controller
                         $this->uploadFile($model, 'selfieFile', 'FotoPerfil', 'selfie', 'selfie_');
                     }
 
-                    // ============================================
-                    // CREATE/UPDATE CONTRACT
-                    // ============================================
                     $modelContrato->user_id = $id;
                     $modelContrato->clinica_id = $model->clinica_id;
 
-                    // Set default status if not set
                     if (empty($modelContrato->estatus)) {
                         $modelContrato->estatus = 'Creado';
                     }
 
-                    // Get plan price
                     if ($modelContrato->plan_id) {
                         $plan = Planes::findOne($modelContrato->plan_id);
                         $modelContrato->monto = $plan ? $plan->precio : 0;
@@ -1278,29 +1865,24 @@ class UserDatosController extends Controller
                         $modelContrato->monto = 0;
                     }
 
-                    // Generate contract number for new contracts
                     if ($isNewContract && empty($modelContrato->nrocontrato)) {
                         $anio_actual = date('Y');
-                        // Use a temporary ID for the contract number
                         $tempId = 'TEMP-' . time();
                         $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $tempId;
                     }
 
                     if ($modelContrato->save()) {
-                        // Update contract number with real ID
                         if (strpos($modelContrato->nrocontrato, 'TEMP-') !== false) {
                             $anio_actual = date('Y');
                             $modelContrato->nrocontrato = $model->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
                             $modelContrato->save(false);
                         }
 
-                        // Update user_datos with the new contract_id
                         if ($model->contrato_id != $modelContrato->id) {
                             $model->contrato_id = $modelContrato->id;
                             $model->save(false);
                         }
 
-                        // Handle cuota creation
                         $cuota = Cuotas::find()->where(['contrato_id' => $modelContrato->id])->orderBy(['fecha_vencimiento' => SORT_ASC])->one();
                         if (!$cuota) {
                             $cuota = new Cuotas();
@@ -1318,7 +1900,6 @@ class UserDatosController extends Controller
                             Yii::error("Error saving cuota: " . json_encode($cuota->getErrors()), __METHOD__);
                         }
 
-                        // Handle user creation if needed
                         if (empty($model->user_login_id)) {
                             $modelUser = new User();
                             $modelUser->username = $model->email;
@@ -1332,7 +1913,6 @@ class UserDatosController extends Controller
                                 $model->user_login_id = $modelUser->id;
                                 $model->save(false);
 
-                                // Assign role
                                 $auth = Yii::$app->authManager;
                                 $roleName = 'afiliado';
                                 $role = $auth->getRole($roleName);
@@ -1347,7 +1927,6 @@ class UserDatosController extends Controller
                                 }
                             }
                         } else {
-                            // Update existing user if needed
                             $modelUser = User::findOne($model->user_login_id);
                             if ($modelUser) {
                                 $modelUser->email = $model->email;
@@ -1355,16 +1934,24 @@ class UserDatosController extends Controller
                             }
                         }
 
-                        Yii::$app->session->setFlash('success', 'El afiliado y su contrato fueron actualizados exitosamente.');
+                        Yii::$app->session->setFlash('success', $this->generateSuccessMessage(
+                            'Afiliado Actualizado Exitosamente',
+                            'El afiliado y su contrato han sido actualizados correctamente.'
+                        ));
                         return $this->redirect(['view', 'id' => $model->id]);
                     } else {
                         Yii::error("Error saving contract: " . json_encode($modelContrato->getErrors()), __METHOD__);
-                        Yii::$app->session->setFlash('error', 'Error al crear/actualizar el contrato: ' . implode(', ', $modelContrato->getErrorSummary(true)));
+                        Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                            'Error al Guardar el Contrato',
+                            'No se pudo guardar el contrato: ' . implode(', ', $modelContrato->getErrorSummary(true))
+                        ));
                     }
                 } else {
                     Yii::error("Error saving UserDatos: " . json_encode($model->getErrors()), __METHOD__);
-                    $errorMessage = implode(', ', $model->getErrorSummary(true));
-                    Yii::$app->session->setFlash('error', 'Error al actualizar los datos del afiliado: ' . $errorMessage);
+                    Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                        'Error al Actualizar los Datos del Afiliado',
+                        'No se pudieron actualizar los datos del afiliado: ' . implode(', ', $model->getErrorSummary(true))
+                    ));
                 }
             }
         }
@@ -1375,10 +1962,9 @@ class UserDatosController extends Controller
         ]);
     }
 
-    
-// ============================================
-// HELPER METHODS
-// ============================================
+    // ============================================
+    // HELPER METHODS
+    // ============================================
 
     /**
      * Clear contratante fields
@@ -1433,7 +2019,10 @@ class UserDatosController extends Controller
                 return $modelUser;
             } else {
                 Yii::error("Error creating user: " . json_encode($modelUser->getErrors()), __METHOD__);
-                Yii::$app->session->setFlash('error', 'Error al crear el usuario: ' . implode(', ', $modelUser->getErrorSummary(true)));
+                Yii::$app->session->setFlash('error', $this->generateErrorMessage(
+                    'Error al Crear el Usuario',
+                    'No se pudo crear el usuario: ' . implode(', ', $modelUser->getErrorSummary(true))
+                ));
                 return false;
             }
         } else {
@@ -1449,16 +2038,13 @@ class UserDatosController extends Controller
         $tipoUsuarioActual = $model->user_datos_type_id;
         $corporativoIdSeleccionado = $model->afiliado_corporativo_id;
 
-        // Caso 1: Si el usuario cambia de "Corporativo" (2) a "Simple" (1)
         if ($tipoUsuarioAnterior == 2 && $tipoUsuarioActual == 1) {
             if ($corporativoIdAnterior) {
                 CorporativoUser::deleteAll(['corporativo_id' => $corporativoIdAnterior, 'user_id' => $model->id]);
                 Yii::info("Relación con corporativo eliminada para el usuario " . $model->id, __METHOD__);
             }
             $model->afiliado_corporativo_id = null;
-        }
-        // Caso 2: Si el usuario se mantiene o cambia a "Corporativo" (2)
-        elseif ($tipoUsuarioActual == 2) {
+        } elseif ($tipoUsuarioActual == 2) {
             if ($corporativoIdAnterior && $corporativoIdAnterior !== $corporativoIdSeleccionado) {
                 CorporativoUser::deleteAll(['corporativo_id' => $corporativoIdAnterior, 'user_id' => $model->id]);
                 Yii::info("Relación anterior con corporativo eliminada para el usuario " . $model->id, __METHOD__);
@@ -1492,14 +2078,12 @@ class UserDatosController extends Controller
      */
     private function handleFileUploads($model)
     {
-        // Selfie upload
         $selfieFiles = UploadedFile::getInstancesByName('UserDatos[selfieFile]');
         if (!empty($selfieFiles) && $selfieFiles[0]->size > 0) {
             $model->selfieFile = reset($selfieFiles);
             $this->uploadFile($model, 'selfieFile', 'FotoPerfil', 'selfie', 'selfie_');
         }
 
-        // Identification image upload
         $identificacionFiles = UploadedFile::getInstancesByName('UserDatos[imagenIdentificacionFile]');
         if (!empty($identificacionFiles) && $identificacionFiles[0]->size > 0) {
             $model->imagenIdentificacionFile = reset($identificacionFiles);
@@ -1541,12 +2125,10 @@ class UserDatosController extends Controller
         $contrato->user_id = $userId;
         $contrato->clinica_id = $userDatos->clinica_id;
 
-        // Set default status if not set
         if (empty($contrato->estatus)) {
             $contrato->estatus = 'Creado';
         }
 
-        // Set default dates if not provided
         if (empty($contrato->fecha_ini)) {
             $contrato->fecha_ini = date('Y-m-d');
         }
@@ -1554,7 +2136,6 @@ class UserDatosController extends Controller
             $contrato->fecha_ven = date('Y-m-d', strtotime('+1 year'));
         }
 
-        // Get plan price
         if ($contrato->plan_id) {
             $plan = Planes::findOne($contrato->plan_id);
             $contrato->monto = $plan ? $plan->precio : 0;
@@ -1562,7 +2143,6 @@ class UserDatosController extends Controller
             $contrato->monto = 0;
         }
 
-        // Generate contract number for new contracts
         if ($isNewContract && empty($contrato->nrocontrato)) {
             $anio_actual = date('Y');
             $contrato->nrocontrato = $userDatos->cedula . '-' . $anio_actual . '-' . ($contrato->id ?: 'NEW');
@@ -1633,7 +2213,8 @@ class UserDatosController extends Controller
         return implode(', ', $errors);
     }
 
-    /* * Deletes an existing UserDatos model.
+    /**
+     * Deletes an existing UserDatos model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param int $id ID
      * @return \yii\web\Response
@@ -1642,6 +2223,11 @@ class UserDatosController extends Controller
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
+
+        Yii::$app->session->setFlash('success', $this->generateSuccessMessage(
+            'Afiliado Eliminado',
+            'El afiliado ha sido eliminado correctamente del sistema.'
+        ));
 
         return $this->redirect(['index']);
     }
@@ -1677,40 +2263,30 @@ class UserDatosController extends Controller
             throw new NotFoundHttpException('El ID del asesor no fue proporcionado.');
         }
 
-        // Find the AgenteFuerza record
         $agenteFuerza = AgenteFuerza::findOne($asesor_id);
 
         if (!$agenteFuerza) {
             throw new NotFoundHttpException('El asesor especificado no existe.');
         }
 
-        // Get the actual UserDatos ID of this asesor person
         $asesorUserDatosId = $agenteFuerza->idusuario;
 
-        // CRITICAL: Get ALL AgenteFuerza IDs for THIS asesor person (from ANY agency they belong to)
         $allAgenteFuerzaIdsForThisAsesor = AgenteFuerza::find()
             ->where(['idusuario' => $asesorUserDatosId])
             ->select('id')
             ->column();
 
-        // Create search model and apply filter
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
-        // IMPORTANT: ONLY filter by asesor_id using ALL AgenteFuerza IDs of this asesor person
-        // Do NOT include agencia_id filter - that would show agency-created affiliates
         $dataProvider->query->andWhere(['user_datos.asesor_id' => $allAgenteFuerzaIdsForThisAsesor]);
-
-        // Also filter by role = afiliado
         $dataProvider->query->andWhere(['user_datos.role' => 'afiliado']);
 
-        // Get the asesor's name for the title
         $asesorUser = UserDatos::findOne($asesorUserDatosId);
         $asesorName = $asesorUser ? $asesorUser->nombres . ' ' . $asesorUser->apellidos : 'Asesor';
 
         $this->view->title = 'Afiliados de: ' . $asesorName;
 
-        // Pass additional data to the view
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -1719,29 +2295,33 @@ class UserDatosController extends Controller
         ]);
     }
 
-
+    /**
+     * Generates contract PDF
+     * @param int $id UserDatos ID
+     * @return \yii\web\Response
+     * @throws NotFoundHttpException
+     */
     public function actionGenerarContratov($id)
     {
         $model = $this->findModel($id);
 
         // ============================================
-        // FIX: Find the active contract by user_id, not contrato_id
+        // DEFINE LOGO AND FIRMAS PATHS FIRST
         // ============================================
+        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+        $firmas = Yii::getAlias('@webroot/img/firmas.png');
+
         $activeContract = Contratos::find()
             ->where(['user_id' => $model->id])
             ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
             ->orderBy(['fecha_ini' => SORT_DESC])
             ->one();
 
-        // ============================================
-        // GET RECEIPT AND CUOTAS INFORMATION
-        // ============================================
         $receiptNumber = '';
         $totalCuotas = 0;
         $totalMontoCuotas = 0;
 
         if ($activeContract) {
-            // Get all cuotas for this contract
             $cuotasList = Cuotas::find()
                 ->where(['contrato_id' => $activeContract->id])
                 ->orderBy(['numero_cuota' => SORT_ASC])
@@ -1749,21 +2329,18 @@ class UserDatosController extends Controller
 
             $totalCuotas = count($cuotasList);
             if ($totalCuotas == 0) {
-                $totalCuotas = 12; // Default for annual contract
+                $totalCuotas = 12;
             }
 
-            // Calculate total amount of all cuotas
             foreach ($cuotasList as $cuota) {
                 $totalMontoCuotas += ($cuota->monto_usd ?: $cuota->monto);
             }
 
-            // Find receipt by contract_id
             $receipt = Receipt::find()
                 ->where(['contract_id' => $activeContract->id])
                 ->orderBy(['created_at' => SORT_DESC])
                 ->one();
 
-            // If no receipt by contract_id, try by user_id
             if (!$receipt && $model->id) {
                 $receipt = Receipt::find()
                     ->where(['user_id' => $model->id])
@@ -1771,7 +2348,6 @@ class UserDatosController extends Controller
                     ->one();
             }
 
-            // If no receipt by user_id, try by payment through paid cuotas
             if (!$receipt) {
                 $paidCuota = Cuotas::find()
                     ->where(['contrato_id' => $activeContract->id])
@@ -1785,7 +2361,6 @@ class UserDatosController extends Controller
                 }
             }
 
-            // If still no receipt, create a provisional one for display
             if (!$receipt && $model->id) {
                 $receipt = new Receipt();
                 $receipt->contract_id = $activeContract->id;
@@ -1807,55 +2382,40 @@ class UserDatosController extends Controller
             }
         }
 
-        // Inicializar variables para datos del corporativo
         $corporativo = null;
         $hasCorporateRelation = false;
+        $isCorporateAffiliate = ($model->user_datos_type_id == 2);
 
-        // Verificar si el afiliado tiene relación con un corporativo
-        if (!empty($model->afiliado_corporativo_id)) {
-            // Buscar la relación corporativo-user
-            $corporativoUser = CorporativoUser::find()
-                ->where(['corporativo_id' => $model->afiliado_corporativo_id, 'user_id' => $model->user_login_id])
-                ->one();
-
-            if ($corporativoUser) {
-                // Obtener los datos del corporativo
-                $corporativo = $corporativoUser->corporativo;
+        // Fetch the corporativo data if this is a corporate affiliate
+        if ($isCorporateAffiliate && !empty($model->afiliado_corporativo_id)) {
+            $corporativo = Corporativo::findOne($model->afiliado_corporativo_id);
+            if ($corporativo) {
                 $hasCorporateRelation = true;
             }
         }
 
-        // ============================================
-        // FIXED: CONTRACT NUMBER GENERATION
-        // ============================================
         $contractNumber = 'N/A';
         $prefix = '';
 
-        // 1. Determine prefix based on user type
         if ($model->user_datos_type_id == 1) {
-            $prefix = 'CI-';  // Individual
+            $prefix = 'CI-';
         } elseif ($model->user_datos_type_id == 2) {
-            $prefix = 'CO-';  // Corporate/Colectivo
+            $prefix = 'CO-';
         }
 
-        // 2. Try to get contract number from the active contract
         if ($activeContract) {
             if (!empty($activeContract->nrocontrato)) {
-                // Use existing contract number
                 $contractNumber = $prefix . $activeContract->nrocontrato;
             } elseif ($activeContract->id) {
-                // Generate contract number on the fly if missing
                 $anio_actual = date('Y');
                 $generatedNumber = $model->cedula . '-' . $anio_actual . '-' . $activeContract->id;
 
-                // Save it to the contract for future use
                 $activeContract->nrocontrato = $generatedNumber;
                 $activeContract->save(false);
 
                 $contractNumber = $prefix . $generatedNumber;
             }
         } else {
-            // No active contract found - check if there's any contract at all
             $anyContract = Contratos::find()
                 ->where(['user_id' => $model->id])
                 ->orderBy(['id' => SORT_DESC])
@@ -1867,29 +2427,24 @@ class UserDatosController extends Controller
                 $anio_actual = date('Y');
                 $contractNumber = $prefix . $model->cedula . '-' . $anio_actual . '-' . $anyContract->id;
             } else {
-                // Ultimate fallback
                 $anio_actual = date('Y');
                 $contractNumber = $prefix . $model->cedula . '-' . $anio_actual . '-' . $model->id;
             }
         }
 
-        // Add debug logging
         Yii::info("Contract Number generated: {$contractNumber} for user {$model->id}", 'contrato-pdf');
         Yii::info("Receipt Number: {$receiptNumber}, Total Cuotas: {$totalCuotas}", 'contrato-pdf');
 
-        // Obtener los IDs de ubicación del modelo
         $estadoId = (int) $model->estado;
         $municipioId = (int) $model->municipio;
         $parroquiaId = (int) $model->parroquia;
         $ciudadId = (int) $model->ciudad;
 
-        // Buscar los nombres correspondientes a los IDs
         $estadoNombre = RmEstado::findOne($estadoId)->nombre ?? '';
         $municipioNombre = RmMunicipio::findOne($municipioId)->nombre ?? '';
         $parroquiaNombre = RmParroquia::findOne($parroquiaId)->nombre ?? '';
         $ciudadNombre = RmCiudad::findOne($ciudadId)->nombre ?? '';
 
-        // Construir la dirección de residencia completa
         $residenceAddressParts = [];
         if (!empty($model->direccion)) $residenceAddressParts[] = $model->direccion;
         if (!empty($parroquiaNombre)) $residenceAddressParts[] = $parroquiaNombre;
@@ -1898,7 +2453,6 @@ class UserDatosController extends Controller
         if (!empty($estadoNombre)) $residenceAddressParts[] = $estadoNombre;
         $fullResidenceAddress = implode(', ', array_filter($residenceAddressParts));
 
-        // Process family group to map Spanish keys to English
         $family_group = [];
         if ($model->grupo_familiar) {
             $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
@@ -1913,21 +2467,128 @@ class UserDatosController extends Controller
             }
         }
 
-        // 💡 CÓDIGO PARA OBTENER LOS DATOS DEL ASESOR 💡
+        // ============================================
+        // INTERMEDIARY DATA - From agente_fuerza table
+        // ============================================
         $agenteFuerza = null;
         $asesorUserDatos = null;
-        $agente = null;
+        $intermediarioNombre = '';
+        $intermediarioCodigo = '';
+        $intermediarioCi = '';
 
         if (!empty($model->asesor_id)) {
+            // Get the AgenteFuerza record directly
             $agenteFuerza = AgenteFuerza::findOne($model->asesor_id);
 
             if ($agenteFuerza) {
-                $asesorUserDatos = $agenteFuerza->userDatos;
-                $agente = $agenteFuerza->agente;
+                // Get the user data for this asesor
+                $asesorUserDatos = UserDatos::findOne($agenteFuerza->idusuario);
+
+                if ($asesorUserDatos) {
+                    // INTERMEDIARIO: nombres + apellidos from UserDatos
+                    $intermediarioNombre = trim($asesorUserDatos->nombres . ' ' . $asesorUserDatos->apellidos);
+
+                    // CÓDIGO: registro_corredor_actividad_aseguradora from AgenteFuerza
+                    $intermediarioCodigo = $agenteFuerza->registro_corredor_actividad_aseguradora ?? '';
+
+                    // C.I.: tipo_cedula + cedula from UserDatos
+                    $intermediarioCi = ($asesorUserDatos->tipo_cedula ?? '') . '-' . ($asesorUserDatos->cedula ?? '');
+                }
             }
         }
 
-        // Preparar los datos para el PDF
+        // ============================================
+        // PLAN INFORMATION - Get plan data
+        // ============================================
+        $plan = $model->plan;
+        $planCobertura = $plan ? $plan->cobertura : 'N/A';
+        // Format the coverage limit with $ sign
+        $planCoberturaFormatted = $planCobertura !== 'N/A' ? '$' . number_format($planCobertura, 2, ',', '.') : 'N/A';
+        $planDeducible = $plan && !empty($plan->deducible) ? $plan->deducible : 'NO APLICA';
+        $planNombre = $plan ? $plan->nombre : 'N/A';
+        $planMoneda = $plan && !empty($plan->moneda) ? $plan->moneda : 'USD';
+        $planExclusiones = $plan && !empty($plan->exclusiones) ? $plan->exclusiones : '';
+
+        // ============================================
+        // PLAN SERVICES - Get services for this plan
+        // ============================================
+        $planServices = [];
+        if ($model->plan_id) {
+            $dbServices = \app\models\PlanServicios::getServicesForPlan($model->plan_id, $model->clinica_id);
+            foreach ($dbServices as $svc) {
+                $planServices[] = [
+                    'servicio' => $svc->servicio_nombre ?? '',
+                    'espera' => $svc->plazo_espera ?? 'NO APLICA',
+                    'descripcion' => $svc->descripcion ?? 'Servicio incluido en el plan',
+                ];
+            }
+        }
+
+        // ============================================
+        // CONTRATANTE DATA - Determine source based on type
+        // ============================================
+        if ($isCorporateAffiliate && $corporativo) {
+            // For CORPORATIVO affiliates, use data from Corporativo table
+            $contratanteData = [
+                'contratante_nombre' => $corporativo->nombre,
+                'contratante_apellido' => '',
+                'contratante_ci' => $corporativo->rif ?: 'N/A',
+                'contratante_nacionalidad' => 'N/A',
+                'contratante_estado_civil' => 'N/A',
+                'contratante_lugar_nacimiento' => 'N/A',
+                'contratante_fecha_nac' => null,
+                'contratante_sexo' => 'N/A',
+                'contratante_profesion' => 'N/A',
+                'contratante_ocupacion' => 'N/A',
+                'contratante_actividad_economica' => $corporativo->actividad_economica ?? 'N/A',
+                'contratante_descripcion_actividad' => $corporativo->productos_servicios ?? 'N/A',
+                'contratante_ingreso_anual' => 'N/A',
+                'contratante_direccion_residencia' => $corporativo->direccion ?? 'N/A',
+                'contratante_direccion_oficina' => $corporativo->direccion ?? 'N/A',
+                'contratante_direccion_cobro' => $corporativo->domicilio_fiscal ?? $corporativo->direccion ?? 'N/A',
+                'contratante_telefono_residencia' => $corporativo->telefono ?? 'N/A',
+                'contratante_telefono_oficina' => $corporativo->telefono ?? 'N/A',
+                'contratante_telefono_celular' => $corporativo->telefono ?? 'N/A',
+                'contratante_email' => $corporativo->email ?? 'N/A',
+                'contratante_tiene_diferente' => false,
+                'tipo_persona_contratante' => 'Jurídica',
+                'razon_social_contratante' => $corporativo->nombre ?? 'N/A',
+                'contratante_is_corporate' => true,
+            ];
+        } else {
+            // For INDIVIDUAL affiliates, use data from UserDatos
+            $contratanteData = [
+                'contratante_nombre' => $model->nombre_contratante ?? $model->nombres,
+                'contratante_apellido' => $model->apellido_contratante ?? $model->apellidos,
+                'contratante_ci' => ($model->tipo_cedula_contratante ?? $model->tipo_cedula) . '-' .
+                    ($model->cedula_contratante ?? $model->cedula),
+                'contratante_nacionalidad' => $model->nacionalidad_contratante ?? $model->nacionalidad,
+                'contratante_estado_civil' => $model->estado_civil_contratante ?? $model->estado_civil,
+                'contratante_lugar_nacimiento' => $model->lugar_nacimiento_contratante ?? $model->lugar_nacimiento,
+                'contratante_fecha_nac' => $model->fecha_nacimiento_contratante ?? $model->fechanac,
+                'contratante_sexo' => $model->sexo_contratante ?? $model->sexo,
+                'contratante_profesion' => $model->profesion_contratante ?? $model->profesion,
+                'contratante_ocupacion' => $model->ocupacion_contratante ?? $model->ocupacion,
+                'contratante_actividad_economica' => $model->actividad_economica_contratante ?? $model->actividad_economica,
+                'contratante_descripcion_actividad' => $model->descripcion_actividad_contratante ?? $model->descripcion_actividad,
+                'contratante_ingreso_anual' => $model->ingreso_anual_contratante ?? $model->ingreso_anual,
+                'contratante_direccion_residencia' => $model->direccion_residencia_contratante ?? $model->direccion_residencia,
+                'contratante_direccion_oficina' => $model->direccion_oficina_contratante ?? $model->direccion_oficina,
+                'contratante_direccion_cobro' => $model->direccion_cobro_contratante ?? $model->direccion_cobro,
+                'contratante_telefono_residencia' => $model->telefono_residencia_contratante ?? $model->telefono_residencia,
+                'contratante_telefono_oficina' => $model->telefono_oficina_contratante ?? $model->telefono_oficina,
+                'contratante_telefono_celular' => $model->telefono_celular_contratante ?? $model->telefono_celular,
+                'contratante_email' => $model->email_contratante ?? $model->email,
+                'contratante_tiene_diferente' => (bool)$model->tiene_contratante_diferente,
+                'tipo_persona_contratante' => 'Natural',
+                'razon_social_contratante' => $model->razon_social ?? 'N/A',
+                'contratante_is_corporate' => false,
+            ];
+        }
+
+        // ============================================
+        // BUILD DATA ARRAY WITH ALL INFORMATION
+        // ============================================
         $data = [
             // Contract Information
             'contract_number' => $contractNumber,
@@ -1935,20 +2596,17 @@ class UserDatosController extends Controller
             'affiliation_type_name' => ($model->user_datos_type_id == 1) ? 'INDIVIDUAL' : 'COLECTIVO',
             'has_active_contract' => ($activeContract !== null),
             'contract_status' => $activeContract ? $activeContract->estatus : 'No activo',
-
-            // Contract Dates and Amount
             'contract_start_date' => $activeContract ? $activeContract->fecha_ini : null,
             'contract_end_date' => $activeContract ? $activeContract->fecha_ven : null,
             'monthly_amount' => $activeContract ? $activeContract->monto : 0,
             'clinica_name' => $model->clinica ? $model->clinica->nombre : 'No asignada',
-
-            // Receipt and Cuotas information
             'receipt_number' => $receiptNumber,
-            'total_cuotas' => $totalCuotas,
+            'total_cuotas' => 12,
             'total_monto_cuotas' => $totalMontoCuotas,
+            'fecha_emision' => date('d/m/Y'),
+            'is_corporate_affiliate' => $isCorporateAffiliate,
 
-            // Datos del Afiliado Propuesto
-            'affiliation_type' => $model->userDatosType ? $model->userDatosType->nombre : '',
+            // Affiliate Information
             'proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
             'proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
             'proposed_affiliate_nationality' => $model->nacionalidad,
@@ -1970,111 +2628,84 @@ class UserDatosController extends Controller
             'proposed_affiliate_cell_phone' => $model->telefono_celular ?: $model->telefono,
             'proposed_affiliate_email' => $model->email,
 
-            // DATOS DEL ASESOR
-            'intermediary_name' => $asesorUserDatos ? $asesorUserDatos->nombres . ' ' . $asesorUserDatos->apellidos : '',
-            'intermediary_code' => $agente ? $agente->sudeaseg : '',
-            'intermediary_ci' => $asesorUserDatos ? $asesorUserDatos->tipo_cedula . '-' . $asesorUserDatos->cedula : '',
+            // ============================================
+            // INTERMEDIARY INFORMATION - From agente_fuerza
+            // ============================================
+            'intermediary_name' => $intermediarioNombre,
+            'intermediary_code' => $intermediarioCodigo,
+            'intermediary_ci' => $intermediarioCi,
 
-            // Datos de la Parte Contratante
-            'contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
-            'contracting_party_ci' => ($model->tipo_cedula_contratante ?? '') . "-" . ($model->cedula_contratante ?? ''),
-            'contracting_party_nationality' => $model->nacionalidad_contratante,
-            'contracting_party_marital_status' => $model->estado_civil_contratante,
-            'contracting_party_birthplace' => $model->lugar_nacimiento_contratante,
-            'contracting_party_birthdate' => $model->fecha_nacimiento_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_contratante, 'yyyy-MM-dd') : '',
-            'contracting_party_sex' => $model->sexo_contratante,
-            'contracting_party_profession' => $model->profesion_contratante,
-            'contracting_party_occupation' => $model->ocupacion_contratante,
-            'contracting_party_economic_activity' => $model->actividad_economica_contratante,
-            'contracting_party_activity_description' => $model->descripcion_actividad_contratante,
-            'contracting_party_annual_income' => $model->ingreso_anual_contratante,
-            'contracting_party_residence_address' => $model->direccion_residencia_contratante,
-            'contracting_party_phone_residence' => $model->telefono_residencia_contratante,
-            'contracting_party_office_address' => $model->direccion_oficina_contratante,
-            'contracting_party_phone_office' => $model->telefono_oficina_contratante,
-            'contracting_party_cell_phone' => $model->telefono_celular_contratante,
-            'contracting_party_email' => $model->email_contratante,
-            'contracting_party_billing_address' => $model->direccion_cobro_contratante ?: ($model->direccion_residencia_contratante ?: ''),
+            // ============================================
+            // CONTRATANTE DATA
+            // ============================================
+            'contratante_nombre' => $contratanteData['contratante_nombre'],
+            'contratante_apellido' => $contratanteData['contratante_apellido'],
+            'contratante_ci' => $contratanteData['contratante_ci'],
+            'contratante_nacionalidad' => $contratanteData['contratante_nacionalidad'],
+            'contratante_estado_civil' => $contratanteData['contratante_estado_civil'],
+            'contratante_lugar_nacimiento' => $contratanteData['contratante_lugar_nacimiento'],
+            'contratante_fecha_nac' => $contratanteData['contratante_fecha_nac'],
+            'contratante_sexo' => $contratanteData['contratante_sexo'],
+            'contratante_profesion' => $contratanteData['contratante_profesion'],
+            'contratante_ocupacion' => $contratanteData['contratante_ocupacion'],
+            'contratante_actividad_economica' => $contratanteData['contratante_actividad_economica'],
+            'contratante_descripcion_actividad' => $contratanteData['contratante_descripcion_actividad'],
+            'contratante_ingreso_anual' => $contratanteData['contratante_ingreso_anual'],
+            'contratante_direccion_residencia' => $contratanteData['contratante_direccion_residencia'],
+            'contratante_direccion_oficina' => $contratanteData['contratante_direccion_oficina'],
+            'contratante_direccion_cobro' => $contratanteData['contratante_direccion_cobro'],
+            'contratante_telefono_residencia' => $contratanteData['contratante_telefono_residencia'],
+            'contratante_telefono_oficina' => $contratanteData['contratante_telefono_oficina'],
+            'contratante_telefono_celular' => $contratanteData['contratante_telefono_celular'],
+            'contratante_email' => $contratanteData['contratante_email'],
+            'contratante_tiene_diferente' => $contratanteData['contratante_tiene_diferente'],
+            'tipo_persona_contratante' => $contratanteData['tipo_persona_contratante'],
+            'razon_social_contratante' => $contratanteData['razon_social_contratante'],
+            'contratante_is_corporate' => $contratanteData['contratante_is_corporate'],
 
-            // Representante Legal
-            'legal_representative_name' => $hasCorporateRelation
-                ? ($corporativo->nombre_representante ?? '')
-                : (($model->nombre_representante_contratante ?? '') . " " . ($model->apellido_representante_contratante ?? '')),
-            'legal_representative_ci' => $hasCorporateRelation
-                ? ($corporativo->cedula_representante ?? '')
-                : (($model->tipo_cedula_representante_contratante ?? '') . "-" . ($model->cedula_representante_contratante ?? '')),
-            'legal_representative_nationality' => $hasCorporateRelation
-                ? ($corporativo->nacionalidad_representante ?? '')
-                : ($model->nacionalidad_representante_contratante ?? ''),
-            'legal_representative_marital_status' => $hasCorporateRelation
-                ? ($corporativo->estado_civil_representante ?? '')
-                : ($model->estado_civil_representante_contratante ?? ''),
-            'legal_representative_birthplace' => $hasCorporateRelation
-                ? ($corporativo->lugar_nacimiento_representante ?? '')
-                : ($model->lugar_nacimiento_representante_contratante ?? ''),
-            'legal_representative_birthdate' => $hasCorporateRelation
-                ? ($corporativo->fecha_nacimiento_representante ? Yii::$app->formatter->asDate($corporativo->fecha_nacimiento_representante, 'yyyy-MM-dd') : '')
-                : ($model->fecha_nacimiento_representante_contratante ? Yii::$app->formatter->asDate($model->fecha_nacimiento_representante_contratante, 'yyyy-MM-dd') : ''),
-            'legal_representative_sex' => $hasCorporateRelation
-                ? ($corporativo->sexo_representante ?? '')
-                : ($model->sexo_representante_contratante ?? ''),
-            'legal_representative_profession' => $hasCorporateRelation
-                ? ($corporativo->profesion_representante ?? '')
-                : ($model->profesion_representante_contratante ?? ''),
-            'legal_representative_occupation' => $hasCorporateRelation
-                ? ($corporativo->ocupacion_representante ?? '')
-                : ($model->ocupacion_representante_contratante ?? ''),
-            'legal_representative_activity_description' => $hasCorporateRelation
-                ? ($corporativo->descripcion_actividad_representante ?? '')
-                : ($model->descripcion_actividad_representante_contratante ?? ''),
-            'legal_representative_address' => $hasCorporateRelation
-                ? ($corporativo->direccion_representante ?? '')
-                : ($model->direccion_representante_contratante ?? ''),
-            'legal_representative_phone' => $hasCorporateRelation
-                ? ($corporativo->telefono_representante ?? '')
-                : ($model->telefono_representante_contratante ?? ''),
+            'tipo_persona_afiliado' => 'Natural',
 
-            // Datos del Plan
-            'plan_selected' => $model->plan ? $model->plan->nombre : '',
-            'plan_currency' => $model->moneda,
-            'plan_deductible' => $model->deducible,
-            'plan_coverage_limit' => $model->limite_cobertura,
-            'maternity_coverage' => $model->cobertura_maternidad,
-            'maternity_deductible' => $model->deducible_maternidad,
-            'maternity_coverage_limit' => $model->limite_cobertura_maternidad,
+            // ============================================
+            // PLAN INFORMATION
+            // ============================================
+            'plan_selected' => $planNombre,
+            'plan_currency' => $planMoneda,
+            'plan_deductible' => $planDeducible,
+            'plan_coverage_limit' => $planCoberturaFormatted,
 
-            // Grupo Familiar
-            'family_group' => (function () use ($model) {
-                if (!$model->grupo_familiar) return [];
-                $grupoFamiliar = json_decode($model->grupo_familiar, true) ?: [];
-                $family_group = [];
-                foreach ($grupoFamiliar as $member) {
-                    $family_group[] = [
-                        'name' => $member['nombre'] ?? '',
-                        'ci' => $member['cedula'] ?? '',
-                        'relationship' => $member['parentesco'] ?? '',
-                        'sex' => $member['sexo'] ?? '',
-                        'birthdate' => $member['fecha_nacimiento'] ?? '',
-                    ];
-                }
-                return $family_group;
-            })(),
+            // ============================================
+            // PLAN SERVICES & EXCLUSIONS
+            // ============================================
+            'plan_services' => $planServices,
+            'exclusiones' => $planExclusiones ?: 'Las exclusiones generales aplicables a todos los planes de medicina prepagada según las condiciones generales del contrato.',
 
-            // Beneficiario
-            'beneficiary_name' => $model->nombre_beneficiario,
-            'beneficiary_ci' => $model->cedula_beneficiario,
-            'beneficiary_relationship' => $model->parentesco_beneficiario,
-            'beneficiary_sex' => $model->sexo_beneficiario,
-            'beneficiary_birthdate' => $model->fecha_nacimiento_beneficiario ? Yii::$app->formatter->asDate($model->fecha_nacimiento_beneficiario, 'yyyy-MM-dd') : '',
+            // Maternity Coverage
+            'maternity_coverage' => $model->cobertura_maternidad ?? false,
+            'maternity_deductible' => $model->deducible_maternidad ?? 'NO APLICA',
+            'maternity_coverage_limit' => $model->limite_cobertura_maternidad ?? 'NO APLICA',
 
-            // Cuenta Bancaria
-            'bank_account_holder_name' => $model->nombre_titular,
-            'bank_account_ci' => $model->cedula_titular,
-            'bank_account_number' => $model->numero_cuenta,
-            'bank_name' => $model->banco ? $model->banco->nombre : '',
-            'bank_account_type' => $model->tipo_cuenta,
+            // Family Group
+            'family_group' => $family_group,
 
-            // Declaración
+            // ============================================
+            // ENHANCED BENEFICIARY INFORMATION
+            // ============================================
+            'beneficiary_name' => $model->nombre_beneficiario ?? 'N/A',
+            'beneficiary_ci' => $model->cedula_beneficiario ?? 'N/A',
+            'beneficiary_relationship' => $model->parentesco_beneficiario ?? 'N/A',
+            'beneficiary_sex' => $model->sexo_beneficiario ?? 'N/A',
+            'beneficiary_birthdate' => $model->fecha_nacimiento_beneficiario ?? null,
+
+            // ============================================
+            // ENHANCED BANKING INFORMATION
+            // ============================================
+            'bank_account_holder_name' => $model->nombre_titular ?? 'N/A',
+            'bank_account_ci' => $model->cedula_titular ?? 'N/A',
+            'bank_account_number' => $model->numero_cuenta ?? 'N/A',
+            'bank_name' => $model->banco ? $model->banco->nombre : 'N/A',
+            'bank_account_type' => $model->tipo_cuenta ?? '',
+
+            // Declaration Information
             'declaration_proposed_affiliate_name' => $model->nombres . " " . $model->apellidos,
             'declaration_proposed_affiliate_ci' => $model->tipo_cedula . "-" . $model->cedula,
             'declaration_contracting_party_name' => ($model->nombre_contratante ?? '') . " " . ($model->apellido_contratante ?? ''),
@@ -2082,11 +2713,12 @@ class UserDatosController extends Controller
             'declaration_place' => $ciudadNombre,
             'declaration_date' => date('d/m/Y'),
 
-            // Datos del Corporativo
+            // Corporate Information
             'has_corporate_relation' => $hasCorporateRelation,
             'corporate_name' => $corporativo ? $corporativo->nombre : '',
             'corporate_rif' => $corporativo ? $corporativo->rif : '',
             'corporate_mercantile_register' => $corporativo ? $corporativo->tomo_registro . ' ' . $corporativo->folio_registro : '',
+            'corporate_tome' => $corporativo ? $corporativo->tomo_registro : '',
             'corporate_registration_date' => $corporativo && $corporativo->fecha_registro_mercantil ? Yii::$app->formatter->asDate($corporativo->fecha_registro_mercantil, 'dd/MM/yyyy') : '',
             'corporate_address' => $corporativo ? $corporativo->direccion : '',
             'corporate_phone' => $corporativo ? $corporativo->telefono : '',
@@ -2095,8 +2727,6 @@ class UserDatosController extends Controller
             'corporate_products_services' => $corporativo ? $corporativo->productos_servicios : '',
             'corporate_profit' => $corporativo ? $corporativo->utilidad_ejercicio_anterior : '',
             'corporate_equity' => $corporativo ? $corporativo->patrimonio : '',
-
-            // Datos del Representante Legal del Corporativo
             'corporate_legal_representative_name' => $corporativo ? $corporativo->nombre_representante : '',
             'corporate_legal_representative_ci' => $corporativo ? $corporativo->cedula_representante : '',
             'corporate_legal_representative_nationality' => $corporativo ? $corporativo->nacionalidad_representante : '',
@@ -2111,10 +2741,6 @@ class UserDatosController extends Controller
             'corporate_legal_representative_phone' => $corporativo ? $corporativo->telefono_representante : '',
         ];
 
-        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
-        $firmas = Yii::getAlias('@webroot/img/firmas.png');
-
-        // Render the HTML content for the PDF
         $content = $this->renderPartial('_contrato_pdf', [
             'data' => $data,
             'logo' => $logo,
@@ -2142,18 +2768,16 @@ class UserDatosController extends Controller
         return $pdf->render();
     }
 
-
-
     public function actionGetCorporativeAffiliates($q = null)
     {
         \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $out = ['results' => ['id' => '', 'text' => '']];
         if (!is_null($q)) {
             $query = UserDatos::find()
-                ->where(['user_datos_type_id' => 2]) // Asume que ID 2 es 'Corporativo'
+                ->where(['user_datos_type_id' => 2])
                 ->andFilterWhere(['ilike', 'nombres', $q])
                 ->orFilterWhere(['ilike', 'apellidos', $q])
-                ->limit(20); // Limita los resultados
+                ->limit(20);
 
             $command = $query->createCommand();
             $data = $command->queryAll();
@@ -2178,18 +2802,16 @@ class UserDatosController extends Controller
                 $clinica = [];
 
                 if ($tipo == 1) {
-                    // Para tipo 1, los datos ya son del modelo RmClinica
                     $clinica = RmClinica::find()->select(['id', 'nombre'])->all();
                 }
 
                 if ($tipo == 2) {
                     $clinica = CorporativoClinica::find()
-                        ->joinWith('clinica') // Usa el nombre de tu relación
+                        ->joinWith('clinica')
                         ->where(['corporativo_id' => $corporativo])
                         ->all();
                 }
 
-                // Cambiar la forma de acceder a los datos dentro del foreach
                 foreach ($clinica as $cli) {
                     if ($tipo == 1) {
                         $out[] = [
@@ -2197,7 +2819,6 @@ class UserDatosController extends Controller
                             'name' => $cli->nombre,
                         ];
                     } elseif ($tipo == 2) {
-                        // Acceder a la clínica a través del nombre de la relación 'clinica'
                         $out[] = [
                             'id' => $cli->clinica->id,
                             'name' => $cli->clinica->nombre,
@@ -2216,16 +2837,11 @@ class UserDatosController extends Controller
             Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
             $datos = Yii::$app->getRequest()->post();
 
-            $plan_id = $datos['id'] ?? null; // Usar operador Elvis para evitar errores si 'id' no existe
+            $plan_id = $datos['id'] ?? null;
 
-            // --- INICIO DE LA CORRECCIÓN CRÍTICA ---
-            // 1. VALIDACIÓN: Asegura que el ID existe, no es nulo y es un valor numérico.
-            // Esto previene que se pase 'Loading ...' o cualquier otra cadena a la base de datos.
             if (empty($plan_id) || !is_numeric($plan_id) || $plan_id <= 0) {
-                // Registrar el intento de consulta inválido
                 Yii::warning("Intento de consulta de plan con ID inválido o no numérico: {$plan_id}", 'datosdelplan');
 
-                // Retornar una respuesta JSON controlada y vacía para que el frontend no falle.
                 return [
                     'data' => [
                         'comision' => 0,
@@ -2236,14 +2852,9 @@ class UserDatosController extends Controller
                     ]
                 ];
             }
-            // --- FIN DE LA CORRECCIÓN CRÍTICA ---
 
-
-            // La búsqueda en la base de datos solo se ejecuta si la validación pasó.
-            // Usamos (int) $plan_id para asegurar que es un entero.
             $plan = Planes::find()->where(['id' => (int) $plan_id])->one();
 
-            // 2. Manejar el caso donde el plan ID es válido pero no existe en la DB
             if (!$plan) {
                 Yii::warning("Plan no encontrado para ID: {$plan_id}", 'datosdelplan');
                 return [
@@ -2257,7 +2868,6 @@ class UserDatosController extends Controller
                 ];
             }
 
-            // 3. Retornar los datos del plan encontrado
             return [
                 'data' => [
                     'comision' => $plan->comision,
@@ -2269,7 +2879,6 @@ class UserDatosController extends Controller
             ];
         }
 
-        // Si no es una petición AJAX, retorna un error 400
         throw new \yii\web\BadRequestHttpException('Solo se permiten peticiones AJAX para esta acción.');
     }
 
@@ -2306,7 +2915,6 @@ class UserDatosController extends Controller
     /**
      * Search affiliates for dependent assignment
      */
-
     public function actionSearchAfiliados()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -2332,7 +2940,6 @@ class UserDatosController extends Controller
         if ($current_user) {
             $query->andWhere(['!=', 'id', $current_user]);
 
-            // Also exclude users who are already dependents of someone else
             $existingDependientes = Dependientes::find()
                 ->select(['dependiente_id'])
                 ->where(['activo' => true])
@@ -2344,12 +2951,11 @@ class UserDatosController extends Controller
         }
 
         if ($q) {
-            // For PostgreSQL, we need to cast cedula to text before using ILIKE
             $query->andWhere([
                 'or',
                 ['ilike', 'nombres', $q],
                 ['ilike', 'apellidos', $q],
-                ['ilike', 'CAST(cedula AS TEXT)', $q], // Cast cedula to text
+                ['ilike', 'CAST(cedula AS TEXT)', $q],
                 ['ilike', 'email', $q],
                 ['ilike', 'CONCAT(nombres, \' \', apellidos)', $q]
             ]);
@@ -2359,7 +2965,6 @@ class UserDatosController extends Controller
 
         $results = [];
         foreach ($afiliados as $afiliado) {
-            // Handle null/empty tipo_cedula
             $tipoCedula = !empty($afiliado->tipo_cedula) ? $afiliado->tipo_cedula : '';
             $cedulaCompleta = $tipoCedula ? $tipoCedula . '-' . $afiliado->cedula : (string)$afiliado->cedula;
 
@@ -2460,6 +3065,7 @@ class UserDatosController extends Controller
 
         return ['success' => true, 'data' => $summary];
     }
+
     public function actionCheckDependientes($id)
     {
         $dependientesCount = \app\models\Dependientes::find()
@@ -2472,6 +3078,7 @@ class UserDatosController extends Controller
             'count' => $dependientesCount
         ]);
     }
+
     /**
      * Test action to debug search
      */
@@ -2479,7 +3086,6 @@ class UserDatosController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        // Test the query directly
         $query = UserDatos::find()
             ->select(['id', 'nombres', 'apellidos', 'cedula', 'tipo_cedula'])
             ->where(['role' => 'afiliado'])
@@ -2517,33 +3123,7 @@ class UserDatosController extends Controller
         return ['success' => true, 'data' => $data];
     }
 
-    /*public function actionClinicasJson()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-
-        $type = Yii::$app->request->get('type');
-        $corporativo_id = Yii::$app->request->get('corporativo');
-
-        if ($type == 2 && $corporativo_id) {
-            $clinicas = RmClinica::find()
-                ->select(['rm_clinica.id', 'rm_clinica.nombre'])
-                ->innerJoin('corporativo_clinica', 'rm_clinica.id = corporativo_clinica.clinica_id')
-                ->where(['corporativo_clinica.corporativo_id' => $corporativo_id])
-                ->asArray()
-                ->all();
-        } else {
-            $clinicas = RmClinica::find()
-                ->select(['id', 'nombre'])
-                ->asArray()
-                ->all();
-        }
-
-        $data = ArrayHelper::map($clinicas, 'id', 'nombre');
-
-        return Json::encode($data);
-    }*/
-
-    // REPORT ACTIONS - Only these should be at the end
+    // REPORT ACTIONS
 
     /**
      * Report of all affiliates
@@ -2553,7 +3133,6 @@ class UserDatosController extends Controller
         $searchModel = new AfiliadosReportSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
-        // Get clinics for filter dropdown
         $clinicas = RmClinica::find()
             ->select(['id', 'nombre'])
             ->orderBy(['nombre' => SORT_ASC])
@@ -2561,10 +3140,7 @@ class UserDatosController extends Controller
             ->all();
         $clinicaList = \yii\helpers\ArrayHelper::map($clinicas, 'id', 'nombre');
 
-        // Get user types for filter dropdown
         $tipoAfiliadoList = UserDatosType::getList();
-
-        // Status options
         $estatusSolventeList = ['Si' => 'Si', 'No' => 'No'];
 
         return $this->render('reporte-afiliados', [
@@ -2584,7 +3160,6 @@ class UserDatosController extends Controller
         $searchModel = new AfiliadosReportSearch();
         $affiliates = $searchModel->getAllAffiliates(Yii::$app->request->queryParams);
 
-        // Calculate number of unique clinics
         $clinicaIds = [];
         foreach ($affiliates as $affiliate) {
             if ($affiliate->clinica_id) {
@@ -2596,40 +3171,34 @@ class UserDatosController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set document properties
         $spreadsheet->getProperties()
             ->setCreator("SISPSA")
             ->setTitle("Reporte de Afiliados")
             ->setSubject("Listado de Afiliados")
             ->setDescription("Reporte de todos los afiliados del sistema");
 
-        // Add report header with statistics (rows 1-3)
+        // ============================================
+        // UPDATED: Header row now spans A1:H1 (was A1:G1)
+        // ============================================
         $sheet->setCellValue('A1', 'REPORTE DE AFILIADOS - SISPSA');
-        $sheet->mergeCells('A1:G1');
+        $sheet->mergeCells('A1:H1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         $sheet->setCellValue('A2', 'Generado: ' . date('d/m/Y H:i:s'));
-        $sheet->mergeCells('A2:G2');
+        $sheet->mergeCells('A2:H2');
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Add statistics row
         $sheet->setCellValue('A3', 'Total Afiliados: ' . count($affiliates) . ' | Número de Clínicas: ' . $numeroClinicas);
-        $sheet->mergeCells('A3:G3');
+        $sheet->mergeCells('A3:H3');
         $sheet->getStyle('A3')->getFont()->setBold(true);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFE8F4FD');
 
-        // Set headers - Column order: #, Nombre Completo, Cédula, Fecha de Afiliación, Plan, Cuotas Pagadas, Clínica
-        $headers = [
-            '#',
-            'Nombre Completo',
-            'Cédula de Identidad',
-            'Fecha de Afiliación',
-            'Plan',
-            'Cuotas Pagadas',
-            'Clínica'
-        ];
+        // ============================================
+        // UPDATED: Added "Fecha de Nacimiento" to headers
+        // ============================================
+        $headers = ['#', 'Nombre Completo', 'Cédula de Identidad', 'Fecha de Nacimiento', 'Fecha de Afiliación', 'Plan', 'Cuotas Pagadas', 'Clínica'];
 
         $column = 'A';
         $headerRow = 5;
@@ -2639,17 +3208,14 @@ class UserDatosController extends Controller
             $column++;
         }
 
-        // Fill data
         $row = 6;
         $counter = 1;
         foreach ($affiliates as $affiliate) {
-            // Get the most recent active contract (non-annulled)
             $contrato = $affiliate->getContratos()
                 ->where(['!=', 'estatus', 'Anulado'])
                 ->orderBy(['fecha_ini' => SORT_DESC])
                 ->one();
 
-            // Check if contract exists and has fecha_ini
             $fechaAfiliacion = '';
             if ($contrato && !empty($contrato->fecha_ini)) {
                 $fechaAfiliacion = date('d/m/Y', strtotime($contrato->fecha_ini));
@@ -2659,9 +3225,18 @@ class UserDatosController extends Controller
                 $fechaAfiliacion = 'No definida';
             }
 
+            // ============================================
+            // NEW: Format birth date
+            // ============================================
+            $fechaNacimiento = '';
+            if (!empty($affiliate->fechanac)) {
+                $fechaNacimiento = date('d/m/Y', strtotime($affiliate->fechanac));
+            } else {
+                $fechaNacimiento = 'No definida';
+            }
+
             $planNombre = $affiliate->plan ? $affiliate->plan->nombre : '';
 
-            // Count paid cuotas across ALL contracts (excluding annulled)
             $totalPaid = \app\models\Cuotas::find()
                 ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
                 ->where(['contratos.user_id' => $affiliate->id])
@@ -2669,23 +3244,25 @@ class UserDatosController extends Controller
                 ->andWhere(['cuotas.estatus' => 'pagada'])
                 ->count();
 
-            $sheet->setCellValue('A' . $row, $counter); // #
-            $sheet->setCellValue('B' . $row, $affiliate->nombres . ' ' . $affiliate->apellidos); // Nombre Completo
-            $sheet->setCellValue('C' . $row, $affiliate->tipo_cedula . '-' . $affiliate->cedula); // Cédula
-            $sheet->setCellValue('D' . $row, $fechaAfiliacion); // Fecha de Afiliación
-            $sheet->setCellValue('E' . $row, $planNombre); // Plan
-            $sheet->setCellValue('F' . $row, $totalPaid); // Cuotas Pagadas
-            $sheet->setCellValue('G' . $row, $affiliate->clinica ? $affiliate->clinica->nombre : ''); // Clínica
+            $sheet->setCellValue('A' . $row, $counter);
+            $sheet->setCellValue('B' . $row, $affiliate->nombres . ' ' . $affiliate->apellidos);
+            $sheet->setCellValue('C' . $row, $affiliate->tipo_cedula . '-' . $affiliate->cedula);
+            // ============================================
+            // NEW: Set birth date value
+            // ============================================
+            $sheet->setCellValue('D' . $row, $fechaNacimiento);
+            $sheet->setCellValue('E' . $row, $fechaAfiliacion);
+            $sheet->setCellValue('F' . $row, $planNombre);
+            $sheet->setCellValue('G' . $row, $totalPaid);
+            $sheet->setCellValue('H' . $row, $affiliate->clinica ? $affiliate->clinica->nombre : '');
             $row++;
             $counter++;
         }
 
-        // Auto size columns (A through G)
-        foreach (range('A', 'G') as $column) {
+        foreach (range('A', 'H') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        // Add borders to all cells with data
         $styleArray = [
             'borders' => [
                 'allBorders' => [
@@ -2694,9 +3271,8 @@ class UserDatosController extends Controller
                 ],
             ],
         ];
-        $sheet->getStyle('A5:G' . ($row - 1))->applyFromArray($styleArray);
+        $sheet->getStyle('A5:H' . ($row - 1))->applyFromArray($styleArray);
 
-        // Set header style
         $headerStyle = [
             'font' => [
                 'bold' => true,
@@ -2711,12 +3287,11 @@ class UserDatosController extends Controller
                 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ];
-        $sheet->getStyle('A5:G5')->applyFromArray($headerStyle);
+        $sheet->getStyle('A5:H5')->applyFromArray($headerStyle);
 
-        // Set alternate row colors for better readability
         for ($i = 6; $i < $row; $i++) {
             if ($i % 2 == 0) {
-                $sheet->getStyle('A' . $i . ':G' . $i)
+                $sheet->getStyle('A' . $i . ':H' . $i)
                     ->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()
@@ -2724,31 +3299,31 @@ class UserDatosController extends Controller
             }
         }
 
-        // Center align numeric columns
         $sheet->getStyle('A6:A' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('C6:C' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        // ============================================
+        // NEW: Center align birth date column
+        // ============================================
         $sheet->getStyle('D6:D' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('E6:E' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('F6:F' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('G6:G' . ($row - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Add summary at the end
         $summaryRow = $row + 1;
         $sheet->setCellValue('A' . $summaryRow, 'RESUMEN:');
-        $sheet->mergeCells('A' . $summaryRow . ':G' . $summaryRow);
+        $sheet->mergeCells('A' . $summaryRow . ':H' . $summaryRow);
         $sheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
 
         $sheet->setCellValue('A' . ($summaryRow + 1), 'Total de Afiliados: ' . count($affiliates));
         $sheet->setCellValue('B' . ($summaryRow + 1), 'Número de Clínicas: ' . $numeroClinicas);
-        $sheet->mergeCells('B' . ($summaryRow + 1) . ':G' . ($summaryRow + 1));
+        $sheet->mergeCells('B' . ($summaryRow + 1) . ':H' . ($summaryRow + 1));
 
         $sheet->getStyle('A' . $summaryRow . ':A' . ($summaryRow + 1))->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setARGB('FFE8F4FD');
 
-        // Set filename with timestamp
         $filename = 'Reporte_Afiliados_' . date('Y-m-d_His') . '.xlsx';
 
-        // Redirect output to a client's web browser
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
@@ -2771,7 +3346,6 @@ class UserDatosController extends Controller
         $searchModel = new \app\models\AfiliadosReportSearch();
         $affiliates = $searchModel->getAllAffiliates(Yii::$app->request->queryParams);
 
-        // Get filter values for report header (REMOVED estatus_solvente)
         $filtros = [];
         if (!empty(Yii::$app->request->get('AfiliadosReportSearch')['clinica_id'])) {
             $clinica = RmClinica::findOne(Yii::$app->request->get('AfiliadosReportSearch')['clinica_id']);
@@ -2781,9 +3355,7 @@ class UserDatosController extends Controller
             $tipo = UserDatosType::findOne(Yii::$app->request->get('AfiliadosReportSearch')['user_datos_type_id']);
             $filtros[] = 'Tipo: ' . ($tipo ? $tipo->nombre : '');
         }
-        // REMOVED: estatus_solvente filter
 
-        // Calculate number of unique clinics
         $clinicaIds = [];
         foreach ($affiliates as $affiliate) {
             if ($affiliate->clinica_id) {
@@ -2794,7 +3366,6 @@ class UserDatosController extends Controller
 
         $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
 
-        // Render HTML content WITHOUT layout
         $content = $this->renderPartial('_reporte_pdf_afiliados', [
             'affiliates' => $affiliates,
             'filtros' => $filtros,
@@ -2803,7 +3374,6 @@ class UserDatosController extends Controller
             'logo' => $logo
         ]);
 
-        // Setup PDF - Use mPDF's built-in CSS support
         $pdf = new \kartik\mpdf\Pdf([
             'mode' => \kartik\mpdf\Pdf::MODE_UTF8,
             'format' => \kartik\mpdf\Pdf::FORMAT_A4,
@@ -2924,21 +3494,18 @@ class UserDatosController extends Controller
 
         return $pdf->render();
     }
-    // In UserDatosController.php - actionReporteAfiliadosDashboard()
 
     public function actionReporteAfiliadosDashboard()
     {
         $searchModel = new AfiliadosReportSearch();
         $params = Yii::$app->request->queryParams;
 
-        // Get all data for charts and summary
         $summaryByClinic = $searchModel->getSummaryByClinic($params);
         $summaryByPlan = $searchModel->getSummaryByPlan($params);
         $timelineData = $searchModel->getTimelineData($params);
         $topClinics = $searchModel->getTopClinics(8, $params);
-        $totals = $searchModel->getTotals($params);  // NOW INCLUDES critical_delinquency
+        $totals = $searchModel->getTotals($params);
 
-        // Prepare chart data as JSON for JavaScript
         $chartData = [
             'clinicLabels' => array_column($summaryByClinic, 'clinica_nombre'),
             'clinicTotals' => array_column($summaryByClinic, 'total_afiliados'),
@@ -2953,7 +3520,6 @@ class UserDatosController extends Controller
             'planTotals' => array_column($summaryByPlan, 'total_afiliados'),
         ];
 
-        // Get clinics for filter dropdown - but respect user access
         if (UserHelper::hasClinicAccess()) {
             $clinicas = UserHelper::getAccessibleClinicas();
         } else {
@@ -2983,7 +3549,7 @@ class UserDatosController extends Controller
             'summaryByPlan' => $summaryByPlan,
             'timelineData' => $timelineData,
             'topClinics' => $topClinics,
-            'totals' => $totals,  // NOW CONTAINS critical_delinquency
+            'totals' => $totals,
             'clinicaList' => $clinicaList,
             'clinicas' => $clinicas,
             'planList' => $planList,
@@ -2991,6 +3557,7 @@ class UserDatosController extends Controller
             'chartData' => $chartData,
         ]);
     }
+
     /**
      * Export Resumen Detallado por Clínica to Excel with Logo and Meta Field
      */
@@ -3000,24 +3567,18 @@ class UserDatosController extends Controller
         $summary = $searchModel->getSummaryByClinic(Yii::$app->request->queryParams);
         $totals = $searchModel->getTotals(Yii::$app->request->queryParams);
 
-        // Get filter values for report header
         $filtros = $this->getFilterLabels(Yii::$app->request->get('AfiliadosReportSearch', []));
 
-        // Get logo path
         $logoPath = Yii::getAlias('@webroot/img/sispsalogo.jpg');
         $logoExists = file_exists($logoPath);
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
-        // ============================================
-        // SHEET 1: Resumen Detallado por Clínica (WITH META)
-        // ============================================
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Resumen por Clínica');
 
         $currentRow = 1;
 
-        // Add Logo if exists
         if ($logoExists) {
             $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
             $drawing->setName('Logo SISPSA');
@@ -3028,7 +3589,6 @@ class UserDatosController extends Controller
             $drawing->setOffsetX(10);
             $drawing->setWorksheet($sheet);
 
-            // Merge cells for logo area - Updated to J column (10 columns)
             $sheet->mergeCells('A' . $currentRow . ':J' . ($currentRow + 5));
             $sheet->getStyle('A' . $currentRow . ':J' . ($currentRow + 5))->getAlignment()
                 ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
@@ -3036,14 +3596,12 @@ class UserDatosController extends Controller
             $currentRow += 6;
         }
 
-        // Title
         $sheet->setCellValue('A' . $currentRow, 'RESUMEN DE AFILIADOS POR CLÍNICA');
         $sheet->mergeCells('A' . $currentRow . ':J' . $currentRow);
         $sheet->getStyle('A' . $currentRow)->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $currentRow++;
 
-        // Company Info
         $sheet->setCellValue('A' . $currentRow, 'Inscrita en la Superintendencia de la Actividad Aseguradora bajo el No. MP000013');
         $sheet->mergeCells('A' . $currentRow . ':J' . $currentRow);
         $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
@@ -3062,10 +3620,8 @@ class UserDatosController extends Controller
         $sheet->getStyle('A' . $currentRow)->getFont()->setSize(9);
         $currentRow++;
 
-        // Add empty row
         $currentRow++;
 
-        // Add filters if applied
         if (!empty($filtros)) {
             $sheet->setCellValue('A' . $currentRow, 'Filtros aplicados:');
             $sheet->setCellValue('B' . $currentRow, implode(' | ', $filtros));
@@ -3075,7 +3631,6 @@ class UserDatosController extends Controller
             $currentRow++;
         }
 
-        // Headers - ADDED META COLUMN (Column B)
         $headers = [
             'A' => 'Clínica',
             'B' => 'Meta Mensual',
@@ -3096,7 +3651,6 @@ class UserDatosController extends Controller
             $sheet->getStyle($col . $headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
 
-        // Apply header styling
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
@@ -3110,13 +3664,11 @@ class UserDatosController extends Controller
         ];
         $sheet->getStyle('A' . $headerRow . ':J' . $headerRow)->applyFromArray($headerStyle);
 
-        // Fill data - WITH META COLUMN
         $dataRow = $headerRow + 1;
         foreach ($summary as $clinic) {
             $meta = (int)($clinic['clinica_meta'] ?? 0);
             $metaDisplay = $meta > 0 ? number_format($meta) : 'No definida';
 
-            // Calculate meta compliance percentage for tooltip/color
             $totalAfiliadosClinica = $clinic['total_afiliados'];
             $metaPorcentaje = $meta > 0 ? round(($totalAfiliadosClinica / $meta) * 100) : 0;
 
@@ -3131,7 +3683,6 @@ class UserDatosController extends Controller
             $sheet->setCellValue('I' . $dataRow, $clinic['contratos_vencidos'] ?? 0);
             $sheet->setCellValue('J' . $dataRow, $clinic['contratos_registrados'] ?? 0);
 
-            // Optional: Add comment to Meta cell showing compliance percentage
             if ($meta > 0) {
                 $sheet->getComment('B' . $dataRow)
                     ->getText()
@@ -3141,7 +3692,6 @@ class UserDatosController extends Controller
             $dataRow++;
         }
 
-        // Add total row
         $totalRow = $dataRow;
         $sheet->setCellValue('A' . $totalRow, 'TOTAL GENERAL');
         $sheet->getStyle('A' . $totalRow)->getFont()->setBold(true);
@@ -3160,7 +3710,6 @@ class UserDatosController extends Controller
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setARGB('FFE8F4FD');
 
-        // Apply borders to all data cells
         $styleArray = [
             'borders' => [
                 'allBorders' => [
@@ -3171,26 +3720,20 @@ class UserDatosController extends Controller
         ];
         $sheet->getStyle('A' . $headerRow . ':J' . $totalRow)->applyFromArray($styleArray);
 
-        // Center align numeric columns
         foreach (range('B', 'J') as $col) {
             $sheet->getStyle($col . $headerRow . ':' . $col . $totalRow)
                 ->getAlignment()
                 ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
 
-        // Left align clinic name column
         $sheet->getStyle('A' . ($headerRow + 1) . ':A' . $totalRow)
             ->getAlignment()
             ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
 
-        // Auto-size columns
         foreach (range('A', 'J') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // ============================================
-        // SHEET 2: Resumen General de Todas las Clínicas (WITH META INFO)
-        // ============================================
         $spreadsheet->createSheet();
         $spreadsheet->setActiveSheetIndex(1);
         $sheet2 = $spreadsheet->getActiveSheet();
@@ -3198,7 +3741,6 @@ class UserDatosController extends Controller
 
         $currentRow2 = 1;
 
-        // Add Logo to second sheet as well
         if ($logoExists) {
             $drawing2 = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
             $drawing2->setName('Logo SISPSA');
@@ -3216,7 +3758,6 @@ class UserDatosController extends Controller
             $currentRow2 += 6;
         }
 
-        // Title
         $sheet2->setCellValue('A' . $currentRow2, 'RESUMEN GENERAL DE TODAS LAS CLÍNICAS');
         $sheet2->mergeCells('A' . $currentRow2 . ':D' . $currentRow2);
         $sheet2->getStyle('A' . $currentRow2)->getFont()->setBold(true)->setSize(14);
@@ -3228,7 +3769,6 @@ class UserDatosController extends Controller
         $sheet2->getStyle('A' . $currentRow2)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $currentRow2++;
 
-        // Filters
         if (!empty($filtros)) {
             $sheet2->setCellValue('A' . $currentRow2, 'Filtros aplicados:');
             $sheet2->setCellValue('B' . $currentRow2, implode(' | ', $filtros));
@@ -3239,7 +3779,6 @@ class UserDatosController extends Controller
             $currentRow2 += 2;
         }
 
-        // Add Meta Summary Section
         $sheet2->setCellValue('A' . $currentRow2, 'META DE AFILIADOS - RESUMEN');
         $sheet2->mergeCells('A' . $currentRow2 . ':D' . $currentRow2);
         $sheet2->getStyle('A' . $currentRow2)->getFont()->setBold(true)->setSize(12);
@@ -3248,7 +3787,6 @@ class UserDatosController extends Controller
             ->getStartColor()->setARGB('FFE8F4FD');
         $currentRow2++;
 
-        // Meta Statistics
         $metaTotals = $totals['meta'] ?? [];
         $metaData = [
             ['Clínicas con Meta Definida', number_format($metaTotals['clinicas_con_meta'] ?? 0)],
@@ -3270,7 +3808,6 @@ class UserDatosController extends Controller
 
         $currentRow2 += 2;
 
-        // Totals cards - using styled cells
         $totalsData = [
             ['TOTAL AFILIADOS', number_format($totals['total_afiliados']), 'en todas las clínicas'],
             ['INDIVIDUALES', number_format($totals['total_individual']), round(($totals['total_individual'] / max($totals['total_afiliados'], 1)) * 100) . '% del total'],
@@ -3294,7 +3831,6 @@ class UserDatosController extends Controller
             $sheet2->getStyle('B' . $row)->getFont()->setBold(true)->setSize(14);
             $sheet2->getStyle('B' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_DARKBLUE));
 
-            // Add a light background for each card
             $sheet2->getStyle('A' . $row . ':C' . $row)->getFill()
                 ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                 ->getStartColor()->setARGB('FFF5F5F5');
@@ -3304,18 +3840,14 @@ class UserDatosController extends Controller
                 ->getStartColor()->setARGB('FFF5F5F5');
         }
 
-        // Auto-size columns
         foreach (range('A', 'C') as $col) {
             $sheet2->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // Set back to first sheet for output
         $spreadsheet->setActiveSheetIndex(0);
 
-        // Generate filename
         $filename = 'Resumen_Afiliados_por_Clinica_' . date('Y-m-d_His') . '.xlsx';
 
-        // Output to browser
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
@@ -3331,11 +3863,10 @@ class UserDatosController extends Controller
     }
 
     /**
-     * Export Resumen Detallado por Clínica to PDF - BULLETPROOF VERSION WITH META FIELD
+     * Export Resumen Detallado por Clínica to PDF
      */
     public function actionExportarResumenPdf()
     {
-        // CRITICAL: Clear all output buffers
         while (ob_get_level()) {
             ob_end_clean();
         }
@@ -3349,7 +3880,6 @@ class UserDatosController extends Controller
             $filtros = $this->getFilterLabels(Yii::$app->request->get('AfiliadosReportSearch', []));
             $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
 
-            // Use the updated template WITH META FIELD
             $content = $this->renderPartial('_reporte_resumen_pdf_v2', [
                 'summary' => $summary,
                 'totals' => $totals,
@@ -3358,22 +3888,18 @@ class UserDatosController extends Controller
                 'logo' => $logo,
             ]);
 
-            // Verify content is not empty
             if (empty(trim($content))) {
                 throw new \Exception('Generated HTML content is empty');
             }
 
-            // Log the first 500 characters for debugging
             Yii::info('PDF Content (first 500 chars): ' . substr($content, 0, 500), 'pdf');
 
-            // Create PDF with minimal options
             $pdf = new \kartik\mpdf\Pdf([
                 'mode' => \kartik\mpdf\Pdf::MODE_UTF8,
                 'format' => \kartik\mpdf\Pdf::FORMAT_A4,
                 'orientation' => \kartik\mpdf\Pdf::ORIENT_LANDSCAPE,
                 'destination' => \kartik\mpdf\Pdf::DEST_BROWSER,
                 'content' => $content,
-                // NO external CSS file
                 'options' => [
                     'title' => 'Resumen de Afiliados por Clínica - SISPSA',
                     'default_font_size' => 10,
@@ -3391,7 +3917,6 @@ class UserDatosController extends Controller
             Yii::error("PDF Generation Error: " . $e->getMessage(), 'pdf');
             Yii::error($e->getTraceAsString(), 'pdf');
 
-            // Return a simple error message
             echo "Error generating PDF: " . $e->getMessage();
             exit;
         }
@@ -3404,7 +3929,6 @@ class UserDatosController extends Controller
     {
         $filtros = [];
 
-        // NEW: Handle multiple clinics
         if (!empty($params['clinica_ids']) && is_array($params['clinica_ids'])) {
             $clinicas = RmClinica::find()
                 ->select(['nombre'])
@@ -3442,38 +3966,27 @@ class UserDatosController extends Controller
 
         return $filtros;
     }
+
     /**
      * Lists all UserDatos models associated with a specific Agente (Agency).
-     * Uses the same OR filtering logic as UserDatosSearch to show affiliates that:
-     * - Are assigned to asesores belonging to this agency, OR
-     * - Are directly assigned to this agency (agencia_id)
-     * 
-     * @param int $agente_id The ID of the Agente (agency)
-     * @return string
-     * @throws NotFoundHttpException if the agente is not found
      */
     public function actionIndexByAgente($agente_id)
     {
-        // Verify the agency exists
         $agente = Agente::findOne($agente_id);
         if ($agente === null) {
             throw new NotFoundHttpException('La agencia especificada no existe.');
         }
 
-        // Get all AgenteFuerza IDs (asesores/intermediarios) belonging to this agency
         $agenteFuerzaIds = AgenteFuerza::find()
             ->where(['agente_id' => $agente_id])
             ->select('id')
             ->column();
 
-        // Get all UserDatos IDs of asesores belonging to this agency
         $asesorUserIds = AgenteFuerza::find()
             ->where(['agente_id' => $agente_id])
             ->select('idusuario')
             ->column();
 
-        // Get ALL AgenteFuerza IDs for these asesores (from ANY agency)
-        // This ensures we get affiliates created under ANY relationship of the asesor
         $allAgenteFuerzaIds = [];
         if (!empty($asesorUserIds)) {
             $allAgenteFuerzaIds = AgenteFuerza::find()
@@ -3482,28 +3995,20 @@ class UserDatosController extends Controller
                 ->column();
         }
 
-        // Build the OR condition for filtering (SAME as UserDatosSearch)
         $filterCondition = ['or'];
 
-        // Condition 1: Affiliates assigned to asesores of this agency (using ALL their AgenteFuerza IDs)
         if (!empty($allAgenteFuerzaIds)) {
             $filterCondition[] = ['user_datos.asesor_id' => $allAgenteFuerzaIds];
         }
 
-        // Condition 2: Affiliates directly assigned to this agency (agencia_id)
         $filterCondition[] = ['user_datos.agencia_id' => $agente_id];
 
-        // Create search model and apply filter
         $searchModel = new UserDatosSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
-        // Apply the OR condition filter
         $dataProvider->query->andWhere($filterCondition);
-
-        // Also filter by role = afiliado
         $dataProvider->query->andWhere(['user_datos.role' => 'afiliado']);
 
-        // Set the title
         $this->view->title = 'Afiliados de la Agencia: ' . $agente->nom;
 
         return $this->render('index', [

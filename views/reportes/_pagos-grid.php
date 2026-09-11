@@ -19,6 +19,31 @@ use yii\data\ActiveDataProvider;
 $totalPages = $dataProvider->pagination ?
     ceil($dataProvider->getTotalCount() / $dataProvider->pagination->pageSize) : 1;
 $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1) : 1;
+
+// ============================================================
+// FIX 2: Calculate totals from ALL records (without pagination)
+// ============================================================
+$allModels = $dataProvider->query->all();
+$totalMontoAll = array_sum(array_column($allModels, 'monto_usd'));
+$totalMontoUSDAll = array_sum(array_column($allModels, 'monto_pagado'));
+
+// Calculate average exchange rate from all records
+$promedioTasaAll = 0;
+if ($totalMontoUSDAll > 0 && $totalMontoAll > 0) {
+    $promedioTasaAll = $totalMontoAll / $totalMontoUSDAll;
+}
+
+// Count reconciled and pending from ALL records
+$conciliadosAll = 0;
+$pendientesAll = 0;
+foreach ($allModels as $model) {
+    if ($model->estatus === 'Conciliado') {
+        $conciliadosAll++;
+    } else {
+        $pendientesAll++;
+    }
+}
+// ============================================================
 ?>
 
 <div class="col-12 mb-4">
@@ -154,6 +179,12 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                                 Página <?= $currentPage ?> de <?= $totalPages ?>
                                             </span>
                                         </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-database me-2 ms-success" style="font-size: 1.3rem;"></i>
+                                            <span class="ms-body-lg fw-semibold text-success" style="font-size: 1.3rem !important;">
+                                                <?= number_format($dataProvider->getTotalCount()) ?> registros totales
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -268,14 +299,13 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                         <tbody>
                             <?php
                             $models = $dataProvider->getModels();
-                            $totalMonto = 0;
-                            $totalMontoUSD = 0;
+                            // FIX 2: Use the pre-calculated totals from ALL records
+                            // $totalMonto, $totalMontoUSD, $promedioTasa, $conciliados, $pendientes are calculated above
+
                             $consecutivo = ($dataProvider->pagination ? ($dataProvider->pagination->page * $dataProvider->pagination->pageSize) : 0) + 1;
 
                             foreach ($models as $model):
-                                $totalMonto += $model->monto_usd;
-                                $totalMontoUSD += $model->monto_pagado;
-                                // Calcular tasa de cambio si ambos montos están disponibles
+                                // Calculate individual exchange rate for this record
                                 $tasaCambio = 0;
                                 if ($model->monto_pagado > 0 && $model->monto_usd > 0) {
                                     $tasaCambio = $model->monto_usd / $model->monto_pagado;
@@ -486,7 +516,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                             <?php endforeach; ?>
                         </tbody>
 
-                        <!-- Total del Detalle -->
+                        <!-- Total del Detalle - FIX 2: Using ALL records totals -->
                         <?php if (!empty($models)): ?>
                             <tfoot style="position: sticky; bottom: 0; z-index: 10;">
                                 <tr style="background: linear-gradient(135deg, #2c3e50 0%, #4a6491 100%);">
@@ -498,51 +528,45 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                                     TOTAL DETALLE
                                                 </h3>
                                                 <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
-                                                    <?= count($models) ?> registros mostrados
+                                                    <?= number_format($dataProvider->getTotalCount()) ?> registros totales (<?= number_format($dataProvider->getCount()) ?> visibles en esta página)
                                                 </p>
                                             </div>
                                         </div>
                                     </td>
-                                    <!-- Total en Bolívares -->
+                                    <!-- Total en Bolívares - Using ALL records -->
                                     <td class="text-center py-3">
                                         <div class="d-flex flex-column align-items-center">
                                             <h2 class="mb-1 fw-bold" style="color: #ffffff; font-size: 1.8rem !important;">
-                                                <?= Yii::$app->formatter->asCurrency($totalMonto, 'VES') ?>
+                                                <?= Yii::$app->formatter->asCurrency($totalMontoAll, 'VES') ?>
                                             </h2>
                                             <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
-                                                Total Bs.
+                                                Total Bs. (<?= number_format($dataProvider->getTotalCount()) ?> registros)
                                             </p>
                                         </div>
                                     </td>
-                                    <!-- Total en USD -->
+                                    <!-- Total en USD - Using ALL records -->
                                     <td class="text-center py-3">
                                         <div class="d-flex flex-column align-items-center">
                                             <h2 class="mb-1 fw-bold" style="color: #ffffff; font-size: 1.8rem !important;">
-                                                <?= Yii::$app->formatter->asCurrency($totalMontoUSD, 'USD') ?>
+                                                <?= Yii::$app->formatter->asCurrency($totalMontoUSDAll, 'USD') ?>
                                             </h2>
                                             <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
                                                 Total USD
                                             </p>
                                         </div>
                                     </td>
-                                    <!-- Promedio Tasa de Cambio -->
+                                    <!-- Promedio Tasa de Cambio - Using ALL records -->
                                     <td class="text-center py-3">
                                         <div class="d-flex flex-column align-items-center">
-                                            <?php
-                                            $promedioTasa = 0;
-                                            if ($totalMontoUSD > 0 && $totalMonto > 0) {
-                                                $promedioTasa = $totalMonto / $totalMontoUSD;
-                                            }
-                                            ?>
                                             <h2 class="mb-1 fw-bold" style="color: #ffffff; font-size: 1.8rem !important;">
-                                                <?= number_format($promedioTasa, 2) ?> Bs./$
+                                                <?= number_format($promedioTasaAll, 2) ?> Bs./$
                                             </h2>
                                             <p class="mb-0" style="color: rgba(255, 255, 255, 0.85); font-size: 1.3rem !important;">
-                                                Tasa Promedio
+                                                Tasa Promedio General
                                             </p>
                                         </div>
                                     </td>
-                                    <!-- Distribución por Estado -->
+                                    <!-- Distribución por Estado - Using ALL records -->
                                     <td class="text-center py-3" colspan="4">
                                         <div class="d-flex justify-content-center align-items-center h-100">
                                             <div class="d-flex gap-4">
@@ -552,7 +576,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                                         <span style="color: #ffffff; font-size: 1.3rem !important;">Conciliados</span>
                                                     </div>
                                                     <div class="display-6 fw-bold" style="color: #ffffff; font-size: 1.4rem !important;">
-                                                        <?= number_format($summary['conciliados'] ?? 0) ?>
+                                                        <?= number_format($conciliadosAll) ?>
                                                     </div>
                                                 </div>
                                                 <div class="text-center">
@@ -561,7 +585,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                                         <span style="color: #ffffff; font-size: 1.3rem !important;">Pendientes</span>
                                                     </div>
                                                     <div class="display-6 fw-bold" style="color: #ffffff; font-size: 1.4rem !important;">
-                                                        <?= number_format($summary['pendientes'] ?? 0) ?>
+                                                        <?= number_format($pendientesAll) ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -590,13 +614,19 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-eye me-2 ms-primary" style="font-size: 1.1rem;"></i>
                                             <span class="ms-body-lg fw-semibold" style="font-size: 1.2rem !important;">
-                                                <?= $dataProvider->getCount() ?> visibles
+                                                <?= number_format($dataProvider->getCount()) ?> visibles en página
                                             </span>
                                         </div>
                                         <div class="d-flex align-items-center">
-                                            <i class="fas fa-database me-2 ms-primary" style="font-size: 1.1rem;"></i>
+                                            <i class="fas fa-database me-2 ms-success" style="font-size: 1.1rem;"></i>
+                                            <span class="ms-body-lg fw-semibold text-success" style="font-size: 1.2rem !important;">
+                                                <?= number_format($dataProvider->getTotalCount()) ?> registros totales
+                                            </span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-money-bill-wave me-2 ms-primary" style="font-size: 1.1rem;"></i>
                                             <span class="ms-body-lg fw-semibold" style="font-size: 1.2rem !important;">
-                                                <?= $dataProvider->getTotalCount() ?> total
+                                                Total: <?= Yii::$app->formatter->asCurrency($totalMontoAll, 'VES') ?>
                                             </span>
                                         </div>
                                     </div>
@@ -627,7 +657,7 @@ $currentPage = $dataProvider->pagination ? ($dataProvider->pagination->page + 1)
         <!-- Tarjetas de Resumen -->
         <div class="col-12 mb-4">
             <div class="row g-3">
-                <!-- Total Recaudado -->
+                <!-- Total Recaudado - Now matches TOTAL DETALLE -->
                 <div class="col-xl-4 col-lg-6">
                     <div class="ms-summary-card ms-summary-card-success border-0 shadow-lg ms-fade-in h-100">
                         <div class="ms-card-body p-3">

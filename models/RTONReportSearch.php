@@ -242,6 +242,7 @@ class RTONReportSearch extends Model
 
     /**
      * Get all RTON data for export - Organized by Clinic
+     * MODIFIED: Now includes "Anulado" contracts (removed the exclusion filter)
      */
     public function getRTONData($params)
     {
@@ -299,7 +300,8 @@ class RTONReportSearch extends Model
                 'clin.codigo_clinica as clinica_codigo',
             ])
             ->innerJoin(['ud' => 'user_datos'], 'ud.id = p.user_id')
-            ->leftJoin(['c' => 'contratos'], 'c.user_id = ud.id AND c.estatus != :anulado', [':anulado' => 'Anulado'])
+            // 🔧 MODIFIED: Removed "AND c.estatus != :anulado" to include ALL contracts
+            ->leftJoin(['c' => 'contratos'], 'c.user_id = ud.id')
             ->leftJoin(['pl' => 'planes'], 'pl.id = COALESCE(ud.plan_id, c.plan_id)')
             ->leftJoin(['clin' => 'rm_clinica'], 'clin.id = ud.clinica_id')
             ->where(['!=', 'p.estatus', 'Deleted'])
@@ -402,7 +404,7 @@ class RTONReportSearch extends Model
                     'summary' => [
                         'total_transactions' => 0,
                         'total_amount' => 0,
-                        'total_usd_amount' => 0,  // ADDED THIS
+                        'total_usd_amount' => 0,
                         'total_coverage' => 0,
                     ]
                 ];
@@ -427,6 +429,7 @@ class RTONReportSearch extends Model
 
     /**
      * Get all transactions as flat array for Excel export (not grouped)
+     * MODIFIED: Now includes "Anulado" contracts
      */
     public function getRTONDataFlat($params)
     {
@@ -444,6 +447,7 @@ class RTONReportSearch extends Model
 
     /**
      * Get summary statistics for the report
+     * MODIFIED: Now includes "Anulado" contracts in count
      */
     public function getSummary($params)
     {
@@ -453,6 +457,7 @@ class RTONReportSearch extends Model
         $totalAmount = 0;
         $totalUsdAmount = 0;
         $totalCoverage = 0;
+        $totalCancelled = 0;
         $clinicsCount = count($groupedData);
 
         foreach ($groupedData as $clinic) {
@@ -460,6 +465,7 @@ class RTONReportSearch extends Model
             $totalAmount += $clinic['summary']['total_amount'];
             $totalUsdAmount += $clinic['summary']['total_usd_amount'] ?? 0;
             $totalCoverage += $clinic['summary']['total_coverage'];
+            $totalCancelled += $clinic['summary']['total_cancelled'] ?? 0;
         }
 
         return [
@@ -468,6 +474,7 @@ class RTONReportSearch extends Model
             'total_usd_amount' => $totalUsdAmount,
             'total_coverage' => $totalCoverage,
             'unique_clinics' => $clinicsCount,
+            'total_cancelled' => $totalCancelled,  // ← ADDED
         ];
     }
 }

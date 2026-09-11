@@ -141,6 +141,8 @@ $config = [
             'site/logout',
             'site/error',
             'site/tabs-data',
+            'site/request-password-reset',      // Password reset request
+            'site/reset-password',              // Password reset action
             'debug/*',
             'reportes/*',
             'rton-report/*',  // Allows RTON report access

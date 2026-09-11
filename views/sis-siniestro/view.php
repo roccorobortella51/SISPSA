@@ -2,6 +2,8 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use app\components\AppointmentNotificationService;
+use app\models\SisSiniestroAttachment;
 
 /**
  * @var yii\web\View $this
@@ -10,8 +12,6 @@ use yii\helpers\Url;
  * @var array $baremos
  * @var int $es_cita
  */
-
-
 
 // Get es_cita parameter from the model or URL
 $esCita = isset($model->es_cita) ? (int)$model->es_cita : (int)Yii::$app->request->get('es_cita', 0);
@@ -34,7 +34,7 @@ function formatBooleanIcon($value)
     return $isTrue ? '<span class="status-badge active">Sí</span>' : '<span class="status-badge inactive">No</span>';
 }
 
-// Register CSS for white text in table headers
+// Register CSS for white text in table headers and notification buttons
 $this->registerCss("
 .table-bordered thead th {
     color: white !important;
@@ -52,8 +52,166 @@ $this->registerCss("
     vertical-align: middle !important;
     text-align: center !important;
 }
-");
 
+/* ===== NOTIFICATION BUTTON STYLES ===== */
+.btn-notification {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    gap: 8px;
+}
+
+.btn-notification:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    text-decoration: none;
+}
+
+.btn-notification-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: #ffffff;
+}
+
+.btn-notification-success:hover {
+    color: #ffffff;
+    background: linear-gradient(135deg, #218838, #1ba87a);
+}
+
+.btn-notification-info {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: #ffffff;
+}
+
+.btn-notification-info:hover {
+    color: #ffffff;
+    background: linear-gradient(135deg, #162b54, #1e3c72);
+}
+
+.whatsapp-link-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: #25D366;
+    color: #ffffff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    gap: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.whatsapp-link-btn:hover {
+    color: #ffffff;
+    background: #1da851;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+.header-buttons-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ===== ATTACHMENT CARD STYLES ===== */
+.attachment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.attachment-card {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.attachment-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: #0078d4;
+}
+
+.attachment-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.attachment-filename {
+    font-weight: 500;
+    font-size: 13px;
+    color: #1a1a1a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.attachment-meta {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+.attachment-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.attachment-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.attachment-badge-receta {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.attachment-badge-informe {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.attachment-badge-autorizacion {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.attachment-badge-resultado {
+    background: #d4edda;
+    color: #155724;
+}
+
+.attachment-badge-otro {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+");
 ?>
 
 <div class="main-container">
@@ -67,6 +225,76 @@ $this->registerCss("
                 ['update', 'id' => $model->id, 'user_id' => $model->iduser, 'es_cita' => $esCita],
                 ['class' => 'btn-base btn-blue']
             ) ?>
+
+            <?php if ($esCita == 1): ?>
+                <?= Html::a(
+                    '<i class="fas fa-envelope mr-2"></i> Reenviar Notificación',
+                    ['resend-notification', 'id' => $model->id],
+                    [
+                        'class' => 'btn-notification btn-notification-info',
+                        'title' => 'Reenviar notificación por correo electrónico al afiliado',
+                        'data-confirm' => '¿Desea reenviar la notificación de la cita por correo electrónico?',
+                        'data-method' => 'post',
+                    ]
+                ) ?>
+
+                <?php
+                // ============================================
+                // GENERATE WHATSAPP LINK FOR STAFF
+                // ============================================
+                if ($afiliado && !empty($afiliado->telefono)) {
+                    // Build the message
+                    $baremosList = [];
+                    $totalCost = 0;
+                    if (!empty($baremos)) {
+                        foreach ($baremos as $baremo) {
+                            $baremosList[] = $baremo->nombre_servicio ?? 'Servicio';
+                            $totalCost += (float)($baremo->precio ?? 0);
+                        }
+                    }
+
+                    $appointmentDate = isset($model->fecha_atencion)
+                        ? Yii::$app->formatter->asDate($model->fecha_atencion, 'dd/MM/yyyy')
+                        : 'No especificada';
+
+                    $appointmentTime = isset($model->hora_atencion)
+                        ? date('H:i', strtotime($model->hora_atencion))
+                        : 'No especificada';
+
+                    $doctorName = $model->nombre_doctor ?? 'No especificado';
+                    $analystName = $model->admission_analyst ?? 'No especificado';
+                    $clinicaName = $model->clinica ? $model->clinica->nombre : 'No especificada';
+
+                    $message = "🏥 SISPSA - Confirmación de Cita Médica\n\n";
+                    $message .= "👤 Paciente: {$afiliado->nombres} {$afiliado->apellidos}\n";
+                    $message .= "📌 Cédula: {$afiliado->tipo_cedula}-{$afiliado->cedula}\n";
+                    $message .= "🏛️ Clínica: {$clinicaName}\n";
+                    $message .= "📅 Fecha: {$appointmentDate}\n";
+                    $message .= "🕐 Hora: {$appointmentTime}\n";
+                    $message .= "👨‍⚕️ Médico: {$doctorName}\n";
+                    $message .= "💼 Analista: {$analystName}\n\n";
+
+                    if (!empty($baremosList)) {
+                        $message .= "📋 Servicios:\n";
+                        foreach ($baremos as $baremo) {
+                            $message .= "   • {$baremo->nombre_servicio} - \$" . number_format((float)($baremo->precio ?? 0), 2) . "\n";
+                        }
+                        $message .= "\n💰 Total: \$" . number_format($totalCost, 2) . "\n";
+                    }
+
+                    $message .= "\n📝 Por favor, llegar con 15 minutos de anticipación.";
+
+                    $whatsappLink = AppointmentNotificationService::generateWhatsAppLink($afiliado->telefono, $message);
+                ?>
+                    <?php if ($whatsappLink): ?>
+                        <a href="<?= $whatsappLink ?>" target="_blank" class="whatsapp-link-btn" title="Abrir WhatsApp con mensaje pre-cargado">
+                            <i class="fab fa-whatsapp fa-lg"></i>
+                            WhatsApp
+                        </a>
+                    <?php endif; ?>
+                <?php } ?>
+            <?php endif; ?>
+
             <?= Html::a(
                 '<i class="fas fa-trash-alt mr-2"></i> Eliminar',
                 ['delete', 'id' => $model->id, 'user_id' => $model->iduser, 'es_cita' => $esCita],
@@ -95,6 +323,7 @@ $this->registerCss("
         </div>
     </div>
 
+    <!-- ===== INFO GENERAL ===== -->
     <div class="ms-panel">
         <div class="ms-panel-body">
             <h3 class="section-title">
@@ -271,6 +500,7 @@ $this->registerCss("
     </div>
     <!-- ===== END DETALLE DE SERVICIOS MÉDICOS ===== -->
 
+    <!-- ===== DESCRIPCIÓN ===== -->
     <div class="ms-panel">
         <div class="ms-panel-body">
             <h3 class="section-title">
@@ -285,6 +515,7 @@ $this->registerCss("
         </div>
     </div>
 
+    <!-- ===== DOCUMENTOS ===== -->
     <div class="ms-panel">
         <div class="ms-panel-body">
             <h3 class="section-title">
@@ -432,150 +663,174 @@ $this->registerCss("
         </div>
     </div>
 
-    <!-- ===== SECTION: DOCUMENTOS ADICIONALES ===== -->
+    <!-- ============================================================ -->
+    <!-- ===== SECTION: DOCUMENTOS ADICIONALES (FROM ATTACHMENTS TABLE) ===== -->
+    <!-- ============================================================ -->
     <?php
-    // Decode additional documents from JSON
-    $documentosAdicionales = [];
-    if (!empty($model->otros_documentos)) {
-        $documentosAdicionales = json_decode($model->otros_documentos, true);
-        if (!is_array($documentosAdicionales)) {
-            $documentosAdicionales = [];
-        }
-    }
-
-    if (!empty($documentosAdicionales)):
+    // Get attachments from the new table
+    $attachments = $model->getActiveAttachments();
+    $attachmentCount = count($attachments);
     ?>
-        <div class="ms-panel">
-            <div class="ms-panel-body">
-                <h3 class="section-title">
-                    <i class="fas fa-folder-open text-blue-600 mr-3"></i> Documentos Adicionales
-                    <span class="badge badge-secondary ml-2"><?= count($documentosAdicionales) ?> archivo(s)</span>
-                </h3>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
+    <div class="ms-panel">
+        <div class="ms-panel-body">
+            <h3 class="section-title">
+                <i class="fas fa-folder-open text-blue-600 mr-3"></i> Documentos Adicionales
+                <?php if ($attachmentCount > 0): ?>
+                    <span class="badge badge-secondary ml-2"><?= $attachmentCount ?> archivo(s)</span>
+                <?php endif; ?>
+            </h3>
+
+            <?php if ($attachmentCount > 0): ?>
+                <!-- Grid View for Attachments -->
+                <div class="attachment-grid">
+                    <?php foreach ($attachments as $index => $attachment): ?>
+                        <div class="attachment-card">
+                            <!-- Icon -->
+                            <span class="attachment-icon">
+                                <i class="fas <?= $attachment->getFileIcon() ?>"></i>
+                            </span>
+
+                            <!-- Document Type Badge -->
+                            <div class="mb-2">
+                                <?php
+                                $badgeClass = 'attachment-badge-otro';
+                                $docType = $attachment->document_type ?? 'Otro';
+                                if ($docType === 'Receta Médica') $badgeClass = 'attachment-badge-receta';
+                                elseif ($docType === 'Informe Médico') $badgeClass = 'attachment-badge-informe';
+                                elseif ($docType === 'Autorización') $badgeClass = 'attachment-badge-autorizacion';
+                                elseif ($docType === 'Resultado de Examen') $badgeClass = 'attachment-badge-resultado';
+                                ?>
+                                <span class="attachment-badge <?= $badgeClass ?>">
+                                    <?= Html::encode($docType) ?>
+                                </span>
+                            </div>
+
+                            <!-- Filename -->
+                            <div class="attachment-filename" title="<?= Html::encode($attachment->original_filename) ?>">
+                                <?= Html::encode($attachment->original_filename) ?>
+                            </div>
+
+                            <!-- Meta info -->
+                            <div class="attachment-meta">
+                                <?= $attachment->getFormattedSize() ?>
+                                <br>
+                                <small><?= Yii::$app->formatter->asDate($attachment->created_at, 'dd/MM/yyyy HH:mm') ?></small>
+                            </div>
+
+                            <!-- Description if available -->
+                            <?php if (!empty($attachment->description)): ?>
+                                <div class="attachment-meta mt-1" style="font-size: 10px; color: #6c757d; max-height: 32px; overflow: hidden;">
+                                    <i class="fas fa-quote-left mr-1"></i>
+                                    <?= Html::encode($attachment->description) ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Actions -->
+                            <div class="attachment-actions">
+                                <a href="<?= $attachment->getFileUrl() ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="Ver documento">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="<?= $attachment->getFileUrl() ?>" download class="btn btn-sm btn-outline-success" title="Descargar">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <?= Html::a(
+                                    '<i class="fas fa-trash-alt"></i>',
+                                    ['/sis-siniestro/delete-attachment', 'id' => $attachment->id],
+                                    [
+                                        'class' => 'btn btn-sm btn-outline-danger',
+                                        'title' => 'Eliminar documento',
+                                        'data-method' => 'post',
+                                        'data-confirm' => '¿Está seguro de eliminar este documento? Esta acción no se puede deshacer.',
+                                    ]
+                                ) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Table View for Attachments (Alternative - shows more details) -->
+                <div class="table-responsive mt-4">
+                    <table class="table table-bordered table-hover table-sm">
                         <thead class="thead-light">
                             <tr>
-                                <th width="20%"><i class="fas fa-tag me-1"></i> Tipo de Documento</th>
-                                <th width="35%"><i class="fas fa-align-left me-1"></i> Descripción</th>
+                                <th width="5%">#</th>
                                 <th width="25%"><i class="fas fa-file me-1"></i> Archivo</th>
-                                <th width="20%"><i class="fas fa-calendar-alt me-1"></i> Fecha de Subida</th>
+                                <th width="15%"><i class="fas fa-tag me-1"></i> Tipo</th>
+                                <th width="25%"><i class="fas fa-align-left me-1"></i> Descripción</th>
+                                <th width="10%"><i class="fas fa-weight-hanging me-1"></i> Tamaño</th>
+                                <th width="10%"><i class="fas fa-calendar-alt me-1"></i> Fecha</th>
+                                <th width="10%"><i class="fas fa-cog me-1"></i> Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($documentosAdicionales as $index => $doc): ?>
+                            <?php foreach ($attachments as $index => $attachment): ?>
                                 <tr>
+                                    <td class="text-center"><?= $index + 1 ?></td>
+                                    <td>
+                                        <i class="fas <?= $attachment->getFileIcon() ?> me-2"></i>
+                                        <?= Html::encode($attachment->original_filename) ?>
+                                    </td>
                                     <td>
                                         <?php
-                                        $tipoIconMap = [
-                                            'Certificado Médico' => 'fa-certificate text-primary',
-                                            'Examen de Laboratorio' => 'fa-flask text-success',
-                                            'Estudio de Imagen' => 'fa-x-ray text-info',
-                                            'Autorización' => 'fa-file-signature text-warning',
-                                            'Referencia' => 'fa-share-square text-secondary',
-                                            'Historia Clínica' => 'fa-notes-medical text-danger',
-                                            'Nota de Evolución' => 'fa-chart-line text-dark',
-                                            'Consentimiento Informado' => 'fa-file-contract text-muted',
-                                            'Otro' => 'fa-file-alt text-secondary',
-                                        ];
-                                        $tipo = $doc['tipo'] ?? 'Otro';
-                                        $iconClass = $tipoIconMap[$tipo] ?? 'fa-file-alt text-secondary';
+                                        $badgeClass = 'badge-secondary';
+                                        $docType = $attachment->document_type ?? 'Otro';
+                                        if ($docType === 'Receta Médica') $badgeClass = 'badge-warning';
+                                        elseif ($docType === 'Informe Médico') $badgeClass = 'badge-info';
+                                        elseif ($docType === 'Autorización') $badgeClass = 'badge-primary';
+                                        elseif ($docType === 'Resultado de Examen') $badgeClass = 'badge-success';
                                         ?>
-                                        <i class="fas <?= $iconClass ?> me-2 fa-lg"></i>
-                                        <strong><?= Html::encode($tipo) ?></strong>
+                                        <span class="badge <?= $badgeClass ?>">
+                                            <?= Html::encode($docType) ?>
+                                        </span>
                                     </td>
+                                    <td><?= Html::encode($attachment->description ?? 'Sin descripción') ?></td>
+                                    <td><?= $attachment->getFormattedSize() ?></td>
+                                    <td><?= Yii::$app->formatter->asDate($attachment->created_at, 'dd/MM/yyyy HH:mm') ?></td>
                                     <td>
-                                        <?= !empty($doc['descripcion']) ? Html::encode($doc['descripcion']) : '<span class="text-muted font-italic">Sin descripción</span>' ?>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <?php
-                                            $fileUrl = $doc['url'];
-                                            $extension = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
-                                            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif']);
-                                            $isPdf = $extension === 'pdf';
-                                            ?>
-
-                                            <?php if ($isImage): ?>
-                                                <?= Html::a(
-                                                    '<i class="fas fa-eye me-1"></i> Ver',
-                                                    $fileUrl . '?v=' . time(),
-                                                    [
-                                                        'class' => 'btn btn-sm btn-outline-primary',
-                                                        'target' => '_blank',
-                                                        'data-pjax' => '0'
-                                                    ]
-                                                ) ?>
-                                            <?php elseif ($isPdf): ?>
-                                                <?= Html::a(
-                                                    '<i class="fas fa-file-pdf me-1"></i> Ver PDF',
-                                                    $fileUrl . '?v=' . time(),
-                                                    [
-                                                        'class' => 'btn btn-sm btn-outline-danger',
-                                                        'target' => '_blank',
-                                                        'data-pjax' => '0'
-                                                    ]
-                                                ) ?>
-                                            <?php else: ?>
-                                                <?= Html::a(
-                                                    '<i class="fas fa-download me-1"></i> Descargar',
-                                                    $fileUrl . '?download=true',
-                                                    [
-                                                        'class' => 'btn btn-sm btn-outline-secondary',
-                                                        'target' => '_blank',
-                                                        'download' => 'documento_' . ($index + 1) . '.' . $extension,
-                                                        'data-pjax' => '0'
-                                                    ]
-                                                ) ?>
-                                            <?php endif; ?>
-
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="<?= $attachment->getFileUrl() ?>" target="_blank" class="btn btn-outline-primary" title="Ver documento">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="<?= $attachment->getFileUrl() ?>" download class="btn btn-outline-success" title="Descargar">
+                                                <i class="fas fa-download"></i>
+                                            </a>
                                             <?= Html::a(
-                                                '<i class="fas fa-download"></i>',
-                                                $fileUrl . '?download=true',
+                                                '<i class="fas fa-trash-alt"></i>',
+                                                ['/sis-siniestro/delete-attachment', 'id' => $attachment->id],
                                                 [
-                                                    'class' => 'btn btn-sm btn-outline-secondary',
-                                                    'target' => '_blank',
-                                                    'title' => 'Descargar archivo',
-                                                    'download' => 'documento_' . ($index + 1) . '.' . $extension,
-                                                    'data-pjax' => '0'
+                                                    'class' => 'btn btn-outline-danger',
+                                                    'title' => 'Eliminar documento',
+                                                    'data-method' => 'post',
+                                                    'data-confirm' => '¿Está seguro de eliminar este documento? Esta acción no se puede deshacer.',
                                                 ]
                                             ) ?>
                                         </div>
-
-                                        <?php if (!empty($doc['nombre_archivo'])): ?>
-                                            <div class="small text-muted mt-1">
-                                                <i class="fas fa-file me-1"></i> <?= Html::encode($doc['nombre_archivo']) ?>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if (!empty($doc['tamano'])): ?>
-                                            <div class="small text-muted">
-                                                <i class="fas fa-weight-hanging me-1"></i>
-                                                <?php
-                                                $size = $doc['tamano'];
-                                                if ($size < 1024) {
-                                                    echo $size . ' B';
-                                                } elseif ($size < 1048576) {
-                                                    echo round($size / 1024, 2) . ' KB';
-                                                } else {
-                                                    echo round($size / 1048576, 2) . ' MB';
-                                                }
-                                                ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <i class="fas fa-clock me-1 text-muted"></i>
-                                        <?= isset($doc['fecha_subida']) ? Yii::$app->formatter->asDatetime($doc['fecha_subida']) : Yii::$app->formatter->asDatetime($model->created_at) ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
-            </div>
+            <?php else: ?>
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
+                    <p class="mb-0">No hay documentos adicionales adjuntos a esta <?= $terminoLower ?></p>
+                    <?php if (Yii::$app->user->can('updateSisSiniestro')): ?>
+                        <p class="mb-0 mt-2">
+                            <?= Html::a(
+                                '<i class="fas fa-plus mr-1"></i> Agregar documentos',
+                                ['update', 'id' => $model->id, 'user_id' => $model->iduser, 'es_cita' => $esCita],
+                                ['class' => 'btn btn-sm btn-outline-primary']
+                            ) ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
-    <?php endif; ?>
+    </div>
+    <!-- ============================================================ -->
     <!-- ===== END DOCUMENTOS ADICIONALES ===== -->
+    <!-- ============================================================ -->
 
 </div>

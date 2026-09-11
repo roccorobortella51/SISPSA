@@ -623,20 +623,41 @@ class CorporativoController extends Controller
 
         $corporativos = ArrayHelper::map($corporativosData, 'id', 'nombre');
 
-        if ($model->load(Yii::$app->request->post())) {
+        // Get plans for dropdown (initially empty, loaded via AJAX)
+        $planes = [];
 
+        // Get asesores list (only active ones)
+        $asesores = UserHelper::getAgenteFuerzaList();
+
+        if ($model->load(Yii::$app->request->post())) {
             $model->masivoFile = UploadedFile::getInstance($model, 'masivoFile');
 
             if ($model->validate()) {
-
                 $filePath = $model->masivoFile->tempName;
                 $corporativoId = $model->corporativo_id;
+                $planId = $model->plan_id;
+                $asesorId = $model->asesor_id;
+
+                // Get the selected plan to determine the clinic
+                $plan = Planes::findOne($planId);
+                if (!$plan) {
+                    Yii::$app->session->setFlash('error', 'El plan seleccionado no existe.');
+                    return $this->render('carga-masiva-afiliados', [
+                        'model' => $model,
+                        'corporativos' => $corporativos,
+                        'planes' => $planes,
+                        'asesores' => $asesores,
+                    ]);
+                }
 
                 $resultados = $this->procesarCSV(
                     $filePath,
                     $corporativoId,
                     $model->fecha_ini,
-                    $model->fecha_ven
+                    $model->fecha_ven,
+                    $planId,        // Pass the plan ID
+                    $plan->clinica_id, // Pass the clinic ID from the plan
+                    $asesorId       // Pass the asesor ID (may be null)
                 );
 
                 // 3. Mostrar el resumen del proceso
@@ -657,12 +678,11 @@ class CorporativoController extends Controller
                 return $this->render('carga-masiva-resumen', [
                     'model' => $model,
                     'resultados' => $resultados,
-                    'corporativo' => $corporativoModel, // This is now properly defined
+                    'corporativo' => $corporativoModel,
+                    'selectedPlan' => $plan,
                 ]);
             } else {
-
                 $validationErrors = ArrayHelper::flatten($model->getErrors());
-
                 Yii::$app->session->setFlash(
                     'error',
                     'Error de validación del formulario de carga: ' . implode('; ', $validationErrors)
@@ -674,26 +694,31 @@ class CorporativoController extends Controller
         return $this->render('carga-masiva-afiliados', [
             'model' => $model,
             'corporativos' => $corporativos,
+            'planes' => $planes,
+            'asesores' => $asesores,
         ]);
     }
 
     /**
      * Lógica principal para leer el archivo CSV y procesar los afiliados,
      * asegurando el cumplimiento de las reglas de validación de UserDatos.
-     * SE HAN AÑADIDO: nacionalidad, estado_civil, lugar_nacimiento, profesion, ocupacion,
-     * actividad_economica, ramo_comercial, descripcion_actividad, ingreso_anual,
-     * direccion_cobro, y telefono_residencia.
      * 
-     * ACTUALIZACIÓN IMPORTANTE: Ahora genera 12 cuotas por afiliado utilizando
-     * el método Cuotas::generateCuotasAnniversaryBased() en lugar de una sola cuota.
+     * ACTUALIZACIÓN IMPORTANTE: 
+     * - plan_id, clinica_id y asesor_id ya NO se leen del CSV
+     * - Se reciben como parámetros del formulario
+     * - Genera 12 cuotas por afiliado utilizando el método generateCuotasAnniversaryBased()
+     * - Validaciones mejoradas para manejar datos del mundo real (teléfonos sin 0, fechas mixtas, etc.)
      * 
      * @param string $filePath Ruta temporal del archivo CSV.
      * @param int $corporativoId ID del corporativo destino.
      * @param string $fechaIniGlobal Fecha de inicio del contrato.
      * @param string $fechaVenGlobal Fecha de vencimiento del contrato.
+     * @param int $planId ID del plan seleccionado en el formulario.
+     * @param int $clinicaId ID de la clínica asociada al plan.
+     * @param int|null $asesorId ID del asesor seleccionado (opcional).
      * @return array Array con el conteo de éxitos, los errores encontrados y detalles de éxito.
      */
-    private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal)
+    private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal, $planId, $clinicaId, $asesorId = null)
     {
         $handle = fopen($filePath, "r");
         if ($handle === false) {
@@ -704,7 +729,7 @@ class CorporativoController extends Controller
             ];
         }
 
-        // Campos requeridos originales
+        // Campos requeridos - PLAN_ID, CLINICA_ID Y ASESOR_ID YA NO SON REQUERIDOS EN EL CSV
         $requiredFields = [
             'tipo_cedula',
             'cedula',
@@ -715,8 +740,6 @@ class CorporativoController extends Controller
             'telefono',
             'email',
             'direccion',
-            'plan_id',
-            'clinica_id',
             'estado'
         ];
 
@@ -730,7 +753,7 @@ class CorporativoController extends Controller
 
         $successCount = 0;
         $errors = [];
-        $successDetails = []; // Array para almacenar detalles de afiliados exitosos
+        $successDetails = [];
         $lineNumber = 1;
 
         if ($headers === false) {
@@ -766,18 +789,26 @@ class CorporativoController extends Controller
             $this->estadoCanonicalNamesText = implode(', ', $canonicos);
         }
 
-        // Definición de rangos de valores válidos para nuevos campos
-        $validRanges = [
-            'estado_civil' => ['Soltero', 'Casado', 'Divorciado', 'Viudo'],
-            'actividad_economica' => ['Industrial', 'Comercial', 'Profesional', 'Gubernamental'],
-            'descripcion_actividad' => ['Independiente', 'Dependiente', 'Societaria'],
-            'ingreso_anual' => [
-                'De 1 a 5 Salarios mínimos',
-                'De 6 a 10 Salarios mínimos',
-                'De 11 a 20 Salarios mínimos',
-                'De 20 Salarios mínimos en adelante'
-            ]
-        ];
+        // Validar que el plan y la clínica existen
+        $plan = Planes::findOne($planId);
+        if (!$plan) {
+            fclose($handle);
+            return [
+                'successCount' => 0,
+                'errors' => ['El Plan ID ' . $planId . ' no existe o no está activo.'],
+                'successDetails' => []
+            ];
+        }
+
+        // Verificar que la clínica está vinculada al corporativo
+        if (!CorporativoClinica::find()->where(['corporativo_id' => $corporativoId])->andWhere(['clinica_id' => $clinicaId])->exists()) {
+            fclose($handle);
+            return [
+                'successCount' => 0,
+                'errors' => ["La Clínica ID {$clinicaId} NO está vinculada al Corporativo ID {$corporativoId} seleccionado."],
+                'successDetails' => []
+            ];
+        }
 
         // Procesar cada línea del CSV
         while (($data = fgetcsv($handle, 1000, ",")) !== false) {
@@ -791,25 +822,51 @@ class CorporativoController extends Controller
             $transaction = Yii::$app->db->beginTransaction();
 
             $cedulaCsv = trim($data[$headerMap['cedula']] ?? '');
-
-            // --- CORRECCIÓN CRÍTICA: LIMPIEZA DE CÉDULA NUMÉRICA ---
-            $cedulaLimpia = $this->limpiarSoloNumeros($cedulaCsv);
-            // -------------------------------------------------------
-
             $logPrefix = "Línea {$lineNumber} (Cédula: " . ($cedulaCsv ?: 'N/A') . "): ";
             $userLogin = null;
 
             try {
-                // Extracción y saneamiento de datos clave
-                $planId = (int) trim($data[$headerMap['plan_id']] ?? 0);
-                $clinicaId = (int) trim($data[$headerMap['clinica_id']] ?? 0);
-                $email = trim($data[$headerMap['email']] ?? '');
+                // === VALIDACIÓN DE CÉDULA ===
+                if (empty($cedulaCsv)) {
+                    throw new \Exception('El campo cédula está vacío.');
+                }
 
+                $cedulaLimpia = $this->limpiarSoloNumeros($cedulaCsv);
+                if (empty($cedulaLimpia)) {
+                    throw new \Exception("La cédula '{$cedulaCsv}' no contiene números válidos.");
+                }
+
+                // === VALIDACIÓN DE EMAIL ===
+                $email = trim($data[$headerMap['email']] ?? '');
+                if (empty($email)) {
+                    throw new \Exception('El campo email está vacío.');
+                }
+
+                // Auto-corregir errores comunes en emails
+                $email = str_replace(' ', '', $email);
+                $email = str_replace('@gamil.com', '@gmail.com', $email);
+                $email = str_replace('@gamil.com', '@gmail.com', $email);
+                $email = str_replace('@gmai.com', '@gmail.com', $email);
+
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    throw new \Exception("El email '{$email}' no tiene un formato válido.");
+                }
+
+                // === VALIDACIÓN DE DUPLICADOS ===
+                if (UserDatos::find()->where(['cedula' => $cedulaLimpia])->exists()) {
+                    throw new \Exception("Ya existe un afiliado con la cédula {$cedulaLimpia} registrado.");
+                }
+
+                if (User::find()->where(['email' => $email])->exists()) {
+                    throw new \Exception("Ya existe un usuario con el email {$email} registrado.");
+                }
+
+                // === EXTRACCIÓN Y SANEAMIENTO DE DATOS ===
                 $telefonoCelularCsv = trim($data[$headerMap['telefono']] ?? '');
                 $direccionResidencia = trim($data[$headerMap['direccion']] ?? '');
                 $estadoNameCsv = trim($data[$headerMap['estado']] ?? '');
 
-                // Extracción y saneamiento de NUEVOS CAMPOS
+                // Nuevos campos opcionales
                 $nacionalidad = trim($data[$headerMap['nacionalidad']] ?? '');
                 $estadoCivilCsv = trim($data[$headerMap['estado_civil']] ?? '');
                 $lugarNacimiento = trim($data[$headerMap['lugar_nacimiento']] ?? '');
@@ -821,75 +878,42 @@ class CorporativoController extends Controller
                 $ingresoAnualCsv = trim($data[$headerMap['ingreso_anual']] ?? '');
                 $direccionCobro = trim($data[$headerMap['direccion_cobro']] ?? '');
                 $telefonoResidenciaCsv = trim($data[$headerMap['telefono_residencia']] ?? '');
-
-                // Campos opcionales existentes
-                $asesorIdData = isset($headerMap['asesor_id']) ? trim($data[$headerMap['asesor_id']] ?? '') : null;
                 $direccionOficina = isset($headerMap['direccion_oficina']) ? trim($data[$headerMap['direccion_oficina']] ?? '') : null;
                 $telefonoOficinaCsv = isset($headerMap['telefono_oficina']) ? trim($data[$headerMap['telefono_oficina']] ?? '') : null;
                 $tipoSangre = isset($headerMap['tipo_sangre']) ? trim($data[$headerMap['tipo_sangre']] ?? '') : null;
 
-                // Validación de datos principales
-                if (empty($cedulaLimpia) || empty($email) || $planId <= 0 || $clinicaId <= 0) {
-                    throw new \Exception('Datos principales (cédula, email, plan_id, o clinica_id) están incompletos o inválidos.');
-                }
-
-                // Validación del Teléfono Celular (se limpia a 11 dígitos, ej. 04121234567)
+                // === VALIDACIÓN DE TELÉFONOS ===
                 $telefonoCelularLimpio = $this->limpiarTelefono($telefonoCelularCsv);
+                $telefonoResidenciaLimpio = $this->limpiarTelefono($telefonoResidenciaCsv);
+                $telefonoOficinaLimpio = $this->limpiarTelefono($telefonoOficinaCsv);
 
-                // Validación del Teléfono de Residencia
-                $telefonoResidenciaLimpio = !empty($telefonoResidenciaCsv) ? $this->limpiarTelefono($telefonoResidenciaCsv) : null;
-
-                // Validación del Teléfono de Oficina
-                $telefonoOficinaLimpio = !empty($telefonoOficinaCsv) ? $this->limpiarTelefono($telefonoOficinaCsv) : null;
-
-                // Validación de Estado (Nombre a ID)
+                // === VALIDACIÓN DE ESTADO ===
                 if (empty($estadoNameCsv)) {
                     throw new \Exception("El campo 'estado' está vacío. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
                 }
 
-                $normalizedCsvName = strtolower($this->_normalizeString($estadoNameCsv));
+                $normalizedCsvName = strtolower(trim($this->_normalizeString($estadoNameCsv)));
 
                 if (!isset($this->estadoNameToIdMap[$normalizedCsvName])) {
-                    throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
+                    // Intentar búsqueda parcial
+                    $found = false;
+                    foreach ($this->estadoNameToIdMap as $key => $id) {
+                        if (strpos($key, $normalizedCsvName) !== false || strpos($normalizedCsvName, $key) !== false) {
+                            $this->estadoNameToIdMap[$normalizedCsvName] = $id;
+                            $this->estadoNormToCanonicalName[$normalizedCsvName] = $this->estadoNormToCanonicalName[$key];
+                            $found = true;
+                            break;
+                        }
+                    }
+
+                    if (!$found) {
+                        throw new \Exception("El nombre del estado '{$estadoNameCsv}' no fue encontrado. Use exactamente uno de: " . $this->estadoCanonicalNamesText);
+                    }
                 }
 
-                // Nombre del estado para asignación a UserDatos (canónico desde rm_estado)
                 $estadoNombreParaUserDatos = $this->estadoNormToCanonicalName[$normalizedCsvName] ?? $estadoNameCsv;
 
-                // 2. Validar relaciones y existencia de Plan y Clínica
-                if (!CorporativoClinica::find()->where(['corporativo_id' => $corporativoId])->andWhere(['clinica_id' => $clinicaId])->exists()) {
-                    throw new \Exception("La Clínica ID {$clinicaId} NO está vinculada al Corporativo ID {$corporativoId} seleccionado.");
-                }
-
-                $plan = Planes::findOne($planId);
-                if (!$plan) {
-                    throw new \Exception('El Plan ID ' . $planId . ' no existe o no está activo.');
-                }
-
-                // 3. Validación de Duplicados (Cédula y Email)
-                if (UserDatos::find()->where(['cedula' => $cedulaLimpia])->exists()) {
-                    throw new \Exception("Ya existe un afiliado con la cédula {$cedulaLimpia} registrado.");
-                }
-
-                if (User::find()->where(['email' => $email])->exists()) {
-                    throw new \Exception("Ya existe un usuario con el email {$email} registrado.");
-                }
-
-                // 4. Validaciones de Rango para Nuevos Campos (si no están vacíos)
-                if (!empty($estadoCivilCsv) && !in_array($estadoCivilCsv, $validRanges['estado_civil'])) {
-                    throw new \Exception("Valor inválido para 'estado_civil': '{$estadoCivilCsv}'. Debe ser uno de: " . implode(', ', $validRanges['estado_civil']));
-                }
-                if (!empty($actividadEconomicaCsv) && !in_array($actividadEconomicaCsv, $validRanges['actividad_economica'])) {
-                    throw new \Exception("Valor inválido para 'actividad_economica': '{$actividadEconomicaCsv}'. Debe ser uno de: " . implode(', ', $validRanges['actividad_economica']));
-                }
-                if (!empty($descripcionActividadCsv) && !in_array($descripcionActividadCsv, $validRanges['descripcion_actividad'])) {
-                    throw new \Exception("Valor inválido para 'descripcion_actividad': '{$descripcionActividadCsv}'. Debe ser uno de: " . implode(', ', $validRanges['descripcion_actividad']));
-                }
-                if (!empty($ingresoAnualCsv) && !in_array($ingresoAnualCsv, $validRanges['ingreso_anual'])) {
-                    throw new \Exception("Valor inválido para 'ingreso_anual': '{$ingresoAnualCsv}'. Debe ser uno de: " . implode(', ', $validRanges['ingreso_anual']));
-                }
-
-                // 5. Crear el User Login
+                // === CREAR USER LOGIN ===
                 $userLogin = new User();
                 $userLogin->email = $email;
                 $userLogin->username = $email;
@@ -902,67 +926,181 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al crear User Login: ' . implode(', ', ArrayHelper::flatten($userLogin->getErrors())));
                 }
 
-                // 6. Crear el registro UserDatos (Afiliado)
+                // === CREAR AFILIADO (UserDatos) ===
                 $afiliado = new UserDatos();
                 $afiliado->user_login_id = $userLogin->id;
 
-                // Mapeo de campos del CSV (Existentes)
+                // Datos básicos
                 $afiliado->tipo_cedula = trim($data[$headerMap['tipo_cedula']]);
-                $afiliado->cedula = $cedulaLimpia; // Asignación del valor NUMÉRICO
+                $afiliado->cedula = $cedulaLimpia;
                 $afiliado->nombres = trim($data[$headerMap['nombres']]);
                 $afiliado->apellidos = trim($data[$headerMap['apellidos']]);
 
-                // Validar y Formatear fecha de nacimiento (YYYY-MM-DD)
+                // === FECHA DE NACIMIENTO (MÚLTIPLES FORMATOS) ===
                 $fechaNacString = trim($data[$headerMap['fechanac']]);
-                $dateObject = \DateTime::createFromFormat('d/m/Y', $fechaNacString) ?: \DateTime::createFromFormat('Y-m-d', $fechaNacString);
+                $dateObject = null;
+
+                // Define los formatos de fecha soportados
+                $formats = [
+                    'd/m/Y',      // 19/07/1995
+                    'd/m/y',      // 17/10/89  → se convierte a 1989
+                    'Y-m-d',      // 1986-09-02
+                    'Y/m/d',      // 1986/09/02
+                    'm/d/Y',      // 07/19/1995
+                    'd-m-Y',      // 19-07-1995
+                    'd.m.Y',      // 19.07.1995
+                    'd.m.y',      // 19.07.89
+                    'd-m-y',      // 19-07-89
+                    'm/d/y',      // 07/19/89
+                ];
+
+                // Intentar cada formato
+                foreach ($formats as $format) {
+                    $dateObject = \DateTime::createFromFormat($format, $fechaNacString);
+                    if ($dateObject !== false) {
+                        break;
+                    }
+                }
 
                 if (!$dateObject) {
-                    throw new \Exception("La fecha de nacimiento '{$fechaNacString}' no tiene un formato de fecha válido (Ej: DD/MM/AAAA o YYYY-MM-DD).");
+                    throw new \Exception("La fecha de nacimiento '{$fechaNacString}' no tiene un formato de fecha válido (Ej: DD/MM/AAAA, DD/MM/AA, o YYYY-MM-DD).");
                 }
+
+                $year = (int)$dateObject->format('Y');
+                $currentYear = (int)date('Y');
+
+                // Para años de 2 dígitos (ej: 89), DateTime::createFromFormat('d/m/y') ya los convierte a 1989
+                // Pero debemos validar que el año sea razonable (entre 1900 y el año actual)
+                if ($year < 1900 || $year > $currentYear) {
+                    // Si el año es 89, significa que no se pudo convertir correctamente
+                    // Intentar convertir manualmente añadiendo el siglo
+                    if ($year < 100) {
+                        // Asumir que es un año del siglo XX (1900-1999)
+                        $year = 1900 + $year;
+                        // Reconstruir la fecha con el año corregido
+                        $month = (int)$dateObject->format('m');
+                        $day = (int)$dateObject->format('d');
+                        $dateObject = \DateTime::createFromFormat('Y-m-d', "{$year}-{$month}-{$day}");
+
+                        if ($dateObject === false) {
+                            throw new \Exception("La fecha de nacimiento '{$fechaNacString}' es inválida después de corregir el año.");
+                        }
+                    } else {
+                        throw new \Exception("La fecha de nacimiento '{$fechaNacString}' es inválida (año: {$year}). La fecha debe ser entre 1900 y {$currentYear}.");
+                    }
+                }
+
                 $afiliado->fechanac = $dateObject->format('Y-m-d');
 
-                // Mapeo de Sexo para cumplir con el range de validación: ['Masculino', 'Femenino', 'Otro']
-                $sexoCsv = strtoupper(trim($data[$headerMap['sexo']]));
-                if (in_array($sexoCsv, ['M', 'MASCULINO'])) {
-                    $afiliado->sexo = 'Masculino';
-                } elseif (in_array($sexoCsv, ['F', 'FEMENINO'])) {
-                    $afiliado->sexo = 'Femenino';
-                } else {
-                    $afiliado->sexo = $sexoCsv;
+                // === SEXO (NORMALIZACIÓN) ===
+                $sexoCsv = trim($data[$headerMap['sexo']]);
+                $sexoNormalizado = null;
+
+                if (!empty($sexoCsv)) {
+                    $sexoUpper = strtoupper($sexoCsv);
+                    if (in_array($sexoUpper, ['M', 'MASCULINO'])) {
+                        $sexoNormalizado = 'Masculino';
+                    } elseif (in_array($sexoUpper, ['F', 'FEMENINO'])) {
+                        $sexoNormalizado = 'Femenino';
+                    } else {
+                        $sexoNormalizado = $sexoCsv;
+                    }
                 }
 
-                // Asignación de Teléfono, Dirección y ESTADO (como string/nombre)
+                $afiliado->sexo = $sexoNormalizado;
+
+                // === TELÉFONOS Y DIRECCIÓN ===
                 $afiliado->telefono_celular = $telefonoCelularLimpio;
                 $afiliado->telefono = $telefonoCelularLimpio;
                 $afiliado->direccion_residencia = $direccionResidencia;
                 $afiliado->direccion = $direccionResidencia;
-
-                // ** IMPORTANTE: Asignación del NOMBRE del estado (string) - Cumple con la validación del modelo **
                 $afiliado->estado = $estadoNombreParaUserDatos;
 
-                // Mapeo de campos del CSV (Nuevos Campos)
-                $afiliado->nacionalidad = $nacionalidad ?: null;
-                $afiliado->estado_civil = $estadoCivilCsv ?: null;
-                $afiliado->lugar_nacimiento = $lugarNacimiento ?: null;
-                $afiliado->profesion = $profesion ?: null;
-                $afiliado->ocupacion = $ocupacion ?: null;
-                $afiliado->actividad_economica = $actividadEconomicaCsv ?: null;
-                $afiliado->ramo_comercial = $ramoComercial ?: null;
-                $afiliado->descripcion_actividad = $descripcionActividadCsv ?: null;
-                $afiliado->ingreso_anual = $ingresoAnualCsv ?: null;
-                $afiliado->direccion_cobro = $direccionCobro ?: null;
-                $afiliado->telefono_residencia = $telefonoResidenciaLimpio; // Limpiado o null
-
-                // Campos opcionales existentes
-                $afiliado->direccion_oficina = $direccionOficina ?: null;
+                // === CAMPOS OPCIONALES (CON VALIDACIÓN NO BLOQUEANTE) ===
+                $afiliado->nacionalidad = !empty($nacionalidad) ? $nacionalidad : null;
+                $afiliado->lugar_nacimiento = !empty($lugarNacimiento) ? $lugarNacimiento : null;
+                $afiliado->profesion = !empty($profesion) ? $profesion : null;
+                $afiliado->ocupacion = !empty($ocupacion) ? $ocupacion : null;
+                $afiliado->ramo_comercial = !empty($ramoComercial) ? $ramoComercial : null;
+                $afiliado->direccion_cobro = !empty($direccionCobro) ? $direccionCobro : null;
+                $afiliado->direccion_oficina = !empty($direccionOficina) ? $direccionOficina : null;
+                $afiliado->telefono_residencia = $telefonoResidenciaLimpio;
                 $afiliado->telefono_oficina = $telefonoOficinaLimpio;
-                $afiliado->tipo_sangre = $tipoSangre ?: null;
 
-                // Campos Fijos y Opcionales (si existen en el CSV)
-                $afiliado->user_datos_type_id = 2; // Tipo: Afiliado Corporativo
+                // === ESTADO CIVIL (NORMALIZACIÓN) ===
+                if (!empty($estadoCivilCsv)) {
+                    $estadoCivilNormalizado = ucfirst(strtolower($estadoCivilCsv));
+                    $validEstadosCivil = ['Soltero', 'Casado', 'Divorciado', 'Viudo'];
+                    if (!in_array($estadoCivilNormalizado, $validEstadosCivil)) {
+                        Yii::warning("Estado civil no válido: '{$estadoCivilCsv}', usando valor original", __METHOD__);
+                        $afiliado->estado_civil = $estadoCivilCsv;
+                    } else {
+                        $afiliado->estado_civil = $estadoCivilNormalizado;
+                    }
+                }
+
+                // === ACTIVIDAD ECONÓMICA (NORMALIZACIÓN) ===
+                if (!empty($actividadEconomicaCsv)) {
+                    $actividadNormalizada = ucfirst(strtolower($actividadEconomicaCsv));
+                    $validActividades = ['Industrial', 'Comercial', 'Profesional', 'Gubernamental'];
+                    if (!in_array($actividadNormalizada, $validActividades)) {
+                        Yii::warning("Actividad económica no válida: '{$actividadEconomicaCsv}', usando valor original", __METHOD__);
+                        $afiliado->actividad_economica = $actividadEconomicaCsv;
+                    } else {
+                        $afiliado->actividad_economica = $actividadNormalizada;
+                    }
+                }
+
+                // === DESCRIPCIÓN DE ACTIVIDAD (NORMALIZACIÓN) ===
+                if (!empty($descripcionActividadCsv)) {
+                    $descripcionNormalizada = ucfirst(strtolower($descripcionActividadCsv));
+                    $validDescripciones = ['Independiente', 'Dependiente', 'Societaria'];
+                    if (!in_array($descripcionNormalizada, $validDescripciones)) {
+                        Yii::warning("Descripción de actividad no válida: '{$descripcionActividadCsv}', usando valor original", __METHOD__);
+                        $afiliado->descripcion_actividad = $descripcionActividadCsv;
+                    } else {
+                        $afiliado->descripcion_actividad = $descripcionNormalizada;
+                    }
+                }
+
+                // === INGRESO ANUAL (NORMALIZACIÓN) ===
+                if (!empty($ingresoAnualCsv)) {
+                    $validIngresos = [
+                        'De 1 a 5 Salarios mínimos',
+                        'De 6 a 10 Salarios mínimos',
+                        'De 11 a 20 Salarios mínimos',
+                        'De 20 Salarios mínimos en adelante'
+                    ];
+
+                    $ingresoLower = strtolower(trim($ingresoAnualCsv));
+                    $found = false;
+                    foreach ($validIngresos as $valid) {
+                        if (strtolower($valid) === $ingresoLower) {
+                            $afiliado->ingreso_anual = $valid;
+                            $found = true;
+                            break;
+                        }
+                    }
+                    if (!$found) {
+                        Yii::warning("Ingreso anual no válido: '{$ingresoAnualCsv}', usando valor original", __METHOD__);
+                        $afiliado->ingreso_anual = $ingresoAnualCsv;
+                    }
+                }
+
+                // === TIPO DE SANGRE (NORMALIZACIÓN) ===
+                if (!empty($tipoSangre)) {
+                    $tipoSangre = strtoupper($tipoSangre);
+                    $validTiposSangre = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+                    if (!in_array($tipoSangre, $validTiposSangre)) {
+                        Yii::warning("Tipo de sangre no válido: '{$tipoSangre}', usando valor original", __METHOD__);
+                    }
+                    $afiliado->tipo_sangre = $tipoSangre;
+                }
+
+                // === CAMPOS FIJOS ===
+                $afiliado->user_datos_type_id = 2;
                 $afiliado->afiliado_corporativo_id = $corporativoId;
                 $afiliado->email = $email;
-
                 $afiliado->role = 'afiliado';
                 $afiliado->estatus = 'Creado';
                 $afiliado->estatus_solvente = 'Si';
@@ -972,35 +1110,36 @@ class CorporativoController extends Controller
                 $afiliado->plan_id = $planId;
                 $afiliado->clinica_id = $clinicaId;
 
+                if (!empty($asesorId)) {
+                    $afiliado->asesor_id = (int) $asesorId;
+                }
+
                 if (!$afiliado->save()) {
                     $errorMessages = ArrayHelper::flatten($afiliado->getErrors());
-
                     Yii::error([
                         'ERROR_VALIDACION_MASIVA' => $lineNumber,
                         'Modelo' => 'UserDatos',
                         'Errores_Detalle' => $afiliado->getErrors(),
                     ], __METHOD__);
-
                     throw new \Exception('Error al crear UserDatos (Validación): ' . implode('; ', $errorMessages));
                 }
 
-                // 7. Creación de Contrato
+                // === CREAR CONTRATO ===
                 $modelContrato = new Contratos();
                 $modelContrato->user_id = $afiliado->id;
                 $modelContrato->estatus = 'Registrado';
                 $modelContrato->clinica_id = $afiliado->clinica_id;
                 $modelContrato->plan_id = $afiliado->plan_id;
                 $modelContrato->monto = $plan ? $plan->precio : 0;
-
-                $modelContrato->fecha_ini = $fechaIniGlobal; // formato Y-m-d del formulario
-                $modelContrato->fecha_ven = $fechaVenGlobal; // formato Y-m-d del formulario
+                $modelContrato->fecha_ini = $fechaIniGlobal;
+                $modelContrato->fecha_ven = $fechaVenGlobal;
 
                 if (!$modelContrato->save()) {
                     Yii::error(['Error_Contrato' => $modelContrato->getErrors()], __METHOD__);
                     throw new \Exception('Error al crear Contrato: ' . implode(', ', ArrayHelper::flatten($modelContrato->getErrors())));
                 }
 
-                // Generar número de contrato
+                // === GENERAR NÚMERO DE CONTRATO ===
                 $anio_actual = date('Y');
                 $modelContrato->nrocontrato = $afiliado->cedula . '-' . $anio_actual . '-' . $modelContrato->id;
                 $afiliado->contrato_id = $modelContrato->id;
@@ -1009,8 +1148,7 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al guardar NroContrato o contrato_id.');
                 }
 
-                // ========== NUEVA FUNCIONALIDAD: Generar 12 cuotas en lugar de una sola ==========
-                // Esto asegura que cada afiliado tenga un año completo de cobertura
+                // === GENERAR 12 CUOTAS ===
                 Yii::info("Generando 12 cuotas para el contrato #{$modelContrato->id} del afiliado {$afiliado->cedula}", __METHOD__);
 
                 $cuotaGenerationResult = Cuotas::generateCuotasAnniversaryBased(
@@ -1029,31 +1167,26 @@ class CorporativoController extends Controller
                         "(Afiliado: {$afiliado->cedula} - {$afiliado->nombres} {$afiliado->apellidos})",
                     __METHOD__
                 );
-                // ========== FIN DE LA NUEVA FUNCIONALIDAD ==========
 
-                // 8. Crear relación CorporativoUser
+                // === CREAR RELACIÓN CORPORATIVO USER ===
                 $corporativoUser = new CorporativoUser();
                 $corporativoUser->corporativo_id = $corporativoId;
                 $corporativoUser->user_id = $afiliado->id;
                 $corporativoUser->fecha_vinculacion = new Expression('NOW()');
-
-                if (!empty($asesorIdData)) {
-                    $corporativoUser->asesor_id = (int) $asesorIdData;
-                }
 
                 if (!$corporativoUser->save()) {
                     Yii::error(['Error_CorporativoUser' => $corporativoUser->getErrors()], __METHOD__);
                     throw new \Exception('Error al vincular con CorporativoUser: ' . implode(', ', ArrayHelper::flatten($corporativoUser->getErrors())));
                 }
 
-                // 9. Asignar rol 'afiliado'
+                // === ASIGNAR ROL ===
                 $auth = Yii::$app->authManager;
                 $role = $auth->getRole('afiliado');
                 if ($role) {
                     $auth->assign($role, $userLogin->id);
                 }
 
-                // ========== RECOLECTAR DETALLES PARA EL RESUMEN ==========
+                // === RECOLECTAR DETALLES PARA EL RESUMEN ===
                 $successDetails[] = [
                     'user_datos_id' => $afiliado->id,
                     'user_login_id' => $userLogin->id,
@@ -1067,9 +1200,9 @@ class CorporativoController extends Controller
                     'plan_id' => $planId,
                     'plan_nombre' => $plan->nombre,
                     'clinica_id' => $clinicaId,
-                    'cuotas_generadas' => $cuotasGeneradas
+                    'cuotas_generadas' => $cuotasGeneradas,
+                    'asesor_id' => $asesorId,
                 ];
-                // ========== FIN DE RECOLECCIÓN ==========
 
                 $transaction->commit();
                 $successCount++;
@@ -1079,7 +1212,7 @@ class CorporativoController extends Controller
 
                 if (isset($userLogin) && !$userLogin->isNewRecord) {
                     try {
-                        $userLogin->delete(); // Limpiar User Login si falló algo posterior
+                        $userLogin->delete();
                     } catch (\Throwable $th) {
                         Yii::error("Error de limpieza del User Login: " . $th->getMessage(), __METHOD__);
                     }
@@ -1090,13 +1223,11 @@ class CorporativoController extends Controller
 
         fclose($handle);
 
-        // ========== RETORNAR CON DETALLES DE ÉXITO ==========
         return [
             'successCount' => $successCount,
             'errors' => $errors,
             'successDetails' => $successDetails
         ];
-        // ========== FIN DEL RETORNO ==========
     }
 
     /**
@@ -1118,11 +1249,11 @@ class CorporativoController extends Controller
             'telefono',
             'email',
             'direccion',
-            'plan_id',
-            'clinica_id',
-            'estado',
+            'estado',           // ← Keep estado
+            // 'plan_id' REMOVED - plan is selected in the form
+            // 'clinica_id' REMOVED - clinic is determined automatically
 
-            // Nuevos campos
+            // New optional fields (unchanged)
             'nacionalidad',
             'estado_civil',
             'lugar_nacimiento',
@@ -1134,9 +1265,6 @@ class CorporativoController extends Controller
             'ingreso_anual',
             'direccion_cobro',
             'telefono_residencia',
-
-            // Campos opcionales existentes
-            'asesor_id',
             'direccion_oficina',
             'telefono_oficina',
             'tipo_sangre'
@@ -1152,11 +1280,11 @@ class CorporativoController extends Controller
             '04121234567',
             'juan.pablo@yopmail.com',
             'CALLE SOL #123',
-            '2',
-            '2',
             'MIRANDA',
+            // plan_id REMOVED
+            // clinica_id REMOVED
 
-            // Datos de muestra para nuevos campos
+            // New fields (unchanged)
             'VENEZOLANA',
             'Casado',
             'CARACAS',
@@ -1168,9 +1296,6 @@ class CorporativoController extends Controller
             'De 6 a 10 Salarios mínimos',
             'DIRECCION PARA ENVIAR ESTADOS DE CUENTA',
             '02125551234',
-
-            // Datos de muestra para campos opcionales existentes
-            '',
             'AV. PRINCIPAL, EDIF. AZUL, PISO 3',
             '2125871425',
             'A+'
@@ -1231,22 +1356,52 @@ class CorporativoController extends Controller
     /**
      * Limpia y formatea un número de teléfono (celular o fijo).
      * Asegura que el formato sea de 11 dígitos, cumpliendo la validación de UserDatos.
+     * 
+     * MEJORADO: Ahora maneja números con y sin código de país,
+     * con o sin el 0 inicial, y con diferentes separadores.
+     * 
      * @param string $telefono El número de teléfono del CSV.
-     * @return string El número de teléfono saneado (11 dígitos, ej. 04121234567).
+     * @return string|null El número de teléfono saneado (11 dígitos) o null si está vacío.
      */
-    protected function limpiarTelefono(string $telefono): string
+    protected function limpiarTelefono(string $telefono): ?string
     {
+        // Si está vacío, retornar null
+        if (empty($telefono) || trim($telefono) === '') {
+            return null;
+        }
+
         // 1. Quitar todos los caracteres que no sean dígitos
         $numeroLimpio = preg_replace('/[^0-9]/', '', $telefono);
 
-        // 2. Si tiene 10 dígitos y no empieza con '0', se asume que le falta el '0' inicial
+        // 2. Si está vacío después de limpiar, retornar null
+        if (empty($numeroLimpio)) {
+            return null;
+        }
+
+        // 3. Si tiene 10 dígitos y no empieza con '0', se asume que le falta el '0' inicial
         if (strlen($numeroLimpio) === 10 && substr($numeroLimpio, 0, 1) !== '0') {
             $numeroLimpio = '0' . $numeroLimpio;
         }
 
-        // Si es más largo, se toman los últimos 11 (para manejar códigos de país si los hubiera)
+        // 4. Si tiene 11 dígitos pero empieza con código de país (ej: 58), extraer el número local
         if (strlen($numeroLimpio) > 11) {
-            $numeroLimpio = substr($numeroLimpio, -11);
+            // Si empieza con 58 (código de Venezuela), quitar el 58 y ajustar
+            if (substr($numeroLimpio, 0, 2) === '58') {
+                $numeroLimpio = substr($numeroLimpio, 2);
+                // Si tiene 10 dígitos después de quitar el 58, agregar el 0
+                if (strlen($numeroLimpio) === 10) {
+                    $numeroLimpio = '0' . $numeroLimpio;
+                }
+            } else {
+                // Si es más largo, se toman los últimos 11 (para manejar códigos de país si los hubiera)
+                $numeroLimpio = substr($numeroLimpio, -11);
+            }
+        }
+
+        // 5. Validar que tenga exactamente 11 dígitos
+        if (strlen($numeroLimpio) !== 11) {
+            Yii::warning("Teléfono no válido: {$telefono} -> {$numeroLimpio} (longitud: " . strlen($numeroLimpio) . ")", __METHOD__);
+            return null; // Retornar null para que no falle la validación
         }
 
         return $numeroLimpio;
@@ -1255,22 +1410,38 @@ class CorporativoController extends Controller
     /**
      * Limpia una cadena para dejar únicamente caracteres numéricos.
      * Requerido porque el campo 'cedula' es INTEGER en la DB.
-     * @param string $input La cédula con posibles prefijos (V, E, J, G, guiones).
+     * 
+     * MEJORADO: Maneja casos como "V-19.088.456" y "19088456"
+     * 
+     * @param string $input La cédula con posibles prefijos (V, E, J, G, guiones, puntos).
      * @return string Solo los dígitos de la cédula.
      */
     protected function limpiarSoloNumeros(string $input): string
     {
-        // Esta es la función crítica que convierte "V-19.088.456" a "19088456"
-        return preg_replace('/[^0-9]/', '', $input);
+        // Si está vacío, retornar vacío
+        if (empty($input)) {
+            return '';
+        }
+
+        // Quitar todo lo que no sea número
+        $output = preg_replace('/[^0-9]/', '', $input);
+
+        return $output;
     }
 
     /**
      * Normaliza una cadena quitando acentos y caracteres especiales (para buscar estados).
+     * 
+     * MEJORADO: Ahora también maneja espacios múltiples y caracteres especiales adicionales.
+     * 
      * @param string $string La cadena a normalizar.
      * @return string La cadena normalizada.
      */
     private function _normalizeString($string)
     {
+        // Remover espacios múltiples y trim
+        $string = trim(preg_replace('/\s+/', ' ', $string));
+
         $unwanted_array = [
             'á' => 'a',
             'é' => 'e',
@@ -1289,6 +1460,8 @@ class CorporativoController extends Controller
             'ï' => 'i',
             'ö' => 'o',
             'ü' => 'u',
+            'ç' => 'c',
+            'Ç' => 'C',
             ' ' => '',
         ];
 
@@ -1370,6 +1543,57 @@ class CorporativoController extends Controller
                 'error' => 'Error interno del servidor: ' . $e->getMessage(),
                 'data' => []
             ];
+        }
+    }
+
+    /**
+     * Obtiene la lista de planes asociados a un corporativo a través de sus clínicas.
+     * 
+     * @param int $id ID del Corporativo
+     * @return array JSON con la lista de planes
+     */
+    public function actionObtenerPlanesPorCorporativo($id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        if (empty($id)) {
+            return ['success' => false, 'error' => 'ID del corporativo no proporcionado', 'data' => []];
+        }
+
+        try {
+            $corporativo = Corporativo::findOne($id);
+            if (!$corporativo) {
+                return ['success' => false, 'error' => 'El corporativo no existe', 'data' => []];
+            }
+
+            // Get all clinics linked to this corporate
+            $clinicasIds = CorporativoClinica::find()
+                ->select('clinica_id')
+                ->where(['corporativo_id' => $id])
+                ->column();
+
+            if (empty($clinicasIds)) {
+                return ['success' => true, 'data' => [], 'message' => 'Este corporativo no tiene clínicas asociadas.'];
+            }
+
+            // Get all plans from those clinics
+            $planes = Planes::find()
+                ->select(['planes.id', 'planes.nombre', 'planes.precio', 'planes.clinica_id', 'rm_clinica.nombre as clinica_nombre'])
+                ->innerJoin('rm_clinica', 'rm_clinica.id = planes.clinica_id')
+                ->where(['planes.clinica_id' => $clinicasIds])
+                ->andWhere(['planes.estatus' => 'Activo'])
+                ->orderBy(['planes.nombre' => SORT_ASC])
+                ->asArray()
+                ->all();
+
+            if (empty($planes)) {
+                return ['success' => true, 'data' => [], 'message' => 'No hay planes activos en las clínicas asociadas.'];
+            }
+
+            return ['success' => true, 'data' => $planes];
+        } catch (\Exception $e) {
+            Yii::error('Error al obtener planes por corporativo: ' . $e->getMessage(), __METHOD__);
+            return ['success' => false, 'error' => 'Error interno: ' . $e->getMessage(), 'data' => []];
         }
     }
 
@@ -1797,5 +2021,70 @@ class CorporativoController extends Controller
             'grandTotal' => $grandTotal,
             'isParcial' => true, // Flag to indicate partial payment
         ]);
+    }
+    /**
+     * Process CSV upload with progress tracking via AJAX
+     */
+    public function actionCargaMasivaAfiliadosProgress()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $model = new MasivoAfiliadosForm();
+        $model->load(Yii::$app->request->post());
+
+        if (!$model->validate()) {
+            return [
+                'success' => false,
+                'errors' => $model->getErrors()
+            ];
+        }
+
+        // Get the uploaded file
+        $model->masivoFile = UploadedFile::getInstance($model, 'masivoFile');
+        if (!$model->masivoFile) {
+            return [
+                'success' => false,
+                'error' => 'No se recibió ningún archivo.'
+            ];
+        }
+
+        // Process the CSV with progress tracking
+        $filePath = $model->masivoFile->tempName;
+        $resultados = $this->procesarCSVWithProgress(
+            $filePath,
+            $model->corporativo_id,
+            $model->fecha_ini,
+            $model->fecha_ven,
+            $model->plan_id,
+            null, // clinica_id will be determined from plan
+            $model->asesor_id
+        );
+
+        return [
+            'success' => true,
+            'resultados' => $resultados
+        ];
+    }
+
+    /**
+     * Process CSV with progress tracking
+     */
+    private function procesarCSVWithProgress($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal, $planId, $clinicaId = null, $asesorId = null)
+    {
+        // Determine clinica_id from plan
+        if (!$clinicaId) {
+            $plan = Planes::findOne($planId);
+            if (!$plan) {
+                return [
+                    'success' => false,
+                    'error' => 'El plan seleccionado no existe.'
+                ];
+            }
+            $clinicaId = $plan->clinica_id;
+        }
+
+        // Use the existing procesarCSV method
+        // You can modify it to emit progress events via session or cache
+        return $this->procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal, $planId, $clinicaId, $asesorId);
     }
 }

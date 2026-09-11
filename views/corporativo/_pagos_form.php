@@ -19,7 +19,9 @@ $grandTotal = $grandTotal ?? 0;
 $cuotaCount = count($allCuotas);
 $isParcialPayment = isset($isParcial) && $isParcial === true;
 
-// Group cuotas by affiliate for better display
+// ============================================================
+// CHANGED: Group cuotas by coverage_start instead of fecha_vencimiento
+// ============================================================
 $affiliateGroups = [];
 foreach ($allCuotas as $cuota) {
     $contrato = $cuota->contrato ?? null;
@@ -241,6 +243,16 @@ $this->registerCss('
         display: inline-block !important;
     }
     
+    .coverage-badge {
+        background-color: #e8f4fd !important;
+        color: #107c10 !important;
+        padding: 4px 12px !important;
+        border-radius: 16px !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        display: inline-block !important;
+    }
+    
     .affiliate-subtotal {
         background-color: #e8f4fd !important;
         font-weight: 700 !important;
@@ -273,6 +285,26 @@ $this->registerCss('
         margin-bottom: 20px !important;
         color: white !important;
     }
+    
+    .payment-summary-card .stat-value {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+    
+    .payment-summary-card .stat-label {
+        font-size: 13px !important;
+        opacity: 0.9 !important;
+    }
+    
+    .coverage-period-text {
+        font-size: 11px;
+        color: #605e5c;
+        background-color: #f3f2f1;
+        padding: 2px 8px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-top: 2px;
+    }
 ');
 
 $form = ActiveForm::begin([
@@ -288,22 +320,41 @@ $form = ActiveForm::begin([
     <div class="col-md-12">
         <div class="payment-summary-card">
             <div class="row align-items-center">
-                <div class="col-md-4">
+                <div class="col-md-3 col-sm-6">
                     <div class="text-center">
-                        <div style="font-size: 14px; opacity: 0.9;">Total a Pagar</div>
-                        <div style="font-size: 32px; font-weight: 700;"><?= Yii::$app->formatter->asCurrency($grandTotal, 'USD') ?></div>
+                        <div class="stat-label">Total a Pagar</div>
+                        <div class="stat-value"><?= Yii::$app->formatter->asCurrency($grandTotal, 'USD') ?></div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3 col-sm-6">
                     <div class="text-center">
-                        <div style="font-size: 14px; opacity: 0.9;">Cuotas Seleccionadas</div>
-                        <div style="font-size: 32px; font-weight: 700;"><?= $cuotaCount ?></div>
+                        <div class="stat-label">Cuotas Seleccionadas</div>
+                        <div class="stat-value"><?= $cuotaCount ?></div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3 col-sm-6">
                     <div class="text-center">
-                        <div style="font-size: 14px; opacity: 0.9;">Afiliados Involucrados</div>
-                        <div style="font-size: 32px; font-weight: 700;"><?= count($affiliateGroups) ?></div>
+                        <div class="stat-label">Afiliados Involucrados</div>
+                        <div class="stat-value"><?= count($affiliateGroups) ?></div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="text-center">
+                        <div class="stat-label">Meses de Cobertura</div>
+                        <div class="stat-value">
+                            <?php
+                            // Count unique months from coverage_start
+                            $uniqueMonths = [];
+                            foreach ($allCuotas as $cuota) {
+                                $coverageStart = $cuota->coverage_start ?: $cuota->fecha_vencimiento;
+                                if ($coverageStart) {
+                                    $date = new \DateTime($coverageStart);
+                                    $uniqueMonths[$date->format('Y-m')] = true;
+                                }
+                            }
+                            echo count($uniqueMonths);
+                            ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -313,10 +364,10 @@ $form = ActiveForm::begin([
     <!-- SECCIÓN 2: Detalle de Cuotas a Pagar (Agrupado por Afiliado) -->
     <div class="col-md-12">
         <div class="card shadow-sm border-info mb-4">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-gradient-blue-2 text-white">
                 <h3 class="card-title mb-0" style="font-size: 1.6rem !important;">
                     <i class="fas fa-list-ul me-2"></i> Detalle de Cuotas a Pagar
-                    <span class="badge badge-light float-end" style="font-size: 1.2rem;"><?= $cuotaCount ?> cuotas</span>
+                    <span class="badge badge-light float-end" style="font-size: 1.2rem; color: #323130 !important;"><?= $cuotaCount ?> cuotas</span>
                 </h3>
             </div>
             <div class="card-body p-0">
@@ -338,9 +389,11 @@ $form = ActiveForm::begin([
                             $affiliateNumber = 1;
                             foreach ($affiliateGroups as $affiliateId => $group):
                                 $cuotasList = $group['cuotas'];
-                                // Sort cuotas by due date (oldest first)
+                                // Sort cuotas by coverage_start (oldest first)
                                 usort($cuotasList, function ($a, $b) {
-                                    return strtotime($a->fecha_vencimiento) - strtotime($b->fecha_vencimiento);
+                                    $coverageA = $a->coverage_start ?: $a->fecha_vencimiento;
+                                    $coverageB = $b->coverage_start ?: $b->fecha_vencimiento;
+                                    return strtotime($coverageA) - strtotime($coverageB);
                                 });
                             ?>
                                 <!-- Affiliate Summary Row -->
@@ -372,7 +425,7 @@ $form = ActiveForm::begin([
                                                 <tr style="background-color: #f3f2f1;">
                                                     <th style="width: 90px;"></th>
                                                     <th style="width: 80px; text-align: center;">Cuota #</th>
-                                                    <th>Mes / Período</th>
+                                                    <th>Mes / Período de Cobertura</th>
                                                     <th>ID Cuota</th>
                                                     <th class="text-end">Monto USD</th>
                                                     <th>Vencimiento</th>
@@ -383,10 +436,14 @@ $form = ActiveForm::begin([
                                                 <?php
                                                 $cuotaNumber = 1;
                                                 foreach ($cuotasList as $cuota):
-                                                    $fechaVencimiento = new \DateTime($cuota->fecha_vencimiento);
-                                                    $monthName = $fechaVencimiento->format('F Y');
-                                                    $coverageText = '';
+                                                    // ============================================================
+                                                    // CHANGED: Use coverage_start for display
+                                                    // ============================================================
+                                                    $coverageStart = $cuota->coverage_start ?: $cuota->fecha_vencimiento;
+                                                    $coverageDate = new \DateTime($coverageStart);
+                                                    $monthName = $coverageDate->format('F Y');
 
+                                                    $coverageText = '';
                                                     if ($cuota->coverage_start && $cuota->coverage_end) {
                                                         $start = new \DateTime($cuota->coverage_start);
                                                         $end = new \DateTime($cuota->coverage_end);
@@ -419,7 +476,11 @@ $form = ActiveForm::begin([
                                                                 <?= $monthName ?>
                                                             </span>
                                                             <?php if ($coverageText): ?>
-                                                                <br><small class="text-muted">(Cobertura: <?= $coverageText ?>)</small>
+                                                                <br>
+                                                                <span class="coverage-badge">
+                                                                    <i class="fas fa-calendar-check me-1"></i>
+                                                                    Cobertura: <?= $coverageText ?>
+                                                                </span>
                                                             <?php endif; ?>
                                                         </td>
                                                         <td>
@@ -478,7 +539,7 @@ $form = ActiveForm::begin([
     <!-- SECCIÓN 3: Registro del Pago Corporativo -->
     <div class="col-md-12">
         <div class="card shadow-sm border-success mb-4">
-            <div class="card-header bg-success text-white">
+            <div class="card-header bg-gradient-green text-white">
                 <h1 class="card-title mb-0" style="font-size: 1.8rem !important;">
                     <i class="fas fa-credit-card me-2"></i> Registro del Pago Corporativo
                 </h1>
@@ -603,7 +664,7 @@ $form = ActiveForm::begin([
     </div>
 </div>
 
-<div class="form-group mt-4 d-flex justify-content-center gap-3">
+<div class="form-group mt-4 d-flex justify-content-center gap-3 flex-wrap">
     <?php if (!empty($allCuotas) && $grandTotal > 0): ?>
         <?= Html::submitButton('<i class="fas fa-save me-2"></i> Guardar Pago Corporativo', [
             'class' => 'btn btn-success btn-lg rounded-pill px-7 shadow-sm text-white',

@@ -4,6 +4,7 @@ namespace app\models;
 
 use Yii;
 use yii\web\UploadedFile;
+use app\models\Preexistencias;
 
 /**
  * This is the model class for table "sis_siniestro".
@@ -47,7 +48,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
     public $imagenInformeFile;
     public $otrosDocumentosFile = []; // Array for multiple documents
 
-
+    // ============================================================
+    // PRE-EXISTENCE PROPERTIES
+    // ============================================================
+    public $tiene_preexistencia;
+    public $preexistencia_nombre;
+    public $preexistencia_descripcion;
+    public $preexistencia_fecha_diagnostico;
+    public $preexistencia_medico;
 
     /**
      * {@inheritdoc}
@@ -86,14 +94,15 @@ class SisSiniestro extends \yii\db\ActiveRecord
             'appointment_status',
             'cancelled_at',
             'cancelled_by',
-            'checked_in_at',     // ← ADD THIS
-            'checked_out_at',    // ← ADD THIS (for completeness)
+            'checked_in_at',
+            'checked_out_at',
             'cancellation_reason',
             'no_show_processed',
             'reminder_24h_sent',
-            'nombre_doctor',  // ← CRITICAL: Add this line
+            'nombre_doctor',
         ];
     }
+
     /**
      * {@inheritdoc}
      */
@@ -103,6 +112,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
         $fields[] = 'nombre_doctor';
         return $fields;
     }
+
     /**
      * {@inheritdoc}
      */
@@ -148,6 +158,45 @@ class SisSiniestro extends \yii\db\ActiveRecord
             [['imagenRecipeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10],
             [['imagenInformeFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf', 'maxSize' => 1024 * 1024 * 10],
             [['otrosDocumentosFile'], 'each', 'rule' => ['file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, pdf, doc, docx', 'maxSize' => 1024 * 1024 * 10]],
+
+            // ============================================================
+            // PRE-EXISTENCE RULES
+            // ============================================================
+            [
+                ['tiene_preexistencia'],
+                'boolean',
+                'message' => 'Debe indicar si el paciente tiene pre-existencia.'
+            ],
+            [
+                ['preexistencia_nombre'],
+                'required',
+                'when' => function ($model) {
+                    return $model->tiene_preexistencia == 1;
+                },
+                'whenClient' => "function (attribute, value) {
+        return $('#preexistencia-yes').is(':checked');
+    }",
+                'message' => 'Debe ingresar el nombre de la pre-existencia.'
+            ],
+            [
+                ['preexistencia_nombre'],
+                'string',
+                'max' => 255
+            ],
+            [
+                ['preexistencia_descripcion', 'preexistencia_medico'],
+                'string',
+                'max' => 255
+            ],
+            [
+                ['preexistencia_fecha_diagnostico'],
+                'date',
+                'format' => 'yyyy-MM-dd'
+            ],
+            [
+                ['preexistencia_nombre'],
+                'trim'
+            ],
         ];
     }
 
@@ -331,7 +380,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
             'deleted_at' => 'Eliminado El',
             'otros_documentos' => 'Documentos Adicionales',
             'nombre_doctor' => 'Nombre del Doctor',
-
+            // ============================================================
+            // PRE-EXISTENCE LABELS
+            // ============================================================
+            'tiene_preexistencia' => '¿Tiene Pre-existencia?',
+            'preexistencia_nombre' => 'Nombre de la Pre-existencia',
+            'preexistencia_descripcion' => 'Descripción de la Pre-existencia',
+            'preexistencia_fecha_diagnostico' => 'Fecha de Diagnóstico',
+            'preexistencia_medico' => 'Médico Tratante',
         ];
     }
 
@@ -404,6 +460,120 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return $this->hasOne(UserDatos::class, ['id' => 'iduser']);
     }
 
+    // ============================================================
+    // PRE-EXISTENCE RELATIONSHIP
+    // ============================================================
+
+    /**
+     * Gets query for [[Preexistencias]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPreexistencias()
+    {
+        return $this->hasMany(Preexistencias::class, ['sis_siniestro_id' => 'id']);
+    }
+
+    /**
+     * Save pre-existence information for the affiliate
+     * 
+     * @param int $userId The affiliate user ID
+     * @return bool
+     */
+    public function savePreexistencia($userId)
+    {
+        // ============================================================
+        // CRITICAL: If "No" is selected, ensure NO pre-existence is saved
+        // ============================================================
+
+        // If "No" is selected (tiene_preexistencia != 1) OR no name provided
+        if ($this->tiene_preexistencia != 1 || empty(trim($this->preexistencia_nombre))) {
+            // If there's an existing pre-existence linked to this attention, DELETE it
+            if ($this->id) {
+                $existing = Preexistencias::find()
+                    ->where(['sis_siniestro_id' => $this->id])
+                    ->one();
+                if ($existing) {
+                    if ($existing->delete()) {
+                        Yii::info('Deleted pre-existence (ID: ' . $existing->id . ') linked to attention ID: ' . $this->id, 'preexistencia');
+                    } else {
+                        Yii::error('Failed to delete pre-existence linked to attention ID: ' . $this->id, 'preexistencia');
+                    }
+                }
+            }
+
+            // Ensure all pre-existence fields are cleared on the model
+            $this->preexistencia_nombre = null;
+            $this->preexistencia_descripcion = null;
+            $this->preexistencia_fecha_diagnostico = null;
+            $this->preexistencia_medico = null;
+
+            return true;
+        }
+
+        // ============================================================
+        // ONLY PROCEED IF "Yes" is selected AND name is provided
+        // ============================================================
+
+        // Ensure the Preexistencias class is loaded
+        if (!class_exists('app\models\Preexistencias')) {
+            Yii::error('Preexistencias class not found!', 'preexistencia');
+            return false;
+        }
+
+        // Check if a pre-existence with this name already exists for this user
+        $existing = Preexistencias::find()
+            ->where([
+                'user_id' => $userId,
+                'nombre' => trim($this->preexistencia_nombre),
+            ])
+            ->andWhere(['IS', 'deleted_at', null])
+            ->one();
+
+        if ($existing) {
+            Yii::info('Found existing pre-existence: ' . $existing->id, 'preexistencia');
+            // Update existing record with new information
+            if (!empty($this->preexistencia_descripcion)) {
+                $existing->descripcion = $this->preexistencia_descripcion;
+            }
+            if (!empty($this->preexistencia_fecha_diagnostico)) {
+                $existing->fecha_diagnostico = $this->preexistencia_fecha_diagnostico;
+            }
+            if (!empty($this->preexistencia_medico)) {
+                $existing->medico_tratante = $this->preexistencia_medico;
+            }
+            $existing->sis_siniestro_id = $this->id;
+            $existing->updated_at = date('Y-m-d H:i:s');
+
+            if ($existing->save(false)) {
+                Yii::info('Pre-existence updated successfully: ' . $existing->id, 'preexistencia');
+                return true;
+            } else {
+                Yii::error('Failed to update pre-existence: ' . print_r($existing->getErrors(), true), 'preexistencia');
+                return false;
+            }
+        }
+
+        // Create new pre-existence record
+        Yii::info('Creating new pre-existence for user: ' . $userId, 'preexistencia');
+        $preexistencia = new Preexistencias();
+        $preexistencia->user_id = $userId;
+        $preexistencia->sis_siniestro_id = $this->id;
+        $preexistencia->nombre = trim($this->preexistencia_nombre);
+        $preexistencia->descripcion = $this->preexistencia_descripcion;
+        $preexistencia->fecha_diagnostico = $this->preexistencia_fecha_diagnostico;
+        $preexistencia->medico_tratante = $this->preexistencia_medico;
+        $preexistencia->estatus = Preexistencias::ESTATUS_ACTIVO;
+
+        if ($preexistencia->save()) {
+            Yii::info('Pre-existence created successfully: ' . $preexistencia->id, 'preexistencia');
+            return true;
+        } else {
+            Yii::error('Failed to create pre-existence: ' . print_r($preexistencia->getErrors(), true), 'preexistencia');
+            return false;
+        }
+    }
+
     /**
      * Guarda la relación con los baremos
      * @param array $baremoIds Array de IDs de baremos a guardar
@@ -442,12 +612,6 @@ class SisSiniestro extends \yii\db\ActiveRecord
                 // Retorna false si falla la inserción de una relación
                 return false;
             }
-
-            // ============ DECREMENT LOGIC - COMPLETELY REMOVED ============
-            // The cantidad_limite is NEVER modified in the database.
-            // Availability is calculated dynamically in _form.php as:
-            // remaining = original_limit - veces_usado
-            // ============ END REMOVED LOGIC ============
         }
 
         // ====================================================================
@@ -478,7 +642,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
      * Valida los baremos seleccionados contra las restricciones del plan
      * @param array $baremoIds Array de IDs de baremos a validar
      * @param int $userId ID del usuario/afiliado
-     * @param int $esCita 0=Siniestro, 1=Cita (AHORA AMBOS VALIDAN COBERTURA)
+     * @param int $esCita 0=Siniestro, 1=Cita
      * @param SisSiniestro|null $model El modelo actual (para updates)
      * @return array ['valid' => bool, 'errors' => array]
      */
@@ -575,13 +739,16 @@ class SisSiniestro extends \yii\db\ActiveRecord
             }
 
             // ============================================
-            // 2. VALIDACIÓN DE LÍMITE DE USO (APLICA PARA AMBOS)
+            // 2. VALIDACIÓN DE LÍMITE DE USO - FIXED: Count ALL events (both Citas AND Atenciones)
             // ============================================
             if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
                 $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
                 list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
 
-                // Contar usos en el período actual
+                // ============================================================
+                // FIX: Count ALL events (both Citas AND Atenciones)
+                // DO NOT filter by es_cita - the limit is shared across both types
+                // ============================================================
                 $eventosUsados = self::find()
                     ->alias('s')
                     ->innerJoin('sis_siniestro_baremo sb', 'sb.siniestro_id = s.id')
@@ -589,6 +756,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
                     ->andWhere(['sb.baremo_id' => $baremoId])
                     ->andWhere(['>=', 's.fecha', $inicioAnioVigencia->format('Y-m-d')])
                     ->andWhere(['<=', 's.fecha', $finAnioVigencia->format('Y-m-d')]);
+                // REMOVED: ->andWhere(['s.es_cita' => $esCita]);
 
                 if ($model && !$model->isNewRecord) {
                     $eventosUsados->andWhere(['<>', 's.id', $model->id]);
@@ -598,14 +766,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
 
                 if ($vecesUsado >= $planItemCobertura->cantidad_limite) {
                     $tipoEvento = ($esCita == 1) ? 'cita' : 'atención';
-                    $errors[] = "No se puede registrar la $tipoEvento para '$nombreBaremo'. Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos. Ya se ha utilizado $vecesUsado veces.";
+                    $errors[] = "No se puede registrar la $tipoEvento para '$nombreBaremo'. Ha alcanzado el límite de {$planItemCobertura->cantidad_limite} usos. Ya se ha utilizado $vecesUsado veces (entre citas y atenciones).";
                     continue;
                 }
             }
         }
 
         // ============================================
-        // 3. VALIDACIÓN DE COBERTURA TOTAL (AHORA APLICA PARA AMBOS)
+        // 3. VALIDACIÓN DE COBERTURA TOTAL (APLICA PARA AMBOS)
         // ============================================
         $tipoEvento = ($esCita == 1) ? 'cita' : 'atención';
 
@@ -671,6 +839,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
 
         return 0;
     }
+
     /**
      * Get status options for dropdown
      */
@@ -759,7 +928,6 @@ class SisSiniestro extends \yii\db\ActiveRecord
         return $this->save(false);
     }
 
-
     /**
      * Complete appointment
      */
@@ -769,5 +937,48 @@ class SisSiniestro extends \yii\db\ActiveRecord
         $this->appointment_status = self::APPOINTMENT_STATUS_COMPLETED;
         $this->atendido = 1;
         return $this->save(false);
+    }
+    // Add this method to get attachments relation
+
+    /**
+     * Gets query for [[Attachments]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getAttachments()
+    {
+        return $this->hasMany(SisSiniestroAttachment::class, ['siniestro_id' => 'id'])
+            ->where(['IS', 'deleted_at', null])
+            ->orderBy(['created_at' => SORT_DESC]);
+    }
+
+    /**
+     * Get active attachments (non-deleted)
+     *
+     * @return SisSiniestroAttachment[]
+     */
+    public function getActiveAttachments()
+    {
+        return $this->getAttachments()->all();
+    }
+
+    /**
+     * Get attachments count
+     *
+     * @return int
+     */
+    public function getAttachmentsCount()
+    {
+        return $this->getAttachments()->count();
+    }
+
+    /**
+     * Check if has attachments
+     *
+     * @return bool
+     */
+    public function hasAttachments()
+    {
+        return $this->getAttachmentsCount() > 0;
     }
 }

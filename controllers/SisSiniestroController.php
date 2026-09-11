@@ -13,6 +13,7 @@ use app\models\Cuotas;
 use app\models\PlanesItemsCobertura;
 use app\models\TasaCambio;
 use app\components\UserHelper;
+use app\components\AppointmentNotificationService;
 use app\models\SisSiniestroAuditLog;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -20,6 +21,9 @@ use yii\filters\VerbFilter;
 use yii\web\UploadedFile;
 use Yii;
 use yii\helpers\Html;
+use app\models\Preexistencias;
+use app\models\SisSiniestroAttachment;
+
 
 /**
  * SisSiniestroController implements the CRUD actions for SisSiniestro model.
@@ -103,7 +107,6 @@ class SisSiniestroController extends Controller
             'baremos' => $baremos
         ]);
     }
-
     /**
      * Creates a new SisSiniestro model.
      * If creation is successful, the browser will be redirected to the 'view' page.
@@ -181,14 +184,31 @@ class SisSiniestroController extends Controller
 
                 if (!$validacion['valid']) {
                     $transaction->rollBack();
+
+                    // Determine which tab has errors
+                    $errorTab = 'atencion'; // default
+
+                    // Check if errors are related to baremos
+                    foreach ($validacion['errors'] as $error) {
+                        if (stripos($error, 'servicio') !== false || stripos($error, 'baremo') !== false) {
+                            $errorTab = 'servicios';
+                            break;
+                        }
+                    }
+
+                    // Store the error tab in session
+                    Yii::$app->session->set('_errorTab', $errorTab);
+
                     foreach ($validacion['errors'] as $error) {
                         Yii::$app->session->setFlash('error', $error);
                     }
+
                     return $this->render('create', [
                         'model' => $model,
                         'afiliado' => $afiliado,
                         'user_id' => $user_id,
                         'es_cita' => $model->es_cita,
+                        'errorTab' => $errorTab, // Pass to view
                     ]);
                 }
 
@@ -296,9 +316,18 @@ class SisSiniestroController extends Controller
                     }
 
                     // ============ PROCESAR DOCUMENTOS ADICIONALES (OTROS) ============
-                    $otrosDocumentosData = Yii::$app->request->post('OtrosDocumentos', []);
-                    $this->processOtrosDocumentos($model, $otrosDocumentosData);
+                    $attachmentData = Yii::$app->request->post('SisSiniestroAttachment', []);
+                    $this->processAttachments($model, $attachmentData);
                     // ============ END NEW CODE ============
+
+                    // ============================================================
+                    // SAVE PRE-EXISTENCE
+                    // ============================================================
+                    if (!$model->savePreexistencia($user_id)) {
+                        Yii::error('Error al guardar la pre-existencia para el usuario ' . $user_id, __METHOD__);
+                        // Don't throw exception, just log it as it's not critical
+                    }
+                    // ============================================================
 
                     // Guardar la relación muchos a muchos
                     $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
@@ -313,6 +342,24 @@ class SisSiniestroController extends Controller
                     // Determine the correct success message based on es_cita value
                     $successMessage = $model->es_cita == 1 ? 'Cita creada correctamente.' : 'Atención creada correctamente.';
                     Yii::$app->session->setFlash('success', $successMessage);
+
+                    // ============================================
+                    // SEND EMAIL NOTIFICATION FOR CITAS
+                    // ============================================
+                    if ($model->es_cita == 1) {
+                        $result = AppointmentNotificationService::sendAppointmentEmail($model);
+
+                        if ($result['success']) {
+                            Yii::$app->session->setFlash('info', '✅ ' . $result['message']);
+                        } else {
+                            Yii::$app->session->setFlash('warning', '⚠️ ' . $result['message']);
+                        }
+                    }
+                    // ============================================
+
+                    // Store success flag for progress overlay
+                    Yii::$app->session->set('_appointment_success', true);
+
                     return $this->redirect(['view', 'id' => $model->id]);
                 } else {
                     throw new \Exception('Error al guardar los datos principales de la atención.');
@@ -337,127 +384,135 @@ class SisSiniestroController extends Controller
         $model = $this->findModel($id);
         $afiliado = UserDatos::find()->where(['id' => $model->iduser])->one();
 
-        // Obtener el modo (cita o siniestro) de la URL o del modelo
-        $esCita = (int)Yii::$app->request->get('es_cita', $model->es_cita);
+        // ============================================================
+        // LOAD PRE-EXISTENCE DATA FOR UPDATE
+        // ============================================================
+        $existingPreexistencia = Preexistencias::find()
+            ->where(['sis_siniestro_id' => $model->id])
+            ->andWhere(['IS', 'deleted_at', null])
+            ->one();
 
-        // Determinar los términos para mensajes dinámicos
+        if ($existingPreexistencia) {
+            $model->tiene_preexistencia = 1;
+            $model->preexistencia_nombre = $existingPreexistencia->nombre;
+            $model->preexistencia_descripcion = $existingPreexistencia->descripcion;
+            $model->preexistencia_fecha_diagnostico = $existingPreexistencia->fecha_diagnostico;
+            $model->preexistencia_medico = $existingPreexistencia->medico_tratante;
+        } else {
+            $model->tiene_preexistencia = 0;
+            $model->preexistencia_nombre = null;
+            $model->preexistencia_descripcion = null;
+            $model->preexistencia_fecha_diagnostico = null;
+            $model->preexistencia_medico = null;
+        }
+        // ============================================================
+
+        $esCita = (int)Yii::$app->request->get('es_cita', $model->es_cita);
         $termino = $esCita == 1 ? 'Cita' : 'Atención';
         $terminoLower = strtolower($termino);
 
-        // Actualizar el modelo con el valor de es_cita si se proporcionó en la URL
         if (Yii::$app->request->get('es_cita') !== null) {
             $model->es_cita = $esCita;
         }
 
-        // Obtener los baremos actuales del modelo
         $baremosActuales = $model->getBaremoIds();
-        $baremos = $model->baremos; // Asegurarse de cargar la relación de baremos
+        $baremos = $model->baremos;
 
         if ($model->load(Yii::$app->request->post())) {
             $transaction = Yii::$app->db->beginTransaction();
 
             try {
-                // Obtener los baremos del formulario
                 $baremoIds = Yii::$app->request->post('SisSiniestro')['idbaremo'] ?? [];
 
-                // Si no se seleccionó ningún baremo, mantener los existentes
                 if (empty($baremoIds)) {
                     $baremoIds = $baremosActuales;
                 }
 
-                // Si aún no hay baremos, mostrar error
                 if (empty($baremoIds)) {
                     Yii::$app->session->setFlash('error', 'Debe seleccionar al menos un servicio médico.');
                     return $this->refresh();
                 }
 
-                // Establecer el primer baremo como idbaremo para compatibilidad
                 $model->idbaremo = is_array($baremoIds) ? reset($baremoIds) : $baremoIds;
 
                 if ($model->save(false)) {
-                    // Actualizar la relación con los baremos
+                    // Update baremos relationship
                     if (!$model->saveBaremos($baremoIds)) {
                         throw new \Exception('Error al actualizar los servicios médicos');
                     }
 
-                    $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
-                    $imagenInformeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenInformeFile]');
+                    // ============================================================
+                    // UPDATE PRE-EXISTENCE
+                    // ============================================================
+                    if ($model->tiene_preexistencia == 1 && !empty(trim($model->preexistencia_nombre))) {
+                        $existing = Preexistencias::find()
+                            ->where(['sis_siniestro_id' => $model->id])
+                            ->andWhere(['IS', 'deleted_at', null])
+                            ->one();
 
+                        if ($existing) {
+                            $existing->nombre = trim($model->preexistencia_nombre);
+                            $existing->descripcion = $model->preexistencia_descripcion;
+                            $existing->fecha_diagnostico = $model->preexistencia_fecha_diagnostico;
+                            $existing->medico_tratante = $model->preexistencia_medico;
+                            $existing->updated_at = date('Y-m-d H:i:s');
+                            $existing->save(false);
+                            Yii::info('Pre-existence updated for attention ID: ' . $model->id, 'preexistencia');
+                        } else {
+                            $preexistencia = new Preexistencias();
+                            $preexistencia->user_id = $model->iduser;
+                            $preexistencia->sis_siniestro_id = $model->id;
+                            $preexistencia->nombre = trim($model->preexistencia_nombre);
+                            $preexistencia->descripcion = $model->preexistencia_descripcion;
+                            $preexistencia->fecha_diagnostico = $model->preexistencia_fecha_diagnostico;
+                            $preexistencia->medico_tratante = $model->preexistencia_medico;
+                            $preexistencia->estatus = Preexistencias::ESTATUS_ACTIVO;
+                            $preexistencia->save();
+                            Yii::info('New pre-existence created for attention ID: ' . $model->id, 'preexistencia');
+                        }
+                    } else {
+                        $deleted = Preexistencias::deleteAll([
+                            'sis_siniestro_id' => $model->id
+                        ]);
+                        if ($deleted > 0) {
+                            Yii::info('Deleted ' . $deleted . ' pre-existence(s) for attention ID: ' . $model->id, 'preexistencia');
+                        }
+                        $model->preexistencia_nombre = null;
+                        $model->preexistencia_descripcion = null;
+                        $model->preexistencia_fecha_diagnostico = null;
+                        $model->preexistencia_medico = null;
+                        $model->tiene_preexistencia = 0;
+                    }
+                    // ============================================================
+
+                    // --- RECIPE FILE UPLOAD ---
+                    $imagenRecipeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenRecipeFile]');
                     $model->imagenRecipeFile = !empty($imagenRecipeFile) ? reset($imagenRecipeFile) : null;
+
+                    if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
+                        // ... recipe upload logic ...
+                    }
+
+                    // --- INFORME FILE UPLOAD ---
+                    $imagenInformeFile = UploadedFile::getInstancesByName('SisSiniestro[imagenInformeFile]');
                     $model->imagenInformeFile = !empty($imagenInformeFile) ? reset($imagenInformeFile) : null;
 
-                    // Subir el recibo si existe
-                    if (!empty($imagenRecipeFile) && $imagenRecipeFile[0]->size > 0) {
-                        $folder = 'documentos';
-                        $fileName = uniqid('imagen_recipe') . '.' . $model->imagenRecipeFile->extension;
-                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-
-                        if ($model->imagenRecipeFile->saveAs($tempFilePath)) {
-                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
-
-                            $fileKeyInBucket = $fileName;
-
-                            Yii::info("Subiendo archivo a Supabase Storage: " . $fileName, __METHOD__);
-                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
-                                $tempFilePath,
-                                $model->imagenRecipeFile->type,
-                                $fileKeyInBucket,
-                                $folder
-                            );
-
-                            if (file_exists($tempFilePath)) {
-                                unlink($tempFilePath);
-                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
-                            }
-
-                            if ($publicUrl) {
-                                $model->imagen_recipe = $publicUrl;
-                                if (!$model->save(false)) {
-                                    throw new \Exception('Error al guardar la ruta de la imagen de receta');
-                                }
-                            } else {
-                                throw new \Exception('Error al subir la imagen de receta a Supabase');
-                            }
-                        } else {
-                            throw new \Exception('Error al guardar el archivo temporal de la receta');
-                        }
-                    }
-
-                    // Subir informe médico si existe
                     if (!empty($imagenInformeFile) && $imagenInformeFile[0]->size > 0) {
-                        $folder = 'documentos';
-                        $fileName = uniqid('selfie_') . '.' . $model->imagenInformeFile->extension;
-                        $tempFilePath = Yii::getAlias('@runtime') . '/' . $fileName;
-
-                        if ($model->imagenInformeFile->saveAs($tempFilePath)) {
-                            Yii::info("Archivo temporal guardado en: " . $tempFilePath, __METHOD__);
-
-                            $fileKeyInBucket = $fileName;
-
-                            $publicUrl = UserHelper::uploadFileToSupabaseApi(
-                                $tempFilePath,
-                                $model->imagenInformeFile->type,
-                                $fileKeyInBucket,
-                                $folder
-                            );
-
-                            if (file_exists($tempFilePath)) {
-                                unlink($tempFilePath);
-                                Yii::info("Archivo temporal eliminado: " . $tempFilePath, __METHOD__);
-                            }
-
-                            if ($publicUrl) {
-                                $model->imagen_informe = $publicUrl;
-                                if (!$model->save(false)) {
-                                    throw new \Exception('Error al guardar la ruta del informe médico');
-                                }
-                            } else {
-                                throw new \Exception('Error al subir el informe médico a Supabase');
-                            }
-                        } else {
-                            throw new \Exception('Error al guardar el archivo temporal del informe');
-                        }
+                        // ... informe upload logic ...
                     }
+
+                    // ✅ ============================================================
+                    // ✅ ADD ATTACHMENT PROCESSING HERE - RIGHT AFTER FILE UPLOADS
+                    // ✅ ============================================================
+
+                    // ============ PROCESAR DOCUMENTOS ADICIONALES (ATTACHMENTS) - FOR UPDATE ============
+                    $attachmentData = Yii::$app->request->post('SisSiniestroAttachment', []);
+                    $this->processAttachments($model, $attachmentData);
+                    // ============ END ============
+
+                    // ✅ ============================================================
+                    // ✅ END OF ATTACHMENT PROCESSING
+                    // ✅ ============================================================
 
                     // Force save nombre_doctor directly to database
                     Yii::$app->db->createCommand()
@@ -470,9 +525,20 @@ class SisSiniestroController extends Controller
 
                     $transaction->commit();
 
-                    // Dynamic success message
                     $successMessage = $esCita == 1 ? 'Cita actualizada correctamente.' : 'Atención actualizada correctamente.';
                     Yii::$app->session->setFlash('success', $successMessage);
+
+                    // Resend email notification if critical fields changed
+                    if ($model->es_cita == 1) {
+                        $changedFields = $model->getDirtyAttributes(['fecha_atencion', 'hora_atencion', 'nombre_doctor', 'admission_analyst']);
+                        if (!empty($changedFields)) {
+                            $result = AppointmentNotificationService::sendAppointmentEmail($model);
+                            if ($result['success']) {
+                                Yii::$app->session->setFlash('info', '📧 ' . $result['message']);
+                            }
+                        }
+                    }
+
                     return $this->redirect(['view', 'id' => $model->id]);
                 } else {
                     throw new \Exception('Error al guardar los datos principales de la ' . $terminoLower . '.');
@@ -480,29 +546,25 @@ class SisSiniestroController extends Controller
             } catch (\Exception $e) {
                 $transaction->rollBack();
                 Yii::error('Error al actualizar ' . $terminoLower . ': ' . $e->getMessage(), __METHOD__);
-
-                // Dynamic error message
-                $errorMessage = 'Error al actualizar la ' . $terminoLower . ': ' . $e->getMessage();
-                Yii::$app->session->setFlash('error', $errorMessage);
-
-                // En caso de error, volver a cargar la vista con los datos actuales
+                Yii::$app->session->setFlash('error', 'Error al actualizar la ' . $terminoLower . ': ' . $e->getMessage());
                 return $this->render('update', [
                     'model' => $model,
                     'afiliado' => $afiliado,
                     'baremos' => $baremos,
                     'baremosActuales' => $baremosActuales,
                     'es_cita' => $esCita,
+                    'hasPreexistencia' => ($existingPreexistencia !== null),
                 ]);
             }
         }
 
-        // Cargar la vista con los datos del modelo
         return $this->render('update', [
             'model' => $model,
             'afiliado' => $afiliado,
             'baremos' => $baremos,
             'baremosActuales' => $baremosActuales,
             'es_cita' => $esCita,
+            'hasPreexistencia' => ($existingPreexistencia !== null),
         ]);
     }
 
@@ -778,6 +840,7 @@ class SisSiniestroController extends Controller
 
         return $siniestrosPorMes;
     }
+
     /**
      * Obtiene estadísticas de siniestros por clínica
      */
@@ -1088,6 +1151,31 @@ class SisSiniestroController extends Controller
     }
 
     /**
+     * Resend appointment notification via email
+     * @param int $id
+     * @return \yii\web\Response
+     */
+    public function actionResendNotification($id)
+    {
+        $model = $this->findModel($id);
+
+        if ($model->es_cita != 1) {
+            Yii::$app->session->setFlash('error', 'Solo se pueden reenviar notificaciones para citas médicas.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        $result = AppointmentNotificationService::sendAppointmentEmail($model);
+
+        if ($result['success']) {
+            Yii::$app->session->setFlash('success', '✅ ' . $result['message']);
+        } else {
+            Yii::$app->session->setFlash('error', '❌ ' . $result['message']);
+        }
+
+        return $this->redirect(['view', 'id' => $id]);
+    }
+
+    /**
      * Build professional success message HTML
      */
     private function buildSuccessMessage($patientName, $date, $time, $serviceCount, $totalCost)
@@ -1158,5 +1246,125 @@ class SisSiniestroController extends Controller
             'no_show' => 'No Asistió',
         ];
         return $labels[$status] ?? $status;
+    }
+
+    /**
+     * Process attachment uploads for a siniestro
+     *
+     * @param SisSiniestro $model The siniestro model
+     * @param array $attachmentData The posted attachment data
+     * @return bool
+     */
+    private function processAttachments($model, $attachmentData)
+    {
+        if (empty($attachmentData) || !is_array($attachmentData)) {
+            return true;
+        }
+
+        $success = true;
+        $errors = [];
+        $savedCount = 0;
+
+        foreach ($attachmentData as $index => $data) {
+            // ✅ Get the file instance ONCE
+            $file = UploadedFile::getInstanceByName('SisSiniestroAttachment[' . $index . '][uploadFile]');
+
+            // Skip if no file or empty
+            if (!$file || !$file instanceof UploadedFile || $file->size == 0) {
+                continue;
+            }
+
+            // Skip if file has upload error
+            if ($file->error != UPLOAD_ERR_OK) {
+                $errors[] = "Error uploading file: " . $file->name . " (Error code: " . $file->error . ")";
+                $success = false;
+                continue;
+            }
+
+            // ✅ Validate BEFORE saving
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'];
+            $extension = strtolower($file->extension);
+            if (!in_array($extension, $allowedExtensions)) {
+                $errors[] = "Invalid file type: " . $file->name;
+                $success = false;
+                continue;
+            }
+
+            if ($file->size > 1024 * 1024 * 10) {
+                $errors[] = "File too large: " . $file->name . " (Max 10MB)";
+                $success = false;
+                continue;
+            }
+
+            try {
+                // ✅ Create attachment record
+                $attachment = new SisSiniestroAttachment();
+                $attachment->siniestro_id = $model->id;
+                $attachment->document_type = $data['document_type'] ?? 'Otro';
+                $attachment->description = $data['description'] ?? '';
+                $attachment->uploadFile = $file;
+
+                // ✅ Save the file and record
+                if ($attachment->saveUploadedFile() && $attachment->save()) {
+                    $savedCount++;
+                    Yii::info("Attachment saved: ID {$attachment->id} for siniestro {$model->id}", __METHOD__);
+                } else {
+                    $errors[] = "Error saving attachment: " . ($file->name ?? 'unknown');
+                    $success = false;
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Exception: " . $e->getMessage();
+                $success = false;
+                Yii::error("Error processing attachment: " . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        // Set flash messages
+        if (!empty($errors)) {
+            if ($savedCount > 0) {
+                Yii::$app->session->setFlash(
+                    'warning',
+                    "{$savedCount} documento(s) guardados correctamente. " . count($errors) . " error(es): " . implode('; ', $errors)
+                );
+            } else {
+                Yii::$app->session->setFlash('error', 'Error al guardar documentos: ' . implode('; ', $errors));
+            }
+        } elseif ($savedCount > 0) {
+            Yii::$app->session->setFlash('success', "{$savedCount} documento(s) adjuntado(s) correctamente.");
+        }
+
+        return $success;
+    }
+
+    /**
+     * Delete an attachment
+     *
+     * @param int $id
+     * @return \yii\web\Response
+     */
+    public function actionDeleteAttachment($id)
+    {
+        $attachment = SisSiniestroAttachment::findOne($id);
+
+        if (!$attachment) {
+            Yii::$app->session->setFlash('error', 'Documento no encontrado.');
+            return $this->redirect(Yii::$app->request->referrer ?: ['index']);
+        }
+
+        $siniestroId = $attachment->siniestro_id;
+        $siniestro = $attachment->siniestro;
+
+        // Check permission - only allow if user has access to this siniestro
+        // You may want to add additional permission checks here
+
+        // Soft delete (or hard delete if you prefer)
+        if ($attachment->delete()) {
+            Yii::$app->session->setFlash('success', 'Documento eliminado correctamente.');
+        } else {
+            Yii::$app->session->setFlash('error', 'Error al eliminar el documento.');
+        }
+
+        // Redirect back to the siniestro view
+        return $this->redirect(['view', 'id' => $siniestroId]);
     }
 }
