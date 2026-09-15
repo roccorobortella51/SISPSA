@@ -409,16 +409,15 @@ class ContratosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
     /**
-     * Anular (Cancel) a contract
+     * Anular (Cancel) a contract with reason via POST
      * @param int $id
      * @return \yii\web\Response
-     * @throws NotFoundHttpException
      */
     public function actionAnular($id)
     {
         $model = $this->findModel($id);
 
-        // Check if user has permission (Superadmin, GERENTE-COMERCIALIZACION, or GERENTE-CLINICA)
+        // Permissions Check
         if (
             !Yii::$app->user->can('superadmin') &&
             !Yii::$app->user->can('GERENTE-COMERCIALIZACION') &&
@@ -429,41 +428,42 @@ class ContratosController extends Controller
             return $this->redirect(['index', 'user_id' => $model->user_id]);
         }
 
-        // Check if contract is already anulado
         if ($model->estatus === Contratos::STATUS_ANULADO) {
-            Yii::$app->session->setFlash('error', 'Este contrato ya está anulado.');
+            Yii::$app->session->setFlash('error', 'Este contrato ya se encuentra anulado.');
             return $this->redirect(['index', 'user_id' => $model->user_id]);
         }
 
-        // Begin transaction
-        $transaction = Yii::$app->db->beginTransaction();
+        if (Yii::$app->request->isPost) {
+            $motivo = Yii::$app->request->post('anulado_motivo');
 
-        try {
-            // Update contract with annulment information
-            $model->estatus = Contratos::STATUS_ANULADO;
-            $model->anulado_por = Yii::$app->user->id;
-            $model->anulado_fecha = date('Y-m-d H:i:s');
-            $model->anulado_motivo = 'Anulado por solicitud administrativa'; // Default reason
-
-            if (!$model->save(false)) {
-                throw new \Exception('Error al guardar la anulación del contrato.');
+            if (empty(trim($motivo))) {
+                Yii::$app->session->setFlash('error', 'Debe indicar un motivo válido para la anulación.');
+                return $this->redirect(['index', 'user_id' => $model->user_id]);
             }
 
-            // Update any pending cuotas to "cancelada"
-            \app\models\Cuotas::updateAll(
-                ['estatus' => 'cancelada'],
-                [
-                    'contrato_id' => $model->id,
-                    'estatus' => 'pendiente'
-                ]
-            );
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                $model->estatus = Contratos::STATUS_ANULADO;
+                $model->anulado_por = Yii::$app->user->id;
+                $model->anulado_fecha = date('Y-m-d H:i:s');
+                $model->anulado_motivo = \yii\helpers\Html::encode($motivo);
 
-            $transaction->commit();
+                if (!$model->save(false)) {
+                    throw new \Exception('Error al guardar la anulación del contrato.');
+                }
 
-            Yii::$app->session->setFlash('success', 'Contrato anulado exitosamente.');
-        } catch (\Exception $e) {
-            $transaction->rollBack();
-            Yii::$app->session->setFlash('error', 'Error al anular el contrato: ' . $e->getMessage());
+                // Update pending cuotas to cancelada
+                \app\models\Cuotas::updateAll(
+                    ['estatus' => 'cancelada'],
+                    ['contrato_id' => $model->id, 'estatus' => 'pendiente']
+                );
+
+                $transaction->commit();
+                Yii::$app->session->setFlash('success', 'El contrato #' . $model->id . ' fue anulado exitosamente.');
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', 'Error al anular el contrato: ' . $e->getMessage());
+            }
         }
 
         return $this->redirect(['index', 'user_id' => $model->user_id]);

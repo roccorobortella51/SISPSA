@@ -66,7 +66,7 @@ $rolesSinFiltroClinica = ['GERENTE-CLINICA', 'Administrador-clinica', 'CONTROL D
 $mostrarFiltroClinica = $isAdmin && !in_array($rol, $rolesSinFiltroClinica);
 
 // Define roles that can access Atención Médica
-$rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR-CLINICA', 'CONTROL DE CITAS', 'GERENTE-CLINICA', 'ADMISIÓN', 'ATENCIÓN', 'OPERACIONES-BOSQUE'];
+$rolesAtencionMedica = ['superadmin', 'DIRECTOR-COMERCIALIZACIÓN', 'COORDINADOR-CLINICA', 'CONTROL DE CITAS', 'GERENTE-CLINICA', 'ADMISIÓN', 'ATENCIÓN', 'OPERACIONES-BOSQUE', 'GERENTE-OPERACIONES'];
 
 // --- GET SUMMARY STATISTICS ---
 $summaryStats = [];

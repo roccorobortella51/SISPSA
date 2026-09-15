@@ -180,7 +180,9 @@ class UserDatos extends ActiveRecord
     public function rules()
     {
         return [
-            // 1. Campos obligatorios - CÉDULA AHORA ES OBLIGATORIA
+            // ============================================================
+            // 1. OBLIGATORY FIELDS - Basic Information
+            // ============================================================
             [[
                 'nombres',
                 'apellidos',
@@ -192,7 +194,9 @@ class UserDatos extends ActiveRecord
                 'direccion'
             ], 'required', 'message' => 'Este campo es obligatorio.'],
 
-            // 2. Campos obligatorios adicionales - NUEVOS CAMPOS REQUERIDOS
+            // ============================================================
+            // 2. CONDITIONAL REQUIRED FIELDS - By User Type
+            // ============================================================
             [
                 ['user_datos_type_id', 'clinica_id', 'plan_id'],
                 'required',
@@ -200,12 +204,11 @@ class UserDatos extends ActiveRecord
                     return $model->user_datos_type_id == 1;
                 },
                 'whenClient' => "function (attribute, value) {
-                    return $('#user_datos_type_id_field').val() == '1';
-                }",
+                return $('#user_datos_type_id_field').val() == '1';
+            }",
                 'message' => 'Este campo es obligatorio para afiliados individuales.'
             ],
 
-            // 3. Validación condicional para afiliado_corporativo_id
             [
                 'afiliado_corporativo_id',
                 'required',
@@ -213,42 +216,121 @@ class UserDatos extends ActiveRecord
                     return $model->user_datos_type_id == 2;
                 },
                 'whenClient' => "function (attribute, value) {
-                    return $('#user_datos_type_id_field').val() == '2';
-                }",
+                return $('#user_datos_type_id_field').val() == '2';
+            }",
                 'message' => 'El afiliado corporativo es obligatorio cuando el tipo es corporativo.'
             ],
 
-            // 4. Valores por defecto
+            // ============================================================
+            // 3. CONTRATANTE DIFERENTE - Conditional Required Fields
+            // ============================================================
+            [
+                [
+                    'nombre_contratante',
+                    'apellido_contratante',
+                    'tipo_cedula_contratante',
+                    'cedula_contratante',
+                    'fecha_nacimiento_contratante',
+                    'sexo_contratante',
+                    'email_contratante',
+                    'telefono_celular_contratante'  // ADDED THIS
+
+                ],
+                'required',
+                'when' => function ($model) {
+                    return $model->tiene_contratante_diferente == true;
+                },
+                'whenClient' => "function (attribute, value) {
+                return $('#userdatos-tiene_contratante_diferente').is(':checked');
+            }",
+                'message' => 'Este campo es obligatorio cuando el contratante es diferente.'
+            ],
+
+            // ============================================================
+            // 4. CONTRATANTE VALIDATIONS - Type-specific
+            // ============================================================
+            // Cédula Contratante - Integer validation (for V, E, J types)
+            [
+                ['cedula_contratante'],
+                'integer',
+                'when' => function ($model) {
+                    return $model->tiene_contratante_diferente == true &&
+                        $model->tipo_cedula_contratante !== 'P' &&
+                        $model->tipo_cedula_contratante !== 'Menor Sin Cédula';
+                },
+                'message' => 'La cédula del contratante debe ser un número entero.'
+            ],
+
+            // Cédula Contratante - String validation (for Passport/P)
+            [
+                ['cedula_contratante'],
+                'string',
+                'max' => 20,
+                'when' => function ($model) {
+                    return $model->tiene_contratante_diferente == true &&
+                        $model->tipo_cedula_contratante === 'P';
+                },
+                'message' => 'El pasaporte del contratante debe ser un número entero.'
+            ],
+
+            // Email Contratante - Email format validation
+            [
+                ['email_contratante'],
+                'email',
+                'when' => function ($model) {
+                    return $model->tiene_contratante_diferente == true;
+                },
+                'message' => 'El correo electrónico del contratante debe ser válido.'
+            ],
+
+            // Fecha Nacimiento Contratante - Date validation
+            [
+                ['fecha_nacimiento_contratante'],
+                'date',
+                'format' => 'yyyy-MM-dd',
+                'when' => function ($model) {
+                    return $model->tiene_contratante_diferente == true;
+                },
+                'message' => 'La fecha de nacimiento del contratante debe ser una fecha válida.'
+            ],
+
+            // ============================================================
+            // 5. DEFAULT VALUES
+            // ============================================================
             [['paso'], 'default', 'value' => 0.0],
             [['user_login_id', 'contrato_id'], 'default', 'value' => null],
             [['qr', 'video', 'codigoValidacion', 'deleted_at'], 'default', 'value' => null],
             [['ver_cedula', 'ver_foto'], 'default', 'value' => '0'],
-
             [['user_id', 'session_id', 'estatus_solvente'], 'string'],
 
-            // 5. Validación de tipos de datos y longitud
+            // ============================================================
+            // 6. STRING LENGTH VALIDATIONS
+            // ============================================================
             [['telefono'], 'string', 'max' => 15],
-            [
-                ['telefono'],
-                'match',
-                'pattern' => '/^(0416|0422|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
-                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'
-            ],
-
             [['nombres', 'apellidos', 'direccion', 'codigoValidacion', 'telefono', 'email', 'estatus'], 'string', 'max' => 255],
             [['sexo', 'estado', 'ciudad', 'municipio', 'parroquia', 'role', 'tipo_sangre'], 'string', 'max' => 255],
             [['nombres', 'apellidos', 'direccion', 'email', 'telefono'], 'trim'],
 
+            // ============================================================
+            // 7. CEDULA FORMAT VALIDATION
+            // ============================================================
             [['cedulaFormatted'], 'string', 'max' => 11, 'message' => 'El formato de la cédula es incorrecto (máx. 11 caracteres).'],
 
-            // 6. Validaciones específicas de contenido
+            // ============================================================
+            // 8. UNIQUE VALIDATIONS
+            // ============================================================
             [['email'], 'email'],
             [['email'], 'unique', 'targetClass' => UserDatos::class, 'message' => 'Este correo electrónico ya está registrado.'],
 
+            // ============================================================
+            // 9. NUMERIC VALIDATIONS
+            // ============================================================
             [['paso'], 'number'],
             [['plan_id', 'contrato_id', 'asesor_id', 'user_login_id', 'user_datos_type_id', 'afiliado_corporativo_id'], 'integer'],
 
-            // 7. Validaciones para campos de selección
+            // ============================================================
+            // 10. SELECTION FIELD VALIDATIONS (In-Range)
+            // ============================================================
             [['sexo'], 'in', 'range' => ['Masculino', 'Femenino', 'Otro'], 'message' => 'El sexo seleccionado no es válido.'],
 
             [
@@ -264,26 +346,27 @@ class UserDatos extends ActiveRecord
             [['tipo_sangre'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'message' => 'Tipo de sangre no válido.'],
             [['tipo_cedula'], 'in', 'range' => ['V', 'E', 'J', 'G', 'P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'], 'message' => 'Tipo de cédula no válido.'],
 
-            // 8. Validaciones para carga de archivos
+            // ============================================================
+            // 11. FILE UPLOAD VALIDATIONS
+            // ============================================================
             [['selfieFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 2, 'tooBig' => 'El archivo selfie no debe exceder 2MB.'],
             [['imagenIdentificacionFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg', 'maxSize' => 1024 * 1024 * 5, 'tooBig' => 'La imagen de identificación no debe exceder 5MB.'],
             [['videoFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'mp4, mov', 'maxSize' => 1024 * 1024 * 20, 'tooBig' => 'El video no debe exceder 20MB.'],
 
-            // 9. Campos que almacenan la ruta de los archivos
+            // ============================================================
+            // 12. FILE PATH FIELDS
+            // ============================================================
             [['selfie', 'imagen_identificacion', 'video', 'qr'], 'string', 'max' => 255],
 
-            // 10. Campos seguros (timestamps)
+            // ============================================================
+            // 13. SAFE FIELDS (Timestamps)
+            // ============================================================
             [['created_at', 'updated_at', 'deleted_at', 'fechanac', 'clinica_id'], 'safe'],
 
-            // 11. Validación específica para cédula
-            [['cedula'], 'integer', 'message' => 'La cédula debe ser un número entero.'],
-            [['cedula'], 'integer', 'max' => 9999999999, 'message' => 'La cédula no puede tener más de 10 dígitos.'],
-            [['codigoAsesor'], 'safe'],
-            // ============================================
-            // CEDULA VALIDATION - COMPLETE SECTION
-            // ============================================
-
-            // 1. Required validation
+            // ============================================================
+            // 14. CEDULA VALIDATION - Core
+            // ============================================================
+            // Required validation
             [
                 'cedula',
                 'required',
@@ -291,12 +374,13 @@ class UserDatos extends ActiveRecord
                     return $model->tipo_cedula !== 'Menor Sin Cédula' && !$model->tiene_contratante_diferente;
                 },
                 'whenClient' => "function (attribute, value) {
-        var tipoCedula = $('#userdatos-tipo_cedula').val();
-        return tipoCedula !== 'Menor Sin Cédula' && !$('#userdatos-tiene_contratante_diferente').is(':checked');
-    }",
+                var tipoCedula = $('#userdatos-tipo_cedula').val();
+                return tipoCedula !== 'Menor Sin Cédula' && !$('#userdatos-tiene_contratante_diferente').is(':checked');
+            }",
                 'message' => 'Este campo es obligatorio.'
             ],
-            // 2. Integer validation - SKIP for Passport, Menor Sin Cédula, Afiliado Otras Clínicas
+
+            // Integer validation - SKIP for Passport, Menor Sin Cédula, Afiliado Otras Clínicas
             [
                 'cedula',
                 'integer',
@@ -305,13 +389,14 @@ class UserDatos extends ActiveRecord
                     return !in_array($model->tipo_cedula, $skipTypes);
                 },
                 'whenClient' => "function (attribute, value) {
-        var tipoCedula = $('#userdatos-tipo_cedula').val();
-        var skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
-        return skipTypes.indexOf(tipoCedula) === -1;
-    }",
+                var tipoCedula = $('#userdatos-tipo_cedula').val();
+                var skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
+                return skipTypes.indexOf(tipoCedula) === -1;
+            }",
                 'message' => 'Cédula debe ser un número entero.'
             ],
-            // 3. Max length validation - SKIP for Passport, Menor Sin Cédula, Afiliado Otras Clínicas
+
+            // Max length validation - SKIP for Passport, Menor Sin Cédula, Afiliado Otras Clínicas
             [
                 'cedula',
                 'integer',
@@ -321,13 +406,14 @@ class UserDatos extends ActiveRecord
                     return !in_array($model->tipo_cedula, $skipTypes);
                 },
                 'whenClient' => "function (attribute, value) {
-        var tipoCedula = $('#userdatos-tipo_cedula').val();
-        var skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
-        return skipTypes.indexOf(tipoCedula) === -1;
-    }",
+                var tipoCedula = $('#userdatos-tipo_cedula').val();
+                var skipTypes = ['P', 'Menor Sin Cédula', 'Afiliado Otras Clínicas'];
+                return skipTypes.indexOf(tipoCedula) === -1;
+            }",
                 'message' => 'La cédula no puede tener más de 10 dígitos.'
             ],
-            // 4. Passport validation - numbers only
+
+            // Passport validation - numbers only
             [
                 'cedula',
                 'match',
@@ -336,22 +422,25 @@ class UserDatos extends ActiveRecord
                     return $model->tipo_cedula === 'P' && !$model->tiene_contratante_diferente;
                 },
                 'whenClient' => "function (attribute, value) {
-        var tipoCedula = $('#userdatos-tipo_cedula').val();
-        return tipoCedula === 'P' && !$('#userdatos-tiene_contratante_diferente').is(':checked');
-    }",
+                var tipoCedula = $('#userdatos-tipo_cedula').val();
+                return tipoCedula === 'P' && !$('#userdatos-tiene_contratante_diferente').is(':checked');
+            }",
                 'message' => 'Pasaporte debe ser un número entero. Ingrese solo el número.'
             ],
 
-            // 12. Validaciones de Existencia (Claves Foráneas)
+            // ============================================================
+            // 15. FOREIGN KEY EXISTENCE VALIDATIONS
+            // ============================================================
             [['clinica_id'], 'exist', 'skipOnError' => true, 'targetClass' => RmClinica::class, 'targetAttribute' => ['clinica_id' => 'id'], 'message' => 'La clínica seleccionada no existe.'],
             [['plan_id'], 'exist', 'skipOnError' => true, 'targetClass' => Planes::class, 'targetAttribute' => ['plan_id' => 'id'], 'message' => 'El plan seleccionado no existe.'],
             [['contrato_id'], 'validateContratoId', 'skipOnEmpty' => true, 'skipOnError' => true],
             [['user_login_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_login_id' => 'id'], 'message' => 'El usuario de login no existe.'],
-
             [['banco_id'], 'integer'],
             [['banco_id'], 'exist', 'skipOnError' => true, 'targetClass' => Banco::class, 'targetAttribute' => ['banco_id' => 'id'], 'message' => 'El banco seleccionado no existe.'],
 
-            // 13. Validaciones de fecha
+            // ============================================================
+            // 16. DATE VALIDATIONS
+            // ============================================================
             [['fechanac'], 'date', 'format' => 'yyyy-MM-dd'],
             [
                 ['fechanac'],
@@ -362,7 +451,9 @@ class UserDatos extends ActiveRecord
                 'message' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.'
             ],
 
-            // 14. Validaciones para campos de texto
+            // ============================================================
+            // 17. TEXT FIELD VALIDATIONS - Contracting Party
+            // ============================================================
             [[
                 'nacionalidad',
                 'estado_civil',
@@ -397,6 +488,7 @@ class UserDatos extends ActiveRecord
                 'nombre_declaracion_contratante',
                 'cedula_declaracion_contratante',
                 'tipo_afiliacion',
+                // Contracting Party Fields
                 'nombre_contratante',
                 'apellido_contratante',
                 'tipo_cedula_contratante',
@@ -436,29 +528,49 @@ class UserDatos extends ActiveRecord
                 'direccion_cobro'
             ], 'string', 'max' => 255],
 
-            // 15. Validaciones para campos de fecha
+            // ============================================================
+            // 18. CONTRATANTE DATE FIELD VALIDATIONS
+            // ============================================================
             [[
                 'fecha_nacimiento_contratante',
                 'fecha_nacimiento_representante_contratante',
                 'fecha_nacimiento_beneficiario'
             ], 'date', 'format' => 'yyyy-MM-dd'],
 
-            // 16. Validaciones para campos booleanos
+            // ============================================================
+            // 19. BOOLEAN FIELD VALIDATIONS
+            // ============================================================
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'boolean'],
             [['cobertura_maternidad', 'tiene_contratante_diferente'], 'default', 'value' => false],
 
-            // 17. Validaciones para campos enteros
+            // ============================================================
+            // 20. INTEGER FIELD VALIDATIONS - Contracting Party
+            // ============================================================
             [['cedula_contratante', 'cedula_representante_contratante'], 'integer'],
 
-            // 18. Validaciones para campos de texto largo (para JSON)
+            // ============================================================
+            // 21. JSON FIELD VALIDATIONS
+            // ============================================================
             [['grupo_familiar'], 'string'],
             [['grupo_familiar'], 'safe'],
 
-            [['tipo_cedula', 'cedula'], 'required', 'when' => function ($model) {
-                return !$model->tiene_contratante_diferente;
-            }, 'whenClient' => "function (attribute, value) {
+            // ============================================================
+            // 22. TIPO CEDULA & CEDULA - Required when contratante not different
+            // ============================================================
+            [
+                ['tipo_cedula', 'cedula'],
+                'required',
+                'when' => function ($model) {
+                    return !$model->tiene_contratante_diferente;
+                },
+                'whenClient' => "function (attribute, value) {
                 return !$('#userdatos-tiene_contratante_diferente').is(':checked');
-            }"],
+            }"
+            ],
+
+            // ============================================================
+            // 23. MENOR SIN CEDULA - Consecutivo Validation
+            // ============================================================
             [
                 ['consecutivo_menor'],
                 'integer',
@@ -468,11 +580,10 @@ class UserDatos extends ActiveRecord
                     return $model->tipo_cedula === 'Menor Sin Cédula';
                 },
                 'whenClient' => "function (attribute, value) {
-                    return $('#userdatos-tipo_cedula').val() === 'Menor Sin Cédula';
-                }",
+                return $('#userdatos-tipo_cedula').val() === 'Menor Sin Cédula';
+            }",
                 'message' => 'El consecutivo debe ser un número entre 1 y 20.'
             ],
-
             [
                 ['consecutivo_menor'],
                 'required',
@@ -480,14 +591,30 @@ class UserDatos extends ActiveRecord
                     return $model->tipo_cedula === 'Menor Sin Cédula';
                 },
                 'whenClient' => "function (attribute, value) {
-                    return $('#userdatos-tipo_cedula').val() === 'Menor Sin Cédula';
-                }",
+                return $('#userdatos-tipo_cedula').val() === 'Menor Sin Cédula';
+            }",
                 'message' => 'El número consecutivo es obligatorio para menores sin cédula.'
             ],
+
+            // ============================================================
+            // 24. AGENCIA ID Validation
+            // ============================================================
             [['agencia_id'], 'integer'],
             [['agencia_id'], 'exist', 'skipOnError' => true, 'targetClass' => Agente::class, 'targetAttribute' => ['agencia_id' => 'id']],
 
-            // 19. DUPLICATE VALIDATION - Check if affiliate already exists
+            // ============================================================
+            // 25. TELEFONO VENEZUELAN PHONE NUMBER VALIDATION
+            // ============================================================
+            [
+                ['telefono'],
+                'match',
+                'pattern' => '/^(0416|0422|0426|0414|0424|0412|0212|0261|0241|0243|0251|0274|0276|0286|0291|0293)\d{7}$/',
+                'message' => 'El número de teléfono debe ser venezolano y tener el formato correcto (ej. 04121234567).'
+            ],
+
+            // ============================================================
+            // 26. DUPLICATE VALIDATION - Check if affiliate already exists
+            // ============================================================
             ['cedula', 'validateNoDuplicate'],
         ];
     }

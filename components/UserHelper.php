@@ -300,7 +300,7 @@ class UserHelper
         return \yii\helpers\ArrayHelper::map(
             User::find()
                 ->select([
-                    new \yii\db\Expression("CONCAT('N° de Vendedor/Asesor: ', agente_fuerza.id, ' - ' , nombres, '  ', apellidos, ', Documento: ',tipo_cedula , cedula) AS name"),
+                    new \yii\db\Expression("CONCAT(user_datos.nombres, ' ', user_datos.apellidos, ', ', user_datos.tipo_cedula, '-', user_datos.cedula, ' (ID: ', agente_fuerza.id, ')') AS name"),
                     'agente_fuerza.id AS id'
                 ])
                 ->joinWith('userDatos')
@@ -308,6 +308,7 @@ class UserHelper
                 ->leftJoin('agente_fuerza', '"agente_fuerza"."idusuario" = "user_datos"."id"')
                 ->where(['auth_assignment.item_name' => "Asesor"])
                 ->andWhere(['is not', 'agente_fuerza.idusuario', null])
+                ->orderBy(['user_datos.nombres' => SORT_ASC, 'user_datos.apellidos' => SORT_ASC])
                 ->asArray()
                 ->all(),
             'id',

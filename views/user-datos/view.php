@@ -685,12 +685,12 @@ html, body, .main-container {
     opacity: 0.7;
 }
 
-/* Right Column - Status & Actions */
+/* Right Column - Status Only */
 .ms-profile-actions-col {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex-shrink: 0;
 }
 
@@ -714,12 +714,40 @@ html, body, .main-container {
     color: #6bcb77;
 }
 
-/* Action Buttons in Header */
-.ms-profile-actions {
+/* Contract Reference below status badge */
+.ms-profile-contract-ref {
+    font-size: 0.7rem;
+    opacity: 0.75;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: -0.25rem;
+}
+
+.ms-profile-contract-ref i {
+    font-size: 0.65rem;
+}
+
+/* ============================================
+   ACTION BUTTONS ROW — Below the header
+   ============================================ */
+.ms-action-row {
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ms-action-row-inner {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    padding: 0.6rem 0.9rem;
+    background: white;
+    border: 1px solid var(--ms-gray-300);
+    border-radius: var(--ms-radius);
+    box-shadow: var(--ms-shadow);
 }
 
 /* Microsoft Buttons with Colors */
@@ -1093,12 +1121,17 @@ div.ms-progress-label,
         width: 100%;
     }
     
-    .ms-profile-actions {
+    /* Action row — centered on mobile */
+    .ms-action-row {
         justify-content: center;
-        width: 100%;
     }
     
-    .ms-profile-actions .ms-btn {
+    .ms-action-row-inner {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .ms-action-row-inner .ms-btn {
         flex: 1;
         justify-content: center;
         min-width: 120px;
@@ -1149,7 +1182,7 @@ div.ms-progress-label,
         max-width: 95%;
     }
     
-    .ms-profile-actions .ms-btn {
+    .ms-action-row-inner .ms-btn {
         min-width: 100%;
     }
 }
@@ -1257,6 +1290,32 @@ $porcentajeConsumido = $datosSaldo['porcentaje_consumido'];
 $baseCalculo = $datosSaldo['base_calculo'];
 
 $historialSiniestros = SaldoHelper::obtenerHistorialSiniestros($model->id);
+
+// ============================================
+// OBTENER CONTRATO ACTIVO DEL AFILIADO
+// ============================================
+// Usa el helper existente en el modelo Contratos para obtener
+// el contrato vigente (Activo, Registrado o Creado Manual).
+$contratoActivo = \app\models\Contratos::getContratoActivo($model->id);
+
+// Determinar el estatus a mostrar:
+// - Si hay contrato activo, usar su estatus
+// - Si no hay, mostrar "Sin Contrato"
+$estatusContrato = $contratoActivo ? $contratoActivo->estatus : 'Sin Contrato';
+$estatusContratoLabel = $contratoActivo ? $contratoActivo->getStatusLabel() : 'Sin Contrato';
+
+// Mapeo de estatus a colores del punto indicador
+$statusColorMap = [
+    'Activo'         => '#6bcb77',  // Verde
+    'Registrado'     => '#4dabf7',  // Azul claro
+    'Creado Manual'  => '#ffd93d',  // Amarillo
+    'Suspendido'     => '#ff922b',  // Naranja
+    'Vencido'        => '#ff6b6b',  // Rojo
+    'Pendiente'      => '#ced4da',  // Gris claro
+    'Anulado'        => '#868e96',  // Gris
+    'Sin Contrato'   => '#868e96',  // Gris
+];
+$statusDotColor = $statusColorMap[$estatusContrato] ?? '#6bcb77';
 
 $currentRoute = Yii::$app->controller->getRoute();
 ?>
@@ -1415,49 +1474,71 @@ $currentRoute = Yii::$app->controller->getRoute();
                 <?php endif; ?>
             </div>
 
-            <!-- Right Column: Status & Actions -->
+            <!-- Right Column: Status Only (buttons moved below) -->
             <div class="ms-profile-actions-col">
-                <span class="ms-profile-status">
-                    <i class="fas fa-circle"></i>
-                    <?= Html::encode($model->estatus ?? 'Activo') ?>
+                <?php
+                // ============================================
+                // ESTATUS DEL CONTRATO — Reemplaza al estatus del afiliado
+                // ============================================
+                // Se muestra el estatus del contrato activo del afiliado
+                // (Activo, Registrado, Creado Manual, Suspendido, Vencido, etc.)
+                // en lugar del estatus del registro del afiliado.
+                ?>
+                <span class="ms-profile-status"
+                    title="Estatus del contrato: <?= Html::encode($estatusContratoLabel) ?>">
+                    <i class="fas fa-circle" style="color: <?= $statusDotColor ?>;"></i>
+                    <?= Html::encode($estatusContratoLabel) ?>
                 </span>
 
-                <?php if ($permisos): ?>
-                    <div class="ms-profile-actions">
-                        <?= Html::a(
-                            '<i class="fas fa-file-pdf"></i> Contrato',
-                            ['user-datos/generar-contratov', 'id' => $model->id],
-                            ['class' => 'ms-btn ms-btn-pdf', 'target' => '_blank', 'data-pjax' => '0']
-                        ) ?>
-                        <?= Html::a(
-                            '<i class="fas fa-edit"></i> Actualizar',
-                            Url::to(array_merge(['update', 'id' => $model->id], ($clinica && $clinica->id !== null ? ['clinica_id' => $clinica->id] : []))),
-                            ['class' => 'ms-btn ms-btn-edit']
-                        ) ?>
-                        <?= Html::a(
-                            '<i class="fas fa-credit-card"></i> Registrar Pago',
-                            ['contratos/index', 'user_id' => $model->id],
-                            ['class' => 'ms-btn ms-btn-payment', 'data-pjax' => '0']
-                        ) ?>
-                        <?php if (!empty($clinica_id_from_url)) : ?>
-                            <?= Html::a(
-                                '<i class="fas fa-arrow-left"></i> Volver',
-                                ['index-clinicas', 'clinica_id' => $clinica->id],
-                                ['class' => 'ms-btn ms-btn-back']
-                            ) ?>
-                        <?php else: ?>
-                            <?= Html::a(
-                                '<i class="fas fa-arrow-left"></i> Volver',
-                                ['index'],
-                                ['class' => 'ms-btn ms-btn-back']
-                            ) ?>
-                        <?php endif; ?>
+                <!-- Contract Reference (número de contrato) -->
+                <?php if ($contratoActivo): ?>
+                    <div class="ms-profile-contract-ref">
+                        <i class="fas fa-file-contract"></i>
+                        <?= Html::encode($contratoActivo->nrocontrato ?? 'Contrato #' . $contratoActivo->id) ?>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
+
+<?php if ($permisos): ?>
+    <!-- ============================================
+         ACTION BUTTONS ROW — Below the header
+         ============================================ -->
+    <div class="ms-action-row">
+        <div class="ms-action-row-inner">
+            <?= Html::a(
+                '<i class="fas fa-file-pdf"></i> Contrato',
+                ['user-datos/generar-contratov', 'id' => $model->id],
+                ['class' => 'ms-btn ms-btn-pdf', 'target' => '_blank', 'data-pjax' => '0']
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-edit"></i> Actualizar',
+                Url::to(array_merge(['update', 'id' => $model->id], ($clinica && $clinica->id !== null ? ['clinica_id' => $clinica->id] : []))),
+                ['class' => 'ms-btn ms-btn-edit']
+            ) ?>
+            <?= Html::a(
+                '<i class="fas fa-credit-card"></i> Registrar Pago',
+                ['contratos/index', 'user_id' => $model->id],
+                ['class' => 'ms-btn ms-btn-payment', 'data-pjax' => '0']
+            ) ?>
+            <?php if (!empty($clinica_id_from_url)) : ?>
+                <?= Html::a(
+                    '<i class="fas fa-arrow-left"></i> Volver',
+                    ['index-clinicas', 'clinica_id' => $clinica->id],
+                    ['class' => 'ms-btn ms-btn-back']
+                ) ?>
+            <?php else: ?>
+                <?= Html::a(
+                    '<i class="fas fa-arrow-left"></i> Volver',
+                    ['index'],
+                    ['class' => 'ms-btn ms-btn-back']
+                ) ?>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
 
 <!-- Balance Card -->
 <div class="ms-balance-card">
