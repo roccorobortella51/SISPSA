@@ -38,6 +38,20 @@ if ($corporativo !== null && isset($corporativo->nombre)) {
 // Get success details if they exist
 $successDetails = isset($resultados['successDetails']) && is_array($resultados['successDetails']) ? $resultados['successDetails'] : [];
 
+// ============================================================
+// NEW: count how many rows were PROMOTED (existing staff users
+// that were linked as affiliates) vs fresh new affiliates.
+// ============================================================
+$promotedCount = 0;
+$freshCount    = 0;
+foreach ($successDetails as $d) {
+    if (!empty($d['promoted'])) {
+        $promotedCount++;
+    } else {
+        $freshCount++;
+    }
+}
+
 ?>
 
 <div class="carga-masiva-resumen">
@@ -148,6 +162,38 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
             </div>
         </div>
 
+        <!-- ============================================================ -->
+        <!-- NEW: Promotion Breakdown (only shown when at least one row -->
+        <!-- was promoted)                                                -->
+        <!-- ============================================================ -->
+        <?php if ($promotedCount > 0): ?>
+            <div class="card shadow mb-4 border-left-info">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="fw-bold text-info mb-1">
+                                <i class="fas fa-link me-2"></i>
+                                Usuarios Existentes Vinculados como Afiliados
+                            </h6>
+                            <p class="text-muted small mb-0">
+                                Los siguientes registros ya existían en el sistema con otro rol.
+                                Fueron <strong>vinculados al corporativo como afiliados</strong> sin perder su acceso original.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-info text-white fs-5 px-3 py-2">
+                                <i class="fas fa-user-plus me-1"></i>
+                                <?= $promotedCount ?> vinculado<?= $promotedCount === 1 ? '' : 's' ?>
+                            </span>
+                            <div class="small text-muted mt-1">
+                                de <?= count($successDetails) ?> cargados
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- Corporate Information Section -->
         <div class="card shadow mb-4">
             <div class="card-header bg-gradient-primary text-white py-3">
@@ -202,7 +248,7 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
                             <i class="fas fa-users me-2"></i> Afiliados Cargados Exitosamente
                         </h5>
                         <span class="badge bg-light text-success fs-6">
-                            <i class="fas fa-user-plus me-1"></i> <?= count($successDetails) ?> nuevos afiliados
+                            <i class="fas fa-user-plus me-1"></i> <?= count($successDetails) ?> afiliados
                         </span>
                     </div>
                 </div>
@@ -223,6 +269,7 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
                             </thead>
                             <tbody>
                                 <?php foreach ($successDetails as $index => $detail): ?>
+                                    <?php $isPromoted = !empty($detail['promoted']); ?>
                                     <tr>
                                         <td class="text-center fw-bold"><?= $index + 1 ?></td>
                                         <td>
@@ -235,8 +282,26 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
                                             <span class="font-monospace"><?= Html::encode($detail['cedula'] ?? 'N/A') ?></span>
                                         </td>
                                         <td>
-                                            <div class="fw-bold"><?= Html::encode($detail['nombres'] ?? '') ?> <?= Html::encode($detail['apellidos'] ?? '') ?></div>
-                                            <small class="text-muted">ID User: <?= Html::encode($detail['user_login_id'] ?? 'N/A') ?></small>
+                                            <div class="fw-bold">
+                                                <?= Html::encode($detail['nombres'] ?? '') ?> <?= Html::encode($detail['apellidos'] ?? '') ?>
+
+                                                <?php if ($isPromoted): ?>
+                                                    <span class="badge bg-info text-white ms-2"
+                                                        title="Este usuario ya existía en el sistema (rol original: <?= Html::encode($detail['promoted_from_role'] ?? 'N/A') ?>) y fue vinculado como afiliado">
+                                                        <i class="fas fa-link me-1"></i> Vinculado
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <small class="text-muted">
+                                                ID User: <?= Html::encode($detail['user_login_id'] ?? 'N/A') ?>
+                                                <?php if ($isPromoted && !empty($detail['promoted_from_role'])): ?>
+                                                    &nbsp;|&nbsp;
+                                                    <span class="text-info">
+                                                        <i class="fas fa-user-tag me-1"></i>
+                                                        Rol anterior: <?= Html::encode($detail['promoted_from_role']) ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </small>
                                         </td>
                                         <td>
                                             <a href="mailto:<?= Html::encode($detail['email'] ?? '') ?>" class="text-decoration-none">
@@ -267,19 +332,25 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
 
                     <!-- Summary Stats for Success Section -->
                     <div class="row mt-4 pt-3 border-top">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="alert alert-success mb-0">
                                 <i class="fas fa-chart-simple me-2"></i>
                                 <strong>Total Afiliados:</strong> <?= count($successDetails) ?>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="alert alert-info mb-0">
-                                <i class="fas fa-file-contract me-2"></i>
-                                <strong>Contratos Generados:</strong> <?= count($successDetails) ?>
+                                <i class="fas fa-user-plus me-2"></i>
+                                <strong>Nuevos:</strong> <?= $freshCount ?>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <div class="alert alert-primary mb-0">
+                                <i class="fas fa-link me-2"></i>
+                                <strong>Vinculados:</strong> <?= $promotedCount ?>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="alert alert-warning mb-0">
                                 <i class="fas fa-coins me-2"></i>
                                 <strong>Cuotas Generadas:</strong> <?= count($successDetails) * 12 ?>
@@ -510,6 +581,8 @@ $successDetails = isset($resultados['successDetails']) && is_array($resultados['
                 html += '<table border="1" cellpadding="5">';
                 html += '<tr><th>Total Procesados</th><td><?= $totalProcessed ?></td></tr>';
                 html += '<tr><th>Afiliados Cargados</th><td><?= $successCount ?></td></tr>';
+                html += '<tr><th>Nuevos</th><td><?= $freshCount ?></td></tr>';
+                html += '<tr><th>Vinculados</th><td><?= $promotedCount ?></td></tr>';
                 html += '<tr><th>Errores Encontrados</th><td><?= $errorCount ?></td></tr>';
                 html += '<tr><th>Cuotas Generadas</th><td><?= $successCount * 12 ?></td></tr>';
                 html += '</table>';

@@ -55,16 +55,12 @@ if (empty($userClinicaIds) && !$isSuperAdmin) {
 $filteredClinicas = $isSuperAdmin ? $clinicas : $userClinicas;
 
 // Set default selected clinics based on user's access
-// MODIFIED: By default, no clinics are selected unless explicitly chosen by the user
 $defaultClinicaIds = [];
 
-// Only pre-select clinics if user has submitted filters
 if (!empty($searchModel->clinica_ids)) {
-    // If user submitted filters, respect them but ensure they only include accessible clinics
     $submittedClinicaIds = is_array($searchModel->clinica_ids) ? $searchModel->clinica_ids : [$searchModel->clinica_ids];
     $defaultClinicaIds = array_intersect($submittedClinicaIds, $userClinicaIds);
 } else {
-    // On initial page load, no clinics are selected
     $defaultClinicaIds = [];
 }
 
@@ -111,15 +107,12 @@ if (!empty($metaSummary['detalle_por_clinica'])) {
 }
 
 // Get selected clinic IDs for checkboxes
-// MODIFIED: Only use submitted values, not defaults on initial load
 $selectedClinicaIds = [];
 
-// Check if there are submitted clinic IDs from the form
 if (!empty($searchModel->clinica_ids)) {
     $selectedClinicaIds = is_array($searchModel->clinica_ids) ? $searchModel->clinica_ids : [$searchModel->clinica_ids];
     $selectedClinicaIds = array_map('intval', $selectedClinicaIds);
 } else {
-    // On initial load, no clinics are selected
     $selectedClinicaIds = [];
 }
 
@@ -147,15 +140,17 @@ $this->registerCss("
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
     }
     
-    /* Four Cards Row - Microsoft Style */
+    /* Five Cards Row - Microsoft Style */
     .kpi-cards-row {
         display: flex;
-        gap: 20px;
+        gap: 14px;
         margin-bottom: 30px;
+        flex-wrap: nowrap;
     }
     
     .kpi-card {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
         background: #ffffff;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -179,14 +174,14 @@ $this->registerCss("
     
     .kpi-card-header h6 {
         margin: 0;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     
     .kpi-card-header i {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         opacity: 0.8;
     }
     
@@ -195,7 +190,7 @@ $this->registerCss("
     }
     
     .kpi-number {
-        font-size: 2.5rem;
+        font-size: 2.1rem;
         font-weight: 700;
         margin: 0;
         line-height: 1.2;
@@ -230,6 +225,19 @@ $this->registerCss("
         color: #ffffff !important;
     }
     
+    /* Gray Card - For 'Suspendidos' */
+    .kpi-card.gray {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+    }
+    
+    .kpi-card.gray .kpi-number,
+    .kpi-card.gray .kpi-label,
+    .kpi-card.gray .kpi-card-header h6 {
+        color: #ffffff !important;
+    }
+    
+    /* Red Card - For 'Anulados' and other danger states */
     .kpi-card.danger {
         background: linear-gradient(135deg, #d13438 0%, #a80000 100%);
         color: white;
@@ -245,14 +253,12 @@ $this->registerCss("
     /* CRITICAL CARD - Dark Amber/Orange Theme                      */
     /* ============================================================ */
     
-    /* Card background and border */
     .kpi-card.critical {
         background: linear-gradient(135deg, #cc7a00 0%, #8a5200 100%) !important;
         border-color: #a86600 !important;
         color: #ffffff !important;
     }
 
-    /* Header - force white text */
     .kpi-card.critical .kpi-card-header {
         border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
     }
@@ -267,21 +273,14 @@ $this->registerCss("
         opacity: 0.9 !important;
     }
 
-    /* ============================================================ */
-    /* CRITICAL: kpi-number - structural styles only                */
-    /* Colors are handled by inline styles                          */
-    /* ============================================================ */
     .kpi-card.critical .kpi-number {
-        font-size: 2.5rem !important;
+        font-size: 2.1rem !important;
         font-weight: 700 !important;
         margin: 0 !important;
         line-height: 1.2 !important;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
     }
 
-    /* ============================================================ */
-    /* CRITICAL: kpi-label - force to amber/white                   */
-    /* ============================================================ */
     .kpi-card.critical .kpi-label {
         color: #ffecb3 !important;
         font-size: 0.7rem !important;
@@ -301,7 +300,7 @@ $this->registerCss("
         font-weight: 400 !important;
     }
 
-    /* Critical badge for tables - Updated to match */
+    /* Critical badge for tables */
     .badge-critical {
         background: linear-gradient(135deg, #cc7a00, #8a5200);
         color: #ffffff !important;
@@ -318,7 +317,6 @@ $this->registerCss("
         color: #ffcc80 !important;
     }
 
-    /* Critical status indicator dot with pulse animation - Updated */
     .critical-dot {
         display: inline-block;
         width: 10px;
@@ -550,7 +548,7 @@ $this->registerCss("
     }
     
     .total-card.suspended .total-card-value {
-        color: #dc3545;
+        color: #6c757d;
     }
     
     .total-card.individual .total-card-icon {
@@ -562,17 +560,17 @@ $this->registerCss("
     }
     
     /* Responsive */
-    @media (max-width: 1200px) {
+    @media (max-width: 1400px) {
         .kpi-cards-row {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
         }
     }
     
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
         .kpi-cards-row {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
         }
         
@@ -594,6 +592,12 @@ $this->registerCss("
         
         .filter-row .col-md-4 {
             margin-bottom: 15px;
+        }
+    }
+    
+    @media (max-width: 600px) {
+        .kpi-cards-row {
+            grid-template-columns: 1fr;
         }
     }
     
@@ -793,6 +797,82 @@ $this->registerCss("
     .text-success { color: #28a745 !important; }
     .text-warning { color: #ffc107 !important; }
     .text-danger { color: #dc3545 !important; }
+
+    /* ============================================================ */
+    /* TIMELINE EXPORT BUTTON - RED THEME                            */
+    /* ============================================================ */
+    .timeline-export-btn {
+        background: #dc3545;
+        border: 1px solid #dc3545;
+        color: #ffffff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+    }
+
+    .timeline-export-btn:hover {
+        background: #b02a37;
+        border-color: #b02a37;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5);
+        transform: translateY(-1px);
+    }
+
+    .timeline-export-btn:active {
+        background: #a02833;
+        border-color: #a02833;
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+    }
+
+    .timeline-export-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.35);
+    }
+
+    .timeline-export-btn:disabled {
+        background: #e9a0a7;
+        border-color: #e9a0a7;
+        color: #ffffff;
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .timeline-export-btn .fa-file-pdf {
+        font-size: 0.9rem;
+        color: #ffffff;
+    }
+
+    .timeline-chart-wrapper {
+        position: relative;
+        min-height: 300px;
+    }
+
+    /* ============================================================ */
+    /* TIMELINE CARD HEADER - FORCE WHITE TITLE                      */
+    /* ============================================================ */
+    .timeline-card-header {
+        background: linear-gradient(135deg, #107c10 0%, #0a5e0a 100%) !important;
+        color: #ffffff !important;
+    }
+
+    .timeline-card-header .timeline-title {
+        color: #ffffff !important;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .timeline-card-header .timeline-title i {
+        color: #ffffff !important;
+    }
 ");
 
 // JavaScript for checkbox handling
@@ -1006,7 +1086,8 @@ $this->registerJs("
     </div>
 
     <!-- ============================================================ -->
-    <!-- KPI CARDS - Four Cards Row (Added Critical Delinquency)       -->
+    <!-- KPI CARDS - Five Cards Row                                    -->
+    <!-- Order: Total → Activos → Suspendidos → Anulados → Críticos    -->
     <!-- ============================================================ -->
     <div class="kpi-cards-row">
         <!-- Card 1: Total Afiliados -->
@@ -1042,11 +1123,11 @@ $this->registerJs("
             </div>
         </div>
 
-        <!-- Card 3: Contratos Suspendidos (Existing) -->
-        <div class="kpi-card danger">
+        <!-- Card 3: Contratos Suspendidos (Now Gray) -->
+        <div class="kpi-card gray">
             <div class="kpi-card-header">
                 <h6><i class="fas fa-pause-circle mr-2"></i> Contratos Suspendidos</h6>
-                <i class="fas fa-exclamation-triangle"></i>
+                <i class="fas fa-clock"></i>
             </div>
             <div class="kpi-card-body">
                 <div class="kpi-number"><?= number_format($totals['total_contratos_suspendidos'] ?? 0) ?></div>
@@ -1056,36 +1137,47 @@ $this->registerJs("
             </div>
         </div>
 
+        <!-- Card 4: Contratos Anulados (New - Red) -->
+        <div class="kpi-card danger">
+            <div class="kpi-card-header">
+                <h6><i class="fas fa-ban mr-2"></i> Contratos Anulados</h6>
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="kpi-card-body">
+                <div class="kpi-number"><?= number_format($totals['total_contratos_anulados'] ?? 0) ?></div>
+                <div class="kpi-label">
+                    <i class="fas fa-ban mr-1"></i> Cancelados permanentemente
+                </div>
+            </div>
+        </div>
+
         <!-- ============================================================ -->
-        <!-- NEW CARD 4: Críticos (Más de 3 cuotas vencidas)              -->
-        <!-- UPDATED: Dark Amber/Orange color for better distinction      -->
+        <!-- CARD 5: Críticos (Más de 3 cuotas vencidas)                  -->
         <!-- ============================================================ -->
         <div class="kpi-card critical" style="background: linear-gradient(135deg, #cc7a00 0%, #8a5200 100%); border-color: #a86600;">
             <div class="kpi-card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.15);">
-                <h6 style="color: #ffffff; font-weight: 700; margin: 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                <h6 style="color: #ffffff; font-weight: 700; margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
                     <i class="fas fa-skull-crossbones mr-2" style="color: #ffcc80;"></i>
                     <?= $hasClinicAccess ? 'Críticos en su Clínica' : 'Afiliados Críticos' ?>
                 </h6>
-                <i class="fas fa-exclamation-circle" style="color: #ffcc80; font-size: 1.5rem; opacity: 0.9;"></i>
+                <i class="fas fa-exclamation-circle" style="color: #ffcc80; font-size: 1.4rem; opacity: 0.9;"></i>
             </div>
             <div class="kpi-card-body" style="padding: 0 20px 20px 20px;">
                 <!-- MAIN NUMBER - Inline styles directly on the element -->
-                <div class="kpi-number" style="color: #ffffff; font-size: 2.5rem; font-weight: 700; margin: 0; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                <div class="kpi-number" style="color: #ffffff; font-size: 2.1rem; font-weight: 700; margin: 0; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
                     <?= number_format($totals['critical_delinquency']['count'] ?? 0) ?>
                     <?php if (($totals['critical_delinquency']['count'] ?? 0) > 0): ?>
-                        <!-- PERCENTAGE TEXT - Inline styles directly on the span -->
-                        <span style="color: #ffffff; font-size: 1rem; font-weight: 500; margin-left: 5px;">
-                            (<?= round(($totals['critical_delinquency']['count'] / max($totals['total_contratos_suspendidos'] ?? 1, 1)) * 100) ?>% de suspendidos)
+                        <span style="color: #ffffff; font-size: 0.9rem; font-weight: 500; margin-left: 5px;">
+                            (<?= round(($totals['critical_delinquency']['count'] / max($totals['total_contratos_suspendidos'] ?? 1, 1)) * 100) ?>%)
                         </span>
                     <?php endif; ?>
                 </div>
-                <!-- LABEL - Inline styles directly on the element -->
                 <div class="kpi-label" style="color: #ffffff; font-size: 0.7rem; opacity: 1; margin-top: 8px;">
                     <i class="fas fa-exclamation-triangle mr-1" style="color: #ffffff;"></i>
                     Con 3+ cuotas vencidas
                     <?php if (($totals['critical_delinquency']['total_vencidas_cuotas'] ?? 0) > 0): ?>
                         <span style="color: #ffffff; display: block; font-size: 0.65rem; margin-top: 2px; font-weight: 400;">
-                            Total: <?= number_format($totals['critical_delinquency']['total_vencidas_cuotas'] ?? 0) ?> cuotas vencidas
+                            Total: <?= number_format($totals['critical_delinquency']['total_vencidas_cuotas'] ?? 0) ?> cuotas
                             (prom. <?= $totals['critical_delinquency']['average_vencidas'] ?? 0 ?> c/u)
                         </span>
                     <?php endif; ?>
@@ -1099,7 +1191,6 @@ $this->registerJs("
     <!-- ============================================================ -->
     <?php if (($totals['critical_delinquency']['count'] ?? 0) > 0): ?>
         <?php
-        // Get top 5 critical delinquents
         $topCritical = $searchModel->getTopCriticalDelinquents(5, Yii::$app->request->queryParams);
         ?>
         <div class="card mb-4" style="border-left: 4px solid #cc7a00;">
@@ -1252,7 +1343,7 @@ $this->registerJs("
                 </div>
             </div>
 
-            <!-- Meta Achievement Table - With Counter -->
+            <!-- Meta Achievement Table -->
             <?php if (!empty($metaSummary['detalle_por_clinica'])): ?>
                 <div class="table-responsive">
                     <table class="table table-hover">
@@ -1369,12 +1460,32 @@ $this->registerJs("
 
             <!-- Chart: Timeline -->
             <div class="card mt-4">
-                <div class="card-header bg-success text-white">
-                    <i class="fas fa-chart-line mr-2"></i> Evolución de Registros (Últimos 12 meses)
+                <div class="card-header timeline-card-header d-flex justify-content-between align-items-center">
+                    <span class="timeline-title" style="color: #ffffff !important;">
+                        <i class="fas fa-chart-line mr-2" style="color: #ffffff !important;"></i> Evolución de Registros (Últimos 12 meses)
+                    </span>
+                    <?php if (!empty($chartData['timelineLabels'])): ?>
+                        <button type="button"
+                            class="btn btn-sm timeline-export-btn"
+                            id="exportTimelinePdfBtn"
+                            title="Exportar gráfico a PDF">
+                            <i class="fas fa-file-pdf mr-1" style="color: #ffffff;"></i>
+                            <span class="d-none d-md-inline">Exportar PDF</span>
+                        </button>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($chartData['timelineLabels'])): ?>
-                        <canvas id="timelineChart" height="300"></canvas>
+                        <div class="timeline-chart-wrapper">
+                            <canvas id="timelineChart" height="300"></canvas>
+                        </div>
+                        <!-- Hidden loading indicator -->
+                        <div id="timelineExportLoading" class="text-center py-3" style="display: none;">
+                            <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
+                                <span class="sr-only">Generando PDF...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Generando PDF, por favor espere...</p>
+                        </div>
                     <?php else: ?>
                         <div class="alert alert-info text-center">No hay datos para mostrar</div>
                     <?php endif; ?>
@@ -1562,8 +1673,16 @@ $this->registerJs("
                                 <td class="text-center"><span class="badge badge-info"><?= number_format($clinic['tipo_individual']) ?></span></td>
                                 <td class="text-center"><span class="badge badge-warning"><?= number_format($clinic['tipo_corporativo']) ?></span></td>
                                 <td class="text-center"><span class="badge badge-success"><?= number_format($clinic['contratos_activos'] ?? 0) ?></span></td>
-                                <td class="text-center"><span class="badge badge-danger"><?= number_format($clinic['contratos_suspendidos'] ?? 0) ?></span></td>
-                                <td class="text-center"><span class="badge badge-secondary"><?= number_format($clinic['contratos_anulados'] ?? 0) ?></span></td>
+                                <td class="text-center">
+                                    <span class="badge" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: #ffffff !important; font-size: 0.9rem; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 500; display: inline-block; min-width: 70px;">
+                                        <?= number_format($clinic['contratos_suspendidos'] ?? 0) ?>
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge" style="background: linear-gradient(135deg, #d13438 0%, #a80000 100%); color: #ffffff !important; font-size: 0.9rem; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 500; display: inline-block; min-width: 70px;">
+                                        <?= number_format($clinic['contratos_anulados'] ?? 0) ?>
+                                    </span>
+                                </td>
                             </tr>
                             <?php $counter++; ?>
                         <?php endforeach; ?>
@@ -1625,19 +1744,19 @@ $this->registerJs("
 
             <div class="total-card suspended">
                 <div class="total-card-icon">
-                    <i class="fas fa-pause-circle" style="color: #dc3545;"></i>
+                    <i class="fas fa-pause-circle" style="color: #6c757d;"></i>
                 </div>
                 <div class="total-card-label">SUSPENDIDOS</div>
-                <div class="total-card-value"><?= number_format($totalSuspendidos) ?></div>
+                <div class="total-card-value" style="color: #6c757d;"><?= number_format($totalSuspendidos) ?></div>
                 <div class="total-card-sub">con cuotas vencidas</div>
             </div>
 
             <div class="total-card">
                 <div class="total-card-icon">
-                    <i class="fas fa-ban" style="color: #6c757d;"></i>
+                    <i class="fas fa-ban" style="color: #dc3545;"></i>
                 </div>
                 <div class="total-card-label">ANULADOS</div>
-                <div class="total-card-value"><?= number_format($totalAnulados) ?></div>
+                <div class="total-card-value" style="color: #dc3545;"><?= number_format($totalAnulados) ?></div>
                 <div class="total-card-sub">contratos cancelados</div>
             </div>
         </div>
@@ -1756,7 +1875,7 @@ $this->registerJs("
     const timelineData = $timelineChartData;
     
     if (timelineData.labels && timelineData.labels.length > 0) {
-        new Chart(timelineCtx, {
+        window.timelineChartInstance = new Chart(timelineCtx, {
             type: 'line',
             data: {
                 labels: timelineData.labels,
@@ -1842,5 +1961,255 @@ $this->registerJs("
             }
         });
     }
+
+    // ============================================================
+    // TIMELINE CHART PDF EXPORT FUNCTIONALITY
+    // ============================================================
+    (function() {
+        'use strict';
+
+        const EXPORT_CONFIG = {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            padding: 20,
+            imageFormat: 'image/png',
+            quality: 1.0
+        };
+
+        function getTimelineChartInstance() {
+            if (window.timelineChartInstance) {
+                return window.timelineChartInstance;
+            }
+
+            if (typeof Chart === 'undefined' || !Chart.instances) {
+                return null;
+            }
+
+            for (let id in Chart.instances) {
+                const chart = Chart.instances[id];
+                if (chart && chart.canvas && chart.canvas.id === 'timelineChart') {
+                    return chart;
+                }
+            }
+
+            return null;
+        }
+
+        function captureChartImage(chart) {
+            return new Promise(function(resolve, reject) {
+                try {
+                    const originalCanvas = chart.canvas;
+                    const exportCanvas = document.createElement('canvas');
+                    const ctx = exportCanvas.getContext('2d');
+
+                    const scale = EXPORT_CONFIG.scale;
+                    const padding = EXPORT_CONFIG.padding;
+                    const originalWidth = originalCanvas.width;
+                    const originalHeight = originalCanvas.height;
+
+                    exportCanvas.width = (originalWidth + padding * 2) * scale;
+                    exportCanvas.height = (originalHeight + padding * 2) * scale;
+
+                    ctx.fillStyle = EXPORT_CONFIG.backgroundColor;
+                    ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+                    ctx.scale(scale, scale);
+
+                    ctx.drawImage(
+                        originalCanvas,
+                        padding,
+                        padding,
+                        originalWidth,
+                        originalHeight
+                    );
+
+                    const imageData = exportCanvas.toDataURL(
+                        EXPORT_CONFIG.imageFormat,
+                        EXPORT_CONFIG.quality
+                    );
+
+                    resolve(imageData);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        function getCurrentFilters() {
+            const filters = {};
+
+            const checkedClinics = document.querySelectorAll('.clinic-checkbox:checked');
+            if (checkedClinics.length > 0) {
+                filters.clinica_ids = Array.from(checkedClinics).map(function(cb) {
+                    return parseInt(cb.value, 10);
+                });
+            }
+
+            const tipoAfiliado = document.querySelector('[name=\"AfiliadosReportSearch[user_datos_type_id]\"]');
+            if (tipoAfiliado && tipoAfiliado.value) {
+                filters.user_datos_type_id = tipoAfiliado.value;
+            }
+
+            const planId = document.querySelector('[name=\"AfiliadosReportSearch[plan_id]\"]');
+            if (planId && planId.value) {
+                filters.plan_id = planId.value;
+            }
+
+            const estatus = document.querySelector('[name=\"AfiliadosReportSearch[estatus]\"]');
+            if (estatus && estatus.value) {
+                filters.estatus = estatus.value;
+            }
+
+            return filters;
+        }
+
+        function setLoadingState(isLoading) {
+            const btn = document.getElementById('exportTimelinePdfBtn');
+            const loadingDiv = document.getElementById('timelineExportLoading');
+            const chartWrapper = document.querySelector('.timeline-chart-wrapper');
+
+            if (btn) {
+                btn.disabled = isLoading;
+                if (isLoading) {
+                    btn.innerHTML = '<i class=\"fas fa-spinner fa-spin mr-1\"></i><span class=\"d-none d-md-inline\">Generando...</span>';
+                } else {
+                    btn.innerHTML = '<i class=\"fas fa-file-pdf mr-1\" style=\"color: #ffffff;\"></i><span class=\"d-none d-md-inline\">Exportar PDF</span>';
+                }
+            }
+
+            if (loadingDiv) {
+                loadingDiv.style.display = isLoading ? 'block' : 'none';
+            }
+
+            if (chartWrapper) {
+                chartWrapper.style.opacity = isLoading ? '0.5' : '1';
+                chartWrapper.style.pointerEvents = isLoading ? 'none' : 'auto';
+            }
+        }
+
+        function showNotification(message, type) {
+            let toastContainer = document.getElementById('pdfExportToastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'pdfExportToastContainer';
+                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+                document.body.appendChild(toastContainer);
+            }
+
+            const bgColor = type === 'error' ? '#d13438' : (type === 'success' ? '#107c10' : '#0078d4');
+            const icon = type === 'error' ? 'fa-exclamation-circle' : (type === 'success' ? 'fa-check-circle' : 'fa-info-circle');
+
+            const toast = document.createElement('div');
+            toast.style.cssText = 'background: ' + bgColor + '; color: white; padding: 14px 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); font-family: Segoe UI, sans-serif; font-size: 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; animation: slideInRight 0.3s ease; max-width: 350px;';
+            toast.innerHTML = '<i class=\"fas ' + icon + '\"></i><span>' + message + '</span>';
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(function() {
+                toast.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(function() {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        function exportTimelinePdf() {
+            const chart = getTimelineChartInstance();
+
+            if (!chart) {
+                showNotification('No se pudo encontrar el gráfico. Por favor, recargue la página.', 'error');
+                return;
+            }
+
+            setLoadingState(true);
+
+            captureChartImage(chart)
+                .then(function(imageData) {
+                    const formData = new FormData();
+                    formData.append('chartImage', imageData);
+                    formData.append('chartTitle', 'Evolución de Registros (Últimos 12 meses)');
+                    formData.append('chartSubtitle', 'Análisis de crecimiento de afiliados por tipo');
+
+                    const filters = getCurrentFilters();
+                    Object.keys(filters).forEach(function(key) {
+                        if (Array.isArray(filters[key])) {
+                            filters[key].forEach(function(value) {
+                                formData.append('filters[' + key + '][]', value);
+                            });
+                        } else {
+                            formData.append('filters[' + key + ']', filters[key]);
+                        }
+                    });
+
+                    return fetch('" . Url::to(['exportar-timeline-pdf']) . "', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-Token': '" . Yii::$app->request->csrfToken . "'
+                        }
+                    });
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Error en el servidor: ' + response.status);
+                    }
+
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.indexOf('application/pdf') !== -1) {
+                        return response.blob();
+                    } else {
+                        return response.text().then(function(text) {
+                            throw new Error('Respuesta inesperada del servidor');
+                        });
+                    }
+                })
+                .then(function(blob) {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+
+                    const now = new Date();
+                    const dateStr = now.getFullYear() + '-' +
+                        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(now.getDate()).padStart(2, '0') + '_' +
+                        String(now.getHours()).padStart(2, '0') + '-' +
+                        String(now.getMinutes()).padStart(2, '0') + '-' +
+                        String(now.getSeconds()).padStart(2, '0');
+
+                    link.download = 'Evolucion_Registros_' + dateStr + '.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+
+                    setTimeout(function() {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+
+                    showNotification('PDF generado exitosamente', 'success');
+                })
+                .catch(function(error) {
+                    console.error('Error exporting timeline PDF:', error);
+                    showNotification('Error al generar el PDF: ' + error.message, 'error');
+                })
+                .finally(function() {
+                    setLoadingState(false);
+                });
+        }
+
+        function init() {
+            const exportBtn = document.getElementById('exportTimelinePdfBtn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportTimelinePdf);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
 ");
 ?>

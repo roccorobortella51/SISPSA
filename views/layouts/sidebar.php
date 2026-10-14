@@ -283,6 +283,10 @@ $userEmail = $userIdentity->email ?? '';
                     'options' => $data,
                 ];
 
+                if (strcasecmp(trim($menu['name']), 'Corporativos') === 0) {
+                    $menuItem['label'] = '<span class="menu-text">' . $menu['name'] . ' <span class="badge badge-warning ml-2">Mejorado</span></span>';
+                }
+
                 // Add icon to menu
                 if (!empty($menu['children'])) {
                     // Has children - dropdown menu

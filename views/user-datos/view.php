@@ -8,6 +8,7 @@ use app\models\AgenteFuerza;
 use app\components\SaldoHelper;
 use yii\bootstrap4\Modal;
 
+
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
 /** @var string $estado */
@@ -27,24 +28,74 @@ if (!function_exists('formatDateTime')) {
     }
 }
 
+if (!function_exists('isLegacyDeadUrl')) {
+    /**
+     * Returns true if the given stored URL points to a known-dead
+     * external host that can no longer serve images.
+     *
+     * This is used to gracefully fall back to local default avatars
+     * for records whose photo was uploaded to the old Supabase bucket
+     * (mzatwtlqduhcphhnvwvk.supabase.co) that is no longer available.
+     *
+     * @param string|null $url
+     * @return bool
+     */
+    function isLegacyDeadUrl($url)
+    {
+        if (empty($url)) {
+            return false;
+        }
+
+        $deadHosts = [
+            'mzatwtlqduhcphhnvwvk.supabase.co', // old Supabase project (dead)
+        ];
+
+        $host = parse_url($url, PHP_URL_HOST);
+        if ($host === null) {
+            return false;
+        }
+
+        foreach ($deadHosts as $deadHost) {
+            if (strcasecmp($host, $deadHost) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('getDefaultAvatar')) {
     /**
-     * Returns the default avatar path based on sex.
-     * Looks in @web/img/avatars/woman.png or @web/img/avatars/man.png
+     * Returns the default avatar URL based on sex.
+     * Verifies the file exists on disk; falls back to a generic placeholder
+     * if neither the sex-specific file nor the placeholder is available.
      *
      * @param string|null $sexo
-     * @return string Relative URL to the default avatar
+     * @return string Web URL to the default avatar
      */
     function getDefaultAvatar($sexo)
     {
         $sexo = strtolower(trim((string)$sexo));
 
-        if (in_array($sexo, ['femenino', 'f', 'mujer'])) {
-            return Yii::getAlias('@web/img/avatars/woman.png');
+        $candidates = in_array($sexo, ['femenino', 'f', 'mujer'], true)
+            ? ['img/avatars/woman.png', 'img/avatars/man.png', 'img/avatars/placeholder.png']
+            : ['img/avatars/man.png', 'img/avatars/woman.png', 'img/avatars/placeholder.png'];
+
+        foreach ($candidates as $relative) {
+            $fsPath = Yii::getAlias('@webroot/' . $relative);
+            if (is_file($fsPath)) {
+                return Yii::getAlias('@web/' . $relative);
+            }
         }
 
-        // Default to man for Masculino, M, or unknown
-        return Yii::getAlias('@web/img/avatars/man.png');
+        // Last-resort: inline SVG data URI (never 404s)
+        return 'data:image/svg+xml;utf8,'
+            . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+                . '<circle cx="50" cy="50" r="50" fill="#c8c6c4"/>'
+                . '<circle cx="50" cy="40" r="18" fill="#605e5c"/>'
+                . '<path d="M20 90c0-16 13-28 30-28s30 12 30 28z" fill="#605e5c"/>'
+                . '</svg>');
     }
 }
 
@@ -89,7 +140,7 @@ $this->registerCss("
     --ms-orange: #D83B01;
     --ms-teal: #008272;
     --ms-pink: #C239B3;
-    --ms-gray-100: #bfd8ea;
+    --ms-gray-100: #f3f2f1;
     --ms-gray-200: #EDEBE9;
     --ms-gray-300: #E1DFDD;
     --ms-gray-400: #C8C6C4;
@@ -418,6 +469,7 @@ html, body, .main-container {
     align-items: center;
     gap: 0.5rem;
     background: var(--ms-gray-100);
+    color: var(--ms-gray-900);
     border-radius: var(--ms-radius) var(--ms-radius) 0 0;
 }
 
@@ -429,7 +481,55 @@ html, body, .main-container {
     margin: 0;
     font-weight: 600;
     font-size: 0.9rem !important;
-    color: var(--ms-gray-900);
+    color: inherit;
+}
+
+.ms-card-colored {
+    border-top: 3px solid var(--ms-card-accent);
+}
+.ms-card-colored > .ms-card-header {
+    background: var(--ms-card-header-bg);
+    border-bottom-color: var(--ms-card-border);
+}
+.ms-card-personal {
+    --ms-card-accent: #0078d4;
+    --ms-card-header-bg: #e5f1fb;
+    --ms-card-border: #c7e0f4;
+}
+.ms-card-contracting {
+    --ms-card-accent: #6c2b8a;
+    --ms-card-header-bg: #f3e8f7;
+    --ms-card-border: #e2cce9;
+}
+.ms-card-plan {
+    --ms-card-accent: #008272;
+    --ms-card-header-bg: #e6f4f2;
+    --ms-card-border: #bfe3dd;
+}
+.ms-card-location {
+    --ms-card-accent: #c65911;
+    --ms-card-header-bg: #fff0e1;
+    --ms-card-border: #f2d0b4;
+}
+.ms-card-additional {
+    --ms-card-accent: #008c95;
+    --ms-card-header-bg: #e4f7f7;
+    --ms-card-border: #bce5e4;
+}
+.ms-card-sociodemographic {
+    --ms-card-accent: #8a6d00;
+    --ms-card-header-bg: #fff8db;
+    --ms-card-border: #eadb9e;
+}
+.ms-card-contact {
+    --ms-card-accent: #c23972;
+    --ms-card-header-bg: #fdeaf2;
+    --ms-card-border: #f1c8da;
+}
+.ms-card-banking {
+    --ms-card-accent: #d13438;
+    --ms-card-header-bg: #fde9e8;
+    --ms-card-border: #f3c5c5;
 }
 
 .ms-card-body {
@@ -1297,6 +1397,9 @@ $historialSiniestros = SaldoHelper::obtenerHistorialSiniestros($model->id);
 // Usa el helper existente en el modelo Contratos para obtener
 // el contrato vigente (Activo, Registrado o Creado Manual).
 $contratoActivo = \app\models\Contratos::getContratoActivo($model->id);
+$coverageSummary = $contratoActivo
+    ? \app\components\CoverageHelper::getCoverageSummary((int)$model->id, (int)$contratoActivo->id)
+    : null;
 
 // Determinar el estatus a mostrar:
 // - Si hay contrato activo, usar su estatus
@@ -1370,7 +1473,9 @@ $currentRoute = Yii::$app->controller->getRoute();
                     // ============================================
                     // Foto de Perfil with Default Fallback
                     // ============================================
-                    $hasSelfie = !empty($model->selfie);
+                    // Treat legacy Supabase URLs as "no photo" so we
+                    // fall back to the local default avatar.
+                    $hasSelfie = !empty($model->selfie) && !isLegacyDeadUrl($model->selfie);
                     $selfieSrc = $hasSelfie ? $model->selfie : getDefaultAvatar($model->sexo);
                     $selfieCaption = $hasSelfie
                         ? 'Foto de Perfil - ' . Html::encode($model->nombres . ' ' . $model->apellidos)
@@ -1409,7 +1514,9 @@ $currentRoute = Yii::$app->controller->getRoute();
                         // ============================================
                         // Cédula de Identidad with Default Fallback
                         // ============================================
-                        $hasIdImage = !empty($model->imagen_identificacion);
+                        // Same legacy-host guard as the selfie above.
+                        $hasIdImage = !empty($model->imagen_identificacion)
+                            && !isLegacyDeadUrl($model->imagen_identificacion);
                         $idImageSrc = $hasIdImage ? $model->imagen_identificacion : getDefaultIdImage();
                         $idImageCaption = $hasIdImage
                             ? 'Documento de Identificación - ' . Html::encode($model->nombres . ' ' . $model->apellidos)
@@ -1509,11 +1616,6 @@ $currentRoute = Yii::$app->controller->getRoute();
     <div class="ms-action-row">
         <div class="ms-action-row-inner">
             <?= Html::a(
-                '<i class="fas fa-file-pdf"></i> Contrato',
-                ['user-datos/generar-contratov', 'id' => $model->id],
-                ['class' => 'ms-btn ms-btn-pdf', 'target' => '_blank', 'data-pjax' => '0']
-            ) ?>
-            <?= Html::a(
                 '<i class="fas fa-edit"></i> Actualizar',
                 Url::to(array_merge(['update', 'id' => $model->id], ($clinica && $clinica->id !== null ? ['clinica_id' => $clinica->id] : []))),
                 ['class' => 'ms-btn ms-btn-edit']
@@ -1575,7 +1677,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 </div>
 
 <!-- Personal Information -->
-<div class="ms-card">
+<div class="ms-card ms-card-colored ms-card-personal">
     <div class="ms-card-header">
         <i class="fas fa-address-card" style="color: var(--ms-blue);"></i>
         <h5>Datos Personales</h5>
@@ -1649,9 +1751,95 @@ $currentRoute = Yii::$app->controller->getRoute();
     </div>
 </div>
 
+<?php if ($coverageSummary && !empty($coverageSummary['has_coverage'])): ?>
+    <?php
+    $effectiveStart = $coverageSummary['effective_start'];
+    $monthsCovered = (int)$coverageSummary['months_covered'];
+    $chainCount = (int)$coverageSummary['contracts_in_chain'];
+    $brokenBefore = $coverageSummary['broken_before'];
+    $hasInterruption = !empty($brokenBefore);
+    $formattedStart = Yii::$app->formatter->asDate($effectiveStart, 'd/M/Y');
+
+    if ($monthsCovered >= 12) {
+        $years = (int)floor($monthsCovered / 12);
+        $months = $monthsCovered % 12;
+        $coverageDuration = $years . ' año' . ($years !== 1 ? 's' : '')
+            . ($months > 0 ? ' y ' . $months . ' mes' . ($months !== 1 ? 'es' : '') : '');
+    } elseif ($monthsCovered > 0) {
+        $coverageDuration = $monthsCovered . ' mes' . ($monthsCovered !== 1 ? 'es' : '');
+    } else {
+        $coverageDuration = 'menos de un mes';
+    }
+    ?>
+    <div class="ms-card ms-card-colored ms-card-continuity" style="border-top: 3px solid <?= $hasInterruption ? '#f7630c' : '#107c10' ?>;">
+        <div class="ms-card-header" style="
+            background: <?= $hasInterruption ? '#fff4ce' : '#eff8ec' ?>;
+            color: <?= $hasInterruption ? '#8a3707' : '#0b5a0b' ?>;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom-color: <?= $hasInterruption ? '#f7d9a8' : '#cde7ca' ?>;
+        ">
+            <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+                <i class="fas <?= $hasInterruption ? 'fa-triangle-exclamation' : 'fa-shield-alt' ?>"></i>
+                <h5>Cobertura Continua</h5>
+            </span>
+            <span style="
+                display: inline-flex; align-items: center; gap: 4px;
+                font-size: 0.68rem; font-weight: 700;
+                color: <?= $hasInterruption ? '#8a3707' : '#107c10' ?>;
+                background: <?= $hasInterruption ? '#fed9cc' : '#dff6dd' ?>;
+                padding: 2px 8px; border-radius: 10px;
+                text-transform: uppercase; white-space: nowrap;
+            ">
+                <i class="fas fa-circle" style="font-size: 6px;"></i>
+                <?= $hasInterruption ? 'CON INTERRUPCIÓN' : 'VIGENTE' ?>
+            </span>
+        </div>
+        <div class="ms-card-body">
+            <div class="ms-info-grid">
+                <div class="ms-info-item">
+                    <span class="ms-info-label">Cubierto desde:</span>
+                    <span class="ms-info-value"><?= Html::encode($formattedStart) ?></span>
+                </div>
+                <div class="ms-info-item">
+                    <span class="ms-info-label">Antigüedad:</span>
+                    <span class="ms-info-value"><?= Html::encode(ucfirst($coverageDuration)) ?></span>
+                </div>
+                <div class="ms-info-item">
+                    <span class="ms-info-label">Contratos:</span>
+                    <span class="ms-info-value"><?= $chainCount ?> en la cadena</span>
+                </div>
+            </div>
+            <?php if ($hasInterruption): ?>
+                <div style="
+                    margin-top: 12px; padding: 10px 12px;
+                    background: #fff4ce; border-left: 3px solid #f7630c;
+                    border-radius: 4px; font-size: 0.78rem;
+                    color: #4a2c0e; line-height: 1.5;
+                ">
+                    <i class="fas fa-circle-exclamation" style="color: #f7630c; margin-right: 4px;"></i>
+                    Interrupción de <strong><?= (int)$brokenBefore['gap_days'] ?> días</strong>.
+                    Los períodos de espera cuentan desde cero.
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php else: ?>
+    <div class="ms-card ms-card-continuity-empty" style="border-top: 3px solid #596b8a;">
+        <div class="ms-card-header" style="background: #eef2f8; color: #354764; border-bottom-color: #d3dce9;">
+            <i class="fas fa-info-circle" style="color: #596b8a;"></i>
+            <h5>Cobertura Continua</h5>
+        </div>
+        <div class="ms-card-body" style="font-size: 0.82rem; color: #605e5c; line-height: 1.5;">
+            No se encontró una cadena de cobertura continua registrada para este afiliado.
+            Los períodos de espera se calculan desde el inicio del contrato actual.
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php if ($model->tiene_contratante_diferente): ?>
     <!-- Contracting Party Information -->
-    <div class="ms-card">
+    <div class="ms-card ms-card-colored ms-card-contracting">
         <div class="ms-card-header">
             <i class="fas fa-user-tie" style="color: var(--ms-purple);"></i>
             <h5>Información del Contratante</h5>
@@ -1659,19 +1847,19 @@ $currentRoute = Yii::$app->controller->getRoute();
         <div class="ms-card-body">
             <div class="ms-info-grid">
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Nombres:</span>
+                    <span class="ms-info-label"><i class="fas fa-user mr-2"></i>Nombres:</span>
                     <span class="ms-info-value"><?= Html::encode($model->nombre_contratante ?? 'N/A') ?></span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Apellidos:</span>
+                    <span class="ms-info-label"><i class="fas fa-user mr-2"></i>Apellidos:</span>
                     <span class="ms-info-value"><?= Html::encode($model->apellido_contratante ?? 'N/A') ?></span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Cédula:</span>
+                    <span class="ms-info-label"><i class="fas fa-id-card mr-2"></i>Cédula:</span>
                     <span class="ms-info-value"><?= Html::encode(($model->tipo_cedula_contratante ? $model->tipo_cedula_contratante . '-' : '') . ($model->cedula_contratante ?? 'N/A')) ?></span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Fecha Nacimiento:</span>
+                    <span class="ms-info-label"><i class="fas fa-calendar-alt mr-2"></i>Fecha Nacimiento:</span>
                     <span class="ms-info-value">
                         <?php
                         if (!empty($model->fecha_nacimiento_contratante)) {
@@ -1687,29 +1875,39 @@ $currentRoute = Yii::$app->controller->getRoute();
                     </span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Email:</span>
+                    <span class="ms-info-label"><i class="fas fa-envelope mr-2"></i>Email:</span>
                     <span class="ms-info-value">
                         <?= !empty($model->email_contratante) ? Html::a(Html::encode($model->email_contratante), 'mailto:' . Html::encode($model->email_contratante)) : 'N/A' ?>
                     </span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Sexo:</span>
+                    <span class="ms-info-label"><i class="fas fa-venus-mars mr-2"></i>Sexo:</span>
                     <span class="ms-info-value"><?= Html::encode($model->sexo_contratante ?? 'N/A') ?></span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Nacionalidad:</span>
+                    <span class="ms-info-label"><i class="fas fa-flag mr-2"></i>Nacionalidad:</span>
                     <span class="ms-info-value"><?= Html::encode($model->nacionalidad_contratante ?? 'N/A') ?></span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Estado Civil:</span>
+                    <span class="ms-info-label"><i class="fas fa-heart mr-2"></i>Estado Civil:</span>
                     <span class="ms-info-value"><?= Html::encode($model->estado_civil_contratante ?? 'N/A') ?></span>
                 </div>
+
+                <!-- ============================================ -->
+                <!-- NEW FIELDS: Profesión & Ocupación            -->
+                <!-- Placed together for logical grouping         -->
+                <!-- ============================================ -->
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Ocupación:</span>
-                    <span class="ms-info-value"><?= Html::encode($model->ocupacion_contratante ?? 'N/A') ?></span>
+                    <span class="ms-info-label"><i class="fas fa-user-graduate mr-2"></i>Profesión:</span>
+                    <span class="ms-info-value"><?= Html::encode($model->profesion_contratante ?? 'N/A') ?></span>
                 </div>
                 <div class="ms-info-item">
-                    <span class="ms-info-label">Teléfono Celular:</span>
+                    <span class="ms-info-label"><i class="fas fa-briefcase mr-2"></i>Ocupación:</span>
+                    <span class="ms-info-value"><?= Html::encode($model->ocupacion_contratante ?? 'N/A') ?></span>
+                </div>
+
+                <div class="ms-info-item">
+                    <span class="ms-info-label"><i class="fas fa-mobile-alt mr-2"></i>Teléfono Celular:</span>
                     <span class="ms-info-value"><?= Html::encode($model->telefono_celular_contratante ?? 'N/A') ?></span>
                 </div>
             </div>
@@ -1718,7 +1916,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 <?php endif; ?>
 
 <!-- Plan Details -->
-<div class="ms-card">
+<div class="ms-card ms-card-colored ms-card-plan">
     <div class="ms-card-header">
         <i class="fas fa-hand-holding-usd" style="color: var(--ms-purple);"></i>
         <h5>Detalles del Plan</h5>
@@ -1778,7 +1976,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 </div>
 
 <!-- Location -->
-<div class="ms-card">
+<div class="ms-card ms-card-colored ms-card-location">
     <div class="ms-card-header">
         <i class="fas fa-map-marker-alt" style="color: #6610f2;"></i>
         <h5>Ubicación</h5>
@@ -1810,7 +2008,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 </div>
 
 <!-- Additional Information -->
-<div class="ms-card">
+<div class="ms-card ms-card-colored ms-card-additional">
     <div class="ms-card-header">
         <i class="fas fa-info-circle" style="color: var(--ms-gray-600);"></i>
         <h5>Información Adicional</h5>
@@ -1852,7 +2050,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 </div>
 
 <!-- Sociodemographic Information -->
-<div class="ms-card">
+<div class="ms-card ms-card-colored ms-card-sociodemographic">
     <div class="ms-card-header">
         <i class="fas fa-file-alt" style="color: var(--ms-green);"></i>
         <h5>Información Sociodemográfica y Económica</h5>
@@ -1901,7 +2099,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 
 <!-- Contact Information -->
 <?php if (!empty($model->telefono_residencia) || !empty($model->telefono_oficina) || !empty($model->direccion_residencia) || !empty($model->direccion_oficina)): ?>
-    <div class="ms-card">
+    <div class="ms-card ms-card-colored ms-card-contact">
         <div class="ms-card-header">
             <i class="fas fa-building" style="color: #fd7e14;"></i>
             <h5>Información de Contacto y Domicilio Adicional</h5>
@@ -1934,7 +2132,7 @@ $currentRoute = Yii::$app->controller->getRoute();
 <?php endif; ?>
 
 <!-- Banking Information -->
-<div class="ms-card">
+<div class="ms-card ms-card-colored ms-card-banking">
     <div class="ms-card-header">
         <i class="fas fa-credit-card" style="color: var(--ms-red);"></i>
         <h5>Información Bancaria</h5>
@@ -1960,36 +2158,6 @@ $currentRoute = Yii::$app->controller->getRoute();
             <div class="ms-info-item">
                 <span class="ms-info-label">Tipo Cuenta:</span>
                 <span class="ms-info-value"><?= Html::encode($model->tipo_cuenta ?? 'N/A') ?></span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Policy Details -->
-<div class="ms-card">
-    <div class="ms-card-header">
-        <i class="fas fa-user-friends" style="color: var(--ms-gray-600);"></i>
-        <h5>Detalles de la Póliza</h5>
-    </div>
-    <div class="ms-card-body">
-        <div class="ms-info-grid">
-            <div class="ms-info-item">
-                <span class="ms-info-label">Cubre Maternidad:</span>
-                <span class="ms-info-value"><?= formatBooleanIcon($model->cobertura_maternidad) ?></span>
-            </div>
-            <div class="ms-info-item">
-                <span class="ms-info-label">Deducible Maternidad:</span>
-                <span class="ms-info-value"><?= Yii::$app->formatter->asCurrency($model->deducible_maternidad ?? 0, 'USD') ?></span>
-            </div>
-            <div class="ms-info-item">
-                <span class="ms-info-label">Límite Maternidad:</span>
-                <span class="ms-info-value"><?= Yii::$app->formatter->asCurrency($model->limite_cobertura_maternidad ?? 0, 'USD') ?></span>
-            </div>
-            <div class="ms-info-item" style="grid-column: 1 / -1;">
-                <span class="ms-info-label">Grupo Familiar:</span>
-                <span class="ms-info-value">
-                    <pre class="p-2 bg-light rounded" style="white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 0.82rem !important;"><?= Html::encode($model->grupo_familiar ?? 'N/A') ?></pre>
-                </span>
             </div>
         </div>
     </div>

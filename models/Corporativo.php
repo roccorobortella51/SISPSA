@@ -12,6 +12,7 @@ use app\models\RmEstado;
 use app\models\RmMunicipio;
 use app\models\RmParroquia;
 use app\models\RmCiudad;
+use app\models\Contratos;
 
 /**
  * This is the model class for table "corporativos".
@@ -285,6 +286,38 @@ class Corporativo extends \yii\db\ActiveRecord
             ->andWhere(['user_datos_type_id' => 2]);
     }
 
+    /**
+     * Affiliates of this corporate that have AT LEAST ONE non-annulled contract.
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getActiveAffiliates()
+    {
+        return $this->hasMany(UserDatos::class, ['afiliado_corporativo_id' => 'id'])
+            ->andWhere(['user_datos_type_id' => 2])
+            ->innerJoin('contratos c', 'c.user_id = user_datos.id')
+            ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+            ->groupBy('user_datos.id');
+    }
+
+    /**
+     * Affiliates of this corporate whose ONLY contracts are annulled
+     * (or who have no contract at all — those count as inactive too).
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getAnnulledAffiliates()
+    {
+        return $this->hasMany(UserDatos::class, ['afiliado_corporativo_id' => 'id'])
+            ->andWhere(['user_datos_type_id' => 2])
+            ->andWhere([
+                'NOT EXISTS',
+                (new \yii\db\Query())
+                    ->from(['c' => 'contratos'])
+                    ->where('c.user_id = user_datos.id')
+                    ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+            ]);
+    }
     /**
      * Gets all employees for this corporate (alias for getEmpleadosAsociados).
      * Use this method for accurate employee counting.

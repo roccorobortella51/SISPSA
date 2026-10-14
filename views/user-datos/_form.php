@@ -13,6 +13,12 @@ use app\models\UserDatosType;
 
 $currentRoute = Yii::$app->controller->getRoute();
 
+// URL for the corporate dates AJAX endpoint (respects baseUrl)
+$corporatePlanesUrl = Url::to(['/corporativo/obtener-planes-por-corporativo']);
+
+// URL for the cédula-lookup AJAX endpoint (respects baseUrl)
+$cedulaLookupUrl = Url::to(['user-datos/check-existing-user']);
+
 /** @var yii\web\View $this */
 /** @var app\models\UserDatos $model */
 /** @var app\models\Contratos $modelContrato */
@@ -106,10 +112,9 @@ $currentRoute = Yii::$app->controller->getRoute();
                     <?= $form->field($model, 'afiliado_corporativo_id')->widget(Select2::class, [
                         'data' => UserHelper::getCorporativoList(),
                         'options' => [
-                            'id' => 'afiliado_corporativo_id',
+                            'id' => 'corporativo_id',
                             'placeholder' => 'Seleccione...',
                             'class' => 'form-control form-control-lg corporativo-required',
-                            'id' => 'corporativo_id'
                         ],
                         'pluginOptions' => [
                             'allowClear' => true,
@@ -166,11 +171,12 @@ $currentRoute = Yii::$app->controller->getRoute();
                         'type' => 'date',
                         'readonly' => true,
                         'disabled' => true,
-                        'placeholder' => 'Fecha calculada automáticamente'
+                        'placeholder' => 'Fecha calculada automáticamente',
+                        'id' => 'contrato-fecha-ven'
                     ])->label('Fecha de Vencimiento <span class="text-muted">(calculada)</span>') ?>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-6 individual-dates-block">
                     <div class="form-group">
                         <label class="control-label">Duración del Contrato</label>
                         <div class="form-control form-control-lg bg-light" style="
@@ -546,10 +552,10 @@ $currentRoute = Yii::$app->controller->getRoute();
 
             <div class="row">
                 <div class="col-md-3">
-                    <?= $form->field($model, 'nombres')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Ingrese los nombres']) ?>
+                    <?= $form->field($model, 'nombres')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Ingrese los nombres', 'id' => 'userdatos-nombres']) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Ingrese los apellidos']) ?>
+                    <?= $form->field($model, 'apellidos')->textInput(['class' => 'form-control form-control-lg', 'placeholder' => 'Ingrese los apellidos', 'id' => 'userdatos-apellidos']) ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($model, 'email')->textInput(['class' => 'form-control form-control-lg']) ?>
@@ -600,6 +606,33 @@ $currentRoute = Yii::$app->controller->getRoute();
                         'placeholder' => 'Ejemplo: 12345678',
                         'id' => 'userdatos-cedula'
                     ])->label('Cédula de Identidad <span class="text-danger conditional-asterisk">*</span>') ?>
+
+                    <!-- ============================================================ -->
+                    <!-- CÉDULA LOOKUP HINT (name-aware)                              -->
+                    <!-- ============================================================ -->
+                    <div id="cedula-link-hint" class="mt-2" style="display: none;">
+                        <div id="cedula-link-hint-inner" style="
+                            background: linear-gradient(135deg, #f0f6fd 0%, #e5f0fa 100%);
+                            border-left: 4px solid #0078d4;
+                            border-radius: 6px;
+                            padding: 10px 14px;
+                            font-size: 0.85rem;
+                            color: #323130;
+                            display: flex;
+                            align-items: flex-start;
+                            gap: 10px;
+                            transition: all 0.25s ease;
+                        ">
+                            <i id="cedula-link-hint-icon" class="fas fa-user-check" style="color: #0078d4; font-size: 1.1rem; margin-top: 2px; flex-shrink: 0;"></i>
+                            <div style="min-width: 0;">
+                                <strong id="cedula-link-hint-title">Usuario existente detectado.</strong><br>
+                                <span id="cedula-link-hint-name" class="text-muted"></span><br>
+                                <small id="cedula-link-hint-subtext">
+                                    Si los datos que ingrese coinciden con este registro, se vinculará automáticamente como afiliado.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="col-md-3" id="consecutivo-container" style="display: none;">
@@ -1086,7 +1119,32 @@ $currentRoute = Yii::$app->controller->getRoute();
                         ]) ?>
                     </div>
                 </div>
+                <!-- NEW ROW: Profession and Occupation (required when contratante differs) -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <?= $form->field($model, 'profesion_contratante', [
+                            'options' => ['class' => 'form-group'],
+                            'template' => '{label}<div class="input-group">{input}<div class="input-group-append"><span class="input-group-text required-star">*</span></div></div>{error}',
+                        ])->textInput([
+                            'maxlength' => true,
+                            'placeholder' => 'Profesión del contratante',
+                            'class' => 'form-control form-control-lg contratante-field',
+                            'id' => 'userdatos-profesion_contratante'
+                        ]) ?>
+                    </div>
 
+                    <div class="col-md-6">
+                        <?= $form->field($model, 'ocupacion_contratante', [
+                            'options' => ['class' => 'form-group'],
+                            'template' => '{label}<div class="input-group">{input}<div class="input-group-append"><span class="input-group-text required-star">*</span></div></div>{error}',
+                        ])->textInput([
+                            'maxlength' => true,
+                            'placeholder' => 'Ocupación del contratante',
+                            'class' => 'form-control form-control-lg contratante-field',
+                            'id' => 'userdatos-ocupacion_contratante'
+                        ]) ?>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         <?= $form->field($model, 'direccion_residencia_contratante')->textarea([
@@ -1393,33 +1451,197 @@ $currentRoute = Yii::$app->controller->getRoute();
 </script>
 
 <?php
+// ============================================================
+// Pass server-side URLs to JavaScript as global variables.
+// Must be done BEFORE the main nowdoc block (which cannot
+// interpolate PHP variables).
+//
+//   - corporatePlanesUrl : endpoint for corporate contract dates
+//   - cedulaLookupUrl    : endpoint to detect promotable staff users
+// ============================================================
+$this->registerJs(
+    'window.corporatePlanesUrl = ' . \yii\helpers\Json::htmlEncode($corporatePlanesUrl) . ';',
+    \yii\web\View::POS_HEAD
+);
+
+$this->registerJs(
+    'window.cedulaLookupUrl = ' . \yii\helpers\Json::htmlEncode($cedulaLookupUrl) . ';',
+    \yii\web\View::POS_HEAD
+);
+?>
+
+<?php
 $this->registerJs(
     <<<'JS'
 $(document).ready(function() {
     // ============================================================
-    // TOGGLE AFILIADO CORPORATIVO - Show/Hide corporativo field
+    // FECHA INICIO - Auto-calculate expiration date
+    //   fecha_ven = fecha_ini + 1 year − 1 day
+    //
+    // Defined FIRST so refreshCorporateEndDate() can use it as
+    // a fallback when no corporate contract exists.
+    // ============================================================
+    function calcularFechaVencimiento(fechaIni) {
+        if (fechaIni) {
+            var parts = fechaIni.split('-');
+            var year = parseInt(parts[0]);
+            var month = parseInt(parts[1]) - 1;
+            var day = parseInt(parts[2]);
+
+            var fecha = new Date(year, month, day);
+            fecha.setFullYear(fecha.getFullYear() + 1);
+            fecha.setDate(fecha.getDate() - 1);
+
+            var newYear = fecha.getFullYear();
+            var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
+            var newDay = String(fecha.getDate()).padStart(2, '0');
+
+            return newYear + '-' + newMonth + '-' + newDay;
+        }
+        return '';
+    }
+
+    // ============================================================
+    // AUTO-UPPERCASE FOR NAMES AND LAST NAMES
+    // Microsoft Fluent-inspired: instant visual feedback
+    // Converts names to UPPERCASE on blur and paste.
+    // ============================================================
+    (function initUppercaseFields() {
+        const uppercaseFields = [
+            '#userdatos-nombres',
+            '#userdatos-apellidos',
+            '#userdatos-nombre_contratante',
+            '#userdatos-apellido_contratante',
+            '#userdatos-nombre_representante_contratante',
+            '#userdatos-apellido_representante_contratante',
+            '#userdatos-nombre_beneficiario',
+            '#userdatos-nombre_titular',
+            '#userdatos-nombre_declaracion_afiliado',
+            '#userdatos-nombre_declaracion_contratante'
+        ];
+
+        const selector = uppercaseFields.join(', ');
+
+        $(document).on('blur', selector, function () {
+            const $field = $(this);
+            const val = $field.val();
+            if (val && val !== val.toUpperCase()) {
+                $field.val(val.toUpperCase());
+                $field.trigger('change');
+            }
+        });
+
+        $(document).on('paste', selector, function () {
+            const $field = $(this);
+            setTimeout(function () {
+                const val = $field.val();
+                if (val && val !== val.toUpperCase()) {
+                    $field.val(val.toUpperCase());
+                    $field.trigger('change');
+                }
+            }, 0);
+        });
+    })();
+
+    // ============================================================
+    // TOGGLE AFILIADO CORPORATIVO
     // ============================================================
     function toggleAfiliadoCorporativo() {
         var tipoAfiliado = $('#user_datos_type_id_field').val();
         var $container = $('#afiliado_corporativo_container');
         var $corporativoField = $('#corporativo_id');
         var $asterisk = $('.conditional-asterisk');
-        
-        console.log('toggleAfiliadoCorporativo called, tipoAfiliado:', tipoAfiliado);
-        
+
         if (tipoAfiliado == '2') {
-            console.log('Showing corporativo container');
             $container.show();
             $corporativoField.attr('required', true);
             $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
             $asterisk.show();
+            $('.individual-dates-block').hide();
         } else {
-            console.log('Hiding corporativo container');
             $container.hide();
             $corporativoField.removeAttr('required');
             $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
             $asterisk.hide();
+            $('.individual-dates-block').show();
         }
+
+        refreshCorporateEndDate();
+    }
+
+    // ============================================================
+    // Refresh the calculated end date for CORPORATE affiliates
+    // - Fetches the corporate's APPLICABLE contract dates via AJAX
+    // - Prefers the ACTIVE corporate contract's fecha_ven
+    // - Falls back to fecha_ini + 1 year − 1 day when no contract
+    //   exists yet, so the field is never blank
+    // ============================================================
+    function refreshCorporateEndDate() {
+        var tipoAfiliado = $('#user_datos_type_id_field').val();
+        var corporativoId = $('#corporativo_id').val() || $('#afiliado_corporativo_id').val();
+
+        // For non-corporate or no corporate selected → standard calculation
+        if (tipoAfiliado != '2' || !corporativoId) {
+            toggleFechaVen();
+            return;
+        }
+
+        // Show the fecha_ven container
+        $('.fecha-ven-container').show();
+
+        var url = window.corporatePlanesUrl;
+        if (!url) {
+            console.error('[Corporate] corporatePlanesUrl is undefined');
+            return;
+        }
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            data: { id: corporativoId },
+            dataType: 'json',
+            success: function(response) {
+                var dates = (response && response.corporate_dates) ? response.corporate_dates : {};
+                var fechaVen = dates.fecha_ven;
+
+                if (fechaVen) {
+                    // Corporate contract exists → mirror its end date.
+                    $('.fecha-ven-field').val(fechaVen);
+                    $('.fecha-ven-field')
+                        .removeClass('bg-light')
+                        .addClass('bg-success-light')
+                        .attr('title', 'Fecha heredada del contrato colectivo aplicable');
+                } else {
+                    // No applicable corporate contract exists yet → fall
+                    // back to the standard fecha_ini + 1 year − 1 day
+                    // calculation so the field is never blank.
+                    var fechaIni = $('.fecha-ini-field').val();
+                    if (fechaIni) {
+                        var fallback = calcularFechaVencimiento(fechaIni);
+                        $('.fecha-ven-field').val(fallback);
+                        $('.fecha-ven-field')
+                            .removeClass('bg-success-light')
+                            .addClass('bg-light')
+                            .attr('title', 'Calculada como inicio + 1 año − 1 día. Se ajustará cuando exista un contrato colectivo.');
+                    } else {
+                        $('.fecha-ven-field').val('');
+                    }
+
+                    console.warn('[Corporate] No applicable corporate contract found for corporate ' + corporativoId);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('[Corporate] Failed to fetch corporate dates:', status, error);
+
+                // On error, fall back to the standard calculation too
+                var fechaIni = $('.fecha-ini-field').val();
+                if (fechaIni) {
+                    $('.fecha-ven-field').val(calcularFechaVencimiento(fechaIni));
+                } else {
+                    $('.fecha-ven-field').val('');
+                }
+            }
+        });
     }
 
     // ============================================================
@@ -1430,37 +1652,29 @@ $(document).ready(function() {
         var clinicaField = $('#clinica_id');
         var planField = $('#plan_id');
         var corporativoField = $('#corporativo_id');
-        
-        console.log('toggleConditionalRequired called, tipoAfiliado:', tipoAfiliado);
-        
+
         if (tipoAfiliado == '1') {
-            // Individual - make clinica and plan required
             clinicaField.attr('required', true);
             planField.attr('required', true);
             $('.conditional-asterisk').show();
             $('.field-userdatos-clinica_id, .field-contratos-plan_id').addClass('required-field');
-            
-            // Remove required from corporativo
+
             corporativoField.removeAttr('required');
             $('.field-userdatos-afiliado_corporativo_id').removeClass('required-field');
-            
-            // Hide corporativo container
+
             $('#afiliado_corporativo_container').hide();
-            
+
         } else if (tipoAfiliado == '2') {
-            // Corporativo - remove required from clinica and plan
             clinicaField.removeAttr('required');
             planField.removeAttr('required');
             $('.conditional-asterisk').hide();
             $('.field-userdatos-clinica_id, .field-contratos-plan_id').removeClass('required-field');
-            
-            // Make corporativo required and show container
+
             corporativoField.attr('required', true);
             $('.field-userdatos-afiliado_corporativo_id').addClass('required-field');
             $('#afiliado_corporativo_container').show();
-            
+
         } else {
-            // No type selected - remove all conditional requirements
             clinicaField.removeAttr('required');
             planField.removeAttr('required');
             corporativoField.removeAttr('required');
@@ -1479,7 +1693,7 @@ $(document).ready(function() {
         var $cedulaField = $('#userdatos-cedula');
         var $cedulaLabel = $('label[for="userdatos-cedula"]');
         var $consecutivoField = $('#userdatos-consecutivo_menor');
-        
+
         if (tipoCedula === 'Menor Sin Cédula') {
             $consecutivoContainer.show();
             $cedulaField.attr('placeholder', 'Cédula del padre/madre/tutor');
@@ -1508,114 +1722,36 @@ $(document).ready(function() {
     }
 
     // ============================================================
-    // INITIALIZATION - Initialize all form elements
+    // PLAN DETAILS - Show/Hide plan detail elements
     // ============================================================
-    function initializePage() {
-        console.log('Initializing page...');
-        
-        // Get current user ID
-        var currentUserId = $('#userdatos-id').val();
-        
-        // Initialize variables
-        dependientesList = [];
-        $dependientesContainer = $('#dependientes-list');
-        $modal = $('#editDependienteModal');
-        
-        // Check if tiene_dependientes is checked
-        if ($('#tiene_dependientes').is(':checked')) {
-            $('#dependientes-section').show();
-            loadDependientes();
-        }
-        
-        // Initialize other form elements
-        toggleAfiliadoCorporativo();
-        toggleConditionalRequired();
-        toggleCedulaFields();
-        togglePlanDetails();
-        toggleContratanteFields();
-        updateContratanteUI();
-        toggleFechaVen();
-        
-        console.log('Page initialized');
-    }
+    function togglePlanDetails() {
+        var planId = $('#plan_id').val();
+        var $coverage = $('#plan-details-container');
+        var $maternityToggle = $('#maternidad_toggle_container');
+        var $maternityDetails = $('#maternidad_fields');
+        var $emptyState = $('#plan-empty-state');
+        var $statusBadge = $('#plan-status-badge');
 
-    // ============================================================
-    // EVENT LISTENERS
-    // ============================================================
-    
-    // Listen for tipo_afiliado changes
-    $('#user_datos_type_id_field').on('change', function() {
-        var selectedValue = $(this).val();
-        console.log('Tipo de Afiliado changed to:', selectedValue);
-        toggleAfiliadoCorporativo();
-        toggleConditionalRequired();
-    });
-    
-    // Listen for tipo_cedula changes
-    $('#userdatos-tipo_cedula').on('change', toggleCedulaFields);
-    
+        if (planId && planId !== '') {
+            $emptyState.hide();
+            $coverage.show();
+            $maternityToggle.show();
+            $statusBadge.removeClass('d-none');
 
-    // Call when maternity checkbox changes
-    $('#cobertura_maternidad_checkbox').on('change', function() {
-        if ($(this).is(':checked')) {
-            $('#maternidad_fields').slideDown(300, function() {
-                // Reset columns and centering after animation
-                var $row = $('#plan-details-container .row');
-                $row.removeClass('justify-content-center justify-content-start');
-                $row.find('.col-md-4, .col-md-5').removeClass('col-md-4 col-md-5').addClass('col-md-4');
-                $row.addClass('justify-content-start');
-                $('#userdatos-cobertura_maternidad').val(1);
-            });
+            if ($('#cobertura_maternidad_checkbox').is(':checked')) {
+                $maternityDetails.show();
+            } else {
+                $maternityDetails.hide();
+            }
         } else {
-            $('#maternidad_fields').slideUp(300, function() {
-                // Center the remaining two cards after animation
-                var $row = $('#plan-details-container .row');
-                $row.removeClass('justify-content-center justify-content-start');
-                $row.find('.col-md-4, .col-md-5').removeClass('col-md-4 col-md-5').addClass('col-md-5');
-                $row.addClass('justify-content-center');
-                $('#userdatos-cobertura_maternidad').val(0);
-            });
-        }
-    });
-
-    // ============================================================
-// PLAN DETAILS - Show/Hide plan detail elements
-// ============================================================
-function togglePlanDetails() {
-    var planId = $('#plan_id').val();
-    var $coverage = $('#plan-details-container');
-    var $maternityToggle = $('#maternidad_toggle_container');
-    var $maternityDetails = $('#maternidad_fields');
-    var $emptyState = $('#plan-empty-state');
-    var $statusBadge = $('#plan-status-badge');
-    
-    if (planId && planId !== '') {
-        // Hide the empty state message
-        $emptyState.hide();
-        
-        // Show the plan detail cards
-        $coverage.show();
-        $maternityToggle.show();
-        $statusBadge.removeClass('d-none');
-        
-        // Show maternity details only if the toggle is checked
-        if ($('#cobertura_maternidad_checkbox').is(':checked')) {
-            $maternityDetails.show();
-        } else {
+            $emptyState.show();
+            $coverage.hide();
+            $maternityToggle.hide();
             $maternityDetails.hide();
+            $statusBadge.addClass('d-none');
         }
-    } else {
-        // Show the empty state message
-        $emptyState.show();
-        
-        // Hide the plan detail cards
-        $coverage.hide();
-        $maternityToggle.hide();
-        $maternityDetails.hide();
-        $statusBadge.addClass('d-none');
     }
-}
-    
+
     // ============================================================
     // CONTRATANTE DIFERENTE - Toggle Logic
     // ============================================================
@@ -1623,8 +1759,7 @@ function togglePlanDetails() {
         var $toggle = $('#userdatos-tiene_contratante_diferente');
         var $container = $('#contratante-fields-container');
         var $requiredStars = $('.required-star');
-        
-        // Define which fields are mandatory (8 required fields)
+
         var requiredFieldIds = [
             'userdatos-nombre_contratante',
             'userdatos-apellido_contratante',
@@ -1633,9 +1768,11 @@ function togglePlanDetails() {
             'userdatos-fecha_nacimiento_contratante',
             'userdatos-sexo_contratante',
             'userdatos-email_contratante',
-            'userdatos-telefono_celular_contratante'
+            'userdatos-telefono_celular_contratante',
+            'userdatos-profesion_contratante',   // NEW
+            'userdatos-ocupacion_contratante'    // NEW
         ];
-        
+
         if ($toggle.is(':checked')) {
             $container.slideDown(300);
             requiredFieldIds.forEach(function(id) {
@@ -1668,9 +1805,8 @@ function togglePlanDetails() {
         var $statusText = $('#status-text');
         var $statusBar = $('#status-bar');
         var $statusMessage = $('#contratante-status-message');
-        
+
         if ($checkbox.length && $checkbox.is(':checked')) {
-            // Active state
             $card.css({
                 'border-color': '#0078d4',
                 'background': 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)',
@@ -1684,12 +1820,11 @@ function togglePlanDetails() {
                 'background': 'linear-gradient(90deg, #0078d4, #00bcf2)',
                 'box-shadow': '0 0 20px rgba(0, 120, 212, 0.3)'
             });
-$statusMessage.html('<i class="fas fa-check-circle text-success mr-1" style="font-size: 1.2rem;"></i> El pago del plan médico lo realiza una persona distinta al afiliado');            
-            // Toggle the slider
+            $statusMessage.html('<i class="fas fa-check-circle text-success mr-1" style="font-size: 1.2rem;"></i> El pago del plan médico lo realiza una persona distinta al afiliado');
+
             $card.find('.slider').css('background', '#0078d4');
             $card.find('.slider-thumb').css('transform', 'translateX(20px)');
         } else {
-            // Inactive state
             $card.css({
                 'border-color': '#e9ecef',
                 'background': 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
@@ -1703,42 +1838,88 @@ $statusMessage.html('<i class="fas fa-check-circle text-success mr-1" style="fon
                 'background': '#d2d0ce',
                 'box-shadow': 'none'
             });
-$statusMessage.html('Active esta opción solo si el afiliado <strong>no</strong> es quien paga el plan médico');
-            
+            $statusMessage.html('Active esta opción solo si el afiliado <strong>no</strong> es quien paga el plan médico');
+
             $card.find('.slider').css('background', '#d2d0ce');
             $card.find('.slider-thumb').css('transform', 'translateX(0px)');
         }
     }
 
-    // Click on card toggles the checkbox
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+    function initializePage() {
+        toggleAfiliadoCorporativo();
+        toggleConditionalRequired();
+        toggleCedulaFields();
+        togglePlanDetails();
+        toggleContratanteFields();
+        updateContratanteUI();
+        toggleFechaVen();
+
+        if ($('#user_datos_type_id_field').val() == '2' && $('#corporativo_id').val()) {
+            refreshCorporateEndDate();
+        }
+    }
+
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    $('#user_datos_type_id_field').on('change', function() {
+        toggleAfiliadoCorporativo();
+        toggleConditionalRequired();
+    });
+
+    $('#userdatos-tipo_cedula').on('change', toggleCedulaFields);
+
+    $(document).on('change', '#corporativo_id', function() {
+        var val = $(this).val();
+
+        if (!val) {
+            var $clinica = $('#clinica_id');
+            if ($clinica.length) {
+                $clinica.val('').trigger('change.select2');
+            }
+
+            var $plan = $('#plan_id');
+            if ($plan.length) {
+                $plan.val('').trigger('change.select2');
+            }
+        }
+
+        if ($('#user_datos_type_id_field').val() == '2' && val) {
+            refreshCorporateEndDate();
+        }
+    });
+
+    $(document).on('select2:select', '#corporativo_id', function() {
+        if ($('#user_datos_type_id_field').val() == '2') {
+            refreshCorporateEndDate();
+        }
+    });
+
+    $(document).on('select2:clear', '#corporativo_id', function() {
+        var $clinica = $('#clinica_id');
+        if ($clinica.length) {
+            $clinica.val('').trigger('change.select2');
+        }
+
+        var $plan = $('#plan_id');
+        if ($plan.length) {
+            $plan.val('').trigger('change.select2');
+        }
+    });
+
     $(document).on('click', '#contratante-card', function(e) {
-        // Prevent toggling if click is on the switch itself
         if ($(e.target).closest('.switch').length) return;
-        
+
         var $checkbox = $('#userdatos-tiene_contratante_diferente');
         $checkbox.prop('checked', !$checkbox.is(':checked')).trigger('change');
     });
-    
-    // ============================================================
-    // CALL INITIALIZE ON PAGE LOAD
-    // ============================================================
-    initializePage();
-    
-    // Also reinitialize when the page is shown again (for browser back/forward)
-    $(window).on('pageshow', function() {
-        setTimeout(initializePage, 100);
-    });
-    
-    // Listen for plan selection changes
-    $('#plan_id').on('change', function() {
-        togglePlanDetails();
-    });
-    
-    // Listen for contratante toggle changes
+
     $('#userdatos-tiene_contratante_diferente').on('change', function() {
         updateContratanteUI();
         toggleContratanteFields();
-        // Reset validation when toggle changes
         var $form = $(this).closest('form');
         $form.find('.required-star').each(function() {
             var $field = $(this).closest('.input-group').find('input, select, textarea');
@@ -1751,49 +1932,35 @@ $statusMessage.html('Active esta opción solo si el afiliado <strong>no</strong>
             }
         });
     });
-    
-    // ============================================================
-// Maternity Coverage Toggle
-// ============================================================
-$('#cobertura_maternidad_checkbox').on('change', function() {
-    if ($(this).is(':checked')) {
-        $('#maternidad_label').text('Sí');
-        $('#maternidad_fields').fadeIn(200);
-        $('#userdatos-cobertura_maternidad').val(1);
-    } else {
-        $('#maternidad_label').text('No');
-        $('#maternidad_fields').fadeOut(200);
-        $('#userdatos-cobertura_maternidad').val(0);
-    }
-});
-    
-    // ============================================================
-    // FECHA INICIO - Auto-calculate expiration date
-    // ============================================================
-    function calcularFechaVencimiento(fechaIni) {
-        if (fechaIni) {
-            var parts = fechaIni.split('-');
-            var year = parseInt(parts[0]);
-            var month = parseInt(parts[1]) - 1;
-            var day = parseInt(parts[2]);
-            
-            var fecha = new Date(year, month, day);
-            fecha.setFullYear(fecha.getFullYear() + 1);
-            fecha.setDate(fecha.getDate() - 1);
-            
-            var newYear = fecha.getFullYear();
-            var newMonth = String(fecha.getMonth() + 1).padStart(2, '0');
-            var newDay = String(fecha.getDate()).padStart(2, '0');
-            
-            return newYear + '-' + newMonth + '-' + newDay;
+
+    $('#plan_id').on('change', function() {
+        togglePlanDetails();
+    });
+
+    $('#cobertura_maternidad_checkbox').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#maternidad_label').text('Sí');
+            $('#maternidad_fields').fadeIn(200);
+            $('#userdatos-cobertura_maternidad').val(1);
+        } else {
+            $('#maternidad_label').text('No');
+            $('#maternidad_fields').fadeOut(200);
+            $('#userdatos-cobertura_maternidad').val(0);
         }
-        return '';
-    }
-    
+    });
+
     function toggleFechaVen() {
+        var tipoAfiliado = $('#user_datos_type_id_field').val();
+        var corporativoId = $('#corporativo_id').val() || $('#afiliado_corporativo_id').val();
+
+        if (tipoAfiliado == '2' && corporativoId) {
+            refreshCorporateEndDate();
+            return;
+        }
+
         var fechaIni = $('.fecha-ini-field').val();
         var fechaVenContainer = $('.fecha-ven-container');
-        
+
         if (fechaIni) {
             fechaVenContainer.show();
             var fechaVen = calcularFechaVencimiento(fechaIni);
@@ -1803,21 +1970,21 @@ $('#cobertura_maternidad_checkbox').on('change', function() {
             $('.fecha-ven-field').val('');
         }
     }
-    
+
     $('.fecha-ini-field').on('change', toggleFechaVen);
-    toggleFechaVen();
-    
+
     // ============================================================
     // DATOS PLAN - Update coverage display
+    //   Guard against non-numeric plan IDs like "Loading ..."
     // ============================================================
     window.datosplan = function(plan_id) {
-        if (!plan_id || plan_id === '') {
+        if (!plan_id || isNaN(plan_id)) {
             $('#userdatos-limite_cobertura').val('');
             $('#userdatos-limite_cobertura_display').text('$0.00');
             togglePlanDetails();
             return;
         }
-        
+
         var csrfToken = $('meta[name="csrf-token"]').attr("content");
         $.ajax({
             url: "datosdelplan",
@@ -1835,11 +2002,11 @@ $('#cobertura_maternidad_checkbox').on('change', function() {
                         style: 'currency',
                         currency: moneda
                     });
-                    
+
                     $('#userdatos-limite_cobertura_display').text(formatter.format(limite_cobertura));
                     $('#userdatos-limite_cobertura').val(limite_cobertura);
                     $('#userdatos-moneda').val(moneda);
-                    
+
                     togglePlanDetails();
                 }
             },
@@ -1849,13 +2016,191 @@ $('#cobertura_maternidad_checkbox').on('change', function() {
             }
         });
     };
-    
-    // Initialize on page load
+
     var initialPlanId = $('#plan_id').val();
-    if (initialPlanId) {
+    if (initialPlanId && !isNaN(initialPlanId)) {
         datosplan(initialPlanId);
-        togglePlanDetails();
     }
+
+    // ============================================================
+    // CALL INITIALIZE ON PAGE LOAD
+    // ============================================================
+    initializePage();
+
+    // ============================================================
+    // CÉDULA LOOKUP — Name-aware staff-user detection (v2)
+    // ------------------------------------------------------------
+    // Sends the cédula, tipo, AND the names currently typed in
+    // the form. The endpoint compares the incoming names against
+    // the existing record and returns one of three states:
+    //
+    //   1. exists + blocking                → RED warning
+    //   2. exists + promotable + match      → BLUE info (will link)
+    //   3. exists + promotable + mismatch   → AMBER warning
+    //   4. doesn't exist                    → no banner
+    // ============================================================
+    let cedulaLookupTimer = null;
+
+    function setBannerState(state, title, nameHtml, subtextHtml) {
+        // state: 'info' | 'warning' | 'danger'
+        const $container = $('#cedula-link-hint');
+        const $inner     = $('#cedula-link-hint-inner');
+        const $icon      = $('#cedula-link-hint-icon');
+
+        // Color palette
+        const palette = {
+            info: {
+                bg:         'linear-gradient(135deg, #f0f6fd 0%, #e5f0fa 100%)',
+                border:     '#0078d4',
+                iconClass:  'fas fa-user-check',
+                iconColor:  '#0078d4',
+            },
+            warning: {
+                bg:         'linear-gradient(135deg, #fffbe6 0%, #fff3c4 100%)',
+                border:     '#e97c00',
+                iconClass:  'fas fa-exclamation-triangle',
+                iconColor:  '#e97c00',
+            },
+            danger: {
+                bg:         'linear-gradient(135deg, #fef6f6 0%, #fde8e8 100%)',
+                border:     '#d13438',
+                iconClass:  'fas fa-times-circle',
+                iconColor:  '#d13438',
+            },
+        };
+
+        const p = palette[state] || palette.info;
+
+        $inner.css({
+            'background':  p.bg,
+            'border-left': '4px solid ' + p.border,
+        });
+        $icon.attr('class', p.iconClass).css('color', p.iconColor);
+
+        $('#cedula-link-hint-title').html(title);
+        $('#cedula-link-hint-name').html(nameHtml);
+        $('#cedula-link-hint-subtext').html(subtextHtml);
+
+        $container.fadeIn(200);
+    }
+
+    function runCedulaLookup() {
+        const cedula    = $('#userdatos-cedula').val();
+        const tipo      = $('#userdatos-tipo_cedula').val();
+        const nombres   = $('#userdatos-nombres').val()   || '';
+        const apellidos = $('#userdatos-apellidos').val() || '';
+
+        // Reset hint
+        $('#cedula-link-hint').hide();
+
+        // Only run for real cédula types with a full number
+        if (!cedula || cedula.length < 6 || !tipo) {
+            return;
+        }
+        if (tipo === 'Menor Sin Cédula' || tipo === 'Afiliado Otras Clínicas' || tipo === 'P') {
+            return;
+        }
+        if (!window.cedulaLookupUrl) {
+            return;
+        }
+
+        $.ajax({
+            url: window.cedulaLookupUrl,
+            type: 'GET',
+            data: {
+                tipo_cedula: tipo,
+                cedula:      cedula,
+                nombres:     nombres,
+                apellidos:   apellidos,
+            },
+            dataType: 'json',
+            success: function (response) {
+
+                if (!response || !response.exists) {
+                    $('#cedula-link-hint').fadeOut(150);
+                    return;
+                }
+
+                const nameLine = '<strong>' + response.nombre + '</strong>'
+                    + ' — Rol actual: '
+                    + '<span class="badge badge-info">' + response.role + '</span>';
+
+                // ── Case 1: Live affiliate → RED (blocking) ──
+                if (response.blocking) {
+                    setBannerState(
+                        'danger',
+                        'Afiliado activo detectado.',
+                        nameLine,
+                        'Ya existe un afiliado activo con esta cédula. No se puede registrar de nuevo.'
+                    );
+                    return;
+                }
+
+                // ── Case 2: Promotable + names match → BLUE ──
+                if (response.promotable && response.names_match) {
+                    setBannerState(
+                        'info',
+                        'Usuario existente detectado.',
+                        nameLine,
+                        'Los datos coinciden con el registro. Se vinculará automáticamente como afiliado.'
+                    );
+                    return;
+                }
+
+                // ── Case 3: Promotable + names provided but mismatched → AMBER ──
+                if (response.promotable && response.incoming_names_provided) {
+                    setBannerState(
+                        'warning',
+                        'Conflicto de identidad.',
+                        nameLine,
+                        'Los datos ingresados <strong>no coinciden</strong> con este registro. '
+                        + 'El sistema <strong>no permitirá</strong> la vinculación.'
+                    );
+                    return;
+                }
+
+                // ── Case 4: Promotable, names not yet provided → BLUE (neutral) ──
+                if (response.promotable) {
+                    setBannerState(
+                        'info',
+                        'Usuario existente detectado.',
+                        nameLine,
+                        'Si los datos que ingrese coinciden con este registro, se vinculará automáticamente como afiliado.'
+                    );
+                    return;
+                }
+
+                // Fallback — shouldn't happen, but hide on unknown
+                $('#cedula-link-hint').fadeOut(150);
+            },
+            error: function () {
+                $('#cedula-link-hint').hide();
+            }
+        });
+    }
+
+    // ── Debounced triggers ──
+    // Trigger on cédula typing
+    $(document).on('input', '#userdatos-cedula', function () {
+        clearTimeout(cedulaLookupTimer);
+        cedulaLookupTimer = setTimeout(runCedulaLookup, 500);
+    });
+
+    // Trigger on name/apellido typing (600ms — slower than cédula)
+    $(document).on('input', '#userdatos-nombres, #userdatos-apellidos', function () {
+        clearTimeout(cedulaLookupTimer);
+        cedulaLookupTimer = setTimeout(runCedulaLookup, 600);
+    });
+
+    // Immediate trigger when tipo_cedula changes
+    $(document).on('change', '#userdatos-tipo_cedula', function () {
+        clearTimeout(cedulaLookupTimer);
+        cedulaLookupTimer = setTimeout(runCedulaLookup, 200);
+    });
+
+    $(window).on('pageshow', function() {
+        setTimeout(initializePage, 100);
+    });
 });
 JS
 );
@@ -1890,9 +2235,6 @@ JS
         background: #ffffff;
     }
 
-    /* ============================================================
-       SECTION HEADER BACKGROUND COLORS
-       ============================================================ */
     .ms-panel-header.bg-indigo {
         background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
         color: #ffffff;
@@ -1965,7 +2307,6 @@ JS
         color: #ffffff !important;
     }
 
-    /* Override badge colors inside colored headers */
     .ms-panel-header .badge {
         background: rgba(255, 255, 255, 0.2) !important;
         color: inherit !important;
@@ -1977,7 +2318,6 @@ JS
         color: #212529 !important;
     }
 
-    /* Header text and icon colors */
     .ms-panel-header h5 {
         color: inherit !important;
         font-weight: 600;
@@ -2051,6 +2391,16 @@ JS
        ============================================================ */
     #contratante-fields-container {
         transition: all 0.3s ease;
+    }
+
+    /* ============================================================
+       FECHA VENCIMIENTO - SUCCESS STATE (inherited from contract)
+       ============================================================ */
+    .fecha-ven-field.bg-success-light {
+        background-color: #dff6dd !important;
+        border-color: #107c10 !important;
+        color: #1b5e20 !important;
+        font-weight: 600;
     }
 
     /* ============================================================
@@ -2141,16 +2491,10 @@ JS
         padding-top: 2px;
     }
 
-    /* ============================================================
-       GAP UTILITY
-       ============================================================ */
     .gap-3 {
         gap: 1rem;
     }
 
-    /* ============================================================
-       RESPONSIVE
-       ============================================================ */
     @media (max-width: 768px) {
         .ms-panel-body {
             padding: 16px;
@@ -2490,9 +2834,6 @@ JS
         cursor: not-allowed;
     }
 
-    /* ============================================================
-       CHECKBOX SECTION BAR ANIMATIONS
-       ============================================================ */
     @keyframes bar-pulse {
 
         0%,
@@ -2534,7 +2875,6 @@ JS
         font-weight: 600 !important;
     }
 
-    /* Custom class for white text on browse button */
     .btn-white-text,
     .btn-white-text span,
     .btn-white-text i,
@@ -2542,9 +2882,6 @@ JS
         color: #ffffff !important;
     }
 
-    /* ============================================================
-       CONTRATANTE CARD SELECTOR - Custom Styles
-       ============================================================ */
     #contratante-card:hover {
         border-color: #0078d4 !important;
         box-shadow: 0 4px 16px rgba(0, 120, 212, 0.08) !important;
@@ -2559,9 +2896,6 @@ JS
         box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.25);
     }
 
-    /* ============================================================
-   PLAN DETAIL CARDS - Compact Horizontal Style
-   ============================================================ */
     .plan-detail-card {
         transition: all 0.3s ease;
     }
@@ -2571,14 +2905,12 @@ JS
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
-    /* Remove the extra margin-top that Yii/Select2 adds to the field */
     #plan-details-container .form-group,
     #maternidad_toggle_container .form-group,
     #maternidad_fields .form-group {
         margin-bottom: 0;
     }
 
-    /* Align labels on the same baseline */
     #plan-details-container>label,
     #maternidad_toggle_container>label,
     #maternidad_fields>label {
@@ -2589,7 +2921,6 @@ JS
         color: #323130;
     }
 
-    /* Responsive adjustments */
     @media (max-width: 768px) {
         .plan-detail-card {
             height: auto !important;
@@ -2605,5 +2936,18 @@ JS
         .plan-detail-card .d-flex>div:first-child i {
             font-size: 0.85rem !important;
         }
+    }
+
+    /* ============================================================
+       CÉDULA LOOKUP HINT (info banner below cédula field)
+       ============================================================ */
+    #cedula-link-hint {
+        animation: slideInWarning 0.3s ease-out;
+    }
+
+    #cedula-link-hint .badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        vertical-align: middle;
     }
 </style>

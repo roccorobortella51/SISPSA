@@ -11,6 +11,7 @@ use app\models\RmClinica;
 use app\models\Contratos;
 use app\components\ContractHelper;
 use yii\web\View;
+use yii\widgets\Pjax;
 
 // Helper function for contract status classes
 function getContractStatusClass($status)
@@ -82,6 +83,7 @@ if (isset($searchModel) && method_exists($searchModel, 'getSummaryStatistics')) 
             'total_contratos_suspendidos' => 0,
             'total_contratos_registrados' => 0,
             'total_contratos_anulados' => 0,
+            'total_contratos_vencidos' => 0,
             'critical_delinquency' => [
                 'count' => 0,
                 'total_vencidas_cuotas' => 0,
@@ -110,36 +112,32 @@ try {
 }
 
 // --- Build filter URLs for each card ---
-// Base URL with current clinic_id if present
 $baseUrl = ['index'];
 if ($clinica && $clinica->id !== null) {
     $baseUrl['clinica_id'] = $clinica->id;
 }
 
-// Total Afiliados - show all (no filter)
 $urlTotalAfiliados = Url::to(array_merge($baseUrl, []));
 
-// Contratos Activos
 $urlActivos = Url::to(array_merge($baseUrl, [
     'UserDatosSearch' => ['contrato_estatus' => 'Activo']
 ]));
 
-// Contratos Suspendidos
 $urlSuspendidos = Url::to(array_merge($baseUrl, [
     'UserDatosSearch' => ['contrato_estatus' => 'Suspendido']
 ]));
 
-// Contratos Registrados
 $urlRegistrados = Url::to(array_merge($baseUrl, [
     'UserDatosSearch' => ['contrato_estatus' => 'Registrado']
 ]));
 
-// Contratos Anulados
 $urlAnulados = Url::to(array_merge($baseUrl, [
     'UserDatosSearch' => ['contrato_estatus' => 'Anulado']
 ]));
+$urlVencidos = Url::to(array_merge($baseUrl, [
+    'UserDatosSearch' => ['contrato_estatus' => 'Vencido']
+]));
 
-// Afiliados Críticos - Filter by 3+ expired cuotas
 $urlCriticos = Url::to(array_merge($baseUrl, [
     'UserDatosSearch' => ['critical_filter' => 'true']
 ]));
@@ -148,11 +146,11 @@ $urlCriticos = Url::to(array_merge($baseUrl, [
 $currentFilter = Yii::$app->request->get('UserDatosSearch')['contrato_estatus'] ?? null;
 $isCriticalFilter = Yii::$app->request->get('UserDatosSearch')['critical_filter'] ?? null;
 
-// Define available status counts for conditional display
 $hasActivos = ($summaryStats['total_contratos_activos'] ?? 0) > 0;
 $hasSuspendidos = ($summaryStats['total_contratos_suspendidos'] ?? 0) > 0;
 $hasRegistrados = ($summaryStats['total_contratos_registrados'] ?? 0) > 0;
 $hasAnulados = ($summaryStats['total_contratos_anulados'] ?? 0) > 0;
+$hasVencidos = ($summaryStats['total_contratos_vencidos'] ?? 0) > 0;
 $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
 
 ?>
@@ -194,7 +192,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
     <!-- ============================================================ -->
     <div class="kpi-cards-row">
         <!-- Card 1: Total Afiliados (Always visible) -->
-        <a href="<?= $urlTotalAfiliados ?>" class="kpi-card-link"
+        <a href="<?= $urlTotalAfiliados ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
             data-toggle="tooltip"
             data-placement="top"
             data-html="true"
@@ -216,7 +214,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
 
         <!-- Card 2: Contratos Activos (Conditional) -->
         <?php if ($hasActivos): ?>
-            <a href="<?= $urlActivos ?>" class="kpi-card-link"
+            <a href="<?= $urlActivos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
@@ -239,7 +237,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
 
         <!-- Card 3: Contratos Suspendidos (Conditional) -->
         <?php if ($hasSuspendidos): ?>
-            <a href="<?= $urlSuspendidos ?>" class="kpi-card-link"
+            <a href="<?= $urlSuspendidos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
@@ -262,7 +260,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
 
         <!-- Card 4: Contratos Registrados (Conditional) -->
         <?php if ($hasRegistrados): ?>
-            <a href="<?= $urlRegistrados ?>" class="kpi-card-link"
+            <a href="<?= $urlRegistrados ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
@@ -285,7 +283,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
 
         <!-- Card 5: Contratos Anulados (Conditional) -->
         <?php if ($hasAnulados): ?>
-            <a href="<?= $urlAnulados ?>" class="kpi-card-link"
+            <a href="<?= $urlAnulados ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
@@ -306,9 +304,32 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
             </a>
         <?php endif; ?>
 
+        <!-- Card 5.1: Contratos Vencidos (Conditional) -->
+        <?php if ($hasVencidos): ?>
+            <a href="<?= $urlVencidos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
+                data-toggle="tooltip"
+                data-placement="top"
+                data-html="true"
+                title="<strong>Contratos Vencidos</strong><br>Afiliados cuyos contratos han superado su fecha de vigencia sin renovación.<br><small class='text-muted'>Click para filtrar</small>">
+                <div class="kpi-card vencido">
+                    <div class="kpi-card-header">
+                        <span class="kpi-icon"><i class="fas fa-calendar-times"></i></span>
+                        <span class="kpi-title">Contratos Vencidos</span>
+                        <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <span class="kpi-number"><?= number_format($summaryStats['total_contratos_vencidos'] ?? 0) ?></span>
+                        <span class="kpi-label">
+                            <i class="fas fa-hourglass-end mr-1"></i> Fuera de vigencia
+                        </span>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+
         <!-- Card 6: Afiliados Críticos (Conditional) -->
         <?php if ($hasCriticos): ?>
-            <a href="<?= $urlCriticos ?>" class="kpi-card-link"
+            <a href="<?= $urlCriticos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
@@ -350,7 +371,6 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
             <h3 class="section-title">
                 <i class="fas fa-users mr-3 text-indigo-600"></i> Listado de Afiliados
                 <?php
-                // Show active filter indicator
                 if ($isCriticalFilter === 'true'):
                     echo '<span class="badge badge-critical ml-2">Filtrado: Críticos (3+ cuotas vencidas)</span>';
                 elseif ($currentFilter):
@@ -372,6 +392,21 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
             <div class="top-native-scrollbar" style="display: none;">
                 <div class="top-native-dummy"></div>
             </div>
+
+            <!-- ============================================================ -->
+            <!-- PJAX CONTAINER — the only part that refreshes on live search  -->
+            <!-- ============================================================ -->
+            <?php Pjax::begin([
+                'id'                 => 'affiliates-pjax',
+                'timeout'            => 5000,
+                'enablePushState'    => false,
+                'enableReplaceState' => false,
+                'linkSelector'       => 'a[data-pjax="#affiliates-pjax"]',
+                'clientOptions'      => [
+                    'cache' => false,
+                    'scrollTo' => false,
+                ],
+            ]); ?>
 
             <div class="table-responsive table-responsive-scroll" id="grid-scroll-container">
                 <?= GridView::widget([
@@ -528,15 +563,16 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                         ],
                         [
                             'label' => 'Nombre Completo',
-                            'attribute' => 'nombres',
+                            'attribute' => 'nombre_completo',
                             'value' => function ($model) {
                                 return $model->nombres . ' ' . $model->apellidos;
                             },
                             'format' => 'ntext',
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar nombre',
-                                'class' => 'form-control text-center',
+                                'placeholder'  => 'Buscar por nombre o apellido…',
+                                'class'        => 'form-control text-center',
+                                'autocomplete' => 'off',
                             ],
                         ],
                         [
@@ -551,9 +587,6 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                     $consecutivo = str_pad((int)$model->consecutivo_menor, 2, '0', STR_PAD_LEFT);
                                 }
 
-                                // ============================================
-                                // HANDLE PASSPORT (P) - NEW
-                                // ============================================
                                 if ($tipoCedula === 'P') {
                                     return '<div class="cedula-grande-container cedula-passport">
                     <div class="cedula-grande-text">
@@ -678,8 +711,8 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                         [
                             'class' => 'yii\grid\ActionColumn',
                             'header' => 'ACCIONES',
-                            'template' => '<div class="d-flex justify-content-center gap-0">{view}{update}{atencion}{pagos}</div>',
-                            'options' => ['style' => 'width:55px; min-width:55px;'],
+                            'template' => '<div class="d-flex justify-content-center">{view}{update}{contracts}{atencion}{pagos}</div>',
+                            'options' => ['style' => 'width:105px; min-width:105px;'],
                             'headerOptions' => ['style' => 'color: white!important;'],
                             'contentOptions' => ['style' => 'text-align: center; padding: 10 !important;'],
                             'buttons' => [
@@ -693,7 +726,8 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                         Url::to($params),
                                         [
                                             'title' => 'Detalle de Usuario',
-                                            'class' => 'btn-action view'
+                                            'class' => 'btn-action view',
+                                            'data-pjax' => '0',
                                         ]
                                     );
                                 },
@@ -708,17 +742,28 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                             Url::to($params),
                                             [
                                                 'title' => 'Editar Usuario',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn-action view',
+                                                'data-pjax' => '0',
                                             ]
                                         );
                                     } else {
                                         return "";
                                     }
                                 },
+                                'contracts' => function ($url, $model) {
+                                    return Html::a(
+                                        '<i class="fas fa-file-contract"></i>',
+                                        ['/contratos/index-list', 'user_id' => $model->id],
+                                        [
+                                            'title' => 'Contratos del afiliado',
+                                            'aria-label' => 'Ver contratos del afiliado',
+                                            'class' => 'btn-action view',
+                                            'data-pjax' => '0',
+                                        ]
+                                    );
+                                },
                                 'atencion' => function ($url, $model, $key) use ($rolesAtencionMedica, $clinica, $rol) {
-                                    // Only show if user has role with medical access AND has a clinic assigned
                                     if (in_array($rol, $rolesAtencionMedica) && $model->clinica_id) {
-                                        // NEW: Check if user has an ACTIVE contract
                                         $hasActiveContract = \app\models\Contratos::find()
                                             ->where(['user_id' => $model->id, 'estatus' => 'Activo'])
                                             ->exists();
@@ -733,6 +778,7 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                                 [
                                                     'title' => 'Gestionar Atención',
                                                     'class' => 'btn-action view atencion-btn',
+                                                    'data-pjax' => '0',
                                                     'data' => [
                                                         'url-siniestro' => $urlSiniestro,
                                                         'url-cita' => $urlCita,
@@ -751,7 +797,8 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                             Url::to($params),
                                             [
                                                 'title' => 'Pagos',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn-action view',
+                                                'data-pjax' => '0',
                                             ]
                                         );
                                     }
@@ -770,7 +817,8 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                                                 'title' => 'Eliminar Usuario',
                                                 'data-confirm' => '¿Estás seguro de que quieres eliminar esta clínica?',
                                                 'data-method' => 'post',
-                                                'class' => 'btn-action view'
+                                                'class' => 'btn-action view',
+                                                'data-pjax' => '0',
                                             ]
                                         );
                                     }
@@ -780,6 +828,9 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                     ],
                 ]); ?>
             </div>
+
+            <?php Pjax::end(); ?>
+
         </div>
 
     </div>
@@ -834,12 +885,10 @@ $(document).on('click', '.btn-cerrar-swal', function(e) {
 // 3. ROBUST TOOLTIP MANAGEMENT SYSTEM
 $(document).ready(function() {
     function initAllTooltips() {
-        // Initialize tooltips for KPI cards
         $('.kpi-card-link').tooltip('dispose');
         $('[data-toggle="tooltip"]').tooltip('dispose');
         
         try {
-            // Tooltips for KPI cards with custom styling
             $('.kpi-card-link').tooltip({
                 trigger: 'hover',
                 delay: { "show": 200, "hide": 100 },
@@ -849,7 +898,6 @@ $(document).ready(function() {
                 template: '<div class="tooltip kpi-tooltip" role="tooltip"><div class="arrow"></div><div class="tooltip-inner"></div></div>'
             });
             
-            // Tooltips for other elements
             $('[data-toggle="tooltip"]').tooltip({
                 trigger: 'hover',
                 delay: { "show": 100, "hide": 100 },
@@ -862,15 +910,12 @@ $(document).ready(function() {
         }
     }
     
-    // Initial tooltip setup
     initAllTooltips();
     
-    // Re-initialize after grid updates
     $(document).on('pjax:complete yiiGridViewUpdated', function() {
         setTimeout(initAllTooltips, 100);
     });
     
-    // Contract tooltip click handler
     $(document).on('click', '.contract-tooltip strong', function(e) {
         e.stopPropagation();
         var text = $(this).text();
@@ -910,7 +955,208 @@ $(document).ready(function() {
     });
 });
 
-// 4. DUAL SCROLLBAR SYSTEM
+// 4. LIVE SEARCH — Debounced PJAX via event delegation
+// ============================================================
+// Uses delegated events on `document` so the handler survives
+// every PJAX replacement of the grid and its filter input.
+$(document).ready(function () {
+    var debounceMs = 400;
+    var timer      = null;
+    var lastQuery  = '';
+
+    var INPUT_NAME     = 'UserDatosSearch[nombre_completo]';
+    var INPUT_SELECTOR = 'input[name="' + INPUT_NAME + '"]';
+    var PJAX_CONTAINER = '#affiliates-pjax';
+
+    function getInput() {
+        return $(INPUT_SELECTOR);
+    }
+
+    // ------------------------------------------------------------
+    // Build the target URL manually.
+    // We take the current URL and REPLACE the `nombre_completo`
+    // parameter with the current input value. This preserves every
+    // other filter (clinica_id, contrato_estatus, critical_filter,
+    // pagination, sorting, etc.) without relying on a <form>.
+    // ------------------------------------------------------------
+    function buildUrl() {
+        var params = new URLSearchParams(window.location.search);
+
+        var val = $.trim(getInput().val() || '');
+
+        if (val === '') {
+            params.delete(INPUT_NAME);
+        } else {
+            params.set(INPUT_NAME, val);
+        }
+
+        // Yii pagination uses `page` — reset to 1 on new search
+        params.delete('page');
+
+        var action = window.location.pathname || window.location.href.split('?')[0];
+        var qs = params.toString();
+        return action + (qs ? '?' + qs : '');
+    }
+
+    function triggerSearch(force) {
+        var $inp  = getInput();
+        var $pjax = $(PJAX_CONTAINER);
+        if (!$inp.length || !$pjax.length) return;
+
+        var currentQuery = $.trim($inp.val() || '');
+        if (!force && currentQuery === lastQuery) return;
+        lastQuery = currentQuery;
+
+        var url = buildUrl();
+
+        if (window.history && window.history.pushState) {
+            window.history.pushState({ gridFilter: true }, '', url);
+        }
+
+        $pjax.addClass('pjax-loading');
+
+        $.pjax({
+            url: url,
+            container: PJAX_CONTAINER,
+            push: false,
+            replace: false,
+            timeout: 5000,
+            scrollTo: false,
+            cache: false,
+            fragment: PJAX_CONTAINER,
+        });
+    }
+
+    // ============================================================
+    // DELEGATED EVENTS — survive any DOM replacement
+    // ============================================================
+
+    // Every keystroke → debounce
+    $(document).off('input.liveSearch').on('input.liveSearch', INPUT_SELECTOR, function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () { triggerSearch(false); }, debounceMs);
+    });
+
+    // Enter → immediate (only when the focus is on the nombre_completo input)
+    $(document).off('keydown.liveSearch').on('keydown.liveSearch', INPUT_SELECTOR, function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            clearTimeout(timer);
+            triggerSearch(true);
+        }
+    });
+
+    // Blur → flush pending search ONLY if the input still exists
+    // (i.e., the user actually tabbed/clicked away, not PJAX replacement)
+    $(document).off('blur.liveSearch').on('blur.liveSearch', INPUT_SELECTOR, function () {
+        var $self = $(this);
+        // Defer the check: if PJAX is about to replace the grid,
+        // this element will be detached from the DOM.
+        setTimeout(function () {
+            if (!$self.closest('body').length) {
+                // Input was detached by PJAX — not a real blur. Do nothing.
+                return;
+            }
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+                triggerSearch(false);
+            }
+        }, 0);
+    });
+
+    // Kill Yii/Kartik's native keydown handlers on the nombre_completo
+    // input so we don't double-fire on blur/Enter. This does NOT affect
+    // the other filter inputs (cedula, email, telefono, etc.).
+    $(document).off('focus.yiiKill').on('focus.yiiKill', INPUT_SELECTOR, function () {
+        $(this).off('change.yiiGridView keydown.yiiGridView');
+    });
+
+    // ============================================================
+    // FORM SUBMIT INTERCEPTION — ONLY FOR THE nombre_completo INPUT
+    // ============================================================
+    // We must NOT hijack submits coming from other filter inputs
+    // (cedula, email, telefono, contrato_estatus, etc.) because our
+    // buildUrl() only knows how to encode `nombre_completo`.
+    // Those filters should fall through to Yii's native grid filter
+    // (full-page reload with all params) so they work correctly.
+    // ============================================================
+    $(document).off('submit.liveSearch').on('submit.liveSearch', 'form', function (e) {
+        var $form = $(this);
+
+        // Only handle forms that contain the nombre_completo input
+        if (!$form.find(INPUT_SELECTOR).length) {
+            return;
+        }
+
+        // Only intercept if the user pressed Enter / clicked submit
+        // *from* the nombre_completo input. Otherwise let Yii handle it.
+        var activeEl = document.activeElement;
+        var fromNombreInput = activeEl && $(activeEl).is(INPUT_SELECTOR);
+
+        // Also allow interception when the submit came from the
+        // implicit search trigger (e.g., the user pressed Enter while
+        // focus was on the nombre_completo input).
+        if (!fromNombreInput) {
+            // The user is submitting from another filter input (or the
+            // submit was triggered by some other control). Let the
+            // browser perform the normal form submit — Yii will reload
+            // the grid with ALL filter parameters intact.
+            return;
+        }
+
+        e.preventDefault();
+        clearTimeout(timer);
+        triggerSearch(true);
+    });
+
+    // Initialize lastQuery from the current URL (authoritative source)
+    var initParams = new URLSearchParams(window.location.search);
+    lastQuery = $.trim(initParams.get(INPUT_NAME) || '');
+
+    // ============================================================
+    // PJAX LIFECYCLE — bound on document so it survives replacement
+    // ============================================================
+    $(document)
+        .off('pjax:end.liveSearch pjax:error.liveSearch pjax:timeout.liveSearch')
+        .on('pjax:end.liveSearch pjax:error.liveSearch pjax:timeout.liveSearch', function (e) {
+            if (e.target && e.target.id !== 'affiliates-pjax') return;
+            $(PJAX_CONTAINER).removeClass('pjax-loading');
+        });
+
+    // ============================================================
+    // BROWSER BACK / FORWARD
+    // ============================================================
+    $(window).off('popstate.liveSearch').on('popstate.liveSearch', function () {
+        var url = window.location.href;
+        var $pjax = $(PJAX_CONTAINER);
+
+        $pjax.addClass('pjax-loading');
+        $.pjax({
+            url: url,
+            container: PJAX_CONTAINER,
+            push: false,
+            replace: true,
+            timeout: 5000,
+            scrollTo: false,
+            cache: false,
+            fragment: PJAX_CONTAINER,
+        });
+
+        // Sync input from URL after swap
+        setTimeout(function () {
+            var params = new URLSearchParams(window.location.search);
+            var newVal = params.get(INPUT_NAME) || '';
+            var $fresh = getInput();
+            if ($fresh.length && $fresh.val() !== newVal) {
+                $fresh.val(newVal);
+                lastQuery = $.trim(newVal);
+            }
+        }, 0);
+    });
+});
+
+// 5. DUAL SCROLLBAR SYSTEM
 $(document).ready(function() {
     var $gridWrapper = $('#grid-scroll-container');
     var $top = $('.top-native-scrollbar');
@@ -1015,20 +1261,15 @@ $(document).ready(function() {
         }, 150);
     });
 });
-
-// Click tracking for debugging
-$(document).on('click', '.kpi-card-link', function(e) {
-    console.log('KPI Card clicked - URL:', $(this).attr('href'));
-});
 JS;
 
 $this->registerJs($js, View::POS_READY);
 ?>
 
 <style>
-    /* ============================================
-       TOOLTIP CUSTOM STYLES
-       ============================================ */
+    /* ============================================ */
+    /* TOOLTIP CUSTOM STYLES                        */
+    /* ============================================ */
     .kpi-tooltip .tooltip-inner {
         background: #2c3e50;
         color: #ffffff;
@@ -1077,9 +1318,16 @@ $this->registerJs($js, View::POS_READY);
         border-right-color: #2c3e50 !important;
     }
 
-    /* ============================================
-       KPI CARDS - Clickable Microsoft Style (Single Row)
-       ============================================ */
+    /* PJAX busy state — subtle dim while refreshing the grid */
+    #affiliates-pjax.pjax-loading {
+        opacity: 0.55;
+        transition: opacity 0.15s ease;
+        pointer-events: none;
+    }
+
+    /* ============================================ */
+    /* KPI CARDS - Clickable Microsoft Style        */
+    /* ============================================ */
     .kpi-cards-row {
         display: flex;
         flex-wrap: nowrap;
@@ -1231,11 +1479,6 @@ $this->registerJs($js, View::POS_READY);
         white-space: nowrap;
     }
 
-    /* ============================================
-       CARD COLOR SCHEMES - MATCHING BADGE COLORS
-       ============================================ */
-
-    /* Total Afiliados - Primary Blue (like badge-primary) */
     .kpi-card.primary {
         background: linear-gradient(145deg, #007bff 0%, #0069d9 100%);
         color: white;
@@ -1250,7 +1493,6 @@ $this->registerJs($js, View::POS_READY);
         color: #ffffff !important;
     }
 
-    /* Registrado - Primary Blue (same as badge-primary) */
     .kpi-card.registrado {
         background: linear-gradient(145deg, #007bff 0%, #0069d9 100%);
         color: white;
@@ -1265,7 +1507,6 @@ $this->registerJs($js, View::POS_READY);
         color: #ffffff !important;
     }
 
-    /* Activo - Success Green (same as badge-success) */
     .kpi-card.success {
         background: linear-gradient(145deg, #28a745 0%, #218838 100%);
         color: white;
@@ -1280,7 +1521,6 @@ $this->registerJs($js, View::POS_READY);
         color: #ffffff !important;
     }
 
-    /* Suspendido - Secondary Gray (same as badge-secondary) */
     .kpi-card.danger {
         background: linear-gradient(145deg, #6c757d 0%, #5a6268 100%);
         color: white;
@@ -1295,7 +1535,6 @@ $this->registerJs($js, View::POS_READY);
         color: #ffffff !important;
     }
 
-    /* Anulado - Danger Red (same as badge-danger) */
     .kpi-card.anulado {
         background: linear-gradient(145deg, #dc3545 0%, #c82333 100%);
         color: white;
@@ -1310,7 +1549,6 @@ $this->registerJs($js, View::POS_READY);
         color: #ffffff !important;
     }
 
-    /* Críticos - Warning Orange (same as badge-warning) */
     .kpi-card.critical {
         background: linear-gradient(145deg, #ffc107 0%, #e0a800 100%);
         color: #212529;
@@ -1329,7 +1567,20 @@ $this->registerJs($js, View::POS_READY);
         color: #856404 !important;
     }
 
-    /* Critical badge for filter indicator */
+    .kpi-card.vencido {
+        background: linear-gradient(145deg, #fd7e14 0%, #e8590c 100%);
+        color: white;
+        border-color: #fd7e14;
+    }
+
+    .kpi-card.vencido .kpi-number,
+    .kpi-card.vencido .kpi-label,
+    .kpi-card.vencido .kpi-title,
+    .kpi-card.vencido .kpi-icon,
+    .kpi-card.vencido .kpi-arrow {
+        color: #ffffff !important;
+    }
+
     .badge-critical {
         background: linear-gradient(135deg, #ffc107, #e0a800);
         color: #212529 !important;
@@ -1342,14 +1593,12 @@ $this->registerJs($js, View::POS_READY);
         gap: 6px;
     }
 
-    /* Filter indicator badge in header */
     .section-title .badge {
         font-size: 0.75rem;
         padding: 0.35rem 0.75rem;
         vertical-align: middle;
     }
 
-    /* Responsive - Single Row with horizontal scroll on smaller screens */
     @media (max-width: 1200px) {
         .kpi-cards-row {
             gap: 10px;
@@ -1477,9 +1726,9 @@ $this->registerJs($js, View::POS_READY);
         }
     }
 
-    /* ============================================
-       CONTRACT STATUS BADGE STYLES - STANDARDIZED
-       ============================================ */
+    /* ============================================ */
+    /* CONTRACT STATUS BADGE STYLES                 */
+    /* ============================================ */
     .badge {
         display: inline-block;
         padding: 0.35em 0.65em;
@@ -1499,42 +1748,36 @@ $this->registerJs($js, View::POS_READY);
         border: 1px solid transparent;
     }
 
-    /* Registrado / Primary */
     .badge-primary {
         background: #007bff;
         color: #fff;
         border-color: #007bff;
     }
 
-    /* Activo / Success */
     .badge-success {
         background: #28a745;
         color: #fff;
         border-color: #28a745;
     }
 
-    /* Anulado / Danger */
     .badge-danger {
         background: #dc3545;
         color: #fff;
         border-color: #dc3545;
     }
 
-    /* Crítico / Warning */
     .badge-warning {
         background: #ffc107;
         color: #212529;
         border-color: #ffc107;
     }
 
-    /* Suspendido / Secondary */
     .badge-secondary {
         background: #6c757d;
         color: #fff;
         border-color: #6c757d;
     }
 
-    /* Pendiente / Info */
     .badge-info {
         background: #17a2b8;
         color: #fff;
@@ -1581,9 +1824,9 @@ $this->registerJs($js, View::POS_READY);
         background-color: rgba(40, 167, 69, 0.1) !important;
     }
 
-    /* ============================================
-       CÉDULA DE IDENTIDAD STYLES
-       ============================================ */
+    /* ============================================ */
+    /* CÉDULA DE IDENTIDAD STYLES                   */
+    /* ============================================ */
     .cedula-grande-container {
         text-align: center;
         padding: 10px 5px;
@@ -1704,9 +1947,9 @@ $this->registerJs($js, View::POS_READY);
         }
     }
 
-    /* ============================================
-       CORPORATIVO BADGE STYLES
-       ============================================ */
+    /* ============================================ */
+    /* CORPORATIVO BADGE STYLES                     */
+    /* ============================================ */
     .corporativo-badge {
         display: inline-flex;
         align-items: center;
@@ -1781,9 +2024,9 @@ $this->registerJs($js, View::POS_READY);
         }
     }
 
-    /* ============================================
-       DUAL SCROLLBAR SYSTEM
-       ============================================ */
+    /* ============================================ */
+    /* DUAL SCROLLBAR SYSTEM                        */
+    /* ============================================ */
     .table-responsive-scroll {
         overflow-x: auto;
         overflow-y: visible;
@@ -1831,7 +2074,6 @@ $this->registerJs($js, View::POS_READY);
         background: #555;
     }
 
-    /* Ensure proper centering */
     .grid-view td:has(.badge) {
         text-align: center !important;
         vertical-align: middle !important;
@@ -1851,7 +2093,6 @@ $this->registerJs($js, View::POS_READY);
         vertical-align: middle !important;
     }
 
-    /* Responsive */
     @media (max-width: 768px) {
 
         .corporativo-badge,
@@ -1892,9 +2133,9 @@ $this->registerJs($js, View::POS_READY);
         }
     }
 
-    /* ============================================
-   PASSPORT (P) CÉDULA STYLES
-   ============================================ */
+    /* ============================================ */
+    /* PASSPORT (P) CÉDULA STYLES                   */
+    /* ============================================ */
     .cedula-grande-container.cedula-passport .cedula-grande-text {
         font-size: 1.2rem !important;
         font-weight: 700;
@@ -1916,10 +2157,9 @@ $this->registerJs($js, View::POS_READY);
     }
 
     tbody tr:hover .bg-passport {
-        background-color: rgba(0, 120, 212, 0.08) !important;
+        background-color: rgba(120, 120, 212, 0.08) !important;
     }
 
-    /* Passport badge in filter */
     .filter-container .passport-badge {
         display: inline-block;
         padding: 0.2rem 0.6rem;

@@ -27,6 +27,14 @@ use app\models\CorporativoClinica;
 use app\models\User;
 use app\models\RmEstado;
 use \yii\db\Expression;
+use app\models\AgenteFuerza;
+use app\models\Receipt;
+use kartik\mpdf\Pdf;
+use app\models\ContratoCorporativo;
+use app\models\ContratoCorporativoAfiliado;
+use app\components\ContractHelper;
+use yii\helpers\Html;
+
 
 /**
  * CorporativoController implements the CRUD actions for Corporativo model.
@@ -129,6 +137,65 @@ class CorporativoController extends Controller
         $searchModel = new CorporativoSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
+        // ── Precompute affiliate counts for every corporate on this page ──
+        $corpIds = array_map(
+            fn($m) => (int)$m->id,
+            $dataProvider->getModels()
+        );
+
+        $activeCounts   = [];
+        $annulledCounts = [];
+
+        if (!empty($corpIds)) {
+            // Active: affiliates with at least one non-annulled contract
+            $activeRows = (new \yii\db\Query())
+                ->select([
+                    'corp_id' => 'ud.afiliado_corporativo_id',
+                    'cnt'     => 'COUNT(DISTINCT ud.id)',
+                ])
+                ->from(['ud' => 'user_datos'])
+                ->innerJoin(['c' => 'contratos'], 'c.user_id = ud.id')
+                ->where(['ud.afiliado_corporativo_id' => $corpIds])
+                ->andWhere(['ud.user_datos_type_id' => 2])
+                ->andWhere(['<>', 'c.estatus', \app\models\Contratos::STATUS_ANULADO])
+                ->groupBy('ud.afiliado_corporativo_id')
+                ->all(\Yii::$app->db);
+
+            foreach ($activeRows as $row) {
+                $activeCounts[(int)$row['corp_id']] = (int)$row['cnt'];
+            }
+
+            // Annulled: affiliates whose only contracts (if any) are all annulled
+            $annulledRows = (new \yii\db\Query())
+                ->select([
+                    'corp_id' => 'ud.afiliado_corporativo_id',
+                    'cnt'     => 'COUNT(DISTINCT ud.id)',
+                ])
+                ->from(['ud' => 'user_datos'])
+                ->where(['ud.afiliado_corporativo_id' => $corpIds])
+                ->andWhere(['ud.user_datos_type_id' => 2])
+                ->andWhere([
+                    'NOT EXISTS',
+                    (new \yii\db\Query())
+                        ->from(['c' => 'contratos'])
+                        ->where('c.user_id = ud.id')
+                        ->andWhere(['<>', 'c.estatus', \app\models\Contratos::STATUS_ANULADO])
+                ])
+                ->groupBy('ud.afiliado_corporativo_id')
+                ->all(\Yii::$app->db);
+
+            foreach ($annulledRows as $row) {
+                $annulledCounts[(int)$row['corp_id']] = (int)$row['cnt'];
+            }
+        }
+
+        return $this->render('index', [
+            'searchModel'    => $searchModel,
+            'dataProvider'   => $dataProvider,
+            'activeCounts'   => $activeCounts,
+            'annulledCounts' => $annulledCounts,
+        ]);
+
         // Asegurar que las relaciones se carguen
         // el query del dataProvider se declara como QueryInterface,
         // comprobar que es un ActiveQuery antes de usar with()
@@ -177,37 +244,69 @@ class CorporativoController extends Controller
     }
 
     /**
-     * Lists all Contratos models for users related to a specific Corporativo.
-     * @param int $id Corporativo ID
-     * @return string
-     * @throws NotFoundHttpException if the corporativo cannot be found
+     * Lists ALL corporate contracts for a given corporate, grouped by
+     * nrocontrato (one business-level contract per year). This is the
+     * entry point for viewing, creating, downloading, and annulling
+     * corporate contracts — instead of jumping straight to the PDF drawer.
+     *
+     * @param  int $id
+     * @return string|\yii\web\Response
+     * @throws NotFoundHttpException
      */
     public function actionContracts($id)
     {
         $corporativo = $this->findModel($id);
 
-        // Obtener IDs de usuarios asociados al corporativo
-        $userIds = CorporativoUser::find()
-            ->select('user_id')
-            ->where(['corporativo_id' => $id])
-            ->column();
-
-        $searchModel = new ContratosSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-
-        // Filtrar contratos por usuarios asociados
-        if (!empty($userIds)) {
-            $dataProvider->query->andWhere(['in', 'user_id', $userIds]);
-        } else {
-            // Si no hay usuarios, no mostrar contratos
-            $dataProvider->query->where('0=1');
+        if (!$this->userHasAccessToCorporativo($id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para ver los contratos de este corporativo.');
+            return $this->redirect(['index']);
         }
 
+        // Load every ContratoCorporativo row for this corporate, including
+        // annulled ones for the historic view, ordered newest first.
+        $flatContracts = ContratoCorporativo::find()
+            ->with(['plan', 'clinica', 'creator'])
+            ->where(['corporativo_id' => $id])
+            ->orderBy(['fecha_ini' => SORT_DESC, 'plan_id' => SORT_ASC])
+            ->all();
+
+        // ── Group into consistent summaries (anchor, is_annulled, etc.) ─────
+        $contractGroups = ContractHelper::buildContractGroupSummaries($flatContracts);
+
+        // Check whether a contract already exists for the CURRENT year — if
+        // yes, the "Nuevo Contrato" button will be disabled by the helper.
+        $currentYear = (int) date('Y');
+
         return $this->render('contracts', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-            'corporativo' => $corporativo,
+            'corporativo'         => $corporativo,
+            'contractGroups'      => $contractGroups,
+            'hasContractThisYear' => $this->hasContractForYear($contractGroups, $currentYear),
+            'currentYear'         => $currentYear,
         ]);
+    }
+
+    /**
+     * Returns true when at least one non-annulled group has a fecha_ini
+     * falling inside $year.
+     *
+     * @param  array $contractGroups
+     * @param  int   $year
+     * @return bool
+     */
+    private function hasContractForYear(array $contractGroups, int $year): bool
+    {
+        foreach ($contractGroups as $group) {
+            if (!empty($group['is_annulled'])) {
+                continue;
+            }
+            if (empty($group['anchor']->fecha_ini)) {
+                continue;
+            }
+            if ((int) date('Y', strtotime($group['anchor']->fecha_ini)) === $year) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -286,9 +385,29 @@ class CorporativoController extends Controller
                     $model->addError('monto_pagado', 'El monto a pagar debe coincidir con el total de cuotas pendientes.');
                     Yii::$app->session->setFlash('warning', 'El monto no coincide con el total de cuotas pendientes.');
                 } else {
-                    // Handle file upload
+                    // ============================================================
+                    // MANDATORY COMPROBANTE — hard server-side guard.
+                    //
+                    // `imagen_prueba_file` is only required when the payment does
+                    // not already carry a saved comprobante URL (edit flow). This
+                    // closes the gap left by the model rule's skipOnEmpty=true.
+                    // ============================================================
                     $model->imagen_prueba_file = \yii\web\UploadedFile::getInstance($model, 'imagen_prueba_file');
 
+                    if (!$model->imagen_prueba_file && empty($model->imagen_prueba)) {
+                        Yii::$app->session->setFlash(
+                            'error',
+                            'Debe adjuntar el comprobante de pago antes de guardar el registro.'
+                        );
+                        return $this->render('pagos', [
+                            'model'       => $model,
+                            'corporativo' => $corporativo,
+                            'allCuotas'   => $allCuotas,
+                            'grandTotal'  => $grandTotal,
+                        ]);
+                    }
+
+                    // Handle file upload
                     if ($model->imagen_prueba_file) {
                         $folder = 'Pago';
                         $fileName = uniqid('pago_corp_') . '.' . $model->imagen_prueba_file->extension;
@@ -330,7 +449,6 @@ class CorporativoController extends Controller
 
                                     // Copy only the safe attributes, excluding the ID
                                     $affiliatePayment->created_at = $model->created_at;
-                                    //$affiliatePayment->recibo_id = $model->recibo_id;
                                     $affiliatePayment->fecha_pago = $model->fecha_pago;
                                     $affiliatePayment->monto_pagado = $userAmount; // User-specific amount
                                     $affiliatePayment->metodo_pago = $model->metodo_pago;
@@ -376,7 +494,7 @@ class CorporativoController extends Controller
                                     $cuota->estatus = 'pagada';
                                     $cuota->fecha_pago = $individualPayment->fecha_pago ?? $model->fecha_pago;
                                     $cuota->rate_usd_bs = $tasaCuota;
-                                    $cuota->id_pago = $mainPaymentId;; // Link to INDIVIDUAL payment
+                                    $cuota->id_pago = $mainPaymentId; // Link to INDIVIDUAL payment
 
                                     if ($cuota->save(false)) {
                                         $cuotasUpdatedCount++;
@@ -588,6 +706,61 @@ class CorporativoController extends Controller
 
             // --- LÓGICA PARA GUARDAR EL MODELO PRINCIPAL (CORPORATIVO) ---
             if ($model->save()) {
+
+                // ============================================================
+                // NEW: Recompute aggregates on contratos_corporativos.
+                //
+                // `contratos_corporativos.cantidad_afiliados` and `monto_total`
+                // are frozen at the moment the corporate contract is created.
+                // Any change to the affiliate set (add/remove here, annul an
+                // individual contract elsewhere, unlink an affiliate, etc.)
+                // would otherwise leave those columns stale — which is exactly
+                // what caused the "25 vs 24" mismatch in `corporativo/view.php`.
+                //
+                // We recompute them from the junction table, which IS the
+                // single source of truth for "who belongs to this corporate
+                // contract".
+                // ============================================================
+                if (!empty($afiliadosParaBorrar) || !empty($afiliadosParaAnadir)) {
+                    Yii::$app->db->createCommand("
+                    UPDATE contratos_corporativos cc
+                    SET cantidad_afiliados = agg.cnt,
+                        monto_total        = agg.total,
+                        updated_at         = NOW()
+                    FROM (
+                        SELECT
+                            cca.contrato_corporativo_id,
+                            COUNT(DISTINCT cca.user_datos_id)       AS cnt,
+                            COALESCE(SUM(cca.precio_individual), 0) AS total
+                        FROM contratos_corporativos_afiliados cca
+                        INNER JOIN contratos_corporativos c
+                            ON c.id = cca.contrato_corporativo_id
+                        WHERE c.corporativo_id = :cid
+                        GROUP BY cca.contrato_corporativo_id
+                    ) agg
+                    WHERE cc.id = agg.contrato_corporativo_id
+                ", [':cid' => $model->id])->execute();
+
+                    // Zero-out any corporate-contract row that lost all its
+                    // affiliates (e.g. the affiliate was the only one on that
+                    // plan). Otherwise those rows would keep their old
+                    // cantidad_afiliados forever.
+                    Yii::$app->db->createCommand("
+                    UPDATE contratos_corporativos cc
+                    SET cantidad_afiliados = 0,
+                        monto_total        = 0,
+                        updated_at         = NOW()
+                    WHERE cc.corporativo_id = :cid
+                      AND NOT EXISTS (
+                          SELECT 1 FROM contratos_corporativos_afiliados cca
+                          WHERE cca.contrato_corporativo_id = cc.id
+                      )
+                ", [':cid' => $model->id])->execute();
+                }
+                // ============================================================
+                // END NEW
+                // ============================================================
+
                 Yii::$app->session->setFlash('success', 'Corporativo actualizado exitosamente.');
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
@@ -603,18 +776,19 @@ class CorporativoController extends Controller
         ]);
     }
 
-
-// ------------------- Controlador de carga masiva de corporativos -------------------------
-
     /**
      * Acción principal para mostrar y procesar el formulario de carga masiva de afiliados.
+     *
+     * The contract vigencia (fecha_ini / fecha_ven) is now captured on this form
+     * and passed down to procesarCSV() → persistCorporateContract().
+     *
      * @return string|\yii\web\Response
      */
     public function actionCargaMasivaAfiliados()
     {
         $model = new MasivoAfiliadosForm();
 
-        // 1. Obtener los corporativos activos para el dropdown
+        // Corporativos activos for the dropdown
         $corporativosData = Corporativo::find()
             ->select(['id', 'nombre'])
             ->where(['estatus' => 'Activo'])
@@ -623,45 +797,44 @@ class CorporativoController extends Controller
 
         $corporativos = ArrayHelper::map($corporativosData, 'id', 'nombre');
 
-        // Get plans for dropdown (initially empty, loaded via AJAX)
-        $planes = [];
-
-        // Get asesores list (only active ones)
+        $planes   = [];
         $asesores = UserHelper::getAgenteFuerzaList();
 
         if ($model->load(Yii::$app->request->post())) {
             $model->masivoFile = UploadedFile::getInstance($model, 'masivoFile');
 
             if ($model->validate()) {
-                $filePath = $model->masivoFile->tempName;
+                $filePath      = $model->masivoFile->tempName;
                 $corporativoId = $model->corporativo_id;
-                $planId = $model->plan_id;
-                $asesorId = $model->asesor_id;
+                $planId        = $model->plan_id;
+                $asesorId      = $model->asesor_id;
+                $fechaIni      = $model->fecha_ini;
+                $fechaVen      = $model->fecha_ven;
 
                 // Get the selected plan to determine the clinic
                 $plan = Planes::findOne($planId);
                 if (!$plan) {
                     Yii::$app->session->setFlash('error', 'El plan seleccionado no existe.');
                     return $this->render('carga-masiva-afiliados', [
-                        'model' => $model,
+                        'model'        => $model,
                         'corporativos' => $corporativos,
-                        'planes' => $planes,
-                        'asesores' => $asesores,
+                        'planes'       => $planes,
+                        'asesores'     => $asesores,
                     ]);
                 }
 
+                // Pass the user-supplied vigencia down to the CSV processor.
                 $resultados = $this->procesarCSV(
                     $filePath,
                     $corporativoId,
-                    $model->fecha_ini,
-                    $model->fecha_ven,
-                    $planId,        // Pass the plan ID
-                    $plan->clinica_id, // Pass the clinic ID from the plan
-                    $asesorId       // Pass the asesor ID (may be null)
+                    $planId,
+                    $plan->clinica_id,
+                    $asesorId,
+                    $fechaIni,
+                    $fechaVen
                 );
 
-                // 3. Mostrar el resumen del proceso
-                $errorCount = count($resultados['errors']);
+                $errorCount   = count($resultados['errors']);
                 $successCount = $resultados['successCount'];
 
                 $messageType = $errorCount > 0 ? 'warning' : 'success';
@@ -672,14 +845,13 @@ class CorporativoController extends Controller
 
                 Yii::$app->session->setFlash($messageType, $messageText);
 
-                // Get the corporativo model for the view
                 $corporativoModel = Corporativo::findOne($corporativoId);
 
                 return $this->render('carga-masiva-resumen', [
-                    'model' => $model,
-                    'resultados' => $resultados,
-                    'corporativo' => $corporativoModel,
-                    'selectedPlan' => $plan,
+                    'model'         => $model,
+                    'resultados'    => $resultados,
+                    'corporativo'   => $corporativoModel,
+                    'selectedPlan'  => $plan,
                 ]);
             } else {
                 $validationErrors = ArrayHelper::flatten($model->getErrors());
@@ -690,35 +862,38 @@ class CorporativoController extends Controller
             }
         }
 
-        // Mostrar el formulario inicial
         return $this->render('carga-masiva-afiliados', [
-            'model' => $model,
+            'model'        => $model,
             'corporativos' => $corporativos,
-            'planes' => $planes,
-            'asesores' => $asesores,
+            'planes'       => $planes,
+            'asesores'     => $asesores,
         ]);
     }
 
     /**
      * Lógica principal para leer el archivo CSV y procesar los afiliados,
      * asegurando el cumplimiento de las reglas de validación de UserDatos.
-     * 
-     * ACTUALIZACIÓN IMPORTANTE: 
+     *
+     * ACTUALIZACIÓN IMPORTANTE (v2 — PROMOTION-AWARE):
      * - plan_id, clinica_id y asesor_id ya NO se leen del CSV
      * - Se reciben como parámetros del formulario
+     * - Las fechas del contrato (fecha_ini / fecha_ven) se leen AHORA del corporativo
      * - Genera 12 cuotas por afiliado utilizando el método generateCuotasAnniversaryBased()
-     * - Validaciones mejoradas para manejar datos del mundo real (teléfonos sin 0, fechas mixtas, etc.)
-     * 
+     * - Duplicate handling is now three-layered, mirroring UserDatosController::actionCreate():
+     *     1. Live affiliate  → block row
+     *     2. Promotable user → promote if names match, else block with identity conflict
+     *     3. Fresh cédula    → normal create
+     *
      * @param string $filePath Ruta temporal del archivo CSV.
      * @param int $corporativoId ID del corporativo destino.
-     * @param string $fechaIniGlobal Fecha de inicio del contrato.
-     * @param string $fechaVenGlobal Fecha de vencimiento del contrato.
      * @param int $planId ID del plan seleccionado en el formulario.
      * @param int $clinicaId ID de la clínica asociada al plan.
      * @param int|null $asesorId ID del asesor seleccionado (opcional).
+     * @param string|null $fechaIni
+     * @param string|null $fechaVen
      * @return array Array con el conteo de éxitos, los errores encontrados y detalles de éxito.
      */
-    private function procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal, $planId, $clinicaId, $asesorId = null)
+    private function procesarCSV($filePath, $corporativoId, $planId, $clinicaId, $asesorId = null, $fechaIni = null, $fechaVen = null)
     {
         $handle = fopen($filePath, "r");
         if ($handle === false) {
@@ -728,6 +903,46 @@ class CorporativoController extends Controller
                 'successDetails' => []
             ];
         }
+
+        // ============================================================
+        // 0. Load the corporate and validate the caller-supplied vigencia.
+        // ============================================================
+        $corporativo = Corporativo::findOne($corporativoId);
+
+        if (!$corporativo) {
+            fclose($handle);
+            return [
+                'successCount' => 0,
+                'errors' => ["El corporativo con ID {$corporativoId} no existe."],
+                'successDetails' => []
+            ];
+        }
+
+        if (empty($fechaIni) || empty($fechaVen)) {
+            fclose($handle);
+            return [
+                'successCount' => 0,
+                'errors' => ['Debe indicar la vigencia del contrato (fecha de inicio y fin).'],
+                'successDetails' => []
+            ];
+        }
+
+        if ($fechaVen <= $fechaIni) {
+            fclose($handle);
+            return [
+                'successCount' => 0,
+                'errors' => ['La fecha de vencimiento debe ser posterior a la fecha de inicio.'],
+                'successDetails' => []
+            ];
+        }
+
+        $fechaIniGlobal = $fechaIni;
+        $fechaVenGlobal = $fechaVen;
+
+        Yii::info(
+            "Carga masiva para corporativo #{$corporativoId}: vigencia {$fechaIniGlobal} → {$fechaVenGlobal}",
+            __METHOD__
+        );
 
         // Campos requeridos - PLAN_ID, CLINICA_ID Y ASESOR_ID YA NO SON REQUERIDOS EN EL CSV
         $requiredFields = [
@@ -852,13 +1067,100 @@ class CorporativoController extends Controller
                     throw new \Exception("El email '{$email}' no tiene un formato válido.");
                 }
 
-                // === VALIDACIÓN DE DUPLICADOS ===
-                if (UserDatos::find()->where(['cedula' => $cedulaLimpia])->exists()) {
-                    throw new \Exception("Ya existe un afiliado con la cédula {$cedulaLimpia} registrado.");
+                // ============================================================
+                // === DUPLICATE HANDLING — PROMOTION-AWARE (v2) ===
+                // ------------------------------------------------------------
+                // Mirrors the logic in UserDatosController::actionCreate():
+                //
+                //   1. LIVE AFFILIATE?        → hard block (throw)
+                //   2. PROMOTABLE RECORD?     → promote if names match, else block
+                //   3. NO EXISTING RECORD?    → normal create path
+                //
+                // The name-match guard prevents the silent identity overwrite
+                // that was previously possible when a cédula collided with a
+                // different person.
+                // ============================================================
+
+                // Extract the incoming identity from the CSV
+                $incomingNombres   = trim($data[$headerMap['nombres']]   ?? '');
+                $incomingApellidos = trim($data[$headerMap['apellidos']] ?? '');
+                $incomingTipoCed   = trim($data[$headerMap['tipo_cedula']] ?? '');
+
+                // Build a transient UserDatos so we can reuse its methods
+                $probe = new UserDatos();
+                $probe->role        = 'afiliado';
+                $probe->tipo_cedula = $incomingTipoCed;
+                $probe->cedula      = $cedulaLimpia;
+                $probe->nombres     = $incomingNombres;
+                $probe->apellidos   = $incomingApellidos;
+                $probe->email       = $email;
+
+                // ── Step 1: LIVE affiliate duplicate? ──
+                $liveDup = $probe->getDuplicateDetails(false);
+                if ($liveDup && isset($liveDup['record'])) {
+                    /** @var UserDatos $existing */
+                    $existing = $liveDup['record'];
+                    throw new \Exception(
+                        "Ya existe un afiliado activo con la cédula {$cedulaLimpia} "
+                            . "({$existing->nombres} {$existing->apellidos}). "
+                            . "No se puede volver a registrar."
+                    );
                 }
 
-                if (User::find()->where(['email' => $email])->exists()) {
-                    throw new \Exception("Ya existe un usuario con el email {$email} registrado.");
+                // ── Step 2: Promotable (non-affiliate) record? ──
+                $promotable     = UserDatos::findPromotableRecordByCedula($incomingTipoCed, $cedulaLimpia);
+                $promotedRecord = null;
+
+                if ($promotable) {
+                    // 2a. Names must match — otherwise block, to prevent identity overwrite.
+                    if (!UserDatos::namesMatch(
+                        $promotable->nombres,
+                        $promotable->apellidos,
+                        $incomingNombres,
+                        $incomingApellidos
+                    )) {
+                        throw new \Exception(
+                            "La cédula {$incomingTipoCed}-{$cedulaLimpia} ya está registrada a nombre de "
+                                . "{$promotable->nombres} {$promotable->apellidos} (rol: {$promotable->role}). "
+                                . "Los datos del CSV ({$incomingNombres} {$incomingApellidos}) no coinciden. "
+                                . "Verifique la cédula o el nombre antes de reintentar."
+                        );
+                    }
+
+                    // 2b. Warn (not block) if the CSV email differs from the login email.
+                    if (!empty($promotable->user_login_id)) {
+                        $existingUserLogin = User::findOne($promotable->user_login_id);
+                        if ($existingUserLogin && strcasecmp($existingUserLogin->email, $email) !== 0) {
+                            Yii::warning(
+                                "Carga masiva: se promueve la cédula {$incomingTipoCed}-{$cedulaLimpia}. "
+                                    . "El email del CSV ({$email}) difiere del login existente "
+                                    . "({$existingUserLogin->email}); se conservará el login original.",
+                                __METHOD__
+                            );
+                        }
+                    }
+
+                    // 2c. Safe to promote.
+                    Yii::info(
+                        "Carga masiva: promoviendo UserDatos #{$promotable->id} "
+                            . "(rol actual: {$promotable->role}) a afiliado para cédula "
+                            . "{$incomingTipoCed}-{$cedulaLimpia}",
+                        __METHOD__
+                    );
+
+                    $promotedRecord = $promotable;
+                }
+
+                // ── Step 3: Email duplicate check (only when NOT promoting) ──
+                // If we're promoting, the email belongs to the staff member's
+                // existing login. If we're creating fresh, the email must not collide.
+                if (!$promotedRecord) {
+                    if (User::find()->where(['email' => $email])->exists()) {
+                        throw new \Exception(
+                            "Ya existe un usuario con el email {$email} registrado. "
+                                . "Use un email diferente o verifique si el afiliado ya está registrado."
+                        );
+                    }
                 }
 
                 // === EXTRACCIÓN Y SANEAMIENTO DE DATOS ===
@@ -913,28 +1215,70 @@ class CorporativoController extends Controller
 
                 $estadoNombreParaUserDatos = $this->estadoNormToCanonicalName[$normalizedCsvName] ?? $estadoNameCsv;
 
-                // === CREAR USER LOGIN ===
-                $userLogin = new User();
-                $userLogin->email = $email;
-                $userLogin->username = $email;
-                $userLogin->password_hash = Yii::$app->security->generatePasswordHash(Yii::$app->security->generateRandomString(12));
-                $userLogin->generateAuthKey();
-                $userLogin->status = 10;
+                // ============================================================
+                // === USER LOGIN — reuse on promotion, create otherwise ===
+                // ============================================================
+                $afiliado  = null;
 
-                if (!$userLogin->save()) {
-                    Yii::error(['Error_User_Login' => $userLogin->getErrors()], __METHOD__);
-                    throw new \Exception('Error al crear User Login: ' . implode(', ', ArrayHelper::flatten($userLogin->getErrors())));
+                if ($promotedRecord) {
+                    // ── PROMOTION PATH ──
+                    // Reuse the existing User login. Do NOT create a new one.
+                    $userLogin = User::findOne($promotedRecord->user_login_id);
+
+                    if (!$userLogin) {
+                        throw new \Exception(
+                            "El registro existente (cédula {$incomingTipoCed}-{$cedulaLimpia}) "
+                                . "no tiene un usuario de login asociado. Contacte al administrador."
+                        );
+                    }
+
+                    // Ensure the login is active.
+                    if ((int)$userLogin->status !== User::STATUS_ACTIVE) {
+                        $userLogin->status = User::STATUS_ACTIVE;
+                        $userLogin->save(false);
+                    }
+
+                    $afiliado = $promotedRecord;
+                } else {
+                    // ── NORMAL CREATE PATH ──
+                    $userLogin = new User();
+                    $userLogin->email = $email;
+                    $userLogin->username = $email;
+                    $userLogin->password_hash = Yii::$app->security->generatePasswordHash(
+                        Yii::$app->security->generateRandomString(12)
+                    );
+                    $userLogin->generateAuthKey();
+                    $userLogin->status = 10;
+
+                    if (!$userLogin->save()) {
+                        Yii::error(['Error_User_Login' => $userLogin->getErrors()], __METHOD__);
+                        throw new \Exception(
+                            'Error al crear User Login: '
+                                . implode(', ', ArrayHelper::flatten($userLogin->getErrors()))
+                        );
+                    }
+
+                    $afiliado = new UserDatos();
+                    $afiliado->user_login_id = $userLogin->id;
                 }
 
-                // === CREAR AFILIADO (UserDatos) ===
-                $afiliado = new UserDatos();
-                $afiliado->user_login_id = $userLogin->id;
-
-                // Datos básicos
-                $afiliado->tipo_cedula = trim($data[$headerMap['tipo_cedula']]);
-                $afiliado->cedula = $cedulaLimpia;
-                $afiliado->nombres = trim($data[$headerMap['nombres']]);
-                $afiliado->apellidos = trim($data[$headerMap['apellidos']]);
+                // ============================================================
+                // IDENTITY FIELDS — preserve on promotion, set on create
+                // ============================================================
+                if (!$promotedRecord) {
+                    $afiliado->tipo_cedula = trim($data[$headerMap['tipo_cedula']]);
+                    $afiliado->cedula      = $cedulaLimpia;
+                    $afiliado->nombres     = trim($data[$headerMap['nombres']]);
+                    $afiliado->apellidos   = trim($data[$headerMap['apellidos']]);
+                } else {
+                    // Sanity: the promoted record must match the CSV cédula
+                    if ((string)$afiliado->cedula !== (string)$cedulaLimpia) {
+                        throw new \Exception(
+                            "Inconsistencia: la cédula promovida ({$afiliado->cedula}) "
+                                . "no coincide con la del CSV ({$cedulaLimpia})."
+                        );
+                    }
+                }
 
                 // === FECHA DE NACIMIENTO (MÚLTIPLES FORMATOS) ===
                 $fechaNacString = trim($data[$headerMap['fechanac']]);
@@ -990,7 +1334,10 @@ class CorporativoController extends Controller
                     }
                 }
 
-                $afiliado->fechanac = $dateObject->format('Y-m-d');
+                // Only set fechanac if the promoted record doesn't already have one
+                if (!$promotedRecord || empty($afiliado->fechanac)) {
+                    $afiliado->fechanac = $dateObject->format('Y-m-d');
+                }
 
                 // === SEXO (NORMALIZACIÓN) ===
                 $sexoCsv = trim($data[$headerMap['sexo']]);
@@ -1105,7 +1452,8 @@ class CorporativoController extends Controller
                 $afiliado->estatus = 'Creado';
                 $afiliado->estatus_solvente = 'Si';
                 $afiliado->codigoValidacion = UserHelper::getInstance()->generarCodigoValidacion();
-                $afiliado->created_at = date('Y-m-d H:i:s');
+                // Preserve created_at on promotion; set it fresh otherwise
+                $afiliado->created_at = $afiliado->created_at ?: date('Y-m-d H:i:s');
                 $afiliado->updated_at = date('Y-m-d H:i:s');
                 $afiliado->plan_id = $planId;
                 $afiliado->clinica_id = $clinicaId;
@@ -1148,42 +1496,127 @@ class CorporativoController extends Controller
                     throw new \Exception('Error al guardar NroContrato o contrato_id.');
                 }
 
-                // === GENERAR 12 CUOTAS ===
-                Yii::info("Generando 12 cuotas para el contrato #{$modelContrato->id} del afiliado {$afiliado->cedula}", __METHOD__);
+                // ============================================================
+                // === GENERAR CUOTAS ALINEADAS AL CICLO DEL CORPORATIVO ===
+                // ------------------------------------------------------------
+                // Corporate affiliates MUST be billed on the same day-of-month
+                // as the corporate contract (the "anchor day").
+                //
+                // When an affiliate joins mid-cycle, a PRORATED first cuota is
+                // emitted for the gap between their join date and the corporate
+                // anchor day, followed by regular aligned monthly cuotas through
+                // the corporate contract's end date.
+                //
+                // This mirrors exactly what the single-affiliate flow does in
+                // UserDatosController::actionCreate() via
+                // Cuotas::generateCorporateAlignedCuotasWithProration(), so both
+                // paths now produce identical schedules for the same affiliate.
+                // ============================================================
 
-                $cuotaGenerationResult = Cuotas::generateCuotasAnniversaryBased(
+                // Resolve the corporate contract that will anchor the billing cycle.
+                // Priority:
+                //   1. A contract whose vigencia contains TODAY
+                //   2. A contract anchored in the CURRENT calendar year
+                $today       = date('Y-m-d');
+                $currentYear = (int) date('Y');
+
+                $corpContract = \app\models\ContratoCorporativo::find()
+                    ->where(['corporativo_id' => $corporativoId])
+                    ->andWhere(['!=', 'estatus', \app\models\ContratoCorporativo::STATUS_ANULADO])
+                    ->andWhere(['<=', 'fecha_ini', $today])
+                    ->andWhere(['>=', 'fecha_ven', $today])
+                    ->orderBy(['fecha_ini' => SORT_DESC])
+                    ->one();
+
+                if (!$corpContract) {
+                    $corpContract = \app\models\ContratoCorporativo::find()
+                        ->where(['corporativo_id' => $corporativoId])
+                        ->andWhere(['!=', 'estatus', \app\models\ContratoCorporativo::STATUS_ANULADO])
+                        ->andWhere(['>=', 'fecha_ini', $currentYear . '-01-01'])
+                        ->andWhere(['<=', 'fecha_ini', $currentYear . '-12-31'])
+                        ->orderBy(['fecha_ini' => SORT_DESC])
+                        ->one();
+                }
+
+                // The billing anchor day comes from the corporate contract's fecha_ini.
+                // Fallback: use the affiliate's own fecha_ini so we don't hard-fail if
+                // the corporate contract hasn't been persisted yet (it will be, right
+                // after this loop, by ContractHelper::persistCorporateContract).
+                $anchorIni = $corpContract ? $corpContract->fecha_ini : $modelContrato->fecha_ini;
+
+                Yii::info(
+                    "Corporate-aligned cuota generation for contract #{$modelContrato->id}: " .
+                        "affiliate fecha_ini={$modelContrato->fecha_ini}, " .
+                        "anchor fecha_ini={$anchorIni}, " .
+                        "corporate fecha_ven={$modelContrato->fecha_ven}",
+                    __METHOD__
+                );
+
+                $cuotaGenerationResult = Cuotas::generateCorporateAlignedCuotasWithProration(
                     $modelContrato->id,
-                    $modelContrato->fecha_ini,
+                    $modelContrato->fecha_ini,   // affiliate's join date
+                    $anchorIni,                  // corporate contract's fecha_ini → anchor day
+                    $modelContrato->fecha_ven,   // corporate contract's fecha_ven → hard stop
                     $modelContrato->monto
                 );
 
                 if (!$cuotaGenerationResult['success']) {
-                    throw new \Exception('Error al generar las 12 cuotas: ' . $cuotaGenerationResult['error']);
+                    throw new \Exception(
+                        'Error al generar las cuotas alineadas al ciclo del corporativo: '
+                            . $cuotaGenerationResult['error']
+                    );
                 }
 
                 $cuotasGeneradas = count($cuotaGenerationResult['cuotas']);
+
                 Yii::info(
-                    "✅ Generadas {$cuotasGeneradas} cuotas para el contrato #{$modelContrato->id} " .
-                        "(Afiliado: {$afiliado->cedula} - {$afiliado->nombres} {$afiliado->apellidos})",
+                    "✅ Generadas {$cuotasGeneradas} cuotas alineadas al ciclo del corporativo " .
+                        "para el contrato #{$modelContrato->id} " .
+                        "(Afiliado: {$afiliado->cedula} - {$afiliado->nombres} {$afiliado->apellidos}). " .
+                        "Prorrateada: " . (!empty($cuotaGenerationResult['has_proration']) ? 'SÍ' : 'NO'),
                     __METHOD__
                 );
 
                 // === CREAR RELACIÓN CORPORATIVO USER ===
+                // Delete any pre-existing relation first (idempotent on promotion)
+                CorporativoUser::deleteAll([
+                    'corporativo_id' => $corporativoId,
+                    'user_id'        => $afiliado->id,
+                ]);
+
                 $corporativoUser = new CorporativoUser();
                 $corporativoUser->corporativo_id = $corporativoId;
                 $corporativoUser->user_id = $afiliado->id;
                 $corporativoUser->fecha_vinculacion = new Expression('NOW()');
+                $corporativoUser->rol_en_corporativo = 'afiliado';
 
                 if (!$corporativoUser->save()) {
                     Yii::error(['Error_CorporativoUser' => $corporativoUser->getErrors()], __METHOD__);
                     throw new \Exception('Error al vincular con CorporativoUser: ' . implode(', ', ArrayHelper::flatten($corporativoUser->getErrors())));
                 }
 
-                // === ASIGNAR ROL ===
+                // ============================================================
+                // === ASSIGN ROLE ===
+                // ------------------------------------------------------------
+                // On a fresh record, assign 'afiliado'.
+                // On a promotion, ADD 'afiliado' without removing existing roles.
+                // ============================================================
                 $auth = Yii::$app->authManager;
                 $role = $auth->getRole('afiliado');
                 if ($role) {
-                    $auth->assign($role, $userLogin->id);
+                    try {
+                        $alreadyAssigned = $auth->getAssignment('afiliado', $userLogin->id);
+                        if (!$alreadyAssigned) {
+                            $auth->assign($role, $userLogin->id);
+                            Yii::$app->cache->flush();
+                        }
+                    } catch (\Throwable $e) {
+                        Yii::error(
+                            "Error asignando rol 'afiliado' a User #{$userLogin->id}: " . $e->getMessage(),
+                            __METHOD__
+                        );
+                        // Non-fatal — the affiliate record is still created.
+                    }
                 }
 
                 // === RECOLECTAR DETALLES PARA EL RESUMEN ===
@@ -1202,6 +1635,8 @@ class CorporativoController extends Controller
                     'clinica_id' => $clinicaId,
                     'cuotas_generadas' => $cuotasGeneradas,
                     'asesor_id' => $asesorId,
+                    'promoted'           => ($promotedRecord !== null),
+                    'promoted_from_role' => $promotedRecord ? $promotedRecord->role : null,
                 ];
 
                 $transaction->commit();
@@ -1222,6 +1657,65 @@ class CorporativoController extends Controller
         }
 
         fclose($handle);
+
+        // ============================================================
+        // 4. Persist the CORPORATE CONTRACT for this batch.
+        //    One row per plan — all sharing the same nrocontrato.
+        //    Only runs if at least one affiliate was created successfully.
+        // ============================================================
+        if ($successCount > 0) {
+            $createdIds = array_column($successDetails, 'user_datos_id');
+
+            // Fetch the freshly-created UserDatos and group them by plan.
+            $newEmpleados = UserDatos::find()
+                ->where(['id' => $createdIds])
+                ->andWhere(['afiliado_corporativo_id' => $corporativoId])
+                ->with(['plan', 'clinica'])
+                ->all();
+
+            $employeesByPlan = [];
+            foreach ($newEmpleados as $emp) {
+                if (!$emp->plan_id || !$emp->plan) {
+                    continue;
+                }
+                $employeesByPlan[(int)$emp->plan_id][] = $emp;
+            }
+
+            $persistedPlans  = [];
+            $failedPlans     = [];
+
+            foreach ($employeesByPlan as $planId => $empleados) {
+                $plan = $empleados[0]->plan;
+
+                $contractModel = \app\components\ContractHelper::persistCorporateContract(
+                    $corporativo,
+                    $plan,
+                    $empleados,
+                    $fechaIniGlobal,
+                    $fechaVenGlobal
+                );
+
+                if ($contractModel === null) {
+                    $failedPlans[] = $plan->nombre;
+                    continue;
+                }
+
+                $persistedPlans[] = $plan->nombre;
+            }
+
+            if (!empty($persistedPlans)) {
+                Yii::info(
+                    "Corporate contract persisted after mass upload for corporate #{$corporativoId}: "
+                        . implode(', ', $persistedPlans),
+                    __METHOD__
+                );
+            }
+
+            if (!empty($failedPlans)) {
+                $errors[] = 'Los siguientes planes no pudieron registrar su contrato corporativo: '
+                    . implode(', ', $failedPlans);
+            }
+        }
 
         return [
             'successCount' => $successCount,
@@ -1356,10 +1850,10 @@ class CorporativoController extends Controller
     /**
      * Limpia y formatea un número de teléfono (celular o fijo).
      * Asegura que el formato sea de 11 dígitos, cumpliendo la validación de UserDatos.
-     * 
+     *
      * MEJORADO: Ahora maneja números con y sin código de país,
      * con o sin el 0 inicial, y con diferentes separadores.
-     * 
+     *
      * @param string $telefono El número de teléfono del CSV.
      * @return string|null El número de teléfono saneado (11 dígitos) o null si está vacío.
      */
@@ -1410,9 +1904,9 @@ class CorporativoController extends Controller
     /**
      * Limpia una cadena para dejar únicamente caracteres numéricos.
      * Requerido porque el campo 'cedula' es INTEGER en la DB.
-     * 
+     *
      * MEJORADO: Maneja casos como "V-19.088.456" y "19088456"
-     * 
+     *
      * @param string $input La cédula con posibles prefijos (V, E, J, G, guiones, puntos).
      * @return string Solo los dígitos de la cédula.
      */
@@ -1431,9 +1925,9 @@ class CorporativoController extends Controller
 
     /**
      * Normaliza una cadena quitando acentos y caracteres especiales (para buscar estados).
-     * 
+     *
      * MEJORADO: Ahora también maneja espacios múltiples y caracteres especiales adicionales.
-     * 
+     *
      * @param string $string La cadena a normalizar.
      * @return string La cadena normalizada.
      */
@@ -1548,9 +2042,9 @@ class CorporativoController extends Controller
 
     /**
      * Obtiene la lista de planes asociados a un corporativo a través de sus clínicas.
-     * 
+     *
      * @param int $id ID del Corporativo
-     * @return array JSON con la lista de planes
+     * @return array JSON con la lista de planes y las fechas de vigencia del corporativo
      */
     public function actionObtenerPlanesPorCorporativo($id)
     {
@@ -1566,6 +2060,44 @@ class CorporativoController extends Controller
                 return ['success' => false, 'error' => 'El corporativo no existe', 'data' => []];
             }
 
+            // ============================================================
+            // 4c-i: expose the corporate's APPLICABLE CONTRACT dates so the
+            //       affiliate form can pre-fill its fecha_ven. The corporate
+            //       itself no longer stores dates — they live on the corporate
+            //       contract (one row per plan, one contract per year).
+            //
+            // Priority:
+            //   1. The contract that is ACTIVE today (fecha_ini <= today <= fecha_ven)
+            //   2. The contract anchored in the CURRENT calendar year
+            //   3. None → both values are null (the caller falls back to a
+            //      computed fecha_ini + 1 year − 1 day)
+            // ============================================================
+            $today       = date('Y-m-d');
+            $currentYear = (int) date('Y');
+
+            $contractForDates = ContratoCorporativo::find()
+                ->where(['corporativo_id' => $id])
+                ->andWhere(['!=', 'estatus', ContratoCorporativo::STATUS_ANULADO])
+                ->andWhere(['<=', 'fecha_ini', $today])
+                ->andWhere(['>=', 'fecha_ven', $today])
+                ->orderBy(['fecha_ini' => SORT_DESC])
+                ->one();
+
+            if (!$contractForDates) {
+                $contractForDates = ContratoCorporativo::find()
+                    ->where(['corporativo_id' => $id])
+                    ->andWhere(['!=', 'estatus', ContratoCorporativo::STATUS_ANULADO])
+                    ->andWhere(['>=', 'fecha_ini', $currentYear . '-01-01'])
+                    ->andWhere(['<=', 'fecha_ini', $currentYear . '-12-31'])
+                    ->orderBy(['fecha_ini' => SORT_DESC])
+                    ->one();
+            }
+
+            $corporateDates = [
+                'fecha_ini' => $contractForDates ? $contractForDates->fecha_ini : null,
+                'fecha_ven' => $contractForDates ? $contractForDates->fecha_ven : null,
+            ];
+
             // Get all clinics linked to this corporate
             $clinicasIds = CorporativoClinica::find()
                 ->select('clinica_id')
@@ -1573,7 +2105,12 @@ class CorporativoController extends Controller
                 ->column();
 
             if (empty($clinicasIds)) {
-                return ['success' => true, 'data' => [], 'message' => 'Este corporativo no tiene clínicas asociadas.'];
+                return [
+                    'success'          => true,
+                    'data'             => [],
+                    'message'          => 'Este corporativo no tiene clínicas asociadas.',
+                    'corporate_dates'  => $corporateDates,
+                ];
             }
 
             // Get all plans from those clinics
@@ -1587,13 +2124,27 @@ class CorporativoController extends Controller
                 ->all();
 
             if (empty($planes)) {
-                return ['success' => true, 'data' => [], 'message' => 'No hay planes activos en las clínicas asociadas.'];
+                return [
+                    'success'          => true,
+                    'data'             => [],
+                    'message'          => 'No hay planes activos en las clínicas asociadas.',
+                    'corporate_dates'  => $corporateDates,
+                ];
             }
 
-            return ['success' => true, 'data' => $planes];
+            return [
+                'success'          => true,
+                'data'             => $planes,
+                'corporate_dates'  => $corporateDates,
+            ];
         } catch (\Exception $e) {
             Yii::error('Error al obtener planes por corporativo: ' . $e->getMessage(), __METHOD__);
-            return ['success' => false, 'error' => 'Error interno: ' . $e->getMessage(), 'data' => []];
+            return [
+                'success'          => false,
+                'error'            => 'Error interno: ' . $e->getMessage(),
+                'data'             => [],
+                'corporate_dates'  => null,
+            ];
         }
     }
 
@@ -1869,9 +2420,26 @@ class CorporativoController extends Controller
                     $model->addError('monto_pagado', 'El monto a pagar debe coincidir con el total de cuotas seleccionadas.');
                     Yii::$app->session->setFlash('warning', 'El monto no coincide con el total de cuotas seleccionadas.');
                 } else {
-                    // Handle file upload
+                    // ============================================================
+                    // MANDATORY COMPROBANTE — hard server-side guard.
+                    // ============================================================
                     $model->imagen_prueba_file = \yii\web\UploadedFile::getInstance($model, 'imagen_prueba_file');
 
+                    if (!$model->imagen_prueba_file && empty($model->imagen_prueba)) {
+                        Yii::$app->session->setFlash(
+                            'error',
+                            'Debe adjuntar el comprobante de pago antes de guardar el registro.'
+                        );
+                        return $this->render('pagos', [
+                            'model'       => $model,
+                            'corporativo' => $corporativo,
+                            'allCuotas'   => $allCuotas,
+                            'grandTotal'  => $grandTotal,
+                            'isParcial'   => true,
+                        ]);
+                    }
+
+                    // Handle file upload
                     if ($model->imagen_prueba_file) {
                         $folder = 'Pago';
                         $fileName = uniqid('pago_corp_') . '.' . $model->imagen_prueba_file->extension;
@@ -1913,7 +2481,6 @@ class CorporativoController extends Controller
 
                                     // Copy only the safe attributes, excluding the ID
                                     $affiliatePayment->created_at = $model->created_at;
-                                    //$affiliatePayment->recibo_id = $model->recibo_id;
                                     $affiliatePayment->fecha_pago = $model->fecha_pago;
                                     $affiliatePayment->monto_pagado = $userAmount; // User-specific amount
                                     $affiliatePayment->metodo_pago = $model->metodo_pago;
@@ -2022,69 +2589,774 @@ class CorporativoController extends Controller
             'isParcial' => true, // Flag to indicate partial payment
         ]);
     }
+
     /**
-     * Process CSV upload with progress tracking via AJAX
+     * Renders the off-canvas drawer used to generate the corporation-wide
+     * contract PDF.
+     *
+     * The drawer shows:
+     *   - A per-plan breakdown of employees, prices and subtotal
+     *   - Two date inputs for the new vigencia
+     *   - An info banner when a previous contract exists, informing the
+     *     admin that the new contract will reuse the same affiliate set
+     *
+     * DATE PRE-FILL (per business rules):
+     *   - If a previous (latest non-annulled) contract exists → suggested
+     *     fecha_ini = previous.fecha_ven + 1 day  (no overlap)
+     *   - Otherwise                                           → today
+     *
+     * GROUP SHAPE:
+     *   Uses ContractHelper::buildContractGroupSummaries() so the groups
+     *   exposed to the drawer have the same shape as those in
+     *   actionContracts() — 'anchor', 'is_annulled', 'rows', etc.
+     *
+     * @param int $id
+     * @return string
+     * @throws NotFoundHttpException
      */
-    public function actionCargaMasivaAfiliadosProgress()
+    public function actionContractSelector($id)
     {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $corporativo = $this->findModel($id);
 
-        $model = new MasivoAfiliadosForm();
-        $model->load(Yii::$app->request->post());
-
-        if (!$model->validate()) {
-            return [
-                'success' => false,
-                'errors' => $model->getErrors()
-            ];
+        if (!$this->userHasAccessToCorporativo($id)) {
+            throw new NotFoundHttpException('No tiene permiso para acceder a este corporativo.');
         }
 
-        // Get the uploaded file
-        $model->masivoFile = UploadedFile::getInstance($model, 'masivoFile');
-        if (!$model->masivoFile) {
-            return [
-                'success' => false,
-                'error' => 'No se recibió ningún archivo.'
-            ];
+        // ── 1. Load employees (as before) ───────────────────────────────────
+        $empleados = $corporativo->getEmpleadosAsociados()
+            ->with(['plan', 'clinica'])
+            ->all();
+
+        $totalEmpleados = count($empleados);
+        $sinPlanCount   = 0;
+        $grandTotal     = 0.0;
+
+        $planBreakdown = [];
+        foreach ($empleados as $empleado) {
+            if (!$empleado->plan_id || !$empleado->plan) {
+                $sinPlanCount++;
+                continue;
+            }
+
+            $planId = (int)$empleado->plan_id;
+            if (!isset($planBreakdown[$planId])) {
+                $planBreakdown[$planId] = [
+                    'plan'     => $empleado->plan,
+                    'clinica'  => $empleado->clinica,
+                    'count'    => 0,
+                    'subtotal' => 0.0,
+                ];
+            }
+
+            $precio = (float)$empleado->plan->precio;
+            $planBreakdown[$planId]['count']++;
+            $planBreakdown[$planId]['subtotal'] += $precio;
+            $grandTotal += $precio;
         }
 
-        // Process the CSV with progress tracking
-        $filePath = $model->masivoFile->tempName;
-        $resultados = $this->procesarCSVWithProgress(
-            $filePath,
-            $model->corporativo_id,
-            $model->fecha_ini,
-            $model->fecha_ven,
-            $model->plan_id,
-            null, // clinica_id will be determined from plan
-            $model->asesor_id
+        uasort($planBreakdown, function ($a, $b) {
+            return strcmp((string)$a['plan']->nombre, (string)$b['plan']->nombre);
+        });
+
+        // ── 2. Load contract groups using the SHARED summary builder ────────
+        //  This ensures every entry has 'anchor', 'is_annulled', 'rows', etc.
+        $flatContracts  = ContractHelper::findCorporateContracts($corporativo->id);
+        $contractGroups = ContractHelper::buildContractGroupSummaries($flatContracts);
+
+        // ── 3. Identify the latest non-annulled contract ────────────────────
+        $previousContract  = null;
+        $previousGroup     = null;
+        $carriedAffiliates = [];
+
+        if (!empty($contractGroups)) {
+            $latestIniTs = null;
+            foreach ($contractGroups as $group) {
+                if (!empty($group['is_annulled'])) {
+                    continue;
+                }
+                if (empty($group['anchor']->fecha_ini)) {
+                    continue;
+                }
+                $ts = strtotime($group['anchor']->fecha_ini);
+                if ($latestIniTs === null || $ts > $latestIniTs) {
+                    $latestIniTs   = $ts;
+                    $previousGroup = $group;
+                }
+            }
+
+            if ($previousGroup !== null) {
+                $previousContract = $previousGroup['anchor'];
+
+                if (!empty($previousContract->nrocontrato)) {
+                    $carriedAffiliates = ContractHelper::getPreviousContractAffiliates(
+                        $corporativo->id,
+                        $previousContract->nrocontrato
+                    );
+                }
+            }
+        }
+
+        // ── 4. Compute suggested dates ──────────────────────────────────────
+        if ($previousContract && !empty($previousContract->fecha_ven)) {
+            // Start the day AFTER the previous contract expires (no overlap)
+            $suggestedIni = date(
+                'Y-m-d',
+                strtotime($previousContract->fecha_ven . ' +1 day')
+            );
+        } else {
+            // No previous contract → today
+            $suggestedIni = date('Y-m-d');
+        }
+
+        $suggestedVen = date('Y-m-d', strtotime($suggestedIni . ' +1 year -1 day'));
+
+        // ── 5. Detect if a current-year contract already exists ─────────────
+        $currentYear    = (int)date('Y');
+        $hasCurrentYear = $this->hasContractForYear($contractGroups, $currentYear);
+
+        // ── 6. Compute carry-forward summary (per plan, for display) ────────
+        $carriedByPlan = [];
+        foreach ($carriedAffiliates as $emp) {
+            if (!$emp->plan_id) {
+                continue;
+            }
+            $planId = (int)$emp->plan_id;
+            if (!isset($carriedByPlan[$planId])) {
+                $carriedByPlan[$planId] = 0;
+            }
+            $carriedByPlan[$planId]++;
+        }
+        $contractCount = count($contractGroups);
+
+        return $this->renderAjax('_contract_selector', [
+            'corporativo'       => $corporativo,
+            'planBreakdown'     => $planBreakdown,
+            'totalEmpleados'    => $totalEmpleados,
+            'sinPlanCount'      => $sinPlanCount,
+            'grandTotal'        => $grandTotal,
+            'suggestedIni'      => $suggestedIni,
+            'suggestedVen'      => $suggestedVen,
+            'hasCurrentYear'    => $hasCurrentYear,
+            'previousContract'  => $previousContract,
+            'previousGroup'     => $previousGroup,
+            'carriedAffiliates' => $carriedAffiliates,
+            'carriedByPlan'     => $carriedByPlan,
+            'carriedTotal'      => count($carriedAffiliates),
+            'contractCount'     => $contractCount,   // ← NEW
+
+        ]);
+    }
+
+
+    /**
+     * Handles the corporate-contract drawer submission AND the PDF request
+     * from an existing row. The action distinguishes the two by the presence
+     * of a `cid` query parameter:
+     *
+     *   ┌─────────────────────────────────────────────────────────────────┐
+     *   │ POST /generar-contrato-pdf?id=8           (drawer → new contract)│
+     *   │   → validates, persists, redirects to contracts?id=8 + flash    │
+     *   ├─────────────────────────────────────────────────────────────────┤
+     *   │ GET  /generar-contrato-pdf?id=8&cid=6    (row → existing PDF)   │
+     *   │   → validates, persists (idempotent), renders the PDF inline    │
+     *   └─────────────────────────────────────────────────────────────────┘
+     *
+     * Both paths run the same validation and persistence logic; only the
+     * final step differs. Persistence is idempotent, so re-clicking the
+     * PDF button on an existing row simply re-writes the same values.
+     *
+     * @param  int $id
+     * @return \yii\web\Response
+     * @throws NotFoundHttpException
+     */
+    public function actionGenerarContratoPdf($id)
+    {
+        $corporativo = $this->findModel($id);
+
+        if (!$this->userHasAccessToCorporativo($id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para generar el contrato de este corporativo.');
+            return $this->redirect(['index']);
+        }
+
+        // ── 1. Read POST dates (drawer flow) ────────────────────────────────
+        $fechaIni = trim((string)$this->request->post('fecha_ini', ''));
+        $fechaVen = trim((string)$this->request->post('fecha_ven', ''));
+
+        // ── 2. FALLBACK: resolve from a persisted contract ──────────────────
+        //  Used when the PDF link is clicked from the actions rail (a GET
+        //  with no POST body). We anchor on the row indicated by `cid`,
+        //  or — if `cid` is missing — on the most recent non-annulled contract.
+        if ($fechaIni === '' || $fechaVen === '') {
+            $anchorId = (int)$this->request->get('cid', 0);
+
+            $anchor = $anchorId
+                ? ContratoCorporativo::findOne([
+                    'id'             => $anchorId,
+                    'corporativo_id' => $corporativo->id,
+                ])
+                : ContratoCorporativo::find()
+                ->where(['corporativo_id' => $corporativo->id])
+                ->andWhere(['!=', 'estatus', ContratoCorporativo::STATUS_ANULADO])
+                ->orderBy(['fecha_ini' => SORT_DESC, 'id' => SORT_ASC])
+                ->one();
+
+            if ($anchor) {
+                if ($fechaIni === '' && !empty($anchor->fecha_ini)) {
+                    $fechaIni = (string)$anchor->fecha_ini;
+                }
+                if ($fechaVen === '' && !empty($anchor->fecha_ven)) {
+                    $fechaVen = (string)$anchor->fecha_ven;
+                }
+            }
+        }
+
+        // ── 3. Validate dates ───────────────────────────────────────────────
+        if ($fechaIni === '' || $fechaVen === '') {
+            Yii::$app->session->setFlash(
+                'error',
+                'No se pudo determinar la vigencia del contrato. Regístrelo primero desde el botón "Nuevo Contrato".'
+            );
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaIni) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaVen)) {
+            Yii::$app->session->setFlash('error', 'Las fechas deben tener el formato AAAA-MM-DD.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        if ($fechaVen <= $fechaIni) {
+            Yii::$app->session->setFlash('error', 'La fecha de vencimiento debe ser posterior a la fecha de inicio.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        // ── 3.5. Overlap guard ──────────────────────────────────────────────
+        //  A corporation's non-annulled contracts may not overlap in time.
+        //  When re-persisting an existing contract (cid present), exclude
+        //  ALL of its sibling rows from the check.
+        $anchorIdToExclude = (int)$this->request->get('cid', 0) ?: null;
+        $excludeIds        = [];
+
+        if ($anchorIdToExclude) {
+            $anchorRow = ContratoCorporativo::findOne($anchorIdToExclude);
+            if ($anchorRow) {
+                $siblings = ContractHelper::findCorporateContractGroup(
+                    (int)$corporativo->id,
+                    $anchorRow->nrocontrato
+                );
+                $excludeIds = array_map(fn($r) => (int)$r->id, $siblings);
+            }
+        }
+
+        $overlapCheck = ContractHelper::validateNoOverlap(
+            (int)$corporativo->id,
+            $fechaIni,
+            $excludeIds
         );
 
-        return [
-            'success' => true,
-            'resultados' => $resultados
+        if ($overlapCheck !== null) {
+            Yii::$app->session->setFlash('error', $overlapCheck['message']);
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        // ============================================================
+        // ── 4. Load ACTIVE employees only, grouped by plan ─────────
+        // ------------------------------------------------------------
+        // Business rule: the corporate contract PDF must list ONLY
+        // affiliates who currently have at least one non-annulled
+        // contract. Affiliates whose only contracts are annulled
+        // (or who have no contract at all) are excluded.
+        //
+        // This mirrors the exact logic used by:
+        //   - Corporativo::getActiveAffiliates()
+        //   - the "Afiliados Activos" KPI on corporativo/index.php
+        //   - the "Afiliados Activos" section in corporativo/view.php
+        //
+        // The filter is applied BEFORE grouping by plan, so a plan
+        // whose entire affiliate set has been annulled will simply
+        // not appear in the PDF.
+        // ============================================================
+        $allEmpleados = $corporativo->getEmpleadosAsociados()
+            ->alias('ud')
+            ->with(['plan', 'clinica'])
+            ->where([
+                'EXISTS',
+                (new \yii\db\Query())
+                    ->from(['c' => 'contratos'])
+                    ->where('c.user_id = ud.id')
+                    ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+            ])
+            ->orderBy(['ud.apellidos' => SORT_ASC, 'ud.nombres' => SORT_ASC])
+            ->all();
+
+        $employeesByPlan = [];
+        foreach ($allEmpleados as $emp) {
+            if (!$emp->plan_id || !$emp->plan) {
+                continue;
+            }
+            $employeesByPlan[(int)$emp->plan_id][] = $emp;
+        }
+
+        if (empty($employeesByPlan)) {
+            Yii::$app->session->setFlash('warning', 'Ninguno de los afiliados de este corporativo tiene un plan asignado.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        // ── 4.5. Carry-forward: if a previous contract exists, reuse its affiliate set ──
+        //  This is the rule: a new-year contract inherits the exact same affiliate
+        //  set as the previous (expired) contract, not whoever is currently linked.
+        $previousAffiliates = [];
+
+        if (empty($anchorIdToExclude)) {
+            // Only do this on CREATE (no `cid`) — the PDF path reuses the same set anyway
+            $latestGroup = null;
+            $latestIniTs = null;
+
+            foreach (
+                ContractHelper::buildContractGroupSummaries(
+                    ContractHelper::findCorporateContracts($corporativo->id)
+                ) as $group
+            ) {
+                if (!empty($group['is_annulled']) || empty($group['anchor']->fecha_ini)) {
+                    continue;
+                }
+                $ts = strtotime($group['anchor']->fecha_ini);
+                if ($latestIniTs === null || $ts > $latestIniTs) {
+                    $latestIniTs = $ts;
+                    $latestGroup = $group;
+                }
+            }
+
+            if ($latestGroup !== null && !empty($latestGroup['anchor']->nrocontrato)) {
+                $previousAffiliates = ContractHelper::getPreviousContractAffiliates(
+                    $corporativo->id,
+                    $latestGroup['anchor']->nrocontrato
+                );
+            }
+        }
+
+        // If we have a carried-forward set, group it by plan and prefer it
+        // over the freshly-queried employeesByPlan.
+        if (!empty($previousAffiliates)) {
+            $carriedByPlan = [];
+            foreach ($previousAffiliates as $emp) {
+                if (!$emp->plan_id) {
+                    continue;
+                }
+
+                // ── Skip affiliates whose only contracts are annulled ──
+                $hasLive = Contratos::find()
+                    ->where(['user_id' => $emp->id])
+                    ->andWhere(['<>', 'estatus', Contratos::STATUS_ANULADO])
+                    ->exists();
+
+                if (!$hasLive) {
+                    continue;
+                }
+                // ────────────────────────────────────────────────────
+
+                $carriedByPlan[(int)$emp->plan_id][] = $emp;
+            }
+            if (!empty($carriedByPlan)) {
+                $employeesByPlan = $carriedByPlan;
+            }
+        }
+
+        // ── 5. Persist one ContratoCorporativo row per plan ────────────────
+        $persistedContracts = [];
+        $failedPlans        = [];
+
+        foreach ($employeesByPlan as $planId => $empleados) {
+            $plan = $empleados[0]->plan ?? null;
+            if (!$plan) {
+                continue;
+            }
+
+            $contractModel = ContractHelper::persistCorporateContract(
+                $corporativo,
+                $plan,
+                $empleados,
+                $fechaIni,
+                $fechaVen,
+                $empleados   // ← affiliate override (carry-forward)
+            );
+
+            if ($contractModel === null) {
+                $failedPlans[] = $plan->nombre;
+                continue;
+            }
+
+            $persistedContracts[$planId] = $contractModel;
+        }
+
+        if (empty($persistedContracts)) {
+            Yii::$app->session->setFlash(
+                'error',
+                'No se pudo registrar ningún contrato corporativo. Revise los registros de error.'
+            );
+            return $this->redirect(['view', 'id' => $id]);
+        }
+
+        if (!empty($failedPlans)) {
+            Yii::$app->session->setFlash(
+                'warning',
+                'Algunos planes no se pudieron registrar: ' . implode(', ', $failedPlans)
+            );
+        }
+
+        // ── 6. Anchor contract (all siblings share these) ───────────────────
+        $anchor         = reset($persistedContracts);
+        $contractNumber = $anchor->nrocontrato;
+
+        // ── 7. Build per-plan sections (only needed for the PDF path) ──────
+        $planSections    = [];
+        $grandSubtotal   = 0.0;
+        $grandAffiliates = 0;
+
+        foreach ($persistedContracts as $planId => $contractModel) {
+            $plan      = $contractModel->plan;
+            $empleados = $employeesByPlan[$planId];
+
+            // ============================================================
+            // PLAN SERVICES — enriched with continuous-coverage P/E
+            // ------------------------------------------------------------
+            // Corporate affiliates still have their own individual
+            // Contratos rows (one per plan, linked via
+            // ContratoCorporativoAfiliado), so the CoverageHelper chain
+            // logic works exactly the same as for individual affiliates.
+            //
+            // ANCHOR CHOICE: we use the EARLIEST-JOINED affiliate in this
+            // plan group as the representative, so "Sin espera" is only
+            // shown when the ENTIRE group has been continuously covered
+            // long enough. Using $empleados[0] directly would be
+            // non-deterministic (depends on query order) and could surface
+            // "Sin espera" for a service the group as a whole hasn't
+            // reached yet.
+            // ============================================================
+            $planServices = [];
+            if ($plan->id) {
+
+                // ── Pick the earliest-joined affiliate as the anchor ──
+                $earliestEmployee = null;
+                foreach ($empleados as $emp) {
+                    if (
+                        $earliestEmployee === null
+                        || strtotime((string)$emp->created_at) < strtotime((string)$earliestEmployee->created_at)
+                    ) {
+                        $earliestEmployee = $emp;
+                    }
+                }
+
+                $representativeUserId     = $earliestEmployee ? (int)$earliestEmployee->id : null;
+                $representativeContractId = null;
+
+                // ── Look up the affiliate's individual contract that matches
+                //    this corporate contract's vigencia. Fallback to the most
+                //    recent non-annulled individual contract if not found. ──
+                if ($representativeUserId) {
+                    $repContract = Contratos::find()
+                        ->where(['user_id' => $representativeUserId])
+                        ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                        ->andWhere(['fecha_ini' => $contractModel->fecha_ini])
+                        ->andWhere(['fecha_ven' => $contractModel->fecha_ven])
+                        ->orderBy(['id' => SORT_DESC])
+                        ->one();
+
+                    if (!$repContract) {
+                        $repContract = Contratos::find()
+                            ->where(['user_id' => $representativeUserId])
+                            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+                            ->orderBy(['fecha_ini' => SORT_DESC, 'id' => SORT_DESC])
+                            ->one();
+                    }
+
+                    if ($repContract) {
+                        $representativeContractId = (int)$repContract->id;
+                    }
+                }
+
+                // ── Load the plan's services and enrich each with its display state ──
+                $dbServices = \app\models\PlanServicios::getServicesForPlan($plan->id, $plan->clinica_id);
+
+                foreach ($dbServices as $svc) {
+
+                    $esperaDisplay = $svc->plazo_espera ?? 'NO APLICA';
+                    $esperaStatus  = 'raw';
+
+                    if ($representativeUserId && $representativeContractId) {
+                        $plazoDisplay = \app\components\CoverageHelper::getPlazoEsperaDisplay(
+                            $representativeUserId,
+                            $representativeContractId,
+                            $svc->plazo_espera,
+                            (string)($svc->servicio_nombre ?? '')
+                        );
+
+                        $esperaDisplay = $plazoDisplay['label'];
+                        $esperaStatus  = $plazoDisplay['status'];
+                    }
+
+                    $planServices[] = [
+                        'servicio'       => $svc->servicio_nombre ?? '',
+                        'espera'         => $svc->plazo_espera ?? 'NO APLICA',
+                        'espera_display' => $esperaDisplay,
+                        'espera_status'  => $esperaStatus,
+                        'descripcion'    => $svc->descripcion ?? 'Servicio incluido en el plan',
+                    ];
+                }
+            }
+
+            $empleadosData = [];
+            $subtotal      = 0.0;
+            $precioPlan    = (float)($plan->precio ?? 0);
+
+            foreach ($empleados as $emp) {
+                $empleadosData[] = [
+                    'id'              => $emp->id,
+                    'nombre_completo' => trim($emp->nombres . ' ' . $emp->apellidos),
+                    'cedula'          => ($emp->tipo_cedula ?: 'V') . '-' . ($emp->cedula ?: 'N/A'),
+                    'fechanac'        => $emp->fechanac,
+                    'sexo'            => $emp->sexo,
+                    'email'           => $emp->email,
+                    'telefono'        => $emp->telefono,
+                    'precio'          => $precioPlan,
+                ];
+                $subtotal += $precioPlan;
+            }
+
+            $planCobertura          = $plan->cobertura ?? 'N/A';
+            $planCoberturaFormatted = ($planCobertura !== 'N/A' && $planCobertura > 0)
+                ? '$' . number_format((float)$planCobertura, 2, ',', '.')
+                : 'N/A';
+
+            $planSections[] = [
+                'contract_id'         => $contractModel->id,
+                'plan_name'           => $plan->nombre ?: 'N/A',
+                'plan_currency'       => !empty($plan->moneda) ? $plan->moneda : 'USD',
+                'plan_deductible'     => !empty($plan->deducible) ? $plan->deducible : 'NO APLICA',
+                'plan_coverage_limit' => $planCoberturaFormatted,
+                'plan_services'       => $planServices,
+                'exclusiones'         => $plan->exclusiones ?? '',
+                'empleados'           => $empleadosData,
+                'precio_plan'         => $precioPlan,
+                'subtotal'            => $subtotal,
+                'count'               => count($empleadosData),
+            ];
+
+            $grandSubtotal   += $subtotal;
+            $grandAffiliates += count($empleadosData);
+        }
+
+        // ── 8. Decide the tail behavior ─────────────────────────────────────
+        //  cid present  → render the PDF for the requested row
+        //  no cid       → the drawer just created a contract; redirect + flash
+        $cid          = (int)$this->request->get('cid', 0);
+        $isPdfRequest = ($cid > 0);
+
+        if (!$isPdfRequest) {
+            // ── Drawer flow: contract created. Redirect to the list. ──
+            Yii::$app->session->setFlash(
+                'success',
+                'Contrato ' . Html::encode($contractNumber) . ' creado correctamente. '
+                    . 'Puede descargar el PDF desde el botón rojo de la fila correspondiente.'
+            );
+
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        // ── PDF button flow: build and stream the PDF ──────────────────────
+        $logo   = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+        $firmas = Yii::getAlias('@webroot/img/firmas.png');
+
+
+        // Receipt number (provisional)
+        $receipt = Receipt::find()
+            ->where(['user_id' => null])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->one();
+
+        $receiptNumber = $receipt
+            ? $receipt->receipt_number
+            : Receipt::generateReceiptNumber();
+
+        // Location + intermediary
+        $estadoNombre    = $corporativo->getRmEstado()->one()->nombre ?? '';
+        $municipioNombre = $corporativo->getRmMunicipio()->one()->nombre ?? '';
+        $parroquiaNombre = $corporativo->getRmParroquia()->one()->nombre ?? '';
+        $ciudadNombre    = $corporativo->getRmCiudad()->one()->nombre ?? '';
+
+        $addressParts = [];
+        if (!empty($corporativo->direccion)) $addressParts[] = $corporativo->direccion;
+        if (!empty($parroquiaNombre))        $addressParts[] = $parroquiaNombre;
+        if (!empty($municipioNombre))        $addressParts[] = $municipioNombre;
+        if (!empty($ciudadNombre))           $addressParts[] = $ciudadNombre;
+        if (!empty($estadoNombre))           $addressParts[] = $estadoNombre;
+        $fullCorporateAddress = implode(', ', array_filter($addressParts));
+
+        $intermediarioNombre = '';
+        $intermediarioCodigo = '';
+        $intermediarioCi     = '';
+
+        $firstAsesorId = null;
+        foreach ($allEmpleados as $emp) {
+            if (!empty($emp->asesor_id)) {
+                $firstAsesorId = $emp->asesor_id;
+                break;
+            }
+        }
+
+        if ($firstAsesorId) {
+            $agenteFuerza = AgenteFuerza::findOne($firstAsesorId);
+            if ($agenteFuerza) {
+                $asesorUserDatos = UserDatos::findOne($agenteFuerza->idusuario);
+                if ($asesorUserDatos) {
+                    $intermediarioNombre = trim($asesorUserDatos->nombres . ' ' . $asesorUserDatos->apellidos);
+                    $intermediarioCodigo = $agenteFuerza->registro_corredor_actividad_aseguradora ?? '';
+                    $intermediarioCi     = ($asesorUserDatos->tipo_cedula ?? '') . '-' . ($asesorUserDatos->cedula ?? '');
+                }
+            }
+        }
+
+        $data = [
+            'contract_number'          => $contractNumber,
+            'contract_status'          => $anchor->estatus,
+            'contract_start_date'      => $anchor->fecha_ini,
+            'contract_end_date'        => $anchor->fecha_ven,
+            'fecha_emision'            => date('d/m/Y'),
+            'receipt_number'           => $receiptNumber,
+            'affiliation_type_name'    => 'COLECTIVO',
+            'tipo_persona_contratante' => 'Jurídica',
+
+            'corporate_name'              => $corporativo->nombre,
+            'corporate_rif'               => $corporativo->rif,
+            'corporate_email'             => $corporativo->email,
+            'corporate_phone'             => $corporativo->telefono,
+            'corporate_address'           => $fullCorporateAddress ?: $corporativo->direccion,
+            'corporate_domicilio_fiscal'  => $corporativo->domicilio_fiscal,
+            'corporate_lugar_registro'    => $corporativo->lugar_registro,
+            'corporate_fecha_registro'    => $corporativo->fecha_registro_mercantil,
+            'corporate_tomo'              => $corporativo->tomo_registro,
+            'corporate_folio'             => $corporativo->folio_registro,
+            'corporate_contacto_nombre'   => $corporativo->contacto_nombre,
+            'corporate_contacto_cedula'   => $corporativo->contacto_cedula,
+            'corporate_contacto_telefono' => $corporativo->contacto_telefono,
+            'corporate_contacto_cargo'    => $corporativo->contacto_cargo,
+
+            'corporate_legal_representative_name'                 => $corporativo->nombre_representante,
+            'corporate_legal_representative_ci'                   => $corporativo->cedula_representante,
+            'corporate_legal_representative_nationality'          => $corporativo->nacionalidad_representante,
+            'corporate_legal_representative_marital_status'       => $corporativo->estado_civil_representante,
+            'corporate_legal_representative_birthplace'           => $corporativo->lugar_nacimiento_representante,
+            'corporate_legal_representative_birthdate'            => $corporativo->fecha_nacimiento_representante,
+            'corporate_legal_representative_sex'                  => $corporativo->sexo_representante,
+            'corporate_legal_representative_profession'           => $corporativo->profesion_representante,
+            'corporate_legal_representative_occupation'           => $corporativo->ocupacion_representante,
+            'corporate_legal_representative_activity_description' => $corporativo->descripcion_actividad_representante,
+            'corporate_legal_representative_address'              => $corporativo->direccion_representante,
+            'corporate_legal_representative_phone'                => $corporativo->telefono_representante,
+
+            'corporate_economic_activity' => $corporativo->actividad_economica,
+            'corporate_products_services' => $corporativo->productos_servicios,
+            'corporate_profit'            => $corporativo->utilidad_ejercicio_anterior,
+            'corporate_equity'            => $corporativo->patrimonio,
+
+            'plan_sections'    => $planSections,
+            'total_plan_count' => count($planSections),
+            'total_empleados'  => $grandAffiliates,
+            'grand_subtotal'   => $grandSubtotal,
+
+            'intermediary_name' => $intermediarioNombre,
+            'intermediary_code' => $intermediarioCodigo,
+            'intermediary_ci'   => $intermediarioCi,
+
+            'declaration_place'      => $ciudadNombre,
+            'declaration_date'       => date('d/m/Y'),
+            'declaration_date_long'  => \Yii::$app->formatter->asDate('now', 'php:j \d\e F \d\e Y'),
         ];
+
+        $content = $this->renderPartial('_contrato_corporativo_pdf', [
+            'data'   => $data,
+            'logo'   => $logo,
+            'firmas' => $firmas,
+        ]);
+
+        $url_css = Yii::getAlias('@webroot') . '/css/affiliation-pdf.css';
+
+        $pdf = new Pdf([
+            'mode'        => Pdf::MODE_UTF8,
+            'format'      => Pdf::FORMAT_LETTER,
+            'orientation' => Pdf::ORIENT_PORTRAIT,
+            'destination' => Pdf::DEST_BROWSER,
+            'content'     => $content,
+            'cssFile'     => $url_css,
+            'options'     => [
+                'title' => 'Contrato Corporativo - ' . $corporativo->nombre,
+            ],
+            'methods' => [
+                'SetHeader' => false,
+                'SetFooter' => ['{PAGENO}'],
+            ],
+        ]);
+
+        return $pdf->render();
     }
 
     /**
-     * Process CSV with progress tracking
+     * Renders the annul form for a corporate contract.
+     *
+     * GET  → shows the confirmation page (anular-contrato-corporativo.php)
+     * POST → performs the annulment and redirects back to the corporate view
+     *
+     * @param  int $id  Any ContratoCorporativo row of the group.
+     * @return string|\yii\web\Response
+     * @throws NotFoundHttpException
      */
-    private function procesarCSVWithProgress($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal, $planId, $clinicaId = null, $asesorId = null)
+    public function actionAnularContratoCorporativo($id)
     {
-        // Determine clinica_id from plan
-        if (!$clinicaId) {
-            $plan = Planes::findOne($planId);
-            if (!$plan) {
-                return [
-                    'success' => false,
-                    'error' => 'El plan seleccionado no existe.'
-                ];
-            }
-            $clinicaId = $plan->clinica_id;
+        $contract = ContratoCorporativo::findOne($id);
+
+        if (!$contract) {
+            throw new NotFoundHttpException('El contrato corporativo no existe.');
         }
 
-        // Use the existing procesarCSV method
-        // You can modify it to emit progress events via session or cache
-        return $this->procesarCSV($filePath, $corporativoId, $fechaIniGlobal, $fechaVenGlobal, $planId, $clinicaId, $asesorId);
+        $corporativoId = (int)$contract->corporativo_id;
+
+        if (!$this->userHasAccessToCorporativo($corporativoId)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para anular este contrato corporativo.');
+            return $this->redirect(['index']);
+        }
+
+        // ── POST: perform the annulment ────────────────────────────────────
+        if ($this->request->isPost) {
+            $motivo = trim((string)$this->request->post('motivo', ''));
+
+            if ($motivo === '') {
+                Yii::$app->session->setFlash('error', 'El motivo de la anulación es obligatorio.');
+                return $this->redirect(['anular-contrato-corporativo', 'id' => $contract->id]);
+            }
+
+            $ok = ContractHelper::annulCorporateContract($contract->id, $motivo);
+
+            if ($ok) {
+                Yii::$app->session->setFlash(
+                    'success',
+                    'El contrato corporativo ' . $contract->nrocontrato . ' ha sido anulado correctamente.'
+                );
+            } else {
+                Yii::$app->session->setFlash(
+                    'error',
+                    'No se pudo anular el contrato corporativo. Revise los registros de error.'
+                );
+            }
+
+            return $this->redirect(['view', 'id' => $corporativoId]);
+        }
+
+        // ── GET: render the confirmation form ──────────────────────────────
+        return $this->render('anular-contrato-corporativo', [
+            'contract'    => $contract,
+            'siblings'    => ContractHelper::findCorporateContractGroup(
+                $corporativoId,
+                $contract->nrocontrato
+            ),
+        ]);
     }
 }

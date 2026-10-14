@@ -4,7 +4,6 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
 use yii\web\View;
-use yii\bootstrap4\Modal;
 use kartik\file\FileInput;
 use kartik\file\FileInputAsset;
 use yii\data\ActiveDataProvider;
@@ -89,6 +88,39 @@ $contrato = \app\models\Contratos::find()
     ->orderBy(['created_at' => SORT_DESC])
     ->one();
 
+// ============================================================
+// CONTINUOUS COVERAGE — Effective start date and months elapsed
+// ============================================================
+$effectiveCoverageStart = null;
+$mesesTranscurridosContinuos = -1;
+$coverageSummary = null;
+
+if ($contrato) {
+    $effectiveCoverageStart = \app\components\CoverageHelper::getEffectiveCoverageStartDate(
+        (int)$afiliado->id,
+        (int)$contrato->id
+    );
+
+    $mesesTranscurridosContinuos = \app\components\CoverageHelper::getMonthsOfContinuousCoverage(
+        (int)$afiliado->id,
+        (int)$contrato->id
+    );
+
+    if ($mesesTranscurridosContinuos < 0 && !empty($contrato->fecha_ini)) {
+        $fallbackDiff = (new \DateTime($contrato->fecha_ini))->diff(new \DateTime());
+        $mesesTranscurridosContinuos = ($fallbackDiff->y * 12) + $fallbackDiff->m;
+    }
+
+    if (!$effectiveCoverageStart && !empty($contrato->fecha_ini)) {
+        $effectiveCoverageStart = $contrato->fecha_ini;
+    }
+
+    $coverageSummary = \app\components\CoverageHelper::getCoverageSummary(
+        (int)$afiliado->id,
+        (int)$contrato->id
+    );
+}
+
 // Get baremos data for historical section
 $afiliadoIdHist = is_object($afiliado) ? $afiliado->id : (is_array($afiliado) && isset($afiliado['id']) ? $afiliado['id'] : (int)$afiliado);
 $baremosUtilizados = \app\models\SisSiniestroBaremo::find()
@@ -142,7 +174,7 @@ $newPreexistencia->user_id = $afiliado->id;
 $newPreexistencia->estatus = Preexistencias::ESTATUS_ACTIVO;
 
 // ============================================================
-// INITIALIZE ALL BAREMOS VARIABLES (BEFORE CONDITIONAL BLOCK)
+// INITIALIZE ALL BAREMOS VARIABLES
 // ============================================================
 $baremosTotales = [];
 $baremosHtml = [];
@@ -222,7 +254,6 @@ if ($contrato && $contrato->estatus === 'Activo') {
                 ->where(['baremo_id' => $item->baremo_id])
                 ->andWhere(['iduser' => $afiliado->id]);
 
-            // DO NOT filter by es_cita - count ALL events (both citas and atenciones)
             $vecesUsado = $queryCount->count();
 
             $remainingUses = 0;
@@ -241,12 +272,9 @@ if ($contrato && $contrato->estatus === 'Activo') {
             $isRestrictedByPlazo = false;
 
             if ($contrato && $hasPlazoEver) {
-                $fechaContratoIni = new \DateTime($contrato->fecha_ini);
-                $diff = $fechaContratoIni->diff($fechaActual);
-                $mesesTranscurridos = $diff->y * 12 + $diff->m;
                 $plazoRequerido = (int)$item->plazo_espera;
 
-                if ($mesesTranscurridos < $plazoRequerido) {
+                if ($mesesTranscurridosContinuos < $plazoRequerido) {
                     $isRestrictedByPlazo = true;
                 }
             }
@@ -272,10 +300,9 @@ if ($contrato && $contrato->estatus === 'Activo') {
                 $baremosInfo[$item->baremo_id]['is_restricted_by_plazo'] = true;
 
                 if ($contrato) {
-                    $fechaContratoIni = new \DateTime($contrato->fecha_ini);
                     $plazoRequerido = (int)$item->plazo_espera;
-                    $fechaTarget = clone $fechaContratoIni;
-                    $fechaTarget->modify("+{$plazoRequerido} months");
+                    $anchorStart = $effectiveCoverageStart ?: $contrato->fecha_ini;
+                    $fechaTarget = (new \DateTime($anchorStart))->modify("+{$plazoRequerido} months");
                     $diff = $fechaActual->diff($fechaTarget);
 
                     $mesesRestantes = ($diff->y * 12) + $diff->m;
@@ -401,15 +428,12 @@ if ($contrato && $contrato->estatus === 'Activo') {
 // ============================================================
 $statusOptions = Preexistencias::getStatusOptions();
 
-// ===== PROGRESS OVERLAY CSS =====
+// ===== PROGRESS OVERLAY + TAB + DRAWER CSS =====
 $this->registerCss("
 /* ===== PROGRESS OVERLAY STYLES ===== */
 .progress-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(4px);
     z-index: 99999;
@@ -418,256 +442,82 @@ $this->registerCss("
     align-items: center;
     transition: all 0.3s ease;
 }
-
-.progress-overlay.active {
-    display: flex;
-}
-
+.progress-overlay.active { display: flex; }
 .progress-modal {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 40px 50px 45px;
-    max-width: 480px;
-    width: 90%;
+    background: #ffffff; border-radius: 16px;
+    padding: 40px 50px 45px; max-width: 480px; width: 90%;
     text-align: center;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.4s ease;
 }
-
 @keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-.progress-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 20px;
-    position: relative;
-}
-
+.progress-icon { width: 80px; height: 80px; margin: 0 auto 20px; position: relative; }
 .progress-icon .icon-wrapper {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
+    width: 100%; height: 100%; border-radius: 50%;
     background: linear-gradient(135deg, #1a3a6b 0%, #2a5298 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 36px;
-    color: #ffffff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; color: #ffffff;
     animation: pulse 1.5s ease-in-out infinite;
 }
-
 @keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(26, 58, 107, 0.4);
-    }
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 15px rgba(26, 58, 107, 0);
-    }
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(26, 58, 107, 0.4); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(26, 58, 107, 0); }
 }
-
-.progress-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #1a1a2e;
-    margin: 0 0 8px 0;
-}
-
-.progress-subtitle {
-    font-size: 14px;
-    color: #6c757d;
-    margin: 0 0 25px 0;
-    line-height: 1.5;
-}
-
-.progress-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    text-align: left;
-    margin-bottom: 28px;
-}
-
+.progress-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin: 0 0 8px 0; }
+.progress-subtitle { font-size: 14px; color: #6c757d; margin: 0 0 25px 0; line-height: 1.5; }
+.progress-steps { display: flex; flex-direction: column; gap: 14px; text-align: left; margin-bottom: 28px; }
 .progress-step {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-    opacity: 0.5;
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; background: #f8f9fa; border-radius: 10px;
+    transition: all 0.3s ease; opacity: 0.5;
 }
-
-.progress-step.active {
-    opacity: 1;
-    background: #f0f4ff;
-    border-left: 4px solid #2a5298;
-}
-
-.progress-step.done {
-    opacity: 1;
-    background: #f0faf0;
-    border-left: 4px solid #28a745;
-}
-
+.progress-step.active { opacity: 1; background: #f0f4ff; border-left: 4px solid #2a5298; }
+.progress-step.done { opacity: 1; background: #f0faf0; border-left: 4px solid #28a745; }
 .progress-step .step-number {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: #e8ecf1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: #6c757d;
-    flex-shrink: 0;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #e8ecf1; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #6c757d; flex-shrink: 0;
     transition: all 0.3s ease;
 }
-
-.progress-step.active .step-number {
-    background: #2a5298;
-    color: #ffffff;
-}
-
-.progress-step.done .step-number {
-    background: #28a745;
-    color: #ffffff;
-}
-
-.progress-step .step-icon {
-    font-size: 18px;
-    width: 28px;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.progress-step .step-text {
-    flex: 1;
-}
-
-.progress-step .step-text .step-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #1a1a2e;
-}
-
-.progress-step .step-text .step-desc {
-    font-size: 12px;
-    color: #6c757d;
-}
-
-.progress-step .step-status {
-    font-size: 14px;
-    color: #6c757d;
-}
-
-.progress-step.done .step-status {
-    color: #28a745;
-}
-
-.progress-step.active .step-status {
-    color: #2a5298;
-}
-
+.progress-step.active .step-number { background: #2a5298; color: #ffffff; }
+.progress-step.done .step-number { background: #28a745; color: #ffffff; }
+.progress-step .step-icon { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+.progress-step .step-text { flex: 1; }
+.progress-step .step-text .step-label { font-size: 14px; font-weight: 500; color: #1a1a2e; }
+.progress-step .step-text .step-desc { font-size: 12px; color: #6c757d; }
+.progress-step .step-status { font-size: 14px; color: #6c757d; }
+.progress-step.done .step-status { color: #28a745; }
+.progress-step.active .step-status { color: #2a5298; }
 .progress-bar-container {
-    width: 100%;
-    height: 6px;
-    background: #e8ecf1;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 20px;
+    width: 100%; height: 6px; background: #e8ecf1;
+    border-radius: 3px; overflow: hidden; margin-bottom: 20px;
 }
-
 .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #1a3a6b, #2a5298);
-    border-radius: 3px;
-    transition: width 0.6s ease;
-    width: 0%;
+    height: 100%; background: linear-gradient(90deg, #1a3a6b, #2a5298);
+    border-radius: 3px; transition: width 0.6s ease; width: 0%;
 }
-
-.progress-percentage {
-    font-size: 13px;
-    font-weight: 600;
-    color: #2a5298;
-}
-
+.progress-percentage { font-size: 13px; font-weight: 600; color: #2a5298; }
 .progress-loading-spinner {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border: 3px solid #e8ecf1;
-    border-top: 3px solid #2a5298;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    vertical-align: middle;
-    margin-left: 8px;
+    display: inline-block; width: 18px; height: 18px;
+    border: 3px solid #e8ecf1; border-top: 3px solid #2a5298;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-left: 8px;
 }
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.progress-success-check {
-    display: none;
-    font-size: 48px;
-    color: #28a745;
-    animation: checkIn 0.5s ease;
-}
-
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.progress-success-check { display: none; font-size: 48px; color: #28a745; animation: checkIn 0.5s ease; }
 @keyframes checkIn {
-    0% {
-        opacity: 0;
-        transform: scale(0);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
+    0% { opacity: 0; transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
 }
-
-.progress-error-icon {
-    display: none;
-    font-size: 48px;
-    color: #dc3545;
-    animation: checkIn 0.5s ease;
-}
-
-.progress-overlay.complete .progress-icon .icon-wrapper {
-    animation: none;
-    background: #28a745;
-}
-
-.progress-overlay.error .progress-icon .icon-wrapper {
-    animation: none;
-    background: #dc3545;
-}
-
-.progress-overlay.complete .progress-loading-spinner {
-    display: none !important;
-}
-
-.progress-overlay.error .progress-loading-spinner {
-    display: none !important;
-}
-
-/* ===== END PROGRESS OVERLAY STYLES ===== */
+.progress-error-icon { display: none; font-size: 48px; color: #dc3545; animation: checkIn 0.5s ease; }
+.progress-overlay.complete .progress-icon .icon-wrapper { animation: none; background: #28a745; }
+.progress-overlay.error .progress-icon .icon-wrapper { animation: none; background: #dc3545; }
+.progress-overlay.complete .progress-loading-spinner { display: none !important; }
+.progress-overlay.error .progress-loading-spinner { display: none !important; }
 
 /* ===== TABBED LAYOUT STYLES ===== */
 .tab-content-wrapper {
@@ -676,318 +526,388 @@ $this->registerCss("
     border-radius: 2px;
     overflow: hidden;
 }
-
 .tab-content-wrapper .nav-tabs {
     background: #faf9f8;
     border-bottom: 1px solid #edebe9;
     padding: 0 16px;
-    display: flex;
-    flex-wrap: wrap;
-    overflow: visible;
-    margin-bottom: 0;
+    display: flex; flex-wrap: wrap; overflow: visible; margin-bottom: 0;
 }
-
-.tab-content-wrapper .nav-tabs .nav-item {
-    margin-bottom: -1px;
-    flex-shrink: 0;
-}
-
+.tab-content-wrapper .nav-tabs .nav-item { margin-bottom: -1px; flex-shrink: 0; }
 .tab-content-wrapper .nav-tabs .nav-link {
     border: none !important;
     border-bottom: 2px solid transparent !important;
     color: #605e5c !important;
-    font-weight: 500;
-    font-size: 14px;
+    font-weight: 500; font-size: 14px;
     padding: 14px 20px !important;
     background: transparent !important;
     border-radius: 0 !important;
     transition: all 0.2s ease;
-    white-space: nowrap;
-    cursor: pointer;
-    text-decoration: none;
+    white-space: nowrap; cursor: pointer; text-decoration: none;
 }
-
 .tab-content-wrapper .nav-tabs .nav-link:hover {
-    color: #323130 !important;
-    background: rgba(0, 0, 0, 0.04) !important;
+    color: #323130 !important; background: rgba(0, 0, 0, 0.04) !important;
 }
-
-.tab-content-wrapper .nav-tabs .nav-link:focus {
-    outline: none;
-}
-
-/* ACTIVE TAB - Use !important on all properties */
+.tab-content-wrapper .nav-tabs .nav-link:focus { outline: none; }
 .tab-content-wrapper .nav-tabs .nav-link.active {
     color: #0078d4 !important;
     background: #e8f0fe !important;
     border-bottom: 3px solid #0078d4 !important;
     font-weight: 600 !important;
 }
-
-.tab-content-wrapper .nav-tabs .nav-link i {
-    margin-right: 8px;
-    font-size: 14px;
-}
-
+.tab-content-wrapper .nav-tabs .nav-link i { margin-right: 8px; font-size: 14px; }
 .tab-content-wrapper .nav-tabs .nav-link .badge {
-    margin-left: 6px;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background: #e8ecf1;
-    color: #605e5c;
+    margin-left: 6px; font-size: 11px; padding: 2px 8px;
+    border-radius: 12px; background: #e8ecf1; color: #605e5c;
 }
-
-.tab-content-wrapper .nav-tabs .nav-link.active .badge {
-    background: #deecf9;
-    color: #0078d4;
-}
-
-.tab-content-wrapper .tab-content {
-    padding: 24px;
-    background: #ffffff;
-}
-
-.tab-content-wrapper .tab-pane {
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.tab-content-wrapper .tab-pane.active {
-    display: block;
-}
-
+.tab-content-wrapper .nav-tabs .nav-link.active .badge { background: #deecf9; color: #0078d4; }
+.tab-content-wrapper .tab-content { padding: 24px; background: #ffffff; }
+.tab-content-wrapper .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+.tab-content-wrapper .tab-pane.active { display: block; }
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
-/* Tab badge counters */
 .tab-badge-count {
-    display: inline-block;
-    background: #e8ecf1;
-    color: #605e5c;
-    border-radius: 12px;
-    padding: 1px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 6px;
+    display: inline-block; background: #e8ecf1; color: #605e5c;
+    border-radius: 12px; padding: 1px 8px;
+    font-size: 11px; font-weight: 600; margin-left: 6px;
 }
-
-.nav-link.active .tab-badge-count {
-    background: #deecf9;
-    color: #0078d4;
-}
-
-/* Make sure tabs don't overflow */
-.tab-content-wrapper .nav-tabs .nav-item:last-child {
-    margin-right: 0;
-}
-
-/* ===== END TABBED LAYOUT STYLES ===== */
+.nav-link.active .tab-badge-count { background: #deecf9; color: #0078d4; }
+.tab-content-wrapper .nav-tabs .nav-item:last-child { margin-right: 0; }
 
 /* ===== SECTION HEADER WITH TITLE AND ARROW INLINE ===== */
 .section-header-inline {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
 }
-
 .section-header-inline .section-title-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
+    display: flex; align-items: center; gap: 12px; flex: 1;
 }
-
 .section-header-inline .section-toggle-wrapper {
-    display: flex;
-    align-items: center;
-    color: white;
-    font-size: 20px;
-    flex-shrink: 0;
+    display: flex; align-items: center; color: white;
+    font-size: 20px; flex-shrink: 0;
 }
-
 .section-header-inline .section-toggle-wrapper .section-toggle-icon {
-    transition: transform 0.3s ease;
-    display: inline-block;
+    transition: transform 0.3s ease; display: inline-block;
 }
-
 .section-header-inline .section-toggle-wrapper .section-toggle-icon.collapsed {
     transform: rotate(-90deg);
 }
 
 /* ===== BOTTOM ACTIONS BAR ===== */
 .bottom-actions-bar {
-    background: #ffffff;
-    border: 1px solid #edebe9;
-    border-radius: 2px;
-    padding: 20px 24px;
-    margin-top: 20px;
+    background: #ffffff; border: 1px solid #edebe9; border-radius: 2px;
+    padding: 20px 24px; margin-top: 20px;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
 }
-
 .bottom-actions-bar .action-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
-    align-items: center;
+    display: flex; flex-wrap: wrap; gap: 12px;
+    justify-content: center; align-items: center;
 }
-
 .bottom-actions-bar .action-hint {
-    text-align: center;
-    margin-top: 12px;
-    color: #6c757d;
-    font-size: 13px;
+    text-align: center; margin-top: 12px;
+    color: #6c757d; font-size: 13px;
 }
-
-.bottom-actions-bar .action-hint i {
-    margin-right: 6px;
-}
+.bottom-actions-bar .action-hint i { margin-right: 6px; }
 
 /* ===== PRE-EXISTENCIAS STYLES ===== */
 .preexistencias-section .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 10px;
 }
-
 .preexistencias-section .card-header .header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    display: flex; gap: 8px; align-items: center;
 }
-
-.preexistencias-table {
-    font-size: 14px;
-}
-
+.preexistencias-table { font-size: 14px; }
 .preexistencias-table thead th {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    font-weight: 600;
-    color: #495057;
+    background: #f8f9fa; border-bottom: 2px solid #dee2e6;
+    font-weight: 600; color: #495057;
 }
-
-.preexistencias-table tbody tr:hover {
-    background-color: #f8f9fa;
-}
-
-.preexistencias-table .badge {
-    font-size: 12px;
-    padding: 4px 10px;
-}
-
+.preexistencias-table tbody tr:hover { background-color: #f8f9fa; }
+.preexistencias-table .badge { font-size: 12px; padding: 4px 10px; }
 .preexistencias-table .action-buttons .btn {
-    padding: 2px 8px;
-    font-size: 12px;
-    margin: 0 2px;
+    padding: 2px 8px; font-size: 12px; margin: 0 2px;
 }
+.badge-status-activo { background: #28a745; color: white; }
+.badge-status-inactivo { background: #6c757d; color: white; }
+.badge-status-tratamiento { background: #17a2b8; color: white; }
+.badge-status-remision { background: #ffc107; color: #212529; }
 
-.badge-status-activo {
-    background: #28a745;
-    color: white;
-}
-
-.badge-status-inactivo {
-    background: #6c757d;
-    color: white;
-}
-
-.badge-status-tratamiento {
-    background: #17a2b8;
-    color: white;
-}
-
-.badge-status-remision {
-    background: #ffc107;
-    color: #212529;
-}
-
-/* ===== PRE-EXISTENCIAS MODAL STYLES ===== */
 .preexistencia-modal .modal-header {
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     color: white;
 }
+.preexistencia-modal .modal-header .close { color: white; opacity: 0.8; }
+.preexistencia-modal .modal-header .close:hover { opacity: 1; }
+.preexistencia-modal .modal-body { padding: 24px; }
+.preexistencia-modal .modal-footer { border-top: 1px solid #edebe9; }
 
-.preexistencia-modal .modal-header .close {
-    color: white;
-    opacity: 0.8;
+/* ===== COVERAGE DRAWER STYLES (Microsoft Fluent) ===== */
+.afiliado-drawer-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(2px);
+    z-index: 1050;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 }
-
-.preexistencia-modal .modal-header .close:hover {
-    opacity: 1;
+.afiliado-drawer-backdrop.is-open { opacity: 1; visibility: visible; }
+.afiliado-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 920px; max-width: 96vw;
+    background: #ffffff;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14), -2px 0 8px rgba(0, 0, 0, 0.06);
+    z-index: 1051;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-
-.preexistencia-modal .modal-body {
-    padding: 24px;
+.afiliado-drawer.is-open { transform: translateX(0); }
+.afiliado-drawer-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; background: #ffffff;
+    border-bottom: 1px solid #edebe9; flex-shrink: 0;
 }
-
-.preexistencia-modal .modal-footer {
-    border-top: 1px solid #edebe9;
+.afiliado-drawer-header-icon {
+    width: 40px; height: 40px; min-width: 40px;
+    border-radius: 8px; background: #107c10;
+    display: flex; align-items: center; justify-content: center;
+    color: #ffffff; font-size: 18px; flex-shrink: 0;
 }
+.afiliado-drawer-header-text { flex: 1; min-width: 0; }
+.afiliado-drawer-header-title {
+    font-size: 16px; font-weight: 600; color: #201f1e; line-height: 1.3;
+}
+.afiliado-drawer-header-subtitle {
+    font-size: 12px; color: #605e5c; line-height: 1.4; margin-top: 2px;
+}
+.afiliado-drawer-close {
+    width: 32px; height: 32px; border: none; background: transparent;
+    color: #605e5c; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: background 0.15s ease; flex-shrink: 0;
+}
+.afiliado-drawer-close:hover { background: #f3f2f1; color: #201f1e; }
+.afiliado-drawer-body { flex: 1; overflow-y: auto; padding: 20px 22px 28px; }
+.afiliado-drawer-body > .card,
+.afiliado-drawer-body > .container,
+.afiliado-drawer-body > .container-fluid { margin-bottom: 0; }
 
-/* ===== END PRE-EXISTENCIAS STYLES ===== */
+.coverage-drawer-backdrop {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.coverage-drawer-backdrop.is-open { opacity: 1; visibility: visible; }
+.coverage-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 480px; max-width: 92vw;
+    background: #ffffff;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14), -2px 0 8px rgba(0, 0, 0, 0.06);
+    z-index: 1041;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.coverage-drawer.is-open { transform: translateX(0); }
+.coverage-drawer-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; background: #ffffff;
+    border-bottom: 1px solid #edebe9; flex-shrink: 0;
+}
+.coverage-drawer-header-icon {
+    width: 40px; height: 40px; min-width: 40px;
+    border-radius: 8px; background: #0078d4;
+    display: flex; align-items: center; justify-content: center;
+    color: #ffffff; font-size: 18px; flex-shrink: 0;
+}
+.coverage-drawer-header-text { flex: 1; min-width: 0; }
+.coverage-drawer-header-title {
+    font-size: 16px; font-weight: 600; color: #201f1e;
+    line-height: 1.3; letter-spacing: -0.005em;
+}
+.coverage-drawer-header-subtitle {
+    font-size: 12px; color: #605e5c; line-height: 1.4; margin-top: 2px;
+}
+.coverage-drawer-close {
+    width: 32px; height: 32px; border: none; background: transparent;
+    color: #605e5c; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: background 0.15s ease; flex-shrink: 0;
+}
+.coverage-drawer-close:hover { background: #f3f2f1; color: #201f1e; }
+.coverage-drawer-body { flex: 1; overflow-y: auto; padding: 20px 22px 28px; }
+
+.coverage-drawer-status {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px; background: #f3f9fd;
+    border-left: 4px solid #0078d4;
+    border-radius: 6px; margin-bottom: 20px;
+}
+.coverage-drawer-status-icon {
+    width: 40px; height: 40px; min-width: 40px;
+    border-radius: 50%; background: #0078d4; color: #ffffff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.coverage-drawer-status-text { flex: 1; min-width: 0; }
+.coverage-drawer-status-title {
+    font-size: 15px; font-weight: 600; color: #201f1e;
+    line-height: 1.3; margin-bottom: 4px;
+}
+.coverage-drawer-status-subtitle {
+    font-size: 12.5px; color: #605e5c; line-height: 1.5;
+}
+.coverage-drawer-status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; color: #107c10;
+    background: #dff6dd; padding: 4px 10px;
+    border-radius: 12px; letter-spacing: 0.03em;
+    white-space: nowrap; flex-shrink: 0;
+}
+.coverage-drawer-section-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; color: #605e5c;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin: 24px 0 12px; padding-bottom: 8px;
+    border-bottom: 1px solid #edebe9;
+}
+.coverage-drawer-section-title:first-child { margin-top: 0; }
+.coverage-drawer-section-title i { color: #0078d4; font-size: 13px; }
+.coverage-drawer-metrics {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px; margin-bottom: 8px;
+}
+.coverage-metric {
+    padding: 14px 12px; background: #faf9f8;
+    border-radius: 6px; border-left: 3px solid #0078d4;
+}
+.coverage-metric-label {
+    font-size: 10.5px; font-weight: 700; color: #605e5c;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+.coverage-metric-value {
+    font-size: 17px; font-weight: 600; color: #201f1e; line-height: 1.2;
+}
+.coverage-metric-hint {
+    font-size: 11px; color: #8a8886; margin-top: 4px; line-height: 1.3;
+}
+.coverage-drawer-timeline { position: relative; padding: 4px 0; }
+.coverage-timeline-item {
+    display: flex; gap: 12px; position: relative; padding: 10px 0;
+}
+.coverage-timeline-item.is-current .coverage-timeline-marker i { color: #0078d4; }
+.coverage-timeline-marker {
+    width: 22px; min-width: 22px; display: flex;
+    justify-content: center; padding-top: 2px;
+}
+.coverage-timeline-marker i { color: #107c10; font-size: 14px; }
+.coverage-timeline-content { flex: 1; min-width: 0; padding-bottom: 6px; }
+.coverage-timeline-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap; margin-bottom: 4px;
+}
+.coverage-timeline-title { font-size: 13.5px; font-weight: 600; color: #201f1e; }
+.coverage-timeline-badge-current {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    color: #0078d4; background: #deecf9;
+    padding: 2px 8px; border-radius: 8px;
+    margin-left: 6px; letter-spacing: 0.03em; text-transform: uppercase;
+}
+.coverage-timeline-status {
+    font-size: 10.5px; font-weight: 700;
+    padding: 2px 8px; border-radius: 8px;
+    letter-spacing: 0.03em; text-transform: uppercase;
+}
+.coverage-timeline-status.activo { color: #107c10; background: #dff6dd; }
+.coverage-timeline-status.vencido { color: #8a3707; background: #fed9cc; }
+.coverage-timeline-status.registrado { color: #0078d4; background: #deecf9; }
+.coverage-timeline-status.anulado { color: #a4262c; background: #fde7e9; }
+.coverage-timeline-status.suspendido { color: #605e5c; background: #f3f2f1; }
+.coverage-timeline-dates {
+    font-size: 12.5px; color: #605e5c; line-height: 1.4; margin-bottom: 2px;
+}
+.coverage-timeline-dates i { color: #8a8886; margin-right: 4px; font-size: 11px; }
+.coverage-timeline-plan { font-size: 12px; color: #8a8886; line-height: 1.4; }
+.coverage-timeline-plan i { color: #8a8886; margin-right: 4px; font-size: 11px; }
+.coverage-timeline-gap {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0 6px 22px;
+    font-size: 11.5px; color: #8a8886;
+    font-weight: 500; letter-spacing: 0.01em;
+}
+.coverage-timeline-gap i { color: #c8c6c4; font-size: 11px; }
+.coverage-drawer-callout {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px; background: #fff4ce;
+    border-left: 4px solid #f7630c; border-radius: 6px;
+}
+.coverage-drawer-callout-icon {
+    width: 32px; height: 32px; min-width: 32px;
+    border-radius: 50%; background: #f7630c; color: #ffffff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+}
+.coverage-drawer-callout-content { flex: 1; min-width: 0; }
+.coverage-drawer-callout-title {
+    font-size: 14px; font-weight: 600; color: #8a3707;
+    line-height: 1.4; margin-bottom: 6px;
+}
+.coverage-drawer-callout-body {
+    font-size: 13px; color: #4a2c0e; line-height: 1.55; margin-bottom: 6px;
+}
+.coverage-drawer-callout-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 6px; font-size: 11px; font-weight: 600;
+    color: #605e5c; background: rgba(255, 255, 255, 0.7);
+    padding: 3px 10px; border-radius: 10px; letter-spacing: 0.01em;
+}
+.coverage-drawer-footer {
+    display: flex; align-items: flex-start; gap: 8px;
+    margin-top: 22px; padding: 12px 14px;
+    background: #faf9f8; border-radius: 6px;
+    font-size: 12px; color: #605e5c; line-height: 1.5;
+}
+.coverage-drawer-footer i {
+    color: #0078d4; font-size: 13px; margin-top: 2px; flex-shrink: 0;
+}
+@media (max-width: 576px) {
+    .afiliado-drawer { width: 100%; max-width: 100%; }
+    .coverage-drawer { width: 100%; max-width: 100%; }
+    .coverage-drawer-metrics { grid-template-columns: 1fr; }
+}
 ");
 
-// ===== JAVASCRIPT - Clean version =====
+// ===== JAVASCRIPT =====
 $jsCode = <<<'JS'
 // ============================================================
-// PROGRESS OVERLAY CONTROLS - WITH VALIDATION
+// PROGRESS OVERLAY CONTROLS
 // ============================================================
 (function() {
     'use strict';
-    
-    // ============================================================
-    // TAB CONTROLS - MUST BE DEFINED FIRST
-    // ============================================================
+
     window.activateTab = function(tabId) {
-        // Remove active from all tabs and panes
         jQuery('.nav-tabs .nav-link').removeClass('active');
         jQuery('.tab-pane').removeClass('active show');
-        
-        // Hide all panes explicitly
         jQuery('.tab-pane').css('display', 'none');
-        
-        // Activate the selected tab and pane
         jQuery('.nav-tabs .nav-link[data-tab="' + tabId + '"]').addClass('active');
         jQuery('#tab-' + tabId).addClass('active');
-        
-        // Force show the active pane
         jQuery('#tab-' + tabId).css('display', 'block');
-        
-        // Store active tab in localStorage
-        try {
-            localStorage.setItem('activeFormTab', tabId);
-        } catch (e) {
-            // Ignore localStorage errors
-        }
+
+        try { localStorage.setItem('activeFormTab', tabId); } catch (e) {}
     };
-    
-    // ============================================================
-    // INIT TABS ON PAGE LOAD
-    // ============================================================
+
     function initTabs() {
         var savedTab = null;
-        try {
-            savedTab = localStorage.getItem('activeFormTab');
-        } catch (e) {
-            // Ignore
-        }
-        
+        try { savedTab = localStorage.getItem('activeFormTab'); } catch (e) {}
+
         var activeTab = savedTab || 'afiliado';
-        
-        // Check URL hash for tab (for server-side errors)
+
         var hash = window.location.hash;
         if (hash && hash.startsWith('#tab-')) {
             var tabFromHash = hash.replace('#tab-', '');
@@ -995,174 +915,111 @@ $jsCode = <<<'JS'
                 activeTab = tabFromHash;
             }
         }
-        
-        // Make sure the tab exists
+
         if (jQuery('.nav-tabs .nav-link[data-tab="' + activeTab + '"]').length === 0) {
             activeTab = 'afiliado';
         }
-        
+
         window.activateTab(activeTab);
     }
-    
-    // Click handler for tabs
+
     jQuery(document).on('click', '.nav-tabs .nav-link', function(e) {
         e.preventDefault();
         var tabId = jQuery(this).data('tab');
-        if (tabId) {
-            window.activateTab(tabId);
-        }
+        if (tabId) window.activateTab(tabId);
     });
-    
-    // ============================================================
-// VALIDATION FUNCTION - CLEAN VERSION (NO DUPLICATE ERRORS)
-// ============================================================
-window.validateForm = function() {
-    var isValid = true;
-    var errorMessages = [];
-    var errorTabId = null;
-    
-    // Clear previous errors
-    jQuery('.is-invalid').removeClass('is-invalid');
-    jQuery('.invalid-feedback').remove();
-    
-    // 1. Validate Descripción de la Atención (Tab: atencion)
-    var descripcionField = document.querySelector('#sissiniestro-descripcion');
-    if (descripcionField) {
-        var descripcionValue = descripcionField.value.trim();
-        if (descripcionValue === '' || descripcionValue.length < 3) {
-            isValid = false;
-            // Let the server-side validation handle the error message
-            // Just highlight the field and switch to the correct tab
-            jQuery(descripcionField).addClass('is-invalid');
-            errorTabId = 'atencion';
-            // REMOVED: The client-side error message to avoid duplication
-        }
-    }
-    
-    // 2. Validate Medical Services (Tab: servicios)
-    var baremosSelect = document.querySelector('#baremos-select');
-    if (baremosSelect) {
-        var selectedValues = jQuery(baremosSelect).val();
-        if (!selectedValues || selectedValues.length === 0) {
-            isValid = false;
-            
-            var select2Container = jQuery(baremosSelect).parent().find('.select2-container');
-            if (select2Container.length) {
-                select2Container.css({
-                    'border': '2px solid #dc3545',
-                    'border-radius': '4px',
-                    'padding': '2px'
-                });
-            }
-            
-            if (!errorTabId) {
-                errorTabId = 'servicios';
-            }
-            // REMOVED: The client-side error message to avoid duplication
-        } else {
-            var select2Container = jQuery(baremosSelect).parent().find('.select2-container');
-            if (select2Container.length) {
-                select2Container.css({
-                    'border': '',
-                    'border-radius': '',
-                    'padding': ''
-                });
-            }
-        }
-    }
-    
-    // 3. Validate Fecha de Atención (Tab: atencion)
-    var fechaField = document.querySelector('#sissiniestro-fecha_atencion');
-    if (fechaField) {
-        var fechaValue = fechaField.value.trim();
-        if (!fechaValue) {
-            isValid = false;
-            jQuery(fechaField).addClass('is-invalid');
-            if (!errorTabId) {
+
+    window.validateForm = function() {
+        var isValid = true;
+        var errorTabId = null;
+
+        jQuery('.is-invalid').removeClass('is-invalid');
+        jQuery('.invalid-feedback').remove();
+
+        var descripcionField = document.querySelector('#sissiniestro-descripcion');
+        if (descripcionField) {
+            var descripcionValue = descripcionField.value.trim();
+            if (descripcionValue === '' || descripcionValue.length < 3) {
+                isValid = false;
+                jQuery(descripcionField).addClass('is-invalid');
                 errorTabId = 'atencion';
             }
-            // REMOVED: The client-side error message to avoid duplication
         }
-    }
-    
-    // If invalid, switch to the tab with errors and let server show the error messages
-    if (!isValid) {
-        // SWITCH TO THE TAB WITH ERRORS
-        if (errorTabId) {
-            window.activateTab(errorTabId);
-        }
-        
-        // Remove any existing client-side error alert (let server handle it)
-        var errorAlert = document.getElementById('validation-error-alert');
-        if (errorAlert) {
-            errorAlert.remove();
-        }
-        
-        // Scroll to first error after tab switch animation
-        setTimeout(function() {
-            var firstError = document.querySelector('.is-invalid');
-            if (firstError) {
-                firstError.focus();
-                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        var baremosSelect = document.querySelector('#baremos-select');
+        if (baremosSelect) {
+            var selectedValues = jQuery(baremosSelect).val();
+            if (!selectedValues || selectedValues.length === 0) {
+                isValid = false;
+                var select2Container = jQuery(baremosSelect).parent().find('.select2-container');
+                if (select2Container.length) {
+                    select2Container.css({ 'border': '2px solid #dc3545', 'border-radius': '4px', 'padding': '2px' });
+                }
+                if (!errorTabId) errorTabId = 'servicios';
+            } else {
+                var select2Container = jQuery(baremosSelect).parent().find('.select2-container');
+                if (select2Container.length) {
+                    select2Container.css({ 'border': '', 'border-radius': '', 'padding': '' });
+                }
             }
-        }, 400);
-        
-        return false;
-    }
-    
-    return true;
-};
-    
-    // ============================================================
-    // INTERCEPT FORM SUBMISSION
-    // ============================================================
+        }
+
+        var fechaField = document.querySelector('#sissiniestro-fecha_atencion');
+        if (fechaField) {
+            var fechaValue = fechaField.value.trim();
+            if (!fechaValue) {
+                isValid = false;
+                jQuery(fechaField).addClass('is-invalid');
+                if (!errorTabId) errorTabId = 'atencion';
+            }
+        }
+
+        if (!isValid) {
+            if (errorTabId) window.activateTab(errorTabId);
+
+            var errorAlert = document.getElementById('validation-error-alert');
+            if (errorAlert) errorAlert.remove();
+
+            setTimeout(function() {
+                var firstError = document.querySelector('.is-invalid');
+                if (firstError) {
+                    firstError.focus();
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 400);
+
+            return false;
+        }
+
+        return true;
+    };
+
     jQuery(document).ready(function() {
-        // Initialize tabs
         initTabs();
-        
+
         var $form = jQuery('.sis-siniestro-form form');
-        if ($form.length === 0) {
-            $form = jQuery('#sis-siniestro-form');
-        }
-        if ($form.length === 0) {
-            $form = jQuery('form');
-        }
-        
+        if ($form.length === 0) $form = jQuery('#sis-siniestro-form');
+        if ($form.length === 0) $form = jQuery('form');
+
         $form.on('submit', function(e) {
-            // RUN VALIDATION FIRST - BEFORE PROGRESS OVERLAY
             if (!window.validateForm()) {
                 e.preventDefault();
                 return false;
             }
-            
-            // If validation passes, show progress overlay
-            var $thisForm = jQuery(this);
-            var hasErrors = $thisForm.find('.has-error').length > 0;
-            
-            if (!hasErrors) {
-                // Progress overlay show logic...
-            }
         });
     });
-    
-    // ============================================================
-    // CHECK FOR SERVER-SIDE ERRORS ON PAGE LOAD
-    // ============================================================
+
     jQuery(document).ready(function() {
-        // If there are flash errors or validation errors from server
         var hasServerError = jQuery('.alert-danger').length > 0 || jQuery('.has-error').length > 0;
-        
+
         if (hasServerError) {
-            // Check which tab has errors
-            if (jQuery('#sissiniestro-descripcion').hasClass('has-error') || 
-                jQuery('#sissiniestro-fecha_atencion').hasClass('has-error')) {
+            if (jQuery('#sissiniestro-descripcion').hasClass('has-error') || jQuery('#sissiniestro-fecha_atencion').hasClass('has-error')) {
                 window.activateTab('atencion');
             } else if (jQuery('#baremos-select').parent().find('.has-error').length > 0) {
                 window.activateTab('servicios');
             }
         }
-        
-        // Also check for flash error messages that mention specific fields
+
         var flashError = jQuery('.alert-danger').text();
         if (flashError) {
             if (flashError.indexOf('Descripción') !== -1 || flashError.indexOf('fecha') !== -1) {
@@ -1172,85 +1029,54 @@ window.validateForm = function() {
             }
         }
     });
-    
 })();
 
 // ============================================================
 // TAB CONTROLS - FORCE ACTIVE STYLES
 // ============================================================
 jQuery(document).ready(function() {
-    
+
     function activateTab(tabId) {
-        // Remove active from all tabs and panes
         jQuery('.nav-tabs .nav-link').removeClass('active');
         jQuery('.tab-pane').removeClass('active');
-        
-        // Hide all panes explicitly
         jQuery('.tab-pane').css('display', 'none');
-        
-        // Activate the selected tab and pane
         jQuery('.nav-tabs .nav-link[data-tab="' + tabId + '"]').addClass('active');
         jQuery('#tab-' + tabId).addClass('active');
-        
-        // Force show the active pane
         jQuery('#tab-' + tabId).css('display', 'block');
-        
-        // Apply active styles via jQuery directly (stronger than CSS)
         jQuery('#tab-' + tabId).css({
             'display': 'block !important',
             'background': '#f8faff !important',
             'border-left': '4px solid #0078d4 !important',
             'padding': '24px 24px 24px 28px !important'
         });
-        
-        // Store active tab in localStorage
-        try {
-            localStorage.setItem('activeFormTab', tabId);
-        } catch (e) {
-            // Ignore localStorage errors
-        }
+
+        try { localStorage.setItem('activeFormTab', tabId); } catch (e) {}
     }
-    
-    // Initialize tabs
+
     function initTabs() {
-        // Check for saved tab preference
         var savedTab = null;
-        try {
-            savedTab = localStorage.getItem('activeFormTab');
-        } catch (e) {
-            // Ignore
-        }
-        
+        try { savedTab = localStorage.getItem('activeFormTab'); } catch (e) {}
+
         var activeTab = savedTab || 'afiliado';
-        
-        // Make sure the tab exists
+
         if (jQuery('.nav-tabs .nav-link[data-tab="' + activeTab + '"]').length === 0) {
             activeTab = 'afiliado';
         }
-        
-        // Wait a tiny bit for DOM to be ready
-        setTimeout(function() {
-            activateTab(activeTab);
-        }, 50);
+
+        setTimeout(function() { activateTab(activeTab); }, 50);
     }
-    
-    // Click handler for tabs
+
     jQuery(document).on('click', '.nav-tabs .nav-link', function(e) {
         e.preventDefault();
         var tabId = jQuery(this).data('tab');
-        if (tabId) {
-            activateTab(tabId);
-        }
+        if (tabId) activateTab(tabId);
     });
-    
-    // Initialize tabs
+
     initTabs();
-    
-    // Re-initialize after AJAX updates
+
     jQuery(document).on('ajaxComplete', function() {
         setTimeout(initTabs, 100);
     });
-    
 });
 
 // ============================================================
@@ -1259,29 +1085,67 @@ jQuery(document).ready(function() {
 function updateServiciosTabBadge() {
     var selectedCount = jQuery('#baremos-select').val() ? jQuery('#baremos-select').val().length : 0;
     var badge = jQuery('.nav-tabs .nav-link[data-tab="servicios"] .tab-badge-count');
-    if (badge.length) {
-        badge.text(selectedCount);
-    }
+    if (badge.length) badge.text(selectedCount);
 }
 
-// Update badge when Select2 changes
-jQuery(document).on('change', '#baremos-select', function() {
-    updateServiciosTabBadge();
-});
-
-// Also update when items are removed via Select2
-jQuery(document).on('select2:unselect', '#baremos-select', function() {
-    setTimeout(updateServiciosTabBadge, 100);
-});
-
-// Update when items are selected via Select2
-jQuery(document).on('select2:select', '#baremos-select', function() {
-    setTimeout(updateServiciosTabBadge, 100);
-});
-
-// Initial update after Select2 is initialized
+jQuery(document).on('change', '#baremos-select', function() { updateServiciosTabBadge(); });
+jQuery(document).on('select2:unselect', '#baremos-select', function() { setTimeout(updateServiciosTabBadge, 100); });
+jQuery(document).on('select2:select', '#baremos-select', function() { setTimeout(updateServiciosTabBadge, 100); });
 setTimeout(updateServiciosTabBadge, 500);
 
+// ============================================================
+// COVERAGE DRAWER CONTROLS
+// ============================================================
+(function() {
+    'use strict';
+
+    function openCoverageDrawer() {
+        jQuery('#coverage-drawer-backdrop').addClass('is-open');
+        jQuery('#coverage-drawer').addClass('is-open');
+        jQuery('body').css('overflow', 'hidden');
+        jQuery('#coverage-drawer-close').trigger('focus');
+    }
+
+    function closeCoverageDrawer() {
+        jQuery('#coverage-drawer-backdrop').removeClass('is-open');
+        jQuery('#coverage-drawer').removeClass('is-open');
+        jQuery('body').css('overflow', '');
+    }
+
+    jQuery(document).on('click', '#coverage-drawer-trigger', function(e) { e.preventDefault(); openCoverageDrawer(); });
+    jQuery(document).on('click', '#coverage-drawer-close', function(e) { e.preventDefault(); closeCoverageDrawer(); });
+    jQuery(document).on('click', '#coverage-drawer-backdrop', function() { closeCoverageDrawer(); });
+    jQuery(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && jQuery('#coverage-drawer').hasClass('is-open')) closeCoverageDrawer();
+    });
+})();
+
+    // ============================================================
+    // AFFILIATE DETAILS DRAWER CONTROLS
+    // ============================================================
+    (function() {
+        'use strict';
+
+        function openAfiliadoDrawer() {
+            jQuery('#afiliado-drawer-backdrop').addClass('is-open');
+            jQuery('#afiliado-drawer').addClass('is-open');
+            jQuery('body').css('overflow', 'hidden');
+            jQuery('#afiliado-drawer-close').trigger('focus');
+        }
+
+        function closeAfiliadoDrawer() {
+            jQuery('#afiliado-drawer-backdrop').removeClass('is-open');
+            jQuery('#afiliado-drawer').removeClass('is-open');
+            jQuery('body').css('overflow', '');
+        }
+
+        jQuery(document).on('click', '#afiliado-drawer-trigger', function(e) { e.preventDefault(); openAfiliadoDrawer(); });
+        jQuery(document).on('click', '#afiliado-drawer-close', function(e) { e.preventDefault(); closeAfiliadoDrawer(); });
+        jQuery(document).on('click', '#afiliado-drawer-backdrop', function() { closeAfiliadoDrawer(); });
+        jQuery(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && jQuery('#afiliado-drawer').hasClass('is-open')) closeAfiliadoDrawer();
+        });
+    })();
 JS;
 $this->registerJs($jsCode, View::POS_END);
 ?>
@@ -1337,49 +1201,48 @@ $this->registerJs($jsCode, View::POS_END);
 
         <!-- Tab Content -->
         <div class="tab-content">
-            <!-- ===== TAB 1: AFILIADO & PLAN ===== -->
+
+            <!-- ===== TAB 1: AFILIADO & PLAN & COBERTURA ===== -->
             <div class="tab-pane active" id="tab-afiliado" role="tabpanel" style="display: block !important;">
                 <div class="row">
-                    <!-- Afiliado Card -->
-                    <div class="col-md-6 mb-4">
+
+                    <!-- ===== Card 1: Datos del Afiliado ===== -->
+                    <div class="col-lg-4 col-md-6 mb-4">
                         <div class="card h-100">
                             <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                                 <i class="fas fa-user me-2"></i> Datos del Afiliado
                             </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <p><strong>Nombre:</strong>
-                                            <?= Html::encode(trim($afiliado->nombres . ' ' . $afiliado->apellidos)) ?>
-                                        </p>
-                                        <p><strong>Código:</strong> <?= Html::encode($afiliado->codigo ?? 'N/A') ?></p>
-                                        <p><strong>Cédula:</strong>
-                                            <?php
-                                            $cedula = $afiliado->cedula;
-                                            $tipoCedula = $afiliado->tipo_cedula ?? 'V';
-                                            echo Html::encode($tipoCedula . '-' . str_pad($cedula, 8, '0', STR_PAD_LEFT));
-                                            ?>
-                                        </p>
-                                        <p><strong>Teléfono:</strong> <?= Html::encode($afiliado->telefono) ?></p>
-                                        <p><strong>Email:</strong> <?= Html::encode($afiliado->email) ?></p>
-                                    </div>
-                                    <div class="col-md-4 d-flex align-items-center justify-content-center">
-                                        <?= Html::button(
-                                            '<i class="fas fa-eye mr-2"></i> Ver Detalles',
-                                            [
-                                                'class' => 'btn btn-success',
-                                                'id' => 'btn-abrir-afiliado-modal',
-                                                'type' => 'button'
-                                            ]
-                                        ) ?>
-                                    </div>
-                                </div>
+                                <p><strong>Nombre:</strong>
+                                    <?= Html::encode(trim($afiliado->nombres . ' ' . $afiliado->apellidos)) ?>
+                                </p>
+                                <p><strong>Código:</strong> <?= Html::encode($afiliado->codigo ?? 'N/A') ?></p>
+                                <p><strong>Cédula:</strong>
+                                    <?php
+                                    $cedula = $afiliado->cedula;
+                                    $tipoCedula = $afiliado->tipo_cedula ?? 'V';
+                                    echo Html::encode($tipoCedula . '-' . str_pad($cedula, 8, '0', STR_PAD_LEFT));
+                                    ?>
+                                </p>
+                                <p><strong>Teléfono:</strong> <?= Html::encode($afiliado->telefono) ?></p>
+                                <p><strong>Email:</strong> <?= Html::encode($afiliado->email) ?></p>
+                            </div>
+                            <div class="card-footer" style="background: #faf9f8; border-top: 1px solid #edebe9; padding: 10px 16px; text-align: right;">
+                                <?= Html::button(
+                                    '<i class="fas fa-eye mr-2"></i> Ver Detalles',
+                                    [
+                                        'class' => 'btn btn-sm',
+                                        'id' => 'afiliado-drawer-trigger',
+                                        'type' => 'button',
+                                        'style' => 'display: inline-flex; align-items: center; gap: 6px; font-family: \'Segoe UI\', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12.5px; font-weight: 600; color: #000000; background: #90dd90 ; border: 1px solid #107c10; padding: 5px 14px; border-radius: 4px; cursor: pointer;',
+                                    ]
+                                ) ?>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Plan Info Card -->
-                    <div class="col-md-6 mb-4">
+                    <!-- ===== Card 2: Información del Plan y Límites ===== -->
+                    <div class="col-lg-4 col-md-6 mb-4">
                         <div class="card h-100">
                             <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                                 <i class="fas fa-file-contract me-2"></i> Información del Plan y Límites
@@ -1436,19 +1299,9 @@ $this->registerJs($jsCode, View::POS_END);
                                                 <td><?= date('d/m/Y', strtotime($cita['fecha'])) ?></td>
                                                 <td><strong><?= $cita['area'] ?></strong></td>
                                                 <td><?= $cita['nombre_servicio'] ?></td>
-                                                <td>
-                                                    <?php if (!empty($cita['descripcion'])): ?>
-                                                        <?= $cita['descripcion'] ?>
-                                                    <?php else: ?>
-                                                        <span class="text-muted">Sin descripción</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="text-success">
-                                                    <strong>$<?= number_format($cita['precio'], 2) ?></strong>
-                                                </td>
-                                                <td>
-                                                    <span class="badge badge-cita">Cita</span>
-                                                </td>
+                                                <td><?= !empty($cita['descripcion']) ? $cita['descripcion'] : '<span class="text-muted">Sin descripción</span>' ?></td>
+                                                <td class="text-success"><strong>$<?= number_format($cita['precio'], 2) ?></strong></td>
+                                                <td><span class="badge badge-cita">Cita</span></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -1494,19 +1347,9 @@ $this->registerJs($jsCode, View::POS_END);
                                                 <td><?= date('d/m/Y', strtotime($siniestro['fecha'])) ?></td>
                                                 <td><strong><?= $siniestro['area'] ?></strong></td>
                                                 <td><?= $siniestro['nombre_servicio'] ?></td>
-                                                <td>
-                                                    <?php if (!empty($siniestro['descripcion'])): ?>
-                                                        <?= $siniestro['descripcion'] ?>
-                                                    <?php else: ?>
-                                                        <span class="text-muted">Sin descripción</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="text-success">
-                                                    <strong>$<?= number_format($siniestro['precio'], 2) ?></strong>
-                                                </td>
-                                                <td>
-                                                    <span class="badge badge-siniestro">Atención</span>
-                                                </td>
+                                                <td><?= !empty($siniestro['descripcion']) ? $siniestro['descripcion'] : '<span class="text-muted">Sin descripción</span>' ?></td>
+                                                <td class="text-success"><strong>$<?= number_format($siniestro['precio'], 2) ?></strong></td>
+                                                <td><span class="badge badge-siniestro">Atención</span></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -1570,33 +1413,16 @@ $this->registerJs($jsCode, View::POS_END);
                             </div>
                             <div class="header-actions">
                                 <?php
-                                // Build the return URL for the current page
                                 $currentUrl = Yii::$app->request->getUrl();
-
-                                // Create a URL with return_url parameter
                                 $createUrl = Yii::$app->urlManager->createUrl([
                                     '/preexistencias/create',
                                     'user_id' => $afiliado->id,
                                     'return_url' => $currentUrl
                                 ]);
                                 ?>
-                                <?= Html::a(
-                                    '<i class="fas fa-plus"></i> Agregar Pre-existencia',
-                                    $createUrl,
-                                    [
-                                        'class' => 'btn btn-sm btn-dark',
-                                        'target' => '_blank',
-                                    ]
-                                ) ?>
+                                <?= Html::a('<i class="fas fa-plus"></i> Agregar Pre-existencia', $createUrl, ['class' => 'btn btn-sm btn-dark', 'target' => '_blank']) ?>
                                 <?php if ($preexistenciasCount > 0): ?>
-                                    <?= Html::a(
-                                        '<i class="fas fa-external-link-alt"></i> Ver todas',
-                                        ['/preexistencias/index', 'user_id' => $afiliado->id],
-                                        [
-                                            'class' => 'btn btn-sm btn-outline-warning',
-                                            'target' => '_blank',
-                                        ]
-                                    ) ?>
+                                    <?= Html::a('<i class="fas fa-external-link-alt"></i> Ver todas', ['/preexistencias/index', 'user_id' => $afiliado->id], ['class' => 'btn btn-sm btn-outline-warning', 'target' => '_blank']) ?>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -1646,46 +1472,10 @@ $this->registerJs($jsCode, View::POS_END);
                                                         </span>
                                                     </td>
                                                     <td class="text-center action-buttons">
-                                                        <?= Html::a(
-                                                            '<i class="fas fa-eye"></i>',
-                                                            ['/preexistencias/view', 'id' => $preexistencia->id],
-                                                            [
-                                                                'class' => 'btn-action btn-action-view',
-                                                                'title' => 'Ver detalles',
-                                                                'target' => '_blank',
-                                                            ]
-                                                        ) ?>
-                                                        <?= Html::a(
-                                                            '<i class="fas fa-edit"></i>',
-                                                            ['/preexistencias/update', 'id' => $preexistencia->id, 'return_url' => $currentUrl],
-                                                            [
-                                                                'class' => 'btn-action btn-action-edit',
-                                                                'title' => 'Editar',
-                                                                'target' => '_blank',
-                                                            ]
-                                                        ) ?>
-                                                        <?= Html::a(
-                                                            '<i class="fas fa-trash"></i>',
-                                                            ['/preexistencias/delete', 'id' => $preexistencia->id, 'return_url' => $currentUrl],
-                                                            [
-                                                                'class' => 'btn-action btn-action-delete',
-                                                                'title' => 'Eliminar',
-                                                                'data-method' => 'post',
-                                                                'data-confirm' => '¿Está seguro de eliminar esta pre-existencia? Esta acción no se puede deshacer.',
-                                                                'target' => '_blank',
-                                                            ]
-                                                        ) ?>
-                                                        <?= Html::a(
-                                                            '<i class="fas fa-sync-alt"></i>',
-                                                            ['/preexistencias/toggle-status', 'id' => $preexistencia->id, 'return_url' => $currentUrl],
-                                                            [
-                                                                'class' => 'btn-action btn-action-toggle',
-                                                                'title' => 'Cambiar estatus',
-                                                                'data-method' => 'post',
-                                                                'data-confirm' => '¿Está seguro de cambiar el estatus de esta pre-existencia?',
-                                                                'target' => '_blank',
-                                                            ]
-                                                        ) ?>
+                                                        <?= Html::a('<i class="fas fa-eye"></i>', ['/preexistencias/view', 'id' => $preexistencia->id], ['class' => 'btn-action btn-action-view', 'title' => 'Ver detalles', 'target' => '_blank']) ?>
+                                                        <?= Html::a('<i class="fas fa-edit"></i>', ['/preexistencias/update', 'id' => $preexistencia->id, 'return_url' => $currentUrl], ['class' => 'btn-action btn-action-edit', 'title' => 'Editar', 'target' => '_blank']) ?>
+                                                        <?= Html::a('<i class="fas fa-trash"></i>', ['/preexistencias/delete', 'id' => $preexistencia->id, 'return_url' => $currentUrl], ['class' => 'btn-action btn-action-delete', 'title' => 'Eliminar', 'data-method' => 'post', 'data-confirm' => '¿Está seguro de eliminar esta pre-existencia? Esta acción no se puede deshacer.', 'target' => '_blank']) ?>
+                                                        <?= Html::a('<i class="fas fa-sync-alt"></i>', ['/preexistencias/toggle-status', 'id' => $preexistencia->id, 'return_url' => $currentUrl], ['class' => 'btn-action btn-action-toggle', 'title' => 'Cambiar estatus', 'data-method' => 'post', 'data-confirm' => '¿Está seguro de cambiar el estatus de esta pre-existencia?', 'target' => '_blank']) ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -1695,14 +1485,7 @@ $this->registerJs($jsCode, View::POS_END);
 
                                 <?php if ($preexistenciasCount > 10): ?>
                                     <div class="text-center mt-3">
-                                        <?= Html::a(
-                                            '<i class="fas fa-external-link-alt"></i> Ver todas las pre-existencias (' . $preexistenciasCount . ')',
-                                            ['/preexistencias/index', 'user_id' => $afiliado->id],
-                                            [
-                                                'class' => 'btn btn-outline-primary',
-                                                'target' => '_blank',
-                                            ]
-                                        ) ?>
+                                        <?= Html::a('<i class="fas fa-external-link-alt"></i> Ver todas las pre-existencias (' . $preexistenciasCount . ')', ['/preexistencias/index', 'user_id' => $afiliado->id], ['class' => 'btn btn-outline-primary', 'target' => '_blank']) ?>
                                     </div>
                                 <?php endif; ?>
                             <?php else: ?>
@@ -1710,14 +1493,7 @@ $this->registerJs($jsCode, View::POS_END);
                                     <i class="fas fa-info-circle me-2"></i>
                                     No se encontraron pre-existencias registradas para este afiliado.
                                     <br>
-                                    <?= Html::a(
-                                        '<i class="fas fa-plus"></i> Agregar Primera Pre-existencia',
-                                        $createUrl,
-                                        [
-                                            'class' => 'btn btn-primary mt-3',
-                                            'target' => '_blank',
-                                        ]
-                                    ) ?>
+                                    <?= Html::a('<i class="fas fa-plus"></i> Agregar Primera Pre-existencia', $createUrl, ['class' => 'btn btn-primary mt-3', 'target' => '_blank']) ?>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -1771,7 +1547,6 @@ $this->registerJs($jsCode, View::POS_END);
                                 ])->label('Descripción de la ' . $terminoPrincipal) ?>
                             </div>
 
-                            <!-- ===== DOCTOR AND ADMISSION ANALYST FIELDS - SAME ROW ===== -->
                             <div class="row">
                                 <div class="col-md-6 field-with-icon">
                                     <i class="fas fa-user-md"></i>
@@ -1803,7 +1578,6 @@ $this->registerJs($jsCode, View::POS_END);
                     </div>
                 </div>
 
-                <!-- ===== SUBSECTION: DOCUMENTACIÓN ADJUNTA ===== -->
                 <div class="card mb-4">
                     <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                         <i class="fas fa-paperclip me-2"></i> Documentación Adjunta
@@ -1814,7 +1588,6 @@ $this->registerJs($jsCode, View::POS_END);
                         </p>
 
                         <div class="row">
-                            <!-- Récipe Médico -->
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="form-label font-weight-bold">
@@ -1840,7 +1613,6 @@ $this->registerJs($jsCode, View::POS_END);
                                 </div>
                             </div>
 
-                            <!-- Informe Médico -->
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="form-label font-weight-bold">
@@ -1867,7 +1639,6 @@ $this->registerJs($jsCode, View::POS_END);
                             </div>
                         </div>
 
-                        <!-- Additional info about existing files -->
                         <?php if (($model->imagen_recipe || $model->imagen_informe) && !$model->isNewRecord): ?>
                             <div class="alert alert-info mt-3 mb-0">
                                 <i class="fas fa-info-circle"></i>
@@ -1883,7 +1654,8 @@ $this->registerJs($jsCode, View::POS_END);
 
             <!-- ===== TAB 5: SELECCIÓN DE SERVICIOS MÉDICOS ===== -->
             <div class="tab-pane" id="tab-servicios" role="tabpanel">
-                <!-- Badges -->
+
+                <!-- ===== BADGES ===== -->
                 <div class="section-badge-white d-flex flex-wrap gap-2 align-items-center mb-3">
                     <?php if ($esCitaMode && $emergencyExcluded): ?>
                         <span class="badge badge-pill stat-badge emergency-excluded-gray"
@@ -1901,10 +1673,7 @@ $this->registerJs($jsCode, View::POS_END);
                         data-placement="top"
                         title="Servicios que cumplen todos los criterios y pueden ser seleccionados ahora mismo. Click para ver detalles.">
                         <i class="fas fa-check-circle me-3"></i>
-                        <?php
-                        $totalDisponibles = count($baremosSinPlazo);
-                        echo $totalDisponibles;
-                        ?> Disponibles
+                        <?= count($baremosSinPlazo) ?> Disponibles
                     </span>
 
                     <?php if (count($baremosPendientesPlazo) > 0): ?>
@@ -1936,10 +1705,8 @@ $this->registerJs($jsCode, View::POS_END);
                             data-placement="top"
                             title="Servicios previamente guardados que ya no cumplen criterios actuales, mostrados solo para referencia histórica."
                             style="color: #ffffff !important; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;">
-                            >
                             <i class="fas fa-history me-3"></i>
                             <span style="color: #ffffff !important;"><?= count($baremosForzados) ?> Históricos</span>
-                        </span>
                         </span>
                     <?php endif; ?>
 
@@ -2094,7 +1861,47 @@ $this->registerJs($jsCode, View::POS_END);
     <?php ActiveForm::end(); ?>
 </div>
 
-<!-- ===== PRE-EXISTENCIAS MODAL (ONLY ONE - AT THE BOTTOM) ===== -->
+<!-- ============================================================
+     COVERAGE DRAWER (Microsoft Fluent off-canvas panel)
+     ============================================================ -->
+<?php if ($contrato && $contrato->estatus === 'Activo' && $coverageSummary && !empty($coverageSummary['has_coverage'])): ?>
+
+    <div id="coverage-drawer-backdrop" class="coverage-drawer-backdrop"></div>
+
+    <aside id="coverage-drawer" class="coverage-drawer" role="dialog" aria-modal="true" aria-labelledby="coverage-drawer-title">
+        <div class="coverage-drawer-header">
+            <div class="coverage-drawer-header-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="coverage-drawer-header-text">
+                <div class="coverage-drawer-header-title" id="coverage-drawer-title">
+                    Cobertura Continua
+                </div>
+                <div class="coverage-drawer-header-subtitle">
+                    Detalle de la cadena de contratos
+                </div>
+            </div>
+            <button type="button" id="coverage-drawer-close" class="coverage-drawer-close" aria-label="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="coverage-drawer-body">
+            <?= $this->render('_coverage_drawer', [
+                'effectiveStart'   => $coverageSummary['effective_start'],
+                'monthsCovered'    => (int)$coverageSummary['months_covered'],
+                'chainCount'       => (int)$coverageSummary['contracts_in_chain'],
+                'chainContractIds' => $coverageSummary['chain_contract_ids'],
+                'brokenBefore'     => $coverageSummary['broken_before'],
+                'contrato'         => $contrato,
+                'afiliado'         => $afiliado,
+            ]) ?>
+        </div>
+    </aside>
+
+<?php endif; ?>
+
+<!-- ===== PRE-EXISTENCIAS MODAL ===== -->
 <div class="modal fade preexistencia-modal" id="preexistencia-modal" tabindex="-1" role="dialog" aria-labelledby="preexistencia-modal-label" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -2222,118 +2029,84 @@ $this->registerJs($jsCode, View::POS_END);
     </div>
 </div>
 
-<?php
-Modal::begin([
-    'title' => '<h4>Detalles del Afiliado <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></h4>',
-    'id' => 'afiliado-modal',
-    'size' => Modal::SIZE_LARGE,
-    'options' => ['tabindex' => false, 'class' => 'fade', 'role' => 'dialog'],
-    'dialogOptions' => ['class' => 'modal-dialog-centered'],
-]);
-echo $this->render('/user-datos/view', ['model' => $afiliado]);
-Modal::end();
-?>
+<div id="afiliado-drawer-backdrop" class="afiliado-drawer-backdrop"></div>
+
+<aside id="afiliado-drawer" class="afiliado-drawer" role="dialog" aria-modal="true" aria-labelledby="afiliado-drawer-title">
+    <div class="afiliado-drawer-header">
+        <div class="afiliado-drawer-header-icon">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="afiliado-drawer-header-text">
+            <div class="afiliado-drawer-header-title" id="afiliado-drawer-title">Detalles del Afiliado</div>
+            <div class="afiliado-drawer-header-subtitle">
+                <?= Html::encode(trim($afiliado->nombres . ' ' . $afiliado->apellidos)) ?>
+            </div>
+        </div>
+        <button type="button" id="afiliado-drawer-close" class="afiliado-drawer-close" aria-label="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="afiliado-drawer-body">
+        <?= $this->render('/user-datos/view', ['model' => $afiliado]) ?>
+    </div>
+</aside>
 
 <?php
 $this->registerJs(<<<'JS'
 // ============================================
-// AFILIADO MODAL TRIGGER
-// ============================================
-jQuery('#btn-abrir-afiliado-modal').on('click', function(e) {
-    e.preventDefault();
-    setTimeout(function() {
-        jQuery('#afiliado-modal').modal('show');
-    }, 50);
-});
-
-// ============================================
 // TIME INPUT FORMATTING AND VALIDATION
 // ============================================
-
-// Validate time format (HH:MM with 00-23:00-59)
 function validateTimeFormat(timeStr) {
     if (!timeStr || timeStr === '') return true;
     return /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
 }
 
-// Convert any time format to 24-hour HH:MM
 function convertTo24Hour(timeStr) {
     if (!timeStr) return '';
-    
-    // Already in 24-hour format (HH:MM)
-    if (/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr)) {
-        return timeStr;
-    }
-    
-    // Handle 12-hour format with AM/PM
+    if (/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr)) return timeStr;
     var match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
     if (match) {
         var hour = parseInt(match[1]);
         var minute = match[2];
         var ampm = match[3].toUpperCase();
-        
-        if (ampm === 'PM' && hour !== 12) {
-            hour += 12;
-        } else if (ampm === 'AM' && hour === 12) {
-            hour = 0;
-        }
-        
+        if (ampm === 'PM' && hour !== 12) hour += 12;
+        else if (ampm === 'AM' && hour === 12) hour = 0;
         return hour.toString().padStart(2, '0') + ':' + minute;
     }
-    
-    // Handle format with seconds (HH:MM:SS)
     match = timeStr.match(/^(\d{1,2}):(\d{2}):\d{2}$/);
-    if (match) {
-        return match[1].padStart(2, '0') + ':' + match[2];
-    }
-    
+    if (match) return match[1].padStart(2, '0') + ':' + match[2];
     return timeStr;
 }
 
-// Auto-format time when user leaves the field (on blur)
 function autoFormatTime(input) {
     var value = input.value;
     if (!value) return;
-    
-    // Remove any non-digit characters for processing
     var digits = value.replace(/[^0-9]/g, '');
-    
     if (digits.length >= 3) {
         var hour = digits.slice(0, 2);
         var minute = digits.slice(2, 4);
-        
-        // Validate ranges
         var hourInt = parseInt(hour);
         var minuteInt = parseInt(minute);
-        
         if (hourInt > 23) hour = '23';
         if (hourInt < 0 || isNaN(hourInt)) hour = '00';
         if (minuteInt > 59) minute = '59';
         if (minuteInt < 0 || isNaN(minuteInt)) minute = '00';
-        
         input.value = hour + ':' + minute;
     } else if (digits.length === 2) {
         input.value = digits;
     }
 }
 
-// Initialize time inputs when document is ready
 jQuery(document).ready(function() {
-    // Convert existing values to 24-hour format on page load
     jQuery('.time-input').each(function() {
         var converted = convertTo24Hour(jQuery(this).val());
-        if (converted !== jQuery(this).val()) {
-            jQuery(this).val(converted);
-        }
+        if (converted !== jQuery(this).val()) jQuery(this).val(converted);
     });
-    
-    // Auto-format when user leaves the field (NOT while typing)
+
     jQuery('.time-input').on('blur', function() {
         autoFormatTime(this);
-        
         var $this = jQuery(this);
         var isValid = validateTimeFormat($this.val());
-        
         if (!isValid && $this.val() !== '') {
             $this.addClass('is-invalid');
             if ($this.next('.invalid-feedback').length === 0) {
@@ -2344,58 +2117,41 @@ jQuery(document).ready(function() {
             $this.next('.invalid-feedback').remove();
         }
     });
-    
-    // Allow normal typing - only validate, don't reformat
+
     jQuery('.time-input').on('input', function() {
-        // Remove the invalid class while user is typing
         jQuery(this).removeClass('is-invalid');
         jQuery(this).next('.invalid-feedback').remove();
     });
-    
-    // Convert to 24-hour format before form submission
+
     jQuery('form').on('beforeSubmit', function() {
         var isValid = true;
-        
         jQuery('.time-input').each(function() {
             var $thisField = jQuery(this);
-            
-            // Auto-format before validation
             autoFormatTime(this);
-            
             var converted = convertTo24Hour($thisField.val());
-            if (converted !== $thisField.val()) {
-                $thisField.val(converted);
-            }
-            
+            if (converted !== $thisField.val()) $thisField.val(converted);
             if (!validateTimeFormat($thisField.val()) && $thisField.val() !== '') {
                 $thisField.addClass('is-invalid');
                 isValid = false;
             }
         });
-        
         if (!isValid) {
             if (jQuery('#time-validation-error').length === 0) {
                 jQuery('.sis-siniestro-form').prepend('<div id="time-validation-error" class="alert alert-danger alert-dismissible fade show" role="alert"><i class="fas fa-exclamation-circle"></i> <strong>Error de validación:</strong> Por favor, corrija los errores en los campos de hora antes de guardar.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
             }
             return false;
         }
-        
         jQuery('#time-validation-error').remove();
         return true;
     });
 });
 
 // ============================================
-// END TIME INPUT FORMATTING AND VALIDATION
-// ============================================
-
-// ============================================
-// CUSTOM FILE INPUT - Show selected file name
+// CUSTOM FILE INPUT
 // ============================================
 jQuery('#recipe-file-input, #informe-file-input').on('change', function() {
     var fileName = jQuery(this).val().split('\\').pop();
     var labelId = jQuery(this).attr('id') === 'recipe-file-input' ? '#recipe-file-label' : '#informe-file-label';
-    
     if (fileName) {
         jQuery(labelId).html('<i class="fas fa-file"></i> ' + fileName);
         jQuery(labelId).addClass('selected');
@@ -2404,16 +2160,14 @@ jQuery('#recipe-file-input, #informe-file-input').on('change', function() {
         jQuery(labelId).removeClass('selected');
     }
 });
+
 // ============================================================
 // CHECK FOR SERVER-SIDE ERROR TAB
 // ============================================================
 jQuery(document).ready(function() {
     var errorTab = jQuery('#error-tab-input').val();
     if (errorTab && errorTab !== '') {
-        // Switch to the tab with errors
-        setTimeout(function() {
-            window.activateTab(errorTab);
-        }, 300);
+        setTimeout(function() { window.activateTab(errorTab); }, 300);
     }
 });
 JS, View::POS_END);
@@ -2433,7 +2187,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     $jsCode = <<<JS
 (function() {
     'use strict';
-    
+
     const baremosTotales = {$baremosTotalesJson};
     const baremosHtml = {$baremosHtmlJson};
     const baremosInfo = {$baremosInfoJson};
@@ -2443,20 +2197,18 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
     const baremosDisponiblesInfo = {$baremosDisponiblesInfoJson};
     const baremosPendientesInfo = {$baremosPendientesInfoJson};
     const baremosAgotadosInfo = {$baremosAgotadosInfoJson};
-    
+
     const baremosSelect = jQuery('#baremos-select');
     const form = baremosSelect.closest('form');
     const citaWarning = jQuery('#cita-warning');
-    
-    // Helper function to escape HTML
+
     function escapeHtml(text) {
         if (!text) return '';
         var div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
-    
-    // Add CSS styles for modals (only once)
+
     function addModalStyles() {
         if (jQuery('#servicios-modal-styles').length) return;
         var styles = '<style id="servicios-modal-styles">' +
@@ -2525,8 +2277,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         '</style>';
         jQuery('head').append(styles);
     }
-    
-    // Professional Modal for Available Services
+
     function showDisponiblesModal() {
         var currentlySelected = baremosSelect.val() || [];
         var items = {};
@@ -2536,7 +2287,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             }
         });
         var count = Object.keys(items).length;
-        
+
         if (count === 0) {
             if (typeof toastr !== 'undefined') {
                 toastr.info('No hay servicios disponibles adicionales. Todos los servicios ya han sido seleccionados.');
@@ -2545,12 +2296,12 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             }
             return;
         }
-        
+
         var totalAvailablePrice = 0;
         Object.keys(items).forEach(function(baremoId) {
             totalAvailablePrice += parseFloat(items[baremoId].precio || 0);
         });
-        
+
         var modalHtml = '<div class="servicios-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); display: flex; justify-content: center; align-items: center; z-index: 10000;">' +
     '<div class="servicios-modal servicios-disponibles-modal" style="background: white; border-radius: 12px; width: 90%; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);">' +
         '<div class="servicios-modal-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 20px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px; color: white;">' +
@@ -2569,16 +2320,16 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                     ' Estos servicios cumplen con los criterios (sin plazo de espera pendiente y con usos disponibles) ' +
                 '</div>' +
             '</div>';
-        
+
         if (currentlySelected.length > 0) {
             modalHtml += '<div class="servicios-selection-info">' +
                 '<i class="fas fa-check-square"></i>' +
                 '<span>Actualmente tienes <strong>' + currentlySelected.length + '</strong> servicio(s) seleccionado(s). Los servicios que ya est\u00e1n agregados no se muestran en esta lista.</span>' +
             '</div>';
         }
-        
+
         modalHtml += '<div class="servicios-toolbar">' +
-    
+
 '<div class="servicios-table-container">' +
     '<table class="servicios-table">' +
         '<thead>' +
@@ -2592,7 +2343,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             '</tr>' +
         '</thead>' +
         '<tbody>';
-        
+
         Object.keys(items).forEach(function(baremoId) {
             var item = items[baremoId];
             if (!item) return;
@@ -2601,7 +2352,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             var nombre = escapeHtml(item.nombre || 'Sin nombre');
             var area = escapeHtml(item.area || 'Sin \u00e1rea');
             var descripcion = escapeHtml(item.descripcion || 'Sin descripci\u00f3n');
-            
+
             modalHtml += '<tr>' +
                 '<td class="text-center"><div class="checkbox-wrapper"><input type="checkbox" class="service-checkbox-available" id="chk_' + baremoId + '" data-baremo-id="' + baremoId + '" data-price="' + precio + '"><label for="chk_' + baremoId + '"></label></div></td>' +
                 '<td class="servicio-nombre"><strong>' + nombre + '</strong></td>' +
@@ -2611,7 +2362,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                 '<td class="servicio-precio">$' + precio + '</td>' +
             '</tr>';
         });
-        
+
         modalHtml += '</tbody>' +
                         '</table>' +
                     '</div>' +
@@ -2629,26 +2380,24 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                 '</div>' +
             '</div>' +
         '</div>';
-        
+
         jQuery('.servicios-modal-overlay').remove();
         jQuery('body').append(modalHtml);
         addModalStyles();
-        
+
         function updateAvailableSelectedCount() {
             var selectedCount = jQuery('.service-checkbox-available:checked').length;
             jQuery('#available-selected-count').text(selectedCount + ' seleccionado' + (selectedCount !== 1 ? 's' : ''));
             jQuery('#available-selected-summary').text(selectedCount);
             jQuery('#available-select-all-checkbox').prop('checked', selectedCount === count && count > 0);
         }
-        
+
         jQuery('#available-select-all-checkbox').off('change').on('change', function() {
             jQuery('.service-checkbox-available').prop('checked', jQuery(this).prop('checked'));
             updateAvailableSelectedCount();
         });
         jQuery(document).off('change', '.service-checkbox-available').on('change', '.service-checkbox-available', function() { updateAvailableSelectedCount(); });
-        jQuery('#select-all-available').off('click').on('click', function() { jQuery('.service-checkbox-available').prop('checked', true); updateAvailableSelectedCount(); });
-        jQuery('#deselect-all-available').off('click').on('click', function() { jQuery('.service-checkbox-available').prop('checked', false); updateAvailableSelectedCount(); });
-        
+
         jQuery('#add-selected-available').off('click').on('click', function() {
             var selectedServices = [];
             jQuery('.service-checkbox-available:checked').each(function() {
@@ -2676,7 +2425,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             }
             jQuery('.servicios-modal-overlay').fadeOut(300, function() { jQuery(this).remove(); });
         });
-        
+
         jQuery('#close-available-modal, #cancel-available-modal').off('click').on('click', function() {
             jQuery('.servicios-modal-overlay').fadeOut(300, function() { jQuery(this).remove(); });
         });
@@ -2687,23 +2436,22 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         });
         jQuery('.servicios-modal-overlay').fadeIn(300);
     }
-    
-    // Professional Modal for Restricted/Agotados Services
+
     function showRestrictedAgotadosModal(type) {
         var isRestringidos = (type === 'restringidos');
         var title = isRestringidos ? 'Servicios con Plazo de Espera Pendiente' : 'Servicios Agotados';
         var icon = isRestringidos ? 'fa-clock' : 'fa-ban';
         var items = isRestringidos ? baremosPendientesInfo : baremosAgotadosInfo;
         var count = Object.keys(items).length;
-        
+
         if (count === 0) return;
-        
+
         var headerClass = isRestringidos ? 'header-warning' : 'header-danger';
         var bannerClass = isRestringidos ? 'info-warning' : 'info-danger';
         var iconClass2 = isRestringidos ? 'fa-hourglass-half' : 'fa-exclamation-triangle';
         var statusText = isRestringidos ? 'en per\u00edodo de espera' : 'con l\u00edmite de uso alcanzado';
         var infoText = isRestringidos ? '<strong>\u00bfQu\u00e9 significa "Plazo de Espera Pendiente"?</strong> Estos servicios requieren que haya transcurrido un per\u00edodo m\u00ednimo desde el inicio del contrato antes de poder ser utilizados. No est\u00e1n disponibles para selecci\u00f3n hasta que se cumpla el plazo.' : '<strong>\u00bfQu\u00e9 significa "Agotado"?</strong> Estos servicios han alcanzado su l\u00edmite m\u00e1ximo de usos permitidos por el plan. No pueden ser seleccionados nuevamente.';
-        
+
         var modalHtml = '<div class="servicios-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); display: flex; justify-content: center; align-items: center; z-index: 10000;">' +
     '<div class="servicios-modal servicios-' + (isRestringidos ? 'restringidos' : 'agotados') + '-modal" style="background: white; border-radius: 12px; width: 90%; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);">' +
         '<div class="servicios-modal-header ' + headerClass + '" style="padding: 20px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px; color: white;">' +
@@ -2730,7 +2478,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                         '</tr>' +
                     '</thead>' +
                     '<tbody>';
-        
+
         Object.keys(items).forEach(function(baremoId) {
             var item = items[baremoId];
             if (!item) return;
@@ -2738,7 +2486,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             var area = escapeHtml(item.area || 'Sin \u00e1rea');
             var descripcion = escapeHtml(item.descripcion || 'Sin descripci\u00f3n');
             var detailHtml = '';
-            
+
             if (isRestringidos) {
                 detailHtml = '<span class="detail-badge detail-warning"><i class="fas fa-hourglass-half"></i> ' + (item.remaining_text || 'No disponible') + '</span>';
             } else {
@@ -2747,7 +2495,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                 var percentage = limit > 0 ? (used / limit) * 100 : 0;
                 detailHtml = '<div class="usage-progress"><div class="usage-stats"><span class="usage-used">' + used + '</span> / ' + limit + '</div><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ' + percentage + '%; background-color: #dc3545;"></div></div></div>';
             }
-            
+
             modalHtml += '<tr>' +
                 '<td class="servicio-nombre"><strong>' + nombre + '</strong></td>' +
                 '<td class="servicio-area"><span class="area-badge">' + area + '</span></td>' +
@@ -2755,7 +2503,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                 '<td class="text-center">' + detailHtml + '</td>' +
             '</tr>';
         });
-        
+
         modalHtml += '</tbody>' +
                         '</table>' +
                     '</div>' +
@@ -2766,11 +2514,11 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
                 '</div>' +
             '</div>' +
         '</div>';
-        
+
         jQuery('.servicios-modal-overlay').remove();
         jQuery('body').append(modalHtml);
         addModalStyles();
-        
+
         jQuery('#close-restricted-modal, #close-restricted-modal-btn').off('click').on('click', function() {
             jQuery('.servicios-modal-overlay').fadeOut(300, function() { jQuery(this).remove(); });
         });
@@ -2781,7 +2529,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         });
         jQuery('.servicios-modal-overlay').fadeIn(300);
     }
-    
+
     function initializeSelect2() {
         if (jQuery('#baremos-select').data('select2')) jQuery('#baremos-select').select2('destroy');
         jQuery('#baremos-select').select2({
@@ -2804,7 +2552,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         });
         calcularTotalYTabla();
     }
-    
+
     function calcularTotalYTabla() {
         var baremosSeleccionados = baremosSelect.val() || [];
         var total = 0;
@@ -2842,7 +2590,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
             jQuery('#cobertura-warning').hide();
         }
     }
-    
+
     function calculateTotal() {
         var selectedValues = baremosSelect.val() || [];
         var total = 0;
@@ -2852,7 +2600,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         });
         return total;
     }
-    
+
     function validateFormBeforeSubmit() {
         var selectedValues = baremosSelect.val() || [];
         if (selectedValues.length === 0) {
@@ -2871,7 +2619,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         jQuery('#empty-selection-error').remove();
         return true;
     }
-    
+
     function setupEventHandlers() {
         jQuery('.stat-badge.disponible').off('click').on('click', function(e) { e.preventDefault(); e.stopPropagation(); showDisponiblesModal(); });
         jQuery('.stat-badge.restringido').off('click').on('click', function(e) { e.preventDefault(); e.stopPropagation(); showRestrictedAgotadosModal('restringidos'); });
@@ -2880,7 +2628,7 @@ if (isset($baremosTotales) && isset($baremosHtml) && isset($baremosInfo) && isse
         jQuery('#recalculate-total').off('click').on('click', function() { calcularTotalYTabla(); jQuery(this).html('<i class="fas fa-check me-1"></i> \u00a1Recalculado!'); setTimeout(function() { jQuery('#recalculate-total').html('<i class="fas fa-redo me-1"></i> Recalcular'); }, 2000); });
         form.off('beforeSubmit').on('beforeSubmit', function(e) { if (!validateFormBeforeSubmit()) { e.preventDefault(); return false; } return true; });
     }
-    
+
     jQuery(document).ready(function() {
         setTimeout(function() {
             initializeSelect2();
@@ -2898,7 +2646,6 @@ JS;
 <!-- ===== PROGRESS OVERLAY HTML ===== -->
 <div id="progress-overlay" class="progress-overlay">
     <div class="progress-modal">
-        <!-- Icon -->
         <div class="progress-icon">
             <div class="icon-wrapper">
                 <i class="fas fa-calendar-check"></i>
@@ -2911,11 +2658,9 @@ JS;
             </div>
         </div>
 
-        <!-- Title & Subtitle -->
         <h3 class="progress-title">Guardando Cita Médica</h3>
         <p class="progress-subtitle">Por favor, espere mientras procesamos su solicitud...</p>
 
-        <!-- Steps -->
         <div class="progress-steps">
             <div class="progress-step">
                 <span class="step-number">1</span>
@@ -2955,12 +2700,10 @@ JS;
             </div>
         </div>
 
-        <!-- Progress Bar -->
         <div class="progress-bar-container">
             <div class="progress-bar-fill"></div>
         </div>
 
-        <!-- Loading Spinner / Status -->
         <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
             <span class="progress-percentage">0%</span>
             <span class="progress-loading-spinner"></span>
@@ -2969,3 +2712,28 @@ JS;
     </div>
 </div>
 <!-- ===== END PROGRESS OVERLAY ===== -->
+
+<!-- ============================================================
+     FOOTER SAFETY SPACING
+     ------------------------------------------------------------
+     Reserves space at the bottom of the form so the layout's
+     fixed footer (copyright line) does not overlap the last
+     row of content — most visible on the Servicios Médicos tab.
+     ============================================================ -->
+<style>
+    .sis-siniestro-form {
+        padding-bottom: 90px;
+    }
+
+    @media (max-width: 768px) {
+        .sis-siniestro-form {
+            padding-bottom: 120px;
+        }
+    }
+
+    /* Ensure the progress overlay sits above any fixed footer */
+    .progress-overlay {
+        z-index: 99999 !important;
+    }
+</style>
+<!-- ===== END FOOTER SAFETY SPACING ===== -->

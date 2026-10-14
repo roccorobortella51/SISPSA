@@ -4,7 +4,7 @@
 # Se ejecuta diariamente, pero detecta si es día 1 del mes para ejecución completa
 
 # Configuración
-PROJECT_DIR="/var/www/html/sitios_yii/sipsa"
+PROJECT_DIR="/home/sispsapp/public_html/v2"
 LOG_FILE="runtime/logs/cron-cuotas.log"
 DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -13,9 +13,21 @@ log_message() {
     echo "[$DATE] $1" | tee -a "$LOG_FILE"
 }
 
+write_status() {
+    printf "Última ejecución: %s\nEstado: %s\nLog: %s\nTipo: %s\n" \
+        "$DATE" "$1" "$LOG_FILE" "$2" > runtime/logs/cron-cuotas-status.txt
+}
+
+CRON_FAILED=false
+
 # Cambiar al directorio del proyecto
 cd "$PROJECT_DIR" || {
     log_message "ERROR: No se pudo cambiar al directorio del proyecto"
+    exit 1
+}
+
+mkdir -p runtime/logs || {
+    echo "ERROR: No se pudo crear runtime/logs" >&2
     exit 1
 }
 
@@ -37,6 +49,7 @@ if [ "$EJECUCION_MENSUAL" = true ]; then
         log_message "   ✅ Conexión a base de datos: OK"
     else
         log_message "   ❌ Conexión a base de datos: FALLÓ"
+        write_status "FALLÓ" "Ejecución mensual"
         exit 1
     fi
 
@@ -45,6 +58,7 @@ if [ "$EJECUCION_MENSUAL" = true ]; then
         log_message "   ✅ Estructura de tablas: OK"
     else
         log_message "   ❌ Estructura de tablas: FALLÓ"
+        write_status "FALLÓ" "Ejecución mensual"
         exit 1
     fi
 else
@@ -59,6 +73,7 @@ if [ "$EJECUCION_MENSUAL" = true ]; then
         log_message "   ✅ Generación completa: COMPLETADA"
     else
         log_message "   ❌ Generación completa: FALLÓ"
+        CRON_FAILED=true
     fi
 else
     log_message "2. Saltando generación de cuotas (ejecución diaria)"
@@ -71,6 +86,7 @@ if [ $? -eq 0 ]; then
     log_message "   ✅ Verificación de contratos vencidos: COMPLETADA"
 else
     log_message "   ❌ Verificación de contratos vencidos: FALLÓ"
+    CRON_FAILED=true
 fi
 
 
@@ -82,6 +98,7 @@ if [ "$EJECUCION_MENSUAL" = true ]; then
         log_message "   ✅ Actualización de montos: COMPLETADA"
     else
         log_message "   ❌ Actualización de montos: FALLÓ"
+        CRON_FAILED=true
     fi
 else
     log_message "4. Saltando actualización de montos (ejecución diaria)"
@@ -95,6 +112,7 @@ if [ "$EJECUCION_MENSUAL" = true ]; then
         log_message "   ✅ Resumen generado: COMPLETADO"
     else
         log_message "   ❌ Resumen: FALLÓ"
+        CRON_FAILED=true
     fi
 else
     log_message "5. Saltando resumen (ejecución diaria)"
@@ -108,6 +126,7 @@ if [ "$EJECUCION_MENSUAL" = true ]; then
         log_message "   ✅ Verificación completa: TODAS LAS VERIFICACIONES PASARON"
     else
         log_message "   ⚠️  Verificación completa: SE ENCONTRARON PROBLEMAS"
+        CRON_FAILED=true
     fi
 else
     log_message "6. Saltando verificación completa (ejecución diaria)"
@@ -116,35 +135,39 @@ fi
 # 7. LIMPIEZA Y MANTENIMIENTO (solo en ejecución mensual)
 if [ "$EJECUCION_MENSUAL" = true ]; then
     log_message "7. Limpiando logs antiguos..."
-    find runtime/logs/ -name "cron-cuotas.log*" -mtime +30 -delete
-    log_message "   ✅ Limpieza de logs: COMPLETADA"
+    if find runtime/logs/ -name "cron-cuotas.log*" -mtime +30 -delete; then
+        log_message "   ✅ Limpieza de logs: COMPLETADA"
+    else
+        log_message "   ❌ Limpieza de logs: FALLÓ"
+        CRON_FAILED=true
+    fi
 else
     log_message "7. Saltando limpieza de logs (ejecución diaria)"
 fi
 
 # 8. RESUMEN FINAL DE EJECUCIÓN
 if [ "$EJECUCION_MENSUAL" = true ]; then
+    TIPO_EJECUCION="Ejecución mensual"
     log_message "=== RESUMEN FINAL DE EJECUCIÓN MENSUAL ==="
-    log_message "Fecha y hora: $DATE"
-    log_message "Estado: COMPLETADO"
-    log_message "Log guardado en: $LOG_FILE"
-    log_message "=== FIN DEL FLUJO MENSUAL ===\n"
-    
-    # Crear archivo de estado para monitoreo mensual
-    echo "Última ejecución mensual: $DATE" > runtime/logs/cron-cuotas-status.txt
-    echo "Estado: COMPLETADO" >> runtime/logs/cron-cuotas-status.txt
-    echo "Log: $LOG_FILE" >> runtime/logs/cron-cuotas-status.txt
-    echo "Tipo: Ejecución mensual" >> runtime/logs/cron-cuotas-status.txt
 else
+    TIPO_EJECUCION="Verificación diaria"
     log_message "=== RESUMEN DE VERIFICACIÓN DIARIA ==="
-    log_message "Fecha y hora: $DATE"
-    log_message "Estado: COMPLETADO"
-    log_message "Log guardado en: $LOG_FILE"
-    log_message "=== FIN DE VERIFICACIÓN DIARIA ===\n"
-    
-    # Crear archivo de estado para monitoreo diario
-    echo "Última ejecución diaria: $DATE" > runtime/logs/cron-cuotas-status.txt
-    echo "Estado: COMPLETADO" >> runtime/logs/cron-cuotas-status.txt
-    echo "Log: $LOG_FILE" >> runtime/logs/cron-cuotas-status.txt
-    echo "Tipo: Verificación diaria" >> runtime/logs/cron-cuotas-status.txt
 fi
+
+log_message "Fecha y hora: $DATE"
+if [ "$CRON_FAILED" = true ]; then
+    ESTADO_FINAL="FALLÓ"
+    log_message "Estado: FALLÓ"
+else
+    ESTADO_FINAL="COMPLETADO"
+    log_message "Estado: COMPLETADO"
+fi
+log_message "Log guardado en: $LOG_FILE"
+log_message "=== FIN DEL FLUJO ==="
+write_status "$ESTADO_FINAL" "$TIPO_EJECUCION"
+
+if [ "$CRON_FAILED" = true ]; then
+    exit 1
+fi
+
+exit 0

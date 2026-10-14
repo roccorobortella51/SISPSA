@@ -11,16 +11,20 @@ use app\models\UserDatos;
 /* @var $model app\models\Contratos */
 /* @var $form yii\bootstrap4\ActiveForm */
 
+if (!isset($model) || !($model instanceof \app\models\Contratos)) {
+    throw new \yii\base\InvalidConfigException('The contract form requires a Contratos model.');
+}
+
 // Helper function to format field values
 $formatValue = function ($value) {
     return $value ? Html::encode($value) : '<span class="text-muted fst-italic">No especificado</span>';
 };
 
 // Get related model names for display
-$planNombre = $model->plan ? $model->plan->nombre : null;
-$clinicaNombre = $model->clinica ? $model->clinica->nombre : null;
-$userNombre = $model->user ? $model->user->nombres . ' ' . $model->user->apellidos : null;
-$userCedula = $model->user ? ($model->user->tipo_cedula . '-' . $model->user->cedula) : null;
+$planNombre = $model && $model->plan ? $model->plan->nombre : null;
+$clinicaNombre = $model && $model->clinica ? $model->clinica->nombre : null;
+$userNombre = $model && $model->user ? ($model->user->nombres . ' ' . $model->user->apellidos) : null;
+$userCedula = $model && $model->user ? ($model->user->tipo_cedula . '-' . $model->user->cedula) : null;
 ?>
 
 <div class="contratos-form p-3">
@@ -56,7 +60,7 @@ $userCedula = $model->user ? ($model->user->tipo_cedula . '-' . $model->user->ce
                 <div class="col-md-4">
                     <div class="mb-3">
                         <label class="form-label text-muted small text-uppercase">Email</label>
-                        <div class="h6"><?= $formatValue($model->user ? $model->user->email : null) ?></div>
+                        <div class="h6"><?= $formatValue($model->user?->email) ?></div>
                     </div>
                 </div>
             </div>
@@ -105,7 +109,7 @@ $userCedula = $model->user ? ($model->user->tipo_cedula . '-' . $model->user->ce
                 'inputOptions' => [
                     'class' => 'form-control rounded-pill',
                     'type' => 'date',
-                    'id' => 'fecha-ini-field'
+                    'id' => 'fecha-ini-field',
                 ]
             ])->label('Fecha de Inicio <span class="text-danger">*</span>') ?>
             <small class="text-muted d-block mt-1">
@@ -240,10 +244,10 @@ $userCedula = $model->user ? ($model->user->tipo_cedula . '-' . $model->user->ce
     <div class="form-group mt-4 d-flex justify-content-between">
         <?= Html::a(
             '<i class="fas fa-undo me-2"></i> Volver',
-            $model->user_id ? ['index', 'user_id' => $model->user_id] : ['index'],
+            ($model && $model->user_id) ? ['index', 'user_id' => $model->user_id] : ['index'],
             ['class' => 'btn btn-secondary rounded-pill px-4 shadow-sm']
         ) ?>
-        <?= Html::submitButton('<i class="fas fa-save me-2"></i> Actualizar Contrato', [
+        <?= Html::submitButton('<i class="fas fa-save me-2"></i> Renovar Contrato', [
             'class' => 'btn btn-success rounded-pill px-4 shadow-sm'
         ]) ?>
     </div>

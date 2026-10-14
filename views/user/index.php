@@ -11,7 +11,7 @@ use app\components\UserHelper;
 
 // Register Microsoft-style CSS for this view only
 $this->registerCssFile('@web/css/microsoft-grid.css', [
-    'depends' => [\yii\bootstrap\BootstrapAsset::class],
+    'depends'  => [\yii\bootstrap\BootstrapAsset::class],
     'position' => \yii\web\View::POS_HEAD
 ]);
 
@@ -19,16 +19,13 @@ $this->registerCssFile('@web/css/microsoft-grid.css', [
 /** @var app\models\UserSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-
 // --- BREADCRUMBS ---
-
 $this->params['breadcrumbs'][] = ['label' => 'Usuarios', 'url' => ['index']];
-// --- FIN  --- 
+// --- FIN ---
 
+$this->title = 'Gestión de Usuarios';
 
-$this->title = 'Gestión de Usuarios'; // Este sigue siendo el título para la página y breadcrumbs
-
-$rol = UserHelper::getMyRol();
+$rol      = UserHelper::getMyRol();
 $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 ?>
 
@@ -43,7 +40,6 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                     <h1><?= $this->title = 'Gestión de Usuarios'; ?></h1>
                 </span>
 
-
                 <div class="col-md-2 text-end">
                     <?php
                     if ($permisos)
@@ -57,14 +53,14 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
             <div class="ms-panel-body">
                 <div class="table-responsive">
                     <?= GridView::widget([
-                        'id' => 'usuarios-grid',
-                        'dataProvider' => $dataProvider,
-                        'filterModel' => $searchModel,
-                        'layout' => "{items}{pager}",
+                        'id'               => 'usuarios-grid',
+                        'dataProvider'     => $dataProvider,
+                        'filterModel'      => $searchModel,
+                        'layout'           => "{items}{pager}",
                         'resizableColumns' => false,
-                        'bordered' => false,
-                        'responsiveWrap' => false,
-                        'persistResize' => false,
+                        'bordered'         => false,
+                        'responsiveWrap'   => false,
+                        'persistResize'    => false,
                         'tableOptions' => [
                             'class' => 'table table-striped table-bordered table-hover '
                         ],
@@ -72,11 +68,13 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                             'class' => 'grid-view-container table-responsive',
                         ],
                         'columns' => [
-                            // CONSECUTIVE COUNT COLUMN (NEW FIRST COLUMN)
+                            // ============================================================
+                            // CONSECUTIVE COUNT COLUMN
+                            // ============================================================
                             [
-                                'class' => 'yii\grid\SerialColumn',
-                                'header' => '#',
-                                'headerOptions' => [
+                                'class'          => 'yii\grid\SerialColumn',
+                                'header'         => '#',
+                                'headerOptions'  => [
                                     'style' => 'color: white!important; background-color: #2b5797; width: 50px;',
                                     'class' => 'text-center'
                                 ],
@@ -86,10 +84,13 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 ],
                             ],
 
+                            // ============================================================
+                            // NOMBRE COMPLETO (uses aliased ud_* with fallback)
+                            // ============================================================
                             [
                                 'attribute' => 'nombrecompleto',
-                                'label' => 'Nombre Completo',
-                                'format' => 'ntext',
+                                'label'     => 'Nombre Completo',
+                                'format'    => 'raw',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
@@ -97,17 +98,38 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'options' => ['style' => 'width: 500px;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar por Nombre/Apellido',
-                                    'class' => 'form-control text-center',
+                                    'class'       => 'form-control text-center',
                                 ],
                                 'value' => function ($model) {
-                                    return $model->userDatos ? Html::encode($model->userDatos->nombres . ' ' . $model->userDatos->apellidos) : 'N/A';
+                                    // 1. Prefer the aliased columns (works for orphans)
+                                    $nombres   = $model->ud_nombres   ?? null;
+                                    $apellidos = $model->ud_apellidos ?? null;
+
+                                    // 2. Fallback to the relational accessor
+                                    if ($nombres === null && $model->userDatos) {
+                                        $nombres   = $model->userDatos->nombres;
+                                        $apellidos = $model->userDatos->apellidos;
+                                    }
+
+                                    $full = trim((string)$nombres . ' ' . (string)$apellidos);
+
+                                    if ($full === '') {
+                                        return '<span class="text-muted">'
+                                            . '<i class="fas fa-exclamation-triangle text-warning mr-1"></i>'
+                                            . 'Sin datos personales</span>';
+                                    }
+
+                                    return Html::encode($full);
                                 },
                             ],
 
+                            // ============================================================
+                            // CORREO ELECTRÓNICO
+                            // ============================================================
                             [
                                 'attribute' => 'email',
-                                'format' => 'ntext',
-                                'label' => 'Correo Electrónico',
+                                'format'    => 'ntext',
+                                'label'     => 'Correo Electrónico',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
@@ -115,105 +137,199 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'options' => ['style' => 'width: 500px;'],
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar por email',
-                                    'class' => 'form-control text-center',
+                                    'class'       => 'form-control text-center',
                                 ],
                             ],
 
+                            // ============================================================
+                            // CÉDULA (uses aliased ud_* with fallback)
+                            // ============================================================
                             [
                                 'attribute' => 'cedula',
-                                'label' => 'Cédula',
-                                'value' => function ($model) {
-                                    return $model->userDatos ?
-                                        ($model->userDatos->tipo_cedula . '-' . $model->userDatos->cedula) :
-                                        'No registrado';
-                                },
-                                'format' => 'ntext',
+                                'label'     => 'Cédula',
+                                'format'    => 'raw',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
                                 ],
+                                'value' => function ($model) {
+                                    // 1. Aliased columns
+                                    $tipo   = $model->ud_tipo_cedula ?? null;
+                                    $numero = $model->ud_cedula        ?? null;
+
+                                    // 2. Fallback
+                                    if ($numero === null && $model->userDatos) {
+                                        $tipo   = $model->userDatos->tipo_cedula;
+                                        $numero = $model->userDatos->cedula;
+                                    }
+
+                                    if (!$numero) {
+                                        return '<span class="text-muted">No registrado</span>';
+                                    }
+
+                                    return Html::encode($tipo . '-' . $numero);
+                                },
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar por cédula',
-                                    'class' => 'form-control text-center',
+                                    'class'       => 'form-control text-center',
                                 ],
                             ],
 
+                            // ============================================================
+                            // TELÉFONO (uses aliased ud_* with fallback)
+                            // ============================================================
                             [
-                                'attribute' => 'telefono',  // Changed from 'userDatos.telefono'
-                                'format' => 'ntext',
-                                'label' => 'Teléfono',
+                                'attribute' => 'telefono',
+                                'format'    => 'ntext',
+                                'label'     => 'Teléfono',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
                                 ],
                                 'value' => function ($model) {
-                                    return $model->userDatos->telefono ?? 'No registrado';
+                                    $telefono = $model->ud_telefono
+                                        ?? ($model->userDatos->telefono ?? 'No registrado');
+
+                                    return $telefono ?: 'No registrado';
                                 },
                                 'filterInputOptions' => [
                                     'placeholder' => 'Buscar por teléfono',
-                                    'class' => 'form-control text-center',
+                                    'class'       => 'form-control text-center',
                                 ],
                             ],
 
                             [
-                                'label' => 'Rol del Usuario',
+                                'label'  => 'Rol del Usuario',
+                                'format' => 'raw',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
                                 ],
-                                'format' => 'raw',
                                 'value' => function ($model) {
-                                    $role = $model->userDatos->role ?? 'No asignado';
-                                    $badgeColor = '#0078d4'; // Microsoft blue default
+                                    // ============================================================
+                                    // PRIORITY (v3 — RBAC-first, deterministic):
+                                    //   1. RBAC assignment, resolved via a priority table so
+                                    //      multi-role users get their MOST authoritative role
+                                    //   2. user_datos.role (fallback for orphans / edge cases)
+                                    //   3. Neutral "Sin rol" badge
+                                    //
+                                    // This matches UserHelper::getMyRol() exactly, so what the
+                                    // grid shows is what the app enforces.
+                                    // ============================================================
+                                    $role = null;
 
-                                    // Different colors for different roles (Microsoft palette)
+                                    // ── 1. RBAC assignment (highest weight wins) ──
+                                    $auth     = Yii::$app->authManager;
+                                    $assigned = $auth->getRolesByUser($model->id);
+
+                                    if (!empty($assigned)) {
+                                        $priority = [
+                                            'afiliado'                  => 1,
+                                            'Asesor'                    => 2,
+                                            'Agente'                    => 3,
+                                            'COORDINADOR-CLINICA'       => 4,
+                                            'Administrador-clinica'     => 4,
+                                            'GERENTE-CLINICA'           => 4,
+                                            'DIRECTOR-COMERCIALIZACIÓN' => 5,
+                                            'admin'                     => 6,
+                                            'superadmin'                => 7,
+                                        ];
+
+                                        $best       = null;
+                                        $bestWeight = -1;
+
+                                        foreach ($assigned as $r) {
+                                            $w = $priority[$r->name] ?? 0;
+                                            if ($w > $bestWeight) {
+                                                $bestWeight = $w;
+                                                $best       = $r->name;
+                                            }
+                                        }
+
+                                        $role = $best;
+                                    }
+
+                                    // ── 2. Fallback to user_datos.role ──
+                                    if (empty($role)) {
+                                        $role = $model->ud_role
+                                            ?? ($model->userDatos->role ?? null);
+                                    }
+
+                                    // ── 3. No role at all ──
+                                    if (empty($role)) {
+                                        return '<span style="background-color:#8a8886;color:white;'
+                                            . 'padding:4px 12px;border-radius:16px;font-size:12px;'
+                                            . 'font-weight:500;display:inline-block;" '
+                                            . 'title="Este usuario no tiene rol asignado.">'
+                                            . '<i class="fas fa-question-circle mr-1"></i>Sin rol</span>';
+                                    }
+
+                                    // ── 4. Color map ──
+                                    $badgeColor = '#666666';
                                     switch ($role) {
                                         case 'superadmin':
                                         case 'admin':
-                                            $badgeColor = '#107c41'; // Microsoft green
+                                            $badgeColor = '#107c41';
                                             break;
                                         case 'DIRECTOR-COMERCIALIZACIÓN':
-                                            $badgeColor = '#d83b01'; // Microsoft orange
+                                            $badgeColor = '#d83b01';
                                             break;
                                         case 'Agente':
-                                            $badgeColor = '#0078d4'; // Microsoft blue
+                                            $badgeColor = '#0078d4';
                                             break;
                                         case 'Asesor':
-                                            $badgeColor = '#5c2d91'; // Microsoft purple
+                                            $badgeColor = '#5c2d91';
+                                            break;
+                                        case 'COORDINADOR-CLINICA':
+                                            $badgeColor = '#8764b8';
+                                            break;
+                                        case 'Administrador-clinica':
+                                        case 'GERENTE-CLINICA':
+                                            $badgeColor = '#008272';
+                                            break;
+                                        case 'afiliado':
+                                            $badgeColor = '#0078d4';
                                             break;
                                         default:
-                                            $badgeColor = '#666666'; // Gray
+                                            $badgeColor = '#666666';
                                     }
 
-                                    return '<span style="background-color: ' . $badgeColor . '; color: white; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; display: inline-block;">' . Html::encode($role) . '</span>';
+                                    return '<span style="background-color: ' . $badgeColor . '; color: white; '
+                                        . 'padding: 4px 12px; border-radius: 16px; font-size: 12px; '
+                                        . 'font-weight: 500; display: inline-block;">'
+                                        . Html::encode($role) . '</span>';
                                 },
                                 'contentOptions' => ['class' => 'text-center'],
                                 'filter' => Select2::widget([
-                                    'model' => $searchModel,
+                                    'model'     => $searchModel,
                                     'attribute' => 'roleName',
-                                    'data' => UserHelper::getRolesAllRoles(),
-                                    'options' => ['placeholder' => 'Filtrar por rol...'],
+                                    'data'      => UserHelper::getRolesAllRoles(),
+                                    'options'   => ['placeholder' => 'Filtrar por rol...'],
                                     'pluginOptions' => [
                                         'allowClear' => true,
                                     ],
                                 ]),
                             ],
 
+                            // ============================================================
+                            // ESTADO
+                            // ============================================================
                             [
                                 'attribute' => 'status',
-                                'label' => 'Estado',
-                                'format' => 'raw',
+                                'label'     => 'Estado',
+                                'format'    => 'raw',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
                                 ],
                                 'value' => function ($model) {
-                                    // Your database uses 1 for active, 0 for inactive
+                                    // The model's afterFind() converts 10 → 1 and 9/0 → 0,
+                                    // so $model->status is already 1 or 0 here.
                                     if ($model->status == 1) {
                                         return '<span class="status-badge status-active">Activo</span>';
-                                    } else {
-                                        return '<span class="status-badge status-inactive">Inactivo</span>';
                                     }
+
+                                    return '<span class="status-badge status-inactive">Inactivo</span>';
                                 },
                                 'filter' => [
                                     1 => 'Activo',
@@ -222,35 +338,42 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                 'contentOptions' => ['class' => 'text-center'],
                             ],
 
+                            // ============================================================
+                            // FECHA DE CREACIÓN
+                            // ============================================================
                             [
                                 'attribute' => 'created_at',
-                                'label' => 'Fecha Creación',
-                                'format' => ['date', 'php:d/m/Y H:i'],
+                                'label'     => 'Fecha Creación',
+                                'format'    => ['date', 'php:d/m/Y H:i'],
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
                                 ],
-                                'contentOptions' => ['class' => 'text-center', 'style' => 'font-size: 13px;'],
+                                'contentOptions' => [
+                                    'class' => 'text-center',
+                                    'style' => 'font-size: 13px;'
+                                ],
                                 'filter' => false,
                             ],
 
-                            // ACTION COLUMN WITH IMPROVED MICROSOFT-STYLE BUTTONS
+                            // ============================================================
+                            // ACTION COLUMN
+                            // ============================================================
                             [
-                                'class' => 'yii\grid\ActionColumn',
+                                'class'  => 'yii\grid\ActionColumn',
                                 'header' => 'ACCIONES',
                                 'headerOptions' => [
                                     'style' => 'color: white!important; background-color: #2b5797;',
                                     'class' => 'text-center'
                                 ],
                                 'template' => '<div class="action-button-container">{view}{update}</div>',
-                                'options' => ['style' => 'width: 120px; min-width: 120px;'],
+                                'options'  => ['style' => 'width: 120px; min-width: 120px;'],
                                 'contentOptions' => [
                                     'style' => 'text-align: center; padding: 8px 4px !important;',
                                     'class' => 'action-column'
                                 ],
                                 'buttons' => [
                                     'view' => function ($url, $model, $key) use ($rol) {
-                                        // Base button classes for consistent styling
                                         $baseClass = 'microsoft-action-btn view-btn';
 
                                         if ($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente") {
@@ -260,29 +383,28 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                                     '<i class="fa fa-eye"></i>',
                                                     Url::to(['/agente-fuerza/view', 'id' => $asesor_id]),
                                                     [
-                                                        'title' => 'Ver detalles del usuario',
-                                                        'class' => $baseClass,
-                                                        'data-toggle' => 'tooltip',
+                                                        'title'          => 'Ver detalles del usuario',
+                                                        'class'          => $baseClass,
+                                                        'data-toggle'    => 'tooltip',
                                                         'data-placement' => 'top',
                                                     ]
                                                 );
                                             }
                                             return '';
-                                        } else {
-                                            return Html::a(
-                                                '<i class="fa fa-eye"></i>',
-                                                Url::to(['view', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Ver detalles del usuario',
-                                                    'class' => $baseClass,
-                                                    'data-toggle' => 'tooltip',
-                                                    'data-placement' => 'top',
-                                                ]
-                                            );
                                         }
+
+                                        return Html::a(
+                                            '<i class="fa fa-eye"></i>',
+                                            Url::to(['view', 'id' => $model->id]),
+                                            [
+                                                'title'          => 'Ver detalles del usuario',
+                                                'class'          => $baseClass,
+                                                'data-toggle'    => 'tooltip',
+                                                'data-placement' => 'top',
+                                            ]
+                                        );
                                     },
                                     'update' => function ($url, $model, $key) use ($rol) {
-                                        // Base button classes for consistent styling
                                         $baseClass = 'microsoft-action-btn edit-btn';
 
                                         if ($rol == "DIRECTOR-COMERCIALIZACIÓN" || $rol == "Agente") {
@@ -292,26 +414,26 @@ $permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
                                                     '<i class="fas fa-pencil-alt"></i>',
                                                     Url::to(['/agente-fuerza/update', 'id' => $asesor_id]),
                                                     [
-                                                        'title' => 'Editar usuario',
-                                                        'class' => $baseClass,
-                                                        'data-toggle' => 'tooltip',
+                                                        'title'          => 'Editar usuario',
+                                                        'class'          => $baseClass,
+                                                        'data-toggle'    => 'tooltip',
                                                         'data-placement' => 'top',
                                                     ]
                                                 );
                                             }
                                             return '';
-                                        } else {
-                                            return Html::a(
-                                                '<i class="fas fa-pencil-alt"></i>',
-                                                Url::to(['update', 'id' => $model->id]),
-                                                [
-                                                    'title' => 'Editar usuario',
-                                                    'class' => $baseClass,
-                                                    'data-toggle' => 'tooltip',
-                                                    'data-placement' => 'top',
-                                                ]
-                                            );
                                         }
+
+                                        return Html::a(
+                                            '<i class="fas fa-pencil-alt"></i>',
+                                            Url::to(['update', 'id' => $model->id]),
+                                            [
+                                                'title'          => 'Editar usuario',
+                                                'class'          => $baseClass,
+                                                'data-toggle'    => 'tooltip',
+                                                'data-placement' => 'top',
+                                            ]
+                                        );
                                     },
                                 ],
                             ],

@@ -10,6 +10,8 @@ use app\models\Cuotas;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use app\models\CorporativoUser;
+use app\models\ContratoCorporativoAfiliado;
 
 /**
  * ContratosController implements the CRUD actions for Contratos model.
@@ -49,6 +51,22 @@ class ContratosController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataProvider->query->andFilterWhere(['=', 'user_id', $user_id]);
 
+        $listedUserIds = array_values(array_unique(array_filter(array_map(
+            static function ($contract) {
+                return (int)$contract->user_id;
+            },
+            $dataProvider->getModels()
+        ))));
+        $usersWithMultipleContracts = [];
+        if ($listedUserIds) {
+            $usersWithMultipleContracts = array_fill_keys(array_map('intval', Contratos::find()
+                ->select('user_id')
+                ->where(['user_id' => $listedUserIds])
+                ->groupBy('user_id')
+                ->having('COUNT(*) > 1')
+                ->column()), true);
+        }
+
         // REMOVE OR COMMENT OUT THIS LINE - Don't update status on index
         // $this->updateAllContractStatuses($user_id);
 
@@ -56,6 +74,42 @@ class ContratosController extends Controller
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'afiliado' => $afiliado,
+            'usersWithMultipleContracts' => $usersWithMultipleContracts,
+        ]);
+    }
+
+    /**
+     * Lists an affiliate's contracts without the payment dashboard.
+     * @param int $user_id Affiliate ID
+     * @return string
+     * @throws NotFoundHttpException
+     */
+    public function actionIndexList($user_id)
+    {
+        $afiliado = UserDatos::findOne((int)$user_id);
+        if (!$afiliado) {
+            throw new NotFoundHttpException('El afiliado solicitado no existe.');
+        }
+
+        $searchModel = new ContratosSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider->query
+            ->andWhere(['user_id' => (int)$afiliado->id])
+            ->orderBy(['fecha_ini' => SORT_DESC, 'id' => SORT_DESC]);
+
+        $hasMultipleContracts = Contratos::find()
+            ->where(['user_id' => (int)$afiliado->id])
+            ->count() > 1;
+
+        if ($dataProvider->pagination) {
+            $dataProvider->pagination->pageSize = 15;
+        }
+
+        return $this->render('index-list', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'afiliado' => $afiliado,
+            'hasMultipleContracts' => $hasMultipleContracts,
         ]);
     }
 
@@ -106,6 +160,115 @@ class ContratosController extends Controller
 
         return $this->render('create', [
             'model' => $model,
+        ]);
+    }
+
+    /**
+     * Starts a new individual contract from an expired contract's terms.
+     * @param int $id Expired contract ID
+     * @return mixed
+     */
+    public function actionRenew($id)
+    {
+        $source = $this->findModel($id);
+        $indexRoute = ['index', 'user_id' => $source->user_id];
+        $today = date('Y-m-d');
+
+        if (
+            $source->estatus === Contratos::STATUS_ANULADO ||
+            empty($source->fecha_ven) ||
+            $source->fecha_ven >= $today
+        ) {
+            Yii::$app->session->setFlash('warning', 'Solo se pueden renovar contratos vencidos que no estén anulados.');
+            return $this->redirect($indexRoute);
+        }
+
+        $hasAnotherContract = Contratos::find()
+            ->where(['user_id' => $source->user_id])
+            ->andWhere(['<>', 'id', $source->id])
+            ->exists();
+        if ($hasAnotherContract) {
+            Yii::$app->session->setFlash('warning', 'Este afiliado ya tiene otro contrato registrado.');
+            return $this->redirect($indexRoute);
+        }
+
+        $affiliate = $source->user;
+        if (!$affiliate) {
+            Yii::$app->session->setFlash('error', 'No se encontró el afiliado asociado al contrato.');
+            return $this->redirect($indexRoute);
+        }
+
+        $model = new Contratos();
+        $model->setAttributes([
+            'plan_id' => $source->plan_id,
+            'ente_id' => $source->ente_id,
+            'clinica_id' => $source->clinica_id,
+            'monto' => $source->monto,
+            'frecuencia_pago' => $source->frecuencia_pago,
+            'sucursal' => $source->sucursal,
+            'moneda' => $source->moneda,
+            'user_id' => $source->user_id,
+            'estatus' => Contratos::STATUS_REGISTRADO,
+        ], false);
+
+        $model->fecha_ini = date('Y-m-d');
+        $model->fecha_ven = (new \DateTimeImmutable($model->fecha_ini))
+            ->modify('+1 year')
+            ->format('Y-m-d');
+
+        if ($model->load(Yii::$app->request->post())) {
+            // Keep contract terms from the source record; only the start date is user-editable.
+            $model->setAttributes([
+                'plan_id' => $source->plan_id,
+                'ente_id' => $source->ente_id,
+                'clinica_id' => $source->clinica_id,
+                'monto' => $source->monto,
+                'frecuencia_pago' => $source->frecuencia_pago,
+                'sucursal' => $source->sucursal,
+                'moneda' => $source->moneda,
+                'user_id' => $source->user_id,
+                'estatus' => Contratos::STATUS_REGISTRADO,
+            ], false);
+
+            try {
+                $startDate = new \DateTimeImmutable($model->fecha_ini);
+                $model->fecha_ven = $startDate->modify('+1 year')->format('Y-m-d');
+            } catch (\Exception $e) {
+                $model->addError('fecha_ini', 'Ingrese una fecha de inicio válida.');
+            }
+
+            if (!$model->hasErrors() && $model->save()) {
+                $model->nrocontrato = $affiliate->cedula . '-' . date('Y') . '-' . $model->id;
+                $model->save(false);
+
+                $cuotaGeneration = Cuotas::generateCuotasSimple(
+                    $model->id,
+                    $model->fecha_ini,
+                    $model->monto
+                );
+
+                if (!empty($cuotaGeneration['success'])) {
+                    Yii::$app->session->setFlash('success', 'El contrato se renovó correctamente y se generaron 12 cuotas.');
+                } else {
+                    Yii::error(
+                        'El contrato renovado #' . $model->id . ' no pudo generar sus cuotas: '
+                            . ($cuotaGeneration['error'] ?? 'Error desconocido'),
+                        __METHOD__
+                    );
+                    Yii::$app->session->setFlash(
+                        'warning',
+                        'El contrato se renovó, pero no se pudieron generar las 12 cuotas. Contacte al administrador para completar la generación.'
+                    );
+                }
+
+                return $this->redirect(['view', 'id' => $model->id]);
+            }
+        }
+
+        return $this->render('create', [
+            'model' => $model,
+            'isRenewal' => true,
+            'sourceContract' => $source,
         ]);
     }
 
@@ -205,6 +368,7 @@ class ContratosController extends Controller
                     $model->anulado_por = Yii::$app->user->id;
                     $model->anulado_fecha = date('Y-m-d H:i:s');
                     $model->save(false);
+                    $this->detachCorporateAffiliateWithoutValidContracts($model->user_id);
                 }
             } else {
                 Yii::$app->session->setFlash('error', 'Error al cambiar el estatus');
@@ -409,6 +573,121 @@ class ContratosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
     /**
+     * After a contract is annulled, if the affiliate is linked to a corporate
+     * AND has no other non-annulled contract, unlink them from the corporate.
+     *
+     *   - user_datos.afiliado_corporativo_id = NULL
+     *   - user_datos.user_datos_type_id      = 1 (Individual)
+     *   - user_datos.estatus_solvente        = 'No'
+     *   - delete corporativo_user row
+     *   - delete contratos_corporativos_afiliados row
+     *   - recompute parent contratos_corporativos aggregates
+     *
+     * MUST be called inside an open DB transaction.
+     *
+     * @param  Contratos $contract  The contract that was just annulled
+     * @return void
+     */
+    private function maybeUnlinkCorporateAffiliate(Contratos $contract): void
+    {
+        $affiliate = UserDatos::findOne($contract->user_id);
+
+        // Not an affiliate, or not linked to a corporate → nothing to do.
+        if (!$affiliate || empty($affiliate->afiliado_corporativo_id)) {
+            return;
+        }
+
+        $corporativoId = (int) $affiliate->afiliado_corporativo_id;
+
+        // Still has another non-annulled contract? Keep the corporate link.
+        $stillLive = Contratos::find()
+            ->where(['user_id' => $affiliate->id])
+            ->andWhere(['!=', 'id', $contract->id])
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+            ->exists();
+
+        if ($stillLive) {
+            Yii::info(
+                "Anulación: afiliado #{$affiliate->id} conserva otro contrato vivo; "
+                    . "NO se desvincula del corporativo #{$corporativoId}.",
+                'contratos'
+            );
+            return;
+        }
+
+        // 1. Unlink from corporate.
+        $affiliate->afiliado_corporativo_id = null;
+        $affiliate->user_datos_type_id      = 1;
+        $affiliate->estatus_solvente        = 'No';
+        $affiliate->updated_at              = date('Y-m-d H:i:s');
+
+        if (!$affiliate->save(false)) {
+            throw new \Exception(
+                'No se pudo desvincular al afiliado del corporativo: '
+                    . json_encode($affiliate->getErrors())
+            );
+        }
+
+        // 2. Remove the legacy junction row (safe: no-op if absent).
+        CorporativoUser::deleteAll([
+            'corporativo_id' => $corporativoId,
+            'user_id'        => $affiliate->id,
+        ]);
+
+        // 3. Remove the corporate-contract junction row.
+        ContratoCorporativoAfiliado::deleteAll([
+            'user_datos_id' => $affiliate->id,
+        ]);
+
+        // 4. Recompute aggregates on affected contratos_corporativos.
+        $this->recomputeCorporateContractAggregates($corporativoId);
+
+        Yii::info(
+            "Anulación: afiliado #{$affiliate->id} desvinculado del corporativo "
+                . "#{$corporativoId} (último contrato vivo anulado).",
+            'contratos'
+        );
+    }
+
+    /**
+     * Recompute cantidad_afiliados / monto_total on contratos_corporativos
+     * rows belonging to a corporate. Idempotent.
+     */
+    private function recomputeCorporateContractAggregates(int $corporativoId): void
+    {
+        Yii::$app->db->createCommand("
+        UPDATE contratos_corporativos cc
+        SET cantidad_afiliados = agg.cnt,
+            monto_total        = agg.total,
+            updated_at         = NOW()
+        FROM (
+            SELECT
+                cca.contrato_corporativo_id,
+                COUNT(DISTINCT cca.user_datos_id)       AS cnt,
+                COALESCE(SUM(cca.precio_individual), 0) AS total
+            FROM contratos_corporativos_afiliados cca
+            INNER JOIN contratos_corporativos c
+                ON c.id = cca.contrato_corporativo_id
+            WHERE c.corporativo_id = :cid
+            GROUP BY cca.contrato_corporativo_id
+        ) agg
+        WHERE cc.id = agg.contrato_corporativo_id
+    ", [':cid' => $corporativoId])->execute();
+
+        // Zero-out any corporate-contract row that lost all its affiliates.
+        Yii::$app->db->createCommand("
+        UPDATE contratos_corporativos cc
+        SET cantidad_afiliados = 0,
+            monto_total        = 0,
+            updated_at         = NOW()
+        WHERE cc.corporativo_id = :cid
+          AND NOT EXISTS (
+              SELECT 1 FROM contratos_corporativos_afiliados cca
+              WHERE cca.contrato_corporativo_id = cc.id
+          )
+    ", [':cid' => $corporativoId])->execute();
+    }
+    /**
      * Anular (Cancel) a contract with reason via POST
      * @param int $id
      * @return \yii\web\Response
@@ -416,6 +695,9 @@ class ContratosController extends Controller
     public function actionAnular($id)
     {
         $model = $this->findModel($id);
+        $returnRoute = Yii::$app->request->post('return_to_index_list')
+            ? ['index-list', 'user_id' => $model->user_id]
+            : ['index', 'user_id' => $model->user_id];
 
         // Permissions Check
         if (
@@ -425,20 +707,20 @@ class ContratosController extends Controller
             !Yii::$app->user->can('GERENTE-OPERACIONES')
         ) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
-            return $this->redirect(['index', 'user_id' => $model->user_id]);
+            return $this->redirect($returnRoute);
         }
 
         if ($model->estatus === Contratos::STATUS_ANULADO) {
             Yii::$app->session->setFlash('error', 'Este contrato ya se encuentra anulado.');
-            return $this->redirect(['index', 'user_id' => $model->user_id]);
+            return $this->redirect($returnRoute);
         }
 
         if (Yii::$app->request->isPost) {
-            $motivo = Yii::$app->request->post('anulado_motivo');
-
+            $motivo = Yii::$app->request->post('motivo')
+                ?? Yii::$app->request->post('anulado_motivo');
             if (empty(trim($motivo))) {
                 Yii::$app->session->setFlash('error', 'Debe indicar un motivo válido para la anulación.');
-                return $this->redirect(['index', 'user_id' => $model->user_id]);
+                return $this->redirect($returnRoute);
             }
 
             $transaction = Yii::$app->db->beginTransaction();
@@ -458,6 +740,12 @@ class ContratosController extends Controller
                     ['contrato_id' => $model->id, 'estatus' => 'pendiente']
                 );
 
+                // ── Unlink from corporate if this was the affiliate's last live contract ──
+                $this->maybeUnlinkCorporateAffiliate($model);
+                // ──────────────────────────────────────────────────────────────────────────
+
+                $this->detachCorporateAffiliateWithoutValidContracts($model->user_id);
+
                 $transaction->commit();
                 Yii::$app->session->setFlash('success', 'El contrato #' . $model->id . ' fue anulado exitosamente.');
             } catch (\Exception $e) {
@@ -466,7 +754,7 @@ class ContratosController extends Controller
             }
         }
 
-        return $this->redirect(['index', 'user_id' => $model->user_id]);
+        return $this->redirect($returnRoute);
     }
 
     /**
@@ -492,14 +780,39 @@ class ContratosController extends Controller
             }
         }
     }
+
+    /**
+     * Remove a corporate affiliate from employee lists when no valid contracts remain.
+     *
+     * @param int|null $userId
+     */
+    private function detachCorporateAffiliateWithoutValidContracts($userId)
+    {
+        if (!$userId) {
+            return;
+        }
+
+        $hasValidContract = Contratos::getContratoActivo((int)$userId) !== null;
+
+        if (!$hasValidContract) {
+            UserDatos::updateAll(
+                ['afiliado_corporativo_id' => null],
+                ['id' => (int)$userId, 'user_datos_type_id' => 2]
+            );
+        }
+    }
+
     /**
      * Displays annulment form
      * @param int $id
      * @return string|\yii\web\Response
      */
-    public function actionAnularForm($id)
+    public function actionAnularForm($id, $return_to_index_list = false)
     {
         $model = $this->findModel($id);
+        $returnRoute = Yii::$app->request->post('return_to_index_list') || $return_to_index_list
+            ? ['index-list', 'user_id' => $model->user_id]
+            : ['index', 'user_id' => $model->user_id];
 
         // Check if user has permission (Superadmin, GERENTE-COMERCIALIZACION, or GERENTE-CLINICA)
         if (
@@ -509,12 +822,12 @@ class ContratosController extends Controller
             !Yii::$app->user->can('GERENTE-OPERACIONES')
         ) {
             Yii::$app->session->setFlash('error', 'No tiene permisos para anular contratos.');
-            return $this->redirect(['index', 'user_id' => $model->user_id]);
+            return $this->redirect($returnRoute);
         }
 
         if ($model->estatus === Contratos::STATUS_ANULADO) {
             Yii::$app->session->setFlash('error', 'Este contrato ya está anulado.');
-            return $this->redirect(['index', 'user_id' => $model->user_id]);
+            return $this->redirect($returnRoute);
         }
 
         if (Yii::$app->request->isPost) {
@@ -522,7 +835,10 @@ class ContratosController extends Controller
 
             if (!$motivo) {
                 Yii::$app->session->setFlash('error', 'Debe indicar el motivo de la anulación.');
-                return $this->render('anular', ['model' => $model]);
+                return $this->render('anular', [
+                    'model' => $model,
+                    'returnToIndexList' => (bool)$return_to_index_list,
+                ]);
             }
 
             $transaction = Yii::$app->db->beginTransaction();
@@ -544,17 +860,24 @@ class ContratosController extends Controller
                         'estatus' => 'pendiente'
                     ]
                 );
+                // ── Unlink from corporate if this was the affiliate's last live contract ──
+                $this->maybeUnlinkCorporateAffiliate($model);
+                // ──────────────────────────────────────────────────────────────────────────
+                $this->detachCorporateAffiliateWithoutValidContracts($model->user_id);
 
                 $transaction->commit();
                 Yii::$app->session->setFlash('success', 'Contrato anulado exitosamente.');
-                return $this->redirect(['index', 'user_id' => $model->user_id]);
+                return $this->redirect($returnRoute);
             } catch (\Exception $e) {
                 $transaction->rollBack();
                 Yii::$app->session->setFlash('error', 'Error al anular el contrato: ' . $e->getMessage());
             }
         }
 
-        return $this->render('anular', ['model' => $model]);
+        return $this->render('anular', [
+            'model' => $model,
+            'returnToIndexList' => (bool)$return_to_index_list,
+        ]);
     }
     /**
      * Check if contract has payments

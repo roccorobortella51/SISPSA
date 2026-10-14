@@ -319,6 +319,12 @@ use yii\helpers\Html;
     <!-- ============================================ -->
     <!-- SECTION 4: SERVICIOS INCLUIDOS               -->
     <!-- ============================================ -->
+
+    <!-- ============================================ -->
+    <!-- FORCE PAGE BREAK BEFORE SERVICIOS INCLUIDOS  -->
+    <!-- ============================================ -->
+    <pagebreak />
+
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 5px;">
         <thead>
             <tr>
@@ -337,7 +343,12 @@ use yii\helpers\Html;
                 <?php foreach ($data['plan_services'] as $service): ?>
                     <tr>
                         <td style="border: 1px solid #000; padding: 4px; vertical-align: middle; font-size: 9px;"><?= Html::encode($service['servicio'] ?? '') ?></td>
-                        <td style="border: 1px solid #000; padding: 4px; vertical-align: middle; font-size: 9px; text-align: center;"><?= Html::encode($service['espera'] ?? 'NO APLICA') ?></td>
+                        <td style="border: 1px solid #000; padding: 4px; vertical-align: middle; font-size: 9px; text-align: center;<?= ($service['espera_status'] ?? '') === 'sin_espera' ? ' color: #107c10; font-weight: bold;' : '' ?>">
+                            <?php
+                            $esperaDisplay = $service['espera_display'] ?? $service['espera'] ?? 'NO APLICA';
+                            echo Html::encode($esperaDisplay);
+                            ?>
+                        </td>
                         <td style="border: 1px solid #000; padding: 4px; vertical-align: middle; font-size: 9px;"><?= Html::encode($service['descripcion'] ?? 'Servicio incluido en el plan') ?></td>
                     </tr>
                 <?php endforeach; ?>

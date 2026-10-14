@@ -233,8 +233,9 @@ class UserDatos extends ActiveRecord
                     'fecha_nacimiento_contratante',
                     'sexo_contratante',
                     'email_contratante',
-                    'telefono_celular_contratante'  // ADDED THIS
-
+                    'telefono_celular_contratante',
+                    'profesion_contratante',   // NEW
+                    'ocupacion_contratante',   // NEW
                 ],
                 'required',
                 'when' => function ($model) {
@@ -825,62 +826,74 @@ class UserDatos extends ActiveRecord
         }
     }
 
-    // ============================================
-    // VALIDACIÓN PERSONALIZADA PARA DUPLICADOS
-    // ============================================
+    // ============================================================
+// FILE: app/models/UserDatos.php
+// REPLACE the existing checkAffiliateDuplicate() and its helpers
+// with the version below. Keeps the same public API so callers
+// (UserDatosController, actionMasivo, etc.) do not need changes.
+// ============================================================
 
     /**
-     * Comprehensive duplicate validation for affiliates
-     * 
-     * @param bool $excludeCurrent If true, exclude current record when checking duplicates
-     * @return bool Returns true if duplicate found, false otherwise
+     * Comprehensive duplicate validation for affiliates.
+     *
+     * IMPORTANT CHANGE (v2):
+     *   A record is considered a TRUE duplicate ONLY when:
+     *     1. An existing UserDatos row has role = 'afiliado'
+     *     2. AND (the row has a non-annulled contract OR has no contract at all
+     *            but is in a "live" state: estatus IN ('Creado','Registrado','Activo'))
+     *     3. AND it is not soft-deleted.
+     *
+     *   If the existing row belongs to a DIFFERENT role (Asesor, Agente,
+     *   Administrador-clinica, etc.) and has NO affiliate contract, we do
+     *   NOT block — the controller will PROMOTE that record into an affiliate.
+     *
+     * @param  bool $excludeCurrent  Exclude the current record (update mode).
+     * @return bool                  TRUE when a blocking duplicate exists.
      */
     public function checkAffiliateDuplicate($excludeCurrent = false)
     {
-        // Only check for 'afiliado' role
+        // Only check for 'afiliado' role on the incoming record
         if ($this->role !== 'afiliado') {
             return false;
         }
 
-        // For underage (Menor Sin Cédula), we use a different duplicate logic
         if ($this->tipo_cedula === 'Menor Sin Cédula') {
             return $this->checkUnderageDuplicate($excludeCurrent);
         }
 
-        // Regular duplicate check for normal affiliates
         return $this->checkRegularDuplicate($excludeCurrent);
     }
 
     /**
-     * Check duplicates for regular affiliates (non-underage)
-     * 
-     * @param bool $excludeCurrent
-     * @return bool
+     * Regular (non-underage) duplicate check.
+     *
+     * A duplicate is blocking ONLY when the existing record is a LIVE
+     * affiliate — i.e., it has role='afiliado' AND (has an active contract
+     * OR is in a non-terminal state with no contract yet).
      */
     private function checkRegularDuplicate($excludeCurrent = false)
     {
-        // Normalize names for comparison (trim, remove multiple spaces)
-        $nombres = preg_replace('/\s+/', ' ', trim($this->nombres));
-        $apellidos = preg_replace('/\s+/', ' ', trim($this->apellidos));
+        $nombres   = preg_replace('/\s+/', ' ', trim((string)$this->nombres));
+        $apellidos = preg_replace('/\s+/', ' ', trim((string)$this->apellidos));
 
+        // ── Base: same role + same cédula, not soft-deleted ──
         $query = self::find()
             ->where(['role' => 'afiliado'])
             ->andWhere(['tipo_cedula' => $this->tipo_cedula])
             ->andWhere(['cedula' => $this->cedula])
             ->andWhere(['IS', 'deleted_at', null]);
 
-        // ============================================
-        // MODIFIED: Only check cross-type for non-"Afiliado Otras Clínicas"
-        // "Afiliado Otras Clínicas" is treated as a separate valid type
-        // ============================================
+        if ($excludeCurrent && !$this->isNewRecord) {
+            $query->andWhere(['!=', 'id', $this->id]);
+        }
+
+        // ── Cross-type check for "Afiliado Otras Clínicas" ──
         if ($this->tipo_cedula !== 'Afiliado Otras Clínicas') {
-            // For regular types (V, E, J, etc.), check if this cedula exists 
-            // with "Afiliado Otras Clínicas" type
             $crossQuery = self::find()
                 ->where(['role' => 'afiliado'])
                 ->andWhere(['cedula' => $this->cedula])
-                ->andWhere(['IS', 'deleted_at', null])
-                ->andWhere(['tipo_cedula' => 'Afiliado Otras Clínicas']);
+                ->andWhere(['tipo_cedula' => 'Afiliado Otras Clínicas'])
+                ->andWhere(['IS', 'deleted_at', null]);
 
             if ($excludeCurrent && !$this->isNewRecord) {
                 $crossQuery->andWhere(['!=', 'id', $this->id]);
@@ -891,54 +904,30 @@ class UserDatos extends ActiveRecord
             }
         }
 
-        // Also check: If current is "Afiliado Otras Clínicas", check if it exists
-        // with the SAME tipo (should be the only one)
-        if ($this->tipo_cedula === 'Afiliado Otras Clínicas') {
-            // Only check for exact match on tipo_cedula for this type
-            // No cross-type checking for "Afiliado Otras Clínicas"
-            // This allows "Afiliado Otras Clínicas" to coexist with V, E, J, etc.
-            // with the same cedula number
-            if ($excludeCurrent && !$this->isNewRecord) {
-                $query->andWhere(['!=', 'id', $this->id]);
-            }
-        } else {
-            if ($excludeCurrent && !$this->isNewRecord) {
-                $query->andWhere(['!=', 'id', $this->id]);
-            }
+        // ── Get all candidate records ──
+        $candidates = $query->all();
+
+        if (empty($candidates)) {
+            return false;
         }
 
-        $count = $query->count();
-
-        if ($count > 0) {
-            if ($count == 1) {
-                $existing = $query->one();
-                if ($existing) {
-                    if (
-                        strcasecmp($existing->nombres, $nombres) === 0 &&
-                        strcasecmp($existing->apellidos, $apellidos) === 0
-                    ) {
-                        return true;
-                    }
-                    return true;
-                }
+        // ── Filter: keep only candidates that are TRUE live affiliates ──
+        foreach ($candidates as $record) {
+            if ($this->isLiveAffiliateRecord($record)) {
+                return true;
             }
-            return true;
         }
 
         return false;
     }
 
     /**
-     * Check duplicates for underage affiliates (Menor Sin Cédula)
-     * These can share the same parent/tutor cedula
-     * 
-     * @param bool $excludeCurrent
-     * @return bool
+     * Underage duplicate check — same logic, but matches on name too.
      */
     private function checkUnderageDuplicate($excludeCurrent = false)
     {
-        $nombres = preg_replace('/\s+/', ' ', trim($this->nombres));
-        $apellidos = preg_replace('/\s+/', ' ', trim($this->apellidos));
+        $nombres   = strtolower(preg_replace('/\s+/', ' ', trim((string)$this->nombres)));
+        $apellidos = strtolower(preg_replace('/\s+/', ' ', trim((string)$this->apellidos)));
 
         $query = self::find()
             ->where(['role' => 'afiliado'])
@@ -950,21 +939,16 @@ class UserDatos extends ActiveRecord
             $query->andWhere(['!=', 'id', $this->id]);
         }
 
-        $existing = $query->all();
+        foreach ($query->all() as $record) {
+            $recordNombres   = strtolower(preg_replace('/\s+/', ' ', trim((string)$record->nombres)));
+            $recordApellidos = strtolower(preg_replace('/\s+/', ' ', trim((string)$record->apellidos)));
 
-        if (empty($existing)) {
-            return false;
-        }
-
-        $nombresLower = strtolower($nombres);
-        $apellidosLower = strtolower($apellidos);
-
-        foreach ($existing as $record) {
-            $recordNombres = strtolower(preg_replace('/\s+/', ' ', trim($record->nombres)));
-            $recordApellidos = strtolower(preg_replace('/\s+/', ' ', trim($record->apellidos)));
-
-            if ($recordNombres === $nombresLower && $recordApellidos === $apellidosLower) {
-                return true;
+            if ($recordNombres === $nombres && $recordApellidos === $apellidos) {
+                // Underage: even a live record is a duplicate UNLESS it's the same child.
+                // But we still want to allow "promotion" if the existing record is not an affiliate.
+                if ($this->isLiveAffiliateRecord($record)) {
+                    return true;
+                }
             }
         }
 
@@ -972,10 +956,60 @@ class UserDatos extends ActiveRecord
     }
 
     /**
-     * Get duplicate details for error reporting
-     * 
-     * @param bool $excludeCurrent
-     * @return array|null Returns array with duplicate record details or null if none
+     * Determines whether an existing UserDatos record is a "live affiliate"
+     * that should BLOCK creating a new one with the same cédula.
+     *
+     * A record is a live affiliate when:
+     *   - role = 'afiliado' (already guaranteed by caller)
+     *   - AND one of the following:
+     *       a) has a non-annulled contract, OR
+     *       b) has no contract at all but is in a non-terminal state
+     *          (estatus IN ('Creado','Registrado','Activo'))
+     *
+     * A record is NOT a live affiliate (and therefore does NOT block) when:
+     *   - role != 'afiliado' (staff member, agent, etc.), OR
+     *   - has only annulled contracts and estatus is terminal
+     *
+     * @param  UserDatos $record
+     * @return bool
+     */
+    private function isLiveAffiliateRecord(UserDatos $record): bool
+    {
+        // If it's not an affiliate role, it can't block — it can only be promoted.
+        if ($record->role !== 'afiliado') {
+            return false;
+        }
+
+        // Terminal states: these records are historical and should not block.
+        $terminalStates = ['Anulado', 'Eliminado', 'Inactivo'];
+        if (in_array($record->estatus, $terminalStates, true)) {
+            return false;
+        }
+
+        // Check contracts: any non-annulled contract means the affiliate is live.
+        $hasActiveOrLiveContract = Contratos::find()
+            ->where(['user_id' => $record->id])
+            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
+            ->exists();
+
+        if ($hasActiveOrLiveContract) {
+            return true;
+        }
+
+        // No contract yet, but the record itself is in a live state
+        // (e.g., created but contract save failed, or awaiting assignment).
+        $liveStates = ['Creado', 'Registrado', 'Activo', 'Pendiente'];
+        if (in_array($record->estatus, $liveStates, true)) {
+            return true;
+        }
+
+        // Everything else (e.g., only annulled contracts + terminal state) → not blocking.
+        return false;
+    }
+
+    /**
+     * Get duplicate details for error reporting.
+     * Only returns a record when it is a TRUE live affiliate.
      */
     public function getDuplicateDetails($excludeCurrent = false)
     {
@@ -986,12 +1020,6 @@ class UserDatos extends ActiveRecord
         return $this->getRegularDuplicateDetails($excludeCurrent);
     }
 
-    /**
-     * Get regular affiliate duplicate details
-     * 
-     * @param bool $excludeCurrent
-     * @return array|null Returns array with 'record' and 'type' keys, or null
-     */
     private function getRegularDuplicateDetails($excludeCurrent = false)
     {
         $query = self::find()
@@ -1004,28 +1032,19 @@ class UserDatos extends ActiveRecord
             $query->andWhere(['!=', 'id', $this->id]);
         }
 
-        $record = $query->one();
-
-        if ($record) {
-            return [
-                'record' => $record,
-                'type' => 'regular'
-            ];
+        foreach ($query->all() as $record) {
+            if ($this->isLiveAffiliateRecord($record)) {
+                return ['record' => $record, 'type' => 'regular'];
+            }
         }
 
         return null;
     }
 
-    /**
-     * Get underage affiliate duplicate details
-     * 
-     * @param bool $excludeCurrent
-     * @return array|null Returns array with 'record' and 'type' keys, or null
-     */
     private function getUnderageDuplicateDetails($excludeCurrent = false)
     {
-        $nombres = preg_replace('/\s+/', ' ', trim($this->nombres));
-        $apellidos = preg_replace('/\s+/', ' ', trim($this->apellidos));
+        $nombres   = strtolower(preg_replace('/\s+/', ' ', trim((string)$this->nombres)));
+        $apellidos = strtolower(preg_replace('/\s+/', ' ', trim((string)$this->apellidos)));
 
         $query = self::find()
             ->where(['role' => 'afiliado'])
@@ -1037,18 +1056,15 @@ class UserDatos extends ActiveRecord
             $query->andWhere(['!=', 'id', $this->id]);
         }
 
-        $nombresLower = strtolower($nombres);
-        $apellidosLower = strtolower($apellidos);
-
         foreach ($query->all() as $record) {
-            $recordNombres = strtolower(preg_replace('/\s+/', ' ', trim($record->nombres)));
-            $recordApellidos = strtolower(preg_replace('/\s+/', ' ', trim($record->apellidos)));
+            $recordNombres   = strtolower(preg_replace('/\s+/', ' ', trim((string)$record->nombres)));
+            $recordApellidos = strtolower(preg_replace('/\s+/', ' ', trim((string)$record->apellidos)));
 
-            if ($recordNombres === $nombresLower && $recordApellidos === $apellidosLower) {
-                return [
-                    'record' => $record,
-                    'type' => 'underage'
-                ];
+            if (
+                $recordNombres === $nombres && $recordApellidos === $apellidos
+                && $this->isLiveAffiliateRecord($record)
+            ) {
+                return ['record' => $record, 'type' => 'underage'];
             }
         }
 
@@ -1056,7 +1072,8 @@ class UserDatos extends ActiveRecord
     }
 
     /**
-     * Validate that there is no duplicate affiliate
+     * Validator entry point used by rules().
+     * Rejects only when a TRUE live affiliate duplicate exists.
      */
     public function validateNoDuplicate($attribute, $params)
     {
@@ -1083,6 +1100,93 @@ class UserDatos extends ActiveRecord
 
             $this->addError($attribute, $message);
         }
+    }
+// ============================================================
+// FILE: app/models/UserDatos.php
+// ADD these methods to the UserDatos class
+// ============================================================
+
+    /**
+     * Finds an existing UserDatos row by cédula that is NOT yet an
+     * affiliate (role != 'afiliado') and is not soft-deleted.
+     *
+     * Used by the controller to "promote" a staff member into an affiliate
+     * without creating a duplicate row / duplicate User login.
+     *
+     * @return UserDatos|null
+     */
+    public static function findPromotableRecordByCedula(string $tipoCedula, $cedula): ?UserDatos
+    {
+        if ($tipoCedula === 'Menor Sin Cédula' || $tipoCedula === 'Afiliado Otras Clínicas') {
+            return null;
+        }
+
+        return self::find()
+            ->where(['tipo_cedula' => $tipoCedula])
+            ->andWhere(['cedula' => $cedula])
+            ->andWhere(['!=', 'role', 'afiliado'])
+            ->andWhere(['IS', 'deleted_at', null])
+            ->one();
+    }
+
+    public function promoteExistingRecord(UserDatos $existing): bool
+    {
+        // ── Capture identity BEFORE any overwrite ──
+        $originalLoginId   = $existing->user_login_id;
+        $originalId        = $existing->id;
+        $originalRole      = $existing->role;
+        $originalCreatedAt = $existing->created_at;
+        $originalNombres   = $existing->nombres;
+        $originalApellidos = $existing->apellidos;
+        $originalCedula    = $existing->cedula;
+        $originalTipoCedula = $existing->tipo_cedula;
+
+        // ── Identity fields that MUST NOT be overwritten ──
+        // (these belong to the human, not to the affiliate contract)
+        $protectedAttributes = [
+            'id',
+            'user_login_id',
+            'created_at',
+            'nombres',
+            'apellidos',
+            'cedula',
+            'tipo_cedula',
+            'fechanac',
+        ];
+
+        // ── Copy only the AFFILIATE-SPECIFIC fields ──
+        $safe = $this->safeAttributes();
+        foreach ($safe as $attr) {
+            if (in_array($attr, $protectedAttributes, true)) {
+                continue;
+            }
+            if ($this->hasAttribute($attr) && $existing->hasAttribute($attr)) {
+                $existing->$attr = $this->$attr;
+            }
+        }
+
+        // ── Re-assert protected fields ──
+        $existing->id          = $originalId;
+        $existing->user_login_id = $originalLoginId;
+        $existing->created_at  = $originalCreatedAt;
+        $existing->nombres     = $originalNombres;
+        $existing->apellidos   = $originalApellidos;
+        $existing->cedula      = $originalCedula;
+        $existing->tipo_cedula = $originalTipoCedula;
+        $existing->updated_at  = date('Y-m-d H:i:s');
+
+        // ── Refuse to save if the login link is empty ──
+        if (empty($existing->user_login_id)) {
+            Yii::error(
+                "promoteExistingRecord: refusing to save UserDatos #{$existing->id} "
+                    . "because user_login_id is empty after promotion.",
+                __METHOD__
+            );
+            $existing->addError('user_login_id', 'No se puede vincular: falta el login del usuario.');
+            return false;
+        }
+
+        return $existing->save(false);
     }
 
     // ============================================
@@ -1119,6 +1223,73 @@ class UserDatos extends ActiveRecord
 
         if ($this->hasAttribute('tiene_contratante_diferente')) {
             $this->tiene_contratante_diferente = (bool)$this->tiene_contratante_diferente;
+        }
+
+        return true;
+    }
+
+    // ============================================
+    // BEFORE SAVE - Normalize names to UPPERCASE
+    // ============================================
+
+    /**
+     * ============================================================
+     * BEFORE SAVE - Normalize names and last names to UPPERCASE
+     * ============================================================
+     * This ensures ALL new records and ALL updates store names
+     * in uppercase automatically, regardless of how the user
+     * types them in the form.
+     */
+    public function beforeSave($insert)
+    {
+        if (!parent::beforeSave($insert)) {
+            return false;
+        }
+
+        // 1. Affiliate main names
+        if ($this->hasAttribute('nombres') && !empty($this->nombres)) {
+            $this->nombres = mb_strtoupper(trim($this->nombres), 'UTF-8');
+        }
+
+        if ($this->hasAttribute('apellidos') && !empty($this->apellidos)) {
+            $this->apellidos = mb_strtoupper(trim($this->apellidos), 'UTF-8');
+        }
+
+        // 2. Contracting party names (contratante)
+        if ($this->hasAttribute('nombre_contratante') && !empty($this->nombre_contratante)) {
+            $this->nombre_contratante = mb_strtoupper(trim($this->nombre_contratante), 'UTF-8');
+        }
+
+        if ($this->hasAttribute('apellido_contratante') && !empty($this->apellido_contratante)) {
+            $this->apellido_contratante = mb_strtoupper(trim($this->apellido_contratante), 'UTF-8');
+        }
+
+        // 3. Legal representative names
+        if ($this->hasAttribute('nombre_representante_contratante') && !empty($this->nombre_representante_contratante)) {
+            $this->nombre_representante_contratante = mb_strtoupper(trim($this->nombre_representante_contratante), 'UTF-8');
+        }
+
+        if ($this->hasAttribute('apellido_representante_contratante') && !empty($this->apellido_representante_contratante)) {
+            $this->apellido_representante_contratante = mb_strtoupper(trim($this->apellido_representante_contratante), 'UTF-8');
+        }
+
+        // 4. Beneficiary names
+        if ($this->hasAttribute('nombre_beneficiario') && !empty($this->nombre_beneficiario)) {
+            $this->nombre_beneficiario = mb_strtoupper(trim($this->nombre_beneficiario), 'UTF-8');
+        }
+
+        // 5. Account holder name (titular)
+        if ($this->hasAttribute('nombre_titular') && !empty($this->nombre_titular)) {
+            $this->nombre_titular = mb_strtoupper(trim($this->nombre_titular), 'UTF-8');
+        }
+
+        // 6. Declaration names
+        if ($this->hasAttribute('nombre_declaracion_afiliado') && !empty($this->nombre_declaracion_afiliado)) {
+            $this->nombre_declaracion_afiliado = mb_strtoupper(trim($this->nombre_declaracion_afiliado), 'UTF-8');
+        }
+
+        if ($this->hasAttribute('nombre_declaracion_contratante') && !empty($this->nombre_declaracion_contratante)) {
+            $this->nombre_declaracion_contratante = mb_strtoupper(trim($this->nombre_declaracion_contratante), 'UTF-8');
         }
 
         return true;
@@ -1234,6 +1405,7 @@ class UserDatos extends ActiveRecord
 
         return '';
     }
+
     /**
      * Gets query for [[Preexistencias]].
      *
@@ -1266,5 +1438,29 @@ class UserDatos extends ActiveRecord
     public function hasHealthDeclaration()
     {
         return $this->getDeclaracionDeSalud()->exists();
+    }
+    // ============================================================
+// FILE: app/models/UserDatos.php
+// ADD this method to the UserDatos class
+// ============================================================
+
+    /**
+     * Compares two name pairs using the same normalization used
+     * across all promotion guards (uppercase, trimmed, UTF-8).
+     *
+     * @param  string|null $aNombres
+     * @param  string|null $aApellidos
+     * @param  string|null $bNombres
+     * @param  string|null $bApellidos
+     * @return bool
+     */
+    public static function namesMatch($aNombres, $aApellidos, $bNombres, $bApellidos): bool
+    {
+        $norm = static function ($s) {
+            return mb_strtoupper(trim((string)$s), 'UTF-8');
+        };
+
+        return $norm($aNombres) === $norm($bNombres)
+            && $norm($aApellidos) === $norm($bApellidos);
     }
 }

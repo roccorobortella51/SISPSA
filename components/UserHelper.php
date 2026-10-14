@@ -416,24 +416,76 @@ class UserHelper
         return $username;
     }
 
+    /**
+     * Returns the "primary" role of the currently logged-in user.
+     *
+     * When a user has MULTIPLE RBAC roles (e.g., a staff member who was
+     * promoted into an affiliate via the create form), this method
+     * returns the MOST AUTHORITATIVE role according to the priority
+     * table below — deterministically, regardless of DB row order.
+     *
+     * This matters because getMyRol() drives authorization decisions
+     * across the entire app:
+     *   - UserSearch::search()       → role-based scoping
+     *   - hasClinicAccess()          → clinic-level filtering
+     *   - getMyClinicaId()           → clinic ID resolution
+     *   - UserDatosController        → agencia_id auto-assignment
+     *   - Views (buttons, menus)     → permission checks
+     *
+     * A non-deterministic result would cause intermittent
+     * access-control bugs. This method guarantees a stable answer.
+     *
+     * ────────────────────────────────────────────────────────────
+     * HOW TO EXTEND
+     * ────────────────────────────────────────────────────────────
+     * When you add a new role to the system, add it to the
+     * $priority table with a weight reflecting its authority tier.
+     * Unknown roles get weight 0 and are never selected as primary,
+     * which is a safe default.
+     *
+     * @return string The role name, or "Sin rol" if none is assigned.
+     */
     public static function getMyRol()
     {
-
         $userId = Yii::$app->user->id;
-        $auth = Yii::$app->authManager;
-        $roles = $auth->getRolesByUser($userId);
-
-        $roleName = null;
-        if (!empty($roles)) {
-            $firstRole = reset($roles);
-            $roleName = $firstRole->name;
-        }
-
-        if ($roleName) {
-            return $roleName;
-        } else {
+        if (!$userId) {
             return "Sin rol";
         }
+
+        $auth  = Yii::$app->authManager;
+        $roles = $auth->getRolesByUser($userId);
+
+        if (empty($roles)) {
+            return "Sin rol";
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // Priority table — higher weight = more authoritative.
+        // ────────────────────────────────────────────────────────────
+        $priority = [
+            'afiliado'                    => 1,
+            'Asesor'                      => 2,
+            'Agente'                      => 3,
+            'COORDINADOR-CLINICA'         => 4,
+            'Administrador-clinica'       => 4,
+            'GERENTE-CLINICA'             => 4,
+            'DIRECTOR-COMERCIALIZACIÓN'   => 5,
+            'admin'                       => 6,
+            'superadmin'                  => 7,
+        ];
+
+        $best       = null;
+        $bestWeight = -1;
+
+        foreach ($roles as $role) {
+            $weight = $priority[$role->name] ?? 0;
+            if ($weight > $bestWeight) {
+                $bestWeight = $weight;
+                $best       = $role;
+            }
+        }
+
+        return $best ? $best->name : "Sin rol";
     }
 
     //funcion para mostrar roles en el index de user mientras tanto*

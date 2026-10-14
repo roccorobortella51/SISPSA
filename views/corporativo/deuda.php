@@ -23,89 +23,107 @@ $totalPayments = $totalPayments ?? 0;
 $lastPaymentDate = $lastPaymentDate ?? null;
 
 // ============================================================
-// CHANGED: Group cuotas by coverage_start instead of fecha_vencimiento
+// Group cuotas by a STABLE, DETERMINISTIC month key
 // ============================================================
 $monthGroups = [];
 
+// Manual Spanish month mapping (works without intl extension)
+$months = [
+    'January' => 'Enero',
+    'February' => 'Febrero',
+    'March' => 'Marzo',
+    'April' => 'Abril',
+    'May' => 'Mayo',
+    'June' => 'Junio',
+    'July' => 'Julio',
+    'August' => 'Agosto',
+    'September' => 'Septiembre',
+    'October' => 'Octubre',
+    'November' => 'Noviembre',
+    'December' => 'Diciembre',
+];
+
 foreach ($allCuotas as $cuota) {
-    // Use coverage_start for grouping
-    $coverageStart = $cuota->coverage_start;
-
-    // Fallback to fecha_vencimiento if coverage_start is null
-    if (empty($coverageStart)) {
-        $coverageStart = $cuota->fecha_vencimiento;
-        \Yii::warning("Cuota #{$cuota->id} has no coverage_start, using fecha_vencimiento: {$coverageStart}", 'deuda');
-    }
-
-    $coverageDate = new \DateTime($coverageStart);
-    $monthKey = $coverageDate->format('Y-m');
-
-    // Manual Spanish month mapping (works without intl extension)
-    $months = [
-        'January' => 'Enero',
-        'February' => 'Febrero',
-        'March' => 'Marzo',
-        'April' => 'Abril',
-        'May' => 'Mayo',
-        'June' => 'Junio',
-        'July' => 'Julio',
-        'August' => 'Agosto',
-        'September' => 'Septiembre',
-        'October' => 'Octubre',
-        'November' => 'Noviembre',
-        'December' => 'Diciembre',
-    ];
-
-    $englishMonth = $coverageDate->format('F');
-    $monthName = $months[$englishMonth] . ' ' . $coverageDate->format('Y');
-    $monthNumber = $coverageDate->format('m');
-    $year = $coverageDate->format('Y');
-
     $contrato = $cuota->contrato ?? null;
     $userDatos = $contrato->user ?? null;
 
+    if ($contrato && !empty($contrato->fecha_ini)) {
+        $baseDateStr = $contrato->fecha_ini;
+    } elseif (!empty($cuota->coverage_start)) {
+        $baseDateStr = $cuota->coverage_start;
+    } elseif (!empty($cuota->fecha_vencimiento)) {
+        $baseDateStr = $cuota->fecha_vencimiento;
+    } else {
+        \Yii::warning("Cuota #{$cuota->id} has no usable date for grouping; skipping.", 'deuda');
+        continue;
+    }
+
+    try {
+        $baseDate = new \DateTime($baseDateStr);
+    } catch (\Exception $e) {
+        \Yii::warning("Cuota #{$cuota->id} has invalid base date '{$baseDateStr}'; skipping.", 'deuda');
+        continue;
+    }
+
+    $cuotaNumber  = max(1, (int)$cuota->numero_cuota);
+    $offsetMonths = $cuotaNumber - 1;
+
+    $baseDate->modify('first day of this month');
+
+    if ($offsetMonths > 0) {
+        $baseDate->modify("+{$offsetMonths} months");
+    }
+
+    $baseDate->modify('first day of this month');
+
+    $monthKey     = $baseDate->format('Y-m');
+    $englishMonth = $baseDate->format('F');
+    $monthName    = $months[$englishMonth] . ' ' . $baseDate->format('Y');
+    $monthNumber  = $baseDate->format('m');
+    $year         = $baseDate->format('Y');
+
+    $coverageStart = $cuota->coverage_start ?: $cuota->fecha_vencimiento;
+
     if (!isset($monthGroups[$monthKey])) {
         $monthGroups[$monthKey] = [
-            'key' => $monthKey,
-            'name' => $monthName,
-            'year' => $year,
-            'month' => $monthNumber,
-            'cuotas' => [],
-            'total' => 0,
-            'cuota_count' => 0,
-            'affiliates' => [],
-            'coverage_start' => $coverageStart, // Added for reference
+            'key'            => $monthKey,
+            'name'           => $monthName,
+            'year'           => $year,
+            'month'          => $monthNumber,
+            'cuotas'         => [],
+            'total'          => 0,
+            'cuota_count'    => 0,
+            'affiliates'     => [],
+            'coverage_start' => $coverageStart,
         ];
     }
 
-    // Store cuota with affiliate info
     $cuotaData = [
-        'cuota' => $cuota,
-        'affiliate_id' => $userDatos ? $userDatos->id : null,
-        'affiliate_name' => $userDatos ? $userDatos->nombres . ' ' . $userDatos->apellidos : 'N/A',
+        'cuota'            => $cuota,
+        'affiliate_id'     => $userDatos ? $userDatos->id : null,
+        'affiliate_name'   => $userDatos ? $userDatos->nombres . ' ' . $userDatos->apellidos : 'N/A',
         'affiliate_cedula' => $userDatos ? $userDatos->tipo_cedula . '-' . $userDatos->cedula : 'N/A',
-        'contrato_nro' => $contrato ? $contrato->nrocontrato : 'N/A',
-        'coverage_start' => $coverageStart,
-        'coverage_end' => $cuota->coverage_end,
+        'contrato_nro'     => $contrato ? $contrato->nrocontrato : 'N/A',
+        'coverage_start'   => $cuota->coverage_start,
+        'coverage_end'     => $cuota->coverage_end,
     ];
 
     $monthGroups[$monthKey]['cuotas'][] = $cuotaData;
     $monthGroups[$monthKey]['total'] += floatval($cuota->monto);
     $monthGroups[$monthKey]['cuota_count']++;
 
-    // Group by affiliate for detail view
     if ($userDatos) {
-        $affiliateId = $userDatos->id;
+        $affiliateId   = $userDatos->id;
         $affiliateName = $userDatos->nombres . ' ' . $userDatos->apellidos;
 
         if (!isset($monthGroups[$monthKey]['affiliates'][$affiliateId])) {
             $monthGroups[$monthKey]['affiliates'][$affiliateId] = [
-                'id' => $affiliateId,
-                'name' => $affiliateName,
-                'cedula' => $userDatos->tipo_cedula . '-' . $userDatos->cedula,
+                'id'           => $affiliateId,
+                'name'         => $affiliateName,
+                'cedula'       => $userDatos->tipo_cedula . '-' . $userDatos->cedula,
                 'contrato_nro' => $contrato ? $contrato->nrocontrato : 'N/A',
-                'cuotas' => [],
-                'total' => 0,
+                'cuotas'       => [],
+                'total'        => 0,
             ];
         }
         $monthGroups[$monthKey]['affiliates'][$affiliateId]['cuotas'][] = $cuota;
@@ -122,15 +140,14 @@ foreach ($monthGroups as $monthKey => &$month) {
         return strcmp($a['name'], $b['name']);
     });
 }
+unset($month);
 
-// Calculate totals
-$totalMonths = count($monthGroups);
-$totalCuotas = count($allCuotas);
+$totalMonths     = count($monthGroups);
+$totalCuotas     = count($allCuotas);
 $totalAffiliates = count(array_unique(array_reduce($monthGroups, function ($carry, $month) {
     return array_merge($carry, array_keys($month['affiliates']));
 }, [])));
 
-// Calculate paid cuotas count per payment (store in temporary array)
 $paymentCuotasCount = [];
 foreach ($paymentHistory as $payment) {
     $paymentCuotasCount[$payment->id] = \app\models\Cuotas::find()
@@ -138,10 +155,6 @@ foreach ($paymentHistory as $payment) {
         ->count();
 }
 
-// ============================================================
-// ENHANCED: Add coverage period badge to month header
-// ============================================================
-// Register CSS
 $this->registerCss(
     <<<CSS
 /* ===== MICROSOFT FLUENT DESIGN SYSTEM ===== */
@@ -152,7 +165,6 @@ body {
     background-color: #faf9f8 !important;
 }
 
-/* ===== TYPOGRAPHY ===== */
 h1 { font-size: 28px !important; font-weight: 600 !important; }
 h2 { font-size: 24px !important; font-weight: 600 !important; }
 h3 { font-size: 20px !important; font-weight: 600 !important; }
@@ -215,106 +227,197 @@ h5 { font-size: 16px !important; font-weight: 600 !important; }
     color: #0078d4 !important;
 }
 
-/* ===== MONTH ACCORDION ===== */
-.month-accordion {
-    margin-bottom: 16px;
-    border: 1px solid #edebe9;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #ffffff;
-    transition: all 0.2s ease;
+/* ============================================================
+   CORPORATE INFO PANEL
+   ============================================================ */
+.corp-info-card {
+    background: #ffffff !important;
+    border: 1px solid #edebe9 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    margin-bottom: 20px !important;
+    overflow: hidden !important;
 }
+
+.corp-info-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 14px 20px !important;
+    background: #faf9f8 !important;
+    border-bottom: 1px solid #edebe9 !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+}
+
+.corp-info-header-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-width: 0 !important;
+}
+
+.corp-info-avatar {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+    background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%) !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    flex-shrink: 0 !important;
+}
+
+.corp-info-title-block {
+    display: flex !important;
+    flex-direction: column !important;
+    line-height: 1.2 !important;
+    min-width: 0 !important;
+}
+
+.corp-info-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #201f1e !important;
+    letter-spacing: -0.01em !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.corp-info-rif-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    margin-top: 3px !important;
+    padding: 2px 10px !important;
+    background: #e8f4fd !important;
+    color: #0078d4 !important;
+    border: 1px solid #cfe7f9 !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+    align-self: flex-start !important;
+}
+
+.corp-info-rif-pill i { font-size: 10px !important; }
+
+.corp-info-fields {
+    display: flex !important;
+    align-items: stretch !important;
+    flex-wrap: wrap !important;
+}
+
+.corp-info-field {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 14px 20px !important;
+    flex: 1 1 0 !important;
+    min-width: 200px !important;
+    border-right: 1px solid #edebe9 !important;
+}
+
+.corp-info-field:last-child { border-right: none !important; }
+
+.corp-info-field-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
+    background: #f3f2f1 !important;
+    color: #605e5c !important;
+    font-size: 13px !important;
+    flex-shrink: 0 !important;
+}
+
+.corp-info-field-body {
+    display: flex !important;
+    flex-direction: column !important;
+    line-height: 1.2 !important;
+    min-width: 0 !important;
+}
+
+.corp-info-field-label {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #a19f9d !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+}
+
+.corp-info-field-value {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #201f1e !important;
+    margin-top: 2px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.corp-info-field-value.is-muted {
+    color: #a19f9d !important;
+    font-weight: 500 !important;
+    font-style: italic !important;
+}
+
+@media (max-width: 992px) {
+    .corp-info-field {
+        flex: 1 1 50% !important;
+        border-bottom: 1px solid #edebe9 !important;
+    }
+    .corp-info-field:nth-child(2n) { border-right: none !important; }
+    .corp-info-field:nth-last-child(-n+2) { border-bottom: none !important; }
+}
+
+@media (max-width: 576px) {
+    .corp-info-field {
+        flex: 1 1 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid #edebe9 !important;
+    }
+    .corp-info-field:last-child { border-bottom: none !important; }
+}
+
+/* ============================================================
+   MONTH ACCORDION — 2-column grid (no ordinal chip)
+   ============================================================ */
+.month-accordion {
+    margin-bottom: 14px;
+    border: 1px solid #edebe9;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.month-accordion:hover { border-color: #d2d0ce; }
 
 .month-accordion.selected {
-    border-color: #0078d4;
-    border-width: 2px;
-    box-shadow: 0 2px 8px rgba(0,120,212,0.2);
+    border-color: #107c10;
+    box-shadow: 0 0 0 1px #107c10, 0 2px 8px rgba(16,124,16,0.15);
 }
+
+.month-accordion.expanded { border-color: #0078d4; }
 
 .month-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background-color: #faf9f8;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.month-header:hover {
-    background-color: #f3f2f1;
-}
-
-.month-header-left {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 16px;
-    flex-wrap: wrap;
-}
-
-.month-header-left .toggle-icon {
-    font-size: 16px;
-    transition: transform 0.2s ease;
-    color: #0078d4;
-}
-
-.month-header-left .toggle-icon.expanded {
-    transform: rotate(90deg);
-}
-
-.month-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: #323130;
-}
-
-.month-badge {
-    background-color: #e8f4fd;
-    color: #0078d4;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.month-badge-coverage {
-    background-color: #e8f4fd;
-    color: #107c10;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.month-header-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    flex-wrap: wrap;
-}
-
-.month-stats {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-}
-
-.month-stats .cuota-count {
-    font-size: 13px;
-    color: #605e5c;
-}
-
-.month-stats .month-total {
-    font-size: 20px;
-    font-weight: 700;
-    color: #107c10;
-}
-
-.month-checkbox {
-    width: 20px;
-    height: 20px;
+    padding: 14px 20px;
     cursor: pointer;
-    margin: 0;
+    transition: background-color 0.15s ease;
+    user-select: none;
 }
 
 .month-content {
@@ -323,207 +426,783 @@ h5 { font-size: 16px !important; font-weight: 600 !important; }
     background-color: #ffffff;
 }
 
-/* ===== AFFILIATE TABLE INSIDE MONTH ===== */
-.affiliate-table {
-    width: 100%;
+.month-title-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.month-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #201f1e;
+    letter-spacing: -0.01em;
+}
+
+.month-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.month-pill i { font-size: 11px; }
+
+.month-pill-coverage {
+    background-color: #ffffff;
+    color: #605e5c;
+    border: 1px solid #edebe9;
+}
+
+.month-pill-count {
+    background-color: #e8f4fd;
+    color: #0078d4;
+    border: 1px solid #cfe7f9;
+}
+
+.month-pill-total {
+    background-color: #e7f6e7;
+    color: #107c10;
+    border: 1px solid #cfe9cf;
+    font-weight: 700;
     font-size: 13px;
 }
 
+.month-pill-total i { font-size: 12px; }
+
+.month-header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-right: 4px;
+}
+
+.month-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
+    accent-color: #107c10;
+}
+
+.month-chevron {
+    font-size: 13px;
+    color: #a19f9d;
+    transition: transform 0.2s ease, color 0.2s ease;
+    margin-left: 4px;
+}
+
+.month-accordion.expanded .month-chevron {
+    transform: rotate(90deg);
+    color: #0078d4;
+}
+
+/* ===== AFFILIATE TABLE ===== */
+.affiliate-table { width: 100%; font-size: 13px; }
+
 .affiliate-table th {
-    background-color: #e8f4fd !important;
-    color: #323130 !important;
+    background-color: #faf9f8 !important;
+    color: #605e5c !important;
     font-weight: 600 !important;
-    padding: 12px 12px !important;
-    font-size: 13px !important;
-    border-bottom: 1px solid #c8e6f5 !important;
+    padding: 10px 14px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #edebe9 !important;
 }
 
 .affiliate-table td {
-    padding: 10px 12px !important;
-    border-bottom: 1px solid #edebe9 !important;
+    padding: 12px 14px !important;
+    border-bottom: 1px solid #f3f2f1 !important;
     vertical-align: middle !important;
     background-color: #ffffff !important;
     color: #323130 !important;
 }
 
-.affiliate-table tr:last-child td {
-    border-bottom: none !important;
-}
+.affiliate-table tr:last-child td { border-bottom: none !important; }
 
-.affiliate-group-row {
-    background-color: #faf9f8 !important;
-    cursor: pointer;
-}
-
-.affiliate-group-row td {
-    font-weight: 600 !important;
-    background-color: #faf9f8 !important;
-    color: #323130 !important;
-}
-
-.affiliate-group-row:hover td {
-    background-color: #f3f2f1 !important;
-}
+.affiliate-group-row { cursor: pointer; transition: background-color 0.15s ease; }
+.affiliate-group-row td { font-weight: 600 !important; background-color: #ffffff !important; color: #323130 !important; }
+.affiliate-group-row:hover td { background-color: #faf9f8 !important; }
 
 .affiliate-group-row .sub-toggle-icon {
-    font-size: 14px;
+    font-size: 12px;
     transition: transform 0.2s ease;
     display: inline-block;
     color: #0078d4 !important;
 }
 
-.affiliate-group-row .sub-toggle-icon.expanded {
-    transform: rotate(90deg);
-}
+.affiliate-group-row .sub-toggle-icon.expanded { transform: rotate(90deg); }
 
-.affiliate-cuotas-row {
-    background-color: #ffffff !important;
-}
+.affiliate-name { font-weight: 600; color: #201f1e; }
+.affiliate-cedula, .affiliate-contrato { color: #605e5c; font-variant-numeric: tabular-nums; }
+.affiliate-total { color: #a4262c; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-.affiliate-cuotas-row td {
-    padding: 0 !important;
-    background-color: #ffffff !important;
-}
+/* ===== CUOTA DETAILS ===== */
+.affiliate-cuotas-row { background-color: #ffffff !important; }
+.affiliate-cuotas-row td { padding: 0 !important; background-color: #ffffff !important; }
 
 .affiliate-cuotas-table {
     width: 100%;
     background-color: #faf9f8 !important;
+    border-top: 1px solid #f3f2f1;
 }
 
+.affiliate-cuotas-table tr { border-bottom: 1px solid #f3f2f1; }
+.affiliate-cuotas-table tr:last-child { border-bottom: none; }
+
 .affiliate-cuotas-table td {
-    padding: 10px 12px 10px 48px !important;
-    border-bottom: 1px solid #edebe9 !important;
+    padding: 12px 14px 12px 56px !important;
     font-size: 13px !important;
     background-color: #faf9f8 !important;
     color: #323130 !important;
-}
-
-.affiliate-cuotas-table tr:last-child td {
+    vertical-align: middle;
     border-bottom: none !important;
 }
 
-.affiliate-cuotas-table .text-muted {
-    color: #605e5c !important;
+.cuota-anchor-cell {
+    padding-left: 20px !important;
+    padding-right: 8px !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
 }
 
-/* ===== COVERAGE PERIOD DISPLAY ===== */
-.coverage-period {
+.cuota-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
+    accent-color: #107c10;
+    flex-shrink: 0;
+}
+
+.cuota-number-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background-color: #e8f4fd;
+    color: #0078d4;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid #cfe7f9;
+    flex-shrink: 0;
+}
+
+.cuota-description { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.cuota-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #605e5c;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.cuota-coverage-range {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
     color: #605e5c;
+    font-variant-numeric: tabular-nums;
+}
+
+.cuota-coverage-range .range-arrow { color: #a19f9d; font-size: 10px; }
+.cuota-coverage-range .range-date { font-weight: 500; }
+
+.cuota-amount {
+    text-align: right;
+    font-weight: 700;
+    font-size: 14px;
+    color: #201f1e;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.cuota-due { text-align: right; white-space: nowrap; }
+
+.cuota-due-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
     background-color: #f3f2f1;
-    padding: 2px 10px;
-    border-radius: 12px;
-    display: inline-block;
+    color: #605e5c;
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid #edebe9;
 }
 
-/* ===== STATUS STYLES ===== */
-.status-overdue { color: #d13438 !important; font-weight: 600 !important; }
-.status-grace { color: #ff8c00 !important; font-weight: 600 !important; }
-.status-pending { color: #107c10 !important; font-weight: 600 !important; }
-.status-paid { color: #107c10 !important; font-weight: 600 !important; }
+.cuota-due-pill i { font-size: 10px; }
 
-/* ===== SUMMARY CARDS ===== */
-.summary-card {
-    background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%) !important;
-    border-radius: 12px !important;
-    padding: 20px !important;
+.cuota-status { text-align: right; white-space: nowrap; }
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+}
+
+.status-pill i { font-size: 10px; }
+.status-pill.status-pending { background-color: #e8f4fd; color: #0078d4; border-color: #cfe7f9; }
+.status-pill.status-grace { background-color: #fff4e5; color: #ca5010; border-color: #ffe0b3; }
+.status-pill.status-overdue { background-color: #fde7e9; color: #a4262c; border-color: #f5c2c7; }
+
+/* ============================================================
+   COMPACT STAT BAR
+   ============================================================ */
+.payment-summary-bar {
+    display: flex !important;
+    align-items: stretch !important;
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    padding: 0 !important;
     margin-bottom: 20px !important;
-    color: white !important;
-    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid #edebe9 !important;
+    overflow: hidden !important;
 }
 
-.summary-number {
-    font-size: 32px !important;
-    font-weight: 700 !important;
-    line-height: 1.2 !important;
+.payment-summary-tile {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    padding: 16px 22px !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    border-right: 1px solid #edebe9 !important;
 }
 
-.summary-label {
-    font-size: 13px !important;
-    opacity: 0.9 !important;
-    margin-top: 6px !important;
+.payment-summary-tile:last-child { border-right: none !important; }
+
+.payment-summary-tile .tile-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+    background: #e8f4fd !important;
+    color: #0078d4 !important;
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
 }
 
-.summary-card-success {
-    background: linear-gradient(135deg, #107c10 0%, #B9D750 100%) !important;
-    border-radius: 12px !important;
-    padding: 20px !important;
-    margin-bottom: 20px !important;
-    color: white !important;
-    text-align: center;
+.payment-summary-tile .tile-body {
+    display: flex !important;
+    flex-direction: column !important;
+    line-height: 1.15 !important;
+    min-width: 0 !important;
 }
 
-/* ===== PAYMENT HISTORY TABLE ===== */
-.payment-history-table {
-    font-size: 13px !important;
-}
-
-.payment-history-table th {
-    background-color: #e8f4fd !important;
-    color: #323130 !important;
+.payment-summary-tile .tile-label {
+    font-size: 11px !important;
     font-weight: 600 !important;
-    padding: 12px 12px !important;
-    font-size: 13px !important;
+    color: #605e5c !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
-.payment-history-table td {
-    padding: 10px 12px !important;
-    vertical-align: middle !important;
-    background-color: #ffffff !important;
-    color: #323130 !important;
+.payment-summary-tile .tile-value {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.1 !important;
+    color: #201f1e !important;
+    font-variant-numeric: tabular-nums !important;
+    margin-top: 2px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.payment-summary-tile-success .tile-icon { background: #e7f6e7 !important; color: #107c10 !important; }
+.payment-summary-tile-success .tile-value { color: #107c10 !important; }
+
+@media (max-width: 992px) {
+    .payment-summary-bar { flex-wrap: wrap !important; }
+    .payment-summary-tile {
+        flex: 1 1 50% !important;
+        border-bottom: 1px solid #edebe9 !important;
+    }
+    .payment-summary-tile:nth-child(2) { border-right: none !important; }
+    .payment-summary-tile:nth-child(3),
+    .payment-summary-tile:nth-child(4) { border-bottom: none !important; }
+}
+
+@media (max-width: 576px) {
+    .payment-summary-tile {
+        flex: 1 1 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid #edebe9 !important;
+    }
+    .payment-summary-tile:last-child { border-bottom: none !important; }
+}
+
+/* ============================================================
+   HISTORIAL DE PAGOS
+   ============================================================ */
+.history-card {
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    border: 1px solid #edebe9 !important;
+    border-top: 3px solid #107c10 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    margin-bottom: 24px !important;
+    overflow: hidden !important;
+}
+
+.history-card-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 20px !important;
+    background: #faf9f8 !important;
     border-bottom: 1px solid #edebe9 !important;
 }
 
-.payment-badge-paid {
-    background-color: #107c10 !important;
-    color: white !important;
-    padding: 4px 12px !important;
-    border-radius: 20px !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    display: inline-block !important;
+.history-header-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
 }
 
-.payment-badge-pending {
-    background-color: #ffc107 !important;
-    color: #212529 !important;
-    padding: 4px 12px !important;
-    border-radius: 20px !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    display: inline-block !important;
+.history-header-left i { color: #107c10 !important; font-size: 15px !important; }
+
+.history-title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #201f1e !important;
+    letter-spacing: -0.01em !important;
 }
 
-/* ===== SELECTION INFO PANEL ===== */
+.history-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2px 10px !important;
+    background: #e7f6e7 !important;
+    color: #107c10 !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+    border: 1px solid #cfe9cf !important;
+}
+
+.history-table {
+    width: 100% !important;
+    margin: 0 !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important;
+}
+
+.history-table thead th {
+    background: #f3f2f1 !important;
+    color: #605e5c !important;
+    font-weight: 600 !important;
+    font-size: 11px !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    padding: 10px 14px !important;
+    border-bottom: 1px solid #edebe9 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+}
+
+.history-table thead th.text-end { text-align: right !important; }
+.history-table thead th.text-center { text-align: center !important; }
+
+.history-table tbody td {
+    padding: 12px 14px !important;
+    border-bottom: 1px solid #edebe9 !important;
+    vertical-align: middle !important;
+    color: #323130 !important;
+}
+
+.history-table tbody tr.history-row:nth-child(odd) { background: #ffffff !important; }
+.history-table tbody tr.history-row:nth-child(even) { background: #faf9f8 !important; }
+.history-table tbody tr.history-row:hover {
+    background: #eef4fb !important;
+    transition: background-color 0.15s ease !important;
+}
+.history-table tbody tr.history-row:last-child td { border-bottom: none !important; }
+
+.history-index { width: 44px !important; }
+
+.history-index-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 26px !important;
+    height: 22px !important;
+    padding: 0 6px !important;
+    background: #e8f4fd !important;
+    color: #0078d4 !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.history-date { display: flex !important; flex-direction: column !important; line-height: 1.2 !important; }
+.history-date-day { font-weight: 600 !important; color: #201f1e !important; font-variant-numeric: tabular-nums !important; }
+.history-date-time { font-size: 11px !important; color: #a19f9d !important; font-variant-numeric: tabular-nums !important; }
+
+.history-month-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 3px 10px !important;
+    background: #e8f4fd !important;
+    color: #0078d4 !important;
+    border: 1px solid #cfe7f9 !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+}
+
+.history-method { color: #605e5c !important; font-size: 12px !important; }
+.history-amount {
+    font-weight: 700 !important;
+    color: #201f1e !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+}
+.history-amount-secondary {
+    color: #605e5c !important;
+    font-size: 12px !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+}
+.history-rate {
+    color: #605e5c !important;
+    font-size: 12px !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.history-cuotas-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 3px 10px !important;
+    background: #e8f4fd !important;
+    color: #0078d4 !important;
+    border: 1px solid #cfe7f9 !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.status-pill-success { background: #e7f6e7 !important; color: #107c10 !important; border-color: #cfe9cf !important; }
+.status-pill-warning { background: #fff4e5 !important; color: #ca5010 !important; border-color: #ffe0b3 !important; }
+
+.history-reference {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.history-ref-number {
+    color: #323130 !important;
+    font-size: 12px !important;
+    font-family: "Consolas", "Menlo", monospace !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 110px !important;
+}
+
+.history-ref-link {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    background: #e8f4fd !important;
+    color: #0078d4 !important;
+    border-radius: 4px !important;
+    text-decoration: none !important;
+    font-size: 11px !important;
+    transition: background-color 0.15s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.history-ref-link:hover {
+    background: #cfe7f9 !important;
+    color: #005a9e !important;
+    text-decoration: none !important;
+}
+
+@media (max-width: 768px) {
+    .history-table { font-size: 12px !important; }
+    .history-table thead th, .history-table tbody td { padding: 8px 10px !important; }
+    .history-ref-number { max-width: 70px !important; }
+}
+
+/* ============================================================
+   SECTION HEADER — title + action on the same row
+   ============================================================ */
+.section-header-action {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+}
+
+.section-header-action,
+.section-header-action *,
+.section-header-title,
+.section-header-title *,
+.section-header-title span,
+.section-header-badge,
+.section-header-badge * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.section-header-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.section-header-title i {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 18px !important;
+}
+
+.section-header-title span {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.section-header-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 3px 10px !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.clear-selection-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 14px !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border-radius: 4px !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+}
+
+.clear-selection-btn i {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 11px !important;
+}
+
+.clear-selection-btn:hover {
+    background: rgba(255, 255, 255, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    transform: translateY(-1px) !important;
+}
+
+.clear-selection-btn:active {
+    transform: translateY(0) !important;
+}
+
+/* ============================================================
+   SELECTION INFO PANEL
+   ============================================================ */
 .selection-info-panel {
-    background-color: #f3f2f1 !important;
-    border: 1px solid #edebe9 !important;
+    display: none;
+    background-color: #ffffff !important;
+    border: 1px solid #cfe7f9 !important;
+    border-left: 4px solid #107c10 !important;
     border-radius: 8px !important;
-    padding: 16px 20px !important;
+    padding: 0 !important;
     margin-bottom: 20px !important;
-    display: none !important;
+    box-shadow: 0 2px 8px rgba(16, 124, 16, 0.08) !important;
+    overflow: hidden;
 }
 
 .selection-info-panel.active {
     display: block !important;
+    animation: selectionSlideIn 0.2s ease-out;
 }
+
+@keyframes selectionSlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.selection-info-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background-color: #f0f9f0;
+    border-bottom: 1px solid #d6ecd6;
+    font-size: 13px;
+    font-weight: 600;
+    color: #107c10;
+    letter-spacing: 0.02em;
+}
+
+.selection-info-header i { font-size: 14px; margin: 0; }
 
 .selection-info-content {
     display: flex !important;
-    justify-content: space-between !important;
     align-items: center !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    padding: 16px 20px !important;
     flex-wrap: wrap !important;
-    gap: 12px !important;
 }
 
-.selection-info-text {
-    font-size: 14px !important;
-    color: #323130 !important;
+.selection-metrics {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
 }
 
-.selection-info-text strong {
-    font-size: 16px !important;
-    color: #107c10 !important;
+.selection-metric {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background-color: #fafbfc;
+    border: 1px solid #edebe9;
+    border-radius: 6px;
+    min-width: 150px;
+    flex: 1 1 0;
+    max-width: 260px;
+}
+
+.selection-metric-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: #e8f4fd;
+    color: #0078d4;
+    flex-shrink: 0;
+}
+
+.selection-metric-icon i { font-size: 16px; margin: 0; }
+.selection-metric-icon.icon-green { background-color: #e7f6e7; color: #107c10; }
+
+.selection-metric-body { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+
+.selection-metric-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #201f1e;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.selection-metric-value.value-green { color: #107c10; }
+
+.selection-metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #605e5c;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+
+.selection-action { flex: 0 0 auto; }
+
+.selection-pay-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    background-color: #107c10 !important;
+    border: 1px solid #107c10 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    padding: 12px 24px !important;
+    border-radius: 4px !important;
+    min-height: 48px !important;
+    box-shadow: 0 2px 6px rgba(16, 124, 16, 0.25) !important;
+    transition: all 0.15s ease !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+}
+
+.selection-pay-btn:hover {
+    background-color: #0e700e !important;
+    border-color: #0e700e !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(16, 124, 16, 0.35) !important;
+    transform: translateY(-1px);
+    text-decoration: none !important;
+}
+
+.selection-pay-btn i { font-size: 14px; margin: 0; }
+
+@media (max-width: 768px) {
+    .selection-info-content { flex-direction: column !important; align-items: stretch !important; }
+    .selection-metric { min-width: 0; max-width: none; flex: 1 1 100%; }
+    .selection-action { width: 100%; }
+    .selection-pay-btn { width: 100%; justify-content: center; }
 }
 
 /* ===== UTILITY ===== */
@@ -543,25 +1222,27 @@ h5 { font-size: 16px !important; font-weight: 600 !important; }
 .mt-4 { margin-top: 20px !important; }
 .p-0 { padding: 0 !important; }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .month-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        padding: 12px 14px;
+        gap: 10px;
     }
-    
     .month-header-right {
-        width: 100%;
-        justify-content: space-between;
+        grid-column: 1;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        padding-right: 0;
     }
-    
-    .summary-number { font-size: 28px !important; }
-    .selection-info-content { flex-direction: column !important; align-items: flex-start !important; }
     .affiliate-table th, .affiliate-table td { font-size: 12px !important; padding: 8px !important; }
+    .affiliate-cuotas-table td { padding-left: 20px !important; }
+    .cuota-anchor-cell { padding-left: 14px !important; }
+
+    .section-header-action { flex-direction: column !important; align-items: flex-start !important; }
+    .clear-selection-btn { width: 100% !important; justify-content: center !important; }
 }
 
-/* ===== PANEL STYLES ===== */
 .ms-panel {
     background: #ffffff !important;
     border-radius: 8px !important;
@@ -588,23 +1269,80 @@ h5 { font-size: 16px !important; font-weight: 600 !important; }
 .bg-gradient-green h2, .bg-gradient-green h3 {
     color: #ffffff !important;
 }
+
+html body .ms-panel-body .month-accordion.month-row-even > .month-header {
+    background-color: #eef4fb !important;
+}
+html body .ms-panel-body .month-accordion.month-row-odd > .month-header {
+    background-color: #ffffff !important;
+}
+html body .ms-panel-body .month-accordion.month-row-even > .month-header:hover {
+    background-color: #e4eefa !important;
+}
+html body .ms-panel-body .month-accordion.month-row-odd > .month-header:hover {
+    background-color: #faf9f8 !important;
+}
+
+html body .ms-panel-body .month-accordion.selected > .month-header {
+    background-color: #e7f6e7 !important;
+    border-left: 4px solid #107c10 !important;
+}
+html body .ms-panel-body .month-accordion.selected > .month-header:hover {
+    background-color: #dff0df !important;
+}
+html body .ms-panel-body .month-accordion.selected .month-name {
+    color: #107c10 !important;
+}
+
+a.selection-pay-btn,
+a.selection-pay-btn:link,
+a.selection-pay-btn:visited,
+a.selection-pay-btn:hover,
+a.selection-pay-btn:focus,
+a.selection-pay-btn:active,
+.selection-action a.selection-pay-btn,
+#pago-parcial-btn,
+#pago-parcial-btn:link,
+#pago-parcial-btn:visited,
+#pago-parcial-btn:hover,
+#pago-parcial-btn:focus,
+#pago-parcial-btn:active {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+a.selection-pay-btn span,
+a.selection-pay-btn i,
+#pago-parcial-btn span,
+#pago-parcial-btn i,
+#pago-parcial-btn-label {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+a.selection-pay-btn.disabled,
+a.selection-pay-btn.disabled span,
+a.selection-pay-btn.disabled i,
+#pago-parcial-btn.disabled,
+#pago-parcial-btn.disabled span,
+#pago-parcial-btn.disabled i {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
 CSS
 );
 
-// JavaScript for month accordion functionality
 $this->registerJs(
     <<<JS
 $(document).ready(function() {
-    // Store cuota amounts for each checkbox
     $('.checkbox-cuota').each(function() {
         var currentCheckbox = $(this);
         var rowElement = currentCheckbox.closest('tr');
         var amountText = rowElement.find('.cuota-amount').text();
-        
-        // Parse currency properly
+
         var amount = 0;
         if (amountText) {
-            // Remove currency symbol and convert
             var cleaned = amountText.replace('$', '').replace('USD', '').trim();
             cleaned = cleaned.replace(/[^0-9.,-]/g, '');
             cleaned = cleaned.replace(',', '');
@@ -612,26 +1350,25 @@ $(document).ready(function() {
             if (isNaN(amount)) amount = 0;
         }
         currentCheckbox.data('amount', amount);
-        // Also store amount as a data attribute on the checkbox
         currentCheckbox.attr('data-amount', amount);
     });
-    
-    // Toggle month content (expand/collapse)
+
     $('.month-header').on('click', function(e) {
         if ($(e.target).is('.month-checkbox') || $(e.target).closest('.month-checkbox').length) {
             return;
         }
+        var accordion = $(this).closest('.month-accordion');
         var targetContent = $(this).next('.month-content');
-        var icon = $(this).find('.toggle-icon');
-        targetContent.slideToggle(200);
-        if (targetContent.is(':visible')) {
-            icon.addClass('expanded');
-        } else {
-            icon.removeClass('expanded');
-        }
+
+        targetContent.slideToggle(200, function() {
+            if ($(this).is(':visible')) {
+                accordion.addClass('expanded');
+            } else {
+                accordion.removeClass('expanded');
+            }
+        });
     });
-    
-    // Toggle affiliate cuotas within month
+
     $(document).on('click', '.affiliate-group-row', function(e) {
         if ($(e.target).is('.checkbox-cuota') || $(e.target).closest('.checkbox-cell').length) {
             return;
@@ -645,31 +1382,28 @@ $(document).ready(function() {
             icon.removeClass('expanded');
         }
     });
-    
-    // Month checkbox selection
+
     $('.month-checkbox').on('change', function() {
         var monthKey = $(this).data('month-key');
         var isChecked = $(this).prop('checked');
         var monthAccordion = $(this).closest('.month-accordion');
-        
+
         if (isChecked) {
             monthAccordion.addClass('selected');
         } else {
             monthAccordion.removeClass('selected');
         }
-        
+
         $('.checkbox-cuota[data-month-key="' + monthKey + '"]').prop('checked', isChecked).trigger('change');
         updateSelectionInfo();
     });
-    
-    // Individual cuota checkbox change event
+
     $(document).on('change', '.checkbox-cuota', function() {
         var monthKey = $(this).data('month-key');
         var monthCheckbox = $('.month-checkbox[data-month-key="' + monthKey + '"]');
         var allCuotasInMonth = $('.checkbox-cuota[data-month-key="' + monthKey + '"]');
         var checkedCuotasInMonth = $('.checkbox-cuota[data-month-key="' + monthKey + '"]:checked');
-        
-        // Update month checkbox state
+
         if (checkedCuotasInMonth.length === allCuotasInMonth.length && allCuotasInMonth.length > 0) {
             monthCheckbox.prop('checked', true);
             monthCheckbox.closest('.month-accordion').addClass('selected');
@@ -680,46 +1414,27 @@ $(document).ready(function() {
             monthCheckbox.prop('checked', false);
             monthCheckbox.closest('.month-accordion').addClass('selected');
         }
-        
+
         updateSelectionInfo();
     });
-    
-    // Global select all months
-    $('#select-all-months').on('change', function() {
-        var isChecked = $(this).prop('checked');
-        $('.month-checkbox').prop('checked', isChecked);
-        $('.checkbox-cuota').prop('checked', isChecked);
-        
-        if (isChecked) {
-            $('.month-accordion').addClass('selected');
-        } else {
-            $('.month-accordion').removeClass('selected');
-        }
-        
-        updateSelectionInfo();
-    });
-    
-    // Clear selection button
+
     $('#clear-selection').on('click', function() {
-        $('.month-checkbox, #select-all-months').prop('checked', false);
+        $('.month-checkbox').prop('checked', false);
         $('.checkbox-cuota').prop('checked', false);
         $('.month-accordion').removeClass('selected');
         updateSelectionInfo();
     });
-    
-    // Update selection info panel
+
     function updateSelectionInfo() {
         var selectedCuotas = $('.checkbox-cuota:checked');
         var selectedMonths = $('.month-checkbox:checked');
         var selectedCount = selectedCuotas.length;
         var selectedTotal = 0;
-        
+
         selectedCuotas.each(function() {
             var currentCheckbox = $(this);
-            // Try to get amount from data attribute first
             var amount = currentCheckbox.data('amount');
-            
-            // If not found, try to get from the cuota-amount cell
+
             if (amount === undefined || isNaN(amount)) {
                 var rowElement = currentCheckbox.closest('tr');
                 var amountText = rowElement.find('.cuota-amount').text();
@@ -734,22 +1449,23 @@ $(document).ready(function() {
                     amount = 0;
                 }
             }
-            
+
             if (!isNaN(amount)) {
                 selectedTotal += amount;
             }
         });
-        
+
         if (selectedCount > 0) {
             $('#selection-info-panel').addClass('active');
             $('#selected-months').text(selectedMonths.length);
             $('#selected-count').text(selectedCount);
             $('#selected-total').text(selectedTotal.toFixed(2));
-            
+
             var paymentBtn = $('#pago-parcial-btn');
-            paymentBtn.html('<i class="fas fa-credit-card me-2"></i> Pagar ' + selectedCount + ' cuota(s) de ' + selectedMonths.length + ' mes(es) por $' + selectedTotal.toFixed(2) + ' USD');
-            
-            // Collect selected cuota IDs
+            paymentBtn.find('#pago-parcial-label').text(
+                'Pagar ' + selectedCount + ' cuota(s) - $' + selectedTotal.toFixed(2)
+            );
+
             var selectedIds = [];
             selectedCuotas.each(function() {
                 var cuotaId = $(this).val();
@@ -757,8 +1473,7 @@ $(document).ready(function() {
                     selectedIds.push(cuotaId);
                 }
             });
-            
-            // Build URL with cuota IDs
+
             if (selectedIds.length > 0) {
                 var baseUrl = $('#pago-parcial-base-url').val();
                 var newUrl = baseUrl + '&cuotas=' + selectedIds.join(',');
@@ -774,19 +1489,8 @@ $(document).ready(function() {
             $('#selection-info-panel').removeClass('active');
         }
     }
-    
-    function parseCurrency(currencyString) {
-        var cleaned = currencyString.replace(/[^0-9.,-]+/g, '');
-        cleaned = cleaned.replace(',', '.');
-        var result = parseFloat(cleaned);
-        return isNaN(result) ? 0 : result;
-    }
-    
-    // Initialize selection info
+
     updateSelectionInfo();
-    
-    // Expand first month by default for better UX
-    $('.month-header').first().trigger('click');
 });
 JS
 );
@@ -835,188 +1539,243 @@ JS
                 </div>
 
                 <div class="ms-panel-body">
-                    <!-- Corporate Info -->
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="ms-panel border-info mb-4">
-                                <div class="ms-panel-header bg-gradient-blue-2">
-                                    <h3 class="mb-0"><i class="fas fa-building me-2"></i>Información del Corporativo</h3>
+
+                    <!-- ============================================================
+                         INFORMACIÓN DEL CORPORATIVO — compact strip
+                         ============================================================ -->
+                    <div class="corp-info-card">
+                        <div class="corp-info-header">
+                            <div class="corp-info-header-left">
+                                <div class="corp-info-avatar">
+                                    <i class="fas fa-building"></i>
                                 </div>
-                                <div class="ms-panel-body informacion-corporativo">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><strong>Nombre:</strong> <?= Html::encode($corporativo->nombre) ?></p>
-                                            <p><strong>RIF:</strong> <?= Html::encode($corporativo->rif) ?></p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p><strong>Email:</strong> <?= Html::encode($corporativo->email) ?></p>
-                                            <p><strong>Teléfono:</strong> <?= Html::encode($corporativo->telefono) ?></p>
-                                            <?php if ($lastPaymentDate): ?>
-                                                <p><strong>Último pago:</strong> <?= Yii::$app->formatter->asDate($lastPaymentDate, 'php:d/m/Y') ?></p>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
+                                <div class="corp-info-title-block">
+                                    <span class="corp-info-title"><?= Html::encode($corporativo->nombre) ?></span>
+                                    <?php if (!empty($corporativo->rif)): ?>
+                                        <span class="corp-info-rif-pill">
+                                            <i class="fas fa-id-card"></i>
+                                            <?= Html::encode($corporativo->rif) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="corp-info-fields">
+                            <div class="corp-info-field">
+                                <div class="corp-info-field-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="corp-info-field-body">
+                                    <span class="corp-info-field-label">Email</span>
+                                    <span class="corp-info-field-value">
+                                        <?= !empty($corporativo->email) ? Html::encode($corporativo->email) : '—' ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="corp-info-field">
+                                <div class="corp-info-field-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div class="corp-info-field-body">
+                                    <span class="corp-info-field-label">Teléfono</span>
+                                    <span class="corp-info-field-value">
+                                        <?= !empty($corporativo->telefono) ? Html::encode($corporativo->telefono) : '—' ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="corp-info-field">
+                                <div class="corp-info-field-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="corp-info-field-body">
+                                    <span class="corp-info-field-label">Dirección</span>
+                                    <span class="corp-info-field-value"
+                                        title="<?= Html::encode($corporativo->direccion ?? '') ?>">
+                                        <?= !empty($corporativo->direccion) ? Html::encode($corporativo->direccion) : '—' ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="corp-info-field">
+                                <div class="corp-info-field-icon">
+                                    <i class="fas fa-history"></i>
+                                </div>
+                                <div class="corp-info-field-body">
+                                    <span class="corp-info-field-label">Último Pago</span>
+                                    <span class="corp-info-field-value <?= !$lastPaymentDate ? 'is-muted' : '' ?>">
+                                        <?= $lastPaymentDate
+                                            ? Yii::$app->formatter->asDate($lastPaymentDate, 'php:d/m/Y')
+                                            : 'Sin pagos registrados' ?>
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Summary Cards - Enhanced with Payment Stats -->
-                    <div class="row mb-4">
-                        <div class="col-md-3 col-sm-6">
-                            <div class="summary-card">
-                                <div class="summary-number"><?= $totalAffiliates ?></div>
-                                <div class="summary-label">Afiliados con Deuda</div>
+                    <!-- ============================================================
+                         COMPACT STAT BAR
+                         ============================================================ -->
+                    <div class="payment-summary-bar">
+                        <div class="payment-summary-tile">
+                            <div class="tile-icon"><i class="fas fa-users"></i></div>
+                            <div class="tile-body">
+                                <span class="tile-label">Afiliados con Deuda</span>
+                                <span class="tile-value"><?= $totalAffiliates ?></span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="summary-card">
-                                <div class="summary-number"><?= $totalMonths ?></div>
-                                <div class="summary-label">Meses con Deuda</div>
+                        <div class="payment-summary-tile">
+                            <div class="tile-icon"><i class="fas fa-calendar-alt"></i></div>
+                            <div class="tile-body">
+                                <span class="tile-label">Meses con Deuda</span>
+                                <span class="tile-value"><?= $totalMonths ?></span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="summary-card">
-                                <div class="summary-number">$<?= number_format($grandTotal, 2, '.', ',') ?> USD</div>
-                                <div class="summary-label">Deuda Pendiente</div>
+                        <div class="payment-summary-tile">
+                            <div class="tile-icon"><i class="fas fa-exclamation-circle"></i></div>
+                            <div class="tile-body">
+                                <span class="tile-label">Deuda Pendiente</span>
+                                <span class="tile-value">$<?= number_format($grandTotal, 2, '.', ',') ?> USD</span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="summary-card-success">
-                                <div class="summary-number">$<?= number_format($totalPaid, 2, '.', ',') ?> USD</div>
-                                <div class="summary-label">Total Pagado</div>
+                        <div class="payment-summary-tile payment-summary-tile-success">
+                            <div class="tile-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="tile-body">
+                                <span class="tile-label">Total Pagado</span>
+                                <span class="tile-value">$<?= number_format($totalPaid, 2, '.', ',') ?> USD</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Payment History Section -->
+                    <!-- ============================================================
+                         HISTORIAL DE PAGOS
+                         ============================================================ -->
                     <?php if (!empty($paymentHistory)): ?>
                         <div class="row">
                             <div class="col-md-12">
-                                <div class="ms-panel border-success mb-4">
-                                    <div class="ms-panel-header bg-gradient-green">
-                                        <h3 class="mb-0">
-                                            <i class="fas fa-history me-2"></i>Historial de Pagos
-                                            <span class="badge badge-light ms-2"><?= $totalPayments ?> pagos</span>
-                                        </h3>
+                                <div class="history-card">
+                                    <div class="history-card-header">
+                                        <div class="history-header-left">
+                                            <i class="fas fa-history"></i>
+                                            <span class="history-title">Historial de Pagos</span>
+                                            <span class="history-badge"><?= $totalPayments ?> pagos</span>
+                                        </div>
                                     </div>
-                                    <div class="ms-panel-body p-0">
-                                        <div class="table-responsive">
-                                            <table class="table payment-history-table mb-0">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width: 50px;">#</th>
-                                                        <th>Fecha de Pago</th>
-                                                        <th>Mes Pagado</th>
-                                                        <th>Método de Pago</th>
-                                                        <th class="text-end">Monto Pagado (USD)</th>
-                                                        <th class="text-end">Monto Bs</th>
-                                                        <th class="text-end">Tasa Cambio</th>
-                                                        <th class="text-center">Cuotas Pagadas</th>
-                                                        <th>Estado</th>
-                                                        <th>Referencia</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php
-                                                    $paymentCounter = 1;
-                                                    foreach ($paymentHistory as $payment):
-                                                        $paymentDate = new \DateTime($payment->fecha_pago);
-                                                        $paidMonth = $paymentDate->format('F Y');
-                                                        $paidCuotas = $paymentCuotasCount[$payment->id] ?? 0;
-                                                        $montoPagadoUSD = floatval($payment->monto_pagado);
-                                                        $montoBs = floatval($payment->monto_usd);
-                                                        $tasaCalculada = ($montoPagadoUSD > 0) ? $montoBs / $montoPagadoUSD : 0;
-                                                    ?>
-                                                        <tr>
-                                                            <td class="text-center"><strong><?= $paymentCounter++ ?></strong></td>
-                                                            <td>
-                                                                <?= Yii::$app->formatter->asDate($payment->fecha_pago, 'php:d/m/Y') ?>
-                                                                <br>
-                                                                <small class="text-muted"><?= Yii::$app->formatter->asTime($payment->created_at, 'php:H:i') ?></small>
-                                                            </td>
-                                                            <td>
-                                                                <span class="month-badge">
-                                                                    <i class="far fa-calendar-alt me-1"></i>
-                                                                    <?= $paidMonth ?>
+                                    <div class="table-responsive">
+                                        <table class="history-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 44px;">#</th>
+                                                    <th style="width: 130px;">Fecha de Pago</th>
+                                                    <th style="width: 130px;">Mes Pagado</th>
+                                                    <th>Método de Pago</th>
+                                                    <th class="text-end" style="width: 130px;">Monto Pagado</th>
+                                                    <th class="text-end" style="width: 110px;">Monto Bs</th>
+                                                    <th class="text-end" style="width: 110px;">Tasa</th>
+                                                    <th class="text-center" style="width: 90px;">Cuotas</th>
+                                                    <th style="width: 130px;">Estado</th>
+                                                    <th style="width: 160px;">Referencia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php
+                                                $paymentCounter = 1;
+                                                foreach ($paymentHistory as $payment):
+                                                    $paymentDate = new \DateTime($payment->fecha_pago);
+                                                    $paidMonth = $paymentDate->format('F Y');
+                                                    $paidCuotas = $paymentCuotasCount[$payment->id] ?? 0;
+                                                    $montoPagadoUSD = floatval($payment->monto_pagado);
+                                                    $montoBs = floatval($payment->monto_usd);
+                                                    $tasaCalculada = ($montoPagadoUSD > 0) ? $montoBs / $montoPagadoUSD : 0;
+                                                ?>
+                                                    <tr class="history-row">
+                                                        <td class="text-center history-index">
+                                                            <span class="history-index-pill"><?= $paymentCounter++ ?></span>
+                                                        </td>
+                                                        <td>
+                                                            <div class="history-date">
+                                                                <span class="history-date-day"><?= Yii::$app->formatter->asDate($payment->fecha_pago, 'php:d/m/Y') ?></span>
+                                                                <span class="history-date-time"><?= Yii::$app->formatter->asTime($payment->created_at, 'php:H:i') ?></span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span class="history-month-pill">
+                                                                <i class="far fa-calendar-alt"></i>
+                                                                <?= $paidMonth ?>
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="history-method"><?= Html::encode($payment->metodo_pago) ?></span>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <span class="history-amount">$<?= number_format($montoPagadoUSD, 2, '.', ',') ?></span>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <span class="history-amount-secondary"><?= number_format($montoBs, 2, '.', ',') ?> Bs</span>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <span class="history-rate"><?= number_format($tasaCalculada, 2, '.', ',') ?></span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="history-cuotas-pill">
+                                                                <i class="fas fa-file-invoice"></i>
+                                                                <?= $paidCuotas ?>
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <?php if ($payment->estatus === 'Conciliado'): ?>
+                                                                <span class="status-pill status-pill-success">
+                                                                    <i class="fas fa-check-circle"></i>
+                                                                    Conciliado
                                                                 </span>
-                                                            </td>
-                                                            <td><?= Html::encode($payment->metodo_pago) ?></td>
-                                                            <td class="text-end">
-                                                                <strong>$<?= number_format($montoPagadoUSD, 2, '.', ',') ?> USD</strong>
-                                                            </td>
-                                                            <td class="text-end">
-                                                                <strong><?= number_format($montoBs, 2, '.', ',') ?> Bs</strong>
-                                                            </td>
-                                                            <td class="text-end">
-                                                                <?= number_format($tasaCalculada, 2, '.', ',') ?> Bs/USD
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <span class="badge badge-primary">
-                                                                    <i class="fas fa-file-invoice me-1"></i> <?= $paidCuotas ?> cuota(s)
+                                                            <?php else: ?>
+                                                                <span class="status-pill status-pill-warning">
+                                                                    <i class="fas fa-clock"></i>
+                                                                    Por Conciliar
                                                                 </span>
-                                                            </td>
-                                                            <td>
-                                                                <?php if ($payment->estatus === 'Conciliado'): ?>
-                                                                    <span class="payment-badge-paid">
-                                                                        <i class="fas fa-check-circle me-1"></i> Conciliado
-                                                                    </span>
-                                                                <?php else: ?>
-                                                                    <span class="payment-badge-pending">
-                                                                        <i class="fas fa-clock me-1"></i> Por Conciliar
-                                                                    </span>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td>
-                                                                <?= Html::encode($payment->numero_referencia_pago) ?>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td>
+                                                            <div class="history-reference">
+                                                                <span class="history-ref-number"><?= Html::encode($payment->numero_referencia_pago) ?></span>
                                                                 <?php if ($payment->imagen_prueba): ?>
-                                                                    <br>
-                                                                    <a href="<?= $payment->imagen_prueba ?>" target="_blank" class="text-primary">
-                                                                        <i class="fas fa-file-image me-1"></i> Ver comprobante
+                                                                    <a href="<?= $payment->imagen_prueba ?>" target="_blank"
+                                                                        class="history-ref-link" title="Ver comprobante">
+                                                                        <i class="fas fa-file-image"></i>
                                                                     </a>
                                                                 <?php endif; ?>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     <?php endif; ?>
 
-                    <!-- Selection Controls -->
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <div class="alert alert-light border" style="background-color: #EE931F; border-radius: 8px;">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                    <div>
-                                        <div class="checkbox-container" style="display: inline-flex; align-items: center;">
-                                            <input type="checkbox" id="select-all-months" style="margin-right: 10px; width: 18px; height: 18px;">
-                                            <label for="select-all-months" style="margin: 0; font-weight: 600;">Seleccionar Todos los Meses</label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-selection">
-                                            <i class="fas fa-times me-2"></i> Limpiar Selección
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Month Accordion -->
+                    <!-- ============================================================
+                         MONTH ACCORDION — no ordinal chip
+                         ============================================================ -->
                     <div class="row">
                         <div class="col-md-12">
                             <div class="ms-panel border-warning mb-4">
                                 <div class="ms-panel-header bg-gradient-blue-3">
-                                    <h3 class="mb-0">
-                                        <i class="fas fa-calendar-alt me-2"></i>Cuotas Pendientes por Mes de Cobertura
-                                        <span class="badge badge-light ms-2"><?= $totalMonths ?> meses</span>
-                                    </h3>
+                                    <div class="section-header-action">
+                                        <div class="section-header-title">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            <span>Cuotas Pendientes por Mes de Cobertura</span>
+                                            <span class="section-header-badge"><?= $totalMonths ?> meses</span>
+                                        </div>
+                                        <button type="button" class="clear-selection-btn" id="clear-selection">
+                                            <i class="fas fa-times"></i>
+                                            Limpiar Selección
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="ms-panel-body">
 
@@ -1027,29 +1786,44 @@ JS
                                         </div>
                                     <?php else: ?>
 
-                                        <?php foreach ($monthGroups as $monthKey => $month): ?>
-                                            <div class="month-accordion" data-month-key="<?= $monthKey ?>">
+                                        <?php
+                                        $rowIndex = 0;
+                                        foreach ($monthGroups as $monthKey => $month):
+                                            $rowIndex++;
+                                            $rowParity = ($rowIndex % 2 === 0) ? 'even' : 'odd';
+
+                                            $firstCuota = $month['cuotas'][0]['cuota'] ?? null;
+                                            $rangeStart = $firstCuota && !empty($firstCuota->coverage_start)
+                                                ? Yii::$app->formatter->asDate($firstCuota->coverage_start, 'php:d/m/Y')
+                                                : null;
+                                            $rangeEnd = $firstCuota && !empty($firstCuota->coverage_end)
+                                                ? Yii::$app->formatter->asDate($firstCuota->coverage_end, 'php:d/m/Y')
+                                                : null;
+                                        ?>
+                                            <div class="month-accordion month-row-<?= $rowParity ?>" data-month-key="<?= $monthKey ?>">
                                                 <div class="month-header">
-                                                    <div class="month-header-left">
-                                                        <i class="fas fa-chevron-right toggle-icon"></i>
+                                                    <div class="month-title-block">
                                                         <span class="month-name"><?= Html::encode($month['name']) ?></span>
-                                                        <span class="month-badge">
-                                                            <i class="fas fa-file-invoice me-1"></i> <?= $month['cuota_count'] ?> cuota(s)
-                                                        </span>
-                                                        <?php if (isset($month['coverage_start'])): ?>
-                                                            <span class="coverage-period">
-                                                                <i class="fas fa-calendar-check me-1"></i>
-                                                                Inicio cobertura: <?= Yii::$app->formatter->asDate($month['coverage_start'], 'php:d/m/Y') ?>
+
+                                                        <?php if ($rangeStart && $rangeEnd): ?>
+                                                            <span class="month-pill month-pill-coverage">
+                                                                <i class="fas fa-calendar-alt"></i>
+                                                                <?= $rangeStart ?> <span class="range-arrow">→</span> <?= $rangeEnd ?>
                                                             </span>
                                                         <?php endif; ?>
                                                     </div>
+
                                                     <div class="month-header-right">
-                                                        <div class="month-stats">
-                                                            <span class="month-total">
-                                                                $<?= number_format($month['total'], 2, '.', ',') ?> USD
-                                                            </span>
-                                                        </div>
+                                                        <span class="month-pill month-pill-count">
+                                                            <i class="fas fa-file-invoice"></i>
+                                                            <?= $month['cuota_count'] ?> cuota(s)
+                                                        </span>
+                                                        <span class="month-pill month-pill-total">
+                                                            <i class="fas fa-dollar-sign"></i>
+                                                            <?= number_format($month['total'], 2, '.', ',') ?> USD
+                                                        </span>
                                                         <input type="checkbox" class="month-checkbox" data-month-key="<?= $monthKey ?>">
+                                                        <i class="fas fa-chevron-right month-chevron"></i>
                                                     </div>
                                                 </div>
                                                 <div class="month-content">
@@ -1062,12 +1836,11 @@ JS
                                                                     <th>Cédula</th>
                                                                     <th>Contrato</th>
                                                                     <th class="text-end">Total</th>
-                                                                    <th style="width: 100px;"></th>
+                                                                    <th style="width: 100px;" class="text-center">Cuotas</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 <?php
-                                                                $affiliateCounter = 1;
                                                                 foreach ($month['affiliates'] as $affiliateId => $affiliate):
                                                                     $cuotasList = $affiliate['cuotas'];
                                                                     usort($cuotasList, function ($a, $b) {
@@ -1079,15 +1852,15 @@ JS
                                                                             <i class="fas fa-chevron-right sub-toggle-icon"></i>
                                                                         </td>
                                                                         <td>
-                                                                            <strong><?= Html::encode($affiliate['name']) ?></strong>
+                                                                            <span class="affiliate-name"><?= Html::encode($affiliate['name']) ?></span>
                                                                         </td>
-                                                                        <td><?= Html::encode($affiliate['cedula']) ?></td>
-                                                                        <td><?= Html::encode($affiliate['contrato_nro']) ?></td>
+                                                                        <td class="affiliate-cedula"><?= Html::encode($affiliate['cedula']) ?></td>
+                                                                        <td class="affiliate-contrato"><?= Html::encode($affiliate['contrato_nro']) ?></td>
                                                                         <td class="text-end">
-                                                                            <strong class="text-danger">$<?= number_format($affiliate['total'], 2, '.', ',') ?> USD</strong>
+                                                                            <span class="affiliate-total">$<?= number_format($affiliate['total'], 2, '.', ',') ?> USD</span>
                                                                         </td>
                                                                         <td class="text-center">
-                                                                            <span class="badge badge-primary"><?= count($cuotasList) ?> cuota(s)</span>
+                                                                            <span class="badge badge-primary"><?= count($cuotasList) ?></span>
                                                                         </td>
                                                                     </tr>
                                                                     <tr class="affiliate-cuotas-row" style="display: none;">
@@ -1096,43 +1869,60 @@ JS
                                                                                 <tbody>
                                                                                     <?php foreach ($cuotasList as $cuota):
                                                                                         $statusClass = 'status-pending';
-                                                                                        $statusText = 'Pendiente';
+                                                                                        $statusIcon  = 'fa-clock';
+                                                                                        $statusText  = 'Pendiente';
+
                                                                                         if ($cuota->estatus === 'vencida') {
                                                                                             $statusClass = 'status-overdue';
-                                                                                            $statusText = 'Vencida';
+                                                                                            $statusIcon  = 'fa-exclamation-circle';
+                                                                                            $statusText  = 'Vencida';
                                                                                         } elseif ($cuota->estatus === 'en_gracias') {
                                                                                             $statusClass = 'status-grace';
-                                                                                            $statusText = 'En Gracia';
+                                                                                            $statusIcon  = 'fa-hourglass-half';
+                                                                                            $statusText  = 'En Gracia';
                                                                                         }
+
+                                                                                        $cuotaNumber = (int)$cuota->numero_cuota;
                                                                                     ?>
                                                                                         <tr>
-                                                                                            <td style="width: 40px; text-align: center;">
+                                                                                            <td class="cuota-anchor-cell">
                                                                                                 <input type="checkbox" class="checkbox-cuota"
                                                                                                     value="<?= $cuota->id ?>"
                                                                                                     data-month-key="<?= $monthKey ?>"
                                                                                                     data-cuota-id="<?= $cuota->id ?>">
+                                                                                                <span class="cuota-number-pill">#<?= $cuotaNumber ?></span>
                                                                                             </td>
-                                                                                            <td colspan="2">
-                                                                                                <small class="text-muted">Cuota #<?= $cuota->numero_cuota ?></small>
-                                                                                                <?php if (!empty($cuota->coverage_start) && !empty($cuota->coverage_end)): ?>
-                                                                                                    <br>
-                                                                                                    <span class="coverage-period" style="font-size: 11px;">
-                                                                                                        <i class="fas fa-calendar-alt me-1"></i>
-                                                                                                        Cobertura: <?= Yii::$app->formatter->asDate($cuota->coverage_start, 'php:d/m/Y') ?> -
-                                                                                                        <?= Yii::$app->formatter->asDate($cuota->coverage_end, 'php:d/m/Y') ?>
-                                                                                                    </span>
-                                                                                                <?php endif; ?>
+
+                                                                                            <td colspan="3">
+                                                                                                <div class="cuota-description">
+                                                                                                    <span class="cuota-label">Cuota <?= $cuotaNumber ?></span>
+                                                                                                    <?php if (!empty($cuota->coverage_start) && !empty($cuota->coverage_end)): ?>
+                                                                                                        <span class="cuota-coverage-range">
+                                                                                                            <i class="fas fa-calendar-alt" style="color:#a19f9d;"></i>
+                                                                                                            <span class="range-date"><?= Yii::$app->formatter->asDate($cuota->coverage_start, 'php:d/m/Y') ?></span>
+                                                                                                            <span class="range-arrow">→</span>
+                                                                                                            <span class="range-date"><?= Yii::$app->formatter->asDate($cuota->coverage_end, 'php:d/m/Y') ?></span>
+                                                                                                        </span>
+                                                                                                    <?php endif; ?>
+                                                                                                </div>
                                                                                             </td>
-                                                                                            <td class="text-end cuota-amount" data-amount="<?= $cuota->monto ?>">
-                                                                                                <strong>$<?= number_format($cuota->monto, 2, '.', ',') ?> USD</strong>
+
+                                                                                            <td class="cuota-amount cuota-amount-cell" data-amount="<?= $cuota->monto ?>">
+                                                                                                $<?= number_format($cuota->monto, 2, '.', ',') ?> USD
                                                                                             </td>
-                                                                                            <td>
-                                                                                                <span class="coverage-period">
-                                                                                                    Vence: <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?>
+
+                                                                                            <td class="cuota-due">
+                                                                                                <span class="cuota-due-pill">
+                                                                                                    <i class="fas fa-hourglass-end"></i>
+                                                                                                    Vence <?= Yii::$app->formatter->asDate($cuota->fecha_vencimiento, 'php:d/m/Y') ?>
                                                                                                 </span>
                                                                                             </td>
-                                                                                            <td>
-                                                                                                <span class="<?= $statusClass ?>"><?= $statusText ?></span>
+
+                                                                                            <td class="cuota-status">
+                                                                                                <span class="status-pill <?= $statusClass ?>">
+                                                                                                    <i class="fas <?= $statusIcon ?>"></i>
+                                                                                                    <?= $statusText ?>
+                                                                                                </span>
                                                                                             </td>
                                                                                         </tr>
                                                                                     <?php endforeach; ?>
@@ -1154,22 +1944,57 @@ JS
                         </div>
                     </div>
 
-                    <!-- Selection Info Panel -->
+                    <!-- ============================================================
+                         SELECTION INFO PANEL
+                         ============================================================ -->
                     <div class="selection-info-panel" id="selection-info-panel">
+                        <div class="selection-info-header">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Selección activa</span>
+                        </div>
                         <div class="selection-info-content">
-                            <div class="selection-info-text">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong><span id="selected-months">0</span> mes(es)</strong> seleccionado(s) -
-                                <strong><span id="selected-count">0</span> cuota(s)</strong> -
-                                Total: <strong>$<span id="selected-total">0.00</span> USD</strong>
+                            <div class="selection-metrics">
+                                <div class="selection-metric">
+                                    <div class="selection-metric-icon">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="selection-metric-body">
+                                        <span class="selection-metric-value" id="selected-months">0</span>
+                                        <span class="selection-metric-label">Mes(es)</span>
+                                    </div>
+                                </div>
+
+                                <div class="selection-metric">
+                                    <div class="selection-metric-icon">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </div>
+                                    <div class="selection-metric-body">
+                                        <span class="selection-metric-value" id="selected-count">0</span>
+                                        <span class="selection-metric-label">Cuota(s)</span>
+                                    </div>
+                                </div>
+
+                                <div class="selection-metric">
+                                    <div class="selection-metric-icon icon-green">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </div>
+                                    <div class="selection-metric-body">
+                                        <span class="selection-metric-value value-green">
+                                            $<span id="selected-total">0.00</span>
+                                        </span>
+                                        <span class="selection-metric-label">Total a pagar (USD)</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
+
+                            <div class="selection-action">
                                 <?= Html::a(
-                                    '<i class="fas fa-credit-card me-2"></i> Pagar Seleccionadas',
+                                    '<span id="pago-parcial-label">Pagar Seleccionadas</span> <i class="fas fa-arrow-right"></i>',
                                     '#',
                                     [
-                                        'class' => 'btn btn-success btn-lg',
-                                        'id' => 'pago-parcial-btn'
+                                        'class' => 'selection-pay-btn',
+                                        'id' => 'pago-parcial-btn',
+                                        'style' => 'color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;'
                                     ]
                                 ) ?>
                             </div>
@@ -1181,11 +2006,6 @@ JS
                             '<i class="fas fa-arrow-left me-2"></i> Volver al Corporativo',
                             ['view', 'id' => $corporativo->id],
                             ['class' => 'btn btn-secondary btn-lg']
-                        ) ?>
-                        <?= Html::a(
-                            '<i class="fas fa-chart-line me-2"></i> Ver Reporte de Pagos',
-                            ['pagos', 'id' => $corporativo->id],
-                            ['class' => 'btn btn-outline-primary btn-lg']
                         ) ?>
                     </div>
                 </div>

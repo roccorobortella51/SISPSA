@@ -40,7 +40,7 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
 
                 <?= Html::a(
                     '<i class="fas fa-undo-alt mr-2"></i> Volver',
-                    Url::to(['user-datos/update', 'id' => (is_object($afiliado) ? $afiliado->id : '')]),
+                    Url::to(['user-datos/view', 'id' => (is_object($afiliado) ? $afiliado->id : '')]),
                     [
                         'class' => 'btn btn-light btn-sm',
                         'data-toggle' => 'tooltip',
@@ -1067,6 +1067,22 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
                                             'style' => 'padding: 2px 10px; font-size: 10px; border-radius: 4px; background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%); border: none;'
                                         ]
                                     ) ?>
+                                    <?php if (
+                                        $model->fecha_ven &&
+                                        $model->fecha_ven < date('Y-m-d') &&
+                                        empty($usersWithMultipleContracts[(int)$model->user_id])
+                                    ): ?>
+                                        <?= Html::a(
+                                            '<i class="fas fa-sync-alt mr-1" style="font-size: 10px;"></i> Generar Nuevo Contrato',
+                                            ['renew', 'id' => $model->id],
+                                            [
+                                                'class' => 'btn btn-info btn-sm',
+                                                'title' => 'Crear un nuevo período de cobertura con este plan',
+                                                'data-toggle' => 'tooltip',
+                                                'style' => 'padding: 2px 10px; font-size: 10px; border-radius: 4px;'
+                                            ]
+                                        ) ?>
+                                    <?php endif; ?>
                                     <?= Html::a(
                                         '<i class="fas fa-file-invoice-dollar mr-1" style="font-size: 10px;"></i> Pago',
                                         ['pagos/create', 'user_id' => $model->user_id, 'contrato_id' => $model->id],
@@ -1191,7 +1207,8 @@ $dataProvider = isset($dataProvider) ? $dataProvider : (isset($contratosDataProv
 
             <?= Html::beginForm(['contratos/anular'], 'post', [
                 'id' => 'anular-shared-form',
-                'class' => 'anular-form'
+                'class' => 'anular-form',
+                'data-base-action' => Url::to(['contratos/anular']),
             ]) ?>
 
             <input type="hidden" name="id" id="anular-modal-contrato-id" value="">
@@ -1926,10 +1943,18 @@ $(document).ready(function() {
         $('body').removeClass('modal-open').css('padding-right', '');
 
         var $form = $('#anular-shared-form');
-        if ($form.length) {
-            $form[0].reset();
-            $form.attr('action', '/sipsa/web/contratos/anular?id=' + id);
-        }
+if ($form.length) {
+    $form[0].reset();
+
+    // Use the Yii-generated base action (works in dev AND prod)
+    var baseAction = $form.data('base-action');
+    if (!baseAction) {
+        // Fallback: derive from current URL path
+        baseAction = window.location.pathname.replace(/\/contratos\/.*$/, '/contratos/anular');
+    }
+    var separator = baseAction.indexOf('?') >= 0 ? '&' : '?';
+    $form.attr('action', baseAction + separator + 'id=' + id);
+}
 
         $('#anular-modal-id').text(id);
         $('#anular-modal-contrato-id').val(id);
@@ -1980,12 +2005,24 @@ if (pendingCuotas > 0) {
         });
 
         $('#anularModalShared').off('shown.bs.modal.cleanup').on('shown.bs.modal.cleanup', function() {
-            $(this).find('.modal-dialog').css({
-                'transform': 'translateY(-50%)',
-                'top': '50%',
-                'margin': '0 auto'
-            });
-        });
+    var $dialog = $(this).find('.modal-dialog');
+    $dialog.css({
+        'transform': 'none',
+        'top': 'auto',
+        'margin': '20px auto',
+        'max-height': 'calc(100vh - 40px)'
+    });
+    $(this).find('.modal-content').css({
+        'max-height': 'calc(100vh - 40px)',
+        'display': 'flex',
+        'flex-direction': 'column'
+    });
+    $(this).find('.anular-modal-body').css({
+        'overflow-y': 'auto',
+        'flex': '1 1 auto',
+        'min-height': '0'
+    });
+});
     });
 
     $(document).on('shown.bs.modal', '#anularModalShared', function () {

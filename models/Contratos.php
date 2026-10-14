@@ -44,7 +44,6 @@ class Contratos extends \yii\db\ActiveRecord
     const STATUS_VENCIDO = 'Vencido';
     const STATUS_PENDIENTE = 'Pendiente';
     const STATUS_SUSPENDIDO = 'Suspendido';
-    const STATUS_CREADO_MANUAL = 'Creado Manual';  // Match database exactly (lowercase 'm')
 
     /**
      * {@inheritdoc}
@@ -210,8 +209,46 @@ class Contratos extends \yii\db\ActiveRecord
             self::STATUS_VENCIDO => 'Vencido',
             self::STATUS_PENDIENTE => 'Pendiente',
             self::STATUS_SUSPENDIDO => 'Suspendido',  // Will now output 'Suspendido'
-            self::STATUS_CREADO_MANUAL => 'Creado Manual',
         ];
+    }
+
+    /**
+     * Calculate a renewal period beginning the day after the prior contract ends.
+     *
+     * @param string $previousEndDate
+     * @return array{fecha_ini: string, fecha_ven: string}
+     */
+    public static function getRenewalPeriod($previousEndDate)
+    {
+        $startDate = (new \DateTimeImmutable($previousEndDate))->modify('+1 day');
+
+        return [
+            'fecha_ini' => $startDate->format('Y-m-d'),
+            'fecha_ven' => $startDate->modify('+1 year')->modify('-1 day')->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * Resolve a contract's status from its coverage dates.
+     *
+     * @param string|null $fechaIni
+     * @param string|null $fechaVen
+     * @param string|null $today
+     * @return string|null
+     */
+    public static function getDateBasedStatus($fechaIni, $fechaVen, $today = null)
+    {
+        $today = $today ?: date('Y-m-d');
+
+        if ($fechaVen && $fechaVen < $today) {
+            return self::STATUS_VENCIDO;
+        }
+
+        if ($fechaIni && $fechaIni > $today) {
+            return self::STATUS_REGISTRADO;
+        }
+
+        return $fechaIni ? self::STATUS_ACTIVO : null;
     }
 
     /**
@@ -230,7 +267,6 @@ class Contratos extends \yii\db\ActiveRecord
             self::STATUS_VENCIDO => 'badge badge-warning',
             self::STATUS_PENDIENTE => 'badge badge-info',
             self::STATUS_SUSPENDIDO => 'badge badge-secondary',
-            self::STATUS_CREADO_MANUAL => 'badge badge-dark',
         ];
 
         $class = $badgeClasses[$status] ?? 'badge badge-light';
@@ -254,7 +290,6 @@ class Contratos extends \yii\db\ActiveRecord
             self::STATUS_VENCIDO => 'Vencido',
             self::STATUS_PENDIENTE => 'Pendiente',
             self::STATUS_SUSPENDIDO => 'Suspendido',
-            self::STATUS_CREADO_MANUAL => 'Creado Manual',
         ];
 
         return $labels[$status] ?? $status;
@@ -291,12 +326,6 @@ class Contratos extends \yii\db\ActiveRecord
             return $this->save(false);
         }
 
-        // SPECIAL HANDLING FOR CREADO MANUAL STATUS
-        if ($this->estatus === self::STATUS_CREADO_MANUAL) {
-            Yii::info("Contract #{$this->id} is CREADO MANUAL, calling specialized handler", 'contratos');
-            return $this->updateCreadoManualStatus();
-        }
-
         // SPECIAL HANDLING FOR SUSPENDIDO STATUS (pero sin vencidas)
         if ($this->estatus === self::STATUS_SUSPENDIDO && $cuotasVencidas == 0) {
             Yii::info("Contract #{$this->id} is SUSPENDIDO but no vencidas - reactivating", 'contratos');
@@ -307,89 +336,6 @@ class Contratos extends \yii\db\ActiveRecord
         Yii::info("Contract #{$this->id} using regular status update", 'contratos');
         return $this->updateRegularStatus();
     }
-
-    // In app/models/Contratos.php
-
-    protected function updateCreadoManualStatus()
-    {
-        Yii::info("INSIDE updateCreadoManualStatus() for Contract #{$this->id}", 'contratos');
-
-        // Check if THIS SPECIFIC contract has any pending cuotas
-        $hasPendingCuotas = Cuotas::find()
-            ->where(['contrato_id' => $this->id])
-            ->andWhere(['estatus' => 'pendiente'])  // Only check for 'pendiente' cuotas
-            ->exists();
-
-        $pendingCount = Cuotas::find()
-            ->where(['contrato_id' => $this->id])
-            ->andWhere(['estatus' => 'pendiente'])
-            ->count();
-
-        Yii::info("Contract #{$this->id} has {$pendingCount} pending cuotas", 'contratos');
-
-        // Also check for pagadas cuotas (for logging)
-        $paidCount = Cuotas::find()
-            ->where(['contrato_id' => $this->id])
-            ->andWhere(['estatus' => 'pagada'])
-            ->count();
-
-        Yii::info("Contract #{$this->id} has {$paidCount} paid cuotas", 'contratos');
-
-        $today = date('Y-m-d');
-        $isExpired = ($this->fecha_ven && $today > $this->fecha_ven);
-        $isStarted = ($this->fecha_ini && $today >= $this->fecha_ini);
-
-        Yii::info("Today: {$today}, Start: {$this->fecha_ini}, End: {$this->fecha_ven}", 'contratos');
-        Yii::info("isStarted: " . ($isStarted ? 'YES' : 'NO') . ", isExpired: " . ($isExpired ? 'YES' : 'NO'), 'contratos');
-
-        // RULE 1: If has pending cuotas → STAY Creado Manual (NO CHANGE)
-        if ($hasPendingCuotas) {
-            Yii::info("RULE 1: Has pending cuotas - staying Creado Manual (waiting for reconciliation)", 'contratos');
-            return false; // No status change
-        }
-
-        // RULE 2: If no pending cuotas, check dates
-        if (!$hasPendingCuotas) {
-            // Check if ALL cuotas are paid (pagada)
-            $totalCuotas = Cuotas::find()->where(['contrato_id' => $this->id])->count();
-            $paidCuotas = Cuotas::find()
-                ->where(['contrato_id' => $this->id])
-                ->andWhere(['estatus' => 'pagada'])
-                ->count();
-
-            Yii::info("Total cuotas: {$totalCuotas}, Paid cuotas: {$paidCuotas}", 'contratos');
-
-            // If all cuotas are paid, then proceed with date checks
-            if ($totalCuotas > 0 && $totalCuotas == $paidCuotas) {
-                // 2a. If expired → VENCIDO
-                if ($isExpired) {
-                    Yii::info("RULE 2a: All cuotas paid but expired - changing to VENCIDO", 'contratos');
-                    $this->estatus = self::STATUS_VENCIDO;
-                    return $this->save(false);
-                }
-
-                // 2b. If started and not expired → ACTIVO
-                if ($isStarted && !$isExpired) {
-                    Yii::info("RULE 2b: All cuotas paid, started, not expired - changing to ACTIVO", 'contratos');
-                    $this->estatus = self::STATUS_ACTIVO;
-                    return $this->save(false);
-                }
-
-                // 2c. Future start date → REGISTRADO
-                if (!$isStarted && !$isExpired) {
-                    Yii::info("RULE 2c: All cuotas paid, future start date - changing to REGISTRADO", 'contratos');
-                    $this->estatus = self::STATUS_REGISTRADO;
-                    return $this->save(false);
-                }
-            } else {
-                Yii::info("Not all cuotas are paid yet - staying Creado Manual", 'contratos');
-            }
-        }
-
-        Yii::info("No rules matched - no status change", 'contratos');
-        return false;
-    }
-
     /**
      * Update logic specifically for Suspendido contracts - CORREGIDA
      */
@@ -468,19 +414,11 @@ class Contratos extends \yii\db\ActiveRecord
             return $this->save(false);
         }
 
-        // ============================================
-        // REGLA 2: Si NO HAY cuotas vencidas → ACTIVO
-        // ============================================
-        if ($this->fecha_ini && $today >= $this->fecha_ini) {
-            Yii::info("RULE 2: Contract #{$this->id} no vencidas and started - setting to ACTIVO", 'contratos');
-            $this->estatus = self::STATUS_ACTIVO;
-            return $this->save(false);
-        }
-
-        // Si no ha empezado, mantener REGISTRADO
-        if ($this->fecha_ini && $today < $this->fecha_ini) {
-            Yii::info("RULE 2b: Contract #{$this->id} no vencidas but future - setting to REGISTRADO", 'contratos');
-            $this->estatus = self::STATUS_REGISTRADO;
+        // Expiration takes precedence over activation once overdue cuotas are handled.
+        $dateBasedStatus = self::getDateBasedStatus($this->fecha_ini, $this->fecha_ven, $today);
+        if ($dateBasedStatus !== null) {
+            Yii::info("Contract #{$this->id} date-based status: {$dateBasedStatus}", 'contratos');
+            $this->estatus = $dateBasedStatus;
             return $this->save(false);
         }
 
@@ -521,7 +459,6 @@ class Contratos extends \yii\db\ActiveRecord
             ->andWhere(['in', 'estatus', [
                 self::STATUS_ACTIVO,      // 'Activo'
                 self::STATUS_REGISTRADO,  // 'Registrado'
-                self::STATUS_CREADO_MANUAL // 'Creado Manual'
             ]])
             ->andWhere(['<=', 'fecha_ini', $today])
             ->andWhere([

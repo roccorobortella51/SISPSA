@@ -5,6 +5,12 @@ use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var app\models\Contratos $model */
+/** @var bool $returnToIndexList */
+
+$returnToIndexList = $returnToIndexList ?? false;
+$cancelRoute = $returnToIndexList
+    ? ['/contratos/index-list', 'user_id' => $model->user_id]
+    : ['index', 'user_id' => $model->user_id];
 
 $this->title = 'Anular Contrato #' . $model->id;
 $this->params['breadcrumbs'][] = ['label' => 'Contratos', 'url' => ['index', 'user_id' => $model->user_id]];
@@ -111,6 +117,9 @@ $this->params['breadcrumbs'][] = $this->title;
             <?php endif; ?>
 
             <?php $form = ActiveForm::begin(); ?>
+            <?php if ($returnToIndexList): ?>
+                <?= Html::hiddenInput('return_to_index_list', '1') ?>
+            <?php endif; ?>
 
             <div class="form-group">
                 <label for="motivo" class="font-weight-bold" style="font-size: 1.2rem; margin-top: 15px">Motivo de la Anulación <span class="text-danger">*</span></label>
@@ -135,7 +144,7 @@ $this->params['breadcrumbs'][] = $this->title;
             </div>
 
             <div class="form-group" style="margin-top: 30px;">
-                <?= Html::a('Cancelar', ['index', 'user_id' => $model->user_id], [
+                <?= Html::a('Cancelar', $cancelRoute, [
                     'class' => 'btn btn-secondary',
                     'style' => 'font-size: 1.2rem; padding: 10px 25px; margin-right: 15px;'
                 ]) ?>

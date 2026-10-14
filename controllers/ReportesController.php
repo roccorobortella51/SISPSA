@@ -29,7 +29,20 @@ class ReportesController extends Controller
                 'rules' => [
                     [
                         'allow' => true,
-                        'actions' => ['index', 'get-pagos-detail', 'generate-pdf', 'export-excel', 'comisiones', 'get-comisiones-detail', 'generate-comisiones-pdf-tcpdf', 'generate-comisiones-pdf', 'export-comisiones-excel'],
+                        'actions' => [
+                            'index',
+                            'get-pagos-detail',
+                            'generate-pdf',
+                            'export-excel',
+                            'comisiones',
+                            'get-comisiones-detail',
+                            'generate-comisiones-pdf-tcpdf',
+                            'generate-comisiones-pdf',
+                            'export-comisiones-excel', // NEW actions
+                            'afiliados-activos-mensual',
+                            'export-afiliados-activos-excel',
+                            'export-afiliados-activos-pdf',
+                        ],
                         'roles' => ['superadmin', 'FINANZAS', 'COORDINADOR-CLINICA', 'Agente'],
                     ],
                 ],
@@ -1641,5 +1654,337 @@ class ReportesController extends Controller
         $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
         $writer->save('php://output');
         exit;
+    }
+    public function actionAfiliadosActivosMensual()
+    {
+        $searchModel = new \app\models\AfiliadosActivosReportSearch();
+        $searchModel->load(Yii::$app->request->queryParams);
+
+        $monthlyData = $searchModel->getActiveAffiliatesByMonth();
+        $clinicMatrix = $searchModel->getActiveAffiliatesByClinic();
+        $summaryStats = $searchModel->getSummaryStats();
+        $clinicas = $searchModel->getAvailableClinicas();
+
+        return $this->render('afiliados-activos-mensual', [
+            'searchModel' => $searchModel,
+            'monthlyData' => $monthlyData,
+            'clinicMatrix' => $clinicMatrix,
+            'summaryStats' => $summaryStats,
+            'clinicas' => $clinicas,
+        ]);
+    }
+
+    /**
+     * Export Afiliados Activos report to Excel
+     *
+     * Columns: Clínica | <12 months> | Tendencia Mensual
+     * Sheet 2: Resumen general with Tendencia Mensual
+     */
+    public function actionExportAfiliadosActivosExcel()
+    {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $searchModel = new \app\models\AfiliadosActivosReportSearch();
+        $searchModel->load(Yii::$app->request->queryParams);
+
+        $clinicMatrix = $searchModel->getActiveAffiliatesByClinic();
+        $monthlyData = $searchModel->getActiveAffiliatesByMonth();
+        $summaryStats = $searchModel->getSummaryStats();
+
+        // Latest month label (used in the summary sheet)
+        $latestMonthLabel = !empty($clinicMatrix['month_labels'])
+            ? end($clinicMatrix['month_labels'])
+            : '-';
+
+        // ============================================================
+        // Overall trend (from summary stats — single source of truth)
+        // ============================================================
+        $overallGrowth = $summaryStats['growth_rate'] ?? null;
+
+        $filename = 'Afiliados_Activos_por_Mes_' . date('Y-m-d_His') . '.xlsx';
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Afiliados Activos');
+
+        // Columns: clinic + months + trend
+        $totalColumns = count($clinicMatrix['month_labels']) + 2;
+        $lastColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalColumns);
+
+        // ===== TITLE =====
+        $sheet->setCellValue('A1', 'REPORTE DE AFILIADOS ACTIVOS POR MES');
+        $sheet->mergeCells('A1:' . $lastColLetter . '1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16)->getColor()->setARGB('FF2c3e50');
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('A2', 'Definición: Afiliado sin cuotas vencidas al cierre del mes');
+        $sheet->mergeCells('A2:' . $lastColLetter . '2');
+        $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10)->getColor()->setARGB('FF6c757d');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('A3', 'Generado: ' . date('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:' . $lastColLetter . '3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A3')->getFont()->setSize(9)->getColor()->setARGB('FF6c757d');
+
+        // ===== HEADER ROW =====
+        $headerRow = 5;
+        $col = 1;
+
+        // Clinic column
+        $clinicColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+        $sheet->setCellValue($clinicColLetter . $headerRow, 'Clínica');
+        $col++;
+
+        // Month columns
+        foreach ($clinicMatrix['month_labels'] as $label) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($colLetter . $headerRow, $label);
+            $col++;
+        }
+
+        // Tendencia column (last column)
+        $growthColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+        $sheet->setCellValue($growthColLetter . $headerRow, 'Tendencia Mensual %');
+
+        // Header style (dark blue for clinic + months)
+        $headerRange = 'A' . $headerRow . ':' . $lastColLetter . $headerRow;
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FF2c3e50'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        // Tendencia column header - green
+        $sheet->getStyle($growthColLetter . $headerRow)->applyFromArray([
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FF107c10'],
+            ],
+            'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        // Clinic column header left-aligned
+        $sheet->getStyle($clinicColLetter . $headerRow)->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+
+        // ===== DATA ROWS =====
+        $row = $headerRow + 1;
+        foreach ($clinicMatrix['clinics'] as $clinic) {
+            $col = 1;
+
+            // Clinic name (left-aligned, bold)
+            $clinicColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($clinicColLetter . $row, $clinic['clinica_nombre']);
+            $sheet->getStyle($clinicColLetter . $row)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle($clinicColLetter . $row)->getFont()->setBold(true);
+            $col++;
+
+            // Month values (centered)
+            foreach ($clinicMatrix['month_keys'] as $key) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $count = $clinic['months'][$key] ?? 0;
+                $sheet->setCellValue($colLetter . $row, $count > 0 ? $count : '-');
+                $sheet->getStyle($colLetter . $row)->getAlignment()
+                    ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $col++;
+            }
+
+            // Trend value (centered, color-coded)
+            $growthColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $growthStatus = $clinic['growth_status'] ?? 'na';
+
+            $growthText = '—';
+            $growthTextColor = 'FF6c757d';
+            $growthBg = 'FFF0F0F0';
+
+            if ($growthStatus === 'up') {
+                $growthRate = (float)($clinic['growth_rate'] ?? 0);
+                $growthText = '+' . number_format($growthRate, 1) . '%/mes';
+                $growthTextColor = 'FF107c10';
+                $growthBg = 'FFD4F4D4';
+            } elseif ($growthStatus === 'down') {
+                $growthRate = (float)($clinic['growth_rate'] ?? 0);
+                $growthText = number_format($growthRate, 1) . '%/mes';
+                $growthTextColor = 'FFD13438';
+                $growthBg = 'FFFDE8E8';
+            } elseif ($growthStatus === 'flat') {
+                $growthText = '≈ 0%/mes';
+                $growthTextColor = 'FF495057';
+                $growthBg = 'FFF0F0F0';
+            }
+
+            $sheet->setCellValue($growthColLetter . $row, $growthText);
+            $sheet->getStyle($growthColLetter . $row)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($growthColLetter . $row)->getFont()->setBold(true);
+            $sheet->getStyle($growthColLetter . $row)->getFont()->getColor()->setARGB($growthTextColor);
+            $sheet->getStyle($growthColLetter . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB($growthBg);
+
+            $row++;
+        }
+
+        // ===== TOTALS ROW =====
+        $totalRow = $row;
+        $sheet->setCellValue('A' . $totalRow, 'TOTAL GENERAL');
+        $col = 2;
+
+        foreach ($clinicMatrix['month_keys'] as $key) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($colLetter . $totalRow, $clinicMatrix['monthly_totals'][$key] ?? 0);
+            $col++;
+        }
+
+        // Overall trend value
+        $growthTotalColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+
+        if ($overallGrowth === null) {
+            $overallGrowthText = '—';
+        } elseif ($overallGrowth >= 1.0) {
+            $overallGrowthText = '+' . number_format($overallGrowth, 1) . '%/mes';
+        } elseif ($overallGrowth <= -1.0) {
+            $overallGrowthText = number_format($overallGrowth, 1) . '%/mes';
+        } else {
+            $overallGrowthText = '≈ 0%/mes';
+        }
+
+        $sheet->setCellValue($growthTotalColLetter . $totalRow, $overallGrowthText);
+
+        // Totals row styling (dark blue background, white text)
+        $sheet->getStyle('A' . $totalRow . ':' . $lastColLetter . $totalRow)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FF2c3e50'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        // Totals: clinic label left-aligned
+        $sheet->getStyle('A' . $totalRow)->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+
+        // Trend total cell - green
+        $sheet->getStyle($growthTotalColLetter . $totalRow)->applyFromArray([
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FF107c10'],
+            ],
+            'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        // ===== AUTO-SIZE =====
+        foreach (range('A', $lastColLetter) as $letter) {
+            $sheet->getColumnDimension($letter)->setAutoSize(true);
+        }
+
+        // ===== BORDERS =====
+        $sheet->getStyle('A' . $headerRow . ':' . $lastColLetter . $totalRow)
+            ->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // ===== SHEET 2: SUMMARY =====
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Resumen');
+
+        $sheet2->setCellValue('A1', 'RESUMEN GENERAL');
+        $sheet2->mergeCells('A1:B1');
+        $sheet2->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+
+        // Summary rows
+        $trendLabel = $summaryStats['growth_rate'] !== null
+            ? number_format($summaryStats['growth_rate'], 1) . '%/mes'
+            : '—';
+
+        $summaryData = [
+            ['Total activos (' . $latestMonthLabel . ')', $summaryStats['current']],
+            ['Total activos (mes anterior)', $summaryStats['previous']],
+            ['Tendencia Mensual (regresión)', $trendLabel],
+            ['Mejor mes', $summaryStats['best_month_label'] . ' (' . $summaryStats['best_month_count'] . ')'],
+            ['Peor mes', $summaryStats['worst_month_label'] . ' (' . $summaryStats['worst_month_count'] . ')'],
+            ['Total clínicas activas', count($clinicMatrix['clinics'])],
+        ];
+
+        $row = 3;
+        foreach ($summaryData as $item) {
+            $sheet2->setCellValue('A' . $row, $item[0]);
+            $sheet2->setCellValue('B' . $row, $item[1]);
+            $sheet2->getStyle('A' . $row)->getFont()->setBold(true);
+            $sheet2->getStyle('B' . $row)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $row++;
+        }
+
+        $sheet2->getColumnDimension('A')->setAutoSize(true);
+        $sheet2->getColumnDimension('B')->setAutoSize(true);
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // ===== OUTPUT =====
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Export Afiliados Activos report to PDF
+     */
+    public function actionExportAfiliadosActivosPdf()
+    {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $searchModel = new \app\models\AfiliadosActivosReportSearch();
+        $searchModel->load(Yii::$app->request->queryParams);
+
+        $clinicMatrix = $searchModel->getActiveAffiliatesByClinic();
+        $monthlyData = $searchModel->getActiveAffiliatesByMonth();
+        $summaryStats = $searchModel->getSummaryStats();
+
+        $logo = Yii::getAlias('@webroot/img/sispsalogo.jpg');
+
+        $content = $this->renderPartial('_afiliados_activos_pdf', [
+            'clinicMatrix' => $clinicMatrix,
+            'monthlyData' => $monthlyData,
+            'summaryStats' => $summaryStats,
+            'logo' => $logo,
+            'generatedAt' => date('d/m/Y H:i:s'),
+        ]);
+
+        $content = '<html><body>' . $content . '</body></html>';
+
+        $pdf = new \kartik\mpdf\Pdf([
+            'mode' => \kartik\mpdf\Pdf::MODE_UTF8,
+            'format' => \kartik\mpdf\Pdf::FORMAT_A4,
+            'orientation' => \kartik\mpdf\Pdf::ORIENT_LANDSCAPE,
+            'destination' => \kartik\mpdf\Pdf::DEST_DOWNLOAD,
+            'content' => $content,
+            'options' => ['title' => 'Afiliados Activos por Mes - SISPSA'],
+        ]);
+
+        $filename = 'Afiliados_Activos_por_Mes_' . date('Y-m-d_His') . '.pdf';
+        $pdf->filename = $filename;
+
+        return $pdf->render();
     }
 }

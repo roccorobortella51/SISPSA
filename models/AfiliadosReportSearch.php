@@ -801,6 +801,182 @@ class AfiliadosReportSearch extends Model
     }
 
     /**
+     * Get monthly breakdown of affiliates by clinic
+     * Returns a matrix: [clinica_nombre => [ 'Ene 2025' => count, 'Feb 2025' => count, ... ]]
+     * Plus totals per clinic and per month
+     *
+     * @param array $params
+     * @return array [
+     *     'months' => ['Ene 2025', 'Feb 2025', ...],
+     *     'clinics' => [
+     *         ['clinica_id' => 1, 'clinica_nombre' => 'X', 'months' => ['Ene 2025' => 3, ...], 'total' => 12],
+     *         ...
+     *     ],
+     *     'monthly_totals' => ['Ene 2025' => 15, ...],
+     *     'grand_total' => 100,
+     * ]
+     */
+    public function getMonthlyBreakdownByClinic($params = [])
+    {
+        $this->load($params);
+
+        // Get last 12 months
+        $startDate = date('Y-m-01', strtotime('-11 months'));
+        $endDate = date('Y-m-t'); // Last day of current month
+
+        $sql = "
+        SELECT 
+            c.id AS clinica_id,
+            c.nombre AS clinica_nombre,
+            TO_CHAR(DATE_TRUNC('month', ud.created_at), 'YYYY-MM') AS month_key,
+            COUNT(ud.id) AS total
+        FROM rm_clinica c
+        LEFT JOIN user_datos ud 
+            ON ud.clinica_id = c.id 
+            AND ud.role = 'afiliado' 
+            AND ud.deleted_at IS NULL
+            AND ud.created_at >= :start_date
+            AND ud.created_at <= :end_date
+        WHERE c.deleted_at IS NULL
+    ";
+
+        $sqlParams = [
+            ':start_date' => $startDate . ' 00:00:00',
+            ':end_date' => $endDate . ' 23:59:59',
+        ];
+
+        // Apply clinic restrictions based on user role
+        if ($this->_hasClinicRestriction && !empty($this->_accessibleClinicaIds)) {
+            $placeholders = $this->buildClinicaPlaceholders($this->_accessibleClinicaIds, $sqlParams, 'restricted_c');
+            if ($placeholders) {
+                $sql .= " AND c.id IN (" . $placeholders . ")";
+            }
+        } else {
+            $filteredClinicaIds = $this->getFilteredClinicaIds();
+            if ($filteredClinicaIds !== null && !empty($filteredClinicaIds)) {
+                $placeholders = $this->buildClinicaPlaceholders($filteredClinicaIds, $sqlParams, 'filter_c');
+                if ($placeholders) {
+                    $sql .= " AND c.id IN (" . $placeholders . ")";
+                }
+            }
+        }
+
+        // Apply additional filters to user_datos
+        if (!empty($this->user_datos_type_id)) {
+            $sql .= " AND (ud.user_datos_type_id = :user_datos_type_id OR ud.id IS NULL)";
+            $sqlParams[':user_datos_type_id'] = $this->user_datos_type_id;
+        }
+
+        if (!empty($this->plan_id)) {
+            $sql .= " AND (ud.plan_id = :plan_id OR ud.id IS NULL)";
+            $sqlParams[':plan_id'] = $this->plan_id;
+        }
+
+        if (!empty($this->estatus)) {
+            $sql .= " AND (ud.estatus = :estatus OR ud.id IS NULL)";
+            $sqlParams[':estatus'] = $this->estatus;
+        }
+
+        $sql .= " GROUP BY c.id, c.nombre, DATE_TRUNC('month', ud.created_at)";
+        $sql .= " ORDER BY c.nombre ASC, month_key ASC";
+
+        $connection = Yii::$app->db;
+        $command = $connection->createCommand($sql, $sqlParams);
+        $rows = $command->queryAll();
+
+        // Build the list of the last 12 months (month keys)
+        $monthKeys = [];
+        $monthLabels = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $timestamp = strtotime("-{$i} months", strtotime(date('Y-m-01')));
+            $key = date('Y-m', $timestamp);
+            $monthKeys[] = $key;
+            // Spanish month abbreviation
+            $monthLabels[$key] = $this->getSpanishMonthLabel($timestamp);
+        }
+
+        // Build the matrix
+        $clinicMatrix = [];        // [clinica_id => ['clinica_nombre' => X, 'months' => [key => count]]]
+        $monthlyTotals = array_fill_keys($monthKeys, 0);
+        $grandTotal = 0;
+
+        foreach ($rows as $row) {
+            $clinicaId = $row['clinica_id'];
+            $monthKey = $row['month_key'];
+            $count = (int)$row['total'];
+
+            if (!isset($clinicMatrix[$clinicaId])) {
+                $clinicMatrix[$clinicaId] = [
+                    'clinica_id' => $clinicaId,
+                    'clinica_nombre' => $row['clinica_nombre'],
+                    'months' => array_fill_keys($monthKeys, 0),
+                    'total' => 0,
+                ];
+            }
+
+            // Only count if the month is within our range
+            if ($monthKey !== null && isset($clinicMatrix[$clinicaId]['months'][$monthKey])) {
+                $clinicMatrix[$clinicaId]['months'][$monthKey] = $count;
+                $clinicMatrix[$clinicaId]['total'] += $count;
+                $monthlyTotals[$monthKey] += $count;
+                $grandTotal += $count;
+            }
+        }
+
+        // Remove clinics with 0 total (no registrations in the period)
+        $clinicMatrix = array_filter($clinicMatrix, function ($c) {
+            return $c['total'] > 0;
+        });
+
+        // Re-index
+        $clinicMatrix = array_values($clinicMatrix);
+
+        // Sort clinics by total desc
+        usort($clinicMatrix, function ($a, $b) {
+            return $b['total'] - $a['total'];
+        });
+
+        // Prepare final month labels array (ordered)
+        $orderedLabels = [];
+        foreach ($monthKeys as $key) {
+            $orderedLabels[] = $monthLabels[$key];
+        }
+
+        return [
+            'month_keys' => $monthKeys,
+            'month_labels' => $orderedLabels,
+            'clinics' => $clinicMatrix,
+            'monthly_totals' => $monthlyTotals,
+            'grand_total' => $grandTotal,
+        ];
+    }
+
+    /**
+     * Helper: Get Spanish month + year label
+     * @param int $timestamp
+     * @return string
+     */
+    private function getSpanishMonthLabel($timestamp)
+    {
+        $months = [
+            1 => 'Ene',
+            2 => 'Feb',
+            3 => 'Mar',
+            4 => 'Abr',
+            5 => 'May',
+            6 => 'Jun',
+            7 => 'Jul',
+            8 => 'Ago',
+            9 => 'Sep',
+            10 => 'Oct',
+            11 => 'Nov',
+            12 => 'Dic',
+        ];
+        $month = (int)date('n', $timestamp);
+        $year = date('Y', $timestamp);
+        return $months[$month] . ' ' . substr($year, -2); // e.g. "Ene 25"
+    }
+    /**
      * Get top clinics by active affiliates count (contratos_activos)
      * MODIFIED: Now sorts by active affiliates instead of total affiliates
      */

@@ -145,17 +145,17 @@ if ($model->plan) {
                 <!-- Right: Action Buttons -->
                 <div class="d-flex align-items-center flex-shrink-0" style="gap: 8px;">
                     <?= Html::a(
-    '<i class="fas fa-file-pdf me-1"></i> Imprimir Contrato',
-    ['user-datos/generar-contratov', 'id' => $model->user_id],
-    [
-        'class' => 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm',
-'style' => 'color: #ffffff; font-weight: 500; font-size: 13px; background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%); border: none; transition: all 0.2s ease;',
-        'target' => '_blank',
-        'data-pjax' => '0',
-        'data-toggle' => 'tooltip',
-        'title' => 'Imprimir el contrato en formato PDF'
-    ]
-) ?>
+                        '<i class="fas fa-file-pdf me-1"></i> Imprimir Contrato',
+                        ['user-datos/generar-contratov', 'id' => $model->user_id],
+                        [
+                            'class' => 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm',
+                            'style' => 'color: #ffffff; font-weight: 500; font-size: 13px; background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%); border: none; transition: all 0.2s ease;',
+                            'target' => '_blank',
+                            'data-pjax' => '0',
+                            'data-toggle' => 'tooltip',
+                            'title' => 'Imprimir el contrato en formato PDF'
+                        ]
+                    ) ?>
                     <?= Html::a(
                         '<i class="fas fa-arrow-left me-1"></i> Volver',
                         ['index', 'user_id' => $model->user_id],
@@ -415,14 +415,72 @@ if ($model->plan) {
                                         <?= Html::encode($servicio->servicio_nombre) ?>
                                     </td>
                                     <td class="text-center" style="padding: 12px 20px; background-color: transparent;">
-                                        <?php if ($servicio->plazo_espera): ?>
-                                            <span class="badge" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #212529; font-size: 12px; padding: 5px 16px; border-radius: 20px; font-weight: 600;">
-                                                <i class="fas fa-hourglass-half me-1" style="font-size: 10px;"></i>
-                                                <?= Html::encode($servicio->plazo_espera) ?>
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="text-muted" style="font-size: 12px;">—</span>
-                                        <?php endif; ?>
+                                        <?php
+                                        // ============================================================
+                                        // Continuous-coverage P/E display
+                                        // ------------------------------------------------------------
+                                        //   'sin_espera' → "Sin espera" (green pill)
+                                        //   'pendiente'  → raw number (amber pill)
+                                        //   'no_aplica'  → "NO APLICA" (plain text)
+                                        //   'sin_plazo'  → "—" (muted)
+                                        //
+                                        // NOTE: MATERNIDAD is always 'no_aplica' via the helper.
+                                        // ============================================================
+                                        $plazoDisplay = \app\components\CoverageHelper::getPlazoEsperaDisplay(
+                                            (int)$model->user_id,
+                                            (int)$model->id,
+                                            $servicio->plazo_espera,
+                                            (string)$servicio->servicio_nombre
+                                        );
+
+                                        switch ($plazoDisplay['status']) {
+
+                                            case 'sin_espera':
+                                                echo '<span class="badge" style="'
+                                                    . 'background: linear-gradient(135deg, #107c10 0%, #0b5c0b 100%);'
+                                                    . ' color: #ffffff;'
+                                                    . ' font-size: 12px;'
+                                                    . ' padding: 5px 16px;'
+                                                    . ' border-radius: 20px;'
+                                                    . ' font-weight: 600;'
+                                                    . ' display: inline-flex;'
+                                                    . ' align-items: center;'
+                                                    . ' gap: 6px;'
+                                                    . '">'
+                                                    . '<i class="fas fa-check-circle" style="font-size: 11px;"></i>'
+                                                    . Html::encode($plazoDisplay['label'])
+                                                    . '</span>';
+                                                break;
+
+                                            case 'no_aplica':
+                                                echo '<span style="font-size: 13px; color: #495057;">'
+                                                    . Html::encode($plazoDisplay['label'])
+                                                    . '</span>';
+                                                break;
+
+                                            case 'pendiente':
+                                                echo '<span class="badge" style="'
+                                                    . 'background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);'
+                                                    . ' color: #212529;'
+                                                    . ' font-size: 12px;'
+                                                    . ' padding: 5px 16px;'
+                                                    . ' border-radius: 20px;'
+                                                    . ' font-weight: 600;'
+                                                    . ' display: inline-flex;'
+                                                    . ' align-items: center;'
+                                                    . ' gap: 6px;'
+                                                    . '">'
+                                                    . '<i class="fas fa-hourglass-half" style="font-size: 10px;"></i>'
+                                                    . Html::encode($plazoDisplay['label'])
+                                                    . '</span>';
+                                                break;
+
+                                            case 'sin_plazo':
+                                            default:
+                                                echo '<span class="text-muted" style="font-size: 12px;">—</span>';
+                                                break;
+                                        }
+                                        ?>
                                     </td>
                                     <td style="padding: 12px 20px; color: #495057; font-size: 13px; line-height: 1.5; background-color: transparent;">
                                         <?= Html::encode($servicio->descripcion ?: 'Sin descripción') ?>

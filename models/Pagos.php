@@ -65,15 +65,36 @@ class Pagos extends \yii\db\ActiveRecord
             ['numero_referencia_pago', 'required', 'when' => function ($model) {
                 return $model->metodo_pago !== 'Efectivo - Dólar ($)';
             }, 'message' => 'El número de referencia es requerido para este método de pago'],
+
+            // ============================================================
+            // MANDATORY COMPROBANTE
+            // ------------------------------------------------------------
+            // At least one of (uploaded file | saved URL) must be present
+            // for non-cash payment methods. Fires on every scenario that
+            // includes `imagen_prueba_file` in its active attributes.
+            // ============================================================
             [
-                ['imagen_prueba'],
+                ['imagen_prueba_file'],
                 'required',
                 'when' => function ($model) {
-                    return $model->metodo_pago !== 'Efectivo - Dólar ($)';
+                    // Cash in USD does not require a receipt.
+                    if ($model->metodo_pago === 'Efectivo - Dólar ($)') {
+                        return false;
+                    }
+                    // Skip when a saved comprobante URL already exists (edit flow).
+                    return empty($model->imagen_prueba);
                 },
-                'on' => 'create',
-                'message' => 'Comprobante de Pago no puede estar vacío'
+                'whenClient' => "function (attribute, value) {
+                    // Mirror the server-side when() for instant feedback.
+                    var metodo = $('#pagos-metodo_pago').val();
+                    if (metodo === 'Efectivo - Dólar ($)') return false;
+                    var fileInput = document.getElementById('pagos-imagen_prueba_file');
+                    var hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+                    return !hasFile;
+                }",
+                'message' => 'Debe adjuntar el comprobante de pago.',
             ],
+
             [['corporativo_id', 'pago_corporativo_id'], 'integer'],
             [['tipo_pago'], 'string', 'max' => 50],
             [['tipo_pago'], 'default', 'value' => 'individual'],
@@ -352,13 +373,43 @@ class Pagos extends \yii\db\ActiveRecord
 
     /**
      * Returns the list of scenarios and their corresponding active attributes.
+     *
+     * `imagen_prueba` is included so the mandatory-comprobante rule can
+     * inspect the already-saved URL during edit flows (no re-upload needed).
+     *
      * @return array
      */
     public function scenarios()
     {
         $scenarios = parent::scenarios();
-        $scenarios['create'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'user_id', 'estatus', 'observacion'];
-        $scenarios['update'] = ['metodo_pago', 'fecha_pago', 'monto_pagado', 'tasa', 'monto_usd', 'numero_referencia_pago', 'imagen_prueba_file', 'estatus', 'observacion'];
+
+        $scenarios['create'] = [
+            'metodo_pago',
+            'fecha_pago',
+            'monto_pagado',
+            'tasa',
+            'monto_usd',
+            'numero_referencia_pago',
+            'imagen_prueba_file',
+            'imagen_prueba',
+            'user_id',
+            'estatus',
+            'observacion',
+        ];
+
+        $scenarios['update'] = [
+            'metodo_pago',
+            'fecha_pago',
+            'monto_pagado',
+            'tasa',
+            'monto_usd',
+            'numero_referencia_pago',
+            'imagen_prueba_file',
+            'imagen_prueba',
+            'estatus',
+            'observacion',
+        ];
+
         return $scenarios;
     }
 

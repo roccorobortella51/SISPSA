@@ -434,15 +434,18 @@ class CuotaWebController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         try {
-            $result = $this->runConsoleCommand('verificar-vencidas');
+            $result = $this->verifyContractExpirations(true);
 
             return [
-                'success' => $result['success'],
+                'success' => empty($result['errors']),
                 'output' => $result['output'],
-                'message' => $result['success'] ? 'Verificación de vencidas completada' : 'Error en verificación',
-                'returnCode' => $result['returnCode']
+                'message' => empty($result['errors'])
+                    ? 'Verificación de vencidas completada'
+                    : 'La verificación terminó con errores',
+                'returnCode' => empty($result['errors']) ? 0 : 1,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Yii::error('Error web al verificar contratos vencidos: ' . $e->getMessage(), __METHOD__);
             return [
                 'success' => false,
                 'output' => $e->getMessage(),
@@ -549,15 +552,18 @@ class CuotaWebController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         try {
-            $result = $this->runConsoleCommand('verificar-contratos-vencidos');
+            $result = $this->verifyContractExpirations(false);
 
             return [
-                'success' => $result['success'],
+                'success' => empty($result['errors']),
                 'output' => $result['output'],
-                'message' => $result['success'] ? 'Verificación de contratos vencidos completada' : 'Error en verificación',
-                'returnCode' => $result['returnCode']
+                'message' => empty($result['errors'])
+                    ? 'Verificación de contratos vencidos completada'
+                    : 'La verificación terminó con errores',
+                'returnCode' => empty($result['errors']) ? 0 : 1,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Yii::error('Error web al verificar contratos vencidos: ' . $e->getMessage(), __METHOD__);
             return [
                 'success' => false,
                 'output' => $e->getMessage(),
@@ -565,6 +571,81 @@ class CuotaWebController extends Controller
                 'returnCode' => -1
             ];
         }
+    }
+
+    /**
+     * Perform the expiration checks directly from the web request without exec().
+     *
+     * @param bool $includeOverdueInstallments
+     * @return array{output: string, errors: array}
+     */
+    private function verifyContractExpirations($includeOverdueInstallments)
+    {
+        $today = date('Y-m-d');
+        $updatedExpired = 0;
+        $updatedSuspended = 0;
+        $errors = [];
+        $output = [];
+
+        $expiredContracts = Contratos::find()
+            ->where(['<', 'fecha_ven', $today])
+            ->andWhere(['not like', 'estatus', Contratos::STATUS_ANULADO, false])
+            ->all();
+
+        $output[] = 'Contratos vencidos por fecha encontrados: ' . count($expiredContracts);
+        foreach ($expiredContracts as $contract) {
+            if ($contract->estatus === Contratos::STATUS_VENCIDO) {
+                continue;
+            }
+
+            $contract->estatus = Contratos::STATUS_VENCIDO;
+            if ($contract->save(false)) {
+                $updatedExpired++;
+                $output[] = "Contrato #{$contract->id} marcado Vencido (fecha: {$contract->fecha_ven}).";
+            } else {
+                $errors[] = "No se pudo actualizar el contrato #{$contract->id}.";
+            }
+        }
+
+        if ($includeOverdueInstallments) {
+            $cutoffDate = date('Y-m-d', strtotime('-7 days'));
+            $overdueInstallments = Cuotas::find()
+                ->with('contrato')
+                ->where(['estatus' => 'pendiente'])
+                ->andWhere(['<', 'fecha_vencimiento', $cutoffDate])
+                ->all();
+
+            $output[] = 'Cuotas pendientes con más de 7 días de atraso: ' . count($overdueInstallments);
+            foreach ($overdueInstallments as $installment) {
+                $contract = $installment->contrato;
+                if (
+                    !$contract ||
+                    $contract->estatus === Contratos::STATUS_ANULADO ||
+                    ($contract->fecha_ven && $contract->fecha_ven < $today) ||
+                    $contract->estatus === Contratos::STATUS_SUSPENDIDO
+                ) {
+                    continue;
+                }
+
+                $contract->estatus = Contratos::STATUS_SUSPENDIDO;
+                if ($contract->save(false)) {
+                    $updatedSuspended++;
+                    $output[] = "Contrato #{$contract->id} suspendido por cuota atrasada #{$installment->id}.";
+                } else {
+                    $errors[] = "No se pudo suspender el contrato #{$contract->id}.";
+                }
+            }
+        }
+
+        $output[] = "Actualizados como vencidos: {$updatedExpired}; suspendidos por cuotas: {$updatedSuspended}.";
+        if ($errors) {
+            $output = array_merge($output, $errors);
+        }
+
+        return [
+            'output' => implode("\n", $output),
+            'errors' => $errors,
+        ];
     }
 
     /**

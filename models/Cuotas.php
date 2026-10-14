@@ -133,9 +133,75 @@ class Cuotas extends \yii\db\ActiveRecord
         return $this->hasOne(Pagos::class, ['id' => 'id_pago']);
     }
 
+    // ============================================================
+    // PRORATION HELPERS
+    // ============================================================
+
+    /**
+     * Returns true when this cuota is a PRORATED (partial-month) cuota,
+     * i.e., its coverage window is shorter than a full calendar month.
+     *
+     * The determination is based purely on the coverage dates, so it
+     * works for cuotas created by any generator (prorated or aligned).
+     *
+     * @return bool
+     */
+    public function getIsProrated()
+    {
+        if (empty($this->coverage_start) || empty($this->coverage_end)) {
+            return false;
+        }
+
+        try {
+            $start = new \DateTime($this->coverage_start);
+            $end   = new \DateTime($this->coverage_end);
+
+            $daysCovered = (int) $start->diff($end)->days + 1;
+
+            // A full month is (days in start's calendar month).
+            // Anything shorter than that is a prorated/partial cuota.
+            $daysInStartMonth = (int) $start->format('t');
+
+            return $daysCovered < $daysInStartMonth;
+        } catch (\Exception $e) {
+            Yii::warning(
+                "getIsProrated failed for cuota #{$this->id}: " . $e->getMessage(),
+                'cuotas'
+            );
+            return false;
+        }
+    }
+
+    /**
+     * Returns a small HTML badge marking this cuota as PRORRATED.
+     * Returns an empty string when the cuota is not prorated.
+     *
+     * @return string
+     */
+    public function getProratedBadge()
+    {
+        if (!$this->getIsProrated()) {
+            return '';
+        }
+
+        $tooltip = 'Cuota prorrateada: cubre solo una fracción del mes '
+            . 'por incorporación a mitad de ciclo. El afiliado queda cubierto '
+            . 'desde el primer día sin dejar un período sin cobertura médica.';
+
+        return '<span class="badge badge-prorated" '
+            . 'data-toggle="tooltip" data-placement="top" '
+            . 'title="' . htmlspecialchars($tooltip, ENT_QUOTES, 'UTF-8') . '">'
+            . '<i class="fas fa-calculator mr-1"></i>PRORRATEADA'
+            . '</span>';
+    }
+
+    // ============================================================
+    // GENERATORS — Anniversary / Individual
+    // ============================================================
+
     /**
      * Generate 12 cuotas based on monthly anniversary dates
-     * 
+     *
      * @param int $contrato_id
      * @param string $fecha_inicio Contract start date (YYYY-MM-DD)
      * @param float $monto Monthly amount
@@ -219,6 +285,7 @@ class Cuotas extends \yii\db\ActiveRecord
             return [
                 'success' => true,
                 'cuotas' => $cuotas,
+                'count' => count($cuotas),
                 'message' => '12 cuotas generadas exitosamente con vencimiento en fecha aniversario'
             ];
         } catch (\Exception $e) {
@@ -226,6 +293,8 @@ class Cuotas extends \yii\db\ActiveRecord
             Yii::error("❌ Error generando cuotas: " . $e->getMessage(), 'cuotas');
             return [
                 'success' => false,
+                'cuotas' => [],
+                'count' => 0,
                 'error' => $e->getMessage()
             ];
         }
@@ -234,7 +303,7 @@ class Cuotas extends \yii\db\ActiveRecord
     /**
      * Generate 12 cuotas with due dates on the same day as contract start
      * FIRST PAYMENT IS DUE ON THE START DATE ITSELF
-     * 
+     *
      * @param int $contrato_id
      * @param string $fecha_inicio Contract start date (YYYY-MM-DD)
      * @param float $monto Monthly amount
@@ -316,6 +385,7 @@ class Cuotas extends \yii\db\ActiveRecord
             return [
                 'success' => true,
                 'cuotas' => $cuotas,
+                'count' => count($cuotas),
                 'message' => '12 cuotas generadas exitosamente con vencimiento en la misma fecha de inicio'
             ];
         } catch (\Exception $e) {
@@ -323,10 +393,581 @@ class Cuotas extends \yii\db\ActiveRecord
             Yii::error("❌ Error generando cuotas: " . $e->getMessage(), 'cuotas');
             return [
                 'success' => false,
+                'cuotas' => [],
+                'count' => 0,
                 'error' => $e->getMessage()
             ];
         }
     }
+
+    // ============================================================
+    // GENERATORS — Corporate Aligned
+    // ============================================================
+
+    /**
+     * Generates cuotas for a CORPORATE affiliate, aligned to the corporate's
+     * monthly billing cycle.
+     *
+     * Rules:
+     *   - The billing day comes from the corporate's fecha_ini (e.g., day 1, day 15).
+     *   - The first cuota is the first monthly billing date on/after the
+     *     affiliate's fecha_ini (Rule A).
+     *   - Subsequent cuotas are one month apart, on the same billing day.
+     *   - Generation stops at (and includes) the corporate's fecha_ven.
+     *   - Number of cuotas is not fixed — it depends on how many months fit.
+     *   - Month-end handling: if the billing day doesn't exist in a given month,
+     *     the last day of that month is used (e.g., day 31 → Feb 28/29).
+     *
+     * NOTE: This is the LEGACY generator. It does NOT emit a prorated cuota
+     *       for the gap between the affiliate's join date and the first
+     *       aligned billing date. Use generateCorporateAlignedCuotasWithProration()
+     *       when you want that gap to be billed.
+     *
+     * @param int    $contrato_id         The new affiliate's contract ID.
+     * @param string $affiliate_fecha_ini User-picked start date (Y-m-d).
+     * @param string $corporate_fecha_ini Corporate contract start date (Y-m-d).
+     * @param string $corporate_fecha_ven Corporate contract end date (Y-m-d).
+     * @param float  $monto               Monthly amount per cuota.
+     * @return array ['success' => bool, 'cuotas' => Cuotas[], 'error' => string|null, 'count' => int,
+     *                'has_proration' => bool, 'proration_info' => array|null]
+     */
+    public static function generateCorporateAlignedCuotas(
+        $contrato_id,
+        $affiliate_fecha_ini,
+        $corporate_fecha_ini,
+        $corporate_fecha_ven,
+        $monto
+    ) {
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            // ------------------------------------------------------------
+            // 1. Validate inputs
+            // ------------------------------------------------------------
+            if (empty($affiliate_fecha_ini) || empty($corporate_fecha_ini) || empty($corporate_fecha_ven)) {
+                throw new \Exception('Las fechas del afiliado y del corporativo son obligatorias para generar cuotas.');
+            }
+
+            $affStart   = new \DateTime($affiliate_fecha_ini);
+            $corpStart  = new \DateTime($corporate_fecha_ini);
+            $corpEnd    = new \DateTime($corporate_fecha_ven);
+
+            if ($corpEnd < $corpStart) {
+                throw new \Exception('La fecha de vencimiento del corporativo es anterior a su fecha de inicio.');
+            }
+
+            if ($affStart > $corpEnd) {
+                throw new \Exception('La fecha de inicio del afiliado es posterior al vencimiento del contrato corporativo.');
+            }
+
+            // ------------------------------------------------------------
+            // 2. Determine the anchor billing day from the corporate's start
+            // ------------------------------------------------------------
+            $anchorDay = (int)$corpStart->format('d');
+
+            Yii::info(
+                "Corporate-aligned cuota generation: contrato #{$contrato_id}, "
+                    . "affiliate start={$affiliate_fecha_ini}, corporate={$corporate_fecha_ini} → {$corporate_fecha_ven}, "
+                    . "anchor day={$anchorDay}",
+                'cuotas'
+            );
+
+            // ------------------------------------------------------------
+            // 3. Find the FIRST billing date on/after the affiliate's start
+            //    on the anchor day. Rule A.
+            // ------------------------------------------------------------
+            $firstDue = self::nextBillingDate($affStart, $anchorDay);
+
+            // ------------------------------------------------------------
+            // 4. Generate cuotas month by month, stopping at corporate's fecha_ven
+            // ------------------------------------------------------------
+            $cuotas      = [];
+            $currentDue  = clone $firstDue;
+            $cuotaNumber = 1;
+
+            // Safety guard: never generate more than 36 cuotas in case of bad input
+            $maxCuotas = 36;
+
+            while ($currentDue <= $corpEnd && $cuotaNumber <= $maxCuotas) {
+
+                $cuota                 = new self();
+                $cuota->contrato_id    = $contrato_id;
+                $cuota->numero_cuota   = $cuotaNumber;
+                $cuota->monto          = round((float)$monto, 2);
+                $cuota->monto_usd      = round((float)$monto, 2);
+                $cuota->estatus        = self::ESTADO_PENDIENTE;
+                $cuota->rate_usd_bs    = 1;
+                $cuota->fecha_vencimiento = $currentDue->format('Y-m-d');
+
+                // Coverage period: from currentDue to (nextDue - 1 day)
+                $coverageStart = clone $currentDue;
+                $coverageEnd   = clone $currentDue;
+
+                // Advance one month for coverage end
+                $coverageEnd = self::nextBillingDateAfter($currentDue, $anchorDay);
+                $coverageEnd->modify('-1 day');
+
+                $cuota->coverage_start = $coverageStart->format('Y-m-d');
+                $cuota->coverage_end   = $coverageEnd->format('Y-m-d');
+
+                if (!$cuota->save()) {
+                    throw new \Exception(
+                        'Error guardando cuota #' . $cuotaNumber . ': '
+                            . json_encode($cuota->getErrors())
+                    );
+                }
+
+                $cuotas[] = $cuota;
+
+                Yii::info(
+                    "Cuota #{$cuotaNumber} generada: vence {$cuota->fecha_vencimiento}, "
+                        . "cubre {$cuota->coverage_start} al {$cuota->coverage_end}",
+                    'cuotas'
+                );
+
+                // Advance to next month's billing date
+                $currentDue  = self::nextBillingDateAfter($currentDue, $anchorDay);
+                $cuotaNumber++;
+            }
+
+            if (empty($cuotas)) {
+                throw new \Exception('No se generó ninguna cuota. Verifique las fechas ingresadas.');
+            }
+
+            // ------------------------------------------------------------
+            // 5. Sync the affiliate's contract dates (fecha_ven = corporate's)
+            // ------------------------------------------------------------
+            $contrato = Contratos::findOne($contrato_id);
+            if ($contrato) {
+                $contrato->fecha_ven = $corporate_fecha_ven;
+                if (!$contrato->save(false)) {
+                    Yii::warning(
+                        "Could not update contract #{$contrato_id} fecha_ven. Errors: "
+                            . json_encode($contrato->getErrors()),
+                        'cuotas'
+                    );
+                }
+            }
+
+            $transaction->commit();
+
+            $count = count($cuotas);
+            Yii::info(
+                "✅ Generated {$count} corporate-aligned cuotas for contract #{$contrato_id}",
+                'cuotas'
+            );
+
+            // This generator does NOT emit a prorated cuota — always false.
+            return [
+                'success'        => true,
+                'cuotas'         => $cuotas,
+                'count'          => $count,
+                'error'          => null,
+                'message'        => "Se generaron {$count} cuotas alineadas al ciclo del corporativo.",
+                'has_proration'  => false,
+                'proration_info' => null,
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::error("❌ Error generating corporate-aligned cuotas: " . $e->getMessage(), 'cuotas');
+            return [
+                'success'        => false,
+                'cuotas'         => [],
+                'count'          => 0,
+                'error'          => $e->getMessage(),
+                'has_proration'  => false,
+                'proration_info' => null,
+            ];
+        }
+    }
+
+    /**
+     * Generates a PRORATED first cuota (for the gap between the affiliate's
+     * join date and the corporate's next billing anchor date) plus the
+     * regular aligned monthly cuotas through the corporate's end date.
+     *
+     * ────────────────────────────────────────────────────────────────────
+     * EXAMPLE
+     * ────────────────────────────────────────────────────────────────────
+     * Corporate contract: 2026-01-01 → 2026-12-31  (anchor day = 1)
+     * Affiliate joins:    2026-09-25
+     * Monthly amount:     $50.00
+     *
+     * Generated cuotas:
+     *   #1  vence 2026-09-25  cubre 2026-09-25 → 2026-09-30   $10.00  (prorated, 6/30 days)
+     *   #2  vence 2026-10-01  cubre 2026-10-01 → 2026-10-31   $50.00
+     *   #3  vence 2026-11-01  cubre 2026-11-01 → 2026-11-30   $50.00
+     *   #4  vence 2026-12-01  cubre 2026-12-01 → 2026-12-31   $50.00
+     *
+     * Total billed: $160.00  — exactly 3 months + 6 days of coverage.
+     * ────────────────────────────────────────────────────────────────────
+     *
+     * KEY DECISIONS:
+     *
+     *   1. The prorated cuota is due ON THE AFFILIATE'S JOIN DATE. This
+     *      ensures the affiliate is billed immediately for the partial
+     *      month they are being granted coverage for.
+     *
+     *   2. The prorated amount is proportional to the number of days
+     *      actually covered in that first calendar month:
+     *          prorated = monto × (daysCovered / daysInCalendarMonth)
+     *
+     *   3. If the affiliate joins EXACTLY on the corporate anchor day,
+     *      there is NO gap → no prorated cuota is generated, and the
+     *      regular aligned loop starts on the join date itself.
+     *
+     *   4. If a prorated cuota is generated, the regular aligned loop
+     *      starts on the NEXT aligned billing date (the anchor day of
+     *      the following month), not on the join date.
+     *
+     *   5. Cuota numbering is sequential across both branches: the
+     *      prorated cuota is always #1, regular aligned cuotas follow
+     *      as #2, #3, ...
+     *
+     * @param int    $contrato_id
+     * @param string $affiliate_fecha_ini   Y-m-d  (the affiliate's join date)
+     * @param string $corporate_fecha_ini   Y-m-d  (used to derive the anchor day)
+     * @param string $corporate_fecha_ven   Y-m-d  (hard stop for generation)
+     * @param float  $monto                 Monthly amount per cuota
+     *
+     * @return array {
+     *     success: bool,
+     *     cuotas:  Cuotas[],
+     *     count:   int,
+     *     error:   string|null,
+     *     message: string,
+     *     has_proration: bool,
+     *     proration_info: array|null
+     * }
+     */
+    public static function generateCorporateAlignedCuotasWithProration(
+        $contrato_id,
+        $affiliate_fecha_ini,
+        $corporate_fecha_ini,
+        $corporate_fecha_ven,
+        $monto
+    ) {
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            // ────────────────────────────────────────────────────────────
+            // 1. Validate inputs
+            // ────────────────────────────────────────────────────────────
+            if (empty($affiliate_fecha_ini) || empty($corporate_fecha_ini) || empty($corporate_fecha_ven)) {
+                throw new \Exception('Las fechas del afiliado y del corporativo son obligatorias.');
+            }
+
+            $affStart  = new \DateTime($affiliate_fecha_ini);
+            $corpStart = new \DateTime($corporate_fecha_ini);
+            $corpEnd   = new \DateTime($corporate_fecha_ven);
+
+            if ($corpEnd < $corpStart) {
+                throw new \Exception('La fecha de vencimiento del corporativo es anterior a su inicio.');
+            }
+
+            if ($affStart > $corpEnd) {
+                throw new \Exception('La fecha de inicio del afiliado es posterior al vencimiento del contrato corporativo.');
+            }
+
+            $anchorDay = (int) $corpStart->format('d');
+
+            Yii::info(
+                "Prorated corporate-aligned generation: contrato #{$contrato_id}, "
+                    . "affiliate={$affiliate_fecha_ini}, corporate={$corporate_fecha_ini} → {$corporate_fecha_ven}, "
+                    . "anchor day={$anchorDay}, monto={$monto}",
+                'cuotas'
+            );
+
+            $cuotas      = [];
+            $cuotaNumber = 1;
+            $maxCuotas   = 36;
+
+            // ────────────────────────────────────────────────────────────
+            // 2. Find the first ALIGNED billing date on/after affiliate's join
+            // ────────────────────────────────────────────────────────────
+            $firstAlignedDue = self::nextBillingDate($affStart, $anchorDay);
+
+            // ────────────────────────────────────────────────────────────
+            // 3. Emit the PRORATED cuota if there's a gap
+            // ────────────────────────────────────────────────────────────
+            if ($affStart < $firstAlignedDue) {
+
+                $gapEnd = (clone $firstAlignedDue)->modify('-1 day');
+
+                // Days in the calendar month containing the affiliate's join date
+                $daysInMonthOfStart = (int) $affStart->format('t');
+                $daysCovered        = (int) $affStart->diff($gapEnd)->days + 1;
+
+                // Guard against zero/negative (shouldn't happen, but be safe)
+                if ($daysCovered <= 0 || $daysInMonthOfStart <= 0) {
+                    throw new \Exception('No se pudo calcular el prorrateo (días inválidos).');
+                }
+
+                $proratedAmount = round((float) $monto * ($daysCovered / $daysInMonthOfStart), 2);
+
+                $prorated                     = new self();
+                $prorated->contrato_id        = $contrato_id;
+                $prorated->numero_cuota       = $cuotaNumber;
+                $prorated->monto              = $proratedAmount;
+                $prorated->monto_usd          = $proratedAmount;
+                $prorated->estatus            = self::ESTADO_PENDIENTE;
+                $prorated->rate_usd_bs        = 1;
+
+                // Due on the affiliate's join date (immediately)
+                $prorated->fecha_vencimiento  = $affStart->format('Y-m-d');
+
+                // Coverage window: join date → day before the first aligned due
+                $prorated->coverage_start     = $affStart->format('Y-m-d');
+                $prorated->coverage_end       = $gapEnd->format('Y-m-d');
+
+                if (!$prorated->save()) {
+                    throw new \Exception(
+                        'Error guardando la cuota prorrateada: '
+                            . json_encode($prorated->getErrors())
+                    );
+                }
+
+                $cuotas[] = $prorated;
+                $cuotaNumber++;
+
+                Yii::info(
+                    "  → Cuota PRORRATEADA #{$prorated->numero_cuota}: "
+                        . "vence {$prorated->fecha_vencimiento}, "
+                        . "cubre {$prorated->coverage_start} → {$prorated->coverage_end}, "
+                        . "monto {$prorated->monto_usd} "
+                        . "(base {$monto} × {$daysCovered}/{$daysInMonthOfStart} días)",
+                    'cuotas'
+                );
+            } else {
+                Yii::info(
+                    "  → No se requiere prorrateo: el afiliado se unió exactamente en el día ancla ({$anchorDay}).",
+                    'cuotas'
+                );
+            }
+
+            // ────────────────────────────────────────────────────────────
+            // 4. Emit the REGULAR aligned cuotas from firstAlignedDue → corpEnd
+            // ────────────────────────────────────────────────────────────
+            $currentDue = clone $firstAlignedDue;
+
+            while ($currentDue <= $corpEnd && $cuotaNumber <= $maxCuotas) {
+
+                $coverageStart = clone $currentDue;
+                $coverageEnd   = self::nextBillingDateAfter($currentDue, $anchorDay);
+                $coverageEnd->modify('-1 day');
+
+                // If the corporate contract ends before the next anchor day,
+                // trim the coverage window so we never claim coverage past the end.
+                if ($coverageEnd > $corpEnd) {
+                    $coverageEnd = clone $corpEnd;
+                }
+
+                $cuota                     = new self();
+                $cuota->contrato_id        = $contrato_id;
+                $cuota->numero_cuota       = $cuotaNumber;
+                $cuota->monto              = round((float) $monto, 2);
+                $cuota->monto_usd          = round((float) $monto, 2);
+                $cuota->estatus            = self::ESTADO_PENDIENTE;
+                $cuota->rate_usd_bs        = 1;
+                $cuota->fecha_vencimiento  = $currentDue->format('Y-m-d');
+                $cuota->coverage_start     = $coverageStart->format('Y-m-d');
+                $cuota->coverage_end       = $coverageEnd->format('Y-m-d');
+
+                if (!$cuota->save()) {
+                    throw new \Exception(
+                        "Error guardando la cuota #{$cuotaNumber}: "
+                            . json_encode($cuota->getErrors())
+                    );
+                }
+
+                $cuotas[] = $cuota;
+                $cuotaNumber++;
+
+                Yii::info(
+                    "  → Cuota alineada #{$cuota->numero_cuota}: "
+                        . "vence {$cuota->fecha_vencimiento}, "
+                        . "cubre {$cuota->coverage_start} → {$cuota->coverage_end}, "
+                        . "monto {$cuota->monto_usd}",
+                    'cuotas'
+                );
+
+                $currentDue = self::nextBillingDateAfter($currentDue, $anchorDay);
+            }
+
+            if (empty($cuotas)) {
+                throw new \Exception('No se generó ninguna cuota. Verifique las fechas ingresadas.');
+            }
+
+            // ────────────────────────────────────────────────────────────
+            // 5. Sync the affiliate's contract end date to the corporate's
+            // ────────────────────────────────────────────────────────────
+            $contrato = Contratos::findOne($contrato_id);
+            if ($contrato) {
+                $contrato->fecha_ven = $corporate_fecha_ven;
+                if (!$contrato->save(false)) {
+                    Yii::warning(
+                        "Could not update contract #{$contrato_id} fecha_ven. Errors: "
+                            . json_encode($contrato->getErrors()),
+                        'cuotas'
+                    );
+                }
+            }
+
+            $transaction->commit();
+
+            $count = count($cuotas);
+            Yii::info(
+                "✅ Generated {$count} prorated-corporate-aligned cuotas for contract #{$contrato_id}",
+                'cuotas'
+            );
+
+            // ────────────────────────────────────────────────────────────
+            // 6. Detect whether a prorated cuota was generated
+            // ────────────────────────────────────────────────────────────
+            $proratedCuota = null;
+            foreach ($cuotas as $c) {
+                // The prorated cuota is the only one whose coverage_start
+                // matches the affiliate's join date AND whose amount differs
+                // from the regular monthly amount.
+                if (
+                    $c->coverage_start === $affStart->format('Y-m-d')
+                    && abs((float)$c->monto - (float)$monto) > 0.001
+                ) {
+                    $proratedCuota = $c;
+                    break;
+                }
+            }
+
+            $prorationInfo = null;
+            if ($proratedCuota) {
+                $coveredDays      = (int) (new \DateTime($proratedCuota->coverage_start))
+                    ->diff(new \DateTime($proratedCuota->coverage_end))->days + 1;
+                $daysInMonthStart = (int) (new \DateTime($proratedCuota->coverage_start))->format('t');
+
+                $prorationInfo = [
+                    'cuota_id'           => (int)$proratedCuota->id,
+                    'numero_cuota'       => (int)$proratedCuota->numero_cuota,
+                    'fecha_vencimiento'  => $proratedCuota->fecha_vencimiento,
+                    'coverage_start'     => $proratedCuota->coverage_start,
+                    'coverage_end'       => $proratedCuota->coverage_end,
+                    'monto'              => (float)$proratedCuota->monto,
+                    'monto_base'         => (float)$monto,
+                    'dias_cubiertos'     => $coveredDays,
+                    'dias_del_mes'       => $daysInMonthStart,
+                    'porcentaje_del_mes' => round(($coveredDays / $daysInMonthStart) * 100, 2),
+                ];
+            }
+
+            return [
+                'success'        => true,
+                'cuotas'         => $cuotas,
+                'count'          => $count,
+                'error'          => null,
+                'message'        => "Se generaron {$count} cuotas (prorrateada + alineadas).",
+                'has_proration'  => $prorationInfo !== null,
+                'proration_info' => $prorationInfo,
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::error(
+                "❌ Error generating prorated corporate-aligned cuotas: " . $e->getMessage(),
+                'cuotas'
+            );
+
+            return [
+                'success'        => false,
+                'cuotas'         => [],
+                'count'          => 0,
+                'error'          => $e->getMessage(),
+                'message'        => 'Error generando cuotas prorrateadas.',
+                'has_proration'  => false,
+                'proration_info' => null,
+            ];
+        }
+    }
+
+    /**
+     * Returns the first monthly billing date on/after $referenceDate,
+     * using $anchorDay as the billing day (1-31).
+     *
+     * Handles month-end: if $anchorDay doesn't exist in a given month
+     * (e.g., 31 in February), the last day of the month is used.
+     *
+     * Rule A: if $referenceDate falls exactly on the anchor day, it is returned.
+     *
+     * @param \DateTime $referenceDate
+     * @param int       $anchorDay
+     * @return \DateTime
+     */
+    protected static function nextBillingDate(\DateTime $referenceDate, int $anchorDay): \DateTime
+    {
+        $candidate = self::buildDateWithAnchorDay(
+            (int)$referenceDate->format('Y'),
+            (int)$referenceDate->format('m'),
+            $anchorDay
+        );
+
+        if ($candidate >= $referenceDate) {
+            return $candidate;
+        }
+
+        // Move one month forward
+        return self::buildDateWithAnchorDay(
+            (int)$referenceDate->format('Y'),
+            (int)$referenceDate->format('m') + 1,
+            $anchorDay
+        );
+    }
+
+    /**
+     * Returns the next monthly billing date strictly AFTER $currentDue
+     * on the same anchor day.
+     *
+     * @param \DateTime $currentDue
+     * @param int       $anchorDay
+     * @return \DateTime
+     */
+    protected static function nextBillingDateAfter(\DateTime $currentDue, int $anchorDay): \DateTime
+    {
+        $year  = (int)$currentDue->format('Y');
+        $month = (int)$currentDue->format('m') + 1;
+
+        // Normalize month overflow (13 → next year's January)
+        if ($month > 12) {
+            $month = 1;
+            $year++;
+        }
+
+        return self::buildDateWithAnchorDay($year, $month, $anchorDay);
+    }
+
+    /**
+     * Builds a DateTime for the given year/month at the anchor day,
+     * falling back to the last day of the month if the anchor day doesn't exist.
+     *
+     * @param int $year
+     * @param int $month
+     * @param int $anchorDay
+     * @return \DateTime
+     */
+    protected static function buildDateWithAnchorDay(int $year, int $month, int $anchorDay): \DateTime
+    {
+        // Normalize month overflow
+        while ($month > 12) {
+            $month -= 12;
+            $year++;
+        }
+
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $day         = min($anchorDay, $daysInMonth);
+
+        return new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
+    }
+
+    // ============================================================
+    // BACKWARD COMPATIBILITY
+    // ============================================================
+
     /**
      * For backward compatibility, keep the old method name but point to the new one
      */
@@ -335,10 +976,14 @@ class Cuotas extends \yii\db\ActiveRecord
         return self::generateCuotasAnniversaryBased($contrato_id, $fecha_inicio, $monto);
     }
 
+    // ============================================================
+    // STATUS / GRACE PERIOD
+    // ============================================================
+
     /**
      * Check cuota statuses and apply grace period logic
      * This should be called by a daily cron job
-     * 
+     *
      * @return array Statistics of updated cuotas
      */
     public static function checkCuotasStatus()
@@ -419,6 +1064,10 @@ class Cuotas extends \yii\db\ActiveRecord
         return $interval->days;
     }
 
+    // ============================================================
+    // QUERIES
+    // ============================================================
+
     /**
      * Get pending cuotas for a user
      */
@@ -496,6 +1145,10 @@ class Cuotas extends \yii\db\ActiveRecord
 
         return $date->format('Y-m-d');
     }
+
+    // ============================================================
+    // ADVANCE CUOTAS
+    // ============================================================
 
     /**
      * Preview advance cuotas without saving
@@ -722,6 +1375,10 @@ class Cuotas extends \yii\db\ActiveRecord
         }
     }
 
+    // ============================================================
+    // DISPLAY HELPERS
+    // ============================================================
+
     /**
      * Get status badge HTML
      */
@@ -739,8 +1396,25 @@ class Cuotas extends \yii\db\ActiveRecord
     }
 
     /**
+     * Get formatted coverage period for display
+     */
+    public function getCoveragePeriodText()
+    {
+        if ($this->coverage_start && $this->coverage_end) {
+            $start = Yii::$app->formatter->asDate($this->coverage_start, 'dd/MM/yyyy');
+            $end = Yii::$app->formatter->asDate($this->coverage_end, 'dd/MM/yyyy');
+            return "Cubre: {$start} al {$end}";
+        }
+        return '';
+    }
+
+    // ============================================================
+    // NEXT PENDING / PAYMENT SUMMARY / MARK AS PAID
+    // ============================================================
+
+    /**
      * Get next pending cuota for a contract
-     * 
+     *
      * @param int $contrato_id
      * @return Cuotas|null
      */
@@ -755,7 +1429,7 @@ class Cuotas extends \yii\db\ActiveRecord
 
     /**
      * Get payment summary for a contract
-     * 
+     *
      * @param int $contrato_id
      * @return array
      */
@@ -809,7 +1483,7 @@ class Cuotas extends \yii\db\ActiveRecord
 
     /**
      * Mark cuota as paid when payment is recorded
-     * 
+     *
      * @param int $pago_id
      * @return bool
      */
@@ -841,34 +1515,20 @@ class Cuotas extends \yii\db\ActiveRecord
             ->andWhere(['in', 'estatus', [self::ESTADO_PENDIENTE, self::ESTADO_GRACE_PERIOD, self::ESTADO_VENCIDA]])
             ->count();
 
-        if ($pendingCuotas == 0 && $this->contrato) {
+        if (
+            $pendingCuotas == 0 &&
+            $this->contrato &&
+            $this->contrato->estatus !== Contratos::STATUS_ANULADO
+        ) {
             // All cuotas are paid - contract is fully paid
             Yii::info("💰 Todas las cuotas pagadas para contrato #{$this->contrato_id}", 'cuotas');
 
-            // Update contract status to Activo if it was suspended
-            if ($this->contrato->estatus === 'suspendido') {
-                $this->contrato->estatus = 'Activo';
-                $this->contrato->save(false);
+            $this->contrato->updateStatus();
 
-                // Update user solvent status
-                if ($this->contrato->user) {
-                    $this->contrato->user->estatus_solvente = 'Si';
-                    $this->contrato->user->save(false);
-                }
+            if ($this->contrato->user) {
+                $this->contrato->user->estatus_solvente = 'Si';
+                $this->contrato->user->save(false);
             }
         }
-    }
-
-    /**
-     * Get formatted coverage period for display
-     */
-    public function getCoveragePeriodText()
-    {
-        if ($this->coverage_start && $this->coverage_end) {
-            $start = Yii::$app->formatter->asDate($this->coverage_start, 'dd/MM/yyyy');
-            $end = Yii::$app->formatter->asDate($this->coverage_end, 'dd/MM/yyyy');
-            return "Cubre: {$start} al {$end}";
-        }
-        return '';
     }
 }

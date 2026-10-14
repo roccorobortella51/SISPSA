@@ -5,6 +5,7 @@ namespace app\models;
 use Yii;
 use yii\web\UploadedFile;
 use app\models\Preexistencias;
+use app\components\CoverageHelper;
 
 /**
  * This is the model class for table "sis_siniestro".
@@ -673,8 +674,14 @@ class SisSiniestro extends \yii\db\ActiveRecord
             return ['valid' => false, 'errors' => $errors];
         }
 
-        $fechaInicioContrato = new \DateTime($contrato->fecha_ini);
         $fechaActual = new \DateTime();
+
+        // Anchor for the per-contract usage-limit window (`cantidad_limite`).
+        // NOTE: This is intentionally the CURRENT contract's start date — the
+        // usage limit resets per contract year (business rule), unlike the
+        // waiting period (`plazo_espera`) which uses the CONTINUOUS COVERAGE
+        // chain start via CoverageHelper.
+        $fechaInicioContratoActual = new \DateTime($contrato->fecha_ini);
 
         // ============================================
         // CALCULAR COSTO TOTAL SELECCIONADO Y COBERTURA DISPONIBLE
@@ -727,13 +734,53 @@ class SisSiniestro extends \yii\db\ActiveRecord
             // ============================================
             // 1. VALIDACIÓN DE PLAZO DE ESPERA (APLICA PARA AMBOS)
             // ============================================
+            // ============================================
+            // 1. VALIDACIÓN DE PLAZO DE ESPERA
+            //    ────────────────────────────────────────
+            //    The waiting period is measured from the affiliate's EFFECTIVE
+            //    COVERAGE START DATE, which accounts for continuous coverage
+            //    across multiple contracts (gaps ≤ 5 days are considered
+            //    continuous; larger gaps reset the clock).
+            // ============================================
             if (!empty($planItemCobertura->plazo_espera) && $planItemCobertura->plazo_espera > 0) {
-                $diff = $fechaInicioContrato->diff($fechaActual);
-                $mesesTranscurridos = $diff->y * 12 + $diff->m;
 
-                if ($mesesTranscurridos < (int)$planItemCobertura->plazo_espera) {
+                $plazoRequerido = (int)$planItemCobertura->plazo_espera;
+
+                // Use the CONTINUOUS COVERAGE chain anchored on the affiliate's
+                // current active contract. This is the source of truth for the
+                // waiting period.
+                $mesesTranscurridos = CoverageHelper::getMonthsOfContinuousCoverage(
+                    (int)$afiliado->id,
+                    (int)$contrato->id
+                );
+
+                if ($mesesTranscurridos < 0) {
+                    // No coverage chain found — fall back to the current contract's
+                    // fecha_ini as a safe default.
+                    $fallbackDiff = (new \DateTime($contrato->fecha_ini))->diff($fechaActual);
+                    $mesesTranscurridos = $fallbackDiff->y * 12 + $fallbackDiff->m;
+                }
+
+                if ($mesesTranscurridos < $plazoRequerido) {
+
                     $tipoEvento = ($esCita == 1) ? 'cita' : 'atención';
-                    $errors[] = "No se puede registrar la $tipoEvento para '$nombreBaremo'. Aún no ha cumplido el plazo de espera de {$planItemCobertura->plazo_espera} meses.";
+
+                    // Compute the target date for a clearer error message.
+                    $targetDate = CoverageHelper::getWaitingPeriodTargetDate(
+                        (int)$afiliado->id,
+                        $plazoRequerido,
+                        (int)$contrato->id
+                    );
+
+                    $targetText = $targetDate
+                        ? ' Estará disponible a partir del '
+                        . Yii::$app->formatter->asDate($targetDate, 'd/M/Y') . '.'
+                        : '';
+
+                    $errors[] = "No se puede registrar la $tipoEvento para '$nombreBaremo'. "
+                        . "Aún no ha cumplido el plazo de espera de {$plazoRequerido} meses."
+                        . $targetText;
+
                     continue;
                 }
             }
@@ -742,8 +789,8 @@ class SisSiniestro extends \yii\db\ActiveRecord
             // 2. VALIDACIÓN DE LÍMITE DE USO - FIXED: Count ALL events (both Citas AND Atenciones)
             // ============================================
             if ($planItemCobertura->cantidad_limite !== null && $planItemCobertura->cantidad_limite > 0) {
-                $anioActual = self::calcularAnioVigencia($fechaInicioContrato, $fechaActual);
-                list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContrato, $anioActual);
+                $anioActual = self::calcularAnioVigencia($fechaInicioContratoActual, $fechaActual);
+                list($inicioAnioVigencia, $finAnioVigencia) = self::calcularPeriodoVigencia($fechaInicioContratoActual, $anioActual);
 
                 // ============================================================
                 // FIX: Count ALL events (both Citas AND Atenciones)
