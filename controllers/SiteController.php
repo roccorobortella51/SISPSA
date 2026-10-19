@@ -874,8 +874,7 @@ class SiteController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
 
-        // Aumentar límites para producción
-        set_time_limit(120);
+        // Aumentar límites para producción        set_time_limit(120);
         ini_set('memory_limit', '256M');
 
         try {
@@ -1732,82 +1731,432 @@ class SiteController extends Controller
         $clinicaId = $userDatos->clinica_id;
         $clinica = RmClinica::findOne($clinicaId);
 
-        // Fetch KPIs
-        $totalAfiliados = UserDatos::find()
+        // ═══════════════════════════════════════════════════════════════
+        // KPI COMPUTATION — BUCKET MODEL (fixed 2026-10-19)
+        // ───────────────────────────────────────────────────────────────
+        // Every affiliate of this clinic is counted in EXACTLY ONE bucket,
+        // by priority:
+        //
+        //   Activo > Registrado > Suspendido > Vencido > Anulado
+        //
+        // "Anulado" therefore means: this affiliate has annulled contracts
+        // (or no contracts at all) AND no live contract. This mirrors
+        // UserDatosSearch::getSummaryStatistics() and the corporate page,
+        // so every surface agrees on the numbers.
+        //
+        // The old implementation counted CONTRACT rows (one affiliate could
+        // be counted in Activos AND Anulados simultaneously). The bucket
+        // model eliminates that class of bug by construction.
+        // ═══════════════════════════════════════════════════════════════
+
+        // ── Base scope: affiliates of this clinic ──
+        $baseQuery = UserDatos::find()
             ->where(['clinica_id' => $clinicaId])
-            ->andWhere(['role' => 'afiliado'])
-            ->count();
+            ->andWhere(['role' => 'afiliado']);
 
-        // Get contract status counts from the contratos table
-        $contratosActivos = Contratos::find()
-            ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
-            ->where(['ud.clinica_id' => $clinicaId])
-            ->andWhere(['ud.role' => 'afiliado'])
-            ->andWhere(['contratos.estatus' => 'Activo'])
-            ->count();
+        $totalAfiliados = (clone $baseQuery)->count();
 
-        // FIXED: Use 'Suspendido' with capital S
-        $contratosSuspendidos = Contratos::find()
-            ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
-            ->where(['ud.clinica_id' => $clinicaId])
-            ->andWhere(['ud.role' => 'afiliado'])
-            ->andWhere(['contratos.estatus' => 'Suspendido'])  // ← FIXED HERE
-            ->count();
+        // ── Bucket assignment (one row per affiliate) ──
+        // Uses BOOL_OR over LEFT JOINed contracts. GROUP BY ud.id
+        // guarantees exactly one bucket per affiliate.
+        $perAffiliateBuckets = (new \yii\db\Query())
+            ->select([
+                'bucket' => "
+                    CASE
+                        WHEN BOOL_OR(c.estatus = :activo)     THEN 'activo'
+                        WHEN BOOL_OR(c.estatus = :registrado) THEN 'registrado'
+                        WHEN BOOL_OR(c.estatus = :suspendido) THEN 'suspendido'
+                        WHEN BOOL_OR(c.estatus = :vencido)    THEN 'vencido'
+                        WHEN BOOL_OR(c.estatus = :anulado)    THEN 'anulado'
+                        ELSE 'anulado'
+                    END
+                ",
+            ])
+            ->from(['user_datos' => 'user_datos'])
+            ->leftJoin(['c' => 'contratos'], 'c.user_id = user_datos.id')
+            ->where(['user_datos.clinica_id' => $clinicaId])
+            ->andWhere(['user_datos.role' => 'afiliado'])
+            ->groupBy('user_datos.id')
+            ->params([
+                ':activo'     => Contratos::STATUS_ACTIVO,
+                ':registrado' => Contratos::STATUS_REGISTRADO,
+                ':suspendido' => Contratos::STATUS_SUSPENDIDO,
+                ':vencido'    => Contratos::STATUS_VENCIDO,
+                ':anulado'    => Contratos::STATUS_ANULADO,
+            ])
+            ->all(\Yii::$app->db);
 
-        // Get affiliate type counts
-        $individuales = UserDatos::find()
-            ->where(['clinica_id' => $clinicaId])
-            ->andWhere(['role' => 'afiliado'])
-            ->andWhere(['user_datos_type_id' => 1])
-            ->count();
+        $globalBuckets = [
+            'activo'     => 0,
+            'registrado' => 0,
+            'suspendido' => 0,
+            'vencido'    => 0,
+            'anulado'    => 0,
+        ];
+        foreach ($perAffiliateBuckets as $row) {
+            $key = $row['bucket'] ?? 'anulado';
+            if (isset($globalBuckets[$key])) {
+                $globalBuckets[$key]++;
+            }
+        }
 
-        $corporativos = UserDatos::find()
-            ->where(['clinica_id' => $clinicaId])
-            ->andWhere(['role' => 'afiliado'])
-            ->andWhere(['user_datos_type_id' => 2])
-            ->count();
-
-        // Get contract expiration counts
+        // ── Contract-adjacent KPIs (independent dimensions) ──
+        // These are NOT buckets — they're cross-cutting counts.
         $expiringSoon = Contratos::find()
             ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
             ->where(['ud.clinica_id' => $clinicaId])
             ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['!=', 'contratos.estatus', Contratos::STATUS_ANULADO])
             ->andWhere(['>=', 'contratos.fecha_ven', date('Y-m-d')])
             ->andWhere(['<=', 'contratos.fecha_ven', date('Y-m-d', strtotime('+30 days'))])
             ->count();
+
+        // ── Nearest expiring contract (the one closest to expiry) ──
+        $nearestExpiring = Contratos::find()
+            ->alias('c')
+            ->select([
+                'c.id',
+                'c.user_id',
+                'c.fecha_ven',
+                'c.nrocontrato',
+                'ud.nombres',
+                'ud.apellidos',
+                'ud.tipo_cedula',
+                'ud.cedula',
+                'ud.telefono',
+                'ud.email',
+            ])
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['!=', 'c.estatus', Contratos::STATUS_ANULADO])
+            ->andWhere(['>=', 'c.fecha_ven', date('Y-m-d')])
+            ->andWhere(['<=', 'c.fecha_ven', date('Y-m-d', strtotime('+30 days'))])
+            ->orderBy(['c.fecha_ven' => SORT_ASC])
+            ->asArray()
+            ->one();
+
+        // Compute days remaining for the nearest one (if any)
+        if ($nearestExpiring) {
+            $daysRemaining = (int) ((strtotime($nearestExpiring['fecha_ven']) - strtotime(date('Y-m-d'))) / 86400);
+            $nearestExpiring['dias_restantes'] = $daysRemaining;
+        }
 
         $expired = Contratos::find()
             ->innerJoin('user_datos ud', 'ud.id = contratos.user_id')
             ->where(['ud.clinica_id' => $clinicaId])
             ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['!=', 'contratos.estatus', Contratos::STATUS_ANULADO])
             ->andWhere(['<', 'contratos.fecha_ven', date('Y-m-d')])
             ->count();
 
-        // Get new affiliates this month
-        $newThisMonth = UserDatos::find()
-            ->where(['clinica_id' => $clinicaId])
-            ->andWhere(['role' => 'afiliado'])
+        // ── Affiliation type breakdown — ACTIVE affiliates only ──
+        // "Active" = has at least one contract whose estatus = 'Activo'.
+        // This mirrors the Activo bucket used by the KPI cards above,
+        // so the Individual + Corporate totals reconcile against
+        // $kpis['contratosActivos'] rather than $kpis['total'].
+        $individuales = (clone $baseQuery)
+            ->andWhere(['user_datos_type_id' => 1])
+            ->andWhere([
+                'EXISTS',
+                (new \yii\db\Query())
+                    ->from(['c' => 'contratos'])
+                    ->where('c.user_id = user_datos.id')
+                    ->andWhere(['c.estatus' => Contratos::STATUS_ACTIVO])
+            ])
+            ->count();
+
+        $corporativos = (clone $baseQuery)
+            ->andWhere(['user_datos_type_id' => 2])
+            ->andWhere([
+                'EXISTS',
+                (new \yii\db\Query())
+                    ->from(['c' => 'contratos'])
+                    ->where('c.user_id = user_datos.id')
+                    ->andWhere(['c.estatus' => Contratos::STATUS_ACTIVO])
+            ])
+            ->count();
+
+        // ── New this month (independent dimension) ──
+        $newThisMonth = (clone $baseQuery)
             ->andWhere(['>=', 'created_at', date('Y-m-01 00:00:00')])
             ->count();
 
+        // ── $kpis array — same keys as before ──
         $kpis = [
-            'total' => $totalAfiliados,
-            'contratosActivos' => $contratosActivos,
-            'contratosSuspendidos' => $contratosSuspendidos,
-            'individuales' => $individuales,
-            'corporativos' => $corporativos,
-            'expiringSoon' => $expiringSoon,
-            'expired' => $expired,
-            'newThisMonth' => $newThisMonth,
+            'total'                => $totalAfiliados,
+            'contratosActivos'     => $globalBuckets['activo'],
+            'contratosRegistrados' => $globalBuckets['registrado'],
+            'contratosSuspendidos' => $globalBuckets['suspendido'],
+            'contratosAnulados'    => $globalBuckets['anulado'],
+            'contratosVencidos'    => $globalBuckets['vencido'],   // ← NEW key
+            'individuales'         => $individuales,
+            'corporativos'         => $corporativos,
+            'expiringSoon'         => $expiringSoon,
+            'expired'              => $expired,
+            'newThisMonth'         => $newThisMonth,
         ];
 
+        // ═══════════════════════════════════════════════════════════════
+        // CORPORATE KPIs — same bucket model, scoped to corporate affiliates
+        // ═══════════════════════════════════════════════════════════════
+
+        $corpAffiliateQuery = (clone $baseQuery)
+            ->andWhere(['user_datos_type_id' => 2])
+            ->andWhere(['IS NOT', 'afiliado_corporativo_id', null]);
+
+        $totalAfiliadosCorporativos = (clone $corpAffiliateQuery)->count();
+
+        $totalCorporativos = (clone $corpAffiliateQuery)
+            ->select(['afiliado_corporativo_id'])
+            ->distinct()
+            ->count();
+
+        // Bucket each corporate affiliate individually.
+        $corpPerAffiliate = (new \yii\db\Query())
+            ->select([
+                'user_id'       => 'user_datos.id',
+                'corp_id'       => 'user_datos.afiliado_corporativo_id',
+                'bucket'        => "
+                    CASE
+                        WHEN BOOL_OR(c.estatus = :activo)     THEN 'activo'
+                        WHEN BOOL_OR(c.estatus = :registrado) THEN 'registrado'
+                        WHEN BOOL_OR(c.estatus = :suspendido) THEN 'suspendido'
+                        WHEN BOOL_OR(c.estatus = :vencido)    THEN 'vencido'
+                        WHEN BOOL_OR(c.estatus = :anulado)    THEN 'anulado'
+                        ELSE 'anulado'
+                    END
+                ",
+            ])
+            ->from(['user_datos' => 'user_datos'])
+            ->leftJoin(['c' => 'contratos'], 'c.user_id = user_datos.id')
+            ->where(['user_datos.clinica_id' => $clinicaId])
+            ->andWhere(['user_datos.role' => 'afiliado'])
+            ->andWhere(['user_datos.user_datos_type_id' => 2])
+            ->andWhere(['IS NOT', 'user_datos.afiliado_corporativo_id', null])
+            ->groupBy(['user_datos.id', 'user_datos.afiliado_corporativo_id'])
+            ->params([
+                ':activo'     => Contratos::STATUS_ACTIVO,
+                ':registrado' => Contratos::STATUS_REGISTRADO,
+                ':suspendido' => Contratos::STATUS_SUSPENDIDO,
+                ':vencido'    => Contratos::STATUS_VENCIDO,
+                ':anulado'    => Contratos::STATUS_ANULADO,
+            ])
+            ->all(\Yii::$app->db);
+
+        $corpBuckets = [
+            'activo'     => 0,
+            'registrado' => 0,
+            'suspendido' => 0,
+            'vencido'    => 0,
+            'anulado'    => 0,
+        ];
+        // Per-corporate aggregation, keyed by corp_id
+        $perCorporateBuckets = [];
+
+        foreach ($corpPerAffiliate as $row) {
+            $key    = $row['bucket'] ?? 'anulado';
+            $corpId = (int) $row['corp_id'];
+
+            if (isset($corpBuckets[$key])) {
+                $corpBuckets[$key]++;
+            }
+            if (!isset($perCorporateBuckets[$corpId])) {
+                $perCorporateBuckets[$corpId] = [
+                    'activo'     => 0,
+                    'registrado' => 0,
+                    'suspendido' => 0,
+                    'vencido'    => 0,
+                    'anulado'    => 0,
+                ];
+            }
+            if (isset($perCorporateBuckets[$corpId][$key])) {
+                $perCorporateBuckets[$corpId][$key]++;
+            }
+        }
+
+        $corporateKpis = [
+            'totalCorporativos'          => $totalCorporativos,
+            'totalAfiliadosCorporativos' => $totalAfiliadosCorporativos,
+            'activos'                    => $corpBuckets['activo'],
+            'registrados'                => $corpBuckets['registrado'],
+            'suspendidos'                => $corpBuckets['suspendido'],
+            'anulados'                   => $corpBuckets['anulado'],
+            'vencidos'                   => $corpBuckets['vencido'],   // ← NEW key
+        ];
+
+        // ═══════════════════════════════════════════════════════════════
+        // PER-CORPORATE DETAIL — one row per corporate this clinic
+        // has affiliates in. Uses the same per-affiliate buckets.
+        // ═══════════════════════════════════════════════════════════════
+        $corporateDetails = [];
+
+        if (!empty($perCorporateBuckets)) {
+            $corpIdsForClinic = array_keys($perCorporateBuckets);
+
+            $corporativos = \app\models\Corporativo::find()
+                ->where(['id' => $corpIdsForClinic])
+                ->all();
+
+            foreach ($corporativos as $corp) {
+                $buckets = $perCorporateBuckets[(int) $corp->id] ?? [
+                    'activo'     => 0,
+                    'registrado' => 0,
+                    'suspendido' => 0,
+                    'vencido'    => 0,
+                    'anulado'    => 0,
+                ];
+
+                $total     = array_sum($buckets);
+                $pctActive = $total > 0 ? round(($buckets['activo'] / $total) * 100, 1) : 0;
+
+                if ($pctActive >= 80) {
+                    $tone = 'good';
+                } elseif ($pctActive >= 50) {
+                    $tone = 'warn';
+                } else {
+                    $tone = 'bad';
+                }
+
+                $corporateDetails[] = [
+                    'id'          => $corp->id,
+                    'nombre'      => $corp->nombre,
+                    'rif'         => $corp->rif,
+                    'activos'     => $buckets['activo'],
+                    'registrados' => $buckets['registrado'],
+                    'suspendidos' => $buckets['suspendido'],
+                    'anulados'    => $buckets['anulado'],
+                    'vencidos'    => $buckets['vencido'],   // ← NEW field
+                    'total'       => $total,
+                    'pct_active'  => $pctActive,
+                    'tone'        => $tone,
+                ];
+            }
+
+            usort($corporateDetails, function ($a, $b) {
+                if ($b['activos'] !== $a['activos']) {
+                    return $b['activos'] - $a['activos'];
+                }
+                return strcasecmp($a['nombre'], $b['nombre']);
+            });
+        }
+
         return $this->render('dashboard-coordinador', [
-            'clinicaId' => $clinicaId,
-            'clinicaNombre' => $clinica ? $clinica->nombre : 'Su clínica',
-            'kpis' => $kpis,
+            'clinicaId'        => $clinicaId,
+            'clinicaNombre'    => $clinica ? $clinica->nombre : 'Su clínica',
+            'kpis'             => $kpis,
+            'corporateKpis'    => $corporateKpis,
+            'corporateDetails' => $corporateDetails,
+            'nearestExpiring' => $nearestExpiring,
+
         ]);
     }
+    /**
+     * Lists contracts expiring within the next N days for the current user's clinic.
+     *
+     * Visible to roles with clinic access (GERENTE-CLINICA, COORDINADOR-CLINICA).
+     *
+     * @param int $days  Window in days (default 30, max 365)
+     * @return string
+     */
+    public function actionContratosPorVencer($days = 30)
+    {
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['site/login']);
+        }
 
+        $user = Yii::$app->user->identity;
+        $roles = Yii::$app->authManager->getRolesByUser($user->id);
+
+        $allowed = ['GERENTE-CLINICA', 'COORDINADOR-CLINICA', 'ADMINISTRADOR', 'ADMIN'];
+        $hasAccess = false;
+        foreach ($allowed as $r) {
+            if (isset($roles[$r])) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        if (!$hasAccess) {
+            Yii::$app->session->setFlash('error', 'No tiene permisos para acceder a esta vista.');
+            return $this->goHome();
+        }
+
+        // Clamp the day window
+        $days = (int) $days;
+        if ($days <= 0) {
+            $days = 30;
+        }
+        if ($days > 365) {
+            $days = 365;
+        }
+
+        // Resolve clinic
+        $clinicaId = UserHelper::getMyClinicaId();
+        if (!$clinicaId) {
+            Yii::$app->session->setFlash('error', 'No tiene una clínica asociada.');
+            return $this->goHome();
+        }
+
+        $clinica = RmClinica::findOne($clinicaId);
+
+        $fromDate = date('Y-m-d');
+        $toDate   = date('Y-m-d', strtotime("+{$days} days"));
+
+        // Fetch all expiring contracts (clinic-scoped)
+        $rows = Contratos::find()
+            ->alias('c')
+            ->select([
+                'c.id            AS contrato_id',
+                'c.nrocontrato   AS nrocontrato',
+                'c.fecha_ini     AS fecha_ini',
+                'c.fecha_ven     AS fecha_ven',
+                'c.estatus       AS estatus',
+                'c.monto         AS monto',
+                'ud.id           AS user_id',
+                'ud.nombres',
+                'ud.apellidos',
+                'ud.tipo_cedula',
+                'ud.cedula',
+                'ud.telefono',
+                'ud.email',
+                'p.nombre        AS plan_nombre',
+            ])
+            ->innerJoin('user_datos ud', 'ud.id = c.user_id')
+            ->leftJoin('planes p', 'p.id = c.plan_id')
+            ->where(['ud.clinica_id' => $clinicaId])
+            ->andWhere(['ud.role' => 'afiliado'])
+            ->andWhere(['!=', 'c.estatus', Contratos::STATUS_ANULADO])
+            ->andWhere(['>=', 'c.fecha_ven', $fromDate])
+            ->andWhere(['<=', 'c.fecha_ven', $toDate])
+            ->orderBy(['c.fecha_ven' => SORT_ASC])
+            ->asArray()
+            ->all();
+
+        // Enrich each row with derived urgency fields
+        $today = new \DateTime('today');
+        foreach ($rows as &$row) {
+            $venc  = new \DateTime($row['fecha_ven']);
+            $diff  = (int) $today->diff($venc)->format('%r%a');   // signed
+            $row['dias_restantes'] = $diff;
+
+            if ($diff <= 3) {
+                $row['urgency'] = 'critical';
+            } elseif ($diff <= 7) {
+                $row['urgency'] = 'warning';
+            } else {
+                $row['urgency'] = 'notice';
+            }
+        }
+        unset($row);
+
+        return $this->render('contratos-por-vencer', [
+            'clinicaNombre' => $clinica ? $clinica->nombre : 'Su clínica',
+            'contratos'     => $rows,
+            'days'          => $days,
+            'fromDate'      => $fromDate,
+            'toDate'        => $toDate,
+        ]);
+    }
     /**
      * Dashboard for ASESOR role
      * Shows affiliate statistics and plan information

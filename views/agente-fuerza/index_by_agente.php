@@ -357,6 +357,18 @@ $this->registerCss("
             width: 100%;
         }
     }
+        .sispsa-badge {
+    background: linear-gradient(135deg, #008272 0%, #00a99d 100%);
+    color: #ffffff !important;
+    font-size: 0.85rem !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
 ");
 ?>
 
@@ -422,16 +434,23 @@ $this->registerCss("
                         'maxButtonCount' => 5,
                     ],
                     'columns' => [
+                        // NEW COLUMN: Código SISPSA (replaces N° Intermediario)
                         [
-                            'attribute' => 'id',
-                            'label' => 'N° INTERMEDIARIO',
-                            'contentOptions' => ['class' => 'text-center align-middle', 'style' => 'font-weight: 600;'],
-                            'headerOptions' => ['style' => 'width: 130px;'],
+                            'attribute' => 'cod_sispsa',
+                            'label' => 'CÓDIGO SISPSA',
+                            'format' => 'raw',
+                            'headerOptions' => ['style' => 'width: 160px;'],
+                            'contentOptions' => ['class' => 'text-center align-middle'],
                             'value' => function ($model) {
-                                return $model->id;
+                                if (!empty($model->cod_sispsa)) {
+                                    return Html::tag('span', Html::encode($model->cod_sispsa), [
+                                        'class' => 'sudeaseg-badge',
+                                    ]);
+                                }
+                                return Html::tag('span', '—', ['class' => 'empty-value']);
                             },
                             'filterInputOptions' => [
-                                'placeholder' => 'Buscar N°',
+                                'placeholder' => 'Buscar SISPSA',
                                 'class' => 'form-control form-control-sm text-center',
                             ],
                         ],

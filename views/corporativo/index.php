@@ -15,92 +15,31 @@ use yii\helpers\ArrayHelper;
 /** @var yii\web\View $this */
 /** @var app\models\CorporativoSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
-/** @var array $activeCounts   Map: corporate_id => count of affiliates with >=1 live contract */
-/** @var array $annulledCounts Map: corporate_id => count of affiliates whose only contracts are annulled */
+/** @var array $activeCounts     Map: corporate_id => count of affiliates whose best status is Activo */
+/** @var array $registeredCounts Map: corporate_id => count of affiliates whose best status is Registrado */
+/** @var array $suspendedCounts  Map: corporate_id => count of affiliates whose best status is Suspendido */
+/** @var array $annulledCounts   Map: corporate_id => count of affiliates whose only contracts are annulled */
+/** @var array $stats            Role-scoped KPI stats array (built in the controller) */
+/** @var bool  $isClinicUser     Whether the current user is bound to a clinic */
 
 $this->params['breadcrumbs'][] = ['label' => 'Corporativos', 'url' => ['index']];
 $this->title = 'GESTIÓN DE AFILIADOS CORPORATIVOS';
 
 // ── Safe fallbacks if the controller didn't pass the maps ──
-$activeCounts   = $activeCounts   ?? [];
-$annulledCounts = $annulledCounts ?? [];
+$activeCounts     = $activeCounts     ?? [];
+$registeredCounts = $registeredCounts ?? [];
+$suspendedCounts  = $suspendedCounts  ?? [];
+$annulledCounts   = $annulledCounts   ?? [];
+$stats            = $stats            ?? [];
+$isClinicUser     = $isClinicUser     ?? false;
 
-// ── Header stats ──
+// ── Header stats — already role-scoped by the controller ──
 $totalCorp = $dataProvider->getTotalCount();
 
-$totalClinicas = (int) RmClinica::find()
-    ->andWhere(['IS', 'deleted_at', null])
-    ->count();
-
-$totalAfiliadosActivos = (int) UserDatos::find()
-    ->alias('ud')
-    ->where(['ud.user_datos_type_id' => 2])
-    ->andWhere(['IS NOT', 'ud.afiliado_corporativo_id', null])
-    ->andWhere([
-        'EXISTS',
-        (new \yii\db\Query())
-            ->from(['c' => 'contratos'])
-            ->where('c.user_id = ud.id')
-            ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
-    ])
-    ->count();
-
-$totalAfiliadosAnulados = (int) UserDatos::find()
-    ->alias('ud')
-    ->where(['ud.user_datos_type_id' => 2])
-    ->andWhere(['IS NOT', 'ud.afiliado_corporativo_id', null])
-    ->andWhere([
-        'NOT EXISTS',
-        (new \yii\db\Query())
-            ->from(['c' => 'contratos'])
-            ->where('c.user_id = ud.id')
-            ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
-    ])
-    ->count();
-
-$totalActivos = (int) Corporativo::find()
-    ->where(['estatus' => 'Activo'])
-    ->andWhere(['IS', 'deleted_at', null])
-    ->count();
-
-// ── KPI cards — value, label, helper, icon, tone ──
-$stats = [
-    [
-        'value'  => $totalCorp,
-        'label'  => 'Corporativos',
-        'helper' => 'Registros totales',
-        'icon'   => 'fa-building',
-        'tone'   => 'primary',
-    ],
-    [
-        'value'  => $totalActivos,
-        'label'  => 'Corporativos Activos',
-        'helper' => 'Con estatus Activo',
-        'icon'   => 'fa-check-circle',
-        'tone'   => 'success',
-    ],
-    [
-        'value'  => $totalAfiliadosActivos,
-        'label'  => 'Afiliados Activos',
-        'helper' => 'Con contrato vigente',
-        'icon'   => 'fa-user-check',
-        'tone'   => 'indigo',
-    ],
-    [
-        'value'  => $totalAfiliadosAnulados,
-        'label'  => 'Afiliados Anulados',
-        'helper' => 'Sin contrato vigente',
-        'icon'   => 'fa-user-slash',
-        'tone'   => 'danger',
-    ],
-    [
-        'value'  => $totalClinicas,
-        'label'  => 'Clínicas',
-        'helper' => 'Red de atención',
-        'icon'   => 'fa-hospital',
-        'tone'   => 'teal',
-    ],
-];
+// Resolve the clinic name once, only when needed.
+$myClinicaName = $isClinicUser
+    ? \app\components\UserHelper::getMyClinicaName()
+    : '';
 ?>
 
 <div class="row" style="margin: 3px !important;">
@@ -113,7 +52,6 @@ $stats = [
             <!-- ============================================================ -->
             <div class="corp-head">
 
-                <!-- ── Title bar ──────────────────────────────────────── -->
                 <div class="corp-head__bar">
                     <div class="corp-head__title-wrap">
                         <span class="corp-head__glyph" aria-hidden="true">
@@ -126,6 +64,14 @@ $stats = [
                                 registro<?= $totalCorp === 1 ? '' : 's' ?>
                                 <span class="corp-head__dot">·</span>
                                 Gestiona corporativos, planes y afiliados
+
+                                <?php if ($isClinicUser && $myClinicaName !== ''): ?>
+                                    <span class="corp-head__scope-badge"
+                                        title="Vista limitada a su clínica">
+                                        <i class="fas fa-clinic-medical"></i>
+                                        <?= Html::encode($myClinicaName) ?>
+                                    </span>
+                                <?php endif; ?>
                             </p>
                         </div>
                     </div>
@@ -138,9 +84,10 @@ $stats = [
                     ) ?>
                 </div>
 
-                <!-- ── KPI strip ─────────────────────────────────────── -->
                 <div class="corp-stats">
                     <?php foreach ($stats as $s): ?>
+                        <?php if (empty($s['show'])): continue;
+                        endif; ?>
                         <div class="corp-stat corp-stat--<?= $s['tone'] ?>">
                             <div class="corp-stat__icon" aria-hidden="true">
                                 <i class="fas <?= $s['icon'] ?>"></i>
@@ -171,7 +118,7 @@ $stats = [
                         'persistResize' => false,
                         'columns' => [
 
-                            // ── No. — compact counter ───────────────────────
+                            // ── No. ─────────────────────────────────────────
                             [
                                 'attribute' => 'rowNumber',
                                 'label' => 'No.',
@@ -207,7 +154,7 @@ $stats = [
                                 ],
                             ],
 
-                            // ── Teléfono — compact ──────────────────────────
+                            // ── Teléfono ────────────────────────────────────
                             [
                                 'attribute' => 'telefono',
                                 'label'     => 'Teléfono',
@@ -315,69 +262,111 @@ $stats = [
                                 ],
                             ],
 
-                            // ── Afiliados Activos ───────────────────────────
+                            // ── Afiliados — count-tile per bucket, mirrors Clínicas Asoc. ──
                             [
-                                'attribute' => 'active_affiliates_count',
-                                'label'     => 'Afiliados Activos',
-                                'header'    => '<i class="fas fa-user-check" style="margin-right:6px; color:#86efac;"></i> Afiliados Activos',
-                                'format' => 'raw',
-                                'value' => function ($model) use ($activeCounts) {
-                                    $count = (int)($activeCounts[(int)$model->id] ?? 0);
+                                'attribute'     => 'active_affiliates_count',
+                                'label'         => 'Afiliados',
+                                'header'        => '<i class="fas fa-users" style="margin-right:6px; color:#a5b4fc;"></i> Afiliados',
+                                'format'        => 'raw',
+                                'value'  => function ($model) use (
+                                    $activeCounts,
+                                    $registeredCounts,
+                                    $suspendedCounts,
+                                    $annulledCounts
+                                ) {
+                                    $corpId = (int) $model->id;
 
-                                    return Html::a(
-                                        '<div class="count-tile count-tile--active">'
-                                            . '<div class="count-tile__number">' . $count . '</div>'
-                                            . '<div class="count-tile__label">'
-                                            . 'Activo' . ($count === 1 ? '' : 's')
-                                            . '</div>'
-                                            . '</div>',
-                                        ['view', 'id' => $model->id],
-                                        [
-                                            'title' => 'Ver afiliados con contrato activo',
-                                            'class' => 'count-tile-link',
-                                        ]
-                                    );
+                                    $active     = (int) ($activeCounts[$corpId]     ?? 0);
+                                    $registered = (int) ($registeredCounts[$corpId] ?? 0);
+                                    $suspended  = (int) ($suspendedCounts[$corpId]  ?? 0);
+                                    $annulled   = (int) ($annulledCounts[$corpId]   ?? 0);
+
+                                    $url = Url::to(['view', 'id' => $corpId]);
+
+                                    // Build the tile list — ONLY include buckets with count > 0.
+                                    $tiles = [];
+
+                                    if ($active > 0) {
+                                        $tiles[] = Html::a(
+                                            '<div class="count-tile count-tile--affiliates-active">'
+                                                . '<div class="count-tile__number">' . $active . '</div>'
+                                                . '<div class="count-tile__label">'
+                                                . 'Activo' . ($active === 1 ? '' : 's')
+                                                . '</div>'
+                                                . '</div>',
+                                            $url,
+                                            [
+                                                'class' => 'count-tile-link',
+                                                'title' => 'Afiliados con contrato Activo',
+                                            ]
+                                        );
+                                    }
+
+                                    if ($registered > 0) {
+                                        $tiles[] = Html::a(
+                                            '<div class="count-tile count-tile--affiliates-registered">'
+                                                . '<div class="count-tile__number">' . $registered . '</div>'
+                                                . '<div class="count-tile__label">'
+                                                . 'Registrado' . ($registered === 1 ? '' : 's')
+                                                . '</div>'
+                                                . '</div>',
+                                            $url,
+                                            [
+                                                'class' => 'count-tile-link',
+                                                'title' => 'Afiliados esperando primer pago',
+                                            ]
+                                        );
+                                    }
+
+                                    if ($suspended > 0) {
+                                        $tiles[] = Html::a(
+                                            '<div class="count-tile count-tile--affiliates-suspended">'
+                                                . '<div class="count-tile__number">' . $suspended . '</div>'
+                                                . '<div class="count-tile__label">'
+                                                . 'Suspendido' . ($suspended === 1 ? '' : 's')
+                                                . '</div>'
+                                                . '</div>',
+                                            $url,
+                                            [
+                                                'class' => 'count-tile-link',
+                                                'title' => 'Afiliados suspendidos por cuotas vencidas',
+                                            ]
+                                        );
+                                    }
+
+                                    if ($annulled > 0) {
+                                        $tiles[] = Html::a(
+                                            '<div class="count-tile count-tile--affiliates-annulled">'
+                                                . '<div class="count-tile__number">' . $annulled . '</div>'
+                                                . '<div class="count-tile__label">'
+                                                . 'Anulado' . ($annulled === 1 ? '' : 's')
+                                                . '</div>'
+                                                . '</div>',
+                                            $url,
+                                            [
+                                                'class' => 'count-tile-link',
+                                                'title' => 'Afiliados con contratos anulados o egresados',
+                                            ]
+                                        );
+                                    }
+
+                                    // Edge case: all four are zero.
+                                    if (empty($tiles)) {
+                                        return '<div class="affiliate-empty">'
+                                            . '<i class="fas fa-user-slash" style="opacity: 0.35;"></i>'
+                                            . '<span>Sin afiliados</span>'
+                                            . '</div>';
+                                    }
+
+                                    return '<div class="count-tile-strip">'
+                                        . implode('', $tiles)
+                                        . '</div>';
                                 },
                                 'headerOptions' => [
-                                    'style' => 'color: white !important; width: 130px; min-width: 130px; text-align: center;',
+                                    'style' => 'color: white !important; width: 220px; min-width: 220px; text-align: center;',
                                 ],
                                 'contentOptions' => [
-                                    'style' => 'width: 130px; min-width: 130px; text-align: center; vertical-align: middle;',
-                                ],
-                            ],
-
-                            // ── Afiliados Anulados ──────────────────────────
-                            [
-                                'attribute' => 'annulled_affiliates_count',
-                                'label'     => 'Afiliados Anulados',
-                                'header'    => '<i class="fas fa-user-slash" style="margin-right:6px; color:#fca5a5;"></i> Afiliados Anulados',
-                                'format' => 'raw',
-                                'value' => function ($model) use ($annulledCounts) {
-                                    $count = (int)($annulledCounts[(int)$model->id] ?? 0);
-
-                                    $tileClass = $count > 0
-                                        ? 'count-tile--annulled'
-                                        : 'count-tile--muted';
-
-                                    return Html::a(
-                                        '<div class="count-tile ' . $tileClass . '">'
-                                            . '<div class="count-tile__number">' . $count . '</div>'
-                                            . '<div class="count-tile__label">'
-                                            . 'Anulado' . ($count === 1 ? '' : 's')
-                                            . '</div>'
-                                            . '</div>',
-                                        ['view', 'id' => $model->id],
-                                        [
-                                            'title' => 'Ver afiliados con contratos anulados',
-                                            'class' => 'count-tile-link',
-                                        ]
-                                    );
-                                },
-                                'headerOptions' => [
-                                    'style' => 'color: white !important; width: 130px; min-width: 130px; text-align: center;',
-                                ],
-                                'contentOptions' => [
-                                    'style' => 'width: 130px; min-width: 130px; text-align: center; vertical-align: middle;',
+                                    'style' => 'width: 220px; min-width: 220px; vertical-align: middle; padding: 10px 8px !important; text-align: center;',
                                 ],
                             ],
 
@@ -386,7 +375,7 @@ $stats = [
                                 'class' => 'yii\grid\ActionColumn',
                                 'header' => '<i class="fas fa-cogs" style="margin-right:6px;"></i> ACCIONES',
                                 'template' => '<div class="d-flex align-items-center justify-content-center actions-wrapper">{view}{update}{pay}{corporate-contract}{upload-affiliates}</div>',
-                                'options' => ['style' => 'width: 280px; min-width: 280px;'],
+                                'options' => ['style' => 'width: 300px; min-width: 300px;'],
                                 'headerOptions' => ['style' => 'color: white !important; text-align: center;'],
                                 'contentOptions' => ['style' => 'text-align: center; padding: 10px !important; vertical-align: middle !important;'],
                                 'buttons' => [
@@ -461,9 +450,9 @@ $stats = [
 <!-- STYLES                                                        -->
 <!-- ============================================================ -->
 <style>
-    /* ============================================================ */
-    /* HEADER — title bar + KPI strip                                */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* HEADER — title bar + KPI strip                              */
+    /* ═══════════════════════════════════════════════════════════ */
     .corp-head {
         position: relative;
         display: flex;
@@ -474,7 +463,6 @@ $stats = [
         border-bottom: 1px solid #e6eaee;
     }
 
-    /* Hairline accent at the very top */
     .corp-head::before {
         content: "";
         position: absolute;
@@ -486,7 +474,6 @@ $stats = [
         opacity: 0.9;
     }
 
-    /* ── Title bar ─────────────────────────────────────────── */
     .corp-head__bar {
         display: flex;
         align-items: center;
@@ -566,7 +553,31 @@ $stats = [
         margin: 0 2px;
     }
 
-    /* ── CTA button ────────────────────────────────────────── */
+    /* ── Clinic-scope badge (only shown for clinic-bound roles) ── */
+    .corp-head__scope-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #e6f2fc 0%, #d4e8f7 100%);
+        color: #0078d4;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        border: 1px solid rgba(0, 120, 212, 0.20);
+        white-space: nowrap;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .corp-head__scope-badge i {
+        font-size: 0.72rem;
+        flex-shrink: 0;
+    }
+
+    /* ── CTA button ──────────────────────────────────────────── */
     .corp-cta,
     .corp-cta:link,
     .corp-cta:visited,
@@ -608,7 +619,6 @@ $stats = [
         -webkit-text-fill-color: #ffffff !important;
     }
 
-    /* Shine sweep */
     .corp-cta::after {
         content: "";
         position: absolute;
@@ -675,9 +685,9 @@ $stats = [
         white-space: nowrap;
     }
 
-    /* ============================================================ */
-    /* KPI STRIP                                                     */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* KPI STRIP                                                   */
+    /* ═══════════════════════════════════════════════════════════ */
     .corp-stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -699,7 +709,6 @@ $stats = [
         overflow: hidden;
     }
 
-    /* Colored rail on the left edge */
     .corp-stat::before {
         content: "";
         position: absolute;
@@ -767,9 +776,6 @@ $stats = [
         text-overflow: ellipsis;
     }
 
-    /* ── Tone variants ─────────────────────────────────────── */
-
-    /* Primary (blue) — Corporativos */
     .corp-stat--primary::before {
         background: linear-gradient(180deg, #2f9bff 0%, #0078d4 100%);
     }
@@ -779,7 +785,6 @@ $stats = [
         color: #0078d4;
     }
 
-    /* Success (green) — Corporativos Activos */
     .corp-stat--success::before {
         background: linear-gradient(180deg, #34d399 0%, #059669 100%);
     }
@@ -789,7 +794,6 @@ $stats = [
         color: #059669;
     }
 
-    /* Indigo — Afiliados Activos */
     .corp-stat--indigo::before {
         background: linear-gradient(180deg, #818cf8 0%, #4f46e5 100%);
     }
@@ -799,7 +803,32 @@ $stats = [
         color: #4f46e5;
     }
 
-    /* Danger (rose) — Afiliados Anulados */
+    .corp-stat--amber::before {
+        background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    }
+
+    .corp-stat--amber .corp-stat__icon {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .corp-stat--amber .corp-stat__value {
+        color: #b45309;
+    }
+
+    .corp-stat--slate::before {
+        background: linear-gradient(180deg, #9ca3af 0%, #4b5563 100%);
+    }
+
+    .corp-stat--slate .corp-stat__icon {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .corp-stat--slate .corp-stat__value {
+        color: #4b5563;
+    }
+
     .corp-stat--danger::before {
         background: linear-gradient(180deg, #fb7185 0%, #be123c 100%);
     }
@@ -809,7 +838,6 @@ $stats = [
         color: #be123c;
     }
 
-    /* Teal — Clínicas */
     .corp-stat--teal::before {
         background: linear-gradient(180deg, #22d3ee 0%, #0891b2 100%);
     }
@@ -819,7 +847,6 @@ $stats = [
         color: #0891b2;
     }
 
-    /* ── Responsive ────────────────────────────────────────── */
     @media (max-width: 992px) {
         .corp-head {
             padding: 22px 22px 20px !important;
@@ -862,6 +889,11 @@ $stats = [
             font-size: 0.82rem;
         }
 
+        .corp-head__scope-badge {
+            max-width: 100%;
+            font-size: 0.72rem;
+        }
+
         .corp-cta {
             padding: 9px 16px 9px 9px;
             font-size: 0.88rem;
@@ -897,9 +929,9 @@ $stats = [
         }
     }
 
-    /* ============================================================ */
-    /* GRID — corporate name & secondary cells                       */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* GRID — name & secondary cells                               */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view tbody td.corp-name-cell {
         font-size: 1.5rem !important;
         font-weight: 800 !important;
@@ -909,7 +941,6 @@ $stats = [
         line-height: 1.25;
     }
 
-    /* Compact phone cell */
     .grid-view tbody td.corp-phone-cell {
         font-size: 1rem !important;
         font-weight: 700 !important;
@@ -919,9 +950,9 @@ $stats = [
         font-variant-numeric: tabular-nums;
     }
 
-    /* ============================================================ */
-    /* GRID HEADER                                                   */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* GRID HEADER                                                 */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view thead th,
     .table thead th,
     .kv-grid-table thead th {
@@ -946,9 +977,15 @@ $stats = [
         color: #ffd700 !important;
     }
 
-    /* ============================================================ */
-    /* GRID BODY                                                     */
-    /* ============================================================ */
+    /* Sort indicator — make it visible on the dark header */
+    .grid-view thead th a::after,
+    .grid-view thead th .sort-indicator {
+        color: #ffd700 !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════════ */
+    /* GRID BODY                                                   */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view tbody td {
         font-size: 1rem !important;
         padding: 14px 10px !important;
@@ -961,9 +998,9 @@ $stats = [
         min-height: 38px !important;
     }
 
-    /* ============================================================ */
-    /* COUNT TILES                                                   */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* COUNT TILES — shared by Clínicas Asoc. and Afiliados        */
+    /* ═══════════════════════════════════════════════════════════ */
     .count-tile-link {
         display: inline-block;
         text-decoration: none !important;
@@ -980,9 +1017,9 @@ $stats = [
         align-items: center;
         justify-content: center;
         gap: 1px;
-        padding: 8px 10px 6px;
+        padding: 6px 10px 5px;
         border-radius: 10px;
-        min-width: 82px;
+        min-width: 62px;
         transition: box-shadow 0.15s ease, transform 0.15s ease;
         position: relative;
         overflow: hidden;
@@ -998,7 +1035,26 @@ $stats = [
         opacity: 0.9;
     }
 
-    /* Clinics */
+    .count-tile__number {
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.5px;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .count-tile__label {
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        opacity: 0.85;
+        margin-top: 2px;
+        white-space: nowrap;
+    }
+
+    /* ── Clinics tile ──────────────────────────────────────────── */
     .count-tile--clinics {
         background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
         border: 2px solid #67e8f9;
@@ -1022,114 +1078,162 @@ $stats = [
         border-color: #22d3ee;
     }
 
-    /* Active affiliates */
-    .count-tile--active {
+    /* ── Affiliate tiles (one per bucket) ──────────────────────── */
+    .count-tile--affiliates-active {
         background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
         border: 2px solid #6ee7b7;
         box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);
     }
 
-    .count-tile--active::before {
+    .count-tile--affiliates-active::before {
         background: linear-gradient(90deg, #10b981 0%, #059669 100%);
     }
 
-    .count-tile--active .count-tile__number {
+    .count-tile--affiliates-active .count-tile__number {
         color: #047857;
     }
 
-    .count-tile--active .count-tile__label {
+    .count-tile--affiliates-active .count-tile__label {
         color: #065f46;
     }
 
-    .count-tile-link:hover .count-tile--active {
+    .count-tile-link:hover .count-tile--affiliates-active {
         box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35);
         border-color: #34d399;
     }
 
-    /* Annulled affiliates */
-    .count-tile--annulled {
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        border: 2px solid #fca5a5;
-        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);
+    .count-tile--affiliates-registered {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 2px solid #fcd34d;
+        box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
     }
 
-    .count-tile--annulled::before {
-        background: linear-gradient(90deg, #ef4444 0%, #b91c1c 100%);
+    .count-tile--affiliates-registered::before {
+        background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
     }
 
-    .count-tile--annulled .count-tile__number {
-        color: #b91c1c;
+    .count-tile--affiliates-registered .count-tile__number {
+        color: #b45309;
     }
 
-    .count-tile--annulled .count-tile__label {
-        color: #7f1d1d;
+    .count-tile--affiliates-registered .count-tile__label {
+        color: #92400e;
     }
 
-    .count-tile-link:hover .count-tile--annulled {
-        box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
-        border-color: #f87171;
+    .count-tile-link:hover .count-tile--affiliates-registered {
+        box-shadow: 0 8px 20px rgba(217, 119, 6, 0.35);
+        border-color: #fbbf24;
     }
 
-    /* Muted */
-    .count-tile--muted {
-        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-        border: 2px solid #e5e7eb;
-        box-shadow: 0 2px 6px rgba(107, 114, 128, 0.10);
+    .count-tile--affiliates-suspended {
+        background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
+        border: 2px solid #9ca3af;
+        box-shadow: 0 2px 6px rgba(75, 85, 99, 0.15);
     }
 
-    .count-tile--muted::before {
-        background: linear-gradient(90deg, #d1d5db 0%, #9ca3af 100%);
+    .count-tile--affiliates-suspended::before {
+        background: linear-gradient(90deg, #6b7280 0%, #4b5563 100%);
     }
 
-    .count-tile--muted .count-tile__number {
-        color: #6b7280;
-    }
-
-    .count-tile--muted .count-tile__label {
+    .count-tile--affiliates-suspended .count-tile__number {
         color: #4b5563;
     }
 
-    .count-tile-link:hover .count-tile--muted {
-        box-shadow: 0 8px 20px rgba(107, 114, 128, 0.20);
-        border-color: #d1d5db;
+    .count-tile--affiliates-suspended .count-tile__label {
+        color: #374151;
     }
 
-    .count-tile__number {
-        font-size: 1.65rem;
-        font-weight: 800;
-        line-height: 1;
-        letter-spacing: -0.5px;
-        font-variant-numeric: tabular-nums;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    .count-tile-link:hover .count-tile--affiliates-suspended {
+        box-shadow: 0 8px 20px rgba(75, 85, 99, 0.30);
+        border-color: #6b7280;
     }
 
-    .count-tile__label {
-        font-size: 0.65rem;
-        font-weight: 700;
+    .count-tile--affiliates-annulled {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border: 2px solid #fca5a5;
+        box-shadow: 0 2px 6px rgba(185, 28, 28, 0.15);
+    }
+
+    .count-tile--affiliates-annulled::before {
+        background: linear-gradient(90deg, #ef4444 0%, #b91c1c 100%);
+    }
+
+    .count-tile--affiliates-annulled .count-tile__number {
+        color: #b91c1c;
+    }
+
+    .count-tile--affiliates-annulled .count-tile__label {
+        color: #7f1d1d;
+    }
+
+    .count-tile-link:hover .count-tile--affiliates-annulled {
+        box-shadow: 0 8px 20px rgba(185, 28, 28, 0.35);
+        border-color: #f87171;
+    }
+
+    /* ── Strip wrapper — holds multiple affiliate tiles per row ── */
+    .count-tile-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    /* Each tile sizes to its content instead of stretching to 50%. */
+    .count-tile-strip .count-tile-link {
+        flex: 0 0 auto;
+        display: inline-block;
+    }
+
+    /* Let the inner tile shrink-to-fit its number + label. */
+    .count-tile-strip .count-tile {
+        min-width: 62px;
+        width: auto;
+    }
+
+    /* ── Empty state (no affiliates at all) ───────────────────── */
+    .affiliate-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px 10px;
+        border-radius: 10px;
+        background: #fafbfc;
+        border: 1px dashed #d1d5db;
+        color: #9ca3af;
+        font-size: 0.82rem;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        opacity: 0.85;
-        margin-top: 2px;
+        letter-spacing: 0.4px;
+        font-style: italic;
+    }
+
+    .affiliate-empty i {
+        font-size: 0.95rem;
     }
 
     @media (max-width: 768px) {
         .count-tile {
-            min-width: 70px;
-            padding: 6px 8px 5px;
+            min-width: 56px;
+            padding: 5px 8px 4px;
         }
 
         .count-tile__number {
-            font-size: 1.35rem;
+            font-size: 1.15rem;
         }
 
         .count-tile__label {
-            font-size: 0.6rem;
+            font-size: 0.55rem;
         }
     }
 
-    /* ============================================================ */
-    /* ACTION BUTTONS                                                */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* ACTION BUTTONS                                              */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view td .actions-wrapper {
         display: inline-flex !important;
         align-items: center !important;
@@ -1240,9 +1344,9 @@ $stats = [
         box-shadow: 0 6px 14px rgba(139, 92, 246, 0.4) !important;
     }
 
-    /* ============================================================ */
-    /* BADGES                                                        */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* BADGES                                                      */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view .badge {
         font-size: 0.9rem !important;
         padding: 7px 14px !important;
@@ -1287,11 +1391,9 @@ $stats = [
         color: #ffffff !important;
     }
 
-    /* ============================================================ */
-    /* SELECT2 IN FILTER ROW — light-on-dark, readable              */
-    /* ============================================================ */
-
-    /* ── The input itself (sits on the dark thead) ───────────── */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* SELECT2 FILTER ROW                                          */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view thead .select2-container {
         width: 100% !important;
     }
@@ -1309,14 +1411,12 @@ $stats = [
         border-color: rgba(255, 255, 255, 0.6) !important;
     }
 
-    /* Focus state — subtle blue halo */
     .grid-view thead .select2-container--focus .select2-selection--single,
     .grid-view thead .select2-container--open .select2-selection--single {
         border-color: #4db8ff !important;
         box-shadow: 0 0 0 3px rgba(77, 184, 255, 0.35) !important;
     }
 
-    /* Selected / typed text — DARK on white */
     .grid-view thead .select2-selection__rendered {
         line-height: 36px !important;
         font-size: 0.9rem !important;
@@ -1325,30 +1425,25 @@ $stats = [
         color: #323130 !important;
     }
 
-    /* Placeholder — soft gray so it still reads as "empty" */
     .grid-view thead .select2-selection__placeholder {
         color: #8a8886 !important;
     }
 
-    /* Arrow container */
     .grid-view thead .select2-selection__arrow {
         height: 36px !important;
         right: 8px !important;
     }
 
-    /* The little caret — dark triangle on white input */
     .grid-view thead .select2-selection__arrow b {
         border-color: #323130 transparent transparent transparent !important;
         border-width: 5px 4px 0 4px !important;
     }
 
-    /* When opened, flip the caret upward (nicer affordance) */
     .grid-view thead .select2-container--open .select2-selection__arrow b {
         border-color: transparent transparent #323130 transparent !important;
         border-width: 0 4px 5px 4px !important;
     }
 
-    /* The × clear button (when allowClear is on and a value is chosen) */
     .grid-view thead .select2-selection__clear {
         color: #605e5c !important;
         font-weight: 700 !important;
@@ -1359,11 +1454,6 @@ $stats = [
         color: #a4262c !important;
     }
 
-    /* ============================================================ */
-    /* SELECT2 DROPDOWN — appended to <body>, so scope by class      */
-    /* ============================================================ */
-
-    /* The search input inside the dropdown */
     .select2-container--krajee .select2-search--dropdown .select2-search__field,
     .select2-container--default .select2-search--dropdown .select2-search__field {
         border: 1px solid #c8c6c4 !important;
@@ -1381,7 +1471,6 @@ $stats = [
         box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.18) !important;
     }
 
-    /* The dropdown panel itself */
     .select2-container--krajee .select2-dropdown,
     .select2-container--default .select2-dropdown {
         border: 1px solid #e1dfdd !important;
@@ -1391,7 +1480,6 @@ $stats = [
         overflow: hidden;
     }
 
-    /* The list of options — dark text on white */
     .select2-container--krajee .select2-results__option,
     .select2-container--default .select2-results__option {
         color: #323130 !important;
@@ -1401,7 +1489,6 @@ $stats = [
         transition: background 0.1s ease;
     }
 
-    /* Hover state */
     .select2-container--krajee .select2-results__option--highlighted,
     .select2-container--default .select2-results__option--highlighted,
     .select2-container--krajee .select2-results__option[aria-selected="true"],
@@ -1410,7 +1497,6 @@ $stats = [
         color: #0078d4 !important;
     }
 
-    /* "No results found" state */
     .select2-container--krajee .select2-results__message,
     .select2-container--default .select2-results__message {
         color: #8a8886 !important;
@@ -1418,9 +1504,9 @@ $stats = [
         padding: 8px 12px !important;
     }
 
-    /* ============================================================ */
-    /* PAGINATION                                                    */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* PAGINATION                                                  */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view .pagination .page-link {
         font-size: 1rem !important;
         padding: 10px 16px !important;
@@ -1445,9 +1531,9 @@ $stats = [
         transform: translateY(-1px);
     }
 
-    /* ============================================================ */
-    /* SUMMARY / FOOTER                                              */
-    /* ============================================================ */
+    /* ═══════════════════════════════════════════════════════════ */
+    /* SUMMARY / FOOTER                                            */
+    /* ═══════════════════════════════════════════════════════════ */
     .grid-view .kv-panel-after,
     .grid-view .panel-footer {
         font-size: 1rem !important;
@@ -1473,9 +1559,7 @@ $stats = [
                 event.stopPropagation();
             }
             var url = el ? el.getAttribute('href') : null;
-            if (!url) {
-                return false;
-            }
+            if (!url) return false;
 
             var existing = document.getElementById('corporateContractDrawer');
             if (existing) {
@@ -1484,9 +1568,7 @@ $stats = [
             }
 
             var host = document.getElementById('corporateContractDrawerHost');
-            if (!host) {
-                return false;
-            }
+            if (!host) return false;
 
             host.innerHTML = '<div style="padding:30px;text-align:center;color:#666;font-size:1.2rem;">' +
                 '<i class="fas fa-spinner fa-spin"></i> Cargando…</div>';
@@ -1499,9 +1581,7 @@ $stats = [
                     credentials: 'same-origin'
                 })
                 .then(function(r) {
-                    if (!r.ok) {
-                        throw new Error('HTTP ' + r.status);
-                    }
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
                     return r.text();
                 })
                 .then(function(html) {
@@ -1534,19 +1614,13 @@ $stats = [
         };
 
         window.closeCorporateContractDrawer = function(event) {
-            if (event && event.target !== event.currentTarget) {
-                return;
-            }
+            if (event && event.target !== event.currentTarget) return;
             var drawer = document.getElementById('corporateContractDrawer');
-            if (!drawer) {
-                return;
-            }
+            if (!drawer) return;
             drawer.classList.add('closing');
             setTimeout(function() {
                 var host = document.getElementById('corporateContractDrawerHost');
-                if (host) {
-                    host.innerHTML = '';
-                }
+                if (host) host.innerHTML = '';
             }, 320);
         };
 

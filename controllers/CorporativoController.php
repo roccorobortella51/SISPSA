@@ -137,35 +137,72 @@ class CorporativoController extends Controller
         $searchModel = new CorporativoSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
 
+        // ── Determine user's role and clinic scope ──
+        $userRole = UserHelper::getMyRol();
+        $isClinicUser = in_array($userRole, $this->allowedClinicaRoles);
+        $userClinicaId = $isClinicUser ? UserHelper::getMyClinicaId() : null;
+
         // ── Precompute affiliate counts for every corporate on this page ──
         $corpIds = array_map(
             fn($m) => (int)$m->id,
             $dataProvider->getModels()
         );
 
-        $activeCounts   = [];
-        $annulledCounts = [];
+        $activeCounts     = [];
+        $registeredCounts = [];
+        $suspendedCounts  = [];
+        $annulledCounts   = [];
 
         if (!empty($corpIds)) {
-            // Active: affiliates with at least one non-annulled contract
-            $activeRows = (new \yii\db\Query())
+            // ─────────────────────────────────────────────────────────────
+            // Per-affiliate "best" contract status.
+            // Priority: Activo > Registrado > Suspendido
+            // An affiliate is counted in exactly ONE bucket.
+            // ─────────────────────────────────────────────────────────────
+            $affiliateBuckets = (new \yii\db\Query())
                 ->select([
                     'corp_id' => 'ud.afiliado_corporativo_id',
-                    'cnt'     => 'COUNT(DISTINCT ud.id)',
+                    'user_id' => 'ud.id',
+                    'bucket'  => "
+            CASE
+                WHEN BOOL_OR(c.estatus = :activo)     THEN 'active'
+                WHEN BOOL_OR(c.estatus = :registrado) THEN 'registered'
+                WHEN BOOL_OR(c.estatus = :suspendido) THEN 'suspended'
+                ELSE 'other'
+            END
+        ",
                 ])
                 ->from(['ud' => 'user_datos'])
                 ->innerJoin(['c' => 'contratos'], 'c.user_id = ud.id')
                 ->where(['ud.afiliado_corporativo_id' => $corpIds])
                 ->andWhere(['ud.user_datos_type_id' => 2])
-                ->andWhere(['<>', 'c.estatus', \app\models\Contratos::STATUS_ANULADO])
-                ->groupBy('ud.afiliado_corporativo_id')
+                ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+                ->groupBy(['ud.afiliado_corporativo_id', 'ud.id'])
+                ->params([
+                    ':activo'     => Contratos::STATUS_ACTIVO,
+                    ':registrado' => Contratos::STATUS_REGISTRADO,
+                    ':suspendido' => Contratos::STATUS_SUSPENDIDO,
+                ])
                 ->all(\Yii::$app->db);
 
-            foreach ($activeRows as $row) {
-                $activeCounts[(int)$row['corp_id']] = (int)$row['cnt'];
+            foreach ($affiliateBuckets as $row) {
+                $corpId = (int) $row['corp_id'];
+                switch ($row['bucket']) {
+                    case 'active':
+                        $activeCounts[$corpId]     = ($activeCounts[$corpId]     ?? 0) + 1;
+                        break;
+                    case 'registered':
+                        $registeredCounts[$corpId] = ($registeredCounts[$corpId] ?? 0) + 1;
+                        break;
+                    case 'suspended':
+                        $suspendedCounts[$corpId]  = ($suspendedCounts[$corpId]  ?? 0) + 1;
+                        break;
+                }
             }
 
-            // Annulled: affiliates whose only contracts (if any) are all annulled
+            // ─────────────────────────────────────────────────────────────
+            // Annulled: no non-annulled contract at all.
+            // ─────────────────────────────────────────────────────────────
             $annulledRows = (new \yii\db\Query())
                 ->select([
                     'corp_id' => 'ud.afiliado_corporativo_id',
@@ -179,7 +216,7 @@ class CorporativoController extends Controller
                     (new \yii\db\Query())
                         ->from(['c' => 'contratos'])
                         ->where('c.user_id = ud.id')
-                        ->andWhere(['<>', 'c.estatus', \app\models\Contratos::STATUS_ANULADO])
+                        ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
                 ])
                 ->groupBy('ud.afiliado_corporativo_id')
                 ->all(\Yii::$app->db);
@@ -189,35 +226,93 @@ class CorporativoController extends Controller
             }
         }
 
-        return $this->render('index', [
-            'searchModel'    => $searchModel,
-            'dataProvider'   => $dataProvider,
-            'activeCounts'   => $activeCounts,
-            'annulledCounts' => $annulledCounts,
-        ]);
+        // ══════════════════════════════════════════════════════════════════
+        // ROLE-SCOPED HEADER STATS
+        // ══════════════════════════════════════════════════════════════════
+        // Only compute stats for the data the user can actually see.
+        //
+        // - Admin / Director: global counts
+        // - Clinic-bound roles: counts scoped to their clinic
+        // ══════════════════════════════════════════════════════════════════
 
-        // Asegurar que las relaciones se carguen
-        // el query del dataProvider se declara como QueryInterface,
-        // comprobar que es un ActiveQuery antes de usar with()
-        $query = $dataProvider->query;
-        if ($query instanceof \yii\db\ActiveQuery) {
-            $query->with(['users', 'clinicas']);
+        $totalCorp = $dataProvider->getTotalCount();
+
+        if ($isClinicUser && $userClinicaId) {
+            // ── Clinic-scoped counts ──
+            $totalClinicas = 1; // They only see their own clinic
+        } else {
+            // ── Global counts ──
+            $totalClinicas = (int) RmClinica::find()
+                ->andWhere(['IS', 'deleted_at', null])
+                ->count();
         }
 
-        // ========== OPTIONAL: You could also add a check here to verify ==========
-        // ========== that the user has access to at least one corporate ==========
-        $userRole = UserHelper::getMyRol();
-        if (in_array($userRole, $this->allowedClinicaRoles)) {
-            $clinicaId = UserHelper::getMyClinicaId();
-            if (empty($clinicaId)) {
-                Yii::$app->session->setFlash('warning', 'No tiene una clínica asociada. No se mostrarán registros.');
-            }
-        }
-        // ========== END OF OPTIONAL CHECK ==========
+        // Affiliate counts are already scoped by the dataProvider (which is role-filtered)
+        $totalAfiliadosActivos     = array_sum($activeCounts);
+        $totalAfiliadosRegistrados = array_sum($registeredCounts);
+        $totalAfiliadosSuspendidos = array_sum($suspendedCounts);
+        $totalAfiliadosAnulados    = array_sum($annulledCounts);
+
+        $stats = [
+            [
+                'value'  => $totalCorp,
+                'label'  => 'Corporativos',
+                'helper' => 'Registros totales',
+                'icon'   => 'fa-building',
+                'tone'   => 'primary',
+                'show'   => true,
+            ],
+            [
+                'value'  => $totalAfiliadosActivos,
+                'label'  => 'Afiliados Activos',
+                'helper' => 'Contrato Activo',
+                'icon'   => 'fa-user-check',
+                'tone'   => 'indigo',
+                'show'   => true,
+            ],
+            [
+                'value'  => $totalAfiliadosRegistrados,
+                'label'  => 'Afiliados Registrados',
+                'helper' => 'Esperando primer pago',
+                'icon'   => 'fa-user-clock',
+                'tone'   => 'amber',
+                'show'   => $totalAfiliadosRegistrados > 0,
+            ],
+            [
+                'value'  => $totalAfiliadosSuspendidos,
+                'label'  => 'Afiliados Suspendidos',
+                'helper' => 'Cuotas vencidas',
+                'icon'   => 'fa-user-lock',
+                'tone'   => 'slate',
+                'show'   => $totalAfiliadosSuspendidos > 0,
+            ],
+            [
+                'value'  => $totalAfiliadosAnulados,
+                'label'  => 'Afiliados Anulados',
+                'helper' => 'Sin contrato vigente',
+                'icon'   => 'fa-user-slash',
+                'tone'   => 'danger',
+                'show'   => true,
+            ],
+            [
+                'value'  => $totalClinicas,
+                'label'  => 'Clínicas',
+                'helper' => $isClinicUser ? 'Su clínica' : 'Red de atención',
+                'icon'   => 'fa-hospital',
+                'tone'   => 'teal',
+                'show'   => true,
+            ],
+        ];
 
         return $this->render('index', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
+            'searchModel'      => $searchModel,
+            'dataProvider'     => $dataProvider,
+            'activeCounts'     => $activeCounts,
+            'registeredCounts' => $registeredCounts,
+            'suspendedCounts'  => $suspendedCounts,
+            'annulledCounts'   => $annulledCounts,
+            'stats'            => $stats,
+            'isClinicUser'     => $isClinicUser,
         ]);
     }
 
@@ -243,16 +338,6 @@ class CorporativoController extends Controller
         ]);
     }
 
-    /**
-     * Lists ALL corporate contracts for a given corporate, grouped by
-     * nrocontrato (one business-level contract per year). This is the
-     * entry point for viewing, creating, downloading, and annulling
-     * corporate contracts — instead of jumping straight to the PDF drawer.
-     *
-     * @param  int $id
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException
-     */
     public function actionContracts($id)
     {
         $corporativo = $this->findModel($id);
@@ -270,18 +355,55 @@ class CorporativoController extends Controller
             ->orderBy(['fecha_ini' => SORT_DESC, 'plan_id' => SORT_ASC])
             ->all();
 
-        // ── Group into consistent summaries (anchor, is_annulled, etc.) ─────
         $contractGroups = ContractHelper::buildContractGroupSummaries($flatContracts);
 
-        // Check whether a contract already exists for the CURRENT year — if
-        // yes, the "Nuevo Contrato" button will be disabled by the helper.
         $currentYear = (int) date('Y');
+
+        // ─────────────────────────────────────────────────────────────────
+        // ACTIVE / ANNULLED AFFILIATE COUNTS — SAME LOGIC AS actionIndex()
+        //
+        // `user_datos` is the source of truth; the junction table is NOT
+        // consulted here. This keeps the numbers on this page identical
+        // to the KPI on corporate/index.php.
+        //
+        //   ACTIVO  = has at least one contract whose estatus <> 'Anulado'
+        //   ANULADO = has only Anulado contracts (or no contracts at all)
+        // ─────────────────────────────────────────────────────────────────
+        $corpId = (int) $corporativo->id;
+
+        $activeRow = (new \yii\db\Query())
+            ->select(['cnt' => 'COUNT(DISTINCT ud.id)'])
+            ->from(['ud' => 'user_datos'])
+            ->innerJoin(['c' => 'contratos'], 'c.user_id = ud.id')
+            ->where(['ud.afiliado_corporativo_id' => $corpId])
+            ->andWhere(['ud.user_datos_type_id' => 2])
+            ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+            ->one(\Yii::$app->db);
+
+        $annulledRow = (new \yii\db\Query())
+            ->select(['cnt' => 'COUNT(DISTINCT ud.id)'])
+            ->from(['ud' => 'user_datos'])
+            ->where(['ud.afiliado_corporativo_id' => $corpId])
+            ->andWhere(['ud.user_datos_type_id' => 2])
+            ->andWhere([
+                'NOT EXISTS',
+                (new \yii\db\Query())
+                    ->from(['c' => 'contratos'])
+                    ->where('c.user_id = ud.id')
+                    ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+            ])
+            ->one(\Yii::$app->db);
+
+        $activeCount   = (int) ($activeRow['cnt']   ?? 0);
+        $annulledCount = (int) ($annulledRow['cnt'] ?? 0);
 
         return $this->render('contracts', [
             'corporativo'         => $corporativo,
             'contractGroups'      => $contractGroups,
             'hasContractThisYear' => $this->hasContractForYear($contractGroups, $currentYear),
             'currentYear'         => $currentYear,
+            'activeCount'         => $activeCount,
+            'annulledCount'       => $annulledCount,
         ]);
     }
 
@@ -1660,24 +1782,74 @@ class CorporativoController extends Controller
 
         // ============================================================
         // 4. Persist the CORPORATE CONTRACT for this batch.
+        //
         //    One row per plan — all sharing the same nrocontrato.
-        //    Only runs if at least one affiliate was created successfully.
+        //
+        //    IDEMPOTENT RECONCILIATION (long-term fix, 2026-10-15):
+        //    -------------------------------------------------------
+        //    Previously, this block only iterated over affiliates that
+        //    were created *in this specific batch* ($successDetails).
+        //    That meant: if an earlier batch had created affiliates but
+        //    failed to link them to the corporate contract (e.g. because
+        //    the batch aborted on a duplicate, or the CSV was uploaded
+        //    before this linking logic existed), those affiliates stayed
+        //    orphaned forever — they had `afiliado_corporativo_id` set
+        //    but no row in `contratos_corporativos_afiliados`.
+        //
+        //    Now we source the affiliate set from EVERY affiliate
+        //    currently linked to this corporate (via
+        //    `user_datos.afiliado_corporativo_id`), not just the ones
+        //    from this batch. `persistCorporateContract()` is idempotent:
+        //    it reuses existing individual contracts and junction rows,
+        //    and only creates what's missing.
+        //
+        //    Net effect:
+        //      * Fresh uploads work exactly as before.
+        //      * Subsequent uploads self-heal any past orphans —
+        //        including affiliates added through other flows
+        //        (manual create, corporate update form, etc.).
+        //      * Re-running the same batch is safe (no duplicates).
+        //
+        //    The block runs whenever at least ONE affiliate exists for
+        //    this corporate, independent of $successCount. This is
+        //    intentional: even a batch that imported zero new rows can
+        //    still heal orphans from a previous batch.
         // ============================================================
-        if ($successCount > 0) {
-            $createdIds = array_column($successDetails, 'user_datos_id');
 
-            // Fetch the freshly-created UserDatos and group them by plan.
-            $newEmpleados = UserDatos::find()
-                ->where(['id' => $createdIds])
-                ->andWhere(['afiliado_corporativo_id' => $corporativoId])
-                ->with(['plan', 'clinica'])
-                ->all();
+        // ── Resolve the full affiliate set for this corporate ────────────
+        //
+        // We load from `user_datos` directly (not through the model
+        // relation) so we can eager-load `plan` and `clinica` in one query.
+        //
+        // Active-only filter: we want every affiliate with
+        // `user_datos_type_id = 2` who is currently linked to this
+        // corporate. Affiliates whose only contract is annulled are
+        // included here too — `persistCorporateContract()` will handle
+        // them appropriately (it skips affiliates whose annulled
+        // contract already matches the current vigencia, which is the
+        // "baja deliberada" guard).
+        $allCorporateAffiliates = UserDatos::find()
+            ->where(['afiliado_corporativo_id' => $corporativoId])
+            ->andWhere(['user_datos_type_id' => 2])
+            ->with(['plan', 'clinica'])
+            ->all();
 
+        if (!empty($allCorporateAffiliates)) {
             $employeesByPlan = [];
-            foreach ($newEmpleados as $emp) {
+
+            foreach ($allCorporateAffiliates as $emp) {
                 if (!$emp->plan_id || !$emp->plan) {
+                    // Affiliate has no valid plan — skip silently. The
+                    // corporate contract groups by plan, so a planless
+                    // affiliate can't be linked to any group row.
+                    Yii::warning(
+                        "persistCorporateContract (mass upload): skipping affiliate "
+                            . "#{$emp->id} (cédula {$emp->cedula}) — no valid plan assigned.",
+                        __METHOD__
+                    );
                     continue;
                 }
+
                 $employeesByPlan[(int)$emp->plan_id][] = $emp;
             }
 
@@ -1705,8 +1877,9 @@ class CorporativoController extends Controller
 
             if (!empty($persistedPlans)) {
                 Yii::info(
-                    "Corporate contract persisted after mass upload for corporate #{$corporativoId}: "
-                        . implode(', ', $persistedPlans),
+                    "Corporate contract reconciled after mass upload for corporate "
+                        . "#{$corporativoId}. Plans: " . implode(', ', $persistedPlans)
+                        . ". Affiliates considered: " . count($allCorporateAffiliates),
                     __METHOD__
                 );
             }
@@ -1715,6 +1888,12 @@ class CorporativoController extends Controller
                 $errors[] = 'Los siguientes planes no pudieron registrar su contrato corporativo: '
                     . implode(', ', $failedPlans);
             }
+        } else {
+            Yii::info(
+                "Corporate contract reconciliation skipped for corporate #{$corporativoId} — "
+                    . "no affiliates are currently linked to it.",
+                __METHOD__
+            );
         }
 
         return [
@@ -2749,23 +2928,40 @@ class CorporativoController extends Controller
 
 
     /**
-     * Handles the corporate-contract drawer submission AND the PDF request
-     * from an existing row. The action distinguishes the two by the presence
-     * of a `cid` query parameter:
+     * Renders the corporation-wide contract PDF.
      *
-     *   ┌─────────────────────────────────────────────────────────────────┐
-     *   │ POST /generar-contrato-pdf?id=8           (drawer → new contract)│
-     *   │   → validates, persists, redirects to contracts?id=8 + flash    │
-     *   ├─────────────────────────────────────────────────────────────────┤
-     *   │ GET  /generar-contrato-pdf?id=8&cid=6    (row → existing PDF)   │
-     *   │   → validates, persists (idempotent), renders the PDF inline    │
-     *   └─────────────────────────────────────────────────────────────────┘
+     * ─────────────────────────────────────────────────────────────────────
+     * READ-ONLY BY DESIGN (fixed 2026-10-15)
+     * ─────────────────────────────────────────────────────────────────────
+     * This action used to call ContractHelper::persistCorporateContract()
+     * on every request, which silently created individual contracts and
+     * 12 cuotas for any affiliate whose current individual contract did
+     * not match the corporate's vigencia. A simple click on the "PDF"
+     * button in the contracts page was therefore a write operation.
      *
-     * Both paths run the same validation and persistence logic; only the
-     * final step differs. Persistence is idempotent, so re-clicking the
-     * PDF button on an existing row simply re-writes the same values.
+     * It is now a PURE RENDERER. It:
+     *   1. Resolves the anchor ContratoCorporativo row (cid, or the most
+     *      recent non-annulled one for this corporate).
+     *   2. Loads its sibling group (same nrocontrato) and every linked
+     *      affiliate via the junction table.
+     *   3. Builds the per-plan sections from the EXISTING rows only.
+     *   4. Streams the PDF back to the browser.
      *
-     * @param  int $id
+     * No calls to persistCorporateContract(), no cuota generation, no
+     * updates. If nothing has ever been persisted for this corporate,
+     * the action redirects with a clear message.
+     *
+     * ─────────────────────────────────────────────────────────────────────
+     * WHAT CHANGED
+     * ─────────────────────────────────────────────────────────────────────
+     * Before:  GET /generar-contrato-pdf?id=X&cid=Y  → persist + render
+     * After:   GET /generar-contrato-pdf?id=X&cid=Y  → render only
+     *
+     * The persistence side is now the responsibility of the drawer form,
+     * which POSTs to `actionCreateCorporateContract()`. See that action
+     * for the write path.
+     *
+     * @param  int $id  The corporativo ID.
      * @return \yii\web\Response
      * @throws NotFoundHttpException
      */
@@ -2774,268 +2970,252 @@ class CorporativoController extends Controller
         $corporativo = $this->findModel($id);
 
         if (!$this->userHasAccessToCorporativo($id)) {
-            Yii::$app->session->setFlash('error', 'No tiene permiso para generar el contrato de este corporativo.');
+            Yii::$app->session->setFlash('error', 'No tiene permiso para ver el contrato de este corporativo.');
             return $this->redirect(['index']);
         }
 
-        // ── 1. Read POST dates (drawer flow) ────────────────────────────────
-        $fechaIni = trim((string)$this->request->post('fecha_ini', ''));
-        $fechaVen = trim((string)$this->request->post('fecha_ven', ''));
+        // ────────────────────────────────────────────────────────────────
+        // 1. Resolve the anchor contract row.
+        //
+        //    Priority:
+        //      1. The row explicitly requested via `cid` (query string)
+        //      2. The most recent non-annulled row for this corporate
+        //
+        //    If neither resolves, there is nothing to render — redirect.
+        // ────────────────────────────────────────────────────────────────
+        $cid = (int) $this->request->get('cid', 0);
 
-        // ── 2. FALLBACK: resolve from a persisted contract ──────────────────
-        //  Used when the PDF link is clicked from the actions rail (a GET
-        //  with no POST body). We anchor on the row indicated by `cid`,
-        //  or — if `cid` is missing — on the most recent non-annulled contract.
-        if ($fechaIni === '' || $fechaVen === '') {
-            $anchorId = (int)$this->request->get('cid', 0);
+        $anchor = $cid
+            ? ContratoCorporativo::findOne([
+                'id'             => $cid,
+                'corporativo_id' => $corporativo->id,
+            ])
+            : ContratoCorporativo::find()
+            ->where(['corporativo_id' => $corporativo->id])
+            ->andWhere(['!=', 'estatus', ContratoCorporativo::STATUS_ANULADO])
+            ->orderBy(['fecha_ini' => SORT_DESC, 'id' => SORT_ASC])
+            ->one();
 
-            $anchor = $anchorId
-                ? ContratoCorporativo::findOne([
-                    'id'             => $anchorId,
-                    'corporativo_id' => $corporativo->id,
-                ])
-                : ContratoCorporativo::find()
-                ->where(['corporativo_id' => $corporativo->id])
-                ->andWhere(['!=', 'estatus', ContratoCorporativo::STATUS_ANULADO])
-                ->orderBy(['fecha_ini' => SORT_DESC, 'id' => SORT_ASC])
-                ->one();
-
-            if ($anchor) {
-                if ($fechaIni === '' && !empty($anchor->fecha_ini)) {
-                    $fechaIni = (string)$anchor->fecha_ini;
-                }
-                if ($fechaVen === '' && !empty($anchor->fecha_ven)) {
-                    $fechaVen = (string)$anchor->fecha_ven;
-                }
-            }
-        }
-
-        // ── 3. Validate dates ───────────────────────────────────────────────
-        if ($fechaIni === '' || $fechaVen === '') {
+        if (!$anchor) {
             Yii::$app->session->setFlash(
                 'error',
-                'No se pudo determinar la vigencia del contrato. Regístrelo primero desde el botón "Nuevo Contrato".'
+                'Este corporativo no tiene contratos registrados. Cree uno primero desde "Nuevo Contrato".'
             );
-            return $this->redirect(['view', 'id' => $id]);
-        }
-
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaIni) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaVen)) {
-            Yii::$app->session->setFlash('error', 'Las fechas deben tener el formato AAAA-MM-DD.');
-            return $this->redirect(['view', 'id' => $id]);
-        }
-
-        if ($fechaVen <= $fechaIni) {
-            Yii::$app->session->setFlash('error', 'La fecha de vencimiento debe ser posterior a la fecha de inicio.');
-            return $this->redirect(['view', 'id' => $id]);
-        }
-
-        // ── 3.5. Overlap guard ──────────────────────────────────────────────
-        //  A corporation's non-annulled contracts may not overlap in time.
-        //  When re-persisting an existing contract (cid present), exclude
-        //  ALL of its sibling rows from the check.
-        $anchorIdToExclude = (int)$this->request->get('cid', 0) ?: null;
-        $excludeIds        = [];
-
-        if ($anchorIdToExclude) {
-            $anchorRow = ContratoCorporativo::findOne($anchorIdToExclude);
-            if ($anchorRow) {
-                $siblings = ContractHelper::findCorporateContractGroup(
-                    (int)$corporativo->id,
-                    $anchorRow->nrocontrato
-                );
-                $excludeIds = array_map(fn($r) => (int)$r->id, $siblings);
-            }
-        }
-
-        $overlapCheck = ContractHelper::validateNoOverlap(
-            (int)$corporativo->id,
-            $fechaIni,
-            $excludeIds
-        );
-
-        if ($overlapCheck !== null) {
-            Yii::$app->session->setFlash('error', $overlapCheck['message']);
             return $this->redirect(['contracts', 'id' => $id]);
         }
 
-        // ============================================================
-        // ── 4. Load ACTIVE employees only, grouped by plan ─────────
-        // ------------------------------------------------------------
-        // Business rule: the corporate contract PDF must list ONLY
-        // affiliates who currently have at least one non-annulled
-        // contract. Affiliates whose only contracts are annulled
-        // (or who have no contract at all) are excluded.
-        //
-        // This mirrors the exact logic used by:
-        //   - Corporativo::getActiveAffiliates()
-        //   - the "Afiliados Activos" KPI on corporativo/index.php
-        //   - the "Afiliados Activos" section in corporativo/view.php
-        //
-        // The filter is applied BEFORE grouping by plan, so a plan
-        // whose entire affiliate set has been annulled will simply
-        // not appear in the PDF.
-        // ============================================================
-        $allEmpleados = $corporativo->getEmpleadosAsociados()
-            ->alias('ud')
-            ->with(['plan', 'clinica'])
-            ->where([
-                'EXISTS',
-                (new \yii\db\Query())
-                    ->from(['c' => 'contratos'])
-                    ->where('c.user_id = ud.id')
-                    ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
-            ])
-            ->orderBy(['ud.apellidos' => SORT_ASC, 'ud.nombres' => SORT_ASC])
-            ->all();
-
-        $employeesByPlan = [];
-        foreach ($allEmpleados as $emp) {
-            if (!$emp->plan_id || !$emp->plan) {
-                continue;
-            }
-            $employeesByPlan[(int)$emp->plan_id][] = $emp;
-        }
-
-        if (empty($employeesByPlan)) {
-            Yii::$app->session->setFlash('warning', 'Ninguno de los afiliados de este corporativo tiene un plan asignado.');
-            return $this->redirect(['view', 'id' => $id]);
-        }
-
-        // ── 4.5. Carry-forward: if a previous contract exists, reuse its affiliate set ──
-        //  This is the rule: a new-year contract inherits the exact same affiliate
-        //  set as the previous (expired) contract, not whoever is currently linked.
-        $previousAffiliates = [];
-
-        if (empty($anchorIdToExclude)) {
-            // Only do this on CREATE (no `cid`) — the PDF path reuses the same set anyway
-            $latestGroup = null;
-            $latestIniTs = null;
-
-            foreach (
-                ContractHelper::buildContractGroupSummaries(
-                    ContractHelper::findCorporateContracts($corporativo->id)
-                ) as $group
-            ) {
-                if (!empty($group['is_annulled']) || empty($group['anchor']->fecha_ini)) {
-                    continue;
-                }
-                $ts = strtotime($group['anchor']->fecha_ini);
-                if ($latestIniTs === null || $ts > $latestIniTs) {
-                    $latestIniTs = $ts;
-                    $latestGroup = $group;
-                }
-            }
-
-            if ($latestGroup !== null && !empty($latestGroup['anchor']->nrocontrato)) {
-                $previousAffiliates = ContractHelper::getPreviousContractAffiliates(
-                    $corporativo->id,
-                    $latestGroup['anchor']->nrocontrato
-                );
-            }
-        }
-
-        // If we have a carried-forward set, group it by plan and prefer it
-        // over the freshly-queried employeesByPlan.
-        if (!empty($previousAffiliates)) {
-            $carriedByPlan = [];
-            foreach ($previousAffiliates as $emp) {
-                if (!$emp->plan_id) {
-                    continue;
-                }
-
-                // ── Skip affiliates whose only contracts are annulled ──
-                $hasLive = Contratos::find()
-                    ->where(['user_id' => $emp->id])
-                    ->andWhere(['<>', 'estatus', Contratos::STATUS_ANULADO])
-                    ->exists();
-
-                if (!$hasLive) {
-                    continue;
-                }
-                // ────────────────────────────────────────────────────
-
-                $carriedByPlan[(int)$emp->plan_id][] = $emp;
-            }
-            if (!empty($carriedByPlan)) {
-                $employeesByPlan = $carriedByPlan;
-            }
-        }
-
-        // ── 5. Persist one ContratoCorporativo row per plan ────────────────
-        $persistedContracts = [];
-        $failedPlans        = [];
-
-        foreach ($employeesByPlan as $planId => $empleados) {
-            $plan = $empleados[0]->plan ?? null;
-            if (!$plan) {
-                continue;
-            }
-
-            $contractModel = ContractHelper::persistCorporateContract(
-                $corporativo,
-                $plan,
-                $empleados,
-                $fechaIni,
-                $fechaVen,
-                $empleados   // ← affiliate override (carry-forward)
+        if ($cid > 0 && (int)$anchor->id !== $cid) {
+            // The requested row does not belong to this corporate.
+            Yii::$app->session->setFlash(
+                'error',
+                'El contrato solicitado no pertenece a este corporativo.'
             );
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
 
-            if ($contractModel === null) {
-                $failedPlans[] = $plan->nombre;
+        // ────────────────────────────────────────────────────────────────
+        // 2. Load every sibling row that shares this contract's
+        //    nrocontrato. This is the business-level contract spanning
+        //    one or more plans.
+        // ────────────────────────────────────────────────────────────────
+        $group = ContractHelper::findCorporateContractGroup(
+            (int) $corporativo->id,
+            (string) $anchor->nrocontrato
+        );
+
+        if (empty($group)) {
+            // Defensive: the anchor exists but its group lookup returned
+            // nothing (should never happen). Fall back to just the anchor.
+            $group = [$anchor];
+        }
+
+        // Group the sibling rows by plan so we can render one section per plan.
+        $persistedContracts = [];
+        foreach ($group as $row) {
+            if (!$row->plan) {
+                // Skip rows whose plan relation is broken. They would render
+                // an empty section anyway, so it's cleaner to drop them here
+                // than to special-case them in the template.
+                Yii::warning(
+                    "generarContratoPdf: skipping ContratoCorporativo #{$row->id} — "
+                        . "plan relation is missing (plan_id={$row->plan_id}).",
+                    'contrato-corporativo'
+                );
                 continue;
             }
-
-            $persistedContracts[$planId] = $contractModel;
+            $persistedContracts[(int) $row->plan_id] = $row;
         }
 
         if (empty($persistedContracts)) {
             Yii::$app->session->setFlash(
                 'error',
-                'No se pudo registrar ningún contrato corporativo. Revise los registros de error.'
+                'Ninguno de los contratos registrados para este corporativo tiene un plan válido.'
             );
-            return $this->redirect(['view', 'id' => $id]);
+            return $this->redirect(['contracts', 'id' => $id]);
         }
 
-        if (!empty($failedPlans)) {
+        // ────────────────────────────────────────────────────────────────
+        // 3. Load every affiliate belonging to this corporate contract
+        //    group, via the junction table. We deliberately query the
+        //    junction table (contratos_corporativos_afiliados) — NOT the
+        //    corporate's current affiliate set — because the PDF must
+        //    reflect WHO WAS COVERED BY THIS CONTRACT, not who is linked
+        //    to the corporate today.
+        // ────────────────────────────────────────────────────────────────
+        $groupIds = array_map(static fn($c) => (int) $c->id, $group);
+
+        $affiliateLinks = ContratoCorporativoAfiliado::find()
+            ->alias('cca')
+            ->with(['afiliado', 'afiliado.plan', 'afiliado.clinica'])
+            ->where(['cca.contrato_corporativo_id' => $groupIds])
+            ->all();
+
+        if (empty($affiliateLinks)) {
             Yii::$app->session->setFlash(
                 'warning',
-                'Algunos planes no se pudieron registrar: ' . implode(', ', $failedPlans)
+                'Este contrato no tiene afiliados vinculados. El PDF se generará sin listado de afiliados.'
             );
         }
 
-        // ── 6. Anchor contract (all siblings share these) ───────────────────
-        $anchor         = reset($persistedContracts);
-        $contractNumber = $anchor->nrocontrato;
+        // ────────────────────────────────────────────────────────────────
+        // 4. Organize affiliates by plan_id, so each plan's section can
+        //    render the affiliates that belong to that specific plan.
+        //
+        //    The affiliate's plan is taken from the ContratoCorporativo
+        //    row they're linked to (via the junction's contrato_corporativo_id),
+        //    which mirrors the plan under which they were covered.
+        // ────────────────────────────────────────────────────────────────
+        $planIdByCorporateContractId = [];
+        foreach ($persistedContracts as $planId => $contractModel) {
+            $planIdByCorporateContractId[(int) $contractModel->id] = (int) $planId;
+        }
 
-        // ── 7. Build per-plan sections (only needed for the PDF path) ──────
+        $employeesByPlan = [];
+        $seenAffiliateIds = [];   // ← ADD THIS LINE
+
+
+        // Build a lookup: contrato_corporativo_id => ContratoCorporativo object
+        // (so we can read fecha_ini / fecha_ven inside the loop below).
+        $corpContractById = [];
+        foreach ($persistedContracts as $contractModel) {
+            $corpContractById[(int) $contractModel->id] = $contractModel;
+        }
+
+        foreach ($affiliateLinks as $link) {
+            $afiliado = $link->afiliado;
+            if (!$afiliado) {
+                continue;
+            }
+
+            $affiliateId = (int) $afiliado->id;
+
+            // ── Dedup guard: skip if this affiliate was already placed in a plan ──
+            if (isset($seenAffiliateIds[$affiliateId])) {
+                Yii::warning(
+                    "generarContratoPdf: affiliate #{$affiliateId} appears in more than "
+                        . "one junction row for corporate #{$corporativo->id}. "
+                        . "Counting only the first occurrence.",
+                    'contrato-corporativo'
+                );
+                continue;
+            }
+
+            $corpContractId = (int) $link->contrato_corporativo_id;
+            $corpContract   = $corpContractById[$corpContractId] ?? null;
+
+            if (!$corpContract) {
+                continue;
+            }
+
+            $planId = (int) $corpContract->plan_id;
+            if (!$planId) {
+                continue;
+            }
+
+            // ════════════════════════════════════════════════════════════════
+            // ACTIVE-ONLY FILTER — aligned with corporate/index.php and view.php
+            //
+            // An affiliate is "Activo" if and only if they have at least one
+            // individual contract whose estatus is NOT 'Anulado'.
+            // ════════════════════════════════════════════════════════════════
+            $hasLiveContract = Contratos::find()
+                ->where(['user_id' => $afiliado->id])
+                ->andWhere(['<>', 'estatus', Contratos::STATUS_ANULADO])
+                ->exists();
+
+            if (!$hasLiveContract) {
+                continue;
+            }
+
+            $employeesByPlan[$planId][] = $afiliado;
+
+            // ── Mark as seen so we never add them to another plan bucket ──
+            $seenAffiliateIds[$affiliateId] = true;
+        }
+
+        // ▼▼▼ GUARD GOES HERE ▼▼▼
+        //
+        // After the loop, if no affiliate had a matching Active contract
+        // for this corporate contract's vigencia, $employeesByPlan will be
+        // empty. Warn the user (via flash) so they understand why the PDF
+        // has no affiliate listing.
+        //
+        // The PDF will still render — with empty plan sections — but the
+        // user is told why. Note: since this action streams a PDF, the
+        // flash message may only surface on the next HTML page load. That's
+        // acceptable as a UX hint.
+        if (empty($employeesByPlan)) {
+            Yii::$app->session->setFlash(
+                'warning',
+                'Este contrato no tiene afiliados con estatus "Activo" para la vigencia actual. '
+                    . 'El PDF se generará sin listado de afiliados.'
+            );
+
+            Yii::warning(
+                "generarContratoPdf: corporate #{$corporativo->id}, contract group "
+                    . "'{$anchor->nrocontrato}' — no affiliates with Active individual "
+                    . "contract for vigencia {$anchor->fecha_ini} → {$anchor->fecha_ven}.",
+                'contrato-corporativo'
+            );
+        }
+        // ▲▲▲ END GUARD ▲▲▲
+
+        // Sort each plan's affiliates alphabetically (apellidos, nombres).
+        foreach ($employeesByPlan as &$list) {
+            usort($list, static function ($a, $b) {
+                $cmp = strcasecmp((string)($a->apellidos ?? ''), (string)($b->apellidos ?? ''));
+                return $cmp !== 0
+                    ? $cmp
+                    : strcasecmp((string)($a->nombres ?? ''), (string)($b->nombres ?? ''));
+            });
+        }
+        unset($list);
+
+        // ────────────────────────────────────────────────────────────────
+        // 5. Build the per-plan sections for the PDF.
+        //
+        //    Everything below reads from data that ALREADY EXISTS in the
+        //    database. Nothing is written, updated, or created.
+        // ────────────────────────────────────────────────────────────────
         $planSections    = [];
         $grandSubtotal   = 0.0;
         $grandAffiliates = 0;
 
         foreach ($persistedContracts as $planId => $contractModel) {
             $plan      = $contractModel->plan;
-            $empleados = $employeesByPlan[$planId];
+            $empleados = $employeesByPlan[$planId] ?? [];
 
-            // ============================================================
-            // PLAN SERVICES — enriched with continuous-coverage P/E
-            // ------------------------------------------------------------
-            // Corporate affiliates still have their own individual
-            // Contratos rows (one per plan, linked via
-            // ContratoCorporativoAfiliado), so the CoverageHelper chain
-            // logic works exactly the same as for individual affiliates.
+            // ────────────────────────────────────────────────────────────
+            // 5a. Plan services — enriched with continuous-coverage P/E.
             //
-            // ANCHOR CHOICE: we use the EARLIEST-JOINED affiliate in this
-            // plan group as the representative, so "Sin espera" is only
-            // shown when the ENTIRE group has been continuously covered
-            // long enough. Using $empleados[0] directly would be
-            // non-deterministic (depends on query order) and could surface
-            // "Sin espera" for a service the group as a whole hasn't
-            // reached yet.
-            // ============================================================
+            //     The representative affiliate for the coverage chain is
+            //     the earliest-joined affiliate in this plan group, so
+            //     that "Sin espera" is only shown when the ENTIRE group
+            //     has been continuously covered long enough.
+            // ────────────────────────────────────────────────────────────
             $planServices = [];
-            if ($plan->id) {
+            if ($plan && $plan->id) {
 
-                // ── Pick the earliest-joined affiliate as the anchor ──
                 $earliestEmployee = null;
                 foreach ($empleados as $emp) {
                     if (
@@ -3049,10 +3229,10 @@ class CorporativoController extends Controller
                 $representativeUserId     = $earliestEmployee ? (int)$earliestEmployee->id : null;
                 $representativeContractId = null;
 
-                // ── Look up the affiliate's individual contract that matches
-                //    this corporate contract's vigencia. Fallback to the most
-                //    recent non-annulled individual contract if not found. ──
                 if ($representativeUserId) {
+                    // Prefer the individual contract that matches this
+                    // corporate contract's vigencia; fall back to the most
+                    // recent non-annulled one.
                     $repContract = Contratos::find()
                         ->where(['user_id' => $representativeUserId])
                         ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
@@ -3074,11 +3254,9 @@ class CorporativoController extends Controller
                     }
                 }
 
-                // ── Load the plan's services and enrich each with its display state ──
                 $dbServices = \app\models\PlanServicios::getServicesForPlan($plan->id, $plan->clinica_id);
 
                 foreach ($dbServices as $svc) {
-
                     $esperaDisplay = $svc->plazo_espera ?? 'NO APLICA';
                     $esperaStatus  = 'raw';
 
@@ -3104,6 +3282,9 @@ class CorporativoController extends Controller
                 }
             }
 
+            // ────────────────────────────────────────────────────────────
+            // 5b. Affiliate list for this plan.
+            // ────────────────────────────────────────────────────────────
             $empleadosData = [];
             $subtotal      = 0.0;
             $precioPlan    = (float)($plan->precio ?? 0);
@@ -3122,7 +3303,10 @@ class CorporativoController extends Controller
                 $subtotal += $precioPlan;
             }
 
-            $planCobertura          = $plan->cobertura ?? 'N/A';
+            // ────────────────────────────────────────────────────────────
+            // 5c. Plan metadata.
+            // ────────────────────────────────────────────────────────────
+            $planCobertura = $plan->cobertura ?? 'N/A';
             $planCoberturaFormatted = ($planCobertura !== 'N/A' && $planCobertura > 0)
                 ? '$' . number_format((float)$planCobertura, 2, ',', '.')
                 : 'N/A';
@@ -3145,29 +3329,13 @@ class CorporativoController extends Controller
             $grandAffiliates += count($empleadosData);
         }
 
-        // ── 8. Decide the tail behavior ─────────────────────────────────────
-        //  cid present  → render the PDF for the requested row
-        //  no cid       → the drawer just created a contract; redirect + flash
-        $cid          = (int)$this->request->get('cid', 0);
-        $isPdfRequest = ($cid > 0);
-
-        if (!$isPdfRequest) {
-            // ── Drawer flow: contract created. Redirect to the list. ──
-            Yii::$app->session->setFlash(
-                'success',
-                'Contrato ' . Html::encode($contractNumber) . ' creado correctamente. '
-                    . 'Puede descargar el PDF desde el botón rojo de la fila correspondiente.'
-            );
-
-            return $this->redirect(['contracts', 'id' => $id]);
-        }
-
-        // ── PDF button flow: build and stream the PDF ──────────────────────
+        // ────────────────────────────────────────────────────────────────
+        // 6. Header data for the PDF.
+        // ────────────────────────────────────────────────────────────────
         $logo   = Yii::getAlias('@webroot/img/sispsalogo.jpg');
         $firmas = Yii::getAlias('@webroot/img/firmas.png');
 
-
-        // Receipt number (provisional)
+        // Provisional receipt number (used only for display).
         $receipt = Receipt::find()
             ->where(['user_id' => null])
             ->orderBy(['created_at' => SORT_DESC])
@@ -3177,29 +3345,32 @@ class CorporativoController extends Controller
             ? $receipt->receipt_number
             : Receipt::generateReceiptNumber();
 
-        // Location + intermediary
-        $estadoNombre    = $corporativo->getRmEstado()->one()->nombre ?? '';
+        // Full corporate address.
+        $estadoNombre    = $corporativo->getRmEstado()->one()->nombre    ?? '';
         $municipioNombre = $corporativo->getRmMunicipio()->one()->nombre ?? '';
         $parroquiaNombre = $corporativo->getRmParroquia()->one()->nombre ?? '';
-        $ciudadNombre    = $corporativo->getRmCiudad()->one()->nombre ?? '';
+        $ciudadNombre    = $corporativo->getRmCiudad()->one()->nombre    ?? '';
 
         $addressParts = [];
-        if (!empty($corporativo->direccion)) $addressParts[] = $corporativo->direccion;
-        if (!empty($parroquiaNombre))        $addressParts[] = $parroquiaNombre;
-        if (!empty($municipioNombre))        $addressParts[] = $municipioNombre;
-        if (!empty($ciudadNombre))           $addressParts[] = $ciudadNombre;
-        if (!empty($estadoNombre))           $addressParts[] = $estadoNombre;
+        if (!empty($corporativo->direccion))  $addressParts[] = $corporativo->direccion;
+        if (!empty($parroquiaNombre))         $addressParts[] = $parroquiaNombre;
+        if (!empty($municipioNombre))         $addressParts[] = $municipioNombre;
+        if (!empty($ciudadNombre))            $addressParts[] = $ciudadNombre;
+        if (!empty($estadoNombre))            $addressParts[] = $estadoNombre;
         $fullCorporateAddress = implode(', ', array_filter($addressParts));
 
+        // Intermediary (asesor) — taken from any employee that has one.
         $intermediarioNombre = '';
         $intermediarioCodigo = '';
         $intermediarioCi     = '';
 
         $firstAsesorId = null;
-        foreach ($allEmpleados as $emp) {
-            if (!empty($emp->asesor_id)) {
-                $firstAsesorId = $emp->asesor_id;
-                break;
+        foreach ($employeesByPlan as $list) {
+            foreach ($list as $emp) {
+                if (!empty($emp->asesor_id)) {
+                    $firstAsesorId = $emp->asesor_id;
+                    break 2;
+                }
             }
         }
 
@@ -3214,6 +3385,8 @@ class CorporativoController extends Controller
                 }
             }
         }
+
+        $contractNumber = $anchor->nrocontrato;
 
         $data = [
             'contract_number'          => $contractNumber,
@@ -3267,11 +3440,14 @@ class CorporativoController extends Controller
             'intermediary_code' => $intermediarioCodigo,
             'intermediary_ci'   => $intermediarioCi,
 
-            'declaration_place'      => $ciudadNombre,
-            'declaration_date'       => date('d/m/Y'),
-            'declaration_date_long'  => \Yii::$app->formatter->asDate('now', 'php:j \d\e F \d\e Y'),
+            'declaration_place'     => $ciudadNombre,
+            'declaration_date'      => date('d/m/Y'),
+            'declaration_date_long' => \Yii::$app->formatter->asDate('now', 'php:j \d\e F \d\e Y'),
         ];
 
+        // ────────────────────────────────────────────────────────────────
+        // 7. Render the PDF.
+        // ────────────────────────────────────────────────────────────────
         $content = $this->renderPartial('_contrato_corporativo_pdf', [
             'data'   => $data,
             'logo'   => $logo,
@@ -3358,5 +3534,138 @@ class CorporativoController extends Controller
                 $contract->nrocontrato
             ),
         ]);
+    }
+    /**
+     * Persists (creates or updates) a corporate contract.
+     *
+     * This is the WRITE side of the drawer flow. It is POST-only and
+     * handles the case where the admin submits the "Nuevo Contrato" form.
+     *
+     * GET requests on this action are rejected — the PDF renderer
+     * (actionGenerarContratoPdf) is the only legitimate way to view a PDF.
+     *
+     * @param  int $id
+     * @return \yii\web\Response
+     * @throws NotFoundHttpException
+     */
+    public function actionCreateCorporateContract($id)
+    {
+        if (!$this->request->isPost) {
+            throw new \yii\web\MethodNotAllowedHttpException('POST is required.');
+        }
+
+        $corporativo = $this->findModel($id);
+
+        if (!$this->userHasAccessToCorporativo($id)) {
+            Yii::$app->session->setFlash('error', 'No tiene permiso para crear contratos de este corporativo.');
+            return $this->redirect(['index']);
+        }
+
+        // ── Validate the submitted dates. ────────────────────────────────
+        $fechaIni = trim((string)$this->request->post('fecha_ini', ''));
+        $fechaVen = trim((string)$this->request->post('fecha_ven', ''));
+
+        if ($fechaIni === '' || $fechaVen === '') {
+            Yii::$app->session->setFlash('error', 'Debe indicar la vigencia del contrato.');
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        if (
+            !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaIni)
+            || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaVen)
+        ) {
+            Yii::$app->session->setFlash('error', 'Las fechas deben tener el formato AAAA-MM-DD.');
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        if ($fechaVen <= $fechaIni) {
+            Yii::$app->session->setFlash('error', 'La fecha de vencimiento debe ser posterior a la fecha de inicio.');
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        // ── Overlap guard. ───────────────────────────────────────────────
+        $overlapCheck = ContractHelper::validateNoOverlap((int)$corporativo->id, $fechaIni);
+        if ($overlapCheck !== null) {
+            Yii::$app->session->setFlash('error', $overlapCheck['message']);
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        // ── Load active employees grouped by plan. ───────────────────────
+        $allEmpleados = $corporativo->getEmpleadosAsociados()
+            ->alias('ud')
+            ->with(['plan', 'clinica'])
+            ->where([
+                'EXISTS',
+                (new \yii\db\Query())
+                    ->from(['c' => 'contratos'])
+                    ->where('c.user_id = ud.id')
+                    ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+            ])
+            ->orderBy(['ud.apellidos' => SORT_ASC, 'ud.nombres' => SORT_ASC])
+            ->all();
+
+        $employeesByPlan = [];
+        foreach ($allEmpleados as $emp) {
+            if (!$emp->plan_id || !$emp->plan) {
+                continue;
+            }
+            $employeesByPlan[(int)$emp->plan_id][] = $emp;
+        }
+
+        if (empty($employeesByPlan)) {
+            Yii::$app->session->setFlash('warning', 'Ninguno de los afiliados tiene un plan asignado.');
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        // ── Persist one ContratoCorporativo row per plan. ────────────────
+        $persistedContracts = [];
+        $failedPlans        = [];
+
+        foreach ($employeesByPlan as $planId => $empleados) {
+            $plan = $empleados[0]->plan ?? null;
+            if (!$plan) {
+                continue;
+            }
+
+            $contractModel = ContractHelper::persistCorporateContract(
+                $corporativo,
+                $plan,
+                $empleados,
+                $fechaIni,
+                $fechaVen
+            );
+
+            if ($contractModel === null) {
+                $failedPlans[] = $plan->nombre;
+                continue;
+            }
+
+            $persistedContracts[$planId] = $contractModel;
+        }
+
+        if (empty($persistedContracts)) {
+            Yii::$app->session->setFlash(
+                'error',
+                'No se pudo registrar ningún contrato corporativo. Revise los registros de error.'
+            );
+            return $this->redirect(['contracts', 'id' => $id]);
+        }
+
+        if (!empty($failedPlans)) {
+            Yii::$app->session->setFlash(
+                'warning',
+                'Algunos planes no se pudieron registrar: ' . implode(', ', $failedPlans)
+            );
+        }
+
+        $anchor = reset($persistedContracts);
+
+        Yii::$app->session->setFlash(
+            'success',
+            'Contrato ' . $anchor->nrocontrato . ' creado correctamente. '
+                . 'Puede descargar el PDF desde el botón rojo de la fila correspondiente.'
+        );
+
+        return $this->redirect(['contracts', 'id' => $id]);
     }
 }

@@ -20,7 +20,7 @@ use app\components\ContractHelper;
 /** @var int $carriedTotal */
 /** @var int $contractCount */
 
-$formAction = Url::to(['generar-contrato-pdf', 'id' => $corporativo->id]);
+$formAction = Url::to(['create-corporate-contract', 'id' => $corporativo->id]);
 
 $startDateValue = !empty($previousContract) ? $suggestedIni : '';
 ?>

@@ -1040,7 +1040,18 @@ class SisSiniestroController extends Controller
     }
 
     /**
-     * Cancel an appointment (Cita only)
+     * ✅ CHECKPOINT #2
+     * Cancel an appointment.
+     *
+     * Behaviour:
+     *  - GET          → renders the off-canvas drawer partial (AJAX-friendly).
+     *  - GET (no XHR)→ still renders the partial so the URL works standalone.
+     *  - POST         → performs the cancellation. Returns JSON.
+     *
+     * Actor resolution:
+     *  - Clinic roles (see SisSiniestro::CLINIC_CANCELLATION_ROLES) → never penalize.
+     *  - Everyone else → 48h rule applies.
+     *
      * @param int $id
      * @return mixed
      */
@@ -1050,49 +1061,70 @@ class SisSiniestroController extends Controller
 
         // Only allow cancellation for Citas
         if ($model->es_cita != 1) {
+            if (Yii::$app->request->isPost) {
+                Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'Solo las citas pueden ser canceladas.'];
+            }
             Yii::$app->session->setFlash('error', 'Solo las citas pueden ser canceladas.');
             return $this->redirect(['view', 'id' => $id]);
         }
 
         // Only allow cancellation for scheduled appointments
         if ($model->appointment_status != SisSiniestro::APPOINTMENT_STATUS_SCHEDULED) {
+            if (Yii::$app->request->isPost) {
+                Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'Esta cita ya fue procesada o cancelada anteriormente.'];
+            }
             Yii::$app->session->setFlash('error', 'Esta cita ya fue procesada o cancelada anteriormente.');
             return $this->redirect(['view', 'id' => $id]);
         }
 
-        // Calculate hours until appointment
-        $canCancelWithoutPenalty = $model->canBeCancelledWithoutPenalty();
-        $hoursUntil = $model->getHoursUntilAppointment();
+        // Resolve actor context
+        $actorRole     = UserHelper::getMyRol();
+        $isClinicActor = SisSiniestro::isClinicActor($actorRole);
 
+        // ============ POST → process cancellation ============
         if (Yii::$app->request->isPost) {
-            $reason = Yii::$app->request->post('reason');
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
 
-            if (empty($reason)) {
-                Yii::$app->session->setFlash('error', 'Debe especificar un motivo para la cancelación.');
-                return $this->render('cancel-appointment', [
-                    'model' => $model,
-                    'canCancelWithoutPenalty' => $canCancelWithoutPenalty,
-                    'hoursUntil' => $hoursUntil,
-                ]);
+            $reason      = trim((string) Yii::$app->request->post('reason', ''));
+            $responsible = trim((string) Yii::$app->request->post('responsible', ''));
+
+            // ✅ CHECKPOINT #2 — Validate the responsible selector
+            $allowedResponsible = ['clinic', 'patient'];
+            if (!in_array($responsible, $allowedResponsible, true)) {
+                $responsible = null; // fallback to role-based rule
             }
 
-            if ($model->cancelAppointment($reason, Yii::$app->user->identity->username)) {
-                $message = $canCancelWithoutPenalty
-                    ? 'Cita cancelada exitosamente. La cobertura ha sido restaurada.'
-                    : 'Cita cancelada fuera del período permitido. La cobertura no será restaurada.';
-
-                Yii::$app->session->setFlash('success', $message);
-            } else {
-                Yii::$app->session->setFlash('error', 'Error al cancelar la cita.');
+            if ($reason === '') {
+                return ['success' => false, 'message' => 'Debe especificar un motivo para la cancelación.'];
             }
 
-            return $this->redirect(['index', 'user_id' => $model->iduser, 'modo' => 'cita']);
+            $username = Yii::$app->user->identity->username ?? 'system';
+
+            if ($model->cancelAppointment($reason, $username, $actorRole, $responsible)) {
+                // Message reflects the FINAL actor stored on the model
+                if ($model->getCancellationActor() === 'clinic') {
+                    $msg = 'Su cita fue cancelada por la clínica. No se aplicará penalidad.';
+                } elseif (!$model->no_show_processed) {
+                    $msg = 'Cita cancelada exitosamente. La cobertura ha sido restaurada.';
+                } else {
+                    $msg = 'Cita cancelada fuera del período permitido. La cobertura no será restaurada.';
+                }
+
+                return ['success' => true, 'message' => $msg];
+            }
+
+            return ['success' => false, 'message' => 'Error al cancelar la cita. Por favor, intente nuevamente.'];
         }
 
-        return $this->render('cancel-appointment', [
-            'model' => $model,
-            'canCancelWithoutPenalty' => $canCancelWithoutPenalty,
-            'hoursUntil' => $hoursUntil,
+        // ============ GET → render drawer partial ============
+        return $this->renderAjax('_cancel-appointment_drawer', [
+            'model'                   => $model,
+            'isClinicActor'           => $isClinicActor,
+            'actorRole'               => $actorRole,
+            'canCancelWithoutPenalty' => $model->canBeCancelledWithoutPenalty(),
+            'hoursUntil'              => $model->getHoursUntilAppointment(),
         ]);
     }
 

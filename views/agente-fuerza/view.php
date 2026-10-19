@@ -35,7 +35,8 @@ if ($model->userDatos) {
 }
 
 // Función auxiliar para mostrar Sí/No con íconos y clases de CSS
-function formatBooleanIcon($value) {
+function formatBooleanIcon($value)
+{
     if ($value) {
         return '<span class="text-green-600 mr-1"><i class="fas fa-check-circle"></i></span> Sí';
     } else {
@@ -45,7 +46,7 @@ function formatBooleanIcon($value) {
 
 
 $rol = UserHelper::getMyRol();
-$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN'); 
+$permisos = ($rol == 'superadmin' || $rol == 'DIRECTOR-COMERCIALIZACIÓN');
 
 
 // --- DATOS DE EJEMPLO PARA LA GRÁFICA ---
@@ -68,12 +69,12 @@ $datosJs = json_encode($datos);
 ?>
 
 <div class="view-main-container agente-view">
-   
+
 
     <div class="ms-panel-header">
         <h1><?= Html::encode($this->title) ?></h1>
         <div class="button-group-spacing">
-            <?php if($permisos){ ?>
+            <?php if ($permisos) { ?>
                 <?= Html::a(
                     '<i class="fas fa-edit"></i> Actualizar',
                     ['update', 'id' => $model->id],
@@ -88,7 +89,7 @@ $datosJs = json_encode($datos);
                     'title' => 'Volver a la lista de agentes de fuerza',
                 ]
             ) ?>
-           
+
         </div>
     </div>
 
@@ -101,10 +102,26 @@ $datosJs = json_encode($datos);
                 <div>
                     <p><strong>Usuario:</strong> <?= Html::encode($nombreCompletoUsuario) ?></p>
                     <p><strong>Teléfono:</strong> <?= Html::encode($telefonoUsuario) ?></p>
+                    <p>
+                        <strong>Código SISPSA:</strong>
+                        <?php if (!empty($model->cod_sispsa)): ?>
+                            <span class="sudeaseg-badge"><?= Html::encode($model->cod_sispsa) ?></span>
+                        <?php else: ?>
+                            <span class="empty-value">—</span>
+                        <?php endif; ?>
+                    </p>
                 </div>
                 <div>
                     <p><strong>Agencia Asociada:</strong> <?= Html::encode($agenciaNombre) ?></p>
                     <p><strong>Correo Electrónico:</strong> <?= Html::a(Html::encode($emailUsuario), 'mailto:' . Html::encode($emailUsuario), ['class' => 'text-primary']) ?></p>
+                    <p>
+                        <strong>Código SUDEASEG:</strong>
+                        <?php if (!empty($model->registro_corredor_actividad_aseguradora)): ?>
+                            <span class="sudeaseg-badge"><?= Html::encode($model->registro_corredor_actividad_aseguradora) ?></span>
+                        <?php else: ?>
+                            <span class="empty-value">—</span>
+                        <?php endif; ?>
+                    </p>
                 </div>
             </div>
         </div>

@@ -25,7 +25,7 @@ class AgenteFuerzaSearch extends AgenteFuerza
             [['id', 'idusuario', 'agente_id', 'puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'integer'],
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number'],
             [['created_at', 'updated_at', 'deleted_at'], 'safe'],
-            [['agenteFuerzaUserNombres', 'agenteFuerzaUserCedula', 'agenteFuerzaUserEmail', 'agenteFuerzaUserTelefono', 'registro_corredor_actividad_aseguradora'], 'safe'],
+            [['agenteFuerzaUserNombres', 'agenteFuerzaUserCedula', 'agenteFuerzaUserEmail', 'agenteFuerzaUserTelefono', 'registro_corredor_actividad_aseguradora', 'cod_sispsa'], 'safe'],
         ];
     }
 
@@ -94,6 +94,11 @@ class AgenteFuerzaSearch extends AgenteFuerza
                         'desc' => ['agente_fuerza.registro_corredor_actividad_aseguradora' => SORT_DESC],
                         'label' => 'Código SUDEASEG',
                     ],
+                    'cod_sispsa' => [
+                        'asc' => ['agente_fuerza.cod_sispsa' => SORT_ASC],
+                        'desc' => ['agente_fuerza.cod_sispsa' => SORT_DESC],
+                        'label' => 'Código SISPSA',
+                    ],
                 ],
             ],
         ]);
@@ -151,6 +156,10 @@ class AgenteFuerzaSearch extends AgenteFuerza
         // Add search condition for registro_corredor_actividad_aseguradora (SUDEASEG)
         if (!empty($this->registro_corredor_actividad_aseguradora)) {
             $query->andFilterWhere(['ilike', 'agente_fuerza.registro_corredor_actividad_aseguradora', $this->registro_corredor_actividad_aseguradora]);
+        }
+        // Add search condition for cod_sispsa (SISPSA)
+        if (!empty($this->cod_sispsa)) {
+            $query->andFilterWhere(['ilike', 'agente_fuerza.cod_sispsa', $this->cod_sispsa]);
         }
 
         // Force ORDER BY ID ASC at the query level as a fallback

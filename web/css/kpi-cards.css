@@ -1,0 +1,240 @@
+/* ──────────────────────────────────────────────────────────── */
+/* Fluent KPI cards — shared by user-datos/index.php and the     */
+/* coordinator dashboard. Do not duplicate elsewhere.            */
+/* ──────────────────────────────────────────────────────────── */
+
+.kpi-cards-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 14px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    padding: 6px 2px 14px 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+.kpi-cards-row::-webkit-scrollbar { height: 5px; }
+.kpi-cards-row::-webkit-scrollbar-track { background: transparent; }
+.kpi-cards-row::-webkit-scrollbar-thumb { background: #c7cbd1; border-radius: 3px; }
+.kpi-cards-row::-webkit-scrollbar-thumb:hover { background: #9aa0a6; }
+
+.kpi-card-link {
+    flex: 1 1 0;
+    min-width: 0;
+    text-decoration: none !important;
+    display: block;
+    transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+    cursor: pointer;
+    outline: none;
+}
+.kpi-card-link:hover { transform: translateY(-4px); text-decoration: none !important; }
+.kpi-card-link:focus-visible .kpi-card { outline: 2px solid #0078d4; outline-offset: 2px; }
+
+.kpi-card {
+    position: relative;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.04);
+    overflow: hidden;
+    transition: box-shadow 0.22s cubic-bezier(0.2,0,0,1), transform 0.22s cubic-bezier(0.2,0,0,1);
+    border: 1px solid rgba(15,23,42,0.06);
+    min-height: 104px;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.kpi-card-link:hover .kpi-card {
+    box-shadow: 0 4px 8px rgba(15,23,42,0.08), 0 12px 28px rgba(15,23,42,0.14);
+}
+
+.kpi-card .kpi-accent {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: rgba(255,255,255,0.35);
+    transition: background 0.22s ease, height 0.22s ease;
+    pointer-events: none;
+}
+.kpi-card-link:hover .kpi-accent { height: 4px; background: rgba(255,255,255,0.75); }
+
+.kpi-card-header {
+    padding: 14px 16px 6px 16px;
+    display: flex; align-items: center; gap: 10px;
+    position: relative; flex-shrink: 0;
+}
+.kpi-card-header .kpi-icon {
+    font-size: 1.05rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; width: 28px; height: 28px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.18);
+    opacity: 0.95;
+    transition: transform 0.3s ease;
+}
+.kpi-card-link:hover .kpi-icon { transform: scale(1.08) rotate(-3deg); }
+
+.kpi-card-header .kpi-title {
+    font-size: 0.78rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    opacity: 0.95; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi-card-header .kpi-arrow {
+    font-size: 0.7rem; opacity: 0.45;
+    transition: transform 0.25s cubic-bezier(0.2,0,0,1), opacity 0.25s ease;
+    margin-left: auto; flex-shrink: 0;
+}
+.kpi-card-link:hover .kpi-arrow { opacity: 1; transform: translateX(4px); }
+
+.kpi-card-body {
+    padding: 0 16px 16px 16px;
+    display: flex; flex-direction: column; flex: 1;
+    justify-content: flex-end;
+}
+.kpi-card-body .kpi-number {
+    font-size: 2.1rem; font-weight: 700; line-height: 1;
+    margin: 0; letter-spacing: -0.8px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.kpi-card-body .kpi-percent {
+    font-size: 0.9rem; font-weight: 600; opacity: 0.7;
+    margin-left: 4px; letter-spacing: 0;
+}
+.kpi-card-body .kpi-label {
+    font-size: 0.7rem; opacity: 0.8; margin-top: 8px;
+    display: flex; align-items: center; gap: 4px; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi-card-body .kpi-label i { font-size: 0.65rem; opacity: 0.75; flex-shrink: 0; }
+
+/* ─── Color themes ─── */
+.kpi-card.primary {
+    background: linear-gradient(135deg, #0f6cbd 0%, #0078d4 55%, #106ebe 100%);
+    color: #fff; border-color: rgba(15,108,189,0.2);
+}
+.kpi-card.success {
+    background: linear-gradient(135deg, #0e7a0d 0%, #107c10 55%, #0c6b0c 100%);
+    color: #fff; border-color: rgba(16,124,16,0.2);
+}
+.kpi-card.registrado {
+    background: linear-gradient(135deg, #4f46e5 0%, #5b5fc7 55%, #4338ca 100%);
+    color: #fff; border-color: rgba(91,95,199,0.2);
+}
+.kpi-card.danger {
+    background: linear-gradient(135deg, #5c5c5c 0%, #6b6b6b 55%, #4f4f4f 100%);
+    color: #fff; border-color: rgba(107,107,107,0.2);
+}
+.kpi-card.anulado {
+    background: linear-gradient(135deg, #c50f1f 0%, #d13438 55%, #a4262c 100%);
+    color: #fff; border-color: rgba(209,52,56,0.2);
+}
+.kpi-card.vencido {
+    background: linear-gradient(135deg, #c85a00 0%, #da3b01 55%, #ad4e00 100%);
+    color: #fff; border-color: rgba(218,59,1,0.2);
+}
+.kpi-card.critical {
+    background: linear-gradient(135deg, #c19c00 0%, #eaa300 55%, #b88f00 100%);
+    color: #1a1a1a; border-color: rgba(234,163,0,0.2);
+}
+
+/* New: corporate KPI variants (used by dashboard) */
+.kpi-card.violet {
+    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #6d28d9 100%);
+    color: #fff; border-color: rgba(124,58,237,0.2);
+}
+.kpi-card.amber {
+    background: linear-gradient(135deg, #b45309 0%, #d97706 55%, #92400e 100%);
+    color: #fff; border-color: rgba(217,119,6,0.2);
+}
+.kpi-card.emerald {
+    background: linear-gradient(135deg, #047857 0%, #10b981 55%, #065f46 100%);
+    color: #fff; border-color: rgba(16,185,129,0.2);
+}
+.kpi-card.rose {
+    background: linear-gradient(135deg, #9f1239 0%, #e11d48 55%, #881337 100%);
+    color: #fff; border-color: rgba(225,29,72,0.2);
+}
+
+/* Force white text for every colored variant */
+.kpi-card.primary .kpi-number, .kpi-card.primary .kpi-label, .kpi-card.primary .kpi-title,
+.kpi-card.primary .kpi-icon, .kpi-card.primary .kpi-arrow, .kpi-card.primary .kpi-percent,
+.kpi-card.success .kpi-number, .kpi-card.success .kpi-label, .kpi-card.success .kpi-title,
+.kpi-card.success .kpi-icon, .kpi-card.success .kpi-arrow, .kpi-card.success .kpi-percent,
+.kpi-card.registrado .kpi-number, .kpi-card.registrado .kpi-label, .kpi-card.registrado .kpi-title,
+.kpi-card.registrado .kpi-icon, .kpi-card.registrado .kpi-arrow, .kpi-card.registrado .kpi-percent,
+.kpi-card.danger .kpi-number, .kpi-card.danger .kpi-label, .kpi-card.danger .kpi-title,
+.kpi-card.danger .kpi-icon, .kpi-card.danger .kpi-arrow, .kpi-card.danger .kpi-percent,
+.kpi-card.anulado .kpi-number, .kpi-card.anulado .kpi-label, .kpi-card.anulado .kpi-title,
+.kpi-card.anulado .kpi-icon, .kpi-card.anulado .kpi-arrow, .kpi-card.anulado .kpi-percent,
+.kpi-card.vencido .kpi-number, .kpi-card.vencido .kpi-label, .kpi-card.vencido .kpi-title,
+.kpi-card.vencido .kpi-icon, .kpi-card.vencido .kpi-arrow, .kpi-card.vencido .kpi-percent,
+.kpi-card.violet .kpi-number, .kpi-card.violet .kpi-label, .kpi-card.violet .kpi-title,
+.kpi-card.violet .kpi-icon, .kpi-card.violet .kpi-arrow, .kpi-card.violet .kpi-percent,
+.kpi-card.amber .kpi-number, .kpi-card.amber .kpi-label, .kpi-card.amber .kpi-title,
+.kpi-card.amber .kpi-icon, .kpi-card.amber .kpi-arrow, .kpi-card.amber .kpi-percent,
+.kpi-card.emerald .kpi-number, .kpi-card.emerald .kpi-label, .kpi-card.emerald .kpi-title,
+.kpi-card.emerald .kpi-icon, .kpi-card.emerald .kpi-arrow, .kpi-card.emerald .kpi-percent,
+.kpi-card.rose .kpi-number, .kpi-card.rose .kpi-label, .kpi-card.rose .kpi-title,
+.kpi-card.rose .kpi-icon, .kpi-card.rose .kpi-arrow, .kpi-card.rose .kpi-percent {
+    color: #ffffff !important;
+}
+
+/* Critical uses dark text for contrast */
+.kpi-card.critical .kpi-number,
+.kpi-card.critical .kpi-label,
+.kpi-card.critical .kpi-title,
+.kpi-card.critical .kpi-icon,
+.kpi-card.critical .kpi-arrow { color: #1a1a1a !important; }
+.kpi-card.critical .kpi-percent { color: #5a4a00 !important; font-weight: 700; }
+
+/* Dark Fluent tooltip */
+.kpi-tooltip .tooltip-inner {
+    background: #2c3e50; color: #fff; border-radius: 8px;
+    padding: 12px 16px; font-size: 0.85rem; max-width: 300px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.kpi-tooltip .tooltip-inner strong { color: #fff; font-size: 0.95rem; }
+.kpi-tooltip .tooltip-inner .text-muted { color: #aab8c5 !important; font-size: 0.75rem; display: block; margin-top: 4px; }
+.kpi-tooltip.bs-tooltip-top .arrow::before    { border-top-color:    #2c3e50 !important; }
+.kpi-tooltip.bs-tooltip-bottom .arrow::before { border-bottom-color: #2c3e50 !important; }
+.kpi-tooltip.bs-tooltip-left .arrow::before   { border-left-color:   #2c3e50 !important; }
+.kpi-tooltip.bs-tooltip-right .arrow::before  { border-right-color:  #2c3e50 !important; }
+
+/* ─── Responsive ─── */
+@media (max-width: 1200px) {
+    .kpi-cards-row { gap: 12px; }
+    .kpi-card { min-height: 96px; }
+    .kpi-card-body .kpi-number { font-size: 1.85rem; }
+}
+@media (max-width: 992px) {
+    .kpi-cards-row { gap: 10px; overflow-x: auto; padding-bottom: 12px; }
+    .kpi-card-link { flex: 0 0 168px; min-width: 156px; }
+    .kpi-card { min-height: 92px; }
+    .kpi-card-header { padding: 12px 14px 4px 14px; }
+    .kpi-card-header .kpi-icon { width: 24px; height: 24px; font-size: 0.95rem; }
+    .kpi-card-header .kpi-title { font-size: 0.72rem; }
+    .kpi-card-body { padding: 0 14px 14px 14px; }
+    .kpi-card-body .kpi-number { font-size: 1.55rem; }
+    .kpi-card-body .kpi-label { font-size: 0.65rem; }
+}
+@media (max-width: 576px) {
+    .kpi-cards-row { gap: 8px; }
+    .kpi-card-link { flex: 0 0 140px; min-width: 130px; }
+    .kpi-card { min-height: 84px; }
+    .kpi-card-header { padding: 10px 12px 2px 12px; gap: 8px; }
+    .kpi-card-header .kpi-icon { width: 22px; height: 22px; font-size: 0.85rem; }
+    .kpi-card-header .kpi-title { font-size: 0.65rem; letter-spacing: 0.4px; }
+    .kpi-card-body { padding: 0 12px 12px 12px; }
+    .kpi-card-body .kpi-number { font-size: 1.35rem; }
+    .kpi-card-body .kpi-label { font-size: 0.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kpi-card-link, .kpi-card, .kpi-card .kpi-accent,
+    .kpi-card-header .kpi-icon, .kpi-card-header .kpi-arrow {
+        transition: none !important; animation: none !important;
+    }
+    .kpi-card-link:hover { transform: none; }
+    .kpi-card-link:hover .kpi-icon { transform: none; }
+    .kpi-card-link:hover .kpi-arrow { transform: none; }
+}

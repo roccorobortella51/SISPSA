@@ -109,11 +109,18 @@ $agenteId = $agente->id ?? $model->agente_id ?? null;
                             ],
                         ])->label('NOMBRE DEL INTERMEDIARIO') ?>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <?= $form->field($model, 'registro_corredor_actividad_aseguradora')->textInput([
                             'class' => 'form-control form-control-lg',
                             'placeholder' => 'Código SUDEASEG',
                         ])->label('CÓDIGO SUDEASEG') ?>
+                    </div>
+                    <div class="col-md-6">
+                        <?= $form->field($model, 'cod_sispsa')->textInput([
+                            'class' => 'form-control form-control-lg',
+                            'placeholder' => 'Ej: AE-001',
+                            'maxlength' => 50,
+                        ])->label('CÓDIGO SISPSA') ?>
                     </div>
                 </div>
             </div>

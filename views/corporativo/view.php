@@ -28,14 +28,58 @@ $corporateContractsGroup = ContractHelper::groupCorporateContractsByNumber($corp
 $contractCount           = count($corporateContractsGroup);
 
 // ─────────────────────────────────────────────────────────────────────
-// Classify affiliates into "active" vs "annulled-only"
+// ACTIVE / ANNULLED AFFILIATE COUNTS — SAME LOGIC AS corporate/index.php
+// ─────────────────────────────────────────────────────────────────────
+// This mirrors CorporativoController::actionIndex() exactly, scoped to
+// the current corporate. `user_datos` is the source of truth; the
+// junction table (contratos_corporativos_afiliados) is NOT consulted
+// for the counts.
+//
+//   ACTIVO  = has at least one contract whose estatus <> 'Anulado'
+//   ANULADO = has only Anulado contracts (or no contracts at all)
+// ─────────────────────────────────────────────────────────────────────
+$corpId = (int) $model->id;
+
+$activeRow = (new \yii\db\Query())
+    ->select([
+        'cnt' => 'COUNT(DISTINCT ud.id)',
+    ])
+    ->from(['ud' => 'user_datos'])
+    ->innerJoin(['c' => 'contratos'], 'c.user_id = ud.id')
+    ->where(['ud.afiliado_corporativo_id' => $corpId])
+    ->andWhere(['ud.user_datos_type_id' => 2])
+    ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+    ->one(\Yii::$app->db);
+
+$annulledRow = (new \yii\db\Query())
+    ->select([
+        'cnt' => 'COUNT(DISTINCT ud.id)',
+    ])
+    ->from(['ud' => 'user_datos'])
+    ->where(['ud.afiliado_corporativo_id' => $corpId])
+    ->andWhere(['ud.user_datos_type_id' => 2])
+    ->andWhere([
+        'NOT EXISTS',
+        (new \yii\db\Query())
+            ->from(['c' => 'contratos'])
+            ->where('c.user_id = ud.id')
+            ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+    ])
+    ->one(\Yii::$app->db);
+
+$activeCount   = (int) ($activeRow['cnt']   ?? 0);
+$annulledCount = (int) ($annulledRow['cnt'] ?? 0);
+
+// ─────────────────────────────────────────────────────────────────────
+// Lists of affiliates for the side panels
 // ─────────────────────────────────────────────────────────────────────
 // An affiliate is ACTIVE if they have at least one contract whose
-// estatus <> 'Anulado'. Otherwise (only annulled contracts, or no
-// contract at all) they count as ANNULLED.
+// estatus <> 'Anulado'. Otherwise they count as ANNULLED.
+//
+// Both lists are sorted by `nombres`, then `apellidos`.
 // ─────────────────────────────────────────────────────────────────────
 
-$allAffiliates = $model->users;   // UserDatos[] linked to this corporate
+$allAffiliates = $model->users;
 
 $activeAffiliates   = [];
 $annulledAffiliates = [];
@@ -43,7 +87,6 @@ $annulledAffiliates = [];
 if (!empty($allAffiliates)) {
     $affiliateIds = array_map(fn($u) => (int)$u->id, $allAffiliates);
 
-    // Single query: for each affiliate, does any non-annulled contract exist?
     $hasLiveContract = (new \yii\db\Query())
         ->select(['user_id'])
         ->from('contratos')
@@ -61,6 +104,22 @@ if (!empty($allAffiliates)) {
         }
     }
 }
+
+usort($activeAffiliates, static function ($a, $b) {
+    $cmp = strcasecmp((string)($a->nombres ?? ''), (string)($b->nombres ?? ''));
+    if ($cmp !== 0) {
+        return $cmp;
+    }
+    return strcasecmp((string)($a->apellidos ?? ''), (string)($b->apellidos ?? ''));
+});
+
+usort($annulledAffiliates, static function ($a, $b) {
+    $cmp = strcasecmp((string)($a->nombres ?? ''), (string)($b->nombres ?? ''));
+    if ($cmp !== 0) {
+        return $cmp;
+    }
+    return strcasecmp((string)($a->apellidos ?? ''), (string)($b->apellidos ?? ''));
+});
 ?>
 
 <style>
@@ -275,7 +334,6 @@ if (!empty($allAffiliates)) {
         box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
     }
 
-    /* ── Panel header BAR — solid colored background like a table header ── */
     .corp-panel__title {
         display: flex;
         align-items: center;
@@ -316,49 +374,39 @@ if (!empty($allAffiliates)) {
         margin-left: 8px;
     }
 
-    /* ── Panel body ── */
     .corp-panel__body {
         padding: 28px 30px;
     }
 
-    /* Extra breathing room when the panel body contains a table */
     .corp-panel__body--roomy {
         padding: 34px 36px 38px 36px;
     }
 
     /* ── Per-section header colors ───────────────────────────── */
-
-    /* General Information + Representante Legal — Azure blue */
     .corp-panel--blue .corp-panel__title {
         background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
     }
 
-    /* Ubicación Geográfica — Indigo */
     .corp-panel--indigo .corp-panel__title {
         background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #6366f1 100%);
     }
 
-    /* Información Registral + Empleados — Slate gray */
     .corp-panel--gray .corp-panel__title {
         background: linear-gradient(135deg, #374151 0%, #6b7280 50%, #9ca3af 100%);
     }
 
-    /* Contacto Principal — Amber */
     .corp-panel--yellow .corp-panel__title {
         background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #f59e0b 100%);
     }
 
-    /* Datos Financieros + Clínicas — Emerald green */
     .corp-panel--green .corp-panel__title {
         background: linear-gradient(135deg, #047857 0%, #059669 50%, #10b981 100%);
     }
 
-    /* Contratos Colectivos — Crimson red */
     .corp-panel--red .corp-panel__title {
         background: linear-gradient(135deg, #991b1b 0%, #dc2626 50%, #ef4444 100%);
     }
 
-    /* ── Extended palette (available if you want ZERO repeats) ── */
     .corp-panel--teal .corp-panel__title {
         background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
     }
@@ -486,7 +534,7 @@ if (!empty($allAffiliates)) {
         white-space: nowrap;
     }
 
-    /* ── Table wrapper — gives the table breathing room ── */
+    /* ── Table wrapper ── */
     .corp-table-wrapper {
         margin: 0;
         padding: 4px 0 8px 0;
@@ -502,6 +550,124 @@ if (!empty($allAffiliates)) {
         display: flex;
         gap: 10px;
         justify-content: center;
+    }
+
+    /* ── Affiliate count cells ── */
+    .corp-table__count {
+        text-align: center;
+        font-weight: 800;
+        font-size: 1.25rem;
+        line-height: 1;
+        padding: 6px 14px;
+        border-radius: 10px;
+        display: inline-block;
+        min-width: 54px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .corp-table__count--active {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+
+    .corp-table__count--annulled {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    /* ─── Vigencia cell ───────────────────────────────────────── */
+    .vigencia-cell {
+        min-width: 260px;
+    }
+
+    .vigencia-cell__dates {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.1rem;
+        color: #323130;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .vigencia-cell__dates i {
+        color: #8a8886;
+        font-size: 1rem;
+    }
+
+    .vigencia-cell__sep {
+        color: #c8c6c4;
+        padding: 0 4px;
+    }
+
+    .vigencia-cell__progress {
+        margin-top: 8px;
+        max-width: 260px;
+    }
+
+    .vigencia-progress__track {
+        position: relative;
+        height: 6px;
+        background: #edebe9;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .vigencia-progress__fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.4s ease;
+    }
+
+    .vigencia-progress--ok .vigencia-progress__fill {
+        background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    .vigencia-progress--warn .vigencia-progress__fill {
+        background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .vigencia-progress--danger .vigencia-progress__fill {
+        background: linear-gradient(90deg, #ef4444 0%, #b91c1c 100%);
+    }
+
+    .vigencia-progress--muted .vigencia-progress__fill {
+        background: #c8c6c4;
+    }
+
+    .vigencia-progress__text {
+        margin-top: 5px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #605e5c;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .vigencia-progress--ok .vigencia-progress__text {
+        color: #1e40af;
+    }
+
+    .vigencia-progress--warn .vigencia-progress__text {
+        color: #b45309;
+    }
+
+    .vigencia-progress--danger .vigencia-progress__text {
+        color: #b91c1c;
+    }
+
+    .vigencia-progress__sep {
+        color: #c8c6c4;
+    }
+
+    .vigencia-progress__muted {
+        color: #8a8886;
+        font-weight: 500;
     }
 
     .row-action {
@@ -756,6 +922,10 @@ if (!empty($allAffiliates)) {
         .corp-list__name {
             font-size: 1.05rem;
         }
+
+        .vigencia-cell {
+            min-width: auto;
+        }
     }
 </style>
 
@@ -803,130 +973,6 @@ if (!empty($allAffiliates)) {
             ) ?>
         </div>
     </div>
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- CONTRATOS COLECTIVOS                                         -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <?php if (!empty($corporateContractsGroup)): ?>
-        <div class="corp-panel corp-panel--red">
-            <h3 class="corp-panel__title">
-                <i class="fas fa-file-contract" aria-hidden="true"></i>
-                Contratos Colectivos
-                <span class="badge"><?= $contractCount ?></span>
-            </h3>
-
-            <div class="corp-panel__body corp-panel__body--roomy">
-                <div class="corp-table-wrapper table-responsive">
-                    <table class="corp-table">
-                        <thead>
-                            <tr>
-                                <th>N° Contrato</th>
-                                <th>Planes</th>
-                                <th style="text-align: center;">Afiliados</th>
-                                <th>Monto Total</th>
-                                <th>Vigencia</th>
-                                <th style="text-align: center;">Estatus</th>
-                                <th style="text-align: center;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($corporateContractsGroup as $nrocontrato => $rows): ?>
-                                <?php
-                                $anchor          = $rows[0];
-                                $totalAffiliates = 0;
-                                $totalAmount     = 0.0;
-                                $planNames       = [];
-
-                                // ── LIVE counts from the junction table (single source of truth) ──
-                                $contractIds = array_map(fn($r) => (int)$r->id, $rows);
-
-                                $live = (new \yii\db\Query())
-                                    ->select([
-                                        'cnt'   => 'COUNT(DISTINCT cca.user_datos_id)',
-                                        'total' => 'COALESCE(SUM(cca.precio_individual), 0)',
-                                    ])
-                                    ->from(['cca' => 'contratos_corporativos_afiliados'])
-                                    ->where(['cca.contrato_corporativo_id' => $contractIds])
-                                    ->one();
-
-                                $totalAffiliates = (int)   ($live['cnt']   ?? 0);
-                                $totalAmount     = (float) ($live['total'] ?? 0.0);
-
-                                foreach ($rows as $r) {
-                                    if ($r->plan) {
-                                        $planNames[] = $r->plan->nombre;
-                                    }
-                                }
-                                ?>
-                                <tr>
-                                    <td>
-                                        <span class="corp-table__contract-no">
-                                            <?= Html::encode($nrocontrato) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($planNames)): ?>
-                                            <div class="corp-table__plans">
-                                                <?php foreach ($planNames as $planName): ?>
-                                                    <span class="plan-chip"><?= Html::encode($planName) ?></span>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php else: ?>
-                                            <span class="text-muted">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="text-align: center; font-weight: 700; color: #107c10;">
-                                        <?= (int)$totalAffiliates ?>
-                                    </td>
-                                    <td style="font-weight: 700; color: #107c10;">
-                                        $<?= number_format($totalAmount, 2, ',', '.') ?>
-                                    </td>
-                                    <td>
-                                        <i class="far fa-calendar-alt" style="color: #8a8886; margin-right: 4px;" aria-hidden="true"></i>
-                                        <?= $anchor->fecha_ini ? date('d/m/Y', strtotime($anchor->fecha_ini)) : 'N/A' ?>
-                                        <span style="color: #c8c6c4; padding: 0 4px;">→</span>
-                                        <?= $anchor->fecha_ven ? date('d/m/Y', strtotime($anchor->fecha_ven)) : 'N/A' ?>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <?= ContractHelper::getCorporateContractStatusBadge($anchor) ?>
-                                    </td>
-                                    <td>
-                                        <div class="corp-table__actions">
-                                            <?= Html::a(
-                                                '<i class="fas fa-file-pdf" aria-hidden="true"></i> Ver PDF',
-                                                [
-                                                    'generar-contrato-pdf',
-                                                    'id'  => $model->id,
-                                                    'cid' => $anchor->id,
-                                                ],
-                                                [
-                                                    'class'     => 'row-action row-action--pdf',
-                                                    'target'    => '_blank',
-                                                    'data-pjax' => '0',
-                                                    'title'     => 'Descargar PDF del contrato (todos los planes)',
-                                                ]
-                                            ) ?>
-                                            <?php if ($anchor->estatus !== ContratoCorporativo::STATUS_ANULADO): ?>
-                                                <?= Html::a(
-                                                    '<i class="fas fa-ban" aria-hidden="true"></i> Anular',
-                                                    ['anular-contrato-corporativo', 'id' => $anchor->id],
-                                                    [
-                                                        'class'   => 'row-action row-action--danger',
-                                                        'title'   => 'Anular este contrato (todos sus planes)',
-                                                        'onclick' => "return confirm('¿Está seguro que desea anular este contrato colectivo? Los contratos individuales de los afiliados también serán anulados.');",
-                                                    ]
-                                                ) ?>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- INFORMACIÓN GENERAL                                          -->
@@ -1179,7 +1225,196 @@ if (!empty($allAffiliates)) {
             </div>
         </div>
     </div>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- CONTRATOS COLECTIVOS                                         -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <?php if (!empty($corporateContractsGroup)): ?>
+        <div class="corp-panel corp-panel--red">
+            <h3 class="corp-panel__title">
+                <i class="fas fa-file-contract" aria-hidden="true"></i>
+                Contratos Colectivos
+                <span class="badge"><?= $contractCount ?></span>
+            </h3>
 
+            <div class="corp-panel__body corp-panel__body--roomy">
+                <div class="corp-table-wrapper table-responsive">
+                    <table class="corp-table">
+                        <thead>
+                            <tr>
+                                <th>N° Contrato</th>
+                                <th>Planes</th>
+                                <th style="text-align: center;">Activos</th>
+                                <th style="text-align: center;">Anulados</th>
+                                <th>Monto Total</th>
+                                <th>Vigencia</th>
+                                <th style="text-align: center;">Estatus</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($corporateContractsGroup as $nrocontrato => $rows): ?>
+                                <?php
+                                $anchor    = $rows[0];
+                                $planNames = [];
+
+                                $contractIds = array_map(fn($r) => (int)$r->id, $rows);
+
+                                // ─────────────────────────────────────────────────
+                                // Monto Total — sum of `precio_individual` from the
+                                // junction table, restricted to affiliates that
+                                // have at least one non-Anulado contract.
+                                //
+                                // Active / Anulled COUNTS themselves come from
+                                // $activeCount / $annulledCount, computed above
+                                // with the same logic as corporate/index.php.
+                                // ─────────────────────────────────────────────────
+                                $totalAmount = (float) (new \yii\db\Query())
+                                    ->from(['cca' => 'contratos_corporativos_afiliados'])
+                                    ->innerJoin(['ud' => 'user_datos'], 'ud.id = cca.user_datos_id')
+                                    ->where(['cca.contrato_corporativo_id' => $contractIds])
+                                    ->andWhere([
+                                        'EXISTS',
+                                        (new \yii\db\Query())
+                                            ->from(['c' => 'contratos'])
+                                            ->where('c.user_id = ud.id')
+                                            ->andWhere(['<>', 'c.estatus', Contratos::STATUS_ANULADO])
+                                    ])
+                                    ->sum('cca.precio_individual');
+
+                                if ($totalAmount === null) {
+                                    $totalAmount = 0.0;
+                                }
+
+                                // ── Vigencia metadata + progress tone ───────────
+                                $remainingMeta = ContractHelper::getCorporateContractRemainingMeta($anchor);
+
+                                $renewalThresholdPct = $remainingMeta['total_days'] > 0
+                                    ? (int) round((1 - (ContractHelper::RENEWAL_WINDOW_DAYS / $remainingMeta['total_days'])) * 100)
+                                    : 100;
+
+                                switch ($remainingMeta['state']) {
+                                    case 'expired':
+                                        $progressTone = 'danger';
+                                        break;
+                                    case 'upcoming':
+                                        $progressTone = 'ok';
+                                        break;
+                                    case 'active':
+                                        $progressTone = $remainingMeta['percent'] >= $renewalThresholdPct
+                                            ? 'warn'
+                                            : 'ok';
+                                        break;
+                                    default:
+                                        $progressTone = 'muted';
+                                }
+
+                                foreach ($rows as $r) {
+                                    if ($r->plan) {
+                                        $planNames[] = $r->plan->nombre;
+                                    }
+                                }
+                                ?>
+                                <tr>
+                                    <td>
+                                        <span class="corp-table__contract-no">
+                                            <?= Html::encode($nrocontrato) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($planNames)): ?>
+                                            <div class="corp-table__plans">
+                                                <?php foreach ($planNames as $planName): ?>
+                                                    <span class="plan-chip"><?= Html::encode($planName) ?></span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="corp-table__count corp-table__count--active">
+                                            <?= (int)$activeCount ?>
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="corp-table__count corp-table__count--annulled">
+                                            <?= (int)$annulledCount ?>
+                                        </span>
+                                    </td>
+                                    <td style="font-weight: 700; color: #107c10;">
+                                        $<?= number_format($totalAmount, 2, ',', '.') ?>
+                                    </td>
+                                    <td class="vigencia-cell">
+                                        <div class="vigencia-cell__dates">
+                                            <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                                            <?= $anchor->fecha_ini ? date('d/m/Y', strtotime($anchor->fecha_ini)) : 'N/A' ?>
+                                            <span class="vigencia-cell__sep">→</span>
+                                            <?= $anchor->fecha_ven ? date('d/m/Y', strtotime($anchor->fecha_ven)) : 'N/A' ?>
+                                        </div>
+
+                                        <?php if ($remainingMeta['state'] !== 'unknown'): ?>
+                                            <div class="vigencia-cell__progress vigencia-progress--<?= $progressTone ?>">
+                                                <div class="vigencia-progress__track"
+                                                    role="progressbar"
+                                                    aria-valuenow="<?= $remainingMeta['percent'] ?>"
+                                                    aria-valuemin="0"
+                                                    aria-valuemax="100"
+                                                    aria-label="Progreso de vigencia del contrato">
+                                                    <div class="vigencia-progress__fill"
+                                                        style="width: <?= $remainingMeta['percent'] ?>%;"></div>
+                                                </div>
+                                                <div class="vigencia-progress__text">
+                                                    <?= Html::encode($remainingMeta['label']) ?>
+                                                    <?php if ($remainingMeta['total_days'] > 0): ?>
+                                                        <span class="vigencia-progress__sep">•</span>
+                                                        <span class="vigencia-progress__muted">
+                                                            <?= $remainingMeta['percent'] ?>% transcurrido
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <?= ContractHelper::getCorporateContractStatusBadge($anchor) ?>
+                                    </td>
+                                    <td>
+                                        <div class="corp-table__actions">
+                                            <?= Html::a(
+                                                '<i class="fas fa-file-pdf" aria-hidden="true"></i> Ver PDF',
+                                                [
+                                                    'generar-contrato-pdf',
+                                                    'id'  => $model->id,
+                                                    'cid' => $anchor->id,
+                                                ],
+                                                [
+                                                    'class'     => 'row-action row-action--pdf',
+                                                    'target'    => '_blank',
+                                                    'data-pjax' => '0',
+                                                    'title'     => 'Descargar PDF del contrato (todos los planes)',
+                                                ]
+                                            ) ?>
+                                            <?php if ($anchor->estatus !== ContratoCorporativo::STATUS_ANULADO): ?>
+                                                <?= Html::a(
+                                                    '<i class="fas fa-ban" aria-hidden="true"></i> Anular',
+                                                    ['anular-contrato-corporativo', 'id' => $anchor->id],
+                                                    [
+                                                        'class'   => 'row-action row-action--danger',
+                                                        'title'   => 'Anular este contrato (todos sus planes)',
+                                                        'onclick' => "return confirm('¿Está seguro que desea anular este contrato colectivo? Los contratos individuales de los afiliados también serán anulados.');",
+                                                    ]
+                                                ) ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- CLÍNICAS + AFILIADOS (ACTIVOS / ANULADOS)                    -->
     <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1237,7 +1472,7 @@ if (!empty($allAffiliates)) {
             <h3 class="corp-panel__title">
                 <i class="fas fa-user-check" aria-hidden="true"></i>
                 Afiliados Activos
-                <span class="badge"><?= count($activeAffiliates) ?></span>
+                <span class="badge"><?= (int)$activeCount ?></span>
             </h3>
             <div class="corp-panel__body">
                 <?php if (!empty($activeAffiliates)): ?>
@@ -1293,7 +1528,7 @@ if (!empty($allAffiliates)) {
         <h3 class="corp-panel__title">
             <i class="fas fa-user-slash" aria-hidden="true"></i>
             Afiliados Anulados
-            <span class="badge"><?= count($annulledAffiliates) ?></span>
+            <span class="badge"><?= (int)$annulledCount ?></span>
         </h3>
         <div class="corp-panel__body">
             <?php if (!empty($annulledAffiliates)): ?>
@@ -1387,7 +1622,6 @@ $this->registerJs(<<<JS
 $(function() {
     var empleadoViewUrl = {$empleadoViewUrl};
 
-    // Generic autocomplete + input filter + show more/less binding
     function bindAffiliatePanel(cfg) {
         var inputSel   = cfg.inputSel;
         var itemSel    = cfg.itemSel;
@@ -1452,7 +1686,6 @@ $(function() {
         source:   {$annulledJson}
     });
 
-    // ─── Clínicas ──────────────────────────────────────────────
     var clinicas = {$clinicasJson};
     if ($.fn.autocomplete) {
         $('#typeahead-clinicas').autocomplete({
@@ -1476,7 +1709,6 @@ $(function() {
         });
     });
 
-    // ─── Show more / less (clínicas) ──────────────────────────
     $('#ver-mas-clinicas').on('click', function() {
         $('#clinicas-list .clinica-item.d-none').removeClass('d-none');
         $(this).hide();

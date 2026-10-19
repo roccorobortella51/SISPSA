@@ -14,6 +14,8 @@ use yii\db\Query;
 /** @var array $contractGroups */
 /** @var bool $hasContractThisYear */
 /** @var int $currentYear */
+/** @var int $activeCount */
+/** @var int $annulledCount */
 
 // ── Compatibility shim: tolerate either $corporativo or $model ────────
 if (!isset($corporativo) && isset($model)) {
@@ -28,7 +30,14 @@ $this->params['breadcrumbs'][] = ['label' => 'Corporativos', 'url' => ['index']]
 $this->params['breadcrumbs'][] = ['label' => $corporativo->nombre, 'url' => ['view', 'id' => $corporativo->id]];
 $this->params['breadcrumbs'][] = 'Contratos';
 
-// Snapshot counts do not change when an individual contract is annulled.
+// ─────────────────────────────────────────────────────────────────────
+// Per-plan affiliate counts (used for the plan-chip badges).
+//
+// These are SEPARATE from $activeCount / $annulledCount (which are
+// corporate-wide and come from the controller, matching the KPI on
+// corporate/index.php). The chip count is scoped to a single contract
+// row's plan and only counts affiliates with a live contract.
+// ─────────────────────────────────────────────────────────────────────
 foreach ($contractGroups as &$group) {
     if (
         !empty($group['is_annulled'])
@@ -37,7 +46,6 @@ foreach ($contractGroups as &$group) {
         continue;
     }
 
-    $groupAffiliateCount = 0;
     $planCounts = [];
 
     foreach ($group['rows'] as $contractRow) {
@@ -57,14 +65,12 @@ foreach ($contractGroups as &$group) {
             ])
             ->count('DISTINCT affiliate.id');
 
-        $groupAffiliateCount += (int)$affiliateCount;
         if ($contractRow->plan) {
             $planName = $contractRow->plan->nombre;
             $planCounts[$planName] = ($planCounts[$planName] ?? 0) + (int)$affiliateCount;
         }
     }
 
-    $group['total_affiliates'] = $groupAffiliateCount;
     $group['plan_counts'] = $planCounts;
 }
 unset($group);
@@ -83,14 +89,11 @@ $stats = [
     'expiring_soon'      => 0,
     'expired_contracts'  => 0,
     'annulled_contracts' => 0,
-    'active_affiliates'  => 0,
-    'total_affiliates'   => 0,
     'active_monthly'     => 0.0,
 ];
 
 foreach ($contractGroups as $group) {
     $stats['total_contracts']++;
-    $stats['total_affiliates'] += (int)$group['total_affiliates'];
 
     if (!empty($group['is_annulled'])) {
         $stats['annulled_contracts']++;
@@ -105,8 +108,7 @@ foreach ($contractGroups as $group) {
     }
 
     $stats['active_contracts']++;
-    $stats['active_affiliates'] += (int)$group['total_affiliates'];
-    $stats['active_monthly']    += (float)$group['total_amount'];
+    $stats['active_monthly'] += (float)($group['total_amount'] ?? 0);
 
     if (
         $meta['state'] === 'active'
@@ -305,9 +307,15 @@ foreach ($contractGroups as $group) {
     /* ─── Summary tiles ──────────────────────────────────────── */
     .corp-stats {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 18px;
         margin-bottom: 24px;
+    }
+
+    @media (max-width: 1200px) {
+        .corp-stats {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
 
     @media (max-width: 992px) {
@@ -363,6 +371,16 @@ foreach ($contractGroups as $group) {
         border-left-color: #d97706;
     }
 
+    .stat-card--emerald {
+        border-left-color: #10b981;
+        background: linear-gradient(180deg, #fff 0%, #f0fdf4 100%);
+    }
+
+    .stat-card--rose {
+        border-left-color: #e11d48;
+        background: linear-gradient(180deg, #fff 0%, #fff1f2 100%);
+    }
+
     .stat-card__header {
         display: flex;
         align-items: center;
@@ -398,6 +416,14 @@ foreach ($contractGroups as $group) {
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
 
+    .stat-card--emerald .stat-card__icon {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .stat-card--rose .stat-card__icon {
+        background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+    }
+
     .stat-card__title {
         font-size: 0.95rem;
         font-weight: 700;
@@ -413,6 +439,14 @@ foreach ($contractGroups as $group) {
         line-height: 1;
         font-variant-numeric: tabular-nums;
         letter-spacing: -1px;
+    }
+
+    .stat-card--emerald .stat-card__value {
+        color: #047857;
+    }
+
+    .stat-card--rose .stat-card__value {
+        color: #b91c1c;
     }
 
     .stat-card__currency {
@@ -651,6 +685,31 @@ foreach ($contractGroups as $group) {
         color: #107c10;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
+    }
+
+    /* ── Affiliate count pills ── */
+    .corp-table__count {
+        display: inline-block;
+        min-width: 54px;
+        padding: 6px 14px;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 1.15rem;
+        line-height: 1;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .corp-table__count--active {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+
+    .corp-table__count--annulled {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
     }
 
     /* ─── Vigencia cell ───────────────────────────────────────── */
@@ -1071,21 +1130,32 @@ foreach ($contractGroups as $group) {
                 </div>
             </div>
 
-            <div class="stat-card stat-card--blue">
+            <div class="stat-card stat-card--emerald">
                 <div class="stat-card__header">
                     <div class="stat-card__icon">
-                        <i class="fas fa-users" aria-hidden="true"></i>
+                        <i class="fas fa-user-check" aria-hidden="true"></i>
                     </div>
-                    <div class="stat-card__title">Afiliados</div>
+                    <div class="stat-card__title">Afiliados Activos</div>
                 </div>
-                <div class="stat-card__value"><?= $stats['active_affiliates'] ?></div>
+                <div class="stat-card__value"><?= (int) $activeCount ?></div>
                 <div class="stat-card__context">
-                    <?php if ($stats['total_affiliates'] > $stats['active_affiliates']): ?>
-                        <span class="stat-card__hint">
-                            de <?= $stats['total_affiliates'] ?> en total
-                        </span>
+                    <span class="stat-card__hint">con al menos un contrato vigente</span>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card--rose">
+                <div class="stat-card__header">
+                    <div class="stat-card__icon">
+                        <i class="fas fa-user-slash" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-card__title">Afiliados Anulados</div>
+                </div>
+                <div class="stat-card__value"><?= (int) $annulledCount ?></div>
+                <div class="stat-card__context">
+                    <?php if ((int) $annulledCount === 0): ?>
+                        <span class="stat-card__hint stat-card__hint--muted">ninguno</span>
                     <?php else: ?>
-                        <span class="stat-card__hint">cubiertos por contratos vigentes</span>
+                        <span class="stat-card__hint">con solo contratos anulados</span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1148,7 +1218,8 @@ foreach ($contractGroups as $group) {
                             <tr>
                                 <th>N° Contrato</th>
                                 <th>Planes</th>
-                                <th style="text-align: center;">Afiliados</th>
+                                <th style="text-align: center;">Activos</th>
+                                <th style="text-align: center;">Anulados</th>
                                 <th>Monto Total</th>
                                 <th>Vigencia</th>
                                 <th style="text-align: center;">Estatus</th>
@@ -1215,12 +1286,20 @@ foreach ($contractGroups as $group) {
                                         <?php endif; ?>
                                     </td>
 
-                                    <td class="corp-table__numeric">
-                                        <?= (int)$group['total_affiliates'] ?>
+                                    <td style="text-align: center;">
+                                        <span class="corp-table__count corp-table__count--active">
+                                            <?= (int) $activeCount ?>
+                                        </span>
+                                    </td>
+
+                                    <td style="text-align: center;">
+                                        <span class="corp-table__count corp-table__count--annulled">
+                                            <?= (int) $annulledCount ?>
+                                        </span>
                                     </td>
 
                                     <td class="corp-table__money">
-                                        $<?= number_format($group['total_amount'], 2, ',', '.') ?>
+                                        $<?= number_format($group['total_amount'] ?? 0, 2, ',', '.') ?>
                                     </td>
 
                                     <td class="vigencia-cell">

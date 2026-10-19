@@ -573,15 +573,33 @@ class ContratosController extends Controller
         throw new NotFoundHttpException('The requested page does not exist.');
     }
     /**
-     * After a contract is annulled, if the affiliate is linked to a corporate
-     * AND has no other non-annulled contract, unlink them from the corporate.
+     * Called after a contract is annulled to update the affiliate's
+     * solvency flag and recompute the corporate's aggregates.
+     *
+     * ─────────────────────────────────────────────────────────────────
+     * UNLINK BEHAVIOR REMOVED (2026-10-15)
+     * ─────────────────────────────────────────────────────────────────
+     * This method previously UNLINKED the affiliate from their corporate
+     * when their last live contract was annulled:
      *
      *   - user_datos.afiliado_corporativo_id = NULL
-     *   - user_datos.user_datos_type_id      = 1 (Individual)
-     *   - user_datos.estatus_solvente        = 'No'
-     *   - delete corporativo_user row
-     *   - delete contratos_corporativos_afiliados row
-     *   - recompute parent contratos_corporativos aggregates
+     *   - user_datos.user_datos_type_id      = 1
+     *   - delete from corporativo_user
+     *   - delete from contratos_corporativos_afiliados
+     *
+     * That behavior broke the audit trail. An annulled affiliate
+     * disappeared from the corporate entirely — visible neither in the
+     * "Afiliados Activos" nor in the "Afiliados Anulados" panel, which
+     * defeats the entire purpose of the latter.
+     *
+     * The correct semantics: annulment is a STATE CHANGE, not a DELETION.
+     * The affiliate-corporate relationship is preserved so the corporate
+     * page can continue to display them under "Afiliados Anulados".
+     *
+     * What this method still does:
+     *   - Marks the affiliate as NOT solvent (estatus_solvente = 'No').
+     *   - Recomputes the corporate contract aggregates so the "Afiliados
+     *     Activos" count on corporate/index reflects the change.
      *
      * MUST be called inside an open DB transaction.
      *
@@ -599,52 +617,26 @@ class ContratosController extends Controller
 
         $corporativoId = (int) $affiliate->afiliado_corporativo_id;
 
-        // Still has another non-annulled contract? Keep the corporate link.
-        $stillLive = Contratos::find()
-            ->where(['user_id' => $affiliate->id])
-            ->andWhere(['!=', 'id', $contract->id])
-            ->andWhere(['!=', 'estatus', Contratos::STATUS_ANULADO])
-            ->exists();
-
-        if ($stillLive) {
-            Yii::info(
-                "Anulación: afiliado #{$affiliate->id} conserva otro contrato vivo; "
-                    . "NO se desvincula del corporativo #{$corporativoId}.",
-                'contratos'
-            );
-            return;
-        }
-
-        // 1. Unlink from corporate.
-        $affiliate->afiliado_corporativo_id = null;
-        $affiliate->user_datos_type_id      = 1;
-        $affiliate->estatus_solvente        = 'No';
-        $affiliate->updated_at              = date('Y-m-d H:i:s');
+        // Mark them as not solvent but DO NOT unlink from the corporate.
+        $affiliate->estatus_solvente = 'No';
+        $affiliate->updated_at       = date('Y-m-d H:i:s');
 
         if (!$affiliate->save(false)) {
             throw new \Exception(
-                'No se pudo desvincular al afiliado del corporativo: '
+                'No se pudo actualizar la solvencia del afiliado: '
                     . json_encode($affiliate->getErrors())
             );
         }
 
-        // 2. Remove the legacy junction row (safe: no-op if absent).
-        CorporativoUser::deleteAll([
-            'corporativo_id' => $corporativoId,
-            'user_id'        => $affiliate->id,
-        ]);
-
-        // 3. Remove the corporate-contract junction row.
-        ContratoCorporativoAfiliado::deleteAll([
-            'user_datos_id' => $affiliate->id,
-        ]);
-
-        // 4. Recompute aggregates on affected contratos_corporativos.
+        // Recompute aggregates on affected contratos_corporativos.
+        // (Their "active" count drops because the underlying contract
+        // is now annulled — see recomputeCorporateContractAggregates.)
         $this->recomputeCorporateContractAggregates($corporativoId);
 
         Yii::info(
-            "Anulación: afiliado #{$affiliate->id} desvinculado del corporativo "
-                . "#{$corporativoId} (último contrato vivo anulado).",
+            "Anulación: afiliado #{$affiliate->id} permanece vinculado al corporativo "
+                . "#{$corporativoId} (su contrato fue anulado, pero se conserva la "
+                . "asociación para auditoría).",
             'contratos'
         );
     }
@@ -782,24 +774,31 @@ class ContratosController extends Controller
     }
 
     /**
-     * Remove a corporate affiliate from employee lists when no valid contracts remain.
+     * @deprecated Kept as a no-op for backward compatibility.
+     *
+     * Previously, this method NULLed out `afiliado_corporativo_id` when
+     * an affiliate had no remaining active contract. That behavior broke
+     * the corporate page's "Afiliados Anulados" panel — annulled
+     * affiliates silently vanished from the corporate.
+     *
+     * The correct semantics: annulment is a STATE CHANGE, not a DELETION.
+     * The affiliate remains associated with the corporate so they're
+     * visible under "Afiliados Anulados".
+     *
+     * The two panels on the corporate page already do the right thing
+     * based on contract status:
+     *   - "Afiliados Activos"   → has ≥1 non-annulled contract
+     *   - "Afiliados Anulados"  → has no non-annulled contracts
+     *
+     * No unlink is needed for either to work correctly.
      *
      * @param int|null $userId
+     * @return void
      */
     private function detachCorporateAffiliateWithoutValidContracts($userId)
     {
-        if (!$userId) {
-            return;
-        }
-
-        $hasValidContract = Contratos::getContratoActivo((int)$userId) !== null;
-
-        if (!$hasValidContract) {
-            UserDatos::updateAll(
-                ['afiliado_corporativo_id' => null],
-                ['id' => (int)$userId, 'user_datos_type_id' => 2]
-            );
-        }
+        // Intentionally a no-op. See docblock above.
+        return;
     }
 
     /**

@@ -580,60 +580,145 @@ class UserDatosSearch extends UserDatos
     // ============================================================
 
     /**
-     * Get summary statistics for affiliates
+     * Get summary statistics for affiliates.
+     *
+     * ─────────────────────────────────────────────────────────────────────
+     * BUCKET MODEL (fixed 2026-10-19)
+     * ─────────────────────────────────────────────────────────────────────
+     * Each affiliate is assigned to EXACTLY ONE bucket, by priority:
+     *
+     *   Activo > Registrado > Suspendido > Vencido > Anulado
+     *
+     * "Anulado" therefore means: this affiliate has annulled contracts
+     * AND no live (non-annulled) contract.
+     *
+     * The returned array keys are unchanged (`total_contratos_*`) so the
+     * KPI cards in `views/user-datos/index.php` keep working without an
+     * edit — even though those cards are now labelled "Afiliados".
+     *
+     * ─────────────────────────────────────────────────────────────────────
+     * ALIAS BUG FIX (2026-10-19)
+     * ─────────────────────────────────────────────────────────────────────
+     * The previous version aliased `user_datos` as `ud` in the bucket
+     * query, but `applyFilters()` internally references
+     * `user_datos.clinica_id`, `user_datos.asesor_id`, and
+     * `user_datos.agencia_id`. When a clinic-bound role (COORDINADOR-
+     * CLINICA, GERENTE-CLINICA, ADMISIÓN, …) loaded the page, the
+     * resulting SQL threw:
+     *
+     *     ERROR: missing FROM-clause entry for table "user_datos"
+     *
+     * and the try/catch in `index.php` swallowed the exception and
+     * rendered all cards as 0. Superadmin never hit this because
+     * `hasClinicAccess()` returns false for that role.
+     *
+     * The fix: use `user_datos` as the alias so every existing
+     * `applyFilters()` reference resolves correctly. No changes needed
+     * to `applyFilters()` itself, so any future consumers of that
+     * helper get the same fix automatically.
+     *
+     * @param  array $params
+     * @return array
      */
     public function getSummaryStatistics($params = [])
     {
-        $query = UserDatos::find();
-        $this->applyFilters($query, $params);
+        // ── Base scope: affiliates only, not soft-deleted ──
+        $baseQuery = UserDatos::find();
+        $this->applyFilters($baseQuery, $params);
 
-        $query->andWhere(['user_datos.role' => 'afiliado']);
-        $query->andWhere(['is', 'user_datos.deleted_at', null]);
+        $baseQuery->andWhere(['user_datos.role' => 'afiliado']);
+        $baseQuery->andWhere(['is', 'user_datos.deleted_at', null]);
 
-        $totalAfiliados = $query->count();
+        $totalAfiliados = (clone $baseQuery)->count();
 
-        $activeContractsQuery = clone $query;
-        $activeContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
-            ->andWhere(['contratos.estatus' => Contratos::STATUS_ACTIVO])
-            ->distinct('user_datos.id');
-        $totalActivos = $activeContractsQuery->count();
+        // ─────────────────────────────────────────────────────────────────
+        // BUCKET ASSIGNMENT
+        //
+        // IMPORTANT: table alias MUST be `user_datos` (not `ud`), because
+        // applyFilters() builds conditions with the `user_datos.` prefix.
+        // ─────────────────────────────────────────────────────────────────
+        $bucketQuery = (new \yii\db\Query())
+            ->select([
+                'bucket' => "
+                    CASE
+                        WHEN BOOL_OR(c.estatus = :activo)     THEN 'activo'
+                        WHEN BOOL_OR(c.estatus = :registrado) THEN 'registrado'
+                        WHEN BOOL_OR(c.estatus = :suspendido) THEN 'suspendido'
+                        WHEN BOOL_OR(c.estatus = :vencido)    THEN 'vencido'
+                        WHEN BOOL_OR(c.estatus = :anulado)    THEN 'anulado'
+                        ELSE 'sin_contrato'
+                    END
+                ",
+            ])
+            ->from(['user_datos' => 'user_datos'])          // ← alias = real name
+            ->leftJoin(['c' => 'contratos'], 'c.user_id = user_datos.id')
+            ->where(['user_datos.role' => 'afiliado'])
+            ->andWhere(['IS', 'user_datos.deleted_at', null])
+            ->groupBy('user_datos.id')
+            ->params([
+                ':activo'     => Contratos::STATUS_ACTIVO,
+                ':registrado' => Contratos::STATUS_REGISTRADO,
+                ':suspendido' => Contratos::STATUS_SUSPENDIDO,
+                ':vencido'    => Contratos::STATUS_VENCIDO,
+                ':anulado'    => Contratos::STATUS_ANULADO,
+            ]);
 
-        $suspendedContractsQuery = clone $query;
-        $suspendedContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
-            ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
-            ->distinct('user_datos.id');
-        $totalSuspendidos = $suspendedContractsQuery->count();
+        // Apply the SAME scoping as the grid. Because the alias matches
+        // the real table name, applyFilters()'s internal references
+        // (`user_datos.clinica_id`, `user_datos.asesor_id`,
+        // `user_datos.agencia_id`) all resolve correctly.
+        $this->applyFilters($bucketQuery, $params);
+        $bucketQuery->andWhere(['user_datos.role' => 'afiliado']);
+        $bucketQuery->andWhere(['IS', 'user_datos.deleted_at', null]);
 
-        $registradosContractsQuery = clone $query;
-        $registradosContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
-            ->andWhere(['contratos.estatus' => Contratos::STATUS_REGISTRADO])
-            ->distinct('user_datos.id');
-        $totalRegistrados = $registradosContractsQuery->count();
+        $perAffiliateBuckets = $bucketQuery->all(\Yii::$app->db);
 
-        $anuladosContractsQuery = clone $query;
-        $anuladosContractsQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
-            ->andWhere(['contratos.estatus' => Contratos::STATUS_ANULADO])
-            ->distinct('user_datos.id');
-        $totalAnulados = $anuladosContractsQuery->count();
+        $cardCounts = [
+            'activo'       => 0,
+            'registrado'   => 0,
+            'suspendido'   => 0,
+            'vencido'      => 0,
+            'anulado'      => 0,
+            'sin_contrato' => 0,
+        ];
+        foreach ($perAffiliateBuckets as $row) {
+            $key = $row['bucket'] ?? 'sin_contrato';
+            if (isset($cardCounts[$key])) {
+                $cardCounts[$key]++;
+            }
+        }
 
-        // VENCIDOS — count affiliates whose CURRENT (most recent) contract is Vencido.
-        // We deliberately use the same "latest contract" pattern as the grid filter
-        // so the KPI card number matches what the user sees after clicking the card.
-        $vencidosContractsQuery = clone $query;
-        $latestVencidoSubquery = Contratos::find()
-            ->select('contratos.id')
-            ->where('contratos.user_id = user_datos.id')
-            ->orderBy(['contratos.id' => SORT_DESC])
-            ->limit(1);
+        // ─────────────────────────────────────────────────────────────────
+        // ONE-TIME KPI INTEGRITY ASSERTION
+        // Grep with:  grep 'KPI bucket' runtime/logs/app.log
+        // Delete this block once verified on your dataset.
+        // ─────────────────────────────────────────────────────────────────
+        $bucketSum = array_sum($cardCounts);
+        Yii::info(sprintf(
+            'KPI bucket check | role=%s total=%d sum=%d | activo=%d registrado=%d suspendido=%d vencido=%d anulado=%d sin_contrato=%d',
+            UserHelper::getMyRol(),
+            $totalAfiliados,
+            $bucketSum,
+            $cardCounts['activo'],
+            $cardCounts['registrado'],
+            $cardCounts['suspendido'],
+            $cardCounts['vencido'],
+            $cardCounts['anulado'],
+            $cardCounts['sin_contrato']
+        ), 'kpi-buckets');
 
-        $vencidosContractsQuery
-            ->innerJoin('contratos', 'contratos.user_id = user_datos.id')
-            ->andWhere(['contratos.id' => $latestVencidoSubquery])
-            ->andWhere(['contratos.estatus' => Contratos::STATUS_VENCIDO])
-            ->distinct('user_datos.id');
-        $totalVencidos = $vencidosContractsQuery->count();
+        if ($totalAfiliados !== $bucketSum) {
+            Yii::warning(
+                "KPI bucket mismatch: total={$totalAfiliados} sum={$bucketSum} "
+                    . "— check sin_contrato={$cardCounts['sin_contrato']}",
+                'kpi-buckets'
+            );
+        }
 
-        $criticalQuery = clone $query;
+        // ─────────────────────────────────────────────────────────────────
+        // CRITICAL DELINQUENCY — unchanged behaviour
+        // ─────────────────────────────────────────────────────────────────
+        $criticalQuery = clone $baseQuery;
         $criticalQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
             ->innerJoin('cuotas', 'cuotas.contrato_id = contratos.id')
             ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
@@ -643,36 +728,40 @@ class UserDatosSearch extends UserDatos
             ->distinct('user_datos.id');
         $criticalCount = $criticalQuery->count();
 
-        $criticalCuotasQuery = clone $query;
-        $criticalCuotasQuery->innerJoin('contratos', 'contratos.user_id = user_datos.id')
+        $criticalUsers = (clone $baseQuery)
+            ->select('user_datos.id')
+            ->innerJoin('contratos', 'contratos.user_id = user_datos.id')
             ->innerJoin('cuotas', 'cuotas.contrato_id = contratos.id')
             ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
             ->andWhere(['cuotas.estatus' => 'vencida'])
             ->groupBy('user_datos.id')
-            ->having(['>=', 'COUNT(cuotas.id)', 3]);
+            ->having(['>=', 'COUNT(cuotas.id)', 3])
+            ->column();
 
-        $criticalUsers = $criticalCuotasQuery->select('user_datos.id')->column();
         $totalOverdueCuotas = 0;
-        $averageOverdue = 0;
+        $averageOverdue     = 0;
 
         if (!empty($criticalUsers)) {
-            $overdueQuery = Cuotas::find()
+            $totalOverdueCuotas = (int) Cuotas::find()
                 ->innerJoin('contratos', 'contratos.id = cuotas.contrato_id')
                 ->where(['contratos.user_id' => $criticalUsers])
                 ->andWhere(['contratos.estatus' => Contratos::STATUS_SUSPENDIDO])
-                ->andWhere(['cuotas.estatus' => 'vencida']);
+                ->andWhere(['cuotas.estatus' => 'vencida'])
+                ->count();
 
-            $totalOverdueCuotas = $overdueQuery->count();
-            $averageOverdue = $criticalCount > 0 ? round($totalOverdueCuotas / $criticalCount, 1) : 0;
+            $averageOverdue = $criticalCount > 0
+                ? round($totalOverdueCuotas / $criticalCount, 1)
+                : 0;
         }
 
         return [
-            'total_afiliados'                => $totalAfiliados,
-            'total_contratos_activos'        => $totalActivos,
-            'total_contratos_suspendidos'    => $totalSuspendidos,
-            'total_contratos_registrados'    => $totalRegistrados,
-            'total_contratos_anulados'       => $totalAnulados,
-            'total_contratos_vencidos'       => $totalVencidos,
+            'total_afiliados'             => $totalAfiliados,
+            'total_contratos_activos'     => $cardCounts['activo'],
+            'total_contratos_suspendidos' => $cardCounts['suspendido'],
+            'total_contratos_registrados' => $cardCounts['registrado'],
+            'total_contratos_anulados'    => $cardCounts['anulado'],
+            'total_contratos_vencidos'    => $cardCounts['vencido'],
+            'sin_contrato'                => $cardCounts['sin_contrato'],
             'critical_delinquency' => [
                 'count'                 => $criticalCount,
                 'total_vencidas_cuotas' => $totalOverdueCuotas,

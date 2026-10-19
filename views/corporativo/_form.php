@@ -462,21 +462,86 @@ if (!$model->isNewRecord) {
 
     <div class="row g-3 mb-3">
         <div class="col-md-12">
-            <?php
-            $afiliadosList = UserHelper::getAfiliadosList();
+            <label class="form-label" style="font-weight: 700; font-size: 1.25rem;">
+                Afiliados Asociados
+                <i class="fas fa-lock" style="color: #8a8886; font-size: 1.05rem; margin-left: 8px;"
+                    title="Los afiliados se gestionan desde Carga Masiva y Nuevo Contrato. Este campo es de solo lectura."></i>
+            </label>
 
-            echo $form->field($model, 'users_ids')->widget(Select2::class, [
-                'data' => $afiliadosList,
-                'options' => [
-                    'placeholder' => 'Seleccione uno o varios afiliados...',
-                    'multiple' => true,
-                    'class' => 'form-control form-control-lg',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ])->label('Afiliados Asociados');
-            ?>
+            <?php if ($model->isNewRecord): ?>
+                <div class="alert alert-info mb-0" style="font-size: 1.15rem; border-radius: 10px; padding: 18px 22px; line-height: 1.5;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Guarde el corporativo primero. Los afiliados se cargan después mediante
+                    <strong>Carga Masiva</strong> o <strong>Nuevo Contrato</strong>.
+                </div>
+            <?php else: ?>
+                <?php
+                $afiliadosAsociados = UserDatos::find()
+                    ->where([
+                        'afiliado_corporativo_id' => $model->id,
+                        'user_datos_type_id'      => 2,
+                    ])
+                    ->orderBy(['apellidos' => SORT_ASC, 'nombres' => SORT_ASC])
+                    ->all();
+                ?>
+
+                <?php if (empty($afiliadosAsociados)): ?>
+                    <div class="alert alert-warning mb-0" style="font-size: 1.15rem; border-radius: 10px; padding: 18px 22px; line-height: 1.5;">
+                        <i class="fas fa-users-slash me-2"></i>
+                        Este corporativo aún no tiene afiliados asociados.
+                    </div>
+                <?php else: ?>
+                    <div class="read-only-affiliates"
+                        style="
+                        background: #faf9f8;
+                        border: 1px solid #e8e6e3;
+                        border-radius: 12px;
+                        padding: 22px 26px;
+                        max-height: 340px;
+                        overflow-y: auto;
+                     ">
+                        <div style="font-size: 1.1rem; color: #605e5c; margin-bottom: 16px; font-weight: 600;">
+                            <?= count($afiliadosAsociados) ?>
+                            afiliado<?= count($afiliadosAsociados) === 1 ? '' : 's' ?>
+                            vinculado<?= count($afiliadosAsociados) === 1 ? '' : 's' ?>
+                        </div>
+                        <ul style="
+                        list-style: none;
+                        padding: 0;
+                        margin: 0;
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                        gap: 12px 28px;
+                    ">
+                            <?php foreach ($afiliadosAsociados as $af): ?>
+                                <li style="
+                                display: flex;
+                                align-items: baseline;
+                                gap: 12px;
+                                font-size: 1.25rem;
+                                color: #1a1a1a;
+                                padding: 10px 0;
+                                border-bottom: 1px dashed #e1dfdd;
+                            ">
+                                    <i class="fas fa-user" style="color: #8a8886; font-size: 1.05rem;"></i>
+                                    <span style="font-weight: 700; letter-spacing: 0.2px;">
+                                        <?= Html::encode(trim(($af->nombres ?? '') . ' ' . ($af->apellidos ?? ''))) ?>
+                                    </span>
+                                    <span style="color: #605e5c; font-size: 1.05rem; font-weight: 500;">
+                                        (<?= Html::encode($af->tipo_cedula . '-' . $af->cedula) ?>)
+                                    </span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+
+                    <div style="font-size: 1.05rem; color: #8a8886; margin-top: 12px; line-height: 1.5;">
+                        <i class="fas fa-info-circle"></i>
+                        Para agregar o quitar afiliados, use
+                        <strong>Carga Masiva</strong> o <strong>Nuevo Contrato</strong>.
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
         </div>
     </div>
 

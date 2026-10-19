@@ -188,146 +188,153 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
     </div>
 
     <!-- ============================================================ -->
-    <!-- KPI SUMMARY CARDS - Clickable Microsoft Style (Single Row)    -->
+    <!-- KPI SUMMARY CARDS — Microsoft Fluent (One Word + Hero Number) -->
     <!-- ============================================================ -->
     <div class="kpi-cards-row">
-        <!-- Card 1: Total Afiliados (Always visible) -->
+
+        <!-- Card 1: Total -->
         <a href="<?= $urlTotalAfiliados ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
             data-toggle="tooltip"
             data-placement="top"
             data-html="true"
-            title="<strong>Total de Afiliados</strong><br>Muestra todos los afiliados registrados en el sistema.<br><small class='text-muted'>Click para ver todos</small>">
+            title="<strong>Total de Afiliados</strong><br>Todos los afiliados registrados en el sistema.<br><small class='text-muted'>Click para ver todos</small>">
             <div class="kpi-card primary">
+                <span class="kpi-accent"></span>
                 <div class="kpi-card-header">
                     <span class="kpi-icon"><i class="fas fa-users"></i></span>
-                    <span class="kpi-title">Total Afiliados</span>
+                    <span class="kpi-title">Total</span>
                     <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                 </div>
                 <div class="kpi-card-body">
                     <span class="kpi-number"><?= number_format($summaryStats['total_afiliados'] ?? 0) ?></span>
                     <span class="kpi-label">
-                        <i class="fas fa-building mr-1"></i> <?= $displayClinicName ?>
+                        <i class="fas fa-building mr-1"></i><?= $displayClinicName ?>
                     </span>
                 </div>
             </div>
         </a>
 
-        <!-- Card 2: Contratos Activos (Conditional) -->
+        <!-- Card 2: Activos -->
         <?php if ($hasActivos): ?>
             <a href="<?= $urlActivos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
-                title="<strong>Contratos Activos</strong><br>Afiliados con contratos en vigencia.<br><small class='text-muted'>Click para filtrar</small>">
+                title="<strong>Afiliados Activos</strong><br>Afiliados con al menos un contrato en vigencia.<br><small class='text-muted'>Click para filtrar</small>">
                 <div class="kpi-card success">
+                    <span class="kpi-accent"></span>
                     <div class="kpi-card-header">
                         <span class="kpi-icon"><i class="fas fa-check-circle"></i></span>
-                        <span class="kpi-title">Contratos Activos</span>
+                        <span class="kpi-title">Activos</span>
                         <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                     </div>
                     <div class="kpi-card-body">
                         <span class="kpi-number"><?= number_format($summaryStats['total_contratos_activos'] ?? 0) ?></span>
                         <span class="kpi-label">
-                            <i class="fas fa-calendar-check mr-1"></i> En vigencia
+                            <i class="fas fa-calendar-check mr-1"></i>En vigencia
                         </span>
                     </div>
                 </div>
             </a>
         <?php endif; ?>
 
-        <!-- Card 3: Contratos Suspendidos (Conditional) -->
+        <!-- Card 3: Suspendidos -->
         <?php if ($hasSuspendidos): ?>
             <a href="<?= $urlSuspendidos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
-                title="<strong>Contratos Suspendidos</strong><br>Afiliados con contratos suspendidos por tener al menos una cuota vencida.<br><small class='text-muted'>Click para filtrar</small>">
+                title="<strong>Afiliados Suspendidos</strong><br>Afiliados con al menos un contrato suspendido por tener cuotas vencidas.<br><small class='text-muted'>Click para filtrar</small>">
                 <div class="kpi-card danger">
+                    <span class="kpi-accent"></span>
                     <div class="kpi-card-header">
                         <span class="kpi-icon"><i class="fas fa-pause-circle"></i></span>
-                        <span class="kpi-title">Contratos Suspendidos</span>
+                        <span class="kpi-title">Suspendidos</span>
                         <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                     </div>
                     <div class="kpi-card-body">
                         <span class="kpi-number"><?= number_format($summaryStats['total_contratos_suspendidos'] ?? 0) ?></span>
                         <span class="kpi-label">
-                            <i class="fas fa-clock mr-1"></i> Con cuotas vencidas
+                            <i class="fas fa-clock mr-1"></i>Con cuotas vencidas
                         </span>
                     </div>
                 </div>
             </a>
         <?php endif; ?>
 
-        <!-- Card 4: Contratos Registrados (Conditional) -->
+        <!-- Card 4: Registrados -->
         <?php if ($hasRegistrados): ?>
             <a href="<?= $urlRegistrados ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
-                title="<strong>Contratos Registrados</strong><br>Afiliados con contratos registrados pendientes de activación.<br><small class='text-muted'>Click para filtrar</small>">
+                title="<strong>Afiliados Registrados</strong><br>Afiliados con al menos un contrato registrado pendiente de activación.<br><small class='text-muted'>Click para filtrar</small>">
                 <div class="kpi-card registrado">
+                    <span class="kpi-accent"></span>
                     <div class="kpi-card-header">
                         <span class="kpi-icon"><i class="fas fa-clipboard-list"></i></span>
-                        <span class="kpi-title">Contratos Registrados</span>
+                        <span class="kpi-title">Registrados</span>
                         <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                     </div>
                     <div class="kpi-card-body">
                         <span class="kpi-number"><?= number_format($summaryStats['total_contratos_registrados'] ?? 0) ?></span>
                         <span class="kpi-label">
-                            <i class="fas fa-clock mr-1"></i> Pendientes de activación
+                            <i class="fas fa-clock mr-1"></i>Pendientes
                         </span>
                     </div>
                 </div>
             </a>
         <?php endif; ?>
 
-        <!-- Card 5: Contratos Anulados (Conditional) -->
+        <!-- Card 5: Anulados -->
         <?php if ($hasAnulados): ?>
             <a href="<?= $urlAnulados ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
-                title="<strong>Contratos Anulados</strong><br>Afiliados con contratos cancelados permanentemente.<br><small class='text-muted'>Click para filtrar</small>">
+                title="<strong>Afiliados Anulados</strong><br>Afiliados sin ningún contrato vigente (todos sus contratos están anulados).<br><small class='text-muted'>Click para filtrar</small>">
                 <div class="kpi-card anulado">
+                    <span class="kpi-accent"></span>
                     <div class="kpi-card-header">
                         <span class="kpi-icon"><i class="fas fa-ban"></i></span>
-                        <span class="kpi-title">Contratos Anulados</span>
+                        <span class="kpi-title">Anulados</span>
                         <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                     </div>
                     <div class="kpi-card-body">
                         <span class="kpi-number"><?= number_format($summaryStats['total_contratos_anulados'] ?? 0) ?></span>
                         <span class="kpi-label">
-                            <i class="fas fa-times-circle mr-1"></i> Cancelados
+                            <i class="fas fa-times-circle mr-1"></i>Sin contrato
                         </span>
                     </div>
                 </div>
             </a>
         <?php endif; ?>
 
-        <!-- Card 5.1: Contratos Vencidos (Conditional) -->
+        <!-- Card 5.1: Vencidos -->
         <?php if ($hasVencidos): ?>
             <a href="<?= $urlVencidos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
                 data-placement="top"
                 data-html="true"
-                title="<strong>Contratos Vencidos</strong><br>Afiliados cuyos contratos han superado su fecha de vigencia sin renovación.<br><small class='text-muted'>Click para filtrar</small>">
+                title="<strong>Afiliados Vencidos</strong><br>Afiliados cuyos contratos han superado su fecha de vigencia sin renovación.<br><small class='text-muted'>Click para filtrar</small>">
                 <div class="kpi-card vencido">
+                    <span class="kpi-accent"></span>
                     <div class="kpi-card-header">
                         <span class="kpi-icon"><i class="fas fa-calendar-times"></i></span>
-                        <span class="kpi-title">Contratos Vencidos</span>
+                        <span class="kpi-title">Vencidos</span>
                         <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                     </div>
                     <div class="kpi-card-body">
                         <span class="kpi-number"><?= number_format($summaryStats['total_contratos_vencidos'] ?? 0) ?></span>
                         <span class="kpi-label">
-                            <i class="fas fa-hourglass-end mr-1"></i> Fuera de vigencia
+                            <i class="fas fa-hourglass-end mr-1"></i>Fuera de vigencia
                         </span>
                     </div>
                 </div>
             </a>
         <?php endif; ?>
 
-        <!-- Card 6: Afiliados Críticos (Conditional) -->
+        <!-- Card 6: Críticos -->
         <?php if ($hasCriticos): ?>
             <a href="<?= $urlCriticos ?>" class="kpi-card-link" data-pjax="#affiliates-pjax"
                 data-toggle="tooltip"
@@ -335,9 +342,10 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                 data-html="true"
                 title="<strong>Afiliados Críticos</strong><br>Afiliados con 3 o más cuotas vencidas. <span class='text-warning'>¡Requieren atención inmediata!</span><br><small class='text-muted'>Click para filtrar</small>">
                 <div class="kpi-card critical">
+                    <span class="kpi-accent"></span>
                     <div class="kpi-card-header">
                         <span class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></span>
-                        <span class="kpi-title">Afiliados Críticos</span>
+                        <span class="kpi-title">Críticos</span>
                         <span class="kpi-arrow"><i class="fas fa-chevron-right"></i></span>
                     </div>
                     <div class="kpi-card-body">
@@ -345,17 +353,12 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
                             <?= number_format($summaryStats['critical_delinquency']['count'] ?? 0) ?>
                             <?php if (($summaryStats['critical_delinquency']['count'] ?? 0) > 0): ?>
                                 <small class="kpi-percent">
-                                    (<?= round(($summaryStats['critical_delinquency']['count'] / max($summaryStats['total_contratos_suspendidos'] ?? 1, 1)) * 100) ?>%)
+                                    <?= round(($summaryStats['critical_delinquency']['count'] / max($summaryStats['total_contratos_suspendidos'] ?? 1, 1)) * 100) ?>%
                                 </small>
                             <?php endif; ?>
                         </span>
                         <span class="kpi-label">
-                            <i class="fas fa-exclamation-circle mr-1"></i> 3+ cuotas vencidas
-                            <?php if (($summaryStats['critical_delinquency']['total_vencidas_cuotas'] ?? 0) > 0): ?>
-                                <span class="kpi-sub">
-                                    <?= number_format($summaryStats['critical_delinquency']['total_vencidas_cuotas'] ?? 0) ?> cuotas
-                                </span>
-                            <?php endif; ?>
+                            <i class="fas fa-exclamation-circle mr-1"></i>3+ cuotas vencidas
                         </span>
                     </div>
                 </div>
@@ -389,8 +392,31 @@ $hasCriticos = ($summaryStats['critical_delinquency']['count'] ?? 0) > 0;
         </div>
         <div class="ms-panel-body">
 
-            <div class="top-native-scrollbar" style="display: none;">
-                <div class="top-native-dummy"></div>
+            <!-- ============================================================ -->
+            <!-- EYE-CATCHING TOP SCROLLBAR — same Fluent chip as pagos/index -->
+            <!-- ============================================================ -->
+            <div class="top-scrollbar-shell">
+                <span class="top-scrollbar-hint">
+                    <i class="fas fa-arrows-alt-h"></i> Deslizar
+                </span>
+
+                <button type="button"
+                    class="top-scrollbar-arrow top-scrollbar-arrow-left"
+                    aria-label="Desplazar a la izquierda"
+                    title="Desplazar a la izquierda">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <div class="top-native-scrollbar">
+                    <div class="top-native-dummy"></div>
+                </div>
+
+                <button type="button"
+                    class="top-scrollbar-arrow top-scrollbar-arrow-right"
+                    aria-label="Desplazar a la derecha"
+                    title="Desplazar a la derecha">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
 
             <!-- ============================================================ -->
@@ -1156,19 +1182,36 @@ $(document).ready(function () {
     });
 });
 
-// 5. DUAL SCROLLBAR SYSTEM
-$(document).ready(function() {
+// 5. EYE-CATCHING DUAL SCROLLBAR SYSTEM
+// ============================================================
+// - Keeps a stylized top scrollbar in sync with the grid's native
+//   bottom scrollbar (the actual overflow driver).
+// - Provides left/right arrow buttons for one-click scrolling.
+// - Auto-hides the whole shell when there's no horizontal overflow.
+// - Re-binds on PJAX / grid refresh / window resize (idempotent).
+// ============================================================
+$(document).ready(function () {
     var $gridWrapper = $('#grid-scroll-container');
-    var $top = $('.top-native-scrollbar');
-    var $dummy = $('.top-native-dummy');
-    var $activeScroller = $();
-    var syncingFrom = null;
+    var $shell       = $('.top-scrollbar-shell');
+    var $top         = $('.top-native-scrollbar');
+    var $dummy       = $('.top-native-dummy');
+    var $arrowLeft   = $('.top-scrollbar-arrow-left');
+    var $arrowRight  = $('.top-scrollbar-arrow-right');
 
+    var $activeScroller = $();
+    var syncingFrom     = null;
+
+    if (!$gridWrapper.length || !$shell.length || !$top.length) {
+        return;
+    }
+
+    // Find the innermost element that actually overflows horizontally.
     function getActiveGridScroller() {
         var $candidates = $gridWrapper.find('*').addBack();
         var best = null;
         var bestWidth = 0;
-        $candidates.each(function() {
+
+        $candidates.each(function () {
             var el = this;
             if (!el || !el.clientWidth) return;
             if (el.scrollWidth > el.clientWidth + 1 && el.scrollWidth > bestWidth) {
@@ -1176,13 +1219,15 @@ $(document).ready(function() {
                 bestWidth = el.scrollWidth;
             }
         });
+
         return best ? $(best) : $gridWrapper;
     }
 
     function syncBars(source) {
         var gridEl = $activeScroller.get(0);
-        var topEl = $top.get(0);
+        var topEl  = $top.get(0);
         if (!gridEl || !topEl) return;
+
         if (source === 'top') {
             if (syncingFrom === 'grid') return;
             syncingFrom = 'top';
@@ -1190,6 +1235,7 @@ $(document).ready(function() {
             syncingFrom = null;
             return;
         }
+
         if (source === 'grid') {
             if (syncingFrom === 'top') return;
             syncingFrom = 'grid';
@@ -1200,62 +1246,105 @@ $(document).ready(function() {
 
     function getMaxScrollWidth() {
         var maxWidth = 0;
-        $gridWrapper.find('table').each(function() {
-            var width = this.scrollWidth;
-            if (width > maxWidth) maxWidth = width;
+
+        $gridWrapper.find('table').each(function () {
+            if (this.scrollWidth > maxWidth) maxWidth = this.scrollWidth;
         });
+
         if ($gridWrapper[0] && $gridWrapper[0].scrollWidth > maxWidth) {
             maxWidth = $gridWrapper[0].scrollWidth;
         }
+
         if ($activeScroller[0] && $activeScroller[0].scrollWidth > maxWidth) {
             maxWidth = $activeScroller[0].scrollWidth;
         }
+
         return maxWidth;
     }
 
     function refreshTopBar() {
         $activeScroller = getActiveGridScroller();
+
         var gridEl = $activeScroller.get(0);
         if (!gridEl || !$top.length || !$dummy.length) return;
-        var scrollWidth = getMaxScrollWidth();
+
+        var scrollWidth   = getMaxScrollWidth();
         var viewportWidth = gridEl.clientWidth;
         var hasHorizontalScroll = scrollWidth > (viewportWidth + 1);
+
         if (hasHorizontalScroll) {
             $dummy.css('width', (scrollWidth + 20) + 'px');
-            $top.show();
-            setTimeout(function() {
+            $shell.css('display', 'flex');
+
+            setTimeout(function () {
                 var maxScroll = scrollWidth - $top[0].clientWidth;
                 if ($top[0].scrollLeft > maxScroll) {
                     $top[0].scrollLeft = maxScroll;
                 }
             }, 20);
+
             syncBars('grid');
         } else {
-            $top.hide();
+            $shell.hide();
         }
     }
 
-    $top.off('scroll.dual').on('scroll.dual', function() {
+    // Top bar drives the grid.
+    $top.off('scroll.dual').on('scroll.dual', function () {
         syncBars('top');
+    });
+
+    // Arrow buttons — smooth one-click scroll on the active scroller.
+    function scrollByStep(direction) {
+        var gridEl = $activeScroller.get(0);
+        if (!gridEl) return;
+
+        var step = Math.max(240, Math.floor(gridEl.clientWidth * 0.6));
+        var target = gridEl.scrollLeft + (direction * step);
+
+        var maxScroll = gridEl.scrollWidth - gridEl.clientWidth;
+        if (target < 0) target = 0;
+        if (target > maxScroll) target = maxScroll;
+
+        if ('scrollBehavior' in document.documentElement.style) {
+            gridEl.scrollTo({ left: target, behavior: 'smooth' });
+        } else {
+            gridEl.scrollLeft = target;
+        }
+    }
+
+    $arrowLeft.off('click.dual').on('click.dual', function (e) {
+        e.preventDefault();
+        scrollByStep(-1);
+    });
+
+    $arrowRight.off('click.dual').on('click.dual', function (e) {
+        e.preventDefault();
+        scrollByStep(1);
     });
 
     function bindGridScroll() {
         $gridWrapper.find('*').off('scroll.dual-grid');
         $gridWrapper.off('scroll.dual-grid');
+
         $activeScroller = getActiveGridScroller();
-        $activeScroller.off('scroll.dual-grid').on('scroll.dual-grid', function() {
+        $activeScroller.off('scroll.dual-grid').on('scroll.dual-grid', function () {
             syncBars('grid');
         });
     }
 
+    // Initial passes — a few runs to let Kartik GridView settle.
     bindGridScroll();
     refreshTopBar();
     setTimeout(refreshTopBar, 120);
     setTimeout(refreshTopBar, 320);
 
+    // Recompute on window resize.
     $(window).off('resize.dual').on('resize.dual', refreshTopBar);
-    $(document).on('pjax:complete yiiGridViewUpdated ajaxComplete', function() {
-        setTimeout(function() {
+
+    // Recompute after PJAX / grid refresh events.
+    $(document).on('pjax:complete yiiGridViewUpdated ajaxComplete', function () {
+        setTimeout(function () {
             bindGridScroll();
             refreshTopBar();
         }, 150);
@@ -1267,6 +1356,248 @@ $this->registerJs($js, View::POS_READY);
 ?>
 
 <style>
+    /* ============================================ */
+    /* EYE-CATCHING DUAL SCROLLBAR                  */
+    /* Microsoft Fluent "Content Scroller" pattern  */
+    /* ============================================ */
+    .table-responsive-scroll {
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Wrapper that holds the hint label + arrows + native scroll strip */
+    .top-scrollbar-shell {
+        display: none;
+        /* toggled by JS when overflow exists */
+        align-items: center;
+        gap: 10px;
+        margin: 0 12px 12px 12px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f8f9ff 0%, #eef2ff 100%);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 1px 3px rgba(15, 23, 42, 0.04);
+        position: relative;
+        overflow: hidden;
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    /* Animated gradient accent line at the top */
+    .top-scrollbar-shell::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg,
+                #0078d4 0%,
+                #00b7c3 35%,
+                #6b69d6 70%,
+                #0078d4 100%);
+        background-size: 200% 100%;
+        animation: scrollbarAccentSlide 6s linear infinite;
+        opacity: 0.85;
+    }
+
+    @keyframes scrollbarAccentSlide {
+        0% {
+            background-position: 0% 50%;
+        }
+
+        100% {
+            background-position: 200% 50%;
+        }
+    }
+
+    .top-scrollbar-shell:hover {
+        border-color: rgba(99, 102, 241, 0.35);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 4px 14px rgba(99, 102, 241, 0.15);
+    }
+
+    /* Hint label on the left */
+    .top-scrollbar-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: #4f46e5;
+        white-space: nowrap;
+        user-select: none;
+        flex: 0 0 auto;
+        padding-right: 6px;
+        border-right: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .top-scrollbar-hint i {
+        font-size: 12px;
+        animation: scrollbarHintPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes scrollbarHintPulse {
+
+        0%,
+        100% {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        50% {
+            transform: translateX(3px);
+            opacity: 0.7;
+        }
+    }
+
+    /* Arrow buttons */
+    .top-scrollbar-arrow {
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #4f46e5;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        box-shadow:
+            inset 0 0 0 1px rgba(99, 102, 241, 0.15),
+            0 1px 2px rgba(15, 23, 42, 0.05);
+        transition: all 0.2s ease;
+    }
+
+    .top-scrollbar-arrow:hover {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+    }
+
+    .top-scrollbar-arrow:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.3);
+    }
+
+    .top-scrollbar-arrow i {
+        font-size: 12px;
+    }
+
+    /* The actual native scroll strip */
+    .top-native-scrollbar {
+        flex: 1 1 auto;
+        height: 14px;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        cursor: pointer;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #6366f1 #e0e7ff;
+    }
+
+    .top-native-scrollbar .top-native-dummy {
+        display: inline-block;
+        width: 100%;
+        min-height: 1px;
+        height: 1px;
+    }
+
+    /* WebKit — track */
+    .top-native-scrollbar::-webkit-scrollbar,
+    .table-responsive-scroll::-webkit-scrollbar {
+        height: 12px;
+    }
+
+    .top-native-scrollbar::-webkit-scrollbar-track {
+        background: linear-gradient(90deg, #e0e7ff 0%, #ede9fe 100%);
+        border-radius: 6px;
+        box-shadow: inset 0 1px 2px rgba(79, 70, 229, 0.08);
+    }
+
+    .table-responsive-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 6px;
+    }
+
+    /* WebKit — thumb: gradient + glow */
+    .top-native-scrollbar::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        transition: all 0.2s ease;
+    }
+
+    .top-native-scrollbar:hover::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 50%, #0891b2 100%);
+        background-size: 200% 100%;
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.55);
+    }
+
+    .top-native-scrollbar::-webkit-scrollbar-thumb:hover {
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.75);
+    }
+
+    /* Native bottom thumb — subtle indigo tint */
+    .table-responsive-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, #c7d2fe 0%, #ddd6fe 100%);
+        border-radius: 6px;
+        transition: background 0.2s ease;
+    }
+
+    .table-responsive-scroll::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(90deg, #a5b4fc 0%, #c4b5fd 100%);
+    }
+
+    /* Firefox native scrollbars */
+    .top-native-scrollbar {
+        scrollbar-color: #6366f1 #e0e7ff;
+    }
+
+    .table-responsive-scroll {
+        scrollbar-color: #c7d2fe #f1f1f1;
+        scrollbar-width: thin;
+    }
+
+    /* Reduce motion — respect user preference */
+    @media (prefers-reduced-motion: reduce) {
+
+        .top-scrollbar-shell::before,
+        .top-scrollbar-hint i {
+            animation: none !important;
+        }
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+        .top-scrollbar-shell {
+            margin: 0 8px 10px 8px;
+            padding: 6px 8px;
+            gap: 6px;
+        }
+
+        .top-scrollbar-hint {
+            font-size: 10px;
+            letter-spacing: 0.4px;
+            padding-right: 4px;
+        }
+
+        .top-scrollbar-arrow {
+            width: 24px;
+            height: 24px;
+        }
+    }
+
     /* ============================================ */
     /* TOOLTIP CUSTOM STYLES                        */
     /* ============================================ */
@@ -1326,99 +1657,136 @@ $this->registerJs($js, View::POS_READY);
     }
 
     /* ============================================ */
-    /* KPI CARDS - Clickable Microsoft Style        */
+    /* KPI CARDS — Microsoft Fluent Redesign        */
     /* ============================================ */
     .kpi-cards-row {
         display: flex;
         flex-wrap: nowrap;
-        gap: 12px;
+        gap: 14px;
         margin-bottom: 24px;
         overflow-x: auto;
-        padding: 2px 0 8px 0;
+        padding: 6px 2px 14px 2px;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
     }
 
     .kpi-cards-row::-webkit-scrollbar {
-        height: 4px;
+        height: 5px;
     }
 
     .kpi-cards-row::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
+        background: transparent;
     }
 
     .kpi-cards-row::-webkit-scrollbar-thumb {
-        background: #c1c7cd;
-        border-radius: 4px;
+        background: #c7cbd1;
+        border-radius: 3px;
     }
 
     .kpi-cards-row::-webkit-scrollbar-thumb:hover {
-        background: #a0a8b0;
+        background: #9aa0a6;
     }
 
+    /* ── Card link wrapper ── */
     .kpi-card-link {
         flex: 1 1 0;
         min-width: 0;
         max-width: none;
         text-decoration: none !important;
         display: block;
-        transition: transform 0.2s ease;
+        transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
         cursor: pointer;
+        outline: none;
     }
 
     .kpi-card-link:hover {
-        transform: translateY(-3px);
+        transform: translateY(-4px);
         text-decoration: none !important;
     }
 
-    .kpi-card-link:hover .kpi-card {
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
+    .kpi-card-link:focus-visible .kpi-card {
+        outline: 2px solid #0078d4;
+        outline-offset: 2px;
     }
 
+    /* ── The card itself ── */
     .kpi-card {
-        background: #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-        overflow: hidden;
-        transition: all 0.25s ease;
-        border: 1px solid #e8eaed;
         position: relative;
-        min-height: 90px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow:
+            0 1px 2px rgba(15, 23, 42, 0.06),
+            0 2px 8px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+        transition:
+            box-shadow 0.22s cubic-bezier(0.2, 0, 0, 1),
+            transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        min-height: 104px;
         height: 100%;
         width: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
-    .kpi-card:hover {
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
+    .kpi-card-link:hover .kpi-card {
+        box-shadow:
+            0 4px 8px rgba(15, 23, 42, 0.08),
+            0 12px 28px rgba(15, 23, 42, 0.14);
     }
 
+    /* Fluent accent bar — brightens on hover */
+    .kpi-card .kpi-accent {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.35);
+        transition: background 0.22s ease, height 0.22s ease;
+        pointer-events: none;
+    }
+
+    .kpi-card-link:hover .kpi-accent {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.75);
+    }
+
+    /* ── Header row: icon · title · chevron ── */
     .kpi-card-header {
-        padding: 10px 14px 4px 14px;
+        padding: 14px 16px 6px 16px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        gap: 10px;
         position: relative;
-    }
-
-    .kpi-card-header .kpi-icon {
-        font-size: 1rem;
-        opacity: 0.9;
-        line-height: 1;
-        display: flex;
-        align-items: center;
         flex-shrink: 0;
     }
 
+    .kpi-card-header .kpi-icon {
+        font-size: 1.05rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.18);
+        opacity: 0.95;
+        transition: transform 0.3s ease;
+    }
+
+    .kpi-card-link:hover .kpi-icon {
+        transform: scale(1.08) rotate(-3deg);
+    }
+
     .kpi-card-header .kpi-title {
-        font-size: 0.7rem;
+        font-size: 0.78rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.4px;
-        opacity: 0.9;
+        letter-spacing: 0.6px;
+        opacity: 0.95;
         flex: 1;
         white-space: nowrap;
         overflow: hidden;
@@ -1427,132 +1795,176 @@ $this->registerJs($js, View::POS_READY);
 
     .kpi-card-header .kpi-arrow {
         font-size: 0.7rem;
-        opacity: 0.5;
-        transition: all 0.3s ease;
+        opacity: 0.45;
+        transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease;
         margin-left: auto;
         flex-shrink: 0;
     }
 
     .kpi-card-link:hover .kpi-arrow {
         opacity: 1;
-        transform: translateX(3px);
+        transform: translateX(4px);
     }
 
+    /* ── Body: hero number + context label ── */
     .kpi-card-body {
-        padding: 6px 14px 12px 14px;
+        padding: 0 16px 16px 16px;
         display: flex;
         flex-direction: column;
+        flex: 1;
+        justify-content: flex-end;
     }
 
     .kpi-card-body .kpi-number {
-        font-size: 1.8rem;
+        font-size: 2.1rem;
         font-weight: 700;
-        line-height: 1.2;
+        line-height: 1;
         margin: 0;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.8px;
         white-space: nowrap;
-    }
-
-    .kpi-card-body .kpi-label {
-        font-size: 0.65rem;
-        opacity: 0.85;
-        margin-top: 2px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        flex-wrap: wrap;
-        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
     }
 
     .kpi-card-body .kpi-percent {
-        font-size: 0.85rem;
-        font-weight: 500;
+        font-size: 0.9rem;
+        font-weight: 600;
+        opacity: 0.7;
+        margin-left: 4px;
+        letter-spacing: 0;
+    }
+
+    .kpi-card-body .kpi-label {
+        font-size: 0.7rem;
+        opacity: 0.8;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .kpi-card-body .kpi-label i {
+        font-size: 0.65rem;
         opacity: 0.75;
-        margin-left: 2px;
+        flex-shrink: 0;
     }
 
     .kpi-card-body .kpi-sub {
         display: block;
-        font-size: 0.6rem;
-        opacity: 0.75;
-        margin-top: 1px;
+        font-size: 0.62rem;
+        opacity: 0.7;
+        margin-top: 2px;
         white-space: nowrap;
     }
 
+    /* ──────────────────────────────────────────── */
+    /* Card color themes                             */
+    /* ──────────────────────────────────────────── */
+
+    /* Total — Fluent blue */
     .kpi-card.primary {
-        background: linear-gradient(145deg, #007bff 0%, #0069d9 100%);
-        color: white;
-        border-color: #007bff;
+        background: linear-gradient(135deg, #0f6cbd 0%, #0078d4 55%, #106ebe 100%);
+        color: #ffffff;
+        border-color: rgba(15, 108, 189, 0.2);
     }
 
     .kpi-card.primary .kpi-number,
     .kpi-card.primary .kpi-label,
     .kpi-card.primary .kpi-title,
     .kpi-card.primary .kpi-icon,
-    .kpi-card.primary .kpi-arrow {
+    .kpi-card.primary .kpi-arrow,
+    .kpi-card.primary .kpi-percent {
         color: #ffffff !important;
     }
 
-    .kpi-card.registrado {
-        background: linear-gradient(145deg, #007bff 0%, #0069d9 100%);
-        color: white;
-        border-color: #007bff;
-    }
-
-    .kpi-card.registrado .kpi-number,
-    .kpi-card.registrado .kpi-label,
-    .kpi-card.registrado .kpi-title,
-    .kpi-card.registrado .kpi-icon,
-    .kpi-card.registrado .kpi-arrow {
-        color: #ffffff !important;
-    }
-
+    /* Activos — Fluent green */
     .kpi-card.success {
-        background: linear-gradient(145deg, #28a745 0%, #218838 100%);
-        color: white;
-        border-color: #28a745;
+        background: linear-gradient(135deg, #0e7a0d 0%, #107c10 55%, #0c6b0c 100%);
+        color: #ffffff;
+        border-color: rgba(16, 124, 16, 0.2);
     }
 
     .kpi-card.success .kpi-number,
     .kpi-card.success .kpi-label,
     .kpi-card.success .kpi-title,
     .kpi-card.success .kpi-icon,
-    .kpi-card.success .kpi-arrow {
+    .kpi-card.success .kpi-arrow,
+    .kpi-card.success .kpi-percent {
         color: #ffffff !important;
     }
 
+    /* Registrados — Fluent royal blue */
+    .kpi-card.registrado {
+        background: linear-gradient(135deg, #4f46e5 0%, #5b5fc7 55%, #4338ca 100%);
+        color: #ffffff;
+        border-color: rgba(91, 95, 199, 0.2);
+    }
+
+    .kpi-card.registrado .kpi-number,
+    .kpi-card.registrado .kpi-label,
+    .kpi-card.registrado .kpi-title,
+    .kpi-card.registrado .kpi-icon,
+    .kpi-card.registrado .kpi-arrow,
+    .kpi-card.registrado .kpi-percent {
+        color: #ffffff !important;
+    }
+
+    /* Suspendidos — Fluent neutral gray */
     .kpi-card.danger {
-        background: linear-gradient(145deg, #6c757d 0%, #5a6268 100%);
-        color: white;
-        border-color: #6c757d;
+        background: linear-gradient(135deg, #5c5c5c 0%, #6b6b6b 55%, #4f4f4f 100%);
+        color: #ffffff;
+        border-color: rgba(107, 107, 107, 0.2);
     }
 
     .kpi-card.danger .kpi-number,
     .kpi-card.danger .kpi-label,
     .kpi-card.danger .kpi-title,
     .kpi-card.danger .kpi-icon,
-    .kpi-card.danger .kpi-arrow {
+    .kpi-card.danger .kpi-arrow,
+    .kpi-card.danger .kpi-percent {
         color: #ffffff !important;
     }
 
+    /* Anulados — Fluent danger red */
     .kpi-card.anulado {
-        background: linear-gradient(145deg, #dc3545 0%, #c82333 100%);
-        color: white;
-        border-color: #dc3545;
+        background: linear-gradient(135deg, #c50f1f 0%, #d13438 55%, #a4262c 100%);
+        color: #ffffff;
+        border-color: rgba(209, 52, 56, 0.2);
     }
 
     .kpi-card.anulado .kpi-number,
     .kpi-card.anulado .kpi-label,
     .kpi-card.anulado .kpi-title,
     .kpi-card.anulado .kpi-icon,
-    .kpi-card.anulado .kpi-arrow {
+    .kpi-card.anulado .kpi-arrow,
+    .kpi-card.anulado .kpi-percent {
         color: #ffffff !important;
     }
 
+    /* Vencidos — Fluent orange */
+    .kpi-card.vencido {
+        background: linear-gradient(135deg, #c85a00 0%, #da3b01 55%, #ad4e00 100%);
+        color: #ffffff;
+        border-color: rgba(218, 59, 1, 0.2);
+    }
+
+    .kpi-card.vencido .kpi-number,
+    .kpi-card.vencido .kpi-label,
+    .kpi-card.vencido .kpi-title,
+    .kpi-card.vencido .kpi-icon,
+    .kpi-card.vencido .kpi-arrow,
+    .kpi-card.vencido .kpi-percent {
+        color: #ffffff !important;
+    }
+
+    /* Críticos — Fluent warning yellow */
     .kpi-card.critical {
-        background: linear-gradient(145deg, #ffc107 0%, #e0a800 100%);
-        color: #212529;
-        border-color: #ffc107;
+        background: linear-gradient(135deg, #c19c00 0%, #eaa300 55%, #b88f00 100%);
+        color: #1a1a1a;
+        border-color: rgba(234, 163, 0, 0.2);
     }
 
     .kpi-card.critical .kpi-number,
@@ -1560,25 +1972,140 @@ $this->registerJs($js, View::POS_READY);
     .kpi-card.critical .kpi-title,
     .kpi-card.critical .kpi-icon,
     .kpi-card.critical .kpi-arrow {
-        color: #212529 !important;
+        color: #1a1a1a !important;
     }
 
     .kpi-card.critical .kpi-percent {
-        color: #856404 !important;
+        color: #5a4a00 !important;
+        font-weight: 700;
     }
 
-    .kpi-card.vencido {
-        background: linear-gradient(145deg, #fd7e14 0%, #e8590c 100%);
-        color: white;
-        border-color: #fd7e14;
+    /* ──────────────────────────────────────────── */
+    /* Responsive                                    */
+    /* ──────────────────────────────────────────── */
+    @media (max-width: 1200px) {
+        .kpi-cards-row {
+            gap: 12px;
+        }
+
+        .kpi-card {
+            min-height: 96px;
+        }
+
+        .kpi-card-body .kpi-number {
+            font-size: 1.85rem;
+        }
     }
 
-    .kpi-card.vencido .kpi-number,
-    .kpi-card.vencido .kpi-label,
-    .kpi-card.vencido .kpi-title,
-    .kpi-card.vencido .kpi-icon,
-    .kpi-card.vencido .kpi-arrow {
-        color: #ffffff !important;
+    @media (max-width: 992px) {
+        .kpi-cards-row {
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+        }
+
+        .kpi-card-link {
+            flex: 0 0 168px;
+            min-width: 156px;
+        }
+
+        .kpi-card {
+            min-height: 92px;
+        }
+
+        .kpi-card-header {
+            padding: 12px 14px 4px 14px;
+        }
+
+        .kpi-card-header .kpi-icon {
+            width: 24px;
+            height: 24px;
+            font-size: 0.95rem;
+        }
+
+        .kpi-card-header .kpi-title {
+            font-size: 0.72rem;
+        }
+
+        .kpi-card-body {
+            padding: 0 14px 14px 14px;
+        }
+
+        .kpi-card-body .kpi-number {
+            font-size: 1.55rem;
+        }
+
+        .kpi-card-body .kpi-label {
+            font-size: 0.65rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .kpi-cards-row {
+            gap: 8px;
+        }
+
+        .kpi-card-link {
+            flex: 0 0 140px;
+            min-width: 130px;
+        }
+
+        .kpi-card {
+            min-height: 84px;
+        }
+
+        .kpi-card-header {
+            padding: 10px 12px 2px 12px;
+            gap: 8px;
+        }
+
+        .kpi-card-header .kpi-icon {
+            width: 22px;
+            height: 22px;
+            font-size: 0.85rem;
+        }
+
+        .kpi-card-header .kpi-title {
+            font-size: 0.65rem;
+            letter-spacing: 0.4px;
+        }
+
+        .kpi-card-body {
+            padding: 0 12px 12px 12px;
+        }
+
+        .kpi-card-body .kpi-number {
+            font-size: 1.35rem;
+        }
+
+        .kpi-card-body .kpi-label {
+            font-size: 0.6rem;
+        }
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+
+        .kpi-card-link,
+        .kpi-card,
+        .kpi-card .kpi-accent,
+        .kpi-card-header .kpi-icon,
+        .kpi-card-header .kpi-arrow {
+            transition: none !important;
+            animation: none !important;
+        }
+
+        .kpi-card-link:hover {
+            transform: none;
+        }
+
+        .kpi-card-link:hover .kpi-icon {
+            transform: none;
+        }
+
+        .kpi-card-link:hover .kpi-arrow {
+            transform: none;
+        }
     }
 
     .badge-critical {
@@ -1597,133 +2124,6 @@ $this->registerJs($js, View::POS_READY);
         font-size: 0.75rem;
         padding: 0.35rem 0.75rem;
         vertical-align: middle;
-    }
-
-    @media (max-width: 1200px) {
-        .kpi-cards-row {
-            gap: 10px;
-        }
-
-        .kpi-card {
-            min-height: 80px;
-        }
-
-        .kpi-card-body .kpi-number {
-            font-size: 1.6rem;
-        }
-
-        .kpi-card-header .kpi-title {
-            font-size: 0.65rem;
-        }
-
-        .kpi-card-header .kpi-icon {
-            font-size: 0.9rem;
-        }
-    }
-
-    @media (max-width: 992px) {
-        .kpi-cards-row {
-            gap: 8px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
-            padding-bottom: 8px;
-        }
-
-        .kpi-card-link {
-            flex: 0 0 160px;
-            min-width: 140px;
-        }
-
-        .kpi-card {
-            min-height: 75px;
-        }
-
-        .kpi-card-header {
-            padding: 8px 10px 3px 10px;
-        }
-
-        .kpi-card-header .kpi-title {
-            font-size: 0.6rem;
-        }
-
-        .kpi-card-header .kpi-icon {
-            font-size: 0.85rem;
-        }
-
-        .kpi-card-body {
-            padding: 4px 10px 10px 10px;
-        }
-
-        .kpi-card-body .kpi-number {
-            font-size: 1.4rem;
-        }
-
-        .kpi-card-body .kpi-label {
-            font-size: 0.6rem;
-        }
-
-        .kpi-card-body .kpi-percent {
-            font-size: 0.7rem;
-        }
-
-        .kpi-card-body .kpi-sub {
-            font-size: 0.55rem;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .kpi-cards-row {
-            gap: 6px;
-        }
-
-        .kpi-card-link {
-            flex: 0 0 130px;
-            min-width: 110px;
-        }
-
-        .kpi-card {
-            min-height: 65px;
-        }
-
-        .kpi-card-header {
-            padding: 6px 8px 2px 8px;
-        }
-
-        .kpi-card-header .kpi-title {
-            font-size: 0.5rem;
-            letter-spacing: 0.2px;
-        }
-
-        .kpi-card-header .kpi-icon {
-            font-size: 0.75rem;
-        }
-
-        .kpi-card-header .kpi-arrow {
-            font-size: 0.6rem;
-        }
-
-        .kpi-card-body {
-            padding: 3px 8px 8px 8px;
-        }
-
-        .kpi-card-body .kpi-number {
-            font-size: 1.2rem;
-        }
-
-        .kpi-card-body .kpi-label {
-            font-size: 0.5rem;
-            white-space: normal;
-        }
-
-        .kpi-card-body .kpi-percent {
-            font-size: 0.65rem;
-        }
-
-        .kpi-card-body .kpi-sub {
-            font-size: 0.5rem;
-            white-space: normal;
-        }
     }
 
     /* ============================================ */
@@ -2022,56 +2422,6 @@ $this->registerJs($js, View::POS_READY);
             opacity: 1;
             transform: scale(1);
         }
-    }
-
-    /* ============================================ */
-    /* DUAL SCROLLBAR SYSTEM                        */
-    /* ============================================ */
-    .table-responsive-scroll {
-        overflow-x: auto;
-        overflow-y: visible;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .top-native-scrollbar {
-        width: 100%;
-        height: 12px;
-        overflow-x: scroll;
-        overflow-y: hidden;
-        margin-bottom: 10px;
-        display: none;
-        cursor: pointer;
-        box-sizing: border-box;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .top-native-scrollbar .top-native-dummy {
-        display: inline-block;
-        width: 100%;
-        min-height: 1px;
-        height: 1px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar,
-    .table-responsive-scroll::-webkit-scrollbar {
-        height: 12px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar-track,
-    .table-responsive-scroll::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 6px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar-thumb,
-    .table-responsive-scroll::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 6px;
-    }
-
-    .top-native-scrollbar::-webkit-scrollbar-thumb:hover,
-    .table-responsive-scroll::-webkit-scrollbar-thumb:hover {
-        background: #555;
     }
 
     .grid-view td:has(.badge) {

@@ -1044,14 +1044,16 @@ $this->registerCss("
                                             ]
                                         );
                                     },
-                                    'cancel' => function ($url, $model) {
+                                    'cancel' => function ($url, $model, $key) {
                                         if ($model->es_cita == 1 && $model->appointment_status == 'scheduled') {
                                             return Html::a(
                                                 '<i class="fas fa-calendar-times"></i>',
                                                 ['cancel-appointment', 'id' => $model->id],
                                                 [
-                                                    'title' => 'Cancelar Cita',
-                                                    'class' => 'btn-action cancel',
+                                                    'title'                    => 'Cancelar Cita',
+                                                    'class'                    => 'btn-action cancel',
+                                                    'data-pjax'                => 0,
+                                                    'data-cancel-appointment'  => $model->id, // ← hook for JS
                                                 ]
                                             );
                                         }
@@ -1082,3 +1084,34 @@ $this->registerCss("
     </div>
     <div class="clearfix"></div>
 </div>
+<?php
+// ✅ CHECKPOINT #4 — Drawer loader (delegated, PJAX-safe)
+$this->registerJs(<<<JS
+(function () {
+    // Delegated so it survives PJAX / grid re-renders
+    $(document).off('click.msCancelDrawer').on('click.msCancelDrawer', '[data-cancel-appointment]', function (e) {
+        e.preventDefault();
+        var url = $(this).attr('href');
+
+        // Prevent double-open
+        if ($('#msCancelDrawer').length) { return; }
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            dataType: 'html'
+        })
+        .done(function (html) {
+            $('body').append(html);
+            if (typeof window.msOpenCancelDrawer === 'function') {
+                window.msOpenCancelDrawer();
+            }
+        })
+        .fail(function () {
+            alert('No se pudo cargar el panel de cancelación. Intente nuevamente.');
+        });
+    });
+})();
+JS);
+?>

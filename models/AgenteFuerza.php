@@ -25,7 +25,7 @@ use yii\db\ActiveRecord;
  * @property int|null $puede_registrar
  * @property float|null $por_registrar
  * @property string|null $registro_corredor_actividad_aseguradora
- *
+ * @property string|null $cod_sispsa
  * @property User $user
  * @property UserDatos $userDatos
  * @property Agente $agente
@@ -68,6 +68,10 @@ class AgenteFuerza extends ActiveRecord
             // Reglas de rangos para porcentajes
             [['por_venta', 'por_asesor', 'por_cobranza', 'por_post_venta', 'por_registrar'], 'number', 'min' => 0, 'max' => 100],
 
+            // Regla para cod_sispsa - Código SISPSA (ej: AE-001)
+            [['cod_sispsa'], 'string', 'max' => 50],
+            [['cod_sispsa'], 'default', 'value' => null],
+
             // Reglas para asegurar que 'puede_...' sean 0 o 1 (booleano)
             [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'in', 'range' => [0, 1]],
             [['puede_vender', 'puede_asesorar', 'puede_cobrar', 'puede_post_venta', 'puede_registrar'], 'default', 'value' => 0],
@@ -107,6 +111,7 @@ class AgenteFuerza extends ActiveRecord
             'puede_registrar' => 'Puede Registrar',
             'por_registrar' => 'Porcentaje de Registro',
             'registro_corredor_actividad_aseguradora' => 'Código SUDEASEG',
+            'cod_sispsa' => 'Código SISPSA',
         ];
     }
 

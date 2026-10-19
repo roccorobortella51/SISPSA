@@ -44,6 +44,7 @@ class SisSiniestro extends \yii\db\ActiveRecord
     const APPOINTMENT_STATUS_NO_SHOW = 'no_show';
 
     const CANCELLATION_WINDOW_HOURS = 48;
+    const CLINIC_CANCELLATION_ROLES = ['clinic', 'doctor', 'staff'];
 
     public $imagenRecipeFile;
     public $imagenInformeFile;
@@ -954,27 +955,130 @@ class SisSiniestro extends \yii\db\ActiveRecord
     }
 
     /**
-     * Cancel appointment
+     * ✅ CHECKPOINT #1 (Design 2)
+     * Cancel an appointment.
+     *
+     * Actor resolution combines the caller's role and the explicit
+     * "responsible" hint chosen in the drawer. See resolveCancellationActor().
+     *
+     * Penalty logic:
+     *   - actor = 'clinic'  → NEVER penalize (costo_total = 0)
+     *   - actor = 'patient' + ≥ 48h  → no penalty (costo_total = 0)
+     *   - actor = 'patient' + < 48h  → penalty (no_show, costo retained)
+     *
+     * The actor tag is stored inside `cancellation_reason`:
+     *   [ACTOR:clinic][PENALTY:no]   <reason text>
+     *   [ACTOR:patient][PENALTY:no]  <reason text>
+     *   [ACTOR:patient][PENALTY:yes] <reason text>
+     *
+     * @param string      $reason      Free-text reason.
+     * @param string|null $cancelledBy Username of the canceller.
+     * @param string|null $actorRole   Logged-in user's role.
+     * @param string|null $responsible 'clinic' | 'patient' | null (from POST).
+     * @return bool
      */
-    public function cancelAppointment($reason, $cancelledBy = null)
+    public function cancelAppointment($reason, $cancelledBy = null, $actorRole = null, $responsible = null)
     {
-        if ($this->canBeCancelledWithoutPenalty()) {
-            // Early cancellation - restore coverage
+        $actor = self::resolveCancellationActor($responsible, $actorRole);
+
+        if ($actor === 'clinic') {
+            // 🏥 CLINIC CANCELLATION → never penalize
             $this->appointment_status = self::APPOINTMENT_STATUS_CANCELLED;
-            $this->costo_total = 0; // Remove cost to restore coverage
+            $this->costo_total        = 0;
+            $this->no_show_processed  = false;
+            $tag = '[ACTOR:clinic][PENALTY:no]';
+        } elseif ($this->canBeCancelledWithoutPenalty()) {
+            // ✅ PATIENT, ≥ 48h → no penalty
+            $this->appointment_status = self::APPOINTMENT_STATUS_CANCELLED;
+            $this->costo_total        = 0;
+            $this->no_show_processed  = false;
+            $tag = '[ACTOR:patient][PENALTY:no]';
         } else {
-            // Late cancellation - treat as no-show, keep deduction
+            // ⚠️ PATIENT, < 48h → penalty (treated as no-show)
             $this->appointment_status = self::APPOINTMENT_STATUS_NO_SHOW;
-            $this->no_show_processed = true;
+            $this->no_show_processed  = true;
+            $tag = '[ACTOR:patient][PENALTY:yes]';
         }
 
-        $this->cancelled_at = date('Y-m-d H:i:s');
-        $this->cancelled_by = $cancelledBy ?? Yii::$app->user->identity->username ?? 'system';
-        $this->cancellation_reason = $reason;
+        $this->cancelled_at        = date('Y-m-d H:i:s');
+        $this->cancelled_by        = $cancelledBy ?? 'system';
+        $this->cancellation_reason = $tag . ' ' . trim((string) $reason);
 
         return $this->save(false);
     }
+    /**
+     * ✅ CHECKPOINT #1 (Design 2)
+     * Resolves the final cancellation actor, combining:
+     *   - the explicit "responsible" hint chosen by the user in the drawer
+     *     ('clinic' | 'patient' | null)
+     *   - the current user's role (UserHelper::getMyRol())
+     *
+     * Resolution priority:
+     *   1. $responsible === 'clinic'  → 'clinic'  (never penalize)
+     *   2. $responsible === 'patient' → 'patient' (48h rule applies)
+     *   3. Fallback → role-based: clinic roles → 'clinic', else 'patient'
+     *
+     * @param string|null $responsible 'clinic' | 'patient' | null
+     * @param string|null $role        Role of the logged-in user.
+     * @return string 'clinic' | 'patient'
+     */
+    public static function resolveCancellationActor($responsible, $role)
+    {
+        if ($responsible === 'clinic') {
+            return 'clinic';
+        }
+        if ($responsible === 'patient') {
+            return 'patient';
+        }
+        // Fallback: role-based rule (Design 1)
+        return self::isClinicActor($role) ? 'clinic' : 'patient';
+    }
+    /**
+     * ✅ CHECKPOINT #1
+     * Returns true when the given role is a "clinic actor".
+     * Clinic actors can cancel any scheduled cita WITHOUT penalty
+     * (costo_total is reset to 0, restoring coverage).
+     *
+     * @param string|null $role
+     * @return bool
+     */
+    public static function isClinicActor($role)
+    {
+        if (empty($role)) {
+            return false;
+        }
+        return in_array($role, self::CLINIC_CANCELLATION_ROLES, true);
+    }
 
+    /**
+     * ✅ CHECKPOINT #1
+     * Reads the actor tag stored inside cancellation_reason.
+     * Returns 'clinic' | 'patient' | null.
+     *
+     * @return string|null
+     */
+    public function getCancellationActor()
+    {
+        $reason = (string) $this->cancellation_reason;
+        if (strpos($reason, '[ACTOR:clinic]') !== false) {
+            return 'clinic';
+        }
+        if (strpos($reason, '[ACTOR:patient]') !== false) {
+            return 'patient';
+        }
+        return null;
+    }
+
+    /**
+     * ✅ CHECKPOINT #1
+     * Convenience helper for the UI.
+     *
+     * @return bool
+     */
+    public function isClinicCancellation()
+    {
+        return $this->getCancellationActor() === 'clinic';
+    }
     /**
      * Complete appointment
      */
